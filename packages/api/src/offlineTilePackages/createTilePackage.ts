@@ -217,7 +217,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
             const bin = await response.arrayBuffer();
             await db.run(
               `INSERT into tiles (tile_column, tile_row, zoom_level, tile_data) values (?, ?, ?, ?)`,
-              [...googleToTile(tile as Google), new Uint8Array(bin)]
+              [...tile, new Uint8Array(bin)]
             );
           } else {
             failuresWithoutSuccess++;

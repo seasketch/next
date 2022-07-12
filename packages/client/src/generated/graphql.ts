@@ -4420,6 +4420,7 @@ export type GenerateOfflineTilePackageInput = {
   dataSourceUrl?: Maybe<Scalars['String']>;
   maxShorelineZ?: Maybe<Scalars['Int']>;
   maxZ?: Maybe<Scalars['Int']>;
+  originalUrlTemplate?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
   sourceType?: Maybe<OfflineTilePackageSourceType>;
 };
@@ -7021,6 +7022,7 @@ export type OfflineTilePackage = Node & {
   maxZ: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  originalUrlTemplate: Scalars['String'];
   /** Can be used to download a tilepackage (if permitted) */
   presignedUrl: Scalars['String'];
   /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
@@ -13525,6 +13527,26 @@ export type CreateProjectMutation = (
   )> }
 );
 
+export type DownloadableOfflineTilePackagesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DownloadableOfflineTilePackagesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'mapboxPublicKey'>
+    & { offlineTilePackagesConnection: (
+      { __typename?: 'OfflineTilePackagesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'OfflineTilePackage' }
+        & OfflineTilePackageDetailsFragment
+      )> }
+    ) }
+  )> }
+);
+
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14015,7 +14037,7 @@ export type OfflineSurveysQuery = (
 
 export type OfflineTilePackageDetailsFragment = (
   { __typename?: 'OfflineTilePackage' }
-  & Pick<OfflineTilePackage, 'id' | 'bytes' | 'projectId' | 'sourceType' | 'jobStatus' | 'tilesFetched' | 'totalTiles' | 'createdAt' | 'jobErrors' | 'dataSourceUrl' | 'isMapboxHosted' | 'maxZ' | 'maxShorelineZ' | 'presignedUrl'>
+  & Pick<OfflineTilePackage, 'id' | 'bytes' | 'projectId' | 'sourceType' | 'jobStatus' | 'tilesFetched' | 'totalTiles' | 'createdAt' | 'jobErrors' | 'dataSourceUrl' | 'isMapboxHosted' | 'maxZ' | 'maxShorelineZ' | 'presignedUrl' | 'originalUrlTemplate'>
   & { region: (
     { __typename?: 'GeometryPolygon' }
     & Pick<GeometryPolygon, 'geojson'>
@@ -14165,6 +14187,7 @@ export type GenerateOfflineTilePackageMutationVariables = Exact<{
   maxZ: Scalars['Int'];
   maxShorelineZ?: Maybe<Scalars['Int']>;
   sourceType?: Maybe<OfflineTilePackageSourceType>;
+  originalUrlTemplate: Scalars['String'];
 }>;
 
 
@@ -16089,6 +16112,7 @@ export const OfflineTilePackageDetailsFragmentDoc = gql`
   maxZ
   maxShorelineZ
   presignedUrl
+  originalUrlTemplate
 }
     `;
 export const OfflineBasemapDetailsFragmentDoc = gql`
@@ -18329,6 +18353,46 @@ export function useCreateProjectMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateProjectMutationHookResult = ReturnType<typeof useCreateProjectMutation>;
 export type CreateProjectMutationResult = Apollo.MutationResult<CreateProjectMutation>;
 export type CreateProjectMutationOptions = Apollo.BaseMutationOptions<CreateProjectMutation, CreateProjectMutationVariables>;
+export const DownloadableOfflineTilePackagesDocument = gql`
+    query DownloadableOfflineTilePackages($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+
+/**
+ * __useDownloadableOfflineTilePackagesQuery__
+ *
+ * To run a query within a React component, call `useDownloadableOfflineTilePackagesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDownloadableOfflineTilePackagesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDownloadableOfflineTilePackagesQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useDownloadableOfflineTilePackagesQuery(baseOptions: Apollo.QueryHookOptions<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>(DownloadableOfflineTilePackagesDocument, options);
+      }
+export function useDownloadableOfflineTilePackagesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>(DownloadableOfflineTilePackagesDocument, options);
+        }
+export type DownloadableOfflineTilePackagesQueryHookResult = ReturnType<typeof useDownloadableOfflineTilePackagesQuery>;
+export type DownloadableOfflineTilePackagesLazyQueryHookResult = ReturnType<typeof useDownloadableOfflineTilePackagesLazyQuery>;
+export type DownloadableOfflineTilePackagesQueryResult = Apollo.QueryResult<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>;
 export const DraftTableOfContentsDocument = gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -19739,9 +19803,9 @@ export type UpdateBasemapOfflineTileSettingsMutationHookResult = ReturnType<type
 export type UpdateBasemapOfflineTileSettingsMutationResult = Apollo.MutationResult<UpdateBasemapOfflineTileSettingsMutation>;
 export type UpdateBasemapOfflineTileSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>;
 export const GenerateOfflineTilePackageDocument = gql`
-    mutation generateOfflineTilePackage($dataSourceUrl: String!, $projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $sourceType: OfflineTilePackageSourceType) {
+    mutation generateOfflineTilePackage($dataSourceUrl: String!, $projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $sourceType: OfflineTilePackageSourceType, $originalUrlTemplate: String!) {
   generateOfflineTilePackage(
-    input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType}
+    input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType, originalUrlTemplate: $originalUrlTemplate}
   ) {
     offlineTilePackage {
       ...OfflineTilePackageDetails
@@ -19769,6 +19833,7 @@ export type GenerateOfflineTilePackageMutationFn = Apollo.MutationFunction<Gener
  *      maxZ: // value for 'maxZ'
  *      maxShorelineZ: // value for 'maxShorelineZ'
  *      sourceType: // value for 'sourceType'
+ *      originalUrlTemplate: // value for 'originalUrlTemplate'
  *   },
  * });
  */
@@ -23022,6 +23087,7 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
+    DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',

@@ -22,11 +22,7 @@ import { MapboxEvent, MapWheelEvent } from "mapbox-gl";
 import debounce from "lodash.debounce";
 import splitGeojson from "geojson-antimeridian-cut";
 import { cleanCoords } from "../workers/utils";
-import {
-  MapTileCache,
-  OfflineTileCacheStatus,
-  OfflineTileSettings,
-} from "./MapTileCache";
+import { SceneTileCalculator } from "./MapTileCache";
 import bytes from "bytes";
 import getSlug from "../getSlug";
 import Switch from "../components/Switch";
@@ -37,6 +33,7 @@ import { useStyleSources } from "./mapboxApiHelpers";
 import Badge from "../components/Badge";
 import { OfflineTileSettingsForCalculationFragment } from "../generated/queries";
 import { urlForSource } from "./OfflineSurveyMapSettings";
+import { OfflineTileSettings } from "./OfflineTileSettings";
 
 export const defaultOfflineTilingSettings: OfflineTileSettingsForCalculationFragment =
   {
@@ -45,13 +42,13 @@ export const defaultOfflineTilingSettings: OfflineTileSettingsForCalculationFrag
   };
 
 let worker: any;
-let Calculator: MapTileCache;
+let Calculator: SceneTileCalculator;
 if (process.env.NODE_ENV === "test") {
   worker = { getChildTiles: () => 0 };
 } else {
   import("../workers/index").then((mod) => {
     worker = new mod.default();
-    Calculator = worker.mapTileCache as MapTileCache;
+    Calculator = worker.mapTileCache as SceneTileCalculator;
   });
 }
 
@@ -255,7 +252,7 @@ export default function BasemapOfflineSettings({
   const [stats, setStats] = useState<
     {
       calculating: boolean;
-    } & Partial<OfflineTileCacheStatus>
+    } & { totalTiles?: number }
   >({ calculating: true });
   const [simulate, setSimulate] = useState(false);
   const [showTiles, setShowTiles] = useState(true);
@@ -443,15 +440,13 @@ export default function BasemapOfflineSettings({
         abortController.current = new AbortController();
         setStats((prev) => ({ calculating: true }));
         const ac = abortController.current;
-        Calculator.cacheStatusForMap(
-          settingsToOfflineSettings(settings),
-          data?.basemap?.id,
-          style.data
-        ).then((status) => {
-          if (!ac.signal.aborted) {
-            setStats((prev) => ({ ...status, calculating: false }));
-          }
-        });
+        Calculator.calculator
+          .countChildTiles(settingsToOfflineSettings(settings))
+          .then((totalTiles) => {
+            if (!ac.signal.aborted) {
+              setStats((prev) => ({ calculating: false, totalTiles }));
+            }
+          });
       }
     })();
   }, [settings, data?.basemap?.id, mapContext?.manager?.map, style.data]);

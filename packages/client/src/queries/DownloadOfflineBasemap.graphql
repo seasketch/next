@@ -1,0 +1,10 @@
+query DownloadableOfflineTilePackages($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}

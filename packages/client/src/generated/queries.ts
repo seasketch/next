@@ -4418,6 +4418,7 @@ export type GenerateOfflineTilePackageInput = {
   dataSourceUrl?: Maybe<Scalars['String']>;
   maxShorelineZ?: Maybe<Scalars['Int']>;
   maxZ?: Maybe<Scalars['Int']>;
+  originalUrlTemplate?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
   sourceType?: Maybe<OfflineTilePackageSourceType>;
 };
@@ -7019,6 +7020,7 @@ export type OfflineTilePackage = Node & {
   maxZ: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  originalUrlTemplate: Scalars['String'];
   /** Can be used to download a tilepackage (if permitted) */
   presignedUrl: Scalars['String'];
   /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
@@ -13523,6 +13525,26 @@ export type CreateProjectMutation = (
   )> }
 );
 
+export type DownloadableOfflineTilePackagesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DownloadableOfflineTilePackagesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'mapboxPublicKey'>
+    & { offlineTilePackagesConnection: (
+      { __typename?: 'OfflineTilePackagesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'OfflineTilePackage' }
+        & OfflineTilePackageDetailsFragment
+      )> }
+    ) }
+  )> }
+);
+
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14013,7 +14035,7 @@ export type OfflineSurveysQuery = (
 
 export type OfflineTilePackageDetailsFragment = (
   { __typename?: 'OfflineTilePackage' }
-  & Pick<OfflineTilePackage, 'id' | 'bytes' | 'projectId' | 'sourceType' | 'jobStatus' | 'tilesFetched' | 'totalTiles' | 'createdAt' | 'jobErrors' | 'dataSourceUrl' | 'isMapboxHosted' | 'maxZ' | 'maxShorelineZ' | 'presignedUrl'>
+  & Pick<OfflineTilePackage, 'id' | 'bytes' | 'projectId' | 'sourceType' | 'jobStatus' | 'tilesFetched' | 'totalTiles' | 'createdAt' | 'jobErrors' | 'dataSourceUrl' | 'isMapboxHosted' | 'maxZ' | 'maxShorelineZ' | 'presignedUrl' | 'originalUrlTemplate'>
   & { region: (
     { __typename?: 'GeometryPolygon' }
     & Pick<GeometryPolygon, 'geojson'>
@@ -14163,6 +14185,7 @@ export type GenerateOfflineTilePackageMutationVariables = Exact<{
   maxZ: Scalars['Int'];
   maxShorelineZ?: Maybe<Scalars['Int']>;
   sourceType?: Maybe<OfflineTilePackageSourceType>;
+  originalUrlTemplate: Scalars['String'];
 }>;
 
 
@@ -16087,6 +16110,7 @@ export const OfflineTilePackageDetailsFragmentDoc = /*#__PURE__*/ gql`
   maxZ
   maxShorelineZ
   presignedUrl
+  originalUrlTemplate
 }
     `;
 export const OfflineBasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -17063,6 +17087,18 @@ export const CreateProjectDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const DownloadableOfflineTilePackagesDocument = /*#__PURE__*/ gql`
+    query DownloadableOfflineTilePackages($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
 export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17632,9 +17668,9 @@ export const UpdateBasemapOfflineTileSettingsDocument = /*#__PURE__*/ gql`
 }
     ${OfflineTileSettingsFragmentDoc}`;
 export const GenerateOfflineTilePackageDocument = /*#__PURE__*/ gql`
-    mutation generateOfflineTilePackage($dataSourceUrl: String!, $projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $sourceType: OfflineTilePackageSourceType) {
+    mutation generateOfflineTilePackage($dataSourceUrl: String!, $projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $sourceType: OfflineTilePackageSourceType, $originalUrlTemplate: String!) {
   generateOfflineTilePackage(
-    input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType}
+    input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType, originalUrlTemplate: $originalUrlTemplate}
   ) {
     offlineTilePackage {
       ...OfflineTilePackageDetails
@@ -18744,6 +18780,7 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
+    DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',

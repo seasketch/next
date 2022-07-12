@@ -1,6 +1,6 @@
 import { PrecacheEntry } from "workbox-precaching/_types";
 import { Workbox } from "workbox-window";
-import { OfflineTileSettings } from "./MapTileCache";
+import { OfflineTileSettings } from "./OfflineTileSettings";
 
 export const MESSAGE_TYPES = {
   GET_MANIFEST: "GET_MANIFEST",

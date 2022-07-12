@@ -16,6 +16,7 @@ fragment OfflineTilePackageDetails on OfflineTilePackage {
   maxZ
   maxShorelineZ
   presignedUrl
+  originalUrlTemplate
 }
 
 fragment OfflineBasemapDetails on Basemap {
@@ -146,6 +147,7 @@ mutation generateOfflineTilePackage(
   $maxZ: Int!
   $maxShorelineZ: Int
   $sourceType: OfflineTilePackageSourceType
+  $originalUrlTemplate: String!
 ) {
   generateOfflineTilePackage(
     input: {
@@ -154,6 +156,7 @@ mutation generateOfflineTilePackage(
       maxZ: $maxZ
       maxShorelineZ: $maxShorelineZ
       sourceType: $sourceType
+      originalUrlTemplate: $originalUrlTemplate
     }
   ) {
     offlineTilePackage {

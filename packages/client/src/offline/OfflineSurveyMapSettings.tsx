@@ -32,6 +32,7 @@ import getSlug from "../getSlug";
 import DataSourceModal from "./DataSourceModal";
 import { getSources, useStyleSources } from "./mapboxApiHelpers";
 import TilePackageListItem from "./TilePackageListItem";
+import useBasemapsBySurvey from "./useBasemapsBySurvey";
 
 const Trans = (props: any) => <T ns="admin:offline" {...props} />;
 
@@ -50,51 +51,8 @@ export default function OfflineSurveyMapSettings() {
 
   const [sourceModalOpen, setSourceModalOpen] =
     useState<null | RasterSource | VectorSource | RasterDemSource>(null);
-  const surveyBasemaps = useMemo(() => {
-    const details: {
-      basemap: OfflineBasemapDetailsFragment;
-      surveys: string[];
-    }[] = [];
-    for (const survey of data?.projectBySlug?.surveys || []) {
-      for (const basemap of survey.basemaps || []) {
-        const existing = details.find((d) => d.basemap.id === basemap.id);
-        if (existing) {
-          if (existing.surveys.indexOf(survey.name) === -1) {
-            existing.surveys.push(survey.name);
-          }
-        } else {
-          details.push({
-            basemap,
-            surveys: [survey.name],
-          });
-        }
-      }
-    }
-    const detailsBySurveys: {
-      surveys: string[];
-      id: string;
-      basemaps: OfflineBasemapDetailsFragment[];
-    }[] = [];
-    for (const detail of details) {
-      const id = detail.surveys.join("-");
-      const existing = detailsBySurveys.find((d) => d.id === id);
-      if (existing) {
-        existing.basemaps.push(detail.basemap);
-      } else {
-        detailsBySurveys.push({
-          id,
-          basemaps: [detail.basemap],
-          surveys: detail.surveys,
-        });
-      }
-    }
-    for (const detail of detailsBySurveys) {
-      detail.basemaps = detail.basemaps.sort((a, b) =>
-        a.name.localeCompare(b.name)
-      );
-    }
-    return detailsBySurveys.sort((a, b) => b.surveys.length - a.surveys.length);
-  }, [data?.projectBySlug?.offlineTileSettings, data?.projectBySlug?.surveys]);
+
+  const { surveyBasemaps } = useBasemapsBySurvey();
 
   const [dataSources, setDataSources] = useState<
     (RasterSource | RasterDemSource | VectorSource)[]

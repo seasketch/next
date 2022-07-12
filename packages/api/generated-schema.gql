@@ -5240,6 +5240,7 @@ input GenerateOfflineTilePackageInput {
   dataSourceUrl: String
   maxShorelineZ: Int
   maxZ: Int
+  originalUrlTemplate: String
   projectId: Int
   sourceType: OfflineTilePackageSourceType
 }
@@ -7953,6 +7954,7 @@ type OfflineTilePackage implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  originalUrlTemplate: String!
 
   """Can be used to download a tilepackage (if permitted)"""
   presignedUrl: String!

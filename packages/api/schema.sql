@@ -4741,6 +4741,7 @@ CREATE TABLE public.offline_tile_packages (
     max_shoreline_z integer,
     source_type public.offline_tile_package_source_type NOT NULL,
     error text,
+    original_url_template text NOT NULL,
     CONSTRAINT offline_tile_packages_check CHECK (((max_shoreline_z > max_z) AND (max_shoreline_z <= 16))),
     CONSTRAINT offline_tile_packages_max_z_check CHECK (((max_z >= 6) AND (max_z <= 16)))
 );
@@ -5174,24 +5175,25 @@ COMMENT ON FUNCTION public.forms_logic_rules(form public.forms) IS '
 
 
 --
--- Name: generate_offline_tile_package(integer, text, integer, integer, public.offline_tile_package_source_type); Type: FUNCTION; Schema: public; Owner: -
+-- Name: generate_offline_tile_package(integer, text, integer, integer, public.offline_tile_package_source_type, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type) RETURNS public.offline_tile_packages
+CREATE FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text) RETURNS public.offline_tile_packages
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
       pkg offline_tile_packages;
     begin
       if session_is_admin("projectId") and (select is_offline_enabled from projects where id = "projectId") = true then
-        insert into offline_tile_packages (project_id, region, data_source_url, is_mapbox_hosted, max_z, max_shoreline_z, source_type) values (
+        insert into offline_tile_packages (project_id, region, data_source_url, is_mapbox_hosted, max_z, max_shoreline_z, source_type, original_url_template) values (
           "projectId",
           (select region from projects where id = "projectId"),
           "dataSourceUrl",
           true,
           "maxZ",
           "maxShorelineZ",
-          "sourceType"
+          "sourceType",
+          "originalUrlTemplate"
         ) returning * into pkg;
         return pkg;
       else
@@ -17309,11 +17311,11 @@ GRANT ALL ON FUNCTION public.forms_logic_rules(form public.forms) TO anon;
 
 
 --
--- Name: FUNCTION generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text) TO seasketch_user;
 
 
 --

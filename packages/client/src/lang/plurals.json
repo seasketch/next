@@ -6,5 +6,9 @@
   "queryCount": "{{count}} query",
   "queryCount_plural": "{{count}} queries",
   "questionCount": "{{count}} question",
-  "questionCount_plural": "{{count}} questions"
+  "questionCount_plural": "{{count}} questions",
+  "downloadBasemaps": "Download Map",
+  "downloadBasemaps_plural": "Download Maps",
+  "tilePackageDownloadStats": "{{count}} tile package",
+  "tilePackageDownloadStats__plural": "{{count}} tile packages"
 }

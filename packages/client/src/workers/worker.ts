@@ -1,4 +1,4 @@
-import { MapTileCache } from "../offline/MapTileCache";
+import { SceneTileCalculator } from "../offline/MapTileCache";
 import pako from "pako";
 
 export function gzippedSize(data: string) {
@@ -6,4 +6,4 @@ export function gzippedSize(data: string) {
   return output.byteLength;
 }
 
-export const mapTileCache = new MapTileCache();
+export const mapTileCache = new SceneTileCalculator();

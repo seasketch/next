@@ -1,18 +1,29 @@
 /* eslint-disable i18next/no-literal-string */
-import { ExternalLinkIcon } from "@heroicons/react/outline";
+import {
+  ExclamationCircleIcon,
+  ExternalLinkIcon,
+} from "@heroicons/react/outline";
 import { CogIcon } from "@heroicons/react/solid";
 import bytes from "bytes";
-import { useContext, useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Badge from "../components/Badge";
+import Button from "../components/Button";
 import { Card, Header } from "../components/CenteredCardListLayout";
 import DropdownButton from "../components/DropdownButton";
 import Spinner from "../components/Spinner";
 import Warning from "../components/Warning";
-import { useOfflineSurveysQuery } from "../generated/graphql";
+import {
+  BasemapDetailsFragment,
+  OfflineBasemapDetailsFragment,
+  useOfflineSurveysQuery,
+} from "../generated/graphql";
 import { CacheProgress } from "./CacheStatus";
 import { ClientCacheManagerContext } from "./ClientCacheManager";
+import DownloadBasemapModal from "./DownloadBasemapModal";
+import { useBasemapCacheStatus } from "./useBasemapCacheStatus";
+import useBasemapsBySurvey from "./useBasemapsBySurvey";
 
 export default function OfflineSurveySelection() {
   const slug = window.location.pathname.split("/")[1];
@@ -21,6 +32,13 @@ export default function OfflineSurveySelection() {
     variables: { slug },
   });
   const { t } = useTranslation("offline");
+  const { surveyBasemaps } = useBasemapsBySurvey(
+    context?.cacheSizes?.selectedSurveyIds,
+    true
+  );
+  const [downloadBasemapModalOpen, setDownloadBasemapModalOpen] =
+    useState<null | Pick<BasemapDetailsFragment, "id" | "url">>(null);
+
   const surveys = useMemo(() => {
     if (data?.projectBySlug?.surveys) {
       return data.projectBySlug.surveys.map((s) => ({
@@ -94,51 +112,6 @@ export default function OfflineSurveySelection() {
               </div>
             ))}
           </div>
-          {/* <table className="min-w-full divide-y divide-gray-300 mb-2">
-            <thead>
-              <tr>
-                <th
-                  scope="col"
-                  className="py-2 px-3 text-left text-sm font-semibold text-gray-900"
-                >
-                  Enable
-                </th>
-                <th
-                  scope="col"
-                  className="py-2 px-3 text-sm font-semibold text-left text-gray-900"
-                >
-                  Survey
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {surveys.map((survey) => (
-                <tr key={survey.id}>
-                  <td className="whitespace-nowrap py-4 w-10 text-sm font-medium text-gray-900 text-center">
-                    <input
-                      checked={
-                        context.cacheSizes?.selectedSurveyIds.indexOf(
-                          survey.id
-                        ) !== -1
-                      }
-                      className="cursor-pointer"
-                      type="checkbox"
-                      onChange={async (e) => {
-                        await context.toggleSurveyOfflineSupport(
-                          survey.id,
-                          slug
-                        );
-                        context.populateOfflineSurveyAssets(false);
-                      }}
-                    />
-                  </td>
-                  <td className="whitespace-nowrap py-4 px-3 text-sm text-gray-500">
-                    <span className="truncate w-80 block">{survey.name}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table> */}
           {context?.cacheSizes && (
             <div>
               <h4 className="flex items-center">
@@ -222,6 +195,100 @@ export default function OfflineSurveySelection() {
           <Spinner />
         </div>
       )}
+      <div className="mt-5">
+        <Header>
+          <Trans ns="offline">Survey-Related Maps</Trans>
+        </Header>
+        <p className="text-gray-800 text-sm">
+          <Trans ns="offline">
+            Maps used in selected surveys will each need to be loaded into
+            browser cache. The cache state of each map is indicated below.
+          </Trans>
+        </p>
+        <div>
+          {surveyBasemaps.map(({ surveys, id, basemaps }) => (
+            <div key={id}>
+              <h4 className="truncate font-semibold text-sm py-4">
+                <Trans>Used in </Trans>
+                {surveys.join(", ")}
+              </h4>
+              <div className="space-y-2">
+                {basemaps.map((map) => (
+                  <MapItem
+                    key={map.id}
+                    map={map}
+                    onDownloadClick={(id) => setDownloadBasemapModalOpen(map)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {downloadBasemapModalOpen && (
+        <DownloadBasemapModal
+          maps={[downloadBasemapModalOpen]}
+          onRequestClose={() => setDownloadBasemapModalOpen(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+function MapItem({
+  map,
+  onDownloadClick,
+}: {
+  map: OfflineBasemapDetailsFragment;
+  onDownloadClick: (id: number) => void;
+}) {
+  const status = useBasemapCacheStatus(map.id);
+  return (
+    <>
+      <div className={`flex items-center h-20 w-full overflow-hidden`}>
+        <img
+          src={map.thumbnail}
+          className="w-20 h-20 rounded"
+          alt={`${map.name} preview`}
+        />
+        <div className="px-2 flex-1 h-full">
+          <h4 className="text-base truncate mb-1.5">{map.name}</h4>
+          {status.loading && <Spinner />}
+          {status.loading === false && (
+            <>
+              {status.status.status === "complete" && (
+                <Badge variant="primary">
+                  <Trans>Ready for offline use</Trans>
+                </Badge>
+              )}
+              {status.status.status === "incomplete" && (
+                <Badge variant="warning">
+                  <Trans>Cache incomplete</Trans>
+                </Badge>
+              )}
+              {status.status.status === "empty" && (
+                <Badge variant="warning">
+                  <ExclamationCircleIcon className="w-4 h-4 opacity-80 -ml-1.5 mr-0.5" />
+                  <Trans>Not cached</Trans>
+                </Badge>
+              )}
+            </>
+          )}
+        </div>
+        <div className="flex items-center justify-center">
+          {status.loading ? (
+            <Spinner />
+          ) : (
+            <>
+              <Button
+                small
+                label={<Trans>Download</Trans>}
+                onClick={() => onDownloadClick(map.id)}
+              />
+            </>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

@@ -44,8 +44,8 @@ import bytes from "bytes";
 import { urlTemplateForArcGISDynamicSource } from "./sourceTypes/ArcGISDynamicMapServiceSource";
 import bbox from "@turf/bbox";
 import { useParams } from "react-router";
-import { OfflineTileSettings } from "../offline/MapTileCache";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
+import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -311,6 +311,10 @@ class MapContextManager {
           /api\.mapbox\./.test(url)
         ) {
           url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
+        } else {
+          const Url = new URL(url);
+          Url.searchParams.set("ssn-tr", "true");
+          url = Url.toString();
         }
         return { url };
       },

@@ -8,12 +8,12 @@ import { strategies } from "./offline/GraphqlQueryCache/strategies";
 import * as SurveyAssetCache from "./offline/SurveyAssetCache";
 import LRUCache from "mnemonist/lru-cache-with-delete";
 import {
+  handleMapTileRequest,
+  handleSimulatorRequest,
+  isMapTileOrAssetRequest,
   isSimulatorUrl,
-  MapTileCache,
-  OfflineTileSettings,
-} from "./offline/MapTileCache";
-
-const mapTileCache = new MapTileCache();
+} from "./offline/MapTileCacheHandlers";
+import { OfflineTileSettings } from "./offline/OfflineTileSettings";
 
 const graphqlQueryCache = new GraphqlQueryCache(
   process.env.REACT_APP_GRAPHQL_ENDPOINT,
@@ -118,9 +118,9 @@ self.addEventListener("fetch", (event) => {
   } else if (isSimulatorUrl(url)) {
     const settings = offlineTileSimulatorSettings.get(event.clientId);
     if (settings) {
-      event.respondWith(
-        mapTileCache.handleSimulatorRequest(url, event, settings)
-      );
+      event.respondWith(handleSimulatorRequest(url, event, settings));
     }
+  } else if (isMapTileOrAssetRequest(url)) {
+    event.respondWith(handleMapTileRequest(url, event));
   }
 });

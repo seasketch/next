@@ -17,19 +17,19 @@ import {
 } from "../generated/graphql";
 import getSlug from "../getSlug";
 import { defaultOfflineTilingSettings } from "./BasemapOfflineSettings";
-import { getSources } from "./mapboxApiHelpers";
-import { MapTileCache } from "./MapTileCache";
+import { getSources, normalizeSourceUrlTemplate } from "./mapboxApiHelpers";
+import { SceneTileCalculator } from "./MapTileCache";
 import { urlForSource } from "./OfflineSurveyMapSettings";
 import TilePackageListItem from "./TilePackageListItem";
 
 let worker: any;
-let Calculator: MapTileCache;
+let Calculator: SceneTileCalculator;
 if (process.env.NODE_ENV === "test") {
   worker = { getChildTiles: () => 0 };
 } else {
   import("../workers/index").then((mod) => {
     worker = new mod.default();
-    Calculator = worker.mapTileCache as MapTileCache;
+    Calculator = worker.mapTileCache as SceneTileCalculator;
   });
 }
 
@@ -151,6 +151,10 @@ export default function DataSourceModal({
                   maxShorelineZ: calculatedTilingSettings.maxShorelineZ,
                   projectId: data!.projectBySlug!.id,
                   sourceType,
+                  originalUrlTemplate: normalizeSourceUrlTemplate(
+                    source.tiles ? source.tiles[0]! : source.url!,
+                    source.type
+                  ),
                 },
               }).then(() => {
                 refetch();
