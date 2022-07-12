@@ -652,6 +652,18 @@ describe("Survey creation smoke test", () => {
         });
         cy.get('@finishSector')
           .should('not.exist')
+        cy.get('h1').contains('Your sectors')
+          .should('exist')
+          .and('be.visible')
+        cy.get('.space-y-2')
+          .should('exist')
+          .and('be.visible')
+        cy.get('button').contains('Next sector').as('nextSectorBtn')
+          .should('exist')
+          .and('be.visible')
+        cy.get('@nextSectorBtn').then(($btn) => {
+          {$btn.trigger('click')}
+        })
         //if (device === "iphone-x") {
         //  cy.get('button').contains('New Shape')
         //    .should('be.visible')
@@ -659,98 +671,117 @@ describe("Survey creation smoke test", () => {
         //    .should('be.visible')
         //    .click()
         //}
-        let ary = []
-        cy.get('button').then(($btn) => {
-          console.log($btn)
-          //@ts-ignore
-          $btn.toArray().forEach((t) => {
-            ary.push(t.innerText)
-          })
-          if (ary.includes('Next sector')) {
-            cy.get('button').contains('Next sector').then(($btn) => {
-              expect ($btn).to.exist
-              //expect ($btn).to.be.visible({timeout: 10000})
-              {$btn.trigger('click')}
-
-            })
-          }
-        })
+        //let ary = []
+        //cy.get('button').then(($btn) => {
+        //  console.log($btn)
+        //  //@ts-ignore
+        //  $btn.toArray().forEach((t) => {
+        //    ary.push(t.innerText)
+        //  })
+        //  console.log(ary)
+        //  if (ary.includes('Next sector')) {
+        //    cy.get('button').contains('Next sector').then(($btn) => {
+        //      expect ($btn).to.exist
+        //      //expect ($btn).to.be.visible({timeout: 10000})
+        //      {$btn.trigger('click')}
+//
+        //    })
+        //  }
+        //})
       });
       it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device)
+        //let ary = []
+        //cy.get('button').then(($btn) => {
+        //  console.log($btn)
+        //  //@ts-ignore
+        //  $btn.toArray().forEach((t) => {
+        //    ary.push(t.innerText)
+        //  })
+        //  console.log(ary)
+        //  if (ary.includes('Next sector') && !ary.includes('Begin')) {
+        //    console.log(ary)
+        //    cy.get('button').contains('Next sector').then(($btn) => {
+        //      expect ($btn).to.exist
+        //      //expect ($btn).to.be.visible({timeout: 10000})
+        //      {$btn.trigger('click')}
+//
+        //    })
+        //  }
+        //})
         //cy.intercept('http://localhost:3000/static/js/*').as('static')
         //cy.contains('Next sector').click()
-        let ary = []
-        cy.get('button').then(($btn) => {
-        //  console.log($btn)
-       //
-        $btn.toArray().forEach((t) => {
-          ary.push(t.innerText)
-        })
-        console.log(ary)
-        if (ary.includes('Next sector')) {
-          console.log('true')
-          cy.get('button').contains('Next sector')
-            .should('be.visible')
-            .then(($btn) => {
-              {$btn.trigger('click')}
-            })
-          }
-        })
-        cy.get('button').contains('Next sector')
-          .should('not.exist')
-        if (device === "iphone-x" || device === "iphone-5") {
-          Cypress.on('uncaught:exception', (err, runnable) => {
-            // returning false here prevents Cypress from
-            // failing the test
-            if (err) {
-              //waitOnMapbox(3)
-              console.log(err)
-              return false
-            }
-            
-          })
-          
-          cy.get('[data-cy="button-begin"]')
-            .should('exist')
-            .and('be.visible')
-            .as('beginBtn').then(($btn) => {
-              {$btn.trigger('click')}
-            })
-            //cy.get('@beginBtn')
-            //  .should('not.exist')
-            waitOnMapbox(2)
-            //cy.get('svg').then((svg) => {
-            //    while (svg.hasClass('animate-spin')) {
-            //      waitOnMapbox(1)
-            //    }
-            //  })
-          cy.get('[role="progressbar"]')
-            .should('not.exist')
-            drawPolygon()
-          cy.get('[data-cy="button-done"]').as('doneBtn')
-            .should('exist')
-            .and('be.visible')
-            .click()
-        } else {
-          waitOnMapbox(5)
-          //cy.get('svg').then((svg) => {
-          //  if (device !== "ipad-2") {
-          //    while (svg.hasClass('animate-spin')) {
-          //      waitOnMapbox(1)
-          //    }
-          //  } else {
-          //    //wait
-          //  }
-          // 
-          //})
-          cy.get('[role="progressbar"]')
-            .should('not.exist')
-          cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
-            .should('exist')
-            .and('be.visible')
-          drawPolygon()
-        }
+        //let ary = []
+        //cy.get('button').then(($btn) => {
+        ////  console.log($btn)
+       ////
+        //$btn.toArray().forEach((t) => {
+        //  ary.push(t.innerText)
+        //})
+        //console.log(ary)
+        //if (ary.includes('Next sector')) {
+        //  console.log('true')
+        //  cy.get('button').contains('Next sector')
+        //    .should('be.visible')
+        //    .then(($btn) => {
+        //      {$btn.trigger('click')}
+        //    })
+        //  }
+        //})
+        //cy.get('button').contains('Next sector')
+        //  .should('not.exist')
+        //if (device === "iphone-x" || device === "iphone-5") {
+        //  Cypress.on('uncaught:exception', (err, runnable) => {
+        //    // returning false here prevents Cypress from
+        //    // failing the test
+        //    if (err) {
+        //      //waitOnMapbox(3)
+        //      console.log(err)
+        //      return false
+        //    }
+        //    
+        //  })
+        //  
+        //  cy.get('[data-cy="button-begin"]')
+        //    .should('exist')
+        //    .and('be.visible')
+        //    .as('beginBtn').then(($btn) => {
+        //      {$btn.trigger('click')}
+        //    })
+        //    //cy.get('@beginBtn')
+        //    //  .should('not.exist')
+        //    waitOnMapbox(2)
+        //    //cy.get('svg').then((svg) => {
+        //    //    while (svg.hasClass('animate-spin')) {
+        //    //      waitOnMapbox(1)
+        //    //    }
+        //    //  })
+        //  cy.get('[role="progressbar"]')
+        //    .should('not.exist')
+        //    drawPolygon()
+        //  cy.get('[data-cy="button-done"]').as('doneBtn')
+        //    .should('exist')
+        //    .and('be.visible')
+        //    .click()
+        //} else {
+        //  waitOnMapbox(5)
+        //  //cy.get('svg').then((svg) => {
+        //  //  if (device !== "ipad-2") {
+        //  //    while (svg.hasClass('animate-spin')) {
+        //  //      waitOnMapbox(1)
+        //  //    }
+        //  //  } else {
+        //  //    //wait
+        //  //  }
+        //  // 
+        //  //})
+        //  cy.get('[role="progressbar"]')
+        //    .should('not.exist')
+        //  cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
+        //    .should('exist')
+        //    .and('be.visible')
+        //  drawPolygon()
+        //}
       });
       //it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
       //  cy.viewport(device)
