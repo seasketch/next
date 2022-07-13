@@ -461,11 +461,20 @@ describe("Survey creation smoke test", () => {
       //})
       it(`Can draw a polygon - Fisheries - Commercial, Tuna - ${device}`, () => {
         cy.viewport(device)
-        cy.get('[type = "button"]').then(($btn) => {
-          if ($btn.html() === "Next") {
-            //{$btn.trigger('click')}
-          } 
-        })
+        cy.get('[title = "Fisheries - Commercial, Tuna"]')
+          .should('not.exist')
+        cy.get('button').contains('Next')
+          .should('not.exist')
+        //cy.get('[type = "button"]').then(($btn) => {
+        //  if ($btn.html() === "Next") {
+        //    cy.get('button').contains('Next')
+        //      .scrollIntoView()
+        //      .should('be.visible')
+        //      .then(($btn) => {
+        //        {$btn.trigger('click')}
+        //      });
+        //  } 
+        //})
         cy.get('h4').contains('Fisheries - Commercial, Tuna')
           .should('exist')
           .and('be.visible')
@@ -493,7 +502,7 @@ describe("Survey creation smoke test", () => {
             .should('not.exist')
           drawPolygon()
         }
-      })
+      })//
       it(`Can view basemap selector - ${device}`, () => {
         cy.viewport(device)
         cy.get('img').click()
@@ -720,34 +729,34 @@ describe("Survey creation smoke test", () => {
         }
       });
       //it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.get('button').then(($button) => {
-      //    if ($button.text().includes('Done')) {
-      //      cy.get('button').contains('Done').then(($btn) => {
-      //        {$btn.trigger('click')}
-      //      });
-      //    }
-      //  });
-      //  cy.get('button').contains('Done')
-      //    .should('not.exist')
-      //  if (device === "iphone-5" || device ==="iphone-x") {
-      //    cy.get('.mapboxgl-ctrl-scale')
-      //    //.should('not.exist')
-      //    .should('not.be.visible')
-      //    cy.contains('Fisheries')
-      //      .should('not.exist')
-      //  //cy.get('img[alt="Satellite map preview')
-      //  //  .should('not.exist')
-//
-      //  }
-      //  
-      //  
-      //  cy.contains('Area Name')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.contains('How important')
-      //  cy.get(".mt-1 > .block")
-      //    .should('be.visible')
+      ////  cy.viewport(device)
+      ////  cy.get('button').then(($button) => {
+      ////    if ($button.text().includes('Done')) {
+      ////      cy.get('button').contains('Done').then(($btn) => {
+      ////        {$btn.trigger('click')}
+      ////      });
+      ////    }
+      ////  });
+      ////  cy.get('button').contains('Done')
+      ////    .should('not.exist')
+      ////  if (device === "iphone-5" || device ==="iphone-x") {
+      ////    cy.get('.mapboxgl-ctrl-scale')
+      ////    //.should('not.exist')
+      ////    .should('not.be.visible')
+      ////    cy.contains('Fisheries')
+      ////      .should('not.exist')
+      ////  //cy.get('img[alt="Satellite map preview')
+      ////  //  .should('not.exist')
+////
+      ////  }
+      ////  
+      ////  
+      ////  cy.contains('Area Name')
+      ////    .should('exist')
+      ////    .and('be.visible')
+      ////  cy.contains('How important')
+      ////  cy.get(".mt-1 > .block")
+      ////    .should('be.visible')
       //    .clear()
       //    .type("Sea cucumber fishing area.")
       //  cy.contains('What type of gear')
