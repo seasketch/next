@@ -98,6 +98,7 @@ const checkForNavAndLang = () => {
 
 const drawPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
+    console.log(t)
     expect (t).to.exist
     const canvases = [];
     canvases.push(t);
@@ -147,7 +148,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["iphone-5"]//"iphone-x", "iphone-5", "ipad-2", "macbook-15"]//"iphone-x", "ipad-2", "macbook-15"]//, ]//]//, "iphone-5",]//
+const devices: any = ["macbook-15"]//"iphone-x", "iphone-5", "ipad-2", "macbook-15"]//"iphone-x", "ipad-2", "macbook-15"]//, ]//]//, "iphone-5",]//
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -359,7 +360,7 @@ describe("Survey creation smoke test", () => {
       it("Can visit the survey", () => {
         cy.viewport(device)
         //iphone-x
-        if (device === "iphone-5") {
+        if (device === "macbook-15") {
           cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         }
       });
@@ -483,6 +484,18 @@ describe("Survey creation smoke test", () => {
             expect (basemaps[maps[key].name]).to.exist
           })
         })
+        if (device === "iphone-x" || device === "iphone-5") {
+          Cypress.on('uncaught:exception', (err, runnable) => {
+            // returning false here prevents Cypress from
+            // failing the test
+            if (err) {
+              //waitOnMapbox(3)
+              console.log(err)
+              return false
+            }
+            
+          })
+        }
         //polygon path for mobile devices
         if (device === "iphone-x" || device === "iphone-5") {
           cy.get('[data-cy="button-begin"]')
@@ -697,27 +710,19 @@ describe("Survey creation smoke test", () => {
             .as('beginBtn').then(($btn) => {
               {$btn.trigger('click')}
             })
-            cy.get('[data-cy="button-begin"]')
-              .should('not.be.visible')
-            cy.get('p').contains('Click on the map')
-              .should('exist')
-              .and('be.visible')
-            
-          //cy.get('@beginBtn')
-          //  .should('not.exist')
-            //waitOnMapbox(2)
-            //cy.get('svg').then((svg) => {
-            //    while (svg.hasClass('animate-spin')) {
-            //      waitOnMapbox(1)
-            //    }
-            //  })
+          cy.get('[data-cy="button-begin"]')
+            .should('not.be.visible')
+          cy.get('p').contains('Click on the map')
+            .should('exist')
+            .and('be.visible');
+          //waitOnMapbox(2);
           cy.get('[role="progressbar"]')
             .should('not.exist')
-            drawPolygon()
-          //cy.get('[data-cy="button-done"]').as('doneBtn')
-          //  .should('exist')
-          //  .and('be.visible')
-          //  .click()
+          drawPolygon()
+          cy.get('[data-cy="button-done"]').as('doneBtn')
+            .should('exist')
+            .and('be.visible')
+            .click()
         } else {
           waitOnMapbox(5)
           cy.get('[role="progressbar"]')
@@ -727,28 +732,28 @@ describe("Survey creation smoke test", () => {
             .and('be.visible')
           drawPolygon()
         }
-      });
-      //it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      ////  cy.viewport(device)
-      ////  cy.get('button').then(($button) => {
-      ////    if ($button.text().includes('Done')) {
-      ////      cy.get('button').contains('Done').then(($btn) => {
-      ////        {$btn.trigger('click')}
-      ////      });
-      ////    }
-      ////  });
-      ////  cy.get('button').contains('Done')
-      ////    .should('not.exist')
-      ////  if (device === "iphone-5" || device ==="iphone-x") {
-      ////    cy.get('.mapboxgl-ctrl-scale')
-      ////    //.should('not.exist')
-      ////    .should('not.be.visible')
-      ////    cy.contains('Fisheries')
-      ////      .should('not.exist')
-      ////  //cy.get('img[alt="Satellite map preview')
-      ////  //  .should('not.exist')
-////
-      ////  }
+      })//;
+      //////it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      ////////  cy.viewport(device)
+      //////  cy.get('button').then(($button) => {
+      //////    if ($button.text().includes('Done')) {
+      //////      cy.get('button').contains('Done').then(($btn) => {
+      //////        {$btn.trigger('click')}
+      //////      });
+      //////    }
+      //////  });
+      //////  cy.get('button').contains('Done')
+      //////    .should('not.exist')
+      //////  if (device === "iphone-5" || device ==="iphone-x") {
+      //////    cy.get('.mapboxgl-ctrl-scale')
+      //////    //.should('not.exist')
+      //////    .should('not.be.visible')
+      //////    cy.contains('Fisheries')
+      //////      .should('not.exist')
+      //////  //cy.get('img[alt="Satellite map preview')
+      //////  //  .should('not.exist')
+//////
+      //////  }
       ////  
       ////  
       ////  cy.contains('Area Name')
