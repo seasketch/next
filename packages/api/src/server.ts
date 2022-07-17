@@ -23,6 +23,7 @@ import { getFeatureCollection, getMVT } from "./exportSurvey";
 import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
+import { makeDataLoaders } from "./dataLoaders";
 
 interface SSNRequest extends Request {
   user?: { id: number; canonicalEmail: string };
@@ -198,6 +199,7 @@ run({
 });
 
 const tilesetPool = createPool();
+const loadersPool = createPool({}, "admin");
 
 app.use(
   "/export-survey/:id/spatial/:element_id/tiles/:z/:x/:y.pbf",
@@ -288,6 +290,7 @@ app.use(
       return {
         user: req.user,
         projectId: req.projectId,
+        loaders: makeDataLoaders(loadersPool),
       };
     },
   })

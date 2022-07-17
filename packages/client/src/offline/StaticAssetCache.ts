@@ -276,7 +276,24 @@ class StaticAssetCache {
   async handleRequest(url: URL, event: FetchEvent): Promise<Response> {
     const cacheKey = this.urlsToCacheKeys.get(url.pathname);
     if (cacheKey) {
-      if (process.env.NODE_ENV === "development" && navigator.onLine && false) {
+      if (process.env.NODE_ENV === "development") {
+        // fetch from dev server, fallback to cache
+        return fetch(event.request)
+          .then((response) => {
+            return response;
+          })
+          .catch(async (e) => {
+            const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+            const response = await cache.match(cacheKey);
+            if (response) {
+              return response;
+            } else {
+              return new Response("Failed to fetch", {
+                status: 408,
+                headers: { "Content-Type": "text/plain" },
+              });
+            }
+          });
       } else {
         const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
         const responseFromCache = await cache.match(cacheKey);

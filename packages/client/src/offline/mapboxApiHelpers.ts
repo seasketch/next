@@ -1,5 +1,4 @@
-import { AnySourceData, Style } from "mapbox-gl";
-import { useEffect, useState } from "react";
+import { Style } from "mapbox-gl";
 
 const cachedStyles: { [url: string]: Style } = {};
 
@@ -59,53 +58,4 @@ export function normalizeSourceUrlTemplate(
     }
   }
   return url;
-}
-
-export async function getSources(
-  styleUrl: string,
-  mapboxApiKey: string,
-  abortController?: AbortController
-) {
-  return Object.values(
-    (await getStyle(styleUrl, mapboxApiKey, abortController)).sources
-  );
-}
-
-export function useStyleSources(
-  styleUrl: string | null | undefined,
-  mapboxApiKey: string
-) {
-  const [state, setState] = useState<{
-    sources?: AnySourceData[];
-    loading: boolean;
-    error?: string;
-  }>({
-    loading: true,
-  });
-  useEffect(() => {
-    const ac = new AbortController();
-    if (!styleUrl) {
-      setState({ loading: false, sources: [] });
-    } else {
-      setState({ loading: true });
-      getSources(styleUrl, mapboxApiKey, ac)
-        .then((sources) => {
-          if (!ac.signal.aborted) {
-            setState({
-              loading: false,
-              sources,
-            });
-          }
-        })
-        .catch((e) => {
-          if (!ac.signal.aborted) {
-            setState({ loading: false, error: e.toString() });
-          }
-        });
-    }
-    return () => {
-      ac.abort();
-    };
-  }, [mapboxApiKey, styleUrl]);
-  return state;
 }

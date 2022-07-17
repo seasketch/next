@@ -71,4 +71,19 @@ async function set(key: string, value: any) {
   });
 }
 
-export { get, set, mget };
+/**
+ * Set a key to expire in x milliseconds
+ * @param {string} key
+ * @param {any} value
+ * @param {number} ttl milliseconds
+ * @returns
+ */
+async function setWithTTL(key: string, value: any, ttl: number) {
+  return new Promise(function (resolve, reject) {
+    client.set(key, value, "PX", ttl, () => {
+      resolve(value);
+    });
+  });
+}
+
+export { get, set, mget, setWithTTL };

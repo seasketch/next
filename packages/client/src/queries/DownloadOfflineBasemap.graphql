@@ -8,3 +8,9 @@ query DownloadableOfflineTilePackages($slug: String!) {
     }
   }
 }
+
+query DownloadBasemapDetails($id: Int!) {
+  basemap(id: $id) {
+    ...OfflineBasemapDetails
+  }
+}

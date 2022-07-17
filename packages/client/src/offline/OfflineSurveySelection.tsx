@@ -1,9 +1,5 @@
-/* eslint-disable i18next/no-literal-string */
-import {
-  ExclamationCircleIcon,
-  ExternalLinkIcon,
-} from "@heroicons/react/outline";
-import { CogIcon } from "@heroicons/react/solid";
+import { ExternalLinkIcon } from "@heroicons/react/outline";
+import { CheckCircleIcon, CogIcon } from "@heroicons/react/solid";
 import bytes from "bytes";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -16,14 +12,14 @@ import Spinner from "../components/Spinner";
 import Warning from "../components/Warning";
 import {
   BasemapDetailsFragment,
-  OfflineBasemapDetailsFragment,
   useOfflineSurveysQuery,
 } from "../generated/graphql";
 import { CacheProgress } from "./CacheStatus";
 import { ClientCacheManagerContext } from "./ClientCacheManager";
 import DownloadBasemapModal from "./DownloadBasemapModal";
-import { useBasemapCacheStatus } from "./useBasemapCacheStatus";
-import useBasemapsBySurvey from "./useBasemapsBySurvey";
+import useBasemapsBySurvey, {
+  BasemapDetailsAndClientCacheStatus,
+} from "./useBasemapsBySurvey";
 
 export default function OfflineSurveySelection() {
   const slug = window.location.pathname.split("/")[1];
@@ -37,7 +33,7 @@ export default function OfflineSurveySelection() {
     true
   );
   const [downloadBasemapModalOpen, setDownloadBasemapModalOpen] =
-    useState<null | Pick<BasemapDetailsFragment, "id" | "url">>(null);
+    useState<null | Pick<BasemapDetailsFragment, "id" | "url" | "name">>(null);
 
   const surveys = useMemo(() => {
     if (data?.projectBySlug?.surveys) {
@@ -227,7 +223,7 @@ export default function OfflineSurveySelection() {
       </div>
       {downloadBasemapModalOpen && (
         <DownloadBasemapModal
-          maps={[downloadBasemapModalOpen]}
+          map={downloadBasemapModalOpen}
           onRequestClose={() => setDownloadBasemapModalOpen(null)}
         />
       )}
@@ -239,10 +235,9 @@ function MapItem({
   map,
   onDownloadClick,
 }: {
-  map: OfflineBasemapDetailsFragment;
+  map: BasemapDetailsAndClientCacheStatus;
   onDownloadClick: (id: number) => void;
 }) {
-  const status = useBasemapCacheStatus(map.id);
   return (
     <>
       <div className={`flex items-center h-20 w-full overflow-hidden`}>
@@ -253,40 +248,70 @@ function MapItem({
         />
         <div className="px-2 flex-1 h-full">
           <h4 className="text-base truncate mb-1.5">{map.name}</h4>
-          {status.loading && <Spinner />}
-          {status.loading === false && (
-            <>
-              {status.status.status === "complete" && (
-                <Badge variant="primary">
-                  <Trans>Ready for offline use</Trans>
-                </Badge>
-              )}
-              {status.status.status === "incomplete" && (
-                <Badge variant="warning">
-                  <Trans>Cache incomplete</Trans>
-                </Badge>
-              )}
-              {status.status.status === "empty" && (
-                <Badge variant="warning">
-                  <ExclamationCircleIcon className="w-4 h-4 opacity-80 -ml-1.5 mr-0.5" />
-                  <Trans>Not cached</Trans>
-                </Badge>
-              )}
-            </>
+          <>
+            {map.cacheState.state === "complete" && (
+              <Badge variant="primary">
+                <Trans>Ready for offline use</Trans>
+              </Badge>
+            )}
+            {map.cacheState.state === "incomplete" && (
+              <Badge variant="warning">
+                <Trans>Not cached</Trans>
+              </Badge>
+            )}
+            {map.cacheState.state === "has-updates" && (
+              <Badge variant="warning">
+                <Trans>Update available</Trans>
+              </Badge>
+            )}
+          </>
+          {map.cacheState.state !== "incomplete" && (
+            <div className="text-sm text-gray-500 mt-0.5 ml-0.5">
+              {map.cacheState.lastUpdated && (
+                // eslint-disable-next-line i18next/no-literal-string
+                <span className="text-xs">
+                  Downloaded {map.cacheState.lastUpdated.toLocaleDateString()}.
+                </span>
+              )}{" "}
+              {/* {map.bytes && (
+                <span className="text-xs">{bytes(map.bytes)}.</span>
+              )}{" "} */}
+              {map.cacheState.sources[0].downloadedTilePackage && (
+                <span className="text-xs">
+                  {map.cacheState.sources[0].downloadedTilePackage.maxShorelineZ
+                    ? // eslint-disable-next-line i18next/no-literal-string
+                      `z${map.cacheState.sources[0].downloadedTilePackage.maxZ}-${map.cacheState.sources[0].downloadedTilePackage.maxShorelineZ}`
+                    : // eslint-disable-next-line i18next/no-literal-string
+                      `z${map.cacheState.sources[0].downloadedTilePackage.maxZ}`}
+                </span>
+              )}{" "}
+              <button
+                className="underline text-xs"
+                onClick={() => onDownloadClick(map.id)}
+              >
+                <Trans ns="offline">Details</Trans>
+              </button>
+            </div>
           )}
         </div>
         <div className="flex items-center justify-center">
-          {status.loading ? (
-            <Spinner />
-          ) : (
-            <>
+          <>
+            {map.cacheState.state === "complete" ? (
+              <CheckCircleIcon className="w-8 h-8 text-primary-600" />
+            ) : (
               <Button
                 small
-                label={<Trans>Download</Trans>}
+                label={
+                  map.cacheState.state === "incomplete" ? (
+                    <Trans>Download</Trans>
+                  ) : (
+                    <Trans>Update</Trans>
+                  )
+                }
                 onClick={() => onDownloadClick(map.id)}
               />
-            </>
-          )}
+            )}
+          </>
         </div>
       </div>
     </>

@@ -3,14 +3,8 @@ import {
   CollectionIcon,
   ExclamationCircleIcon,
 } from "@heroicons/react/solid";
-import { flatten } from "lodash";
-import {
-  AnySourceData,
-  RasterDemSource,
-  RasterSource,
-  VectorSource,
-} from "mapbox-gl";
-import { useEffect, useMemo, useState } from "react";
+import { AnySourceData } from "mapbox-gl";
+import { useMemo, useState } from "react";
 import { Trans as T } from "react-i18next";
 import { Link } from "react-router-dom";
 import Badge from "../components/Badge";
@@ -20,17 +14,13 @@ import CenteredCardListLayout, {
 } from "../components/CenteredCardListLayout";
 import Spinner from "../components/Spinner";
 import {
-  BasemapDetailsFragment,
   useOfflineSurveyMapsQuery,
   OfflineBasemapDetailsFragment,
+  OfflineSourceDetails,
 } from "../generated/graphql";
-import {
-  OfflineTilePackageDetailsFragment,
-  OfflineTilePackageStatus,
-} from "../generated/queries";
+import { OfflineTilePackageStatus } from "../generated/queries";
 import getSlug from "../getSlug";
 import DataSourceModal from "./DataSourceModal";
-import { getSources, useStyleSources } from "./mapboxApiHelpers";
 import TilePackageListItem from "./TilePackageListItem";
 import useBasemapsBySurvey from "./useBasemapsBySurvey";
 
@@ -50,54 +40,12 @@ export default function OfflineSurveyMapSettings() {
   });
 
   const [sourceModalOpen, setSourceModalOpen] =
-    useState<null | RasterSource | VectorSource | RasterDemSource>(null);
+    useState<null | Pick<
+      OfflineSourceDetails,
+      "dataSourceUrl" | "templateUrl" | "type"
+    >>(null);
 
   const { surveyBasemaps } = useBasemapsBySurvey();
-
-  const [dataSources, setDataSources] = useState<
-    (RasterSource | RasterDemSource | VectorSource)[]
-  >([]);
-
-  useEffect(() => {
-    const basemaps: {
-      [id: number]: BasemapDetailsFragment & {
-        useDefaultOfflineTileSettings: boolean;
-      };
-    } = {};
-    for (const survey of data?.projectBySlug?.surveys || []) {
-      for (const basemap of survey.basemaps || []) {
-        if (basemap.isOfflineEnabled) {
-          basemaps[basemap.id] = basemap;
-        }
-      }
-    }
-    Promise.all(
-      Object.values(basemaps).map(({ url }) =>
-        getSources(
-          url,
-          data!.projectBySlug!.mapboxPublicKey ||
-            process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
-        )
-      )
-    ).then((sources) => {
-      const flattenedSources = flatten(sources);
-      const uniqueSources: {
-        [url: string]: RasterSource | RasterDemSource | VectorSource;
-      } = {};
-      for (const source of flattenedSources) {
-        const url = urlForSource(source);
-        if (
-          url &&
-          (source.type === "raster" ||
-            source.type === "raster-dem" ||
-            source.type === "vector")
-        ) {
-          uniqueSources[url] = source;
-        }
-      }
-      setDataSources(Object.values(uniqueSources));
-    });
-  }, [data]);
 
   const sortedTilePackages = useMemo(() => {
     if (data?.projectBySlug?.offlineTilePackagesConnection.nodes) {
@@ -168,11 +116,9 @@ export default function OfflineSurveyMapSettings() {
                             maxShorelineZ: number;
                           }) || { maxZ: 11 }
                         }
-                        tilePackages={
-                          data?.projectBySlug?.offlineTilePackagesConnection
-                            .nodes || []
-                        }
-                        onSourceClick={(source) => setSourceModalOpen(source)}
+                        onSourceClick={(source, tp?: any) => {
+                          setSourceModalOpen(source);
+                        }}
                       />
                     ))}
                   </div>
@@ -208,38 +154,18 @@ function MapItem({
   map,
   mapboxApiKey,
   defaultTilingSettings,
-  tilePackages,
   onSourceClick,
 }: {
   map: OfflineBasemapDetailsFragment;
   mapboxApiKey: string;
   defaultTilingSettings: { maxZ: number; maxShorelineZ: number };
-  tilePackages: OfflineTilePackageDetailsFragment[];
   onSourceClick: (
-    source: RasterSource | RasterDemSource | VectorSource
+    source: Pick<OfflineSourceDetails, "dataSourceUrl" | "type" | "templateUrl">
   ) => void;
 }) {
-  const { sources, loading, error } = useStyleSources(map.url, mapboxApiKey);
   const tilingSettings = !map.useDefaultOfflineTileSettings
     ? map.offlineTileSettings[0] || defaultTilingSettings
     : defaultTilingSettings;
-
-  const annotatedSources = useMemo(() => {
-    const annotated = [];
-    if (sources) {
-      for (const source of sources) {
-        const url = urlForSource(source)!;
-        const pkg = tilePackages.find((p) => p.dataSourceUrl === url);
-        annotated.push({
-          ...source,
-          tilePackage: pkg,
-          source: source,
-          status: pkg ? "match" : "missing",
-        });
-      }
-    }
-    return annotated;
-  }, [sources, tilePackages]);
 
   const isMapboxHosted = /mapbox:/.test(map.url);
   return (
@@ -283,58 +209,59 @@ function MapItem({
             </Link>
           </p>
           <div>
-            {loading && <Spinner />}
-            {error}
-            {annotatedSources &&
-              (isMapboxHosted ? (
-                <div className="text-sm">
-                  <h5 className="text-sm text-gray-500 pb-0.5">
-                    <Trans>Source types</Trans>
-                  </h5>
-                  <div className="text-gray-500 space-x-1 overflow-hidden whitespace-nowrap">
-                    {annotatedSources.map((s, i) => (
+            {map.offlineSupportInformation && isMapboxHosted ? (
+              <div className="text-sm">
+                <h5 className="text-sm text-gray-500 pb-0.5">
+                  <Trans>Source types</Trans>
+                </h5>
+                <div className="text-gray-500 space-x-1 overflow-hidden whitespace-nowrap">
+                  {map.offlineSupportInformation.sources.map((source, i) => {
+                    const tilePackage = source.tilePackages.length
+                      ? source.tilePackages[0]
+                      : null;
+                    return (
                       <button
-                        key={urlForSource(s.source)}
-                        onClick={() =>
-                          onSourceClick(
-                            s.source as
-                              | VectorSource
-                              | RasterDemSource
-                              | RasterSource
-                          )
-                        }
+                        key={source.dataSourceUrl}
+                        onClick={() => {
+                          onSourceClick(source);
+                        }}
                       >
                         <Badge
-                          key={s.type + i}
-                          variant={
-                            s.status === "missing" ? "warning" : "primary"
-                          }
+                          key={source.dataSourceUrl}
+                          variant={!tilePackage ? "warning" : "primary"}
                         >
-                          {s.status === "complete" && (
+                          {tilePackage?.jobStatus ===
+                            OfflineTilePackageStatus.Complete && (
                             <CheckCircleIcon className="w-4 h-4 opacity-80 -ml-1.5 mr-0.5" />
                           )}
-                          {s.status === "incomplete" && (
-                            <ExclamationCircleIcon className="w-4 h-4 opacity-80 -ml-1.5 mr-0.5 text-red-800" />
-                          )}
-                          {s.status === "missing" && (
+                          {!tilePackage && (
                             <ExclamationCircleIcon className="w-4 h-4 opacity-80 -ml-1.5 mr-0.5 text-yellow-700" />
                           )}
-                          {s.status === "match" && s.tilePackage && (
-                            <MiniPkgIcon status={s.tilePackage.jobStatus!} />
+                          {tilePackage?.jobStatus ===
+                            OfflineTilePackageStatus.Failed && (
+                            <ExclamationCircleIcon className="w-4 h-4 opacity-80 -ml-1.5 mr-0.5 text-red-800" />
                           )}
-                          {s.type}
+                          {tilePackage &&
+                            tilePackage.jobStatus !==
+                              OfflineTilePackageStatus.Complete &&
+                            tilePackage.jobStatus !==
+                              OfflineTilePackageStatus.Failed && (
+                              <MiniPkgIcon status={tilePackage.jobStatus!} />
+                            )}
+                          {source.type.toLowerCase()}
                         </Badge>
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              ) : (
-                <div className="text-sm">
-                  <Trans>
-                    Only supported for Mapbox-hosted basemaps currently.
-                  </Trans>
-                </div>
-              ))}
+              </div>
+            ) : (
+              <div className="text-sm">
+                <Trans>
+                  Only supported for Mapbox-hosted basemaps currently.
+                </Trans>
+              </div>
+            )}
           </div>
         </div>
       </div>

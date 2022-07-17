@@ -19,6 +19,24 @@ fragment OfflineTilePackageDetails on OfflineTilePackage {
   originalUrlTemplate
 }
 
+fragment BasemapOfflineSupportInfo on OfflineSupportInformation {
+  id
+  styleLastModified
+  staticAssets {
+    url
+    cacheKey
+    type
+  }
+  sources {
+    templateUrl
+    dataSourceUrl
+    tilePackages {
+      ...OfflineTilePackageDetails
+    }
+    type
+  }
+}
+
 fragment OfflineBasemapDetails on Basemap {
   ...BasemapDetails
   useDefaultOfflineTileSettings
@@ -27,6 +45,9 @@ fragment OfflineBasemapDetails on Basemap {
     id
     maxShorelineZ
     maxZ
+  }
+  offlineSupportInformation {
+    ...BasemapOfflineSupportInfo
   }
 }
 
@@ -109,6 +130,14 @@ query BasemapOfflineSettings($id: Int!, $slug: String!) {
         geojson
       }
     }
+    offlineSupportInformation {
+      id
+      hasUncacheableSources
+      sources {
+        dataSourceUrl
+        type
+      }
+    }
   }
 }
 
@@ -160,6 +189,30 @@ mutation generateOfflineTilePackage(
     }
   ) {
     offlineTilePackage {
+      project {
+        id
+        surveys {
+          id
+          basemaps {
+            id
+            offlineSupportInformation {
+              id
+              staticAssets {
+                url
+                type
+              }
+              sources {
+                templateUrl
+                dataSourceUrl
+                tilePackages {
+                  ...OfflineTilePackageDetails
+                }
+                type
+              }
+            }
+          }
+        }
+      }
       ...OfflineTilePackageDetails
     }
   }

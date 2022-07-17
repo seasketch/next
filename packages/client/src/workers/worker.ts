@@ -6,4 +6,26 @@ export function gzippedSize(data: string) {
   return output.byteLength;
 }
 
-export const mapTileCache = new SceneTileCalculator();
+let sceneCalculator: SceneTileCalculator;
+export function getSceneTileCalculator() {
+  if (!sceneCalculator) {
+    sceneCalculator = new SceneTileCalculator();
+  }
+  return sceneCalculator;
+}
+
+export async function getTilesForScene() {
+  return getSceneTileCalculator().getTilesForScene.apply(
+    getSceneTileCalculator(),
+    // @ts-ignore
+    arguments
+  );
+}
+
+export async function countChildTiles() {
+  return getSceneTileCalculator().calculator.countChildTiles.apply(
+    getSceneTileCalculator().calculator,
+    // @ts-ignore
+    arguments
+  );
+}

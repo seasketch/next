@@ -234,6 +234,9 @@ type Basemap implements Node {
   """
   nodeId: ID!
 
+  """Only available on supported projects by authorized users"""
+  offlineSupportInformation: OfflineSupportInformation
+
   """Reads and enables pagination through a set of `OfflineTileSetting`."""
   offlineTileSettings(
     """
@@ -561,6 +564,24 @@ max value for a JavaScript number. Therefore all big integers will be output as
 strings and not numbers.
 """
 scalar BigInt
+
+type CacheableOfflineAsset {
+  """
+  If provided, is a "bare" url with query strings such as access_token
+  stripped out.
+  """
+  cacheKey: String
+  type: CacheableOfflineAssetType!
+  url: String!
+}
+
+enum CacheableOfflineAssetType {
+  FONT
+  IMAGE
+  JSON
+  MAPBOX_GL_STYLE
+  SPRITE
+}
 
 """All input for the `clearFormElementStyle` mutation."""
 input ClearFormElementStyleInput {
@@ -2674,6 +2695,9 @@ enum DataSourceTypes {
   """MapBox GL Style "video" source"""
   VIDEO
 }
+
+"""The day, does not include a time."""
+scalar Date
 
 """
 A point in time as described by the [ISO
@@ -7936,6 +7960,24 @@ interface Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+}
+
+type OfflineSourceDetails {
+  dataSourceUrl: String!
+  templateUrl: String!
+
+  """Whether a tile packages is available for download"""
+  tilePackages: [OfflineTilePackage!]!
+  type: OfflineTilePackageSourceType!
+}
+
+"""Provides information on resources necessary to use a basemap offline"""
+type OfflineSupportInformation {
+  hasUncacheableSources: Boolean!
+  id: ID!
+  sources: [OfflineSourceDetails!]!
+  staticAssets: [CacheableOfflineAsset!]!
+  styleLastModified: Date
 }
 
 type OfflineTilePackage implements Node {

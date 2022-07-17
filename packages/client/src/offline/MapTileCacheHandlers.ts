@@ -62,7 +62,6 @@ async function cachesMatch(url: string) {
   // check map tiles
   for (const key of cacheKeys) {
     if (/^data-source/.test(key)) {
-      console.log("checking", key);
       const cache = await caches.open(key);
       const cached = await cache.match(url);
       if (cached) {

@@ -20,6 +20,8 @@ export type Scalars = {
   BigInt: any;
   /** A location in a connection that can be used for resuming pagination. */
   Cursor: any;
+  /** The day, does not include a time. */
+  Date: any;
   /**
    * A point in time as described by the [ISO
    * 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
@@ -246,6 +248,8 @@ export type Basemap = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Only available on supported projects by authorized users */
+  offlineSupportInformation?: Maybe<OfflineSupportInformation>;
   /** Reads and enables pagination through a set of `OfflineTileSetting`. */
   offlineTileSettings: Array<OfflineTileSetting>;
   /** Reads and enables pagination through a set of `OptionalBasemapLayer`. */
@@ -478,6 +482,25 @@ export enum BasemapsOrderBy {
 }
 
 
+
+export type CacheableOfflineAsset = {
+  __typename?: 'CacheableOfflineAsset';
+  /**
+   * If provided, is a "bare" url with query strings such as access_token
+   * stripped out.
+   */
+  cacheKey?: Maybe<Scalars['String']>;
+  type: CacheableOfflineAssetType;
+  url: Scalars['String'];
+};
+
+export enum CacheableOfflineAssetType {
+  Font = 'FONT',
+  Image = 'IMAGE',
+  Json = 'JSON',
+  MapboxGlStyle = 'MAPBOX_GL_STYLE',
+  Sprite = 'SPRITE'
+}
 
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
@@ -2229,6 +2252,7 @@ export enum DataSourcesOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
+
 
 
 /** All input for the `deleteBasemapByNodeId` mutation. */
@@ -7003,6 +7027,25 @@ export type MutationUploadStyleArgs = {
 export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+};
+
+export type OfflineSourceDetails = {
+  __typename?: 'OfflineSourceDetails';
+  dataSourceUrl: Scalars['String'];
+  templateUrl: Scalars['String'];
+  /** Whether a tile packages is available for download */
+  tilePackages: Array<OfflineTilePackage>;
+  type: OfflineTilePackageSourceType;
+};
+
+/** Provides information on resources necessary to use a basemap offline */
+export type OfflineSupportInformation = {
+  __typename?: 'OfflineSupportInformation';
+  hasUncacheableSources: Scalars['Boolean'];
+  id: Scalars['ID'];
+  sources: Array<OfflineSourceDetails>;
+  staticAssets: Array<CacheableOfflineAsset>;
+  styleLastModified?: Maybe<Scalars['Date']>;
 };
 
 export type OfflineTilePackage = Node & {
@@ -13545,6 +13588,19 @@ export type DownloadableOfflineTilePackagesQuery = (
   )> }
 );
 
+export type DownloadBasemapDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DownloadBasemapDetailsQuery = (
+  { __typename?: 'Query' }
+  & { basemap?: Maybe<(
+    { __typename?: 'Basemap' }
+    & OfflineBasemapDetailsFragment
+  )> }
+);
+
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14042,12 +14098,31 @@ export type OfflineTilePackageDetailsFragment = (
   ) }
 );
 
+export type BasemapOfflineSupportInfoFragment = (
+  { __typename?: 'OfflineSupportInformation' }
+  & Pick<OfflineSupportInformation, 'id' | 'styleLastModified'>
+  & { staticAssets: Array<(
+    { __typename?: 'CacheableOfflineAsset' }
+    & Pick<CacheableOfflineAsset, 'url' | 'cacheKey' | 'type'>
+  )>, sources: Array<(
+    { __typename?: 'OfflineSourceDetails' }
+    & Pick<OfflineSourceDetails, 'templateUrl' | 'dataSourceUrl' | 'type'>
+    & { tilePackages: Array<(
+      { __typename?: 'OfflineTilePackage' }
+      & OfflineTilePackageDetailsFragment
+    )> }
+  )> }
+);
+
 export type OfflineBasemapDetailsFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'useDefaultOfflineTileSettings'>
   & { offlineTileSettings: Array<(
     { __typename?: 'OfflineTileSetting' }
     & Pick<OfflineTileSetting, 'basemapId' | 'id' | 'maxShorelineZ' | 'maxZ'>
+  )>, offlineSupportInformation?: Maybe<(
+    { __typename?: 'OfflineSupportInformation' }
+    & BasemapOfflineSupportInfoFragment
   )> }
   & BasemapDetailsFragment
 );
@@ -14147,6 +14222,13 @@ export type BasemapOfflineSettingsQuery = (
         { __typename?: 'GeometryPolygon' }
         & Pick<GeometryPolygon, 'geojson'>
       ) }
+    )>, offlineSupportInformation?: Maybe<(
+      { __typename?: 'OfflineSupportInformation' }
+      & Pick<OfflineSupportInformation, 'id' | 'hasUncacheableSources'>
+      & { sources: Array<(
+        { __typename?: 'OfflineSourceDetails' }
+        & Pick<OfflineSourceDetails, 'dataSourceUrl' | 'type'>
+      )> }
     )> }
   )> }
 );
@@ -14195,6 +14277,33 @@ export type GenerateOfflineTilePackageMutation = (
     { __typename?: 'GenerateOfflineTilePackagePayload' }
     & { offlineTilePackage?: Maybe<(
       { __typename?: 'OfflineTilePackage' }
+      & { project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id'>
+        & { surveys: Array<(
+          { __typename?: 'Survey' }
+          & Pick<Survey, 'id'>
+          & { basemaps?: Maybe<Array<(
+            { __typename?: 'Basemap' }
+            & Pick<Basemap, 'id'>
+            & { offlineSupportInformation?: Maybe<(
+              { __typename?: 'OfflineSupportInformation' }
+              & Pick<OfflineSupportInformation, 'id'>
+              & { staticAssets: Array<(
+                { __typename?: 'CacheableOfflineAsset' }
+                & Pick<CacheableOfflineAsset, 'url' | 'type'>
+              )>, sources: Array<(
+                { __typename?: 'OfflineSourceDetails' }
+                & Pick<OfflineSourceDetails, 'templateUrl' | 'dataSourceUrl' | 'type'>
+                & { tilePackages: Array<(
+                  { __typename?: 'OfflineTilePackage' }
+                  & OfflineTilePackageDetailsFragment
+                )> }
+              )> }
+            )> }
+          )>> }
+        )> }
+      )> }
       & OfflineTilePackageDetailsFragment
     )> }
   )> }
@@ -16113,6 +16222,25 @@ export const OfflineTilePackageDetailsFragmentDoc = /*#__PURE__*/ gql`
   originalUrlTemplate
 }
     `;
+export const BasemapOfflineSupportInfoFragmentDoc = /*#__PURE__*/ gql`
+    fragment BasemapOfflineSupportInfo on OfflineSupportInformation {
+  id
+  styleLastModified
+  staticAssets {
+    url
+    cacheKey
+    type
+  }
+  sources {
+    templateUrl
+    dataSourceUrl
+    tilePackages {
+      ...OfflineTilePackageDetails
+    }
+    type
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
 export const OfflineBasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment OfflineBasemapDetails on Basemap {
   ...BasemapDetails
@@ -16123,8 +16251,12 @@ export const OfflineBasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
     maxShorelineZ
     maxZ
   }
+  offlineSupportInformation {
+    ...BasemapOfflineSupportInfo
+  }
 }
-    ${BasemapDetailsFragmentDoc}`;
+    ${BasemapDetailsFragmentDoc}
+${BasemapOfflineSupportInfoFragmentDoc}`;
 export const OfflineTileSettingsForCalculationFragmentDoc = /*#__PURE__*/ gql`
     fragment OfflineTileSettingsForCalculation on OfflineTileSetting {
   maxShorelineZ
@@ -17099,6 +17231,13 @@ export const DownloadableOfflineTilePackagesDocument = /*#__PURE__*/ gql`
   }
 }
     ${OfflineTilePackageDetailsFragmentDoc}`;
+export const DownloadBasemapDetailsDocument = /*#__PURE__*/ gql`
+    query DownloadBasemapDetails($id: Int!) {
+  basemap(id: $id) {
+    ...OfflineBasemapDetails
+  }
+}
+    ${OfflineBasemapDetailsFragmentDoc}`;
 export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17646,6 +17785,14 @@ export const BasemapOfflineSettingsDocument = /*#__PURE__*/ gql`
         geojson
       }
     }
+    offlineSupportInformation {
+      id
+      hasUncacheableSources
+      sources {
+        dataSourceUrl
+        type
+      }
+    }
   }
 }
     ${OfflineTileSettingsFragmentDoc}`;
@@ -17673,6 +17820,30 @@ export const GenerateOfflineTilePackageDocument = /*#__PURE__*/ gql`
     input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType, originalUrlTemplate: $originalUrlTemplate}
   ) {
     offlineTilePackage {
+      project {
+        id
+        surveys {
+          id
+          basemaps {
+            id
+            offlineSupportInformation {
+              id
+              staticAssets {
+                url
+                type
+              }
+              sources {
+                templateUrl
+                dataSourceUrl
+                tilePackages {
+                  ...OfflineTilePackageDetails
+                }
+                type
+              }
+            }
+          }
+        }
+      }
       ...OfflineTilePackageDetails
     }
   }
@@ -18781,6 +18952,7 @@ export const namedOperations = {
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
     DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
+    DownloadBasemapDetails: 'DownloadBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
@@ -18952,6 +19124,7 @@ export const namedOperations = {
     BasemapDetails: 'BasemapDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
+    BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',
     OfflineBasemapDetails: 'OfflineBasemapDetails',
     OfflineTileSettingsForCalculation: 'OfflineTileSettingsForCalculation',
     OfflineTileSettings: 'OfflineTileSettings',

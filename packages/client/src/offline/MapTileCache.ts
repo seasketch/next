@@ -1,11 +1,8 @@
-import { BBox, Feature, MultiPolygon, Polygon } from "geojson";
+import { BBox, Feature, Polygon } from "geojson";
 import bboxPolygon from "@turf/bbox-polygon";
 import splitGeojson from "geojson-antimeridian-cut";
 import { cleanCoords } from "../workers/utils";
-import { AnySourceData, Style } from "mapbox-gl";
 import { MapTileCacheCalculator as Calculator } from "@seasketch/map-tile-cache-calculator";
-import { useMapboxStyle } from "../useMapboxStyle";
-import { useEffect, useState } from "react";
 import {
   DetailedShorelineOfflineTileSettings,
   OfflineTileSettings,
@@ -44,17 +41,6 @@ export class SceneTileCalculator {
       viewport.geometry
     );
     return tiles;
-  }
-}
-
-function urlForSource(source: AnySourceData) {
-  switch (source.type) {
-    case "vector":
-    case "raster":
-    case "raster-dem":
-      return source.tiles ? source.tiles[0] : source.url!;
-    default:
-      throw new Error(`Source of type ${source.type} not supported`);
   }
 }
 

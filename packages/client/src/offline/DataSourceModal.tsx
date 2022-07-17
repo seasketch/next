@@ -1,6 +1,4 @@
-import { urlEncode } from "@sentry/utils";
 import bytes from "bytes";
-import { RasterDemSource, RasterSource, VectorSource } from "mapbox-gl";
 import { useState, useEffect, useMemo } from "react";
 import { Trans } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -12,32 +10,19 @@ import {
   useOfflineSurveyMapsQuery,
   OfflineBasemapDetailsFragment,
   OfflineTileSettingsForCalculationFragment,
-  OfflineTilePackageSourceType,
   useGenerateOfflineTilePackageMutation,
+  OfflineSourceDetails,
 } from "../generated/graphql";
 import getSlug from "../getSlug";
 import { defaultOfflineTilingSettings } from "./BasemapOfflineSettings";
-import { getSources, normalizeSourceUrlTemplate } from "./mapboxApiHelpers";
-import { SceneTileCalculator } from "./MapTileCache";
-import { urlForSource } from "./OfflineSurveyMapSettings";
 import TilePackageListItem from "./TilePackageListItem";
-
-let worker: any;
-let Calculator: SceneTileCalculator;
-if (process.env.NODE_ENV === "test") {
-  worker = { getChildTiles: () => 0 };
-} else {
-  import("../workers/index").then((mod) => {
-    worker = new mod.default();
-    Calculator = worker.mapTileCache as SceneTileCalculator;
-  });
-}
+import worker from "../TileCalculator";
 
 export default function DataSourceModal({
   source,
   onRequestClose,
 }: {
-  source: RasterSource | VectorSource | RasterDemSource;
+  source: Pick<OfflineSourceDetails, "dataSourceUrl" | "templateUrl" | "type">;
   onRequestClose: (update?: boolean) => void;
 }) {
   const { data, loading, refetch } = useOfflineSurveyMapsQuery({
@@ -54,20 +39,19 @@ export default function DataSourceModal({
     bytes?: number;
   }>({ calculating: true });
 
-  const sourceUrl = urlForSource(source);
+  const sourceUrl = source.dataSourceUrl;
   useEffect(() => {
     if (data) {
       (async () => {
         const maps: OfflineBasemapDetailsFragment[] = [];
         for (const survey of data?.projectBySlug?.surveys || []) {
           for (const map of survey.basemaps || []) {
-            if (!maps.find((b) => b.id === map.id)) {
-              const sources = await getSources(
-                map.url,
-                data.projectBySlug?.mapboxPublicKey ||
-                  process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
-              );
-              if (sources.find((s) => urlForSource(s) === sourceUrl)) {
+            if (
+              map.offlineSupportInformation?.sources.find(
+                (s) => s.dataSourceUrl === sourceUrl
+              )
+            ) {
+              if (!maps.find((m) => m.id === map.id)) {
                 maps.push(map);
               }
             }
@@ -105,7 +89,7 @@ export default function DataSourceModal({
 
   useEffect(() => {
     if (data?.projectBySlug?.region.geojson) {
-      Calculator.calculator
+      worker
         .countChildTiles({
           maxShorelineZ: calculatedTilingSettings.maxShorelineZ,
           maxZ: calculatedTilingSettings.maxZ,
@@ -121,17 +105,6 @@ export default function DataSourceModal({
         });
     }
   }, [source, data?.projectBySlug, calculatedTilingSettings]);
-
-  const sourceType = useMemo(() => {
-    switch (source.type) {
-      case "raster":
-        return OfflineTilePackageSourceType.Raster;
-      case "raster-dem":
-        return OfflineTilePackageSourceType.RasterDem;
-      case "vector":
-        return OfflineTilePackageSourceType.Vector;
-    }
-  }, [source]);
 
   const [generate, generateState] = useGenerateOfflineTilePackageMutation();
   return (
@@ -150,11 +123,8 @@ export default function DataSourceModal({
                   maxZ: calculatedTilingSettings.maxZ,
                   maxShorelineZ: calculatedTilingSettings.maxShorelineZ,
                   projectId: data!.projectBySlug!.id,
-                  sourceType,
-                  originalUrlTemplate: normalizeSourceUrlTemplate(
-                    source.tiles ? source.tiles[0]! : source.url!,
-                    source.type
-                  ),
+                  sourceType: source.type,
+                  originalUrlTemplate: source.templateUrl,
                 },
               }).then(() => {
                 refetch();
@@ -170,7 +140,7 @@ export default function DataSourceModal({
       }
     >
       <div className="w-144">
-        <h2 className="truncate font-mono p-1">{urlForSource(source)}</h2>
+        <h2 className="truncate font-mono p-1">{source.dataSourceUrl}</h2>
         {tilePackages.length === 0 && (
           <Warning>
             <Trans>
@@ -194,7 +164,7 @@ export default function DataSourceModal({
                   );
             return (
               <Link
-                key={map.id}
+                key={`basemap-${map.id}`}
                 to={`./offline/basemap/${
                   map.id
                 }?returnToUrl=${encodeURIComponent(window.location.pathname)}`}

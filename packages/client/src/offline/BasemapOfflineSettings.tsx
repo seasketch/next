@@ -22,35 +22,25 @@ import { MapboxEvent, MapWheelEvent } from "mapbox-gl";
 import debounce from "lodash.debounce";
 import splitGeojson from "geojson-antimeridian-cut";
 import { cleanCoords } from "../workers/utils";
-import { SceneTileCalculator } from "./MapTileCache";
 import bytes from "bytes";
 import getSlug from "../getSlug";
 import Switch from "../components/Switch";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import RadioGroup from "../components/RadioGroup";
 import { useMapboxStyle } from "../useMapboxStyle";
-import { useStyleSources } from "./mapboxApiHelpers";
 import Badge from "../components/Badge";
-import { OfflineTileSettingsForCalculationFragment } from "../generated/queries";
-import { urlForSource } from "./OfflineSurveyMapSettings";
+import {
+  OfflineTilePackageSourceType,
+  OfflineTileSettingsForCalculationFragment,
+} from "../generated/queries";
 import { OfflineTileSettings } from "./OfflineTileSettings";
+import Calculator from "../TileCalculator";
 
 export const defaultOfflineTilingSettings: OfflineTileSettingsForCalculationFragment =
   {
     maxZ: 11,
     maxShorelineZ: 14,
   };
-
-let worker: any;
-let Calculator: SceneTileCalculator;
-if (process.env.NODE_ENV === "test") {
-  worker = { getChildTiles: () => 0 };
-} else {
-  import("../workers/index").then((mod) => {
-    worker = new mod.default();
-    Calculator = worker.mapTileCache as SceneTileCalculator;
-  });
-}
 
 function addTileLayers(
   manager: MapContextManager,
@@ -143,7 +133,9 @@ export default function BasemapOfflineSettings({
     },
     onError,
   });
-  const [mutate, mutationState] = useUpdateBasemapOfflineTileSettingsMutation();
+  const [mutate] = useUpdateBasemapOfflineTileSettingsMutation({
+    onError,
+  });
 
   const projectSettings: Omit<OfflineTileSettingsFragment, "id"> | null =
     useMemo(() => {
@@ -197,12 +189,6 @@ export default function BasemapOfflineSettings({
     }
   }, [settings, setSettings, projectSettings, basemapSettings, data?.basemap]);
 
-  const dataSources = useStyleSources(
-    data?.basemap?.url,
-    data?.projectBySlug?.mapboxPublicKey ||
-      process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
-  );
-
   const debouncedMutate = useDebouncedFn(
     (
       basemapId: number,
@@ -245,6 +231,7 @@ export default function BasemapOfflineSettings({
           : null
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
   const [z, setZ] = useState<number>(0);
@@ -440,13 +427,13 @@ export default function BasemapOfflineSettings({
         abortController.current = new AbortController();
         setStats((prev) => ({ calculating: true }));
         const ac = abortController.current;
-        Calculator.calculator
-          .countChildTiles(settingsToOfflineSettings(settings))
-          .then((totalTiles) => {
+        Calculator.countChildTiles(settingsToOfflineSettings(settings)).then(
+          (totalTiles) => {
             if (!ac.signal.aborted) {
               setStats((prev) => ({ calculating: false, totalTiles }));
             }
-          });
+          }
+        );
       }
     })();
   }, [settings, data?.basemap?.id, mapContext?.manager?.map, style.data]);
@@ -458,17 +445,19 @@ export default function BasemapOfflineSettings({
   return (
     <div className={`space-y-4`}>
       <h2 className="text-xl">{data?.basemap?.name}</h2>
-      {dataSources.sources?.length && (
+      {data?.basemap?.offlineSupportInformation && (
         <div className="mb-5 pb-5 border-b">
           <h3>{t("Data Sources")}</h3>
-          {dataSources.sources.map((source) => (
-            <div key={urlForSource(source)} className="flex mt-1 space-x-2">
-              <Badge>{source.type}</Badge>
-              {/* @ts-ignore */}
-              <span className="truncate text-sm" title={source.url}>
-                {source.type === "vector" && source.url}
-                {source.type === "raster" && source.url}
-                {source.type === "raster-dem" && source.url}
+          {data.basemap.offlineSupportInformation.sources.map((source) => (
+            <div key={source.dataSourceUrl} className="flex mt-1 space-x-2">
+              <Badge>{source.type.toLowerCase()}</Badge>
+              <span className="truncate text-sm" title={source.dataSourceUrl}>
+                {source.type === OfflineTilePackageSourceType.Vector &&
+                  source.dataSourceUrl}
+                {source.type === OfflineTilePackageSourceType.Raster &&
+                  source.dataSourceUrl}
+                {source.type === OfflineTilePackageSourceType.RasterDem &&
+                  source.dataSourceUrl}
               </span>
             </div>
           ))}
