@@ -148,7 +148,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["ipad-2"]//"iphone-x", "iphone-5", "ipad-2", "macbook-15"]//"iphone-x", "ipad-2", "macbook-15"]//, ]//]//, "iphone-5",]//
+const devices: any = ["macbook-15", "ipad-2", "iphone-x"]//"iphone-x", "iphone-5", "ipad-2", "macbook-15"]//"iphone-x", "ipad-2", "macbook-15"]//, ]//]//, "iphone-5",]//
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -359,7 +359,7 @@ describe("Survey creation smoke test", () => {
     devices.forEach((device) => {
       it("Can visit the survey", () => {
         cy.viewport(device)
-        if (device === "ipad-2") {
+        if (device === "macbook-15") {
           cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         }
       });
