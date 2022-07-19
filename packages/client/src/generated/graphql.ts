@@ -13603,6 +13603,32 @@ export type DownloadBasemapDetailsQuery = (
   )> }
 );
 
+export type ImportBasemapDetailsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ImportBasemapDetailsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id'>
+      & { basemaps?: Maybe<Array<(
+        { __typename?: 'Basemap' }
+        & Pick<Basemap, 'id' | 'thumbnail' | 'name'>
+        & { offlineSupportInformation?: Maybe<(
+          { __typename?: 'OfflineSupportInformation' }
+          & Pick<OfflineSupportInformation, 'hasUncacheableSources'>
+          & BasemapOfflineSupportInfoFragment
+        )> }
+      )>> }
+    )> }
+  )> }
+);
+
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -18560,6 +18586,53 @@ export function useDownloadBasemapDetailsLazyQuery(baseOptions?: Apollo.LazyQuer
 export type DownloadBasemapDetailsQueryHookResult = ReturnType<typeof useDownloadBasemapDetailsQuery>;
 export type DownloadBasemapDetailsLazyQueryHookResult = ReturnType<typeof useDownloadBasemapDetailsLazyQuery>;
 export type DownloadBasemapDetailsQueryResult = Apollo.QueryResult<DownloadBasemapDetailsQuery, DownloadBasemapDetailsQueryVariables>;
+export const ImportBasemapDetailsDocument = gql`
+    query ImportBasemapDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      basemaps {
+        id
+        thumbnail
+        name
+        offlineSupportInformation {
+          hasUncacheableSources
+          ...BasemapOfflineSupportInfo
+        }
+      }
+    }
+  }
+}
+    ${BasemapOfflineSupportInfoFragmentDoc}`;
+
+/**
+ * __useImportBasemapDetailsQuery__
+ *
+ * To run a query within a React component, call `useImportBasemapDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useImportBasemapDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useImportBasemapDetailsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useImportBasemapDetailsQuery(baseOptions: Apollo.QueryHookOptions<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>(ImportBasemapDetailsDocument, options);
+      }
+export function useImportBasemapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>(ImportBasemapDetailsDocument, options);
+        }
+export type ImportBasemapDetailsQueryHookResult = ReturnType<typeof useImportBasemapDetailsQuery>;
+export type ImportBasemapDetailsLazyQueryHookResult = ReturnType<typeof useImportBasemapDetailsLazyQuery>;
+export type ImportBasemapDetailsQueryResult = Apollo.QueryResult<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>;
 export const DraftTableOfContentsDocument = gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -23288,6 +23361,7 @@ export const namedOperations = {
     MapboxKeys: 'MapboxKeys',
     DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
     DownloadBasemapDetails: 'DownloadBasemapDetails',
+    ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',

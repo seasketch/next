@@ -11,7 +11,7 @@ import { CacheProgress } from "./CacheStatus";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/solid";
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import Warning from "../components/Warning";
 
 const Trans = (props: any) => <T {...props} ns="offline"></T>;
@@ -31,7 +31,7 @@ export default function DownloadBasemapModal({
     onError,
   });
 
-  const { cacheStatus, populateCache, downloadState, clearCache } =
+  const { cacheStatus, populateCache, downloadState, clearCache, cancel } =
     useMapDownloadManager({
       map: data?.basemap || undefined,
     });
@@ -40,58 +40,74 @@ export default function DownloadBasemapModal({
     (cacheStatus?.status?.sources || []).find((source) => source.hasUpdates)
   );
 
+  const footer = useMemo(() => {
+    return (
+      <>
+        <Button
+          label={
+            downloadState.working ? <Trans>Cancel</Trans> : <Trans>Close</Trans>
+          }
+          onClick={() => {
+            cancel();
+            onRequestClose();
+          }}
+        />
+        {(cacheStatus.status?.state === "complete" ||
+          cacheStatus.status?.state === "has-updates") && (
+          <Button
+            // backgroundColor="#cc1111"
+            disabled={downloadState.working}
+            label={
+              <span className="text-red-800">
+                <Trans>Clear Map Data</Trans>
+              </span>
+            }
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Are you sure you want to delete this offline map data? You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps.`
+                )
+              ) {
+                clearCache();
+              }
+            }}
+          />
+        )}
+        {cacheStatus.status?.state === "incomplete" && (
+          <Button
+            primary
+            disabled={downloadState.working}
+            label={<Trans>Begin Download</Trans>}
+            onClick={() => populateCache()}
+          />
+        )}
+        {cacheStatus.status?.state === "has-updates" && (
+          <Button
+            primary
+            disabled={downloadState.working}
+            label={<Trans>Update Map</Trans>}
+            onClick={() => populateCache()}
+          />
+        )}
+      </>
+    );
+  }, [
+    cacheStatus.status?.state,
+    cancel,
+    clearCache,
+    downloadState.working,
+    onRequestClose,
+    populateCache,
+  ]);
+
   return (
     <Modal
+      disableBackdropClick={!!downloadState.working}
+      disableEscapeKeyDown={!!downloadState.working}
       onRequestClose={onRequestClose}
       open={true}
       loading={loading || cacheStatus.loading}
-      footer={
-        <>
-          <Button
-            label={<Trans>Close</Trans>}
-            onClick={() => {
-              onRequestClose();
-            }}
-          />
-          {(cacheStatus.status?.state === "complete" ||
-            cacheStatus.status?.state === "has-updates") && (
-            <Button
-              // backgroundColor="#cc1111"
-              disabled={downloadState.working}
-              label={
-                <span className="text-red-800">
-                  <Trans>Clear Map Data</Trans>
-                </span>
-              }
-              onClick={() => {
-                if (
-                  window.confirm(
-                    `Are you sure you want to delete this offline map data? You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps.`
-                  )
-                ) {
-                  clearCache();
-                }
-              }}
-            />
-          )}
-          {cacheStatus.status?.state === "incomplete" && (
-            <Button
-              primary
-              disabled={downloadState.working}
-              label={<Trans>Begin Download</Trans>}
-              onClick={() => populateCache()}
-            />
-          )}
-          {cacheStatus.status?.state === "has-updates" && (
-            <Button
-              primary
-              disabled={downloadState.working}
-              label={<Trans>Update Map</Trans>}
-              onClick={() => populateCache()}
-            />
-          )}
-        </>
-      }
+      footer={footer}
     >
       {!cacheStatus.loading && cacheStatus.status && (
         <div className="w-128 space-y-2">
@@ -255,7 +271,8 @@ export default function DownloadBasemapModal({
                                 source.currentTilePackage &&
                                 source.downloadedTilePackage &&
                                 source.downloadedTilePackage.id ===
-                                  source.currentTilePackage.id
+                                  source.currentTilePackage.id &&
+                                source.cached
                                   ? 0
                                   : source.currentTilePackage?.bytes || 0),
                             0

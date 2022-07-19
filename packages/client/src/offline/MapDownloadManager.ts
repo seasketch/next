@@ -1,3 +1,4 @@
+import bboxPolygon from "@turf/bbox-polygon";
 import bytes from "bytes";
 import { Feature, Polygon } from "geojson";
 import localforage from "localforage";
@@ -6,8 +7,10 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
+import { Statement } from "sql.js";
 import {
   BasemapOfflineSupportInfoFragment,
   CacheableOfflineAssetType,
@@ -15,6 +18,7 @@ import {
   OfflineTilePackageSourceType,
   OfflineTilePackageStatus,
 } from "../generated/graphql";
+import { normalizeSourceUrlTemplate } from "./mapboxApiHelpers";
 import {
   cacheNameForSource,
   MAP_STATIC_ASSETS_CACHE_NAME,
@@ -43,6 +47,7 @@ export function useMapDownloadManager({
 }: {
   map: OfflineBasemapDetailsFragment | undefined;
 }) {
+  const abortController = useRef(new AbortController());
   const context = useContext(DownloadManagerContext);
   const [cacheStatus, setCacheStatus] = useState<{
     loading: boolean;
@@ -90,6 +95,7 @@ export function useMapDownloadManager({
     }
     // delete static assets
     const cache = await caches.open(MAP_STATIC_ASSETS_CACHE_NAME);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const [i, asset] of cacheStatus.status.staticAssets.entries()) {
       await cache.delete(asset.cacheKey || asset.url);
     }
@@ -167,7 +173,11 @@ export function useMapDownloadManager({
         progressMessage: `Downloading support file (${i}/${cacheStatus.status.staticAssets.length})`,
       });
       try {
-        const response = await fetch(asset.url);
+        // first delete so service worker doesn't respond with cache
+        await cache.delete(asset.cacheKey || asset.url);
+        const response = await fetch(asset.url, {
+          signal: abortController.current.signal,
+        });
         await cache.put(asset.cacheKey || asset.url, response);
         progress += 1;
       } catch (e) {
@@ -181,54 +191,31 @@ export function useMapDownloadManager({
       }
     }
 
-    setDownloadState({
-      progress: progress / totalProgressUnits,
-      working: true,
-      // eslint-disable-next-line i18next/no-literal-string
-      progressMessage: `Initializing mbtiles reader`,
-    });
-
-    import("sql.js").then(async (initSqlJs) => {
-      const SQL = await initSqlJs.default({
-        // Required to load the wasm binary asynchronously. Of course, you can host it wherever you want
-        // You can omit locateFile completely when running in node
-        locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+    for (const source of sourcesToDownload) {
+      if (!source.currentTilePackage) {
+        throw new Error("Offline tile package does not exist to be downloaded");
+      }
+      const currentTilePackage = source.currentTilePackage;
+      setDownloadState({
+        progress: progress / totalProgressUnits,
+        working: true,
+        // eslint-disable-next-line i18next/no-literal-string
+        progressMessage: `Downloading ${source.type.toLowerCase()} tile package. ${bytes(
+          0,
+          { decimalPlaces: 0 }
+        )} / ${bytes(source.currentTilePackage.bytes, { decimalPlaces: 0 })}`,
       });
-      for (const source of sourcesToDownload) {
-        if (!source.currentTilePackage) {
-          throw new Error(
-            "Offline tile package does not exist to be downloaded"
-          );
-        }
-        setDownloadState({
-          progress: progress / totalProgressUnits,
-          working: true,
-          // eslint-disable-next-line i18next/no-literal-string
-          progressMessage: `Downloading ${source.type.toLowerCase()} tile package. ${bytes(
-            0,
-            { decimalPlaces: 0 }
-          )} / ${bytes(source.currentTilePackage.bytes, { decimalPlaces: 0 })}`,
-        });
-        const response = await fetch(source.currentTilePackage.presignedUrl);
-        if (!response.body) {
-          throw new Error("Could not get response.body");
-        }
-        const reader = response.body.getReader();
-        let receivedLength = 0; // received that many bytes at the moment
-        let chunks = []; // array of received binary chunks (comprises the body)
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
-          }
-          chunks.push(value);
-          receivedLength += value.length;
-          progress += value.length / 10000;
+
+      const mbtiles = await downloadMbtiles(
+        currentTilePackage.presignedUrl,
+        // eslint-disable-next-line no-loop-func
+        ({ chunkBytes, receivedBytes }) => {
+          progress += chunkBytes / 10000;
           // eslint-disable-next-line i18next/no-literal-string
           const progressMessage = `Downloading ${source.type.toLowerCase()} tile package. ${bytes(
-            receivedLength,
+            receivedBytes,
             { decimalPlaces: 0 }
-          )} / ${bytes(source.currentTilePackage.bytes, {
+          )} / ${bytes(currentTilePackage.bytes, {
             decimalPlaces: 0,
           })}`;
           const progressFraction = progress / totalProgressUnits;
@@ -238,123 +225,90 @@ export function useMapDownloadManager({
             // eslint-disable-next-line i18next/no-literal-string
             progressMessage,
           }));
-        }
-        let chunksAll = new Uint8Array(receivedLength); // (4.1)
-        let position = 0;
-        for (let chunk of chunks) {
-          chunksAll.set(chunk, position); // (4.2)
-          position += chunk.length;
-        }
-        setDownloadState((prev) => ({
-          ...prev,
-          // eslint-disable-next-line i18next/no-literal-string
-          progressMessage: `Decoding mbtiles...`,
-        }));
-        const db = new SQL.Database(chunksAll);
-        setDownloadState((prev) => ({
-          ...prev,
-          // eslint-disable-next-line i18next/no-literal-string
-          progressMessage: `Resetting cache...`,
-        }));
-        let tilesProcessed = 0;
-        const cacheName = cacheNameForSource(source.url);
-        await caches.delete(cacheName);
-        const tileCache = await caches.open(cacheName);
-        const statement = db.prepare(
-          "SELECT tile_column, tile_row, zoom_level, tile_data from tiles",
-          []
-        );
-        try {
-          while (statement.step()) {
-            const { zoom_level, tile_column, tile_row, tile_data } =
-              statement.getAsObject(null) as {
-                zoom_level: number;
-                tile_column: number;
-                tile_row: number;
-                tile_data: Uint8Array;
-              };
-            tilesProcessed += 1;
+        },
+        abortController.current.signal
+      );
+
+      let tilesProcessed = 0;
+      try {
+        await addTilesToCache(
+          mbtiles,
+          source.type.toString().toLowerCase() as
+            | "vector"
+            | "raster"
+            | "raster-dem",
+          // eslint-disable-next-line no-loop-func
+          ({ tile, totalTiles, task }) => {
             progress += 1;
-            const url = source.currentTilePackage.originalUrlTemplate
-              .replace("{z}", zoom_level.toString())
-              .replace("{x}", tile_column.toString())
-              .replace("{y}", tile_row.toString());
-            await tileCache.put(url, new Response(tile_data as Uint8Array));
-            if (tilesProcessed % 100 === 0) {
-              // eslint-disable-next-line i18next/no-literal-string
-              const progressMessage = `Processing tiles (${tilesProcessed}/${source.currentTilePackage.totalTiles})...`;
+            if (tile && tile % 100 === 0) {
+              tilesProcessed = tile;
               const currentProgress = progress / totalProgressUnits;
               setDownloadState((prev) => ({
                 ...prev,
-                progressMessage,
+                progressMessage: task,
                 progress: currentProgress,
               }));
+            } else {
+              setDownloadState((prev) => ({
+                ...prev,
+                progressMessage: task,
+              }));
             }
-          }
-        } catch (e) {
-          setDownloadState({
-            working: false,
-            progress: progress / totalProgressUnits,
-            error: e.toString(),
-          });
-        } finally {
-          statement.free();
-        }
+          },
+          abortController.current.signal
+        );
         const currentProgress = progress / totalProgressUnits;
+        // eslint-disable-next-line i18next/no-literal-string
+        const msg = `Processed ${tilesProcessed} tiles`;
         setDownloadState((prev) => ({
           ...prev,
-          // eslint-disable-next-line i18next/no-literal-string
-          progressMessage: `Processed ${tilesProcessed} tiles`,
+          progressMessage: msg,
           progress: currentProgress,
         }));
         if (!map || !map.offlineSupportInformation) {
           throw new Error("map.offlineSupportInformation not set?");
         }
-        const pkg = source.currentTilePackage;
-        await updateDownloadedOfflineTilePackages((prev) => {
-          return [
-            {
-              dataSourceUrl: source.url,
-              bytes: pkg.bytes,
-              packageId: pkg.id,
-              downloadedAt: new Date(),
-              tilingSettings: {
-                maxZ: pkg.maxZ,
-                maxShorelineZ: pkg.maxShorelineZ,
-                region: pkg.region,
-              },
-            },
-            ...prev.filter((state) => state.dataSourceUrl !== source.url),
-          ];
-        });
-      }
-      await setBasemapClientCacheState(
-        map!.id,
-        new Date(),
-        map!.offlineSupportInformation!.staticAssets.map(
-          (a) => a.cacheKey || a.url
-        )
-      );
+        await setBasemapClientCacheState(
+          map!.id,
+          new Date(),
+          map!.offlineSupportInformation!.staticAssets.map(
+            (a) => a.cacheKey || a.url
+          )
+        );
 
-      const status = await getCacheStatusForBasemap(
-        map!.id,
-        map!.offlineSupportInformation!
-      );
-      setCacheStatus({ loading: false, status });
-      setDownloadState({
-        working: false,
-        progress: 0,
-      });
-      // Make sure parent components update their map cache states
-      context.bump();
-    });
+        const status = await getCacheStatusForBasemap(
+          map!.id,
+          map!.offlineSupportInformation!
+        );
+        setCacheStatus({ loading: false, status });
+        setDownloadState({
+          working: false,
+          progress: 0,
+        });
+        // Make sure parent components update their map cache states
+        context.bump();
+      } catch (e) {
+        setDownloadState({
+          working: false,
+          progress: progress / totalProgressUnits,
+          error: e.toString(),
+        });
+        return;
+      }
+    }
   }, [cacheStatus.status, map, context]);
+
+  const cancel = useCallback(() => {
+    console.log("abort", abortController);
+    abortController.current?.abort();
+  }, []);
 
   return {
     cacheStatus,
     downloadState,
     populateCache,
     clearCache,
+    cancel,
   };
 }
 
@@ -391,6 +345,8 @@ export type CachedTilePackageState = {
   dataSourceUrl: string;
   bytes: number;
   downloadedAt: Date;
+  packageCreationDate: Date;
+  totalTiles: number;
   tilingSettings: {
     maxZ: number;
     maxShorelineZ?: number;
@@ -413,6 +369,155 @@ export async function updateDownloadedOfflineTilePackages(
     DOWNLOADED_OFFLINE_TILE_PACKAGES_KEY,
     updaterFn(existingValue)
   );
+}
+
+async function downloadMbtiles(
+  presignedUrl: string,
+  progressCallback: (details: {
+    chunkBytes: number;
+    receivedBytes: number;
+  }) => void,
+  signal: AbortSignal
+) {
+  const response = await fetch(presignedUrl, { signal });
+  if (!response.body) {
+    throw new Error("Could not get response.body");
+  }
+  const reader = response.body.getReader();
+  let receivedLength = 0; // received that many bytes at the moment
+  let chunks = []; // array of received binary chunks (comprises the body)
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    receivedLength += value.length;
+    progressCallback({
+      chunkBytes: value.length,
+      receivedBytes: receivedLength,
+    });
+  }
+  let chunksAll = new Uint8Array(receivedLength);
+  let position = 0;
+  for (let chunk of chunks) {
+    chunksAll.set(chunk, position);
+    position += chunk.length;
+  }
+  return chunksAll;
+}
+
+export async function addTilesToCache(
+  mbtiles: Uint8Array,
+  sourceUrlTemplate: string,
+  progressCallback: (progress: {
+    tile?: number;
+    totalTiles?: number;
+    task: string;
+  }) => void,
+  signal: AbortSignal
+) {
+  return new Promise((resolve, reject) => {
+    import("sql.js").then(async (initSqlJs) => {
+      if (signal.aborted) {
+        reject(new Error("Aborted"));
+        return;
+      }
+      const SQL = await initSqlJs.default({
+        // Required to load the wasm binary asynchronously. Of course, you can host it wherever you want
+        // You can omit locateFile completely when running in node
+        locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+      });
+      progressCallback({ task: "Initializing database" });
+      const db = new SQL.Database(mbtiles);
+      progressCallback({ task: "Reading mbtiles metadata" });
+      let meta: SSNMBTilesMetadata;
+      try {
+        // eslint-disable-next-line i18next/no-literal-string
+        const stm = db.prepare(`select name, value from metadata`);
+        meta = parseMetadataRows(stm);
+      } catch (e) {
+        reject(new Error(`Does not appear to be a valid mbtiles file`));
+        return;
+      }
+      if (!meta.dataSourceUrl) {
+        reject(new Error(`mbtiles file does not contain required metadata`));
+        return;
+      }
+      if (signal.aborted) {
+        reject(new Error("Aborted"));
+        return;
+      }
+      progressCallback({ task: "Resetting cache" });
+      const cacheName = cacheNameForSource(meta.dataSourceUrl);
+      let tilesProcessed = 0;
+      // eslint-disable-next-line i18next/no-literal-string
+      const results = db.exec(`select count(*) from tiles`);
+      const totalTiles = parseInt(results[0].values[0][0]!.toString());
+      await caches.delete(cacheName);
+      const tileCache = await caches.open(cacheName);
+      if (signal.aborted) {
+        reject(new Error("Aborted"));
+        return;
+      }
+      const statement = db.prepare(
+        "SELECT tile_column, tile_row, zoom_level, tile_data from tiles",
+        []
+      );
+      try {
+        while (statement.step()) {
+          if (signal.aborted) {
+            reject(new Error("Aborted"));
+            return;
+          }
+          const { zoom_level, tile_column, tile_row, tile_data } =
+            statement.getAsObject(null) as {
+              zoom_level: number;
+              tile_column: number;
+              tile_row: number;
+              tile_data: Uint8Array;
+            };
+          tilesProcessed += 1;
+
+          const url = sourceUrlTemplate
+            .replace("{z}", zoom_level.toString())
+            .replace("{x}", tile_column.toString())
+            .replace("{y}", tile_row.toString());
+          await tileCache.put(url, new Response(tile_data as Uint8Array));
+          progressCallback({
+            tile: tilesProcessed,
+            totalTiles: totalTiles,
+            // eslint-disable-next-line i18next/no-literal-string
+            task: `Processing tiles (${tilesProcessed}/${totalTiles})...`,
+          });
+        }
+      } catch (e) {
+        reject(new Error(`Failed to process tiles`));
+      } finally {
+        statement.free();
+      }
+
+      await updateDownloadedOfflineTilePackages((prev) => {
+        return [
+          {
+            dataSourceUrl: meta.dataSourceUrl,
+            bytes: mbtiles.byteLength,
+            packageId: meta.packageId,
+            downloadedAt: new Date(),
+            packageCreationDate: new Date(meta.createdAt),
+            totalTiles,
+            tilingSettings: {
+              maxZ: meta.maxZ,
+              maxShorelineZ: meta.maxShorelineZ,
+              region: meta.region,
+            },
+          },
+          ...prev.filter((state) => state.dataSourceUrl !== meta.dataSourceUrl),
+        ];
+      });
+      resolve(cacheName);
+    });
+  });
 }
 
 type CachedSourceDetails = {
@@ -507,15 +612,24 @@ export async function getCacheStatusForBasemap(
     const downloaded = downloadedPackages?.find(
       (p) => p.dataSourceUrl === source.dataSourceUrl
     );
+    let cacheExists = false;
     if (!downloaded) {
       anyMissing = true;
-    } else if (completePkg && downloaded.packageId !== completePkg.id) {
-      anyUpdates = true;
+    } else {
+      // check that cache has not been deleted
+      const cacheName = cacheNameForSource(source.dataSourceUrl);
+      cacheExists = await caches.has(cacheName);
+      if (!cacheExists) {
+        anyMissing = true;
+      }
+      if (completePkg && downloaded.packageId !== completePkg.id) {
+        anyUpdates = true;
+      }
     }
     cachedSourceDetails.push({
       url: source.dataSourceUrl,
       type: source.type,
-      cached: Boolean(downloaded),
+      cached: Boolean(downloaded) && cacheExists,
       hasUpdates:
         Boolean(completePkg) && downloaded?.packageId !== completePkg?.id,
       currentTilePackage: completePkg
@@ -561,3 +675,87 @@ export const DownloadManagerContext = createContext({
   iter: 0,
   bump: () => {},
 });
+
+export type SSNMBTilesMetadata = {
+  format: string;
+  dataSourceUrl: string;
+  maxZ: number;
+  maxShorelineZ?: number;
+  projectId: number;
+  createdAt: Date;
+  packageId: string;
+  bounds: [number, number, number, number];
+  region: Feature<Polygon>;
+  sourceType: "raster" | "vector" | "raster-dem";
+  originalUrlTemplate: string;
+};
+
+export function parseMetadataRows(stm: Statement) {
+  const kv: { [name: string]: any } = {};
+  while (stm.step()) {
+    const { name, value } = stm.getAsObject() as {
+      name: string;
+      value: string;
+    };
+    switch (name) {
+      case "dataSourceUrl":
+        kv.dataSourceUrl = value;
+        break;
+      case "format":
+        kv.format = value;
+        break;
+      case "maxShorelineZ":
+        kv.maxShorelineZ = parseInt(value);
+        break;
+      case "maxZ":
+        kv.maxZ = parseInt(value);
+        break;
+      case "projectId":
+        kv.projectId = parseInt(value);
+        break;
+      case "createdAt":
+        kv.createdAt = new Date(value);
+        break;
+      case "uuid":
+        kv.packageId = value;
+        break;
+      case "sourceType":
+        kv.sourceType = value;
+        break;
+      case "originalUrlTemplate":
+        kv.originalUrlTemplate = value;
+        break;
+      case "bounds":
+        kv.bounds = value
+          .toString()
+          .split(",")
+          .map((coord) => parseFloat(coord)) as [
+          number,
+          number,
+          number,
+          number
+        ];
+        kv.region = bboxPolygon(kv.bounds);
+        break;
+      default:
+        break;
+    }
+  }
+  const required = [
+    "dataSourceUrl",
+    "maxZ",
+    "projectId",
+    "createdAt",
+    "packageId",
+    "format",
+    "bounds",
+    "sourceType",
+    "originalUrlTemplate",
+  ];
+  for (const key of required) {
+    if (!(key in kv)) {
+      throw new Error(`Required metadata field "${key}" is missing`);
+    }
+  }
+  return kv as SSNMBTilesMetadata;
+}

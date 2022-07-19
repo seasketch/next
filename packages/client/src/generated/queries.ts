@@ -13601,6 +13601,32 @@ export type DownloadBasemapDetailsQuery = (
   )> }
 );
 
+export type ImportBasemapDetailsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ImportBasemapDetailsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id'>
+      & { basemaps?: Maybe<Array<(
+        { __typename?: 'Basemap' }
+        & Pick<Basemap, 'id' | 'thumbnail' | 'name'>
+        & { offlineSupportInformation?: Maybe<(
+          { __typename?: 'OfflineSupportInformation' }
+          & Pick<OfflineSupportInformation, 'hasUncacheableSources'>
+          & BasemapOfflineSupportInfoFragment
+        )> }
+      )>> }
+    )> }
+  )> }
+);
+
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -17238,6 +17264,25 @@ export const DownloadBasemapDetailsDocument = /*#__PURE__*/ gql`
   }
 }
     ${OfflineBasemapDetailsFragmentDoc}`;
+export const ImportBasemapDetailsDocument = /*#__PURE__*/ gql`
+    query ImportBasemapDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      basemaps {
+        id
+        thumbnail
+        name
+        offlineSupportInformation {
+          hasUncacheableSources
+          ...BasemapOfflineSupportInfo
+        }
+      }
+    }
+  }
+}
+    ${BasemapOfflineSupportInfoFragmentDoc}`;
 export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -18953,6 +18998,7 @@ export const namedOperations = {
     MapboxKeys: 'MapboxKeys',
     DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
     DownloadBasemapDetails: 'DownloadBasemapDetails',
+    ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',

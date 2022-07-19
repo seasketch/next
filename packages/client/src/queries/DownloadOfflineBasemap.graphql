@@ -14,3 +14,21 @@ query DownloadBasemapDetails($id: Int!) {
     ...OfflineBasemapDetails
   }
 }
+
+query ImportBasemapDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      basemaps {
+        id
+        thumbnail
+        name
+        offlineSupportInformation {
+          hasUncacheableSources
+          ...BasemapOfflineSupportInfo
+        }
+      }
+    }
+  }
+}

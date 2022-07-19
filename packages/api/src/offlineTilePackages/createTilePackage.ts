@@ -39,6 +39,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
     maxShorelineZ: number;
     accessToken?: string;
     sourceType: "raster" | "raster-dem" | "vector";
+    originalUrlTemplate: string;
   }[] = (
     await client.query(
       `
@@ -52,7 +53,8 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         max_z as "maxZ",
         max_shoreline_z as "maxShorelineZ",
         projects.mapbox_public_key as "accessToken",
-        source_type as "sourceType"
+        source_type as "sourceType",
+        original_url_template as "originalUrlTemplate"
       from
         offline_tile_packages
       inner join
@@ -150,6 +152,14 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         await db.run(`INSERT INTO metadata (name, value) VALUES (?, ?)`, [
           "uuid",
           result.id,
+        ]);
+        await db.run(`INSERT INTO metadata (name, value) VALUES (?, ?)`, [
+          "sourceType",
+          result.sourceType,
+        ]);
+        await db.run(`INSERT INTO metadata (name, value) VALUES (?, ?)`, [
+          "originalUrlTemplate",
+          result.originalUrlTemplate,
         ]);
 
         const parts = result.dataSourceUrl.replace(/\/$/, "").split("/");

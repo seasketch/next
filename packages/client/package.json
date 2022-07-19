@@ -203,7 +203,7 @@
     "translation:publish": "bin/publishLocalizationTerms.js",
     "translation:import": "bin/importTranslations.js",
     "translation:sync": "npm run translation:extract && npm run translation:publish && npm run translation:import",
-    "translation:extract": "rm -rf src/lang/en && NODE_ENV=development npx babel -f .babelrc 'src/**/*.{js,jsx,ts,tsx}' --ignore '**/graphql.ts' > /dev/null && mv extractedTranslations/en src/lang/en && rm -rf extractedTranslations && echo 'Translations extracted to src/lang/en'",
+    "translation:extract": "rm -rf src/lang/en && NODE_ENV=development npx babel -f .babelrc 'src/**/*.{js,jsx,ts,tsx}' --ignore '**/generated/graphql.ts,**/generated/queries.ts,**/workers/*' > /dev/null && mv extractedTranslations/en src/lang/en && rm -rf extractedTranslations && echo 'Translations extracted to src/lang/en'",
     "graphql:codegen": "graphql-codegen --config codegen.yml --watch 'src/**/*.tsx'",
     "start": "craco start",
     "storybook": "start-storybook -p 6006 -s public",

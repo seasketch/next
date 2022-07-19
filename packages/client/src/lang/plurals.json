@@ -10,5 +10,7 @@
   "downloadBasemaps": "Download Map",
   "downloadBasemaps_plural": "Download Maps",
   "tilePackageDownloadStats": "{{count}} tile package",
-  "tilePackageDownloadStats__plural": "{{count}} tile packages"
+  "tilePackageDownloadStats__plural": "{{count}} tile packages",
+  "importMapPackages": "Import Map Package",
+  "importMapPackages__plural": "Import Map Packages"
 }

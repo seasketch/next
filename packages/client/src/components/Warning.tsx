@@ -4,6 +4,7 @@ interface WarningProps {
   disabled?: boolean;
   className?: string;
   level?: "info" | "warning" | "error";
+  compact?: boolean;
 }
 
 const Warning: FunctionComponent<WarningProps> = ({
@@ -11,6 +12,7 @@ const Warning: FunctionComponent<WarningProps> = ({
   children,
   disabled,
   level,
+  compact,
 }) => {
   let borderColor = "border-yellow-400";
   let bgColor = "bg-yellow-50";
@@ -35,10 +37,12 @@ const Warning: FunctionComponent<WarningProps> = ({
 
   return (
     <div
-      className={`${borderColor} ${bgColor} border-l-4 p-4 mt-2 ${className}`}
+      className={`${borderColor} ${bgColor} border-l-4 ${
+        compact ? "p-1" : "p-4"
+      } mt-2 ${className}`}
     >
-      <div className="flex">
-        <div className="flex-shrink-0">
+      <div className="flex items-center">
+        <div className={`flex-shrink-0 ${compact ? "pl-1" : ""}`}>
           {level === "info" ? (
             <Info className={svgColor} />
           ) : level === "error" ? (

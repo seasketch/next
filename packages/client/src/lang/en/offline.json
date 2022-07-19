@@ -1,14 +1,9 @@
 {
-  "Cache Status": "Cache Status",
+  "": "",
   "Clear cache": "Clear cache",
-  "Data Caching setting must be set higher to enable offline support.": "Data Caching setting must be set higher to enable offline support.",
-  "Offline Surveys": "Offline Surveys",
+  "Failed to render offline settings. Is ServiceWorker enabled?": "Failed to render offline settings. Is ServiceWorker enabled?",
   "Reload cache": "Reload cache",
-  "SeaSketch can cache selected surveys for use offline in the field. You will need to make sure that Data Caching is set to \"Improved Performance\" or higher to enable this functionality.": "SeaSketch can cache selected surveys for use offline in the field. You will need to make sure that Data Caching is set to \"Improved Performance\" or higher to enable this functionality.",
-  "documentCount": "{{count}} documents",
-  "documentCount_plural": "documentCount_plural",
-  "imageCount": "{{count}} images",
-  "imageCount_plural": "imageCount_plural",
-  "questionCount": "{{count}} questions",
-  "questionCount_plural": "questionCount_plural"
+  "This file is not the most up to date tile package. Consider downloading the newer package instead.": "This file is not the most up to date tile package. Consider downloading the newer package instead.",
+  "This tile package is not related to any current maps, and will not be imported": "This tile package is not related to any current maps, and will not be imported",
+  "This tile package was generated for a different project": "This tile package was generated for a different project"
 }

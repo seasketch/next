@@ -1,8 +1,8 @@
 import { ExternalLinkIcon } from "@heroicons/react/outline";
 import { CheckCircleIcon, CogIcon } from "@heroicons/react/solid";
 import bytes from "bytes";
-import { useContext, useEffect, useMemo, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Trans as T, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
@@ -17,13 +17,21 @@ import {
 import { CacheProgress } from "./CacheStatus";
 import { ClientCacheManagerContext } from "./ClientCacheManager";
 import DownloadBasemapModal from "./DownloadBasemapModal";
+import ImportMbtilesModal from "./ImportMbtilesModal";
 import useBasemapsBySurvey, {
   BasemapDetailsAndClientCacheStatus,
 } from "./useBasemapsBySurvey";
 
+const Trans = (props: any) => (
+  <T ns="offline" {...props}>
+    {props.children}
+  </T>
+);
+
 export default function OfflineSurveySelection() {
   const slug = window.location.pathname.split("/")[1];
   const context = useContext(ClientCacheManagerContext);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { data } = useOfflineSurveysQuery({
     variables: { slug },
   });
@@ -34,6 +42,7 @@ export default function OfflineSurveySelection() {
   );
   const [downloadBasemapModalOpen, setDownloadBasemapModalOpen] =
     useState<null | Pick<BasemapDetailsFragment, "id" | "url" | "name">>(null);
+  const [mbtilesFileList, setMbtilesFileList] = useState<FileList | null>(null);
 
   const surveys = useMemo(() => {
     if (data?.projectBySlug?.surveys) {
@@ -219,12 +228,63 @@ export default function OfflineSurveySelection() {
               </div>
             </div>
           ))}
+          {surveyBasemaps.length && (
+            <div className="text-sm p-2 rounded bg-gray-100 my-4 flex items-center">
+              <div className="px-2">
+                <Trans>
+                  You can also prepare offline maps using mbtiles packages
+                  provided by an admin.
+                </Trans>
+              </div>
+              <label className="bg-white rounded cursor-pointer border shadow-sm px-2 pr-4 py-0.5 text-black whitespace-nowrap mx-1 flex items-center">
+                <input
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files?.length) {
+                      setMbtilesFileList(e.target.files);
+                    } else {
+                      setMbtilesFileList(null);
+                    }
+                  }}
+                  multiple
+                  className="hidden"
+                  accept=".mbtiles"
+                  type="file"
+                />
+                <svg
+                  viewBox="0 0 100 100"
+                  height="36"
+                  width="36"
+                  focusable="false"
+                  role="img"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="text-gray-500"
+                >
+                  <path d="M64.603 35.504a2.777 2.777 0 00-2.774-2.72c-.047 0-.091.012-.138.014h-2.039V17.774a1.687 1.687 0 00-1.684-1.684H41.765v.03a1.681 1.681 0 00-1.386 1.654v15.022h-2.052c-.043-.002-.083-.013-.126-.013a2.776 2.776 0 00-2.774 2.72h-.036v45.625h.001a2.782 2.782 0 002.78 2.781l.014-.001h23.643a2.78 2.78 0 002.78-2.779V35.504h-.006zm-9.938-2.706h-9.329v-11.72h9.329v11.72z"></path>
+                  <path d="M47.506 27.933h4.988v2.072h-4.988z"></path>
+                </svg>
+                <Trans>Select files</Trans>
+              </label>
+            </div>
+          )}
         </div>
       </div>
       {downloadBasemapModalOpen && (
         <DownloadBasemapModal
           map={downloadBasemapModalOpen}
           onRequestClose={() => setDownloadBasemapModalOpen(null)}
+        />
+      )}
+      {mbtilesFileList && (
+        <ImportMbtilesModal
+          files={mbtilesFileList}
+          onRequestClose={() => {
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
+            setMbtilesFileList(null);
+          }}
         />
       )}
     </Card>
