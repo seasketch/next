@@ -299,7 +299,6 @@ export function useMapDownloadManager({
   }, [cacheStatus.status, map, context]);
 
   const cancel = useCallback(() => {
-    console.log("abort", abortController);
     abortController.current?.abort();
   }, []);
 
