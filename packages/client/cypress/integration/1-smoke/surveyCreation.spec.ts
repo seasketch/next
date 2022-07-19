@@ -148,7 +148,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["macbook-15", "ipad-2", "iphone-x"]//"iphone-x", "iphone-5", "ipad-2", "macbook-15"]//"iphone-x", "ipad-2", "macbook-15"]//, ]//]//, "iphone-5",]//
+const devices: any = ["macbook-15"]//, , "ipad-2", "iphone-x"
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -497,6 +497,7 @@ describe("Survey creation smoke test", () => {
         }
         //polygon path for mobile devices
         if (device === "iphone-x" || device === "iphone-5") {
+          console.log('small devices')
           cy.get('[data-cy="button-begin"]')
             .should('exist')
             .and('be.visible')
@@ -509,7 +510,12 @@ describe("Survey creation smoke test", () => {
             .should('not.exist')
           drawPolygon()
         } else {
-          waitOnMapbox(5)
+          console.log("large devices")
+         waitOnMapbox(5)
+          cy.get('div.MapPicker')
+            .should('exist')
+            .and('be.visible')
+          //cy.get('p').contains('Click on map')
           cy.get('[role="progressbar"]')
             .should('not.exist')
           drawPolygon()
