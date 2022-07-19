@@ -665,8 +665,13 @@ describe("Survey creation smoke test", () => {
         cy.get('button').contains('Save').then(($save) => {
           {$save.trigger('click')}
         });
+        cy.get('button').contains('Yellowfin')
+          .should('not.exist')
+        cy.get('button').contains('Save')
+          .should('not.exist')
         cy.get('.SAPRangeMini')
           .should('exist')
+          .and('be.visible')
           .and('have.value', 15);
       });
       it(`Can finish sector - Fisheries - Commercial, Tuna - ${device}`, () => {
@@ -1103,5 +1108,5 @@ describe("Survey creation smoke test", () => {
           }
         });
       });
-    })//;
+    });
   });
