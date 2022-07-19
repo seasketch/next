@@ -359,6 +359,7 @@ describe("Survey creation smoke test", () => {
     devices.forEach((device) => {
       it("Can visit the survey", () => {
         cy.viewport(device)
+        
         if (device === "macbook-15") {
           cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         }
@@ -394,6 +395,7 @@ describe("Survey creation smoke test", () => {
       });
       it(`Cannot advance until name is provided - ${device}`, () => {
         cy.viewport(device)
+        checkForNavAndLang()
         cy.contains('What is your name?')
           .get('[title = "Next Question"]')
           .should('have.class', 'pointer-events-none')
@@ -402,6 +404,7 @@ describe("Survey creation smoke test", () => {
       })
       it(`Can input email address or can skip question - ${device}`, () => {
         cy.viewport(device)
+        checkForNavAndLang()
         cy.contains("What is your email address?")
         cy.get("input").should('be.visible')
         cy.get("input")
@@ -410,12 +413,14 @@ describe("Survey creation smoke test", () => {
       })
       it(`Cannot advance until atoll selection is made - ${device}`, () => {
         cy.viewport(device)
+        checkForNavAndLang()
         cy.contains("Which Atoll do you reside on?")
           .get('[title = "Next Question"]')
           .should('have.class', "pointer-events-none")
         cy.contains('N').click()
       });
       it(`Cannot advance until island selection is made - ${device}`, () => {
+        checkForNavAndLang()
         cy.viewport(device)
         cy.restoreLocalStorage()
         cy.getLocalStorage('slug').then((slug) => {
@@ -433,6 +438,7 @@ describe("Survey creation smoke test", () => {
       })
       it(`Cannot advance until sector selection(s) is made - ${device}`, () => {
         cy.viewport(device)
+        checkForNavAndLang()
         cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden')
         cy.get('[title = "Fisheries - Commercial, Tuna"]').click()
         cy.get('[title = "Fisheries - Commercial, Non-Tuna Species"]').click()
@@ -511,7 +517,7 @@ describe("Survey creation smoke test", () => {
           drawPolygon()
         } else {
           console.log("large devices")
-         waitOnMapbox(7)
+         waitOnMapbox(9)
           cy.get('div.MapPicker')
             .should('exist')
             .and('be.visible')
