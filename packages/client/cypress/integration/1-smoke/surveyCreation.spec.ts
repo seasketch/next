@@ -511,7 +511,7 @@ describe("Survey creation smoke test", () => {
           drawPolygon()
         } else {
           console.log("large devices")
-         waitOnMapbox(6)
+         waitOnMapbox(7)
           cy.get('div.MapPicker')
             .should('exist')
             .and('be.visible')
