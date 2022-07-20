@@ -245,7 +245,7 @@ export function useMapDownloadManager({
                 progressMessage: task,
                 progress: currentProgress,
               }));
-            } else {
+            } else if (!tile) {
               setDownloadState((prev) => ({
                 ...prev,
                 progressMessage: task,

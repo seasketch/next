@@ -129,10 +129,9 @@ const BasemapOfflineDetailsPlugin = makeExtendSchemaPlugin((build) => {
           )) as Style;
 
           const validSources = Object.values(style.sources).filter(
-            (s) =>
-              s.type === "vector" ||
-              s.type === "raster" ||
-              s.type === "raster-dem"
+            (s) => s.type === "vector" || s.type === "raster"
+            // disable raster-dem for now
+            // || s.type === "raster-dem"
           ) as (VectorSource | RasterDemSource | RasterSource)[];
 
           const sourceUrls = validSources.reduce((urls, source) => {
@@ -299,7 +298,7 @@ export function normalizeSourceUrlTemplate(
         url = `https://api.mapbox.com/v4/${sourceList}/{z}/{x}/{y}@2x.webp`;
         break;
       case "raster-dem":
-        url = `https://api.mapbox.com/v4/${sourceList}/{z}/{x}/{y}.webp`;
+        url = `https://api.mapbox.com/v4/${sourceList}/{z}/{x}/{y}@2x.webp`;
         break;
       default:
         break;

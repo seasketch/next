@@ -52,7 +52,9 @@ export function normalizeSourceUrlTemplate(
         url = `https://api.mapbox.com/v4/${sourceList}/{z}/{x}/{y}@2x.webp`;
         break;
       case "raster-dem":
-        throw new Error("raster-dem Unsuppored");
+        // eslint-disable-next-line i18next/no-literal-string
+        url = `https://api.mapbox.com/raster/v1/${sourceList}/{z}/{x}/{y}.webp`;
+        break;
       default:
         break;
     }
