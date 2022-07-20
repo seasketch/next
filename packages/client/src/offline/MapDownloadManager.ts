@@ -23,6 +23,7 @@ import {
   cacheNameForSource,
   MAP_STATIC_ASSETS_CACHE_NAME,
 } from "./MapTileCache";
+import { removeDpiComponentFromMapboxUrl } from "./MapTileCacheHandlers";
 
 type MapDownloadManagerPausedStatus = {
   working: false;
@@ -228,15 +229,11 @@ export function useMapDownloadManager({
         },
         abortController.current.signal
       );
-
       let tilesProcessed = 0;
       try {
         await addTilesToCache(
           mbtiles,
-          source.type.toString().toLowerCase() as
-            | "vector"
-            | "raster"
-            | "raster-dem",
+          currentTilePackage.originalUrlTemplate,
           // eslint-disable-next-line no-loop-func
           ({ tile, totalTiles, task }) => {
             progress += 1;
@@ -478,11 +475,14 @@ export async function addTilesToCache(
             };
           tilesProcessed += 1;
 
-          const url = sourceUrlTemplate
+          let cacheKey = sourceUrlTemplate
             .replace("{z}", zoom_level.toString())
             .replace("{x}", tile_column.toString())
             .replace("{y}", tile_row.toString());
-          await tileCache.put(url, new Response(tile_data as Uint8Array));
+          if (/api.mapbox.com/.test(cacheKey)) {
+            cacheKey = removeDpiComponentFromMapboxUrl(cacheKey);
+          }
+          await tileCache.put(cacheKey, new Response(tile_data as Uint8Array));
           progressCallback({
             tile: tilesProcessed,
             totalTiles: totalTiles,

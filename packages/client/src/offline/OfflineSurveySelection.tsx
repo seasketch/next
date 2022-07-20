@@ -18,6 +18,7 @@ import { CacheProgress } from "./CacheStatus";
 import { ClientCacheManagerContext } from "./ClientCacheManager";
 import DownloadBasemapModal from "./DownloadBasemapModal";
 import ImportMbtilesModal from "./ImportMbtilesModal";
+import isGoogleChrome from "./isGoogleChrome";
 import useBasemapsBySurvey, {
   BasemapDetailsAndClientCacheStatus,
 } from "./useBasemapsBySurvey";
@@ -74,6 +75,23 @@ export default function OfflineSurveySelection() {
           Performance" or higher to enable this functionality.
         </Trans>
       </p>
+      {!isGoogleChrome && (
+        <Warning>
+          <Trans>
+            Offline functionality is only supported using Google Chrome. Other
+            browsers have restrictions that prevent the caching of large amounts
+            of map data, and may have other problems.
+            <br />
+            <br /> Please{" "}
+            <a
+              className="underline"
+              href="https://www.google.com/chrome/downloads/"
+            >
+              download Google Chrome
+            </a>
+          </Trans>
+        </Warning>
+      )}
       {context &&
       context.cacheSizes?.offlineSurveys.queries &&
       context.level.id !== "improved" &&

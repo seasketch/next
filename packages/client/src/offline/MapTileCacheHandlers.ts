@@ -39,12 +39,17 @@ export function handleMapTileRequest(url: URL, event: FetchEvent) {
   url.searchParams.delete("sku");
   url.searchParams.delete("access_token");
   url.searchParams.delete("secure");
-  const cacheKey = url.toString();
+  let cacheKey = url.toString();
   return cachesMatch(cacheKey).then((response) => {
     if (response) {
       return response;
     } else {
-      return fetch(event.request);
+      return fetch(event.request).catch((e) => {
+        return new Response("Failed to fetch", {
+          status: 408,
+          headers: { "Content-Type": "text/plain" },
+        });
+      });
     }
   });
 }
@@ -60,6 +65,14 @@ async function cachesMatch(url: string) {
     return existing;
   }
   // check map tiles
+  if (/https:\/\/api.mapbox.com/.test(url)) {
+    // normalize @1x/@2x component of url to match what is in cache
+    url = removeDpiComponentFromMapboxUrl(url);
+    // if not webp, make webp
+    if (!/.pbf$/.test(url) && !/\.webp$/.test(url)) {
+      url = url.replace(/\.\w+$/, ".webp");
+    }
+  }
   for (const key of cacheKeys) {
     if (/^data-source/.test(key)) {
       const cache = await caches.open(key);
@@ -69,4 +82,8 @@ async function cachesMatch(url: string) {
       }
     }
   }
+}
+
+export function removeDpiComponentFromMapboxUrl(url: string) {
+  return url.replace(/@\dx\./, ".");
 }
