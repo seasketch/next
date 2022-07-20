@@ -517,11 +517,14 @@ describe("Survey creation smoke test", () => {
           drawPolygon()
         } else {
           console.log("large devices")
-          cy.get('[role="progressbar"]').then((progressBar) => {
-            if (progressBar.children().hasClass('animate-spin')) {
-              waitOnMapbox(9)
-            }
-          })
+          if (device === "macbook-15") {
+            waitOnMapbox(9)
+          }
+          //cy.get('[role="progressbar"]').then((progressBar) => {
+          //  if (progressBar.children().hasClass('animate-spin')) {
+          //    
+          //  }
+          //})
           
           cy.get('div.MapPicker')
             .should('exist')
