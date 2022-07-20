@@ -76,6 +76,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
       maxZ: result.maxZ,
       region,
     });
+    console.log("counted child tiles", totalTiles);
 
     if (totalTiles > 50000) {
       await client.query(
@@ -204,6 +205,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         let tilesProcessed = 0;
 
         async function addTile(tile: number[], totalTiles: number) {
+          console.log("add tile", totalTiles + 1, tile);
           const url =
             result.sourceType === "vector"
               ? tileUrlForMapBoxVectorSource(
@@ -211,7 +213,13 @@ export async function createTilePackage(packageId: string, client: DBClient) {
                   tile,
                   result.accessToken || process.env.MAPBOX_ACCESS_TOKEN!
                 )
-              : tileUrlForMapBoxRasterSource(
+              : result.sourceType === "raster"
+              ? tileUrlForMapBoxRasterSource(
+                  sourcesList,
+                  tile,
+                  result.accessToken || process.env.MAPBOX_ACCESS_TOKEN!
+                )
+              : tileUrlForMapBoxRasterDemSource(
                   sourcesList,
                   tile,
                   result.accessToken || process.env.MAPBOX_ACCESS_TOKEN!
@@ -288,27 +296,25 @@ export async function createTilePackage(packageId: string, client: DBClient) {
             // Here we only retry once
             return 25;
           } else {
-            // For unrecoverable errors, kill the tiling process and update the
-            // db record. Note that 404's should *not* trigger this
-            limiter.stop();
-            await client.query(
-              `update offline_tile_packages set status = 'FAILED', error = $2 where id = $1`,
-              [packageId, error.toString()]
-            );
+            try {
+              // For unrecoverable errors, kill the tiling process and update the
+              // db record. Note that 404's should *not* trigger this
+              await client.query(
+                `update offline_tile_packages set status = 'FAILED', error = $2 where id = $1`,
+                [packageId, error.toString()]
+              );
+              await limiter.stop();
+            } catch (e) {
+              console.error(e);
+            }
           }
         });
 
         const curried = (tile: number[]) => addTile(tile, tiles.length);
 
-        await Promise.all(
+        const status = await Promise.all(
           tiles.map((tile) => limiter.schedule(curried, tile))
-        ).catch((e) => {
-          if (/limiter/.test(e.toString())) {
-            // ignore
-          } else {
-            throw e;
-          }
-        });
+        );
 
         await db.close();
         const stats = fs.statSync(path);
@@ -360,6 +366,14 @@ export function tileUrlForMapBoxRasterSource(
   accessToken: string
 ) {
   return `https://api.mapbox.com/v4/${sourcesList}/${tile[Z]}/${tile[X]}/${tile[Y]}@2x.webp?access_token=${accessToken}`;
+}
+
+export function tileUrlForMapBoxRasterDemSource(
+  sourcesList: string,
+  tile: number[],
+  accessToken: string
+) {
+  return `https://api.mapbox.com/v4/${sourcesList}/${tile[Z]}/${tile[X]}/${tile[Y]}.webp?access_token=${accessToken}`;
 }
 
 export function objectKeyForTilePackageId(id: string) {
