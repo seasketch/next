@@ -67,7 +67,6 @@ export async function createTilePackage(packageId: string, client: DBClient) {
       [packageId, "QUEUED"]
     )
   ).rows;
-
   if (results.length === 1) {
     const result = results[0];
     const region = JSON.parse(result.region);
@@ -204,7 +203,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         let failuresWithoutSuccess = 0;
         let tilesProcessed = 0;
 
-        async function addTile(tile: number[]) {
+        async function addTile(tile: number[], totalTiles: number) {
           const url =
             result.sourceType === "vector"
               ? tileUrlForMapBoxVectorSource(
@@ -217,24 +216,46 @@ export async function createTilePackage(packageId: string, client: DBClient) {
                   tile,
                   result.accessToken || process.env.MAPBOX_ACCESS_TOKEN!
                 );
-          client.query(
-            `update offline_tile_packages set tiles_fetched = $2 where id = $1`,
-            [packageId, tilesProcessed++]
-          );
-          const response = await fetch(url);
-          if (response.ok) {
-            failuresWithoutSuccess = 0;
-            const bin = await response.arrayBuffer();
-            await db.run(
-              `INSERT into tiles (tile_column, tile_row, zoom_level, tile_data) values (?, ?, ?, ?)`,
-              [...tile, new Uint8Array(bin)]
-            );
-          } else {
-            failuresWithoutSuccess++;
-            if (failuresWithoutSuccess > 20) {
-              throw new Error(
-                `Failed to retrieve tiles ${failuresWithoutSuccess} times without any successes. Last message = ${await response.text()}`
+          try {
+            const response = await fetchWithTimeout(url, 10000);
+            if (response.ok) {
+              failuresWithoutSuccess = 0;
+              const bin = await response.arrayBuffer();
+              await db.run(
+                `INSERT into tiles (tile_column, tile_row, zoom_level, tile_data) values (?, ?, ?, ?)`,
+                [...tile, new Uint8Array(bin)]
               );
+            } else {
+              if (response.status < 500) {
+                failuresWithoutSuccess++;
+                if (failuresWithoutSuccess > 20) {
+                  throw new Error(
+                    `Failed to retrieve tiles ${failuresWithoutSuccess} times without any successes. Last message = ${await response.text()}`
+                  );
+                }
+              } else {
+                throw new Error(
+                  "Request for tile failed with status = " + response.status
+                );
+              }
+            }
+            tilesProcessed++;
+            // only do this for every 20 tiles
+            if (
+              tilesProcessed === 1 ||
+              tilesProcessed % 20 === 0 ||
+              tilesProcessed === totalTiles
+            ) {
+              client.query(
+                `update offline_tile_packages set tiles_fetched = $2 where id = $1`,
+                [packageId, tilesProcessed]
+              );
+            }
+          } catch (e: any) {
+            if (/The user aborted a request/.test(e.toString())) {
+              throw new Error("Repeated timeout while requesting a map tiles");
+            } else {
+              throw e;
             }
           }
         }
@@ -252,12 +273,42 @@ export async function createTilePackage(packageId: string, client: DBClient) {
           }
         );
 
+        // Mapbox Tiling API rate limit is 100,000 / minute
+        // https://docs.mapbox.com/api/maps/vector-tiles/#vector-tiles-api-restrictions-and-limits
+        // or, 1,666 / second
         const limiter = new Bottleneck({
-          minTime: 50,
-          maxConcurrent: 20,
+          minTime: 25, // 1000 / 25 = 40 batches per second * 5 = 200 tiles / second
+          maxConcurrent: 5,
         });
 
-        await Promise.all(tiles.map((tile) => limiter.schedule(addTile, tile)));
+        limiter.on("failed", async (error, jobInfo) => {
+          const id = jobInfo.options.id;
+          console.warn(`Map tile fetch ${id} failed: ${error}`);
+          if (jobInfo.retryCount === 0) {
+            // Here we only retry once
+            return 25;
+          } else {
+            // For unrecoverable errors, kill the tiling process and update the
+            // db record. Note that 404's should *not* trigger this
+            limiter.stop();
+            await client.query(
+              `update offline_tile_packages set status = 'FAILED', error = $2 where id = $1`,
+              [packageId, error.toString()]
+            );
+          }
+        });
+
+        const curried = (tile: number[]) => addTile(tile, tiles.length);
+
+        await Promise.all(
+          tiles.map((tile) => limiter.schedule(curried, tile))
+        ).catch((e) => {
+          if (/limiter/.test(e.toString())) {
+            // ignore
+          } else {
+            throw e;
+          }
+        });
 
         await db.close();
         const stats = fs.statSync(path);
@@ -336,3 +387,14 @@ async function uploadMBTiles(path: string, id: string) {
 const X = 0;
 const Y = 1;
 const Z = 2;
+
+async function fetchWithTimeout(url: string, ms = 2000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, ms);
+
+  const response = await fetch(url, { signal: controller.signal });
+  clearTimeout(timeout);
+  return response;
+}
