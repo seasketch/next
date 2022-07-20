@@ -4,7 +4,6 @@ import { MapTileCacheCalculator } from "@seasketch/map-tile-cache-calculator/dis
 import { file } from "tmp-promise";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
-import "../fetch-polyfill";
 import bbox from "@turf/bbox";
 import centerOfMass from "@turf/center-of-mass";
 import { Google, googleToTile } from "global-mercator";
@@ -67,9 +66,15 @@ export async function createTilePackage(packageId: string, client: DBClient) {
       [packageId, "QUEUED"]
     )
   ).rows;
+  console.log("starting", results);
   if (results.length === 1) {
+    await client.query(
+      `update offline_tile_packages set status = 'GENERATING' where id = $1`,
+      [packageId]
+    );
     const result = results[0];
     const region = JSON.parse(result.region);
+    console.log("count child tiles");
     const totalTiles = await calculator.countChildTiles({
       levelOfDetail: 1,
       maxShorelineZ: result.maxShorelineZ,
@@ -77,7 +82,6 @@ export async function createTilePackage(packageId: string, client: DBClient) {
       region,
     });
     console.log("counted child tiles", totalTiles);
-
     if (totalTiles > 50000) {
       await client.query(
         `update offline_tile_packages set status = 'FAILED', total_tiles = $2, error = $3 where id = $1`,
@@ -261,6 +265,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
             }
           } catch (e: any) {
             if (/The user aborted a request/.test(e.toString())) {
+              console.error(url);
               throw new Error("Repeated timeout while requesting a map tiles");
             } else {
               throw e;
@@ -285,8 +290,8 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         // https://docs.mapbox.com/api/maps/vector-tiles/#vector-tiles-api-restrictions-and-limits
         // or, 1,666 / second
         const limiter = new Bottleneck({
-          minTime: 25, // 1000 / 25 = 40 batches per second * 5 = 200 tiles / second
-          maxConcurrent: 5,
+          minTime: 20, // 1000 / 25 = 50 batches per second * 10 = 500 tiles / second
+          maxConcurrent: 10,
         });
 
         limiter.on("failed", async (error, jobInfo) => {
