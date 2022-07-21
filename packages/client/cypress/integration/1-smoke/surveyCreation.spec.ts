@@ -486,6 +486,8 @@ describe("Survey creation smoke test", () => {
           .and('be.visible')
         cy.window().its('mapContext.basemaps').then((maps) => {
           Object.keys(maps).forEach((key) => {
+            console.log(device)
+            console.log(basemaps[maps[key].name])
             expect (basemaps[maps[key].name]).to.exist
           })
         })
@@ -526,13 +528,13 @@ describe("Survey creation smoke test", () => {
             .should('not.exist')
           drawPolygon()
           } else {
-            (waitOnMapbox(5), {timeout:7000})
+            //(waitOnMapbox(5), {timeout:7000})
           cy.get('div.MapPicker')
             .should('exist')
             .and('be.visible')
           //cy.get('p').contains('Click on map')
           cy.get('[role="progressbar"]')
-            .should('not.exist')
+            .should('not.exist', {timeout: 10000})
           drawPolygon()
           }
           //cy.get('[role="progressbar"]').then((progressBar) => {
