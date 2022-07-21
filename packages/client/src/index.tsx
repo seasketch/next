@@ -24,10 +24,11 @@ import * as Sentry from "@sentry/react";
 import { Integrations } from "@sentry/tracing";
 import { createBrowserHistory } from "history";
 import SW from "./offline/ServiceWorkerWindow";
-import { namedOperations } from "./generated/graphql";
 import { GraphqlQueryCache } from "./offline/GraphqlQueryCache/main";
 import { strategies } from "./offline/GraphqlQueryCache/strategies";
 import { GraphqlQueryCacheContext } from "./offline/GraphqlQueryCache/useGraphqlQueryCache";
+import { OfflineStateDetector } from "./offline/OfflineStateContext";
+import { onError } from "@apollo/client/link/error";
 
 const history = createBrowserHistory();
 
@@ -39,6 +40,14 @@ const loadingFallback = (
     <Spinner />
   </div>
 );
+
+export class GraphqlNetworkErrorEventTarget extends EventTarget {
+  handleError(e: Error) {
+    this.dispatchEvent(new Event("GraphqlNetworkError"));
+  }
+}
+
+const errorTarget = new GraphqlNetworkErrorEventTarget();
 
 if (process.env.REACT_APP_SENTRY_DSN && process.env.REACT_APP_BUILD) {
   Sentry.init({
@@ -79,20 +88,20 @@ function Auth0ProviderWithRouter(props: any) {
 }
 
 function ApolloProviderWithToken(props: any) {
-  const {
-    getAccessTokenSilently,
-    getAccessTokenWithPopup,
-    user,
-    isAuthenticated,
-  } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
   const [client, setClient] =
     useState<ApolloClient<NormalizedCacheObject> | null>(null);
   const [graphqlQueryCache, setGraphqlQueryCache] =
     useState<GraphqlQueryCache>();
-  const { Survey, ProjectMetadata, SimpleProjectList } = namedOperations.Query;
 
   const httpLink = createUploadLink({
     uri: process.env.REACT_APP_GRAPHQL_ENDPOINT!,
+  });
+
+  const errorLink = onError(({ graphQLErrors, networkError }) => {
+    if (networkError) {
+      errorTarget.handleError(networkError);
+    }
   });
 
   const getToken = async () => {
@@ -156,19 +165,20 @@ function ApolloProviderWithToken(props: any) {
       },
     },
   });
-  const splitLink = split(
-    ({ query }) => {
-      const definition = getMainDefinition(query);
-      return (
-        definition.kind === "OperationDefinition" &&
-        definition.operation === "subscription"
-      );
-    },
-    wsLink,
-    concat(authMiddleware, httpLink)
-  );
 
   useEffect(() => {
+    const splitLink = split(
+      ({ query }) => {
+        const definition = getMainDefinition(query);
+        return (
+          definition.kind === "OperationDefinition" &&
+          definition.operation === "subscription"
+        );
+      },
+      wsLink,
+      concat(authMiddleware, concat(errorLink, httpLink))
+    );
+
     async function init() {
       const cache = new InMemoryCache({
         typePolicies: {
@@ -194,6 +204,7 @@ function ApolloProviderWithToken(props: any) {
     }
 
     init().catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (client && graphqlQueryCache) {
@@ -221,18 +232,20 @@ ReactDOM.render(
         </div>
       }
     >
-      <Router history={history}>
-        <Auth0ProviderWithRouter
-          domain={process.env.REACT_APP_AUTH0_DOMAIN!}
-          clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
-          redirectUri={`${window.location.origin}/authenticate`}
-          cacheLocation="localstorage"
-        >
-          <ApolloProviderWithToken>
-            <App />
-          </ApolloProviderWithToken>
-        </Auth0ProviderWithRouter>
-      </Router>
+      <OfflineStateDetector graphqlErrorTarget={errorTarget}>
+        <Router history={history}>
+          <Auth0ProviderWithRouter
+            domain={process.env.REACT_APP_AUTH0_DOMAIN!}
+            clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
+            redirectUri={`${window.location.origin}/authenticate`}
+            cacheLocation="localstorage"
+          >
+            <ApolloProviderWithToken>
+              <App />
+            </ApolloProviderWithToken>
+          </Auth0ProviderWithRouter>
+        </Router>
+      </OfflineStateDetector>
     </Suspense>
   </React.StrictMode>,
   document.getElementById("root")

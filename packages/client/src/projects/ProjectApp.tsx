@@ -1,5 +1,5 @@
 import bytes from "bytes";
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useContext, useState } from "react";
 import { Route, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import MapboxMap from "../components/MapboxMap";
 import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
@@ -12,6 +12,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import BasemapControl from "../dataLayers/BasemapControl";
 import useMapData from "../dataLayers/useMapData";
 import Spinner from "../components/Spinner";
+import { OfflineStateContext } from "../offline/OfflineStateContext";
+import OfflineToastNotification from "../offline/OfflineToastNotification";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
@@ -43,6 +45,7 @@ export default function ProjectApp() {
     settings: t("Account Settings"),
   };
   const { basemaps, tableOfContentsItems } = useMapData(mapContext);
+  const { online } = useContext(OfflineStateContext);
   const dark = true;
   return (
     <div
@@ -127,6 +130,7 @@ export default function ProjectApp() {
             setExpandSidebar((prev) => false);
           }}
         />
+        <OfflineToastNotification />
       </MapContext.Provider>
     </div>
   );

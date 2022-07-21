@@ -16,6 +16,8 @@ import { useAuth0 } from "@auth0/auth0-react";
 import * as Sentry from "@sentry/react";
 import { CameraOptions } from "mapbox-gl";
 import { ClientCacheManagerProvider } from "./offline/ClientCacheManager";
+import OfflineToastNotification from "./offline/OfflineToastNotification";
+import FullScreenOfflineNavigation from "./offline/FullScreenOfflineNavigation";
 
 const LazyProjectApp = React.lazy(
   () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
@@ -93,6 +95,12 @@ function App() {
               >
                 <Header />
               </Route>
+              <Route
+                path={["/signin", "/projects", "/new-project", "/api", "/team"]}
+                exact
+              >
+                <OfflineToastNotification />
+              </Route>
               <Switch>
                 <Route path="/auth/projectInvite">
                   <LazyAuthLanding />
@@ -117,6 +125,7 @@ function App() {
                   <LazyAccountSettingsPage />
                 </Route>
                 <Route exact path="/">
+                  <FullScreenOfflineNavigation />
                   <div className="p-4 pb-12 bg-white">
                     <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                       {t(
