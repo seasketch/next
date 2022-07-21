@@ -63,7 +63,13 @@ const BasemapOfflineDetailsPlugin = makeExtendSchemaPlugin((build) => {
     resolvers: {
       OfflineSupportInformation: {
         sources: async (parent, args, context, resolveInfo) => {
-          const returnValue = parent.validSources.map(
+          const returnValue: {
+            templateUrl: string;
+            dataSourceUrl: string;
+            type: "vector" | "raster";
+            tilePackageIds: string;
+            ready: boolean;
+          }[] = parent.validSources.map(
             (source: VectorSource | RasterSource | RasterDemSource) => {
               const dataSourceUrl = source.tiles
                 ? source.tiles[0]
