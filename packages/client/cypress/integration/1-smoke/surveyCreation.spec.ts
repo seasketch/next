@@ -12,6 +12,17 @@ let formId: any;
 const FormData = require('form-data');
 const fetch = require('node-fetch');
 
+function timer(){
+  var sec = 30;
+  var timer = setInterval(function(){
+    console.log('00: ' +sec)
+      sec--;
+      if (sec < 0) {
+          clearInterval(timer);
+      }
+  }, 1000);
+}
+
 const basemapNames = ["Maldives Light", "Satellite"];
 
 const basemaps = {
@@ -148,7 +159,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["macbook-15", "ipad-2", "iphone-x"]
+const devices: any = ["macbook-15", "ipad-2"]//, "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -528,20 +539,24 @@ describe("Survey creation smoke test", () => {
             .should('not.exist')
           drawPolygon()
           } else {
-            //(waitOnMapbox(5), {timeout:7000})
+            
+            //, {timeout:7000})
           cy.get('div.MapPicker')
             .should('exist')
             .and('be.visible')
           //cy.get('p').contains('Click on map')
+          //cy.get('[role="progressbar"]').then((progressBar) => {
+          //    while (progressBar.children().hasClass('animate-spin')) {
+          //      timer()
+          //    }
+          //})
+          cy.wait(10000)
+          waitOnMapbox(3)
           cy.get('[role="progressbar"]')
-            .should('not.exist', {timeout: 10000})
+            .should('not.exist')
           drawPolygon()
           }
-          //cy.get('[role="progressbar"]').then((progressBar) => {
-          //  if (progressBar.children().hasClass('animate-spin')) {
-          //    
-          //  }
-          //})
+          //
           
         }
       })//
