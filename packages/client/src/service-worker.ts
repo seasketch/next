@@ -71,7 +71,7 @@ self.addEventListener("message", (event) => {
     event.data &&
     event.data.type === MESSAGE_TYPES.ENABLE_OFFLINE_TILE_SIMULATOR
   ) {
-    var sourceId = (event.source as any).id as string;
+    const sourceId = (event.source as any).id as string;
     if (sourceId) {
       console.warn(
         "Enabling offline tile simulator. Tile requests will be intercepted and blocked if not in offline tileset settings.",
@@ -86,7 +86,7 @@ self.addEventListener("message", (event) => {
     event.data.type === MESSAGE_TYPES.DISABLE_OFFLINE_TILE_SIMULATOR
   ) {
     console.warn("Disabling offline tile simulator.");
-    var sourceId = (event.source as any).id as string;
+    const sourceId = (event.source as any).id as string;
     if (sourceId) {
       offlineTileSimulatorSettings.delete(sourceId);
     }
