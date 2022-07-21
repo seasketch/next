@@ -518,6 +518,22 @@ describe("Survey creation smoke test", () => {
         } else {
           if (device === "macbook-15") {
             waitOnMapbox(9)
+            cy.get('div.MapPicker')
+            .should('exist')
+            .and('be.visible')
+          //cy.get('p').contains('Click on map')
+          cy.get('[role="progressbar"]')
+            .should('not.exist')
+          drawPolygon()
+          } else {
+            (waitOnMapbox(5), {timeout:7000})
+          cy.get('div.MapPicker')
+            .should('exist')
+            .and('be.visible')
+          //cy.get('p').contains('Click on map')
+          cy.get('[role="progressbar"]')
+            .should('not.exist')
+          drawPolygon()
           }
           //cy.get('[role="progressbar"]').then((progressBar) => {
           //  if (progressBar.children().hasClass('animate-spin')) {
@@ -525,13 +541,6 @@ describe("Survey creation smoke test", () => {
           //  }
           //})
           
-          cy.get('div.MapPicker')
-            .should('exist')
-            .and('be.visible')
-          //cy.get('p').contains('Click on map')
-          cy.get('[role="progressbar"]')
-            .should('not.exist', {timeout:7000})
-          drawPolygon()
         }
       })//
       it(`Can view basemap selector - ${device}`, () => {
