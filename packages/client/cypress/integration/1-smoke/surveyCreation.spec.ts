@@ -516,7 +516,6 @@ describe("Survey creation smoke test", () => {
             .should('not.exist')
           drawPolygon()
         } else {
-          console.log("large devices")
           if (device === "macbook-15") {
             waitOnMapbox(9)
           }
@@ -531,7 +530,7 @@ describe("Survey creation smoke test", () => {
             .and('be.visible')
           //cy.get('p').contains('Click on map')
           cy.get('[role="progressbar"]')
-            .should('not.exist')
+            .should('not.exist', {timeout:7000})
           drawPolygon()
         }
       })//
