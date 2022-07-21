@@ -8,7 +8,6 @@ import {
 } from "react";
 import { Trans as T, useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
-import { Statement } from "sql.js";
 import {
   OfflineSupportInformation,
   OfflineTilePackageDetailsFragment,
@@ -207,7 +206,7 @@ function ImportMbtilesModal({
           onRequestClose();
         });
     }
-  }, [files, data]);
+  }, [files, data, onError, onRequestClose, t]);
 
   const relatedMaps = useMemo(() => {
     if (state) {
@@ -354,7 +353,7 @@ function ImportMbtilesModal({
         }
       }
     },
-    [files, setImportState, state, importState.working]
+    [files, relatedMaps, importState.working, state, context]
   );
 
   return (
