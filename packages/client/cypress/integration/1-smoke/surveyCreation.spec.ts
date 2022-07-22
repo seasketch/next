@@ -471,7 +471,7 @@ describe("Survey creation smoke test", () => {
       cy.get('[role="switch"]').then(($switch) => {
         {$switch.trigger('click')}
       })
-      cy.contains('5000 km')
+      cy.contains('10000 km')
     })
     it ('Renders the correct basemap', () => {
       cy.contains('Maldives Light').as('maldivesLightBasemap')

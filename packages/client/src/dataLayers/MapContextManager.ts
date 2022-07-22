@@ -174,7 +174,7 @@ class MapContextManager {
   arcgisVectorSourceCache: ArcGISVectorSourceCache;
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
-  private scaleControl = new mapboxgl.ScaleControl();
+  private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
   private basemapsWereSet = false;
 
   constructor(
@@ -571,8 +571,8 @@ class MapContextManager {
             }
           : {}),
         prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
-        basemapOptionalLayerStatePreferences: this.internalState
-          .basemapOptionalLayerStatePreferences,
+        basemapOptionalLayerStatePreferences:
+          this.internalState.basemapOptionalLayerStatePreferences,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
@@ -732,9 +732,8 @@ class MapContextManager {
         };
       } else {
         // @ts-ignore
-        baseStyle.sources![
-          baseStyle.terrain?.source || "terrain-source"
-        ] = newSource;
+        baseStyle.sources![baseStyle.terrain?.source || "terrain-source"] =
+          newSource;
       }
 
       // @ts-ignore

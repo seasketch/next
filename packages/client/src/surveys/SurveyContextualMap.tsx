@@ -1,6 +1,6 @@
 import { ArrowLeftIcon, ArrowsExpandIcon } from "@heroicons/react/outline";
 import { CameraOptions, FreeCameraOptions } from "mapbox-gl";
-import React from "react";
+import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
 import { Trans } from "react-i18next";
 import MiniBasemapSelector from "../admin/data/MiniBasemapSelector";
@@ -9,7 +9,7 @@ import useMapEssentials from "../admin/surveys/useMapEssentials";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import MapboxMap from "../components/MapboxMap";
 import MapPicker from "../components/MapPicker";
-import { ResetCamera, ResetView } from "../draw/MapSettingsPopup";
+import { ResetCamera, ResetView, ShowScaleBar } from "../draw/MapSettingsPopup";
 import { SurveyMapPortal } from "../formElements/FormElement";
 import { useUpdateFormElementMapCameraMutation } from "../generated/graphql";
 import useWindowSize from "../useWindowSize";
@@ -38,10 +38,12 @@ export default function SurveyContextualMap(props: {
     basemaps.length > 1 ||
     basemaps[0]?.optionalBasemapLayers?.length > 0 ||
     props.cameraOptions;
+
   return (
     <SurveyMapPortal mapContext={mapContext}>
       {!props.displayShowMapButton && hasMapSettings && (
         <MapPicker basemaps={basemaps}>
+          <ShowScaleBar mapContext={mapContext} />
           {mapContext?.manager?.map && props.cameraOptions && (
             <ResetCamera
               mapContextManager={mapContext.manager}
