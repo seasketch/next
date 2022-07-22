@@ -585,6 +585,7 @@ describe("Survey creation smoke test", () => {
         });
         cy.get('.mapboxgl-ctrl-scale')
           .should('be.visible');
+        cy.contains('10000km')
           //.as("scaleBar").then((scaleBar) => {
           //  cy.setLocalStorage("scale bar", scaleBar.html())
           //  cy.saveLocalStorage()

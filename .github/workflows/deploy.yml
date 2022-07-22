@@ -156,7 +156,7 @@ jobs:
           UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: |
-          cdk deploy -e SeaSketchGraphQLServer
+          cdk deploy --require-approval never -e SeaSketchGraphQLServer
   deploy_client:
     name: Deploy Client
     runs-on: ubuntu-latest

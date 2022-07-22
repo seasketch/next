@@ -36,3 +36,8 @@ html.survey {
 .SurveyAppLayout .mapboxgl-ctrl-top-left {
   /* top: 4px; */
 }
+
+.SurveyAppLayout .mapboxgl-ctrl-scale {
+  font-weight: 500;
+  font-size: 14px;
+}
