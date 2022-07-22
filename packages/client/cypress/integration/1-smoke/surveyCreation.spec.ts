@@ -15,7 +15,8 @@ const fetch = require('node-fetch');
 function timer(){
   var sec = 30;
   var timer = setInterval(function(){
-    console.log('00: ' +sec)
+    cy.wait(sec)
+    console.log(sec)
       sec--;
       if (sec < 0) {
           clearInterval(timer);
@@ -159,7 +160,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["macbook-15", "ipad-2"]//, "iphone-x"]
+const devices: any = ["macbook-15", "ipad-2", "iphone-x"]//, "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -368,7 +369,7 @@ describe("Survey creation smoke test", () => {
       })
     })
     devices.forEach((device) => {
-      it("Can visit the survey", () => {
+      it(`Can visit the survey - ${device}`, () => {
         cy.viewport(device)
         
         if (device === "macbook-15") {
@@ -530,6 +531,7 @@ describe("Survey creation smoke test", () => {
           drawPolygon()
         } else {
           if (device === "macbook-15") {
+            console.log("macbook-15")
             waitOnMapbox(9)
             cy.get('div.MapPicker')
             .should('exist')
@@ -539,25 +541,23 @@ describe("Survey creation smoke test", () => {
             .should('not.exist')
           drawPolygon()
           } else {
+            console.log("ipad-2")
             
             //, {timeout:7000})
           cy.get('div.MapPicker')
             .should('exist')
             .and('be.visible')
           //cy.get('p').contains('Click on map')
-          //cy.get('[role="progressbar"]').then((progressBar) => {
-          //    while (progressBar.children().hasClass('animate-spin')) {
-          //      timer()
-          //    }
-          //})
-          cy.wait(10000)
+          cy.get('[role="progressbar"]').then((progressBar) => {
+              if (progressBar.children().hasClass('animate-spin')) {
+                cy.wait(6000)
+              }
+          })
           waitOnMapbox(3)
           cy.get('[role="progressbar"]')
             .should('not.exist')
           drawPolygon()
           }
-          //
-          
         }
       })//
       it(`Can view basemap selector - ${device}`, () => {
