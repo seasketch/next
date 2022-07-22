@@ -34,14 +34,10 @@ export default function SurveyContextualMap(props: {
   const onError = useGlobalErrorHandler();
   const [mutate, state] = useUpdateFormElementMapCameraMutation({ onError });
   const windowSize = useWindowSize();
-  let hasMapSettings =
-    basemaps.length > 1 ||
-    basemaps[0]?.optionalBasemapLayers?.length > 0 ||
-    props.cameraOptions;
 
   return (
     <SurveyMapPortal mapContext={mapContext}>
-      {!props.displayShowMapButton && hasMapSettings && (
+      {!props.displayShowMapButton && (
         <MapPicker basemaps={basemaps}>
           <ShowScaleBar mapContext={mapContext} />
           {mapContext?.manager?.map && props.cameraOptions && (
