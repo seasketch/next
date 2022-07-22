@@ -519,9 +519,16 @@ describe("Survey creation smoke test", () => {
         cy.get('@scaleSwitch').then(($switch) => {
           expect ($switch.attr('aria-checked')).to.equal(`true`);
         });
-        cy.get('.mapboxgl-ctrl-scale')
-          .contains('5000')
-          .should('be.visible');
+        if (device !== "iphone-x") {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('5000')
+            .should('be.visible');
+        } else {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('10000')
+            .should('be.visible');
+        }
+        
           
           //.as("scaleBar").then((scaleBar) => {
           //  cy.setLocalStorage("scale bar", scaleBar.html())
