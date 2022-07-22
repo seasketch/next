@@ -178,7 +178,7 @@ class MapContextManager {
   arcgisVectorSourceCache: ArcGISVectorSourceCache;
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
-  private scaleControl = new mapboxgl.ScaleControl();
+  private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
   private basemapsWereSet = false;
 
   constructor(
