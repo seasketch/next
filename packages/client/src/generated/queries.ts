@@ -3358,6 +3358,23 @@ export type DeleteSurveyResponseByNodeIdInput = {
   nodeId: Scalars['ID'];
 };
 
+/** All input for the `deleteSurveyResponseByOfflineId` mutation. */
+export type DeleteSurveyResponseByOfflineIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /**
+   * Should be used by clients to uniquely identify responses that are collected
+   * offline. Survey facilitators can download their responses to disk as json so
+   * that they may be recovered/submitted in the case of the client machine being
+   * damaged or stolen. Tracking an offline uuid ensures that these responses are
+   * not somehow submitted in duplicate.
+   */
+  offlineId: Scalars['UUID'];
+};
+
 /** All input for the `deleteSurveyResponse` mutation. */
 export type DeleteSurveyResponseInput = {
   /**
@@ -5510,6 +5527,8 @@ export type Mutation = {
   deleteSurveyResponse?: Maybe<DeleteSurveyResponsePayload>;
   /** Deletes a single `SurveyResponse` using its globally unique id. */
   deleteSurveyResponseByNodeId?: Maybe<DeleteSurveyResponsePayload>;
+  /** Deletes a single `SurveyResponse` using a unique key. */
+  deleteSurveyResponseByOfflineId?: Maybe<DeleteSurveyResponsePayload>;
   /**
    * Deletes an item from the draft table of contents, as well as all child items
    * if it is a folder. This action will also delete all related layers and sources
@@ -5768,6 +5787,8 @@ export type Mutation = {
   updateSurveyResponse?: Maybe<UpdateSurveyResponsePayload>;
   /** Updates a single `SurveyResponse` using its globally unique id and a patch. */
   updateSurveyResponseByNodeId?: Maybe<UpdateSurveyResponsePayload>;
+  /** Updates a single `SurveyResponse` using a unique key and a patch. */
+  updateSurveyResponseByOfflineId?: Maybe<UpdateSurveyResponsePayload>;
   /** Updates a single `TableOfContentsItem` using a unique key and a patch. */
   updateTableOfContentsItem?: Maybe<UpdateTableOfContentsItemPayload>;
   /** Updates a single `TableOfContentsItem` using a unique key and a patch. */
@@ -6346,6 +6367,12 @@ export type MutationDeleteSurveyResponseArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyResponseByNodeIdArgs = {
   input: DeleteSurveyResponseByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteSurveyResponseByOfflineIdArgs = {
+  input: DeleteSurveyResponseByOfflineIdInput;
 };
 
 
@@ -6960,6 +6987,12 @@ export type MutationUpdateSurveyResponseArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyResponseByNodeIdArgs = {
   input: UpdateSurveyResponseByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSurveyResponseByOfflineIdArgs = {
+  input: UpdateSurveyResponseByOfflineIdInput;
 };
 
 
@@ -8456,6 +8489,7 @@ export type Query = Node & {
   surveyResponse?: Maybe<SurveyResponse>;
   /** Reads a single `SurveyResponse` using its globally unique `ID`. */
   surveyResponseByNodeId?: Maybe<SurveyResponse>;
+  surveyResponseByOfflineId?: Maybe<SurveyResponse>;
   /** Reads and enables pagination through a set of `SurveyResponse`. */
   surveyResponsesConnection?: Maybe<SurveyResponsesConnection>;
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
@@ -9142,6 +9176,12 @@ export type QuerySurveyResponseArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponseByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySurveyResponseByOfflineIdArgs = {
+  offlineId: Scalars['UUID'];
 };
 
 
@@ -10419,6 +10459,14 @@ export type SurveyResponse = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
+   * Should be used by clients to uniquely identify responses that are collected
+   * offline. Survey facilitators can download their responses to disk as json so
+   * that they may be recovered/submitted in the case of the client machine being
+   * damaged or stolen. Tracking an offline uuid ensures that these responses are
+   * not somehow submitted in duplicate.
+   */
+  offlineId?: Maybe<Scalars['UUID']>;
+  /**
    * Checked on SUBMISSION, so adding or changing a survey geofence after responses
    * have been submitted will not update values. GPS coordinates and IP addresses
    * are not stored for privacy purposes.
@@ -10442,6 +10490,8 @@ export type SurveyResponse = Node & {
 export type SurveyResponseCondition = {
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `offlineId` field. */
+  offlineId?: Maybe<Scalars['UUID']>;
   /** Checks for equality with the object’s `surveyId` field. */
   surveyId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `userId` field. */
@@ -10486,6 +10536,8 @@ export enum SurveyResponsesOrderBy {
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
+  OfflineIdAsc = 'OFFLINE_ID_ASC',
+  OfflineIdDesc = 'OFFLINE_ID_DESC',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   SurveyIdAsc = 'SURVEY_ID_ASC',
@@ -12308,6 +12360,25 @@ export type UpdateSurveyResponseByNodeIdInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SurveyResponse` to be updated. */
   nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `SurveyResponse` being updated. */
+  patch: SurveyResponsePatch;
+};
+
+/** All input for the `updateSurveyResponseByOfflineId` mutation. */
+export type UpdateSurveyResponseByOfflineIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /**
+   * Should be used by clients to uniquely identify responses that are collected
+   * offline. Survey facilitators can download their responses to disk as json so
+   * that they may be recovered/submitted in the case of the client machine being
+   * damaged or stolen. Tracking an offline uuid ensures that these responses are
+   * not somehow submitted in duplicate.
+   */
+  offlineId: Scalars['UUID'];
   /** An object where the defined keys will be set on the `SurveyResponse` being updated. */
   patch: SurveyResponsePatch;
 };

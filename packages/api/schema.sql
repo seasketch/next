@@ -1912,6 +1912,7 @@ CREATE TABLE public.survey_responses (
     is_practice boolean DEFAULT false NOT NULL,
     archived boolean DEFAULT false NOT NULL,
     last_updated_by_id integer,
+    offline_id uuid,
     CONSTRAINT survey_responses_data_check CHECK ((char_length((data)::text) < 10000))
 );
 
@@ -1998,6 +1999,13 @@ Checked on SUBMISSION, so adding or changing a survey geofence after responses h
 --
 
 COMMENT ON COLUMN public.survey_responses.is_facilitated IS 'If true, a logged-in user entered information on behalf of another person, so userId is not as relevant.';
+
+
+--
+-- Name: COLUMN survey_responses.offline_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.offline_id IS 'Should be used by clients to uniquely identify responses that are collected offline. Survey facilitators can download their responses to disk as json so that they may be recovered/submitted in the case of the client machine being damaged or stolen. Tracking an offline uuid ensures that these responses are not somehow submitted in duplicate.';
 
 
 --
@@ -11746,6 +11754,14 @@ ALTER TABLE ONLY public.survey_invites
 
 ALTER TABLE ONLY public.survey_invites
     ADD CONSTRAINT survey_invites_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: survey_responses survey_responses_offline_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.survey_responses
+    ADD CONSTRAINT survey_responses_offline_id_key UNIQUE (offline_id);
 
 
 --
