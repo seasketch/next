@@ -66,7 +66,6 @@ export async function createTilePackage(packageId: string, client: DBClient) {
       [packageId, "QUEUED"]
     )
   ).rows;
-  console.log("starting", results);
   if (results.length === 1) {
     await client.query(
       `update offline_tile_packages set status = 'GENERATING' where id = $1`,
@@ -74,14 +73,12 @@ export async function createTilePackage(packageId: string, client: DBClient) {
     );
     const result = results[0];
     const region = JSON.parse(result.region);
-    console.log("count child tiles");
     const totalTiles = await calculator.countChildTiles({
       levelOfDetail: 1,
       maxShorelineZ: result.maxShorelineZ,
       maxZ: result.maxZ,
       region,
     });
-    console.log("counted child tiles", totalTiles);
     if (totalTiles > 50000) {
       await client.query(
         `update offline_tile_packages set status = 'FAILED', total_tiles = $2, error = $3 where id = $1`,
@@ -209,7 +206,6 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         let tilesProcessed = 0;
 
         async function addTile(tile: number[], totalTiles: number) {
-          console.log("add tile", totalTiles + 1, tile);
           const url =
             result.sourceType === "vector"
               ? tileUrlForMapBoxVectorSource(
