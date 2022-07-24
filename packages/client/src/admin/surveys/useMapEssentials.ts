@@ -1,7 +1,7 @@
 import bbox from "@turf/bbox";
 import { BBox } from "geojson";
 import { CameraOptions } from "mapbox-gl";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useMapContext } from "../../dataLayers/MapContextManager";
@@ -9,6 +9,9 @@ import {
   BasemapDetailsFragment,
   useGetBasemapsAndRegionQuery,
 } from "../../generated/graphql";
+import { normalizeStyleUrl } from "../../offline/mapboxApiHelpers";
+import { MAP_STATIC_ASSETS_CACHE_NAME } from "../../offline/MapTileCache";
+import { OfflineStateContext } from "../../offline/OfflineStateContext";
 import useDebounce from "../../useDebounce";
 
 export const defaultStartingBounds = [
@@ -49,6 +52,7 @@ export default function useMapEssentials({
     defaultStartingBounds;
 
   const debouncedCamera = useDebounce(cameraOptions, 30);
+  const { online } = useContext(OfflineStateContext);
 
   useEffect(() => {
     if (mapContext?.manager && data?.projectBySlug?.basemaps) {
@@ -67,14 +71,34 @@ export default function useMapEssentials({
       if (!basemaps.length && data.projectBySlug.basemaps.length) {
         basemaps = [data.projectBySlug.basemaps[0]];
       }
-      setBasemaps(basemaps);
-      mapContext.manager?.setBasemaps(basemaps);
+      if (!online) {
+        // need to first check that basemaps are cached
+        caches.open(MAP_STATIC_ASSETS_CACHE_NAME).then(async (cache) => {
+          const offlineBasemaps: BasemapDetailsFragment[] = [];
+          for (const basemap of basemaps) {
+            const cacheKey = new URL(normalizeStyleUrl(basemap.url, ""));
+            cacheKey.searchParams.delete("access_token");
+            const match = await cache.match(cacheKey.toString());
+            if (Boolean(match)) {
+              offlineBasemaps.push(basemap);
+            }
+          }
+          setBasemaps(offlineBasemaps.length ? offlineBasemaps : basemaps);
+          mapContext.manager?.setBasemaps(
+            offlineBasemaps.length ? offlineBasemaps : basemaps
+          );
+        });
+      } else {
+        setBasemaps(basemaps);
+        mapContext.manager?.setBasemaps(basemaps);
+      }
     }
   }, [
     data?.projectBySlug?.basemaps,
     data?.projectBySlug?.surveyBasemaps,
     mapContext.manager,
     filterBasemapIds,
+    online,
   ]);
 
   useEffect(() => {
