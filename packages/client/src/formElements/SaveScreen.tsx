@@ -3,70 +3,63 @@ import {
   SaveAsIcon,
   StatusOfflineIcon,
 } from "@heroicons/react/outline";
-import { useOnlineState } from "beautiful-react-hooks";
 import { GraphQLError } from "graphql";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import IndeterminantLoadingBar from "../admin/surveys/IndeterminantLoadingBar";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
-import Spinner from "../components/Spinner";
+import { offlineSurveyChoiceStrategy } from "../offline/GraphqlQueryCache/strategies";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
+import { OfflineStateContext } from "../offline/OfflineStateContext";
+import useOfflineSurveyResponses from "../offline/useOfflineSurveyResponses";
 import SurveyButton from "../surveys/SurveyButton";
-import {
-  FormElementBody,
-  FormElementComponent,
-  SurveyContext,
-} from "./FormElement";
+import { FormElementComponent, SurveyContext } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
-import LoadingDots from "./LoadingDots";
 
 const SaveScreen: FormElementComponent<{}> = (props) => {
   const { t } = useTranslation("surveys");
-  const isOnline = useOnlineState();
+  const { online } = useContext(OfflineStateContext);
   const surveyContext = useContext(SurveyContext);
-  const [wasOffline, setWasOffline] = useState(!isOnline);
   const [errors, setErrors] = useState<null | GraphQLError>(null);
   const [saving, setSaving] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
 
-  function save() {
-    if (isOnline) {
-      setSaving(true);
-      setWasOffline(false);
-      setErrors(null);
-      const startedSubmissionAt = new Date().getTime();
-
-      if (surveyContext?.saveResponse) {
-        surveyContext
-          .saveResponse()
-          .then((response) => {
-            if (response.errors) {
-              setSaving(false);
-              if (Array.isArray(response.errors)) {
-                setErrors(response.errors[0]);
-              } else {
-                // @ts-ignore
-                setErrors(response.errors);
-              }
-            } else {
-              const duration = new Date().getTime() - startedSubmissionAt;
-              if (duration > 2000) {
-                props.onSubmit();
-              } else {
-                setTimeout(() => {
-                  props.onSubmit();
-                }, 2000 - duration);
-              }
-            }
-          })
-          .catch((e) => {
-            setSaving(false);
-            setErrors(e);
-          });
-      }
+  function advance(startedSubmissionAt: number) {
+    const duration = new Date().getTime() - startedSubmissionAt;
+    if (duration > 2000) {
+      props.onSubmit();
     } else {
-      setSaving(false);
-      setWasOffline(true);
+      setTimeout(() => {
+        props.onSubmit();
+      }, 2000 - duration);
+    }
+  }
+
+  function save() {
+    setSaving(true);
+    setErrors(null);
+    const startedSubmissionAt = new Date().getTime();
+
+    if (surveyContext?.saveResponse) {
+      surveyContext.saveResponse().then(async (response) => {
+        if (response.errors) {
+          if (!online && surveyContext.clientIsPreppedForOfflineUse) {
+            await surveyContext.saveResponseToOfflineStore();
+            advance(startedSubmissionAt);
+          } else {
+            setSaving(false);
+            if (Array.isArray(response.errors)) {
+              setErrors(response.errors[0]);
+            } else {
+              // @ts-ignore
+              setErrors(response.errors);
+            }
+          }
+        } else {
+          advance(startedSubmissionAt);
+        }
+      });
     }
   }
 
@@ -77,16 +70,17 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
       {/* TODO: Really shouldn't be handling these text wrapping issues here. Should be handled in SurveyAppLayout */}
       <div className="mb-5 md:w-96 xl:w-160 max-w-full">
         <h4 className="text-xl ">
-          {!isOnline && <Trans ns="surveys">You Are Offline</Trans>}
-          {isOnline && saving && (
+          {!online && <Trans ns="surveys">You Are Offline</Trans>}
+          {online && saving && (
             <Trans ns="surveys">Submitting Your Response</Trans>
           )}
-          {isOnline && errors && (
+          {online && errors && (
             <Trans ns="surveys">Error saving response</Trans>
           )}
         </h4>
-        {isOnline && saving && <IndeterminantLoadingBar className="mt-5" />}
-        {!isOnline && (
+        {saving && <IndeterminantLoadingBar className="mt-5" />}
+
+        {!saving && !online && (
           <p>
             <Trans ns="surveys" i18nKey="OfflineInstructions">
               We cannot submit your response until you are connected to the
@@ -96,7 +90,8 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
             <StatusOfflineIcon className="mx-auto max-w-1/3 opacity-40 mt-5" />
           </p>
         )}
-        {isOnline && errors && (
+
+        {online && errors && (
           <>
             <h4 className="font-mono text-base my-3">{errors.message}</h4>
 

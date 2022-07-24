@@ -4325,10 +4325,10 @@ Initializes a new FormLogicRule with a single condition and command=JUMP.
 
 
 --
--- Name: create_survey_response(integer, json, boolean, boolean, boolean, boolean); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_survey_response(integer, json, boolean, boolean, boolean, boolean, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean) RETURNS public.survey_responses
+CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid) RETURNS public.survey_responses
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -4351,7 +4351,7 @@ CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data 
         surveys.id = "surveyId";
       -- TODO: improve access control to consider group membership
       if session_is_admin(pid) or (is_disabled = false and (access_type = 'PUBLIC'::survey_access_type) or (access_type = 'INVITE_ONLY'::survey_access_type and session_member_of_group((select array_agg(group_id) from survey_invited_groups where survey_id = "surveyId")))) then
-        insert into survey_responses (survey_id, data, user_id, is_draft, is_facilitated, bypassed_duplicate_submission_control, is_practice) values ("surveyId", response_data, nullif(current_setting('session.user_id', TRUE), '')::int, draft, facilitated, bypassed_submission_control, practice) returning * into response;
+        insert into survey_responses (survey_id, data, user_id, is_draft, is_facilitated, bypassed_duplicate_submission_control, is_practice, offline_id) values ("surveyId", response_data, nullif(current_setting('session.user_id', TRUE), '')::int, draft, facilitated, bypassed_submission_control, practice, offline_id) returning * into response;
         return response;
       else
         raise exception 'Access denied to % survey. is_disabled = %', access_type, is_disabled;
@@ -5314,6 +5314,24 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
+
+
+--
+-- Name: get_surveys(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_surveys(ids integer[]) RETURNS SETOF public.surveys
+    LANGUAGE sql STABLE
+    AS $$
+    select * from surveys where id = any(ids);
+$$;
+
+
+--
+-- Name: FUNCTION get_surveys(ids integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_surveys(ids integer[]) IS '@simpleCollections only';
 
 
 --
@@ -11757,14 +11775,6 @@ ALTER TABLE ONLY public.survey_invites
 
 
 --
--- Name: survey_responses survey_responses_offline_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_responses
-    ADD CONSTRAINT survey_responses_offline_id_key UNIQUE (offline_id);
-
-
---
 -- Name: survey_responses survey_responses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16992,11 +17002,11 @@ GRANT ALL ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "j
 
 
 --
--- Name: FUNCTION create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean) TO anon;
+REVOKE ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid) TO anon;
 
 
 --
@@ -18118,6 +18128,14 @@ GRANT ALL ON FUNCTION public.get_project_id(_slug text) TO anon;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
+
+
+--
+-- Name: FUNCTION get_surveys(ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_surveys(ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_surveys(ids integer[]) TO anon;
 
 
 --

@@ -6,19 +6,18 @@ import { XIcon } from "@heroicons/react/solid";
 import { Trans as T } from "react-i18next";
 import { Link } from "react-router-dom";
 import { OfflineStateContext } from "./OfflineStateContext";
+import useOfflineSurveyResponses from "./useOfflineSurveyResponses";
 
 const Trans = (props: any) => <T ns="offline">{props.children}</T>;
 
-export default function OfflineToastNotification() {
+export default function OfflineResponsesToastNotification() {
   const [dismissed, setDismissed] = useState(false);
   const { online } = useContext(OfflineStateContext);
+  const { responses } = useOfflineSurveyResponses();
 
-  useEffect(() => {
-    if (!online && dismissed) {
-      setDismissed(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [online]);
+  if (responses.length === 0 || !online) {
+    return null;
+  }
 
   return (
     <>
@@ -28,7 +27,7 @@ export default function OfflineToastNotification() {
       >
         <div className="w-full flex flex-col items-center space-y-4 sm:items-end">
           <Transition
-            show={!dismissed && !online}
+            show={!dismissed}
             as={Fragment}
             enter="transform ease-out duration-300 transition"
             enterFrom="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
@@ -48,18 +47,21 @@ export default function OfflineToastNotification() {
                   </div>
                   <div className="ml-3 w-0 flex-1 pt-0.5">
                     <p className="text-sm font-medium text-gray-900">
-                      <Trans>Network Error</Trans>
+                      <Trans>Pending Survey Responses</Trans>
                     </p>
                     <p className="mt-1 text-sm text-gray-500">
-                      <Trans>You appear to be offline.</Trans>
+                      <Trans>
+                        You have offline survey responses waiting to be
+                        submitted
+                      </Trans>
                     </p>
                     <div className="mt-3 flex space-x-7">
                       <Link
-                        to="/"
+                        to="/submit-offline-surveys"
                         type="button"
                         className="bg-white rounded-md text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       >
-                        <Trans>Access Offline Content</Trans>
+                        <Trans>Submit responses now</Trans>
                       </Link>
                       <button
                         type="button"

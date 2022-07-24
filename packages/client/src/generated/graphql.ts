@@ -1456,6 +1456,7 @@ export type CreateSurveyResponseInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   draft?: Maybe<Scalars['Boolean']>;
   facilitated?: Maybe<Scalars['Boolean']>;
+  offlineId?: Maybe<Scalars['UUID']>;
   practice?: Maybe<Scalars['Boolean']>;
   responseData?: Maybe<Scalars['JSON']>;
   surveyId?: Maybe<Scalars['Int']>;
@@ -3358,23 +3359,6 @@ export type DeleteSurveyResponseByNodeIdInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** The globally unique `ID` which will identify a single `SurveyResponse` to be deleted. */
   nodeId: Scalars['ID'];
-};
-
-/** All input for the `deleteSurveyResponseByOfflineId` mutation. */
-export type DeleteSurveyResponseByOfflineIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /**
-   * Should be used by clients to uniquely identify responses that are collected
-   * offline. Survey facilitators can download their responses to disk as json so
-   * that they may be recovered/submitted in the case of the client machine being
-   * damaged or stolen. Tracking an offline uuid ensures that these responses are
-   * not somehow submitted in duplicate.
-   */
-  offlineId: Scalars['UUID'];
 };
 
 /** All input for the `deleteSurveyResponse` mutation. */
@@ -5529,8 +5513,6 @@ export type Mutation = {
   deleteSurveyResponse?: Maybe<DeleteSurveyResponsePayload>;
   /** Deletes a single `SurveyResponse` using its globally unique id. */
   deleteSurveyResponseByNodeId?: Maybe<DeleteSurveyResponsePayload>;
-  /** Deletes a single `SurveyResponse` using a unique key. */
-  deleteSurveyResponseByOfflineId?: Maybe<DeleteSurveyResponsePayload>;
   /**
    * Deletes an item from the draft table of contents, as well as all child items
    * if it is a folder. This action will also delete all related layers and sources
@@ -5789,8 +5771,6 @@ export type Mutation = {
   updateSurveyResponse?: Maybe<UpdateSurveyResponsePayload>;
   /** Updates a single `SurveyResponse` using its globally unique id and a patch. */
   updateSurveyResponseByNodeId?: Maybe<UpdateSurveyResponsePayload>;
-  /** Updates a single `SurveyResponse` using a unique key and a patch. */
-  updateSurveyResponseByOfflineId?: Maybe<UpdateSurveyResponsePayload>;
   /** Updates a single `TableOfContentsItem` using a unique key and a patch. */
   updateTableOfContentsItem?: Maybe<UpdateTableOfContentsItemPayload>;
   /** Updates a single `TableOfContentsItem` using a unique key and a patch. */
@@ -6369,12 +6349,6 @@ export type MutationDeleteSurveyResponseArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyResponseByNodeIdArgs = {
   input: DeleteSurveyResponseByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteSurveyResponseByOfflineIdArgs = {
-  input: DeleteSurveyResponseByOfflineIdInput;
 };
 
 
@@ -6989,12 +6963,6 @@ export type MutationUpdateSurveyResponseArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyResponseByNodeIdArgs = {
   input: UpdateSurveyResponseByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSurveyResponseByOfflineIdArgs = {
-  input: UpdateSurveyResponseByOfflineIdInput;
 };
 
 
@@ -8396,6 +8364,8 @@ export type Query = Node & {
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `Survey`. */
+  getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
   group?: Maybe<Group>;
   /** Reads a single `Group` using its globally unique `ID`. */
@@ -8491,7 +8461,6 @@ export type Query = Node & {
   surveyResponse?: Maybe<SurveyResponse>;
   /** Reads a single `SurveyResponse` using its globally unique `ID`. */
   surveyResponseByNodeId?: Maybe<SurveyResponse>;
-  surveyResponseByOfflineId?: Maybe<SurveyResponse>;
   /** Reads and enables pagination through a set of `SurveyResponse`. */
   surveyResponsesConnection?: Maybe<SurveyResponsesConnection>;
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
@@ -8769,6 +8738,14 @@ export type QueryForumArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryForumByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetSurveysArgs = {
+  first?: Maybe<Scalars['Int']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -9178,12 +9155,6 @@ export type QuerySurveyResponseArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySurveyResponseByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySurveyResponseByOfflineIdArgs = {
-  offlineId: Scalars['UUID'];
 };
 
 
@@ -10492,8 +10463,6 @@ export type SurveyResponse = Node & {
 export type SurveyResponseCondition = {
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `offlineId` field. */
-  offlineId?: Maybe<Scalars['UUID']>;
   /** Checks for equality with the object’s `surveyId` field. */
   surveyId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `userId` field. */
@@ -10538,8 +10507,6 @@ export enum SurveyResponsesOrderBy {
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
-  OfflineIdAsc = 'OFFLINE_ID_ASC',
-  OfflineIdDesc = 'OFFLINE_ID_DESC',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   SurveyIdAsc = 'SURVEY_ID_ASC',
@@ -12366,25 +12333,6 @@ export type UpdateSurveyResponseByNodeIdInput = {
   patch: SurveyResponsePatch;
 };
 
-/** All input for the `updateSurveyResponseByOfflineId` mutation. */
-export type UpdateSurveyResponseByOfflineIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /**
-   * Should be used by clients to uniquely identify responses that are collected
-   * offline. Survey facilitators can download their responses to disk as json so
-   * that they may be recovered/submitted in the case of the client machine being
-   * damaged or stolen. Tracking an offline uuid ensures that these responses are
-   * not somehow submitted in duplicate.
-   */
-  offlineId: Scalars['UUID'];
-  /** An object where the defined keys will be set on the `SurveyResponse` being updated. */
-  patch: SurveyResponsePatch;
-};
-
 /** All input for the `updateSurveyResponse` mutation. */
 export type UpdateSurveyResponseInput = {
   /**
@@ -14188,6 +14136,30 @@ export type OfflineSurveysQuery = (
   )> }
 );
 
+export type SurveysByIdQueryVariables = Exact<{
+  surveyIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+}>;
+
+
+export type SurveysByIdQuery = (
+  { __typename?: 'Query' }
+  & { getSurveys?: Maybe<Array<(
+    { __typename?: 'Survey' }
+    & Pick<Survey, 'id' | 'projectId' | 'name'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'name' | 'slug'>
+    )> }
+  )>>, me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'canonicalEmail'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
+    )> }
+  )> }
+);
+
 export type OfflineTilePackageDetailsFragment = (
   { __typename?: 'OfflineTilePackage' }
   & Pick<OfflineTilePackage, 'id' | 'bytes' | 'projectId' | 'sourceType' | 'jobStatus' | 'tilesFetched' | 'totalTiles' | 'createdAt' | 'jobErrors' | 'dataSourceUrl' | 'isMapboxHosted' | 'maxZ' | 'maxShorelineZ' | 'presignedUrl' | 'originalUrlTemplate'>
@@ -15504,6 +15476,7 @@ export type CreateResponseMutationVariables = Exact<{
   responseData: Scalars['JSON'];
   facilitated: Scalars['Boolean'];
   practice: Scalars['Boolean'];
+  offlineId?: Maybe<Scalars['UUID']>;
 }>;
 
 
@@ -19912,6 +19885,59 @@ export function useOfflineSurveysLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type OfflineSurveysQueryHookResult = ReturnType<typeof useOfflineSurveysQuery>;
 export type OfflineSurveysLazyQueryHookResult = ReturnType<typeof useOfflineSurveysLazyQuery>;
 export type OfflineSurveysQueryResult = Apollo.QueryResult<OfflineSurveysQuery, OfflineSurveysQueryVariables>;
+export const SurveysByIdDocument = gql`
+    query SurveysById($surveyIds: [Int]!) {
+  getSurveys(ids: $surveyIds) {
+    id
+    projectId
+    name
+    project {
+      id
+      name
+      slug
+    }
+  }
+  me {
+    id
+    canonicalEmail
+    profile {
+      userId
+      email
+      fullname
+      nickname
+      picture
+    }
+  }
+}
+    `;
+
+/**
+ * __useSurveysByIdQuery__
+ *
+ * To run a query within a React component, call `useSurveysByIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveysByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveysByIdQuery({
+ *   variables: {
+ *      surveyIds: // value for 'surveyIds'
+ *   },
+ * });
+ */
+export function useSurveysByIdQuery(baseOptions: Apollo.QueryHookOptions<SurveysByIdQuery, SurveysByIdQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveysByIdQuery, SurveysByIdQueryVariables>(SurveysByIdDocument, options);
+      }
+export function useSurveysByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveysByIdQuery, SurveysByIdQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveysByIdQuery, SurveysByIdQueryVariables>(SurveysByIdDocument, options);
+        }
+export type SurveysByIdQueryHookResult = ReturnType<typeof useSurveysByIdQuery>;
+export type SurveysByIdLazyQueryHookResult = ReturnType<typeof useSurveysByIdLazyQuery>;
+export type SurveysByIdQueryResult = Apollo.QueryResult<SurveysByIdQuery, SurveysByIdQueryVariables>;
 export const OfflineSurveyMapsDocument = gql`
     query OfflineSurveyMaps($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -22358,9 +22384,9 @@ export type SurveyQueryHookResult = ReturnType<typeof useSurveyQuery>;
 export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
 export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
 export const CreateResponseDocument = gql`
-    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {
+    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!, $offlineId: UUID) {
   createSurveyResponse(
-    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice}
+    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice, offlineId: $offlineId}
   ) {
     clientMutationId
     surveyResponse {
@@ -22390,6 +22416,7 @@ export type CreateResponseMutationFn = Apollo.MutationFunction<CreateResponseMut
  *      responseData: // value for 'responseData'
  *      facilitated: // value for 'facilitated'
  *      practice: // value for 'practice'
+ *      offlineId: // value for 'offlineId'
  *   },
  * });
  */
@@ -23444,6 +23471,7 @@ export const namedOperations = {
     InteractivitySettingsById: 'InteractivitySettingsById',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
+    SurveysById: 'SurveysById',
     OfflineSurveyMaps: 'OfflineSurveyMaps',
     BasemapOfflineSettings: 'BasemapOfflineSettings',
     getTilePackage: 'getTilePackage',

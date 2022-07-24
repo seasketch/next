@@ -14,6 +14,7 @@ import useMapData from "../dataLayers/useMapData";
 import Spinner from "../components/Spinner";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import OfflineToastNotification from "../offline/OfflineToastNotification";
+import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
@@ -131,6 +132,7 @@ export default function ProjectApp() {
           }}
         />
         <OfflineToastNotification />
+        <OfflineResponsesToastNotification />
       </MapContext.Provider>
     </div>
   );

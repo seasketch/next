@@ -1,17 +1,18 @@
 import {
   CogIcon,
   PencilIcon,
+  StatusOfflineIcon,
   TableIcon,
   TranslateIcon,
 } from "@heroicons/react/outline";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Modal from "../components/Modal";
 import Switch from "../components/Switch";
-import TextInput from "../components/TextInput";
+import { OfflineStateContext } from "../offline/OfflineStateContext";
 import LanguageSelector from "../surveys/LanguageSelector";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
@@ -43,6 +44,7 @@ const WelcomeMessage: FormElementComponent<
     "beginButtonText",
     props
   );
+  const { online } = useContext(OfflineStateContext);
 
   return (
     <>
@@ -156,6 +158,36 @@ const WelcomeMessage: FormElementComponent<
           </div>
         </Modal>
       </div>
+      {context.offlineResponseCount > 0 && (
+        <div className="w-full flex align-middle mt-6 mb-10 border rounded p-2 border-opacity-50">
+          <StatusOfflineIcon className="w-6 h-6 mr-2 ml-0.5 block" />
+          <p className="flex-1">
+            {online && (
+              <Trans
+                i18nKey={"WelcomeOfflineResponseCount"}
+                count={context.offlineResponseCount}
+              >
+                You have collected {{ count: context.offlineResponseCount }}{" "}
+                responses while offline.
+              </Trans>
+            )}
+            {online === false && (
+              <Trans
+                i18nKey={"WelcomeOfflineResponseCountWhenOffline"}
+                count={context.offlineResponseCount}
+              >
+                You are offline and have collected{" "}
+                {{ count: context.offlineResponseCount }} responses so far.
+              </Trans>
+            )}{" "}
+            {online && (
+              <Link to={`/submit-offline-surveys`} className="underline">
+                <Trans ns="offline">Submit them now</Trans>
+              </Link>
+            )}
+          </p>
+        </div>
+      )}
 
       <FormElementEditorPortal
         render={(updateBaseSetting, updateComponentSetting) => {

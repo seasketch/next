@@ -1643,6 +1643,7 @@ input CreateSurveyResponseInput {
   clientMutationId: String
   draft: Boolean
   facilitated: Boolean
+  offlineId: UUID
   practice: Boolean
   responseData: JSON
   surveyId: Int
@@ -3961,24 +3962,6 @@ input DeleteSurveyResponseByNodeIdInput {
   The globally unique `ID` which will identify a single `SurveyResponse` to be deleted.
   """
   nodeId: ID!
-}
-
-"""All input for the `deleteSurveyResponseByOfflineId` mutation."""
-input DeleteSurveyResponseByOfflineIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  Should be used by clients to uniquely identify responses that are collected
-  offline. Survey facilitators can download their responses to disk as json so
-  that they may be recovered/submitted in the case of the client machine being
-  damaged or stolen. Tracking an offline uuid ensures that these responses are
-  not somehow submitted in duplicate.
-  """
-  offlineId: UUID!
 }
 
 """All input for the `deleteSurveyResponse` mutation."""
@@ -6989,14 +6972,6 @@ type Mutation {
     input: DeleteSurveyResponseByNodeIdInput!
   ): DeleteSurveyResponsePayload
 
-  """Deletes a single `SurveyResponse` using a unique key."""
-  deleteSurveyResponseByOfflineId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteSurveyResponseByOfflineIdInput!
-  ): DeleteSurveyResponsePayload
-
   """
   Deletes an item from the draft table of contents, as well as all child items
   if it is a folder. This action will also delete all related layers and sources
@@ -7905,14 +7880,6 @@ type Mutation {
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: UpdateSurveyResponseByNodeIdInput!
-  ): UpdateSurveyResponsePayload
-
-  """Updates a single `SurveyResponse` using a unique key and a patch."""
-  updateSurveyResponseByOfflineId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSurveyResponseByOfflineIdInput!
   ): UpdateSurveyResponsePayload
 
   """Updates a single `TableOfContentsItem` using a unique key and a patch."""
@@ -9636,6 +9603,16 @@ type Query implements Node {
     nodeId: ID!
   ): Forum
   getDefaultDataSourcesBucket: String
+
+  """Reads and enables pagination through a set of `Survey`."""
+  getSurveys(
+    """Only read the first `n` values of the set."""
+    first: Int
+    ids: [Int]
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Survey!]
   getUnsplashPhotos(query: String!): UnsplashSearchResult!
   group(id: Int!): Group
 
@@ -10009,7 +9986,6 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SurveyResponse
-  surveyResponseByOfflineId(offlineId: UUID!): SurveyResponse
 
   """Reads and enables pagination through a set of `SurveyResponse`."""
   surveyResponsesConnection(
@@ -11629,9 +11605,6 @@ input SurveyResponseCondition {
   """Checks for equality with the object’s `id` field."""
   id: Int
 
-  """Checks for equality with the object’s `offlineId` field."""
-  offlineId: UUID
-
   """Checks for equality with the object’s `surveyId` field."""
   surveyId: Int
 
@@ -11687,8 +11660,6 @@ enum SurveyResponsesOrderBy {
   ID_ASC
   ID_DESC
   NATURAL
-  OFFLINE_ID_ASC
-  OFFLINE_ID_DESC
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
   SURVEY_ID_ASC
@@ -13976,29 +13947,6 @@ input UpdateSurveyResponseByNodeIdInput {
   The globally unique `ID` which will identify a single `SurveyResponse` to be updated.
   """
   nodeId: ID!
-
-  """
-  An object where the defined keys will be set on the `SurveyResponse` being updated.
-  """
-  patch: SurveyResponsePatch!
-}
-
-"""All input for the `updateSurveyResponseByOfflineId` mutation."""
-input UpdateSurveyResponseByOfflineIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  Should be used by clients to uniquely identify responses that are collected
-  offline. Survey facilitators can download their responses to disk as json so
-  that they may be recovered/submitted in the case of the client machine being
-  damaged or stolen. Tracking an offline uuid ensures that these responses are
-  not somehow submitted in duplicate.
-  """
-  offlineId: UUID!
 
   """
   An object where the defined keys will be set on the `SurveyResponse` being updated.

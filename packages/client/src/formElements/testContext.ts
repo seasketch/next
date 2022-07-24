@@ -17,4 +17,8 @@ export const TestSurveyContextValue = {
   toggleFacilitation: (enabled: boolean) => {},
   surveyId: 0,
   slug: "",
+  projectId: 1,
+  clientIsPreppedForOfflineUse: false,
+  offlineResponseCount: 0,
+  saveResponseToOfflineStore: () => Promise.resolve(),
 };

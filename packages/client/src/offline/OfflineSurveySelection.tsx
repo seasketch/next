@@ -246,7 +246,7 @@ export default function OfflineSurveySelection() {
               </div>
             </div>
           ))}
-          {surveyBasemaps.length && (
+          {surveyBasemaps.length > 0 && (
             <div className="text-sm p-2 rounded bg-gray-100 my-4 flex items-center">
               <div className="px-2">
                 <Trans>
@@ -347,7 +347,7 @@ function MapItem({
             <div className="text-sm text-gray-500 mt-0.5 ml-0.5">
               {map.cacheState.lastUpdated && (
                 // eslint-disable-next-line i18next/no-literal-string
-                <span className="text-xs">
+                <span className="text-xs hidden 2xl:inline-block">
                   Downloaded {map.cacheState.lastUpdated.toLocaleDateString()}.
                 </span>
               )}{" "}

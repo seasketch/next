@@ -1,4 +1,12 @@
-import { MouseEventHandler, useEffect, useRef, useState, useMemo } from "react";
+import {
+  MouseEventHandler,
+  useEffect,
+  useRef,
+  useState,
+  useMemo,
+  useContext,
+  useCallback,
+} from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
@@ -52,6 +60,9 @@ import SurveyContextualMap from "./SurveyContextualMap";
 import { ProjectAccessGate } from "../auth/ProjectAccessGate";
 import { useApolloClient } from "@apollo/client";
 import { SurveyDocument } from "../generated/queries";
+import useOfflineSurveyResponses from "../offline/useOfflineSurveyResponses";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
+import { offlineSurveyChoiceStrategy } from "../offline/GraphqlQueryCache/strategies";
 
 require("./surveys.css");
 
@@ -68,12 +79,13 @@ interface FormElementState {
  * validation and input rendering to FormElements.
  */
 function SurveyApp() {
-  const { surveyId, position, practice, slug } = useParams<{
-    surveyId: string;
-    position: string;
-    practice?: string;
-    slug: string;
-  }>();
+  const { surveyId, position, practice, slug } =
+    useParams<{
+      surveyId: string;
+      position: string;
+      practice?: string;
+      slug: string;
+    }>();
   const { t, i18n } = useTranslation("surveys");
 
   let language = languages.find((lang) => lang.code === "EN")!;
@@ -254,6 +266,55 @@ function SurveyApp() {
     }
   }, [data?.survey?.form?.formElements, position, surveyId]);
 
+  const offlineStore = useOfflineSurveyResponses();
+  const graphqlQueryCache = useContext(GraphqlQueryCacheContext);
+  const [clientIsPreppedForOfflineUse, setClientIsPreppedForOfflineUse] =
+    useState(false);
+
+  useEffect(() => {
+    if (graphqlQueryCache && data?.survey) {
+      const args =
+        graphqlQueryCache.getStrategyArgs(offlineSurveyChoiceStrategy.key) ||
+        [];
+      setClientIsPreppedForOfflineUse(
+        Boolean(args.find((arg) => arg.id === data?.survey?.id))
+      );
+    } else {
+      setClientIsPreppedForOfflineUse(false);
+    }
+  }, [graphqlQueryCache, data?.survey?.id]);
+
+  const saveResponseToOfflineStore = useCallback(async () => {
+    if (data?.survey && data?.currentProject) {
+      const answers: { [elementId: number]: any } = {};
+      for (const key in responseState) {
+        if (parseInt(key).toString() === key) {
+          answers[parseInt(key)] = responseState[key].value;
+        }
+      }
+      if (Object.keys(answers).length > 0) {
+        await offlineStore.addResponse(
+          data.survey.id,
+          data.currentProject.id,
+          responseState.facilitated,
+          !!practice,
+          answers
+        );
+      }
+      await setResponseState((prev) => ({
+        facilitated: false,
+        submitted: false,
+      }));
+    }
+  }, [
+    data?.survey,
+    data?.currentProject,
+    offlineStore,
+    responseState,
+    practice,
+    setResponseState,
+  ]);
+
   if (!data?.survey?.form?.formElements || !pagingState) {
     return <div></div>;
   } else if (!data?.survey) {
@@ -317,6 +378,7 @@ function SurveyApp() {
               projectName: data.currentProject!.name,
               projectBounds: bbox(data.currentProject!.region.geojson),
               projectUrl: data.currentProject!.url!,
+              projectId: data.currentProject!.id,
               surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
               bestEmail: data.me?.profile?.email || auth0.user?.email,
               bestName: data.me?.profile?.fullname || auth0.user?.name,
@@ -369,6 +431,9 @@ function SurveyApp() {
 
                 return response;
               },
+              offlineResponseCount: offlineStore.responses.length,
+              clientIsPreppedForOfflineUse,
+              saveResponseToOfflineStore,
             }}
           >
             <Title>{data.survey.name}</Title>

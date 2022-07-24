@@ -19,7 +19,7 @@ import {
 } from "react-share";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import { LinkIcon } from "@heroicons/react/outline";
+import { LinkIcon, StatusOfflineIcon } from "@heroicons/react/outline";
 import TextInput from "../components/TextInput";
 import Button from "../components/Button";
 import { useContext } from "react";
@@ -27,6 +27,7 @@ import { Link } from "react-router-dom";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 import useClipboard from "react-use-clipboard";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import { OfflineStateContext } from "../offline/OfflineStateContext";
 
 export interface ThankYouProps {
   promptToRespondAgain?: boolean;
@@ -48,6 +49,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
     // `isCopied` will go back to `false` after 2000ms.
     successDuration: 1000,
   });
+  const { online } = useContext(OfflineStateContext);
 
   const respondAgainMessage = useLocalizedComponentSetting(
     "respondAgainMessage",
@@ -63,9 +65,48 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
           editable={props.editable}
           alternateLanguageSettings={props.alternateLanguageSettings}
         />
+        {context?.offlineResponseCount && context?.offlineResponseCount > 0 && (
+          <div className="border my-4 p-4 rounded border-opacity-30 flex">
+            <StatusOfflineIcon className="w-8 h-8 block mr-4" />
+            <div className="flex-1">
+              <h2 className="text-lg mb-1 font-semibold">
+                <Trans
+                  i18nKey="offlineResponseCount"
+                  count={context.offlineResponseCount}
+                >
+                  {{ count: context.offlineResponseCount }} offline responses
+                  collected
+                </Trans>
+              </h2>
+              {!online && (
+                <>
+                  <p>
+                    <Trans ns="offline">
+                      These responses have been saved to your device but will
+                      need to be resubmitted to the SeaSketch server once you
+                      are back online. You can continue to collect additional
+                      responses until then.
+                    </Trans>
+                  </p>
+                  <p className="mt-1">
+                    <Trans ns="offline">
+                      Once online, you can resubmit from the this page, the
+                      begining of the survey, or from the SeaSketch homepage.
+                    </Trans>
+                  </p>
+                </>
+              )}
+            </div>
+            {online && (
+              <Link to={`/submit-offline-surveys`} className="underline">
+                <Trans ns="offline">Submit them now</Trans>
+              </Link>
+            )}
+          </div>
+        )}
 
-        <div className="my-5 space-x-2 rtl:space-x-reverse flex items-center">
-          {props.componentSettings.shareButtons && (
+        {props.componentSettings.shareButtons && (
+          <div className="my-5 space-x-2 rtl:space-x-reverse flex items-center">
             <>
               <FacebookShareButton
                 url={shareUrl}
@@ -96,8 +137,8 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
                 </div>
               </button>
             </>
-          )}
-        </div>
+          </div>
+        )}
         <div className="mt-10 space-x-5 rtl:space-x-reverse">
           {(props.componentSettings.promptToRespondAgain ||
             context?.isAdmin) && (

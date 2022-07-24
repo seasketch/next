@@ -18,6 +18,7 @@ import { CameraOptions } from "mapbox-gl";
 import { ClientCacheManagerProvider } from "./offline/ClientCacheManager";
 import OfflineToastNotification from "./offline/OfflineToastNotification";
 import FullScreenOfflineNavigation from "./offline/FullScreenOfflineNavigation";
+import OfflineResponsesToastNotification from "./offline/OfflineResponsesToastNotification";
 
 const LazyProjectApp = React.lazy(
   () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
@@ -44,6 +45,12 @@ const LazySurveyFormEditor = React.lazy(
   () =>
     import(
       /* webpackChunkName: "AdminSurveyFormEditor" */ "./admin/surveys/SurveyFormEditor"
+    )
+);
+const LazySubmitOfflineResponsesPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminSurveyFormEditor" */ "./offline/SubmitOfflineResponsesPage"
     )
 );
 
@@ -90,16 +97,18 @@ function App() {
                   "/",
                   "/api",
                   "/team",
+                  "/submit-offline-surveys",
                 ]}
                 exact
               >
                 <Header />
               </Route>
               <Route
-                path={["/signin", "/projects", "/new-project", "/api", "/team"]}
+                path={["/projects", "/new-project", "/api", "/team"]}
                 exact
               >
                 <OfflineToastNotification />
+                <OfflineResponsesToastNotification />
               </Route>
               <Switch>
                 <Route path="/auth/projectInvite">
@@ -124,7 +133,11 @@ function App() {
                 <Route path="/account-settings">
                   <LazyAccountSettingsPage />
                 </Route>
+                <Route path="/submit-offline-surveys">
+                  <LazySubmitOfflineResponsesPage />
+                </Route>
                 <Route exact path="/">
+                  <OfflineResponsesToastNotification />
                   <FullScreenOfflineNavigation />
                   <div className="p-4 pb-12 bg-white">
                     <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">

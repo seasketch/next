@@ -54,9 +54,11 @@
   "Generate Tile Package": "Generate Tile Package",
   "Groups can be used to organize users and control access to resources like data layers and discussion forums.": "Groups can be used to organize users and control access to resources like data layers and discussion forums.",
   "I understand that this profile will be shared with project admins and accompany my posts to the discussion forums.": "I understand that this profile will be shared with project admins and accompany my posts to the discussion forums.",
+  "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.",
   "Information in the profile will be included with your request": "Information in the profile will be included with your request",
   "Input must be  characters or greater": "Input must be  characters or greater",
   "Input must be  characters or less": "Input must be  characters or less",
+  "It appears you don't have connection to the internet. SeaSketch supports offline use for the collection of survey data which you can submit when back online. If you don't see the project or survey you are looking for you will need to reconnect to the internet and adjust your account settings.": "It appears you don't have connection to the internet. SeaSketch supports offline use for the collection of survey data which you can submit when back online. If you don't see the project or survey you are looking for you will need to reconnect to the internet and adjust your account settings.",
   "Layout": "Layout",
   "Location Name": "Location Name",
   "Logout and sign in as {{email}}": "Logout and sign in as {{email}}",
@@ -133,6 +135,8 @@
   "dismiss": "dismiss",
   "light": "light",
   "loading...": "loading...",
+  "offlineResponseCount": "{{count}} offline responses collected",
+  "offlineResponseCount_plural": "offlineResponseCount_plural",
   "reset to defaults": "reset to defaults",
   "toggle all folder expansion": "toggle all folder expansion"
 }

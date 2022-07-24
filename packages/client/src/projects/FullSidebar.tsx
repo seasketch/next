@@ -14,6 +14,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { StatusOfflineIcon } from "@heroicons/react/outline";
+import SignedInAs from "../components/SignedInAs";
 
 export default function FullSidebar({
   open,
@@ -30,24 +31,6 @@ export default function FullSidebar({
   const { loginWithRedirect } = useAuth0();
   const { data, loading, error, refetch } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
-  let social: string | false = false;
-  if (user?.sub) {
-    if (/twitter/.test(user.sub)) {
-      social = "twitter";
-    } else if (/google/.test(user.sub)) {
-      social = "google";
-    } else if (/github/.test(user.sub)) {
-      social = "github";
-    }
-  }
-  const userId = user
-    ? `${user.email || user.name} ${social ? `(${social})` : ""}`
-    : false;
-
-  // if (!data?.currentProject && !loading && !error) {
-  //   refetch();
-  //   return <div></div>;
-  // }
 
   const chooseSidebar = (sidebar: string) => () => {
     history.replace(`/${slug}/app/${sidebar}`);
@@ -170,20 +153,7 @@ export default function FullSidebar({
       {user && (
         <>
           <nav className="mt-4">
-            <div className="flex mb-1">
-              <ProfileStatusButton />
-              <div className="ml-2">
-                <p className="text-base md:text-sm leading-5">
-                  {t("Signed in as")}
-                </p>
-                <p
-                  title={userId as string}
-                  className="text-base md:text-sm leading-8 md:leading-5 font-medium truncate"
-                >
-                  {userId}
-                </p>
-              </div>
-            </div>
+            <SignedInAs className="mb-1" />
             <div className="py-1">
               <NavItem
                 icon={
