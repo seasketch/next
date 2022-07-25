@@ -40,6 +40,7 @@ self.addEventListener("install", (event) => {
   (async () => {
     if (await staticAssetCache.precacheEnabled()) {
       await staticAssetCache.populateCache();
+      self.skipWaiting();
     }
   })();
 });
