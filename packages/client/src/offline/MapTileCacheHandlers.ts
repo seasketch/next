@@ -1,5 +1,6 @@
 import { OfflineTileSettings } from "@seasketch/map-tile-cache-calculator";
 import { MapTileCacheCalculator as Calculator } from "@seasketch/map-tile-cache-calculator";
+import { cacheFirst, CacheLike, networkFirst } from "./handlerStrategies";
 
 const calculator = new Calculator("https://d3p1dsef9f0gjr.cloudfront.net/");
 
@@ -34,27 +35,31 @@ export function isMapTileOrAssetRequest(url: URL) {
   return url.searchParams.get("ssn-tr") === "true";
 }
 
-export function handleMapTileRequest(url: URL, event: FetchEvent) {
+export async function handleMapTileRequest(
+  url: URL,
+  event: FetchEvent,
+  resolution?: "network-first" | "cache-first"
+) {
   url.searchParams.delete("ssn-tr");
   url.searchParams.delete("sku");
   url.searchParams.delete("access_token");
   url.searchParams.delete("secure");
   let cacheKey = url.toString();
-  return cachesMatch(cacheKey).then((response) => {
-    if (response) {
-      return response;
-    } else {
-      return fetch(event.request).catch((e) => {
-        return new Response("Failed to fetch", {
-          status: 408,
-          headers: { "Content-Type": "text/plain" },
-        });
-      });
-    }
-  });
+  // Default is network-first resolution
+  resolution = resolution || "network-first";
+  if (resolution === "network-first") {
+    return networkFirst(MapTileCacheLike, cacheKey, event.request, false);
+  } else {
+    return cacheFirst(MapTileCacheLike, cacheKey, event.request, false);
+  }
 }
 
 const staticMapAssets = caches.open("offline-basemap-static-assets");
+
+const MapTileCacheLike: CacheLike = {
+  match: cachesMatch,
+  put: () => Promise.resolve(),
+};
 
 async function cachesMatch(url: string) {
   const cacheKeys = await caches.keys();

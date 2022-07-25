@@ -1,5 +1,5 @@
 export async function cacheFirst(
-  cache: Cache,
+  cache: Cache | CacheLike,
   cacheKey: string,
   request: Request,
   appendToCache?: boolean
@@ -25,7 +25,7 @@ export async function cacheFirst(
 }
 
 export async function networkFirst(
-  cache: Cache,
+  cache: Cache | CacheLike,
   cacheKey: string,
   request: Request,
   appendToCache?: boolean
@@ -61,3 +61,8 @@ export async function networkFirst(
     }
   }
 }
+
+export type CacheLike = {
+  match: (cacheKey: string) => Promise<Response | undefined>;
+  put: (cacheKey: string, response: Response) => void;
+};
