@@ -17,7 +17,6 @@ import * as Sentry from "@sentry/react";
 import { CameraOptions } from "mapbox-gl";
 import { ClientCacheManagerProvider } from "./offline/ClientCacheManager";
 import OfflineToastNotification from "./offline/OfflineToastNotification";
-import FullScreenOfflineNavigation from "./offline/FullScreenOfflineNavigation";
 import OfflineResponsesToastNotification from "./offline/OfflineResponsesToastNotification";
 
 const LazyProjectApp = React.lazy(
@@ -50,7 +49,14 @@ const LazySurveyFormEditor = React.lazy(
 const LazySubmitOfflineResponsesPage = React.lazy(
   () =>
     import(
-      /* webpackChunkName: "AdminSurveyFormEditor" */ "./offline/SubmitOfflineResponsesPage"
+      /* webpackChunkName: "OfflineSurveys" */ "./offline/SubmitOfflineResponsesPage"
+    )
+);
+
+const LazyFullScreenOfflinePage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "OfflineSurveys" */ "./offline/FullScreenOfflineNavigation"
     )
 );
 
@@ -138,7 +144,7 @@ function App() {
                 </Route>
                 <Route exact path="/">
                   <OfflineResponsesToastNotification />
-                  <FullScreenOfflineNavigation />
+                  <LazyFullScreenOfflinePage />
                   <div className="p-4 pb-12 bg-white">
                     <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                       {t(

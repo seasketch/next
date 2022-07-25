@@ -6,12 +6,14 @@ import { XIcon } from "@heroicons/react/solid";
 import { Trans as T } from "react-i18next";
 import { Link } from "react-router-dom";
 import { OfflineStateContext } from "./OfflineStateContext";
+import useOfflineSurveysEnabled from "./useOfflineSurveysEnabled";
 
 const Trans = (props: any) => <T ns="offline">{props.children}</T>;
 
 export default function OfflineToastNotification() {
   const [dismissed, setDismissed] = useState(false);
   const { online } = useContext(OfflineStateContext);
+  const offlineSurveysEnabled = useOfflineSurveysEnabled();
 
   useEffect(() => {
     if (!online && dismissed) {
@@ -19,6 +21,10 @@ export default function OfflineToastNotification() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online]);
+
+  if (!offlineSurveysEnabled) {
+    return null;
+  }
 
   return (
     <>

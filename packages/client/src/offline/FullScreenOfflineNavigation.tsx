@@ -4,7 +4,6 @@ import { OfflineStateContext } from "./OfflineStateContext";
 import logo from "../header/seasketch-logo.png";
 import CenteredCardListLayout, {
   Card,
-  Header,
 } from "../components/CenteredCardListLayout";
 import { offlineSurveyChoiceStrategy } from "./GraphqlQueryCache/strategies";
 import { GraphqlQueryCache } from "./GraphqlQueryCache/main";
@@ -15,7 +14,6 @@ import {
   SurveyQueryResult,
 } from "../generated/graphql";
 import { Link } from "react-router-dom";
-import Button from "../components/Button";
 
 export default function FullScreenOfflineNavigation() {
   const { online, dismissed, dismiss } = useContext(OfflineStateContext);
