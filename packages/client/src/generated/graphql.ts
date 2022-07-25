@@ -8321,8 +8321,6 @@ export type Query = Node & {
   currentProject?: Maybe<Project>;
   /** @deprecated Use project_access_status(slug) instead */
   currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
-  /** @deprecated Use projectPublicDetails(slug) instead */
-  currentProjectPublicDetails?: Maybe<PublicProjectDetail>;
   currentUserIsSuperuser: Scalars['Boolean'];
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;

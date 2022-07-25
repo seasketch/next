@@ -4570,35 +4570,6 @@ COMMENT ON FUNCTION public.current_project_access_status() IS '@deprecated Use p
 
 
 --
--- Name: current_project_public_details(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.current_project_public_details() RETURNS public.public_project_details
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-  SELECT
-    id,
-    name,
-    slug,
-    logo_url,
-    access_control,
-    support_email,
-    project_access_status(id) as access_status
-  FROM
-    projects
-  WHERE
-    id = nullif (current_setting('session.project_id', TRUE), '')::integer
-$$;
-
-
---
--- Name: FUNCTION current_project_public_details(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.current_project_public_details() IS '@deprecated Use projectPublicDetails(slug) instead';
-
-
---
 -- Name: data_hosting_quota_left(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6510,7 +6481,7 @@ CREATE FUNCTION public.project_public_details(slug text) RETURNS public.public_p
   FROM
     projects
   WHERE
-    projects.slug = "slug"
+    projects.slug = project_public_details.slug
 $$;
 
 
@@ -17067,14 +17038,6 @@ GRANT ALL ON FUNCTION public.current_project() TO anon;
 
 REVOKE ALL ON FUNCTION public.current_project_access_status() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.current_project_access_status() TO anon;
-
-
---
--- Name: FUNCTION current_project_public_details(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.current_project_public_details() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.current_project_public_details() TO anon;
 
 
 --

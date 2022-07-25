@@ -9442,7 +9442,6 @@ type Query implements Node {
   ): CommunityGuideline
   currentProject: Project @deprecated(reason: "Use projectBySlug() instead")
   currentProjectAccessStatus: ProjectAccessStatus @deprecated(reason: "Use project_access_status(slug) instead")
-  currentProjectPublicDetails: PublicProjectDetail @deprecated(reason: "Use projectPublicDetails(slug) instead")
   currentUserIsSuperuser: Boolean!
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
