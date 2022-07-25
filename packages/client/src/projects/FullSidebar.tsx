@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useContext } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,7 @@ import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { StatusOfflineIcon } from "@heroicons/react/outline";
 import SignedInAs from "../components/SignedInAs";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 
 export default function FullSidebar({
   open,
@@ -31,6 +32,7 @@ export default function FullSidebar({
   const { loginWithRedirect } = useAuth0();
   const { data, loading, error, refetch } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
+  const cache = useContext(GraphqlQueryCacheContext);
 
   const chooseSidebar = (sidebar: string) => () => {
     history.replace(`/${slug}/app/${sidebar}`);
@@ -218,15 +220,16 @@ export default function FullSidebar({
                   </svg>
                 }
                 label={t("Sign Out")}
-                onClick={() =>
+                onClick={() => {
+                  cache?.logout();
                   logout({
                     returnTo:
                       window.location.protocol +
                       "//" +
                       window.location.host +
                       "/",
-                  })
-                }
+                  });
+                }}
               />
             </div>
           </nav>

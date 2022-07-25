@@ -134,6 +134,15 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
       strategies: strategyStats,
     };
   }
+
+  /**
+   * Clears all cache responses
+   */
+  async logout() {
+    for (const strategy of this.strategies) {
+      await caches.delete(this.cacheNameForStrategy(strategy));
+    }
+  }
 }
 
 export async function getCacheSize(cacheName: string) {
