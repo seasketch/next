@@ -1,6 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 import bytes from "bytes";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Card } from "../components/CenteredCardListLayout";
 import Modal from "../components/Modal";
@@ -82,6 +82,26 @@ export function CacheSettingCards() {
       slug: getSlug(),
     },
   });
+
+  useEffect(() => {
+    // when user first opens this window, check if prefetching should be enabled, and if so,
+    // populate the cache. Service worker and settings change handlers should perform this,
+    // but I'd like an extra step to make sure prefetching works if the user is proactively
+    // checking their offline readiness
+    if (context?.level.prefetchEnabled) {
+      setTimeout(() => {
+        if (
+          context.cacheSizes &&
+          context.cacheSizes.staticAssets.entries.find((e) => !e.cached)
+        ) {
+          context.staticAssetCache.populateCache().then(() => {
+            context.updateCacheSizes();
+          });
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const level = context?.level || defaultCacheSetting;
   const quotaPercent =

@@ -6,6 +6,7 @@ import {
   ClientCacheSettings,
   CLIENT_CACHE_SETTINGS_KEY,
 } from "./ClientCacheSettings";
+import { cacheFirst, networkFirst } from "./handlerStrategies";
 const STATIC_ASSET_CACHE_NAME = "static-assets";
 type PrecacheManifest = (string | PrecacheEntry)[];
 
@@ -31,6 +32,7 @@ export interface StaticAssetCacheState {
 class StaticAssetCache {
   private readonly urlsToCacheKeys: Map<string, string> = new Map();
   private manifest?: PrecacheManifest;
+  private cache = caches.open(STATIC_ASSET_CACHE_NAME);
 
   constructor(manifest?: PrecacheManifest) {
     if (manifest) {
@@ -229,14 +231,15 @@ class StaticAssetCache {
    */
   async hasFile(entry: string | PrecacheEntry) {
     const [url, cacheKey] = this.cacheKeyForEntry(entry);
-    const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+    const cache = await this.cache;
     const match = await cache.match(cacheKey);
     return match;
   }
 
   /** Deletes entire cache regardless of entry presence in manifest */
-  clearCache() {
-    return caches.delete(STATIC_ASSET_CACHE_NAME);
+  async clearCache() {
+    await caches.delete(STATIC_ASSET_CACHE_NAME);
+    this.cache = caches.open(STATIC_ASSET_CACHE_NAME);
   }
 
   /**
@@ -249,7 +252,7 @@ class StaticAssetCache {
         "Manifest has not been set. Cannot purge cache without information about current bundles."
       );
     }
-    const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+    const cache = await this.cache;
     const cachedUrls = (await cache.keys()).map((req) => {
       const url = new URL(req.url);
       return `${url.pathname}${url.search}`;
@@ -277,43 +280,10 @@ class StaticAssetCache {
     const cacheKey = this.urlsToCacheKeys.get(url.pathname);
     if (cacheKey) {
       if (process.env.NODE_ENV === "development") {
-        // fetch from dev server, fallback to cache
-        return fetch(event.request)
-          .then((response) => {
-            return response;
-          })
-          .catch(async (e) => {
-            const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-            const response = await cache.match(cacheKey);
-            if (response) {
-              return response;
-            } else {
-              return new Response("Failed to fetch", {
-                status: 408,
-                headers: { "Content-Type": "text/plain" },
-              });
-            }
-          });
+        return networkFirst(await this.cache, cacheKey, event.request);
       } else {
-        const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-        const responseFromCache = await cache.match(cacheKey);
-        if (responseFromCache) {
-          return responseFromCache;
-        } else {
-          try {
-            const response = await fetch(event.request);
-            if (response.ok) {
-              await cache.put(cacheKey, response.clone());
-            }
-            return response;
-          } catch (e) {
-            console.error(e);
-            return new Response("Failed to fetch", {
-              status: 408,
-              headers: { "Content-Type": "text/plain" },
-            });
-          }
-        }
+        const cache = await this.cache;
+        return cacheFirst(await cache, cacheKey, event.request, true);
       }
     } else {
       console.warn(
@@ -324,38 +294,7 @@ class StaticAssetCache {
   }
 
   async networkThenIndexHtmlCache(event: FetchEvent) {
-    try {
-      const response = await fetch(event.request);
-      if (response) {
-        const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-        await cache.put("/index.html", response.clone());
-        return response;
-      } else {
-        const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-        console.warn("SW: Responding with cached index.html");
-        const response = await cache.match("/index.html");
-        if (response) {
-          return response;
-        } else {
-          return new Response("Failed to fetch or retrieve from cache", {
-            status: 408,
-            headers: { "Content-Type": "text/plain" },
-          });
-        }
-      }
-    } catch (e) {
-      const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-      const response = await cache.match("/index.html");
-      if (response) {
-        console.warn("SW: Responding with cached index.html");
-        return response;
-      } else {
-        return new Response("Failed to fetch or retrieve from cache", {
-          status: 408,
-          headers: { "Content-Type": "text/plain" },
-        });
-      }
-    }
+    return networkFirst(await this.cache, "/index.html", event.request, true);
   }
 }
 

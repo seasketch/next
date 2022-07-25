@@ -127,6 +127,9 @@ export function ClientCacheManagerProvider({
       }
       localforage.setItem(CLIENT_CACHE_SETTINGS_KEY, id);
       setState(setting);
+      if (setting.prefetchEnabled) {
+        staticAssetCache.populateCache();
+      }
     },
     [setState]
   );
@@ -398,8 +401,6 @@ export function ClientCacheManagerProvider({
       throw new Error("GraphqlQueryCache not set");
     }
     setUpdatingCacheSizes(true);
-    // Map tiles - TODO: update when proper custom cache is added
-    const mapboxTiles = await getCacheSize("mapbox-tiles");
     // static assets
     const staticAssetState = await staticAssetCache.getState();
     const queries = await graphqlQueryCache.getState();
@@ -410,9 +411,10 @@ export function ClientCacheManagerProvider({
     const stats = {
       queries,
       staticAssets: staticAssetState,
+      // Map tiles - TODO: update when proper custom cache is added
       mapTiles: {
-        bytes: mapboxTiles.bytes,
-        tileCount: mapboxTiles.keys,
+        bytes: 0,
+        tileCount: 0,
       },
       selectedSurveyIds: strategyArgs.map((args: { id: number }) => args.id),
       offlineSurveys: {
