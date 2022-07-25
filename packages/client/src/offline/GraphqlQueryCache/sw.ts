@@ -5,8 +5,6 @@ import debounce from "lodash.debounce";
 import { MESSAGE_TYPES } from "../ServiceWorkerWindow";
 import { GraphqlQueryCacheCommon, isByArgs, Strategy } from "./shared";
 
-// TODO: clear cache on logout
-
 declare const self: ServiceWorkerGlobalScope;
 
 /**

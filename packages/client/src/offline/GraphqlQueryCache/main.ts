@@ -4,8 +4,6 @@ import ServiceWorkerWindow, { MESSAGE_TYPES } from "../ServiceWorkerWindow";
 import * as graphql from "../../generated/graphql";
 import { GraphqlQueryCacheCommon, Strategy } from "./shared";
 
-// TODO: clear cache on logout
-
 /**
  * Saves query results to CacheStorage for use offline or just to improve
  * performance. Requests to be cached are identified by the configured
@@ -133,6 +131,15 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
       }, 0),
       strategies: strategyStats,
     };
+  }
+
+  /**
+   * Clears all cache responses
+   */
+  async logout() {
+    for (const strategy of this.strategies) {
+      await caches.delete(this.cacheNameForStrategy(strategy));
+    }
   }
 }
 

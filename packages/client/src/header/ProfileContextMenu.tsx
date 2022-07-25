@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useContext } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 
 export default function ProfileContextMenu(props?: { itemClassName?: string }) {
   const { user, logout } = useAuth0();
   const { t, i18n } = useTranslation(["nav"]);
+  const cache = useContext(GraphqlQueryCacheContext);
   if (!user) {
     return null;
   }
@@ -56,12 +58,13 @@ export default function ProfileContextMenu(props?: { itemClassName?: string }) {
           type="submit"
           className="block w-full text-left px-4 py-2 text-base md:text-sm leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900"
           role="menuitem"
-          onClick={() =>
+          onClick={() => {
+            cache?.logout();
             logout({
               returnTo:
                 window.location.protocol + "//" + window.location.host + "/",
-            })
-          }
+            });
+          }}
         >
           {t("Sign out")}
         </button>
