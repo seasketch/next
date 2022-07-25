@@ -1,15 +1,12 @@
 import { ArrowLeftIcon, ArrowsExpandIcon } from "@heroicons/react/outline";
-import { CameraOptions, FreeCameraOptions } from "mapbox-gl";
-import React, { useEffect } from "react";
-import ReactDOM from "react-dom";
+import { CameraOptions } from "mapbox-gl";
 import { Trans } from "react-i18next";
-import MiniBasemapSelector from "../admin/data/MiniBasemapSelector";
 import MapCameraCaptureButton from "../admin/surveys/MapCameraCaptureButton";
 import useMapEssentials from "../admin/surveys/useMapEssentials";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import MapboxMap from "../components/MapboxMap";
 import MapPicker from "../components/MapPicker";
-import { ResetCamera, ResetView, ShowScaleBar } from "../draw/MapSettingsPopup";
+import { ResetCamera, ShowScaleBar } from "../draw/MapSettingsPopup";
 import { SurveyMapPortal } from "../formElements/FormElement";
 import { useUpdateFormElementMapCameraMutation } from "../generated/graphql";
 import useWindowSize from "../useWindowSize";

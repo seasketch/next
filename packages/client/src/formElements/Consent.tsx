@@ -1,15 +1,12 @@
 import {
   CheckIcon,
-  DocumentIcon,
   DocumentTextIcon,
   ExclamationIcon,
   XIcon,
 } from "@heroicons/react/outline";
-import { DocumentReportIcon } from "@heroicons/react/solid";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { Trans, useTranslation } from "react-i18next";
-import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Spinner from "../components/Spinner";
 import Switch from "../components/Switch";
@@ -17,7 +14,6 @@ import TextInput from "../components/TextInput";
 import { useUploadConsentDocMutation } from "../generated/graphql";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import {
-  adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,

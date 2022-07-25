@@ -1,4 +1,3 @@
-import { useState } from "react";
 import useLocalStorage from "../useLocalStorage";
 
 export default function useSegmentState<T>(props: {

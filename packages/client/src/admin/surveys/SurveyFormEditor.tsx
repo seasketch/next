@@ -6,14 +6,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
@@ -30,7 +23,6 @@ import {
   useUpdateFormElementBackgroundMutation,
   useSetFormElementBackgroundMutation,
   useClearFormElementStyleMutation,
-  FormElement,
   FormElementFullDetailsFragment,
   LogicRuleDetailsFragment,
   useCopyAppearanceMutation,
@@ -44,7 +36,6 @@ import {
   FormEditorPortalContext,
   SurveyButtonFooterPortalContext,
   SurveyContext,
-  SurveyMapPortal,
   useUpdateFormElement,
 } from "../../formElements/FormElement";
 import { sortFormElements } from "../../formElements/sortFormElements";
@@ -67,12 +58,9 @@ import SurveyFlowMap from "./SurveyFlowMap";
 import LogicRuleEditor from "./LogicRuleEditor";
 import { components } from "../../formElements";
 import bbox from "@turf/bbox";
-import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
 import languages, { LangDetails } from "../../lang/supported";
-import i18n from "../../i18n";
 import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
-import DropdownButton from "../../components/DropdownButton";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);

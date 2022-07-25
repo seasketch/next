@@ -6,7 +6,6 @@ import EditableResponseCell, {
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import TextInput from "../components/TextInput";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import {
   FormElementBody,

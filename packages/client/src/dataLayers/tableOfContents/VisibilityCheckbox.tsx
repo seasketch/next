@@ -1,6 +1,3 @@
-import React from "react";
-import FolderIcon from "../../components/FolderIcon";
-
 export default function VisibilityCheckbox(props: {
   id: number;
   onClick?: () => void;

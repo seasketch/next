@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect, ReactNode, useRef } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { getAnswers, getDataForExport } from "../../formElements/ExportUtils";
-import { sortFormElements } from "../../formElements/sortFormElements";
+import { getDataForExport } from "../../formElements/ExportUtils";
 import {
   useToggleResponsesPracticeMutation,
   useSurveyResponsesQuery,
@@ -11,17 +10,14 @@ import {
 import {
   useTable,
   useSortBy,
-  useBlockLayout,
   useFlexLayout,
   useResizeColumns,
   Row,
-  Column,
   useGlobalFilter,
   useRowSelect,
   usePagination,
   Cell,
 } from "react-table";
-import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
 import Papa from "papaparse";
 import ExportResponsesModal from "./ExportResponsesModal";
@@ -251,20 +247,17 @@ export default function ResponseGrid(props: Props) {
   const survey = data?.survey;
   const [tab, setTab] = useState("responses");
   const onError = useGlobalErrorHandler();
-  const [
-    togglePractice,
-    togglePracticeState,
-  ] = useToggleResponsesPracticeMutation({
-    onError,
-    onCompleted: props.onNewMapTilesRequired,
-  });
-  const [
-    archiveResponses,
-    archiveResponsesState,
-  ] = useArchiveResponsesMutation({
-    onError,
-    onCompleted: props.onNewMapTilesRequired,
-  });
+  const [togglePractice, togglePracticeState] =
+    useToggleResponsesPracticeMutation({
+      onError,
+      onCompleted: props.onNewMapTilesRequired,
+    });
+  const [archiveResponses, archiveResponsesState] = useArchiveResponsesMutation(
+    {
+      onError,
+      onCompleted: props.onNewMapTilesRequired,
+    }
+  );
   const [modifyAnswers, modifyAnwersState] = useModifyAnswersMutation({});
   const [editingCell, setEditingCell] = useState(false);
   const scrollContainer = useRef<HTMLDivElement | null>(null);
@@ -530,9 +523,10 @@ export default function ResponseGrid(props: Props) {
                     </span>
                   );
                 }
-                const url = ConsentElement.surveyConsentDocumentsConnection.nodes.find(
-                  (doc) => doc.version === value.docVersion
-                )?.url;
+                const url =
+                  ConsentElement.surveyConsentDocumentsConnection.nodes.find(
+                    (doc) => doc.version === value.docVersion
+                  )?.url;
                 return value?.consented ? (
                   <span>
                     {value.clickedDoc ? (

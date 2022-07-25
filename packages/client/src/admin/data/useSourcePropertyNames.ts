@@ -3,7 +3,7 @@ import {
   useDataSourceUrlPropertiesQuery,
   DataSourceTypes,
 } from "../../generated/graphql";
-import { GeoJSON, FeatureCollection, Feature } from "geojson";
+import { GeoJSON, Feature } from "geojson";
 
 const cache: { [sourceId: number]: string[] } = {};
 

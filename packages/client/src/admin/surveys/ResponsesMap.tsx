@@ -1,22 +1,18 @@
-import { useAuth0 } from "@auth0/auth0-react";
 import { Feature } from "geojson";
-import { Layer, MapDataEvent, MapMouseEvent, Popup } from "mapbox-gl";
+import { Layer, MapMouseEvent, Popup } from "mapbox-gl";
 import { useEffect, useMemo, useState } from "react";
 import { render } from "react-dom";
 import { Trans } from "react-i18next";
-import Badge from "../../components/Badge";
 import MapboxMap from "../../components/MapboxMap";
-import MapContextManager, {
+import {
   ClientDataLayer,
   ClientDataSource,
   MapContext,
 } from "../../dataLayers/MapContextManager";
 import {
-  DataSource,
   DataSourceTypes,
   FormElementDetailsFragment,
   RenderUnderType,
-  SurveyListDetailsFragment,
   useSurveyMapDetailsQuery,
   useSurveyResponsesQuery,
 } from "../../generated/graphql";
@@ -34,8 +30,6 @@ function getFilter(tab: ResponseGridTabName) {
     return ["all", ["==", "practice", false], ["==", "archived", false]];
   }
 }
-
-const initTime = new Date().getTime();
 
 export default function ResponsesMap({
   surveyId,
@@ -87,7 +81,6 @@ export default function ResponsesMap({
     ) {
       // eslint-disable-next-line i18next/no-literal-string
       const sourceId = `${selectedQuestion}-source`;
-      const sourceLayer = "sketches";
 
       for (const response of responses) {
         const collection = response.data[questionId]?.collection || [];

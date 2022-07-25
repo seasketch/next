@@ -30,7 +30,6 @@ import Button from "../../components/Button";
 import MapboxMap from "../../components/MapboxMap";
 import { Icons } from "../../components/SketchGeometryTypeSelector";
 import {
-  BasemapControl,
   ResetView,
   ShowScaleBar,
   ZoomToFeature,
@@ -44,7 +43,6 @@ import {
   FormElementFullDetailsFragment,
   FormElementLayout,
   SketchGeometryType,
-  useUpdateFormElementMutation,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { SurveyLayoutContext } from "../../surveys/SurveyAppLayout";
@@ -57,7 +55,6 @@ import {
   SurveyContext,
   SurveyMapPortal,
   useLocalizedComponentSetting,
-  useUpdateFormElement,
 } from "../FormElement";
 import { sortFormElements } from "../sortFormElements";
 import FormElementOptionsInput, {
@@ -71,7 +68,6 @@ import DigitizingMiniMap from "../DigitizingMiniMap";
 import { FormEditorHeader } from "../../admin/surveys/SurveyFormEditor";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
-import { collectText } from "../../admin/surveys/collectText";
 import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";

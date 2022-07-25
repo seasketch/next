@@ -1,23 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import logo from "./seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useLocation, Link, NavLink, useParams } from "react-router-dom";
-import { ProfileStatusButton } from "./ProfileStatusButton";
+import { Link, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ProfileContextMenu from "./ProfileContextMenu";
 import ProfileControl from "./ProfileControl";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 export default function Header() {
-  const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
-  const { t, i18n } = useTranslation(["nav"]);
+  const { isAuthenticated, loginWithRedirect } = useAuth0();
+  const { t } = useTranslation(["nav"]);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const { slug } = useParams<{ slug: string }>();
   const currentProjectQuery = useCurrentProjectMetadata();
 
-  const handleDocumentClick = useCallback(() => setProfileModalOpen(false), [
-    setProfileModalOpen,
-  ]);
+  const handleDocumentClick = useCallback(
+    () => setProfileModalOpen(false),
+    [setProfileModalOpen]
+  );
 
   useEffect(() => {
     if (profileModalOpen) {

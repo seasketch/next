@@ -1,11 +1,9 @@
-import React from "react";
 import { useHistory, useParams } from "react-router-dom";
 import Button from "../../../components/Button";
 import InputBlock from "../../../components/InputBlock";
 import Modal from "../../../components/Modal";
 import ProgressBar from "../../../components/ProgressBar";
 import Switch from "../../../components/Switch";
-import { RenderUnderType } from "../../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import useProjectId from "../../../useProjectId";
 import {

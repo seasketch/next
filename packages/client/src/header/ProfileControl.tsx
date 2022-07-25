@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ProfileStatusButton } from "./ProfileStatusButton";
 import { useTranslation } from "react-i18next";
@@ -7,10 +7,11 @@ import ProfileContextMenu from "./ProfileContextMenu";
 export default function ProfileControl() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const { loginWithRedirect } = useAuth0();
-  const { t, i18n } = useTranslation(["nav"]);
-  const handleDocumentClick = useCallback(() => setProfileModalOpen(false), [
-    setProfileModalOpen,
-  ]);
+  const { t } = useTranslation(["nav"]);
+  const handleDocumentClick = useCallback(
+    () => setProfileModalOpen(false),
+    [setProfileModalOpen]
+  );
 
   useEffect(() => {
     if (profileModalOpen) {

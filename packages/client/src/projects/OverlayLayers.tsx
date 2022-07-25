@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
-import MetadataModal from "../dataLayers/MetadataModal";
+import { useState, useEffect, useContext } from "react";
 import TableOfContents, {
   ClientTableOfContentsItem,
   createBoundsRecursive,

@@ -1,18 +1,17 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { GeoJSONSource, LngLatLike, Map } from "mapbox-gl";
+import { LngLatLike, Map } from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature, FeatureCollection, Point } from "geojson";
+import { Feature, FeatureCollection } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
 import DrawPoint from "./DrawPoint";
 import DirectSelect from "./DirectSelect";
 import SimpleSelect from "./SimpleSelect";
 import getKinks from "@turf/kinks";
 import styles from "./styles";
-import debounce from "lodash.debounce";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 
 function hasKinks(feature?: Feature<any>) {

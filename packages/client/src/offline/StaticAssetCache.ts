@@ -230,6 +230,7 @@ class StaticAssetCache {
    * @returns
    */
   async hasFile(entry: string | PrecacheEntry) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [url, cacheKey] = this.cacheKeyForEntry(entry);
     const cache = await this.cache;
     const match = await cache.match(cacheKey);

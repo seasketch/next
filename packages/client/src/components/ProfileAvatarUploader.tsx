@@ -1,18 +1,16 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import ProfilePhoto from "../admin/users/ProfilePhoto";
 import { useMeQuery, useUpdateProfileMutation } from "../generated/graphql";
-import ProjectAppSidebar from "../projects/ProjectAppSidebar";
-import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import Button from "./Button";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 
 export default function ProfileAvatarUploader() {
   const auth0 = useAuth0();
   const onError = useGlobalErrorHandler();
-  const { data, loading, error } = useMeQuery({
+  const { data } = useMeQuery({
     fetchPolicy: "cache-and-network",
     onError,
   });
@@ -36,6 +34,7 @@ export default function ProfileAvatarUploader() {
     [data?.me, mutate]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   return (

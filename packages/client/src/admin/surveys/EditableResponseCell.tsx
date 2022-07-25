@@ -1,12 +1,6 @@
-import { CheckIcon, SaveIcon, XIcon } from "@heroicons/react/outline";
+import { CheckIcon, XIcon } from "@heroicons/react/outline";
 import { PencilIcon } from "@heroicons/react/solid";
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Spinner from "../../components/Spinner";
 
@@ -14,17 +8,15 @@ export const CellEditorContext = createContext<{ editing: boolean }>({
   editing: false,
 });
 
-export type CellEditorComponent<
-  ValueType = any,
-  ComponentSettingsType = any
-> = React.FunctionComponent<{
-  value: ValueType;
-  disabled: boolean;
-  onChange: (value: ValueType) => void;
-  onRequestSave: () => void;
-  onRequestCancel: () => void;
-  componentSettings: ComponentSettingsType;
-}>;
+export type CellEditorComponent<ValueType = any, ComponentSettingsType = any> =
+  React.FunctionComponent<{
+    value: ValueType;
+    disabled: boolean;
+    onChange: (value: ValueType) => void;
+    onRequestSave: () => void;
+    onRequestCancel: () => void;
+    componentSettings: ComponentSettingsType;
+  }>;
 
 export type EditorsList = [
   formElementId: number,

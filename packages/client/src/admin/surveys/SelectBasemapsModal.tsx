@@ -5,11 +5,9 @@ import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Switch from "../../components/Switch";
 import {
-  BasemapDetailsFragmentDoc,
   DeleteBasemapDocument,
   DeleteBasemapMutation,
   useAllBasemapsQuery,
-  useDeleteBasemapMutation,
 } from "../../generated/graphql";
 import { useDelete } from "../../graphqlHookWrappers";
 

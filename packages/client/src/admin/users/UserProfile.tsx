@@ -1,7 +1,5 @@
-import React from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Profile } from "../../generated/graphql";
-import ProfilePhoto from "./ProfilePhoto";
 
 interface ProfileProps {
   profile: Pick<

@@ -22,7 +22,7 @@ import {
   ClientCacheSettings,
   CLIENT_CACHE_SETTINGS_KEY,
 } from "./ClientCacheSettings";
-import { getCacheSize, GraphqlQueryCache } from "./GraphqlQueryCache/main";
+import { GraphqlQueryCache } from "./GraphqlQueryCache/main";
 import {
   offlineSurveyChoiceStrategy,
   surveyLRUStrategy,

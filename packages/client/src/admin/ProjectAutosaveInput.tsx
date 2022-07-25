@@ -1,9 +1,6 @@
-import React, { useState, useEffect, ReactNode } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import useDebounce from "../useDebounce";
-import {
-  UpdateProjectSettingsDocument,
-  useUpdateProjectSettingsMutation,
-} from "../generated/graphql";
+import { UpdateProjectSettingsDocument } from "../generated/graphql";
 import TextInput from "../components/TextInput";
 import { DocumentNode, useMutation } from "@apollo/client";
 

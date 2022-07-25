@@ -9,11 +9,7 @@ import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import { SketchGeometryType } from "../generated/graphql";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CursorClickIcon,
-  DotsHorizontalIcon,
-  TrashIcon,
-} from "@heroicons/react/outline";
+import { CursorClickIcon, TrashIcon } from "@heroicons/react/outline";
 import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";

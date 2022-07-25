@@ -1,11 +1,5 @@
-import React, { ReactNode, useState } from "react";
-import {
-  AnimatePresence,
-  AnimationControls,
-  AnimationProps,
-  motion,
-  TargetAndTransition,
-} from "framer-motion";
+import { ReactNode, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
 
 interface SidebarButtonProps {

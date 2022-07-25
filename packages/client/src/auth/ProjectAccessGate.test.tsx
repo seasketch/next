@@ -1,14 +1,11 @@
 /* eslint-disable i18next/no-literal-string */
-import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
   AccessGranted,
   Error404,
   Loading,
-  AccessRequestScreen,
   DeniedAdminsOnly,
-  DeniedAnon,
   DeniedEmailNotVerified,
   DeniedInviteOnly,
   DeniedNotApproved,

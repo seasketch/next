@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { ReactNode, useContext, useRef, useState } from "react";
 import SortableTree, {
   changeNodeAtPath,
@@ -273,6 +274,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
                     childIds = [data.node.id];
                     layerIds = [data.node.dataLayerId];
                   } else {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     [childIds, layerIds] = getEnabledChildren(
                       data.node as ClientTableOfContentsItem,
 

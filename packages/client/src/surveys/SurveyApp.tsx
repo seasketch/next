@@ -1,5 +1,4 @@
 import {
-  MouseEventHandler,
   useEffect,
   useRef,
   useState,
@@ -13,21 +12,12 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import {
   FormElementLayout,
   SurveyAppFormElementFragment,
-  SurveyAppRuleFragment,
   useCreateResponseMutation,
   useSurveyQuery,
 } from "../generated/graphql";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
-import UpArrowIcon from "../components/UpArrowIcon";
-import DownArrowIcon from "../components/DownArrowIcon";
-import useLocalStorage from "../useLocalStorage";
-import {
-  ComputedFormElementStyle,
-  FormElementStyleProps,
-  useCurrentStyle,
-} from "./appearance";
+import { useCurrentStyle } from "./appearance";
 import ImagePreloader from "./ImagePreloader";
 import SurveyAppLayout from "./SurveyAppLayout";
 import FormElementFactory from "./FormElementFactory";
@@ -41,25 +31,15 @@ import {
 } from "../formElements/FormElement";
 import { sortFormElements } from "../formElements/sortFormElements";
 import { components } from "../formElements";
-import { getSurveyPagingState, SurveyPagingState } from "./paging";
-import {
-  collectHeaders,
-  collectQuestion,
-  collectText,
-} from "../admin/surveys/collectText";
-import { HeadProvider, Title, Meta } from "react-head";
-import { colord } from "colord";
+import { getSurveyPagingState } from "./paging";
+import { Title, Meta } from "react-head";
 import { useLocalForage } from "../useLocalForage";
-import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/outline";
 import useMobileDeviceDetector from "./useMobileDeviceDetector";
 import bbox from "@turf/bbox";
-import { LngLatBoundsLike } from "mapbox-gl";
 import SurveyNavigationButton from "./SurveyNavigationButtons";
 import languages from "../lang/supported";
 import SurveyContextualMap from "./SurveyContextualMap";
 import { ProjectAccessGate } from "../auth/ProjectAccessGate";
-import { useApolloClient } from "@apollo/client";
-import { SurveyDocument } from "../generated/queries";
 import useOfflineSurveyResponses from "../offline/useOfflineSurveyResponses";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { offlineSurveyChoiceStrategy } from "../offline/GraphqlQueryCache/strategies";
@@ -96,7 +76,7 @@ function SurveyApp() {
 
   const [backwards, setBackwards] = useState(false);
   const onError = useGlobalErrorHandler();
-  const { data, loading } = useSurveyQuery({
+  const { data } = useSurveyQuery({
     variables: { id: parseInt(surveyId), slug },
     onError,
     // This could help improve resilience of the app when working offline with a stale cache
@@ -237,6 +217,7 @@ function SurveyApp() {
       handleAdvance(pagingState);
       setAutoAdvance(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoAdvance, pagingState]);
 
   const surveyButtonFooter = useRef<HTMLDivElement>(null);
@@ -689,97 +670,6 @@ function SurveyApp() {
       </>
     );
   }
-}
-
-function SurveyNav({
-  pagingState,
-  onNext,
-  onPrev,
-  slug,
-  surveyId,
-  canAdvance,
-  practice,
-  style,
-}: {
-  canAdvance: boolean;
-  onNext: MouseEventHandler<HTMLAnchorElement>;
-  onPrev: MouseEventHandler<HTMLAnchorElement>;
-  slug: string;
-  surveyId: string;
-  practice?: string;
-  pagingState: SurveyPagingState<SurveyAppFormElementFragment>;
-  style: ComputedFormElementStyle;
-}) {
-  const { t } = useTranslation("surveys");
-  let position =
-    "bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
-  switch (style.layout) {
-    case FormElementLayout.Right:
-      position =
-        "bottom-3 right-3 md:right-1/2 md:bottom-6 md:pr-4 lg:bottom-10 lg:pr-8";
-      break;
-    case FormElementLayout.MapStacked:
-      position =
-        "bottom-3 right-3 md:bottom-6 md:right-6 lg:bottom-10 lg:right-5";
-      break;
-    case FormElementLayout.MapSidebarLeft:
-      position =
-        "bottom-3 left-96 md:bottom-6 md:right-6 lg:bottom-10 lg:right-10";
-      break;
-    default:
-      break;
-  }
-  return (
-    <div
-      style={{
-        width: "fit-content",
-        height: "fit-content",
-      }}
-      className={`z-20 fixed flex ${position} ${style.secondaryTextClass} ${
-        !pagingState.previousFormElement && "hidden"
-      }`}
-    >
-      {pagingState.previousFormElement && (
-        <Link
-          title={t("Previous Question")}
-          onClick={onPrev}
-          to={`/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
-            pagingState.previousFormElement
-          )}/${practice ? "practice" : ""}`}
-          className={`inline-block border-r shadow border-${style.secondaryTextClass.replace(
-            "text-",
-            ""
-          )} border-opacity-10 opacity-95 hover:opacity-100 p-2 rounded-l ${
-            pagingState.isLastQuestion ? "rounded-r" : ""
-          }`}
-          style={{
-            background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
-          }}
-        >
-          <ChevronUpIcon className="w-6 h-6" />
-        </Link>
-      )}
-      {!pagingState.isLastQuestion && (
-        <Link
-          title={t("Next Question")}
-          onClick={onNext}
-          className={`inline-flex items-center p-2 shadow rounded-r ${
-            !canAdvance
-              ? "opacity-50 cursor-default"
-              : "opacity-95 hover:opacity-100"
-          }`}
-          to={`/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
-            pagingState.nextFormElement!
-          )}/${practice ? "practice" : ""}`}
-          style={{
-            background: `linear-gradient(${style.secondaryColor}, ${style.secondaryColor2})`,
-          }}
-        >
-          <ChevronDownIcon className="w-6 h-6" />
-        </Link>
-      )}
-    </div>
-  );
 }
 
 export function advancesAutomatically(
