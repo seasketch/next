@@ -1,0 +1,91 @@
+name: Deploy Server (w/migrations)
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+jobs:
+  run_migrations:
+    name: Run DB Migrations
+    concurrency: ${{github.event.inputs.environment }}_db_migrations
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{github.event.inputs.environment }}_db_migrations
+      url: https://api.seasket.ch/graphiql
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - name: Install unbuffer command
+        run: |
+          sudo apt-get install expect
+      # This remote command must succeed with the message "database migrations complete"
+      - name: Run migrations using ecs exec
+        run: |
+          unbuffer aws ecs execute-command --cluster ${{secrets.MAINTENANCE_STACK}} --task ${{secrets.MAINTENANCE_TASK}} --container Default --command "/bin/sh -l /home/migrate.sh ${{github.sha}}" --interactive | tee /dev/stderr | grep "database migrations complete"
+  deploy_server:
+    runs-on: ubuntu-latest
+    name: Deploy Server
+    if: always() && needs.run_migrations.result != 'failure'
+    concurrency: ${{github.event.inputs.environment }}_server
+    timeout-minutes: 12
+    environment:
+      name: ${{github.event.inputs.environment }}_server
+      url: https://api.seasket.ch/graphiql
+    needs:
+      - run_migrations
+    steps:
+      - uses: actions/checkout@v2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-server-deploy-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install CDK
+        run: |
+          npm install -g aws-cdk typescript
+      - name: Install dependencies
+        run: |
+          lerna bootstrap --scope=infra
+      - name: Deploy server
+        working-directory: ./packages/infra
+        env:
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          BUILD: ${{ needs.detect_changes.outputs.build_label }}
+          COMMIT: ${{ needs.detect_changes.outputs.build_label }}
+          UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          cdk deploy --require-approval never -e SeaSketchGraphQLServer
