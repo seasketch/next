@@ -30,9 +30,7 @@ class ServiceWorkerWindow {
       this.wb = wb;
     } else {
       this.wb = {
-        messageSW: (message: object) => {
-          throw new Error("ServiceWorker not available");
-        },
+        messageSW: (message: object) => Promise.resolve(),
       };
     }
   }
