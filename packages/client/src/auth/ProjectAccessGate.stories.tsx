@@ -23,6 +23,7 @@ const projectCommonDetails = {
   name: "Chad's Project",
   logoUrl: "",
   supportEmail: "chad@underbluewaters.net",
+  isOfflineEnabled: false,
 };
 
 const projectPublicDetails = {
