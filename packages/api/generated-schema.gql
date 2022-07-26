@@ -233,6 +233,26 @@ type Basemap implements Node {
   """
   nodeId: ID!
 
+  """Only available on supported projects by authorized users"""
+  offlineSupportInformation: OfflineSupportInformation
+
+  """Reads and enables pagination through a set of `OfflineTileSetting`."""
+  offlineTileSettings(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OfflineTileSettingCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `OfflineTileSetting`."""
+    orderBy: [OfflineTileSettingsOrderBy!]
+  ): [OfflineTileSetting!]!
+
   """Reads and enables pagination through a set of `OptionalBasemapLayer`."""
   optionalBasemapLayers(
     """
@@ -329,6 +349,7 @@ type Basemap implements Node {
   conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   url: String!
+  useDefaultOfflineTileSettings: Boolean!
 }
 
 """
@@ -409,6 +430,7 @@ input BasemapInput {
   conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   url: String!
+  useDefaultOfflineTileSettings: Boolean
 }
 
 """
@@ -478,6 +500,7 @@ input BasemapPatch {
   conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   url: String
+  useDefaultOfflineTileSettings: Boolean
 }
 
 """A connection to a list of `Basemap` values."""
@@ -538,6 +561,24 @@ max value for a JavaScript number. Therefore all big integers will be output as
 strings and not numbers.
 """
 scalar BigInt
+
+type CacheableOfflineAsset {
+  """
+  If provided, is a "bare" url with query strings such as access_token
+  stripped out.
+  """
+  cacheKey: String
+  type: CacheableOfflineAssetType!
+  url: String!
+}
+
+enum CacheableOfflineAssetType {
+  FONT
+  IMAGE
+  JSON
+  MAPBOX_GL_STYLE
+  SPRITE
+}
 
 """All input for the `clearFormElementStyle` mutation."""
 input ClearFormElementStyleInput {
@@ -1162,6 +1203,41 @@ type CreateInteractivitySettingPayload {
   query: Query
 }
 
+"""All input for the create `OfflineTileSetting` mutation."""
+input CreateOfflineTileSettingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `OfflineTileSetting` to be created by this mutation."""
+  offlineTileSetting: OfflineTileSettingInput!
+}
+
+"""The output of our create `OfflineTileSetting` mutation."""
+type CreateOfflineTileSettingPayload {
+  """Reads a single `Basemap` that is related to this `OfflineTileSetting`."""
+  basemap: Basemap
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `OfflineTileSetting` that was created by this mutation."""
+  offlineTileSetting: OfflineTileSetting
+
+  """Reads a single `Project` that is related to this `OfflineTileSetting`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the create `OptionalBasemapLayer` mutation."""
 input CreateOptionalBasemapLayerInput {
   """
@@ -1564,6 +1640,7 @@ input CreateSurveyResponseInput {
   clientMutationId: String
   draft: Boolean
   facilitated: Boolean
+  offlineId: UUID
   practice: Boolean
   responseData: JSON
   surveyId: Int
@@ -2617,6 +2694,9 @@ enum DataSourceTypes {
   VIDEO
 }
 
+"""The day, does not include a time."""
+scalar Date
+
 """
 A point in time as described by the [ISO
 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
@@ -3163,6 +3243,102 @@ type DeleteGroupPayload {
   group: Group
 
   """Reads a single `Project` that is related to this `Group`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deleteOfflineTilePackage` mutation."""
+input DeleteOfflineTilePackageInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID
+}
+
+"""The output of our `deleteOfflineTilePackage` mutation."""
+type DeleteOfflineTilePackagePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  offlineTilePackage: OfflineTilePackage
+
+  """An edge for our `OfflineTilePackage`. May be used by Relay 1."""
+  offlineTilePackageEdge(
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesEdge
+
+  """Reads a single `Project` that is related to this `OfflineTilePackage`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `deleteOfflineTileSettingByNodeId` mutation."""
+input DeleteOfflineTileSettingByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `OfflineTileSetting` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""
+All input for the `deleteOfflineTileSettingByProjectIdAndBasemapId` mutation.
+"""
+input DeleteOfflineTileSettingByProjectIdAndBasemapIdInput {
+  basemapId: Int!
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int!
+}
+
+"""All input for the `deleteOfflineTileSetting` mutation."""
+input DeleteOfflineTileSettingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `OfflineTileSetting` mutation."""
+type DeleteOfflineTileSettingPayload {
+  """Reads a single `Basemap` that is related to this `OfflineTileSetting`."""
+  basemap: Basemap
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedOfflineTileSettingNodeId: ID
+
+  """The `OfflineTileSetting` that was deleted by this mutation."""
+  offlineTileSetting: OfflineTileSetting
+
+  """Reads a single `Project` that is related to this `OfflineTileSetting`."""
   project: Project
 
   """
@@ -4071,6 +4247,41 @@ type EnableForumPostingPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `enableOfflineSupport` mutation."""
+input EnableOfflineSupportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  enable: Boolean
+  projectId: Int
+}
+
+"""The output of our `enableOfflineSupport` mutation."""
+type EnableOfflineSupportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `DataSourcesBucket` that is related to this `Project`."""
+  dataSourcesBucket: DataSourcesBucket
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -5039,6 +5250,45 @@ enum ForumsOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
+}
+
+"""All input for the `generateOfflineTilePackage` mutation."""
+input GenerateOfflineTilePackageInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  dataSourceUrl: String
+  maxShorelineZ: Int
+  maxZ: Int
+  originalUrlTemplate: String
+  projectId: Int
+  sourceType: OfflineTilePackageSourceType
+}
+
+"""The output of our `generateOfflineTilePackage` mutation."""
+type GenerateOfflineTilePackagePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  offlineTilePackage: OfflineTilePackage
+
+  """An edge for our `OfflineTilePackage`. May be used by Relay 1."""
+  offlineTilePackageEdge(
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesEdge
+
+  """Reads a single `Project` that is related to this `OfflineTilePackage`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All geography XY types implement this interface"""
@@ -6143,6 +6393,14 @@ type Mutation {
     input: CreateInteractivitySettingInput!
   ): CreateInteractivitySettingPayload
 
+  """Creates a single `OfflineTileSetting`."""
+  createOfflineTileSetting(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateOfflineTileSettingInput!
+  ): CreateOfflineTileSettingPayload
+
   """Creates a single `OptionalBasemapLayer`."""
   createOptionalBasemapLayer(
     """
@@ -6469,6 +6727,36 @@ type Mutation {
     """
     input: DeleteGroupByProjectIdAndNameInput!
   ): DeleteGroupPayload
+  deleteOfflineTilePackage(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteOfflineTilePackageInput!
+  ): DeleteOfflineTilePackagePayload
+
+  """Deletes a single `OfflineTileSetting` using a unique key."""
+  deleteOfflineTileSetting(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteOfflineTileSettingInput!
+  ): DeleteOfflineTileSettingPayload
+
+  """Deletes a single `OfflineTileSetting` using its globally unique id."""
+  deleteOfflineTileSettingByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteOfflineTileSettingByNodeIdInput!
+  ): DeleteOfflineTileSettingPayload
+
+  """Deletes a single `OfflineTileSetting` using a unique key."""
+  deleteOfflineTileSettingByProjectIdAndBasemapId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteOfflineTileSettingByProjectIdAndBasemapIdInput!
+  ): DeleteOfflineTileSettingPayload
 
   """Deletes a single `OptionalBasemapLayer` using a unique key."""
   deleteOptionalBasemapLayer(
@@ -6726,6 +7014,18 @@ type Mutation {
     """
     input: EnableForumPostingInput!
   ): EnableForumPostingPayload
+  enableOfflineSupport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: EnableOfflineSupportInput!
+  ): EnableOfflineSupportPayload
+  generateOfflineTilePackage(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: GenerateOfflineTilePackageInput!
+  ): GenerateOfflineTilePackagePayload
 
   """
   Use to create new sprites. If an existing sprite in the database for this
@@ -7092,6 +7392,12 @@ type Mutation {
     """
     input: UpdateBasemapByNodeIdInput!
   ): UpdateBasemapPayload
+  updateBasemapOfflineTileSettings(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateBasemapOfflineTileSettingsInput!
+  ): UpdateBasemapOfflineTileSettingsPayload
 
   """Updates a single `CommunityGuideline` using a unique key and a patch."""
   updateCommunityGuideline(
@@ -7308,6 +7614,38 @@ type Mutation {
     """
     input: UpdateInteractivitySettingByNodeIdInput!
   ): UpdateInteractivitySettingPayload
+  updateMapboxSecretKey(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateMapboxSecretKeyInput!
+  ): UpdateMapboxSecretKeyPayload
+
+  """Updates a single `OfflineTileSetting` using a unique key and a patch."""
+  updateOfflineTileSetting(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateOfflineTileSettingInput!
+  ): UpdateOfflineTileSettingPayload
+
+  """
+  Updates a single `OfflineTileSetting` using its globally unique id and a patch.
+  """
+  updateOfflineTileSettingByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateOfflineTileSettingByNodeIdInput!
+  ): UpdateOfflineTileSettingPayload
+
+  """Updates a single `OfflineTileSetting` using a unique key and a patch."""
+  updateOfflineTileSettingByProjectIdAndBasemapId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateOfflineTileSettingByProjectIdAndBasemapIdInput!
+  ): UpdateOfflineTileSettingPayload
 
   """
   Updates a single `OptionalBasemapLayer` using a unique key and a patch.
@@ -7620,6 +7958,189 @@ interface Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+}
+
+type OfflineSourceDetails {
+  dataSourceUrl: String!
+  templateUrl: String!
+
+  """Whether a tile packages is available for download"""
+  tilePackages: [OfflineTilePackage!]!
+  type: OfflineTilePackageSourceType!
+}
+
+"""Provides information on resources necessary to use a basemap offline"""
+type OfflineSupportInformation {
+  hasUncacheableSources: Boolean!
+  id: ID!
+  sources: [OfflineSourceDetails!]!
+  staticAssets: [CacheableOfflineAsset!]!
+  styleLastModified: Date
+}
+
+type OfflineTilePackage implements Node {
+  bytes: Int!
+  createdAt: Datetime!
+  dataSourceUrl: String!
+  error: String @deprecated(reason: "Use jobErrors instead")
+  id: UUID!
+  isMapboxHosted: Boolean!
+  jobErrors: String
+  jobStatus: OfflineTilePackageStatus
+  maxShorelineZ: Int
+  maxZ: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  originalUrlTemplate: String!
+
+  """Can be used to download a tilepackage (if permitted)"""
+  presignedUrl: String!
+
+  """Reads a single `Project` that is related to this `OfflineTilePackage`."""
+  project: Project
+  projectId: Int!
+  region: GeometryPolygon!
+  sourceType: OfflineTilePackageSourceType!
+  status: OfflineTilePackageStatus! @deprecated(reason: "Use jobStatus instead")
+  tilesFetched: Int!
+  totalTiles: Int!
+}
+
+"""
+A condition to be used against `OfflineTilePackage` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input OfflineTilePackageCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""A connection to a list of `OfflineTilePackage` values."""
+type OfflineTilePackagesConnection {
+  """
+  A list of edges which contains the `OfflineTilePackage` and cursor to aid in pagination.
+  """
+  edges: [OfflineTilePackagesEdge!]!
+
+  """A list of `OfflineTilePackage` objects."""
+  nodes: [OfflineTilePackage!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `OfflineTilePackage` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `OfflineTilePackage` edge in the connection."""
+type OfflineTilePackagesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `OfflineTilePackage` at the end of the edge."""
+  node: OfflineTilePackage!
+}
+
+"""Methods to use when ordering `OfflineTilePackage`."""
+enum OfflineTilePackagesOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
+enum OfflineTilePackageSourceType {
+  RASTER
+  RASTER_DEM
+  VECTOR
+}
+
+enum OfflineTilePackageStatus {
+  COMPLETE
+  FAILED
+  GENERATING
+  QUEUED
+  UPLOADING
+}
+
+type OfflineTileSetting implements Node {
+  """Reads a single `Basemap` that is related to this `OfflineTileSetting`."""
+  basemap: Basemap
+  basemapId: Int
+  id: Int!
+  maxShorelineZ: Int
+  maxZ: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `OfflineTileSetting`."""
+  project: Project
+  projectId: Int!
+  region: GeometryPolygon!
+}
+
+"""
+A condition to be used against `OfflineTileSetting` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input OfflineTileSettingCondition {
+  """Checks for equality with the object’s `basemapId` field."""
+  basemapId: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""An input for mutations affecting `OfflineTileSetting`"""
+input OfflineTileSettingInput {
+  basemapId: Int
+  id: Int
+  maxShorelineZ: Int
+  maxZ: Int
+  projectId: Int!
+  region: GeoJSON!
+}
+
+"""
+Represents an update to a `OfflineTileSetting`. Fields that are set will be updated.
+"""
+input OfflineTileSettingPatch {
+  basemapId: Int
+  id: Int
+  maxShorelineZ: Int
+  maxZ: Int
+  projectId: Int
+  region: GeoJSON
+}
+
+"""Methods to use when ordering `OfflineTileSetting`."""
+enum OfflineTileSettingsOrderBy {
+  BASEMAP_ID_ASC
+  BASEMAP_ID_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
 }
 
 """
@@ -8125,6 +8646,7 @@ type Project implements Node {
   public project listing via Query.projectsConnection.
   """
   isListed: Boolean!
+  isOfflineEnabled: Boolean
 
   """
   If a logoUrl is provided, it will link to this url in a new window if provided.
@@ -8168,6 +8690,52 @@ type Project implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """Reads and enables pagination through a set of `OfflineTilePackage`."""
+  offlineTilePackagesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OfflineTilePackageCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesConnection!
+
+  """Reads and enables pagination through a set of `OfflineTileSetting`."""
+  offlineTileSettings(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OfflineTileSettingCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `OfflineTileSetting`."""
+    orderBy: [OfflineTileSettingsOrderBy!]
+  ): [OfflineTileSetting!]!
 
   """
   Count of all users who have opted into participating in the project, sharing their profile with project administrators.
@@ -8654,7 +9222,6 @@ input ProjectPatch {
   """
   logoUrl: Upload
   mapboxPublicKey: String
-  mapboxSecretKey: String
   name: String
   region: GeoJSON
 }
@@ -8771,6 +9338,7 @@ enum ProjectsSharedBasemapsOrderBy {
 
 type PublicProjectDetail {
   accessControl: ProjectAccessControlSetting
+  accessStatus: ProjectAccessStatus
   id: Int
   logoUrl: String
   name: String
@@ -8869,25 +9437,8 @@ type Query implements Node {
     """
     nodeId: ID!
   ): CommunityGuideline
-
-  """
-  The current SeaSketch Project, which is determined by the `referer` or
-  `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
-  
-  """
-  currentProject: Project
-
-  """
-  Use to indicate to a user why they cannot access the given project, if denied.
-  
-  """
-  currentProjectAccessStatus: ProjectAccessStatus
-
-  """
-  Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization.
-  
-  """
-  currentProjectPublicDetails: PublicProjectDetail
+  currentProject: Project @deprecated(reason: "Use projectBySlug() instead")
+  currentProjectAccessStatus: ProjectAccessStatus @deprecated(reason: "Use project_access_status(slug) instead")
   currentUserIsSuperuser: Boolean!
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
@@ -9048,6 +9599,16 @@ type Query implements Node {
     nodeId: ID!
   ): Forum
   getDefaultDataSourcesBucket: String
+
+  """Reads and enables pagination through a set of `Survey`."""
+  getSurveys(
+    """Only read the first `n` values of the set."""
+    first: Int
+    ids: [Int]
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Survey!]
   getUnsplashPhotos(query: String!): UnsplashSearchResult!
   group(id: Int!): Group
 
@@ -9091,6 +9652,71 @@ type Query implements Node {
   The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`.
   """
   nodeId: ID!
+  offlineTilePackage(id: UUID!): OfflineTilePackage
+
+  """Reads a single `OfflineTilePackage` using its globally unique `ID`."""
+  offlineTilePackageByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `OfflineTilePackage`.
+    """
+    nodeId: ID!
+  ): OfflineTilePackage
+
+  """Reads and enables pagination through a set of `OfflineTilePackage`."""
+  offlineTilePackagesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OfflineTilePackageCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OfflineTilePackage`."""
+    orderBy: [OfflineTilePackagesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OfflineTilePackagesConnection
+  offlineTileSetting(id: Int!): OfflineTileSetting
+
+  """Reads a single `OfflineTileSetting` using its globally unique `ID`."""
+  offlineTileSettingByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `OfflineTileSetting`.
+    """
+    nodeId: ID!
+  ): OfflineTileSetting
+  offlineTileSettingByProjectIdAndBasemapId(basemapId: Int!, projectId: Int!): OfflineTileSetting
+
+  """Reads a set of `OfflineTileSetting`."""
+  offlineTileSettings(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OfflineTileSettingCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `OfflineTileSetting`."""
+    orderBy: [OfflineTileSettingsOrderBy!]
+  ): [OfflineTileSetting!]
   optionalBasemapLayer(id: Int!): OptionalBasemapLayer
 
   """Reads a single `OptionalBasemapLayer` using its globally unique `ID`."""
@@ -9138,6 +9764,7 @@ type Query implements Node {
   ): PostsConnection
   profileByUserId(userId: Int!): Profile
   project(id: Int!): Project
+  projectAccessStatus(pid: Int): ProjectAccessStatus
 
   """Reads a single `Project` using its globally unique `ID`."""
   projectByNodeId(
@@ -9185,6 +9812,7 @@ type Query implements Node {
     """The method to use when ordering `ProjectInviteGroup`."""
     orderBy: [ProjectInviteGroupsOrderBy!] = [NATURAL]
   ): ProjectInviteGroupsConnection
+  projectPublicDetails(slug: String): PublicProjectDetail
 
   """Reads and enables pagination through a set of `Project`."""
   projectsConnection(
@@ -10458,6 +11086,15 @@ type Survey implements Node {
   accessType: SurveyAccessType!
   archivedResponseCount: Int
 
+  """Reads and enables pagination through a set of `Basemap`."""
+  basemaps(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Basemap!]
+
   """Reads a single `Form` that is related to this `Survey`."""
   form: Form
 
@@ -10926,6 +11563,15 @@ type SurveyResponse implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  Should be used by clients to uniquely identify responses that are collected
+  offline. Survey facilitators can download their responses to disk as json so
+  that they may be recovered/submitted in the case of the client machine being
+  damaged or stolen. Tracking an offline uuid ensures that these responses are
+  not somehow submitted in duplicate.
+  """
+  offlineId: UUID
 
   """
   Checked on SUBMISSION, so adding or changing a survey geofence after responses
@@ -11696,6 +12342,51 @@ input UpdateBasemapInput {
   patch: BasemapPatch!
 }
 
+"""All input for the `updateBasemapOfflineTileSettings` mutation."""
+input UpdateBasemapOfflineTileSettingsInput {
+  basemapId: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  maxShorelineZ: Int
+  maxZ: Int
+  projectId: Int
+  useDefault: Boolean
+}
+
+"""The output of our `updateBasemapOfflineTileSettings` mutation."""
+type UpdateBasemapOfflineTileSettingsPayload {
+  basemap: Basemap
+
+  """An edge for our `Basemap`. May be used by Relay 1."""
+  basemapEdge(
+    """The method to use when ordering `Basemap`."""
+    orderBy: [BasemapsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): BasemapsEdge
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `InteractivitySetting` that is related to this `Basemap`.
+  """
+  interactivitySettings: InteractivitySetting
+
+  """Reads a single `Project` that is related to this `Basemap`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """The output of our update `Basemap` mutation."""
 type UpdateBasemapPayload {
   """The `Basemap` that was updated by this mutation."""
@@ -12409,6 +13100,117 @@ type UpdateInteractivitySettingPayload {
 
   """The `InteractivitySetting` that was updated by this mutation."""
   interactivitySetting: InteractivitySetting
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateMapboxSecretKey` mutation."""
+input UpdateMapboxSecretKeyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  secret: String
+}
+
+"""The output of our `updateMapboxSecretKey` mutation."""
+type UpdateMapboxSecretKeyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `DataSourcesBucket` that is related to this `Project`."""
+  dataSourcesBucket: DataSourcesBucket
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateOfflineTileSettingByNodeId` mutation."""
+input UpdateOfflineTileSettingByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `OfflineTileSetting` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `OfflineTileSetting` being updated.
+  """
+  patch: OfflineTileSettingPatch!
+}
+
+"""
+All input for the `updateOfflineTileSettingByProjectIdAndBasemapId` mutation.
+"""
+input UpdateOfflineTileSettingByProjectIdAndBasemapIdInput {
+  basemapId: Int!
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  An object where the defined keys will be set on the `OfflineTileSetting` being updated.
+  """
+  patch: OfflineTileSettingPatch!
+  projectId: Int!
+}
+
+"""All input for the `updateOfflineTileSetting` mutation."""
+input UpdateOfflineTileSettingInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `OfflineTileSetting` being updated.
+  """
+  patch: OfflineTileSettingPatch!
+}
+
+"""The output of our update `OfflineTileSetting` mutation."""
+type UpdateOfflineTileSettingPayload {
+  """Reads a single `Basemap` that is related to this `OfflineTileSetting`."""
+  basemap: Basemap
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `OfflineTileSetting` that was updated by this mutation."""
+  offlineTileSetting: OfflineTileSetting
+
+  """Reads a single `Project` that is related to this `OfflineTileSetting`."""
+  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

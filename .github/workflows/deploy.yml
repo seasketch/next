@@ -193,7 +193,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+          lerna bootstrap
       - name: Build client
         working-directory: ./packages/client
         env:
