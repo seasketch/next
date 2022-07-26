@@ -24,5 +24,6 @@ declare namespace NodeJS {
     AWS_SECRET_ACCESS_KEY: string;
     PUBLIC_UPLOADS_DOMAIN: string;
     UNSPLASH_KEY: string;
+    TILE_PACKAGES_BUCKET: string;
   }
 }
