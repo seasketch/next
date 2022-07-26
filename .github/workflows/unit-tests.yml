@@ -213,7 +213,7 @@ jobs:
           REACT_APP_PUBLIC_URL: https://example.com
           REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
         run: |
-          CI=false npm run build
+          NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
   integration-tests:
     name: Cypress Integration Tests
     runs-on: ubuntu-latest
@@ -296,7 +296,7 @@ jobs:
       - name: Start client
         working-directory: ./packages/client
         run: |
-          CI=false npm run build
+          NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
           serve -s build &
         env:
           SKIP_PREFLIGHT_CHECK: true
