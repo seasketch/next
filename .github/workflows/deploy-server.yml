@@ -10,6 +10,19 @@ on:
         options:
           - production
 jobs:
+  export_commit:
+    name: Determine commit to deploy
+    runs-on: ubuntu-latest
+    outputs:
+      build_label: ${{ steps.short_sha.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - id: short_sha
+        run: |
+          echo `git rev-parse HEAD`
+          echo "::set-output name=sha::`git rev-parse --short HEAD`"
   run_migrations:
     name: Run DB Migrations
     concurrency: ${{github.event.inputs.environment }}_db_migrations
@@ -83,8 +96,8 @@ jobs:
         env:
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
-          BUILD: ${{ needs.detect_changes.outputs.build_label }}
-          COMMIT: ${{ needs.detect_changes.outputs.build_label }}
+          BUILD: ${{ needs.export_commit.outputs.build_label }}
+          COMMIT: ${{ needs.export_commit.outputs.build_label }}
           UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
