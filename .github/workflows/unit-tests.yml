@@ -111,6 +111,7 @@ jobs:
           AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
           AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
           GM_DBURL: postgres://postgres:password@localhost:54321/seasketch_shadow
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         run: |
           node tests/init_dockerdb.js
           IN_TESTS=1 npm run db:migrate -- --shadow
