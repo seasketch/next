@@ -86,15 +86,6 @@ query OfflineSurveyMaps($slug: String!) {
   }
 }
 
-mutation ToggleOfflineBasemapSupport($id: Int!, $enable: Boolean!) {
-  updateBasemap(input: { id: $id, patch: { isOfflineEnabled: $enable } }) {
-    basemap {
-      id
-      isOfflineEnabled
-    }
-  }
-}
-
 fragment OfflineTileSettings on OfflineTileSetting {
   id
   projectId
@@ -122,7 +113,6 @@ query BasemapOfflineSettings($id: Int!, $slug: String!) {
     id
     name
     url
-    isOfflineEnabled
     useDefaultOfflineTileSettings
     project {
       id

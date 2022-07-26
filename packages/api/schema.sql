@@ -2059,7 +2059,6 @@ CREATE TABLE public.basemaps (
     interactivity_settings_id integer NOT NULL,
     is_disabled boolean DEFAULT false NOT NULL,
     surveys_only boolean DEFAULT false NOT NULL,
-    is_offline_enabled boolean DEFAULT false NOT NULL,
     use_default_offline_tile_settings boolean DEFAULT true NOT NULL
 );
 

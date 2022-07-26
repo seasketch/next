@@ -35,7 +35,6 @@ fragment BasemapDetails on Basemap {
   type
   url
   surveysOnly
-  isOfflineEnabled
 }
 
 query GetBasemaps($slug: String!) {

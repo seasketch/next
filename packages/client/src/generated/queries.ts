@@ -241,7 +241,6 @@ export type Basemap = Node & {
    * project which will only be used in surveys.
    */
   isDisabled: Scalars['Boolean'];
-  isOfflineEnabled: Scalars['Boolean'];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -350,7 +349,6 @@ export type BasemapInput = {
    * project which will only be used in surveys.
    */
   isDisabled?: Maybe<Scalars['Boolean']>;
-  isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -403,7 +401,6 @@ export type BasemapPatch = {
    * project which will only be used in surveys.
    */
   isDisabled?: Maybe<Scalars['Boolean']>;
-  isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Label shown in the basemap picker interface */
@@ -13166,7 +13163,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'isOfflineEnabled'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -14235,23 +14232,6 @@ export type OfflineSurveyMapsQuery = (
   )> }
 );
 
-export type ToggleOfflineBasemapSupportMutationVariables = Exact<{
-  id: Scalars['Int'];
-  enable: Scalars['Boolean'];
-}>;
-
-
-export type ToggleOfflineBasemapSupportMutation = (
-  { __typename?: 'Mutation' }
-  & { updateBasemap?: Maybe<(
-    { __typename?: 'UpdateBasemapPayload' }
-    & { basemap?: Maybe<(
-      { __typename?: 'Basemap' }
-      & Pick<Basemap, 'id' | 'isOfflineEnabled'>
-    )> }
-  )> }
-);
-
 export type OfflineTileSettingsFragment = (
   { __typename?: 'OfflineTileSetting' }
   & Pick<OfflineTileSetting, 'id' | 'projectId' | 'basemapId' | 'maxZ' | 'maxShorelineZ'>
@@ -14281,7 +14261,7 @@ export type BasemapOfflineSettingsQuery = (
     )> }
   )>, basemap?: Maybe<(
     { __typename?: 'Basemap' }
-    & Pick<Basemap, 'id' | 'name' | 'url' | 'isOfflineEnabled' | 'useDefaultOfflineTileSettings'>
+    & Pick<Basemap, 'id' | 'name' | 'url' | 'useDefaultOfflineTileSettings'>
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id'>
@@ -16249,7 +16229,6 @@ export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
   type
   url
   surveysOnly
-  isOfflineEnabled
 }
     `;
 export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
@@ -17863,16 +17842,6 @@ export const OfflineSurveyMapsDocument = /*#__PURE__*/ gql`
 }
     ${OfflineBasemapDetailsFragmentDoc}
 ${OfflineTilePackageDetailsFragmentDoc}`;
-export const ToggleOfflineBasemapSupportDocument = /*#__PURE__*/ gql`
-    mutation ToggleOfflineBasemapSupport($id: Int!, $enable: Boolean!) {
-  updateBasemap(input: {id: $id, patch: {isOfflineEnabled: $enable}}) {
-    basemap {
-      id
-      isOfflineEnabled
-    }
-  }
-}
-    `;
 export const BasemapOfflineSettingsDocument = /*#__PURE__*/ gql`
     query BasemapOfflineSettings($id: Int!, $slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17889,7 +17858,6 @@ export const BasemapOfflineSettingsDocument = /*#__PURE__*/ gql`
     id
     name
     url
-    isOfflineEnabled
     useDefaultOfflineTileSettings
     project {
       id
@@ -19159,7 +19127,6 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
-    ToggleOfflineBasemapSupport: 'ToggleOfflineBasemapSupport',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',

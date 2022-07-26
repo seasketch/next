@@ -219,7 +219,6 @@ type Basemap implements Node {
   
   """
   isDisabled: Boolean!
-  isOfflineEnabled: Boolean!
 
   """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
@@ -384,7 +383,6 @@ input BasemapInput {
   
   """
   isDisabled: Boolean
-  isOfflineEnabled: Boolean
 
   """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
@@ -455,7 +453,6 @@ input BasemapPatch {
   
   """
   isDisabled: Boolean
-  isOfflineEnabled: Boolean
 
   """
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
