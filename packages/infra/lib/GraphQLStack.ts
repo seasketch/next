@@ -33,8 +33,13 @@ export class GraphQLStack extends cdk.Stack {
     }
   ) {
     super(scope, id, props);
-    const { AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID, UNSPLASH_KEY, SENTRY_DSN } =
-      process.env;
+    const {
+      AUTH0_CLIENT_SECRET,
+      AUTH0_CLIENT_ID,
+      UNSPLASH_KEY,
+      SENTRY_DSN,
+      MAPBOX_ACCESS_TOKEN,
+    } = process.env;
     if (!AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET) {
       throw new Error(
         `AUTH0_CLIENT_SECRET, AUTH0_CLIENT_ID environment variables must be set`
@@ -45,6 +50,9 @@ export class GraphQLStack extends cdk.Stack {
     }
     if (!SENTRY_DSN) {
       throw new Error(`SENTRY_DSN environment variable must be set`);
+    }
+    if (!MAPBOX_ACCESS_TOKEN) {
+      throw new Error(`MAPBOX_ACCESS_TOKEN environment variable must be set`);
     }
     if (!process.env.COMMIT) {
       throw new Error(
@@ -94,6 +102,7 @@ export class GraphQLStack extends cdk.Stack {
             BUILD: process.env.BUILD || "dev",
             UNSPLASH_KEY,
             SENTRY_DSN,
+            MAPBOX_ACCESS_TOKEN,
           },
           containerPort: 3857,
         },
