@@ -40,7 +40,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=@seasketch/api
+          lerna bootstrap
       - name: Init docker db
         working-directory: ./packages/api
         env:
@@ -100,7 +100,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=@seasketch/api --scope=client --scope=mapbox-gl-esri-feature-layers
+          lerna bootstrap
       - name: Initialize database
         working-directory: ./packages/api
         env:
@@ -153,7 +153,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+          lerna bootstrap
       - name: Test client
         working-directory: ./packages/client
         env:
@@ -199,7 +199,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers
+          lerna bootstrap
       - name: Build client
         working-directory: ./packages/client
         env:
@@ -260,7 +260,7 @@ jobs:
           npm install
           npm install -g lerna
           npm install serve -g
-          lerna bootstrap --scope=client --scope=mapbox-gl-esri-feature-layers --scope=@seasketch/api
+          lerna bootstrap
       - name: Init docker db
         working-directory: ./packages/api
         env:
