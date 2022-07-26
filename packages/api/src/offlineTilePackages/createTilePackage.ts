@@ -16,17 +16,17 @@ const calculator = new MapTileCacheCalculator(
   "https://d3p1dsef9f0gjr.cloudfront.net/"
 );
 
-if (!process.env.MAPBOX_ACCESS_TOKEN) {
-  throw new Error("MAPBOX_ACCESS_TOKEN env var not set");
-}
-
-if (!process.env.TILE_PACKAGES_BUCKET) {
-  throw new Error("TILE_PACKAGES_BUCKET env var not set");
-}
-
 const s3 = new S3();
 
 export async function createTilePackage(packageId: string, client: DBClient) {
+  if (!process.env.MAPBOX_ACCESS_TOKEN) {
+    throw new Error("MAPBOX_ACCESS_TOKEN env var not set");
+  }
+
+  if (!process.env.TILE_PACKAGES_BUCKET) {
+    throw new Error("TILE_PACKAGES_BUCKET env var not set");
+  }
+
   const results: {
     id: string;
     projectId: number;
