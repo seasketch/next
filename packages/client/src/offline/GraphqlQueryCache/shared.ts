@@ -29,9 +29,9 @@ export const ENABLED_KEY = `graphql-query-cache-enabled`;
 
 export function enabledByDefault() {
   return process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT
-    ? process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT.toUpperCase() ===
-        "TRUE"
-    : false;
+    ? process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT.toUpperCase() !==
+        "FALSE"
+    : true;
 }
 
 export async function isEnabled() {
