@@ -104,7 +104,7 @@ jobs:
     name: Deploy Server
     if: always() && needs.run_migrations.result != 'failure' && (github.event.inputs.force == 'true' || needs.detect_changes.outputs.api == 'true')
     concurrency: ${{github.event.inputs.environment }}_server
-    timeout-minutes: 12
+    timeout-minutes: 20
     environment:
       name: ${{github.event.inputs.environment }}_server
       url: https://api.seasket.ch/graphiql
