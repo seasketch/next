@@ -650,10 +650,12 @@ describe("Survey creation smoke test", () => {
           }
           
         })
+        cy.get('button').contains('Yellowfin')
+          .should('not.exist')
+        cy.wait(500)
         cy.get('button').contains('Save')
           .should('not.exist')
-        //cy.get('button').contains('Yellowfin')
-        //  .should('not.exist')
+        
         
         cy.get('.SAPRangeMini')
           .should('exist')
