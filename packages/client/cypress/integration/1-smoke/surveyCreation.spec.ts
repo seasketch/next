@@ -144,7 +144,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["macbook-15", "ipad-2", "iphone-x"]
+const devices: any = ["macbook-15","ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -642,10 +642,19 @@ describe("Survey creation smoke test", () => {
         cy.get('button').contains('Save').then(($save) => {
           {$save.trigger('click')}
         });
-        cy.get('button').contains('Yellowfin')
-          .should('not.exist')
+        cy.get('button').then((button) => {
+          if(button.text().includes('Save')) {
+            cy.get('button').contains('Save').then(($btn) => {
+              {$btn.trigger('click')}
+            })
+          }
+          
+        })
         cy.get('button').contains('Save')
           .should('not.exist')
+        //cy.get('button').contains('Yellowfin')
+        //  .should('not.exist')
+        
         cy.get('.SAPRangeMini')
           .should('exist')
           .and('be.visible')
@@ -1063,5 +1072,5 @@ describe("Survey creation smoke test", () => {
           }
         });
       });
-    });
-  });
+    })//;
+  });//
