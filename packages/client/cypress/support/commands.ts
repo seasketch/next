@@ -5,6 +5,8 @@ import { request } from "graphql-request";
 import { ProjectAccessControlSetting } from "../../src/generated/graphql";
 import { data } from "cypress/types/jquery";
 import "cypress-localstorage-commands"
+import '@percy/cypress';
+
 
 const jwt = require("jsonwebtoken");
 const users = require("../fixtures/users.json");

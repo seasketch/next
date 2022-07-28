@@ -379,8 +379,8 @@ describe("Survey creation smoke test", () => {
         });
       });
       it(`Cannot advance until name is provided - ${device}`, () => {
-        cy.viewport(device)
-        //checkForNavAndLang()
+        cy.viewport(device);
+        checkForNavAndLang();
         cy.contains('What is your name?')
           .get('[title = "Next Question"]')
           .should('have.class', 'pointer-events-none')
@@ -388,8 +388,8 @@ describe("Survey creation smoke test", () => {
         cy.get('button').contains('Next').click()
       })
       it(`Can input email address or can skip question - ${device}`, () => {
-        cy.viewport(device)
-        //checkForNavAndLang()
+        cy.viewport(device);
+        checkForNavAndLang();
         cy.contains("What is your email address?")
         cy.get("input").should('be.visible')
         cy.get("input")
@@ -397,17 +397,17 @@ describe("Survey creation smoke test", () => {
         cy.contains("Next").click()
       })
       it(`Cannot advance until atoll selection is made - ${device}`, () => {
-        cy.viewport(device)
-        //checkForNavAndLang()
+        cy.viewport(device);
+        checkForNavAndLang();
         cy.contains("Which Atoll do you reside on?")
           .get('[title = "Next Question"]')
           .should('have.class', "pointer-events-none")
         cy.contains('N').click()
       });
       it(`Cannot advance until island selection is made - ${device}`, () => {
-        cy.viewport(device)
-        //checkForNavAndLang()
-        cy.restoreLocalStorage()
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.restoreLocalStorage();
         cy.getLocalStorage('slug').then((slug) => {
           cy.getLocalStorage("surveyId").then((id) => {
             cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/7/`);
@@ -422,8 +422,8 @@ describe("Survey creation smoke test", () => {
         cy.contains('Kudafari').click()
       })
       it(`Cannot advance until sector selection(s) is made - ${device}`, () => {
-        cy.viewport(device)
-        //checkForNavAndLang()
+        cy.viewport(device);
+        checkForNavAndLang();
         cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden')
         cy.get('[title = "Fisheries - Commercial, Tuna"]').click()
         cy.get('[title = "Fisheries - Commercial, Non-Tuna Species"]').click()
@@ -876,7 +876,7 @@ describe("Survey creation smoke test", () => {
         cy.viewport(device);
         if (device !== "iphone-x") {
           //these don't exist on this page for iphone-x
-          //checkForNavAndLang();
+          checkForNavAndLang();
         }
         
         cy.get('button').then(($btn) => {
@@ -904,7 +904,7 @@ describe("Survey creation smoke test", () => {
       })
       it(`Can input number of people reflected in response - ${device}`, () => {
         cy.viewport(device);
-        //checkForNavAndLang();
+        checkForNavAndLang();
         cy.get('[data-question="yes"]').contains('Please indicate how many people are reflected in this response')
           .should('exist')
           .and('be.visible')
@@ -941,7 +941,7 @@ describe("Survey creation smoke test", () => {
       });
       it(`Can input name or number of vessel - ${device}`, () => {
         cy.viewport(device); 
-        //checkForNavAndLang();
+        checkForNavAndLang();
         cy.contains('vessel')
           .should('exist')
           .and('be.visible');
@@ -970,7 +970,7 @@ describe("Survey creation smoke test", () => {
       });
       it(`Can answer additional questions - ${device}`, () => {
         cy.viewport(device);
-        //checkForNavAndLang();
+        checkForNavAndLang();
         cy.contains('additional')
           .should('exist')
           .and('be.visible');
@@ -981,7 +981,7 @@ describe("Survey creation smoke test", () => {
       });
       it(`Can input age - ${device}`, () => {
         cy.viewport(device);
-       // checkForNavAndLang();
+        checkForNavAndLang();
         cy.restoreLocalStorage()
         cy.getLocalStorage('slug').then((slug) => {
           cy.getLocalStorage('surveyId').then((id) => {
@@ -1001,13 +1001,13 @@ describe("Survey creation smoke test", () => {
       })
       it(`Can select gender - ${device}`, () => {
         cy.viewport(device); 
-        //checkForNavAndLang();
+        checkForNavAndLang();
         cy.contains("Gender")
         cy.contains("Female").click()
       })
       it(`Can add comments - ${device}`, () => {
         cy.viewport(device);
-        //checkForNavAndLang();
+        checkForNavAndLang();
         cy.get("textarea").type("My general comments.")
         cy.contains("Complete Submission").as('completeSubmission')
         cy.get('@completeSubmission').should('be.visible').then(($btn) => {
