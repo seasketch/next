@@ -44,9 +44,9 @@ export class SceneTileCalculator {
   }
 }
 
-export function cacheNameForSource(url: string) {
+export function cacheNameForSource(url: string, slug: string) {
   // eslint-disable-next-line i18next/no-literal-string
-  return `data-source-${url}`;
+  return `data-source-${slug}-${url}`;
 }
 
 export const MAP_STATIC_ASSETS_CACHE_NAME = `offline-basemap-static-assets`;

@@ -18,6 +18,7 @@ import {
   OfflineTilePackageSourceType,
   OfflineTilePackageStatus,
 } from "../generated/graphql";
+import getSlug from "../getSlug";
 import {
   cacheNameForSource,
   MAP_STATIC_ASSETS_CACHE_NAME,
@@ -102,7 +103,7 @@ export function useMapDownloadManager({
     // delete tile package caches
     for (const source of cacheStatus.status.sources) {
       if (source.downloadedTilePackage) {
-        await caches.delete(cacheNameForSource(source.url));
+        await caches.delete(cacheNameForSource(source.url, getSlug()));
         await updateDownloadedOfflineTilePackages((prev) => {
           return [
             ...prev.filter((state) => state.dataSourceUrl !== source.url),
@@ -442,7 +443,7 @@ export async function addTilesToCache(
         return;
       }
       progressCallback({ task: "Resetting cache" });
-      const cacheName = cacheNameForSource(meta.dataSourceUrl);
+      const cacheName = cacheNameForSource(meta.dataSourceUrl, getSlug());
       let tilesProcessed = 0;
       // eslint-disable-next-line i18next/no-literal-string
       const results = db.exec(`select count(*) from tiles`);
@@ -613,7 +614,7 @@ export async function getCacheStatusForBasemap(
       anyMissing = true;
     } else {
       // check that cache has not been deleted
-      const cacheName = cacheNameForSource(source.dataSourceUrl);
+      const cacheName = cacheNameForSource(source.dataSourceUrl, getSlug());
       cacheExists = await caches.has(cacheName);
       if (!cacheExists) {
         anyMissing = true;
