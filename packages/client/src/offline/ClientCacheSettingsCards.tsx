@@ -95,10 +95,12 @@ export function CacheSettingCards() {
           context.cacheSizes.staticAssets.entries.find((e) => !e.cached)
         ) {
           context.staticAssetCache.populateCache().then(() => {
-            context.updateCacheSizes();
+            setTimeout(() => {
+              context.updateCacheSizes();
+            }, 100);
           });
         }
-      });
+      }, 200);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
