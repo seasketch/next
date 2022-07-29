@@ -581,7 +581,7 @@ function MapExtentSettings() {
 
   useEffect(() => {
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
-    if (!map && mapContainer.current) {
+    if (!map && mapContainer.current && data?.projectBySlug) {
       const mapInstance = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/streets-v11", // stylesheet location
@@ -608,8 +608,6 @@ function MapExtentSettings() {
         // when mode drawing should be activated
         // draw.changeMode("draw_rectangle", {});
         mapInstance.resize();
-        // @ts-ignore
-        window.map = mapInstance;
       });
 
       mapInstance.on("draw.create", (e) => {
@@ -626,7 +624,7 @@ function MapExtentSettings() {
         setDrawing(false);
       });
     }
-  }, [map, mapContainer.current]);
+  }, [map, mapContainer.current, slug, data]);
 
   useEffect(() => {
     if (data && map && draw && draw.getAll().features.length === 0) {
