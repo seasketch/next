@@ -18,7 +18,6 @@ import {
   OfflineTilePackageSourceType,
   OfflineTilePackageStatus,
 } from "../generated/graphql";
-import { normalizeSourceUrlTemplate } from "./mapboxApiHelpers";
 import {
   cacheNameForSource,
   MAP_STATIC_ASSETS_CACHE_NAME,
@@ -272,18 +271,6 @@ export function useMapDownloadManager({
             (a) => a.cacheKey || a.url
           )
         );
-
-        const status = await getCacheStatusForBasemap(
-          map!.id,
-          map!.offlineSupportInformation!
-        );
-        setCacheStatus({ loading: false, status });
-        setDownloadState({
-          working: false,
-          progress: 0,
-        });
-        // Make sure parent components update their map cache states
-        context.bump();
       } catch (e) {
         setDownloadState({
           working: false,
@@ -293,6 +280,17 @@ export function useMapDownloadManager({
         return;
       }
     }
+    const status = await getCacheStatusForBasemap(
+      map!.id,
+      map!.offlineSupportInformation!
+    );
+    setCacheStatus({ loading: false, status });
+    setDownloadState({
+      working: false,
+      progress: 0,
+    });
+    // Make sure parent components update their map cache states
+    context.bump();
   }, [cacheStatus.status, map, context]);
 
   const cancel = useCallback(() => {
@@ -356,7 +354,6 @@ export async function getDownloadedOfflineTilePackages() {
   );
 }
 
-// TODO: clear values for older tile packages that have been superceeded by the new ones
 export async function updateDownloadedOfflineTilePackages(
   updaterFn: (previous: CachedTilePackageState[]) => CachedTilePackageState[]
 ) {
