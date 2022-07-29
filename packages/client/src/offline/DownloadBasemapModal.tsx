@@ -75,6 +75,7 @@ export default function DownloadBasemapModal({
         )}
         {cacheStatus.status?.state === "incomplete" && (
           <Button
+            autofocus
             primary
             disabled={downloadState.working}
             label={<Trans>Begin Download</Trans>}
@@ -83,6 +84,7 @@ export default function DownloadBasemapModal({
         )}
         {cacheStatus.status?.state === "has-updates" && (
           <Button
+            autofocus
             primary
             disabled={downloadState.working}
             label={<Trans>Update Map</Trans>}
