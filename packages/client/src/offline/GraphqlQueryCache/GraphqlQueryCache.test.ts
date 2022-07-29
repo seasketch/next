@@ -45,6 +45,7 @@ function createMockRequest(json: any) {
 
 function createResponse(data: any) {
   return {
+    ok: true,
     url: ENDPOINT,
     headers: {
       get: (key: string) => undefined,
