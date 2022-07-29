@@ -105,6 +105,11 @@ export class MapTileCacheCalculator {
     let count = 0;
     await this.traverseOfflineTiles(settings, (tile, stop) => {
       count++;
+      if (isDetailedShorelineSetting(settings) && count > 50000) {
+        throw new Error(
+          "Number of tiles exceeds maximum (50 thousand) while considering shoreline"
+        );
+      }
     });
     return count;
   }
@@ -153,6 +158,7 @@ export class MapTileCacheCalculator {
         geometry: tileGeoJSON,
       });
       if (shoreFeatures.length === 0 && !parentIntersectsLand) {
+        parentIntersectsLand = false;
         return;
       } else if (shoreFeatures.length === 0) {
         parentIntersectsLand = false;

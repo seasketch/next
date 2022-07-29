@@ -17,6 +17,9 @@ import getSlug from "../getSlug";
 import { defaultOfflineTilingSettings } from "./BasemapOfflineSettings";
 import TilePackageListItem from "./TilePackageListItem";
 import worker from "../TileCalculator";
+import { cleanCoords } from "../workers/utils";
+import splitGeojson from "geojson-antimeridian-cut";
+import { Feature, Polygon } from "geojson";
 
 export default function DataSourceModal({
   source,
@@ -37,6 +40,7 @@ export default function DataSourceModal({
     calculating: boolean;
     tiles?: number;
     bytes?: number;
+    error?: string;
   }>({ calculating: true });
 
   const sourceUrl = source.dataSourceUrl;
@@ -88,19 +92,32 @@ export default function DataSourceModal({
   }, [data?.projectBySlug, matchingMaps]);
 
   useEffect(() => {
-    if (data?.projectBySlug?.region.geojson) {
+    if (
+      data?.projectBySlug?.region.geojson &&
+      (!stats.calculating || !stats.tiles)
+    ) {
       worker
         .countChildTiles({
           maxShorelineZ: calculatedTilingSettings.maxShorelineZ,
           maxZ: calculatedTilingSettings.maxZ,
           levelOfDetail: 1,
-          region: data.projectBySlug.region.geojson,
+          region: splitGeojson(
+            cleanCoords(data.projectBySlug.region.geojson) as Feature<Polygon>
+          ),
         })
         .then((tiles) => {
           setStats({
             calculating: false,
             tiles,
             bytes: tiles * 40000,
+          });
+        })
+        .catch((e) => {
+          setStats({
+            calculating: false,
+            tiles: 0,
+            bytes: 0,
+            error: e.toString(),
           });
         });
     }
@@ -156,12 +173,12 @@ export default function DataSourceModal({
           </h3>
           {matchingMaps!.map((map) => {
             const tileSettings =
-              !map.useDefaultOfflineTileSettings &&
+              (!map.useDefaultOfflineTileSettings &&
               map.offlineTileSettings?.length
                 ? map.offlineTileSettings[0]
                 : data!.projectBySlug!.offlineTileSettings.find(
                     (s) => !s.basemapId
-                  );
+                  )) || defaultOfflineTilingSettings;
             return (
               <Link
                 key={`basemap-${map.id}`}
@@ -220,6 +237,9 @@ export default function DataSourceModal({
             </span>
           </div>
         </div>
+        {stats.error && (
+          <Warning level="error">{stats.error.toString()}</Warning>
+        )}
         {tilePackages.length > 0 && (
           <div className="mt-2">
             <h2 className="text-base">

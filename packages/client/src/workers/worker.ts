@@ -23,8 +23,9 @@ export async function getTilesForScene() {
 }
 
 export async function countChildTiles() {
-  return getSceneTileCalculator().calculator.countChildTiles.apply(
-    getSceneTileCalculator().calculator,
+  const calculator = getSceneTileCalculator().calculator;
+  return calculator.countChildTiles.apply(
+    calculator,
     // @ts-ignore
     arguments
   );

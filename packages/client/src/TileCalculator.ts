@@ -1,4 +1,5 @@
 import { OfflineTileSettings } from "@seasketch/map-tile-cache-calculator";
+import area from "@turf/area";
 import { BBox } from "geojson";
 
 interface Worker {
@@ -35,13 +36,57 @@ async function getWorker(): Promise<Worker> {
 
 export default {
   getTilesForScene: function () {
-    return getWorker().then((worker) =>
-      // @ts-ignore
-      worker.getTilesForScene(...arguments)
-    );
+    return new Promise(async (resolve, reject) => {
+      if (arguments[2].region) {
+        const areaKm = area(arguments[2].region) / 1000000;
+        if (areaKm > 10_000_000) {
+          reject(
+            new Error(
+              "Area of region is greater than 10 million square kilometers"
+            )
+          );
+          return;
+        }
+      }
+      try {
+        getWorker().then((worker) =>
+          worker
+            // @ts-ignore
+            .getTilesForScene(...arguments)
+            .then((tiles) => resolve(tiles))
+            .catch((e) => reject(e))
+        );
+      } catch (e) {
+        reject(e);
+      }
+    });
   },
   countChildTiles: function () {
-    // @ts-ignore
-    return getWorker().then((worker) => worker.countChildTiles(...arguments));
+    return new Promise(async (resolve, reject) => {
+      if (arguments[0].region) {
+        const areaKm = area(arguments[0].region) / 1000000;
+        if (areaKm > 10_000_000) {
+          reject(
+            new Error(
+              "Area of region is greater than 10 million square kilometers"
+            )
+          );
+          return;
+        }
+      }
+      try {
+        getWorker()
+          .then((worker) => {
+            worker
+              // @ts-ignore
+              .countChildTiles(...arguments)
+              .then(resolve)
+              .catch(reject);
+          })
+          .catch(reject);
+      } catch (e) {
+        reject(e);
+      }
+    });
   },
 } as Worker;

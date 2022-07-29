@@ -35,6 +35,7 @@ import {
 } from "../generated/queries";
 import { OfflineTileSettings } from "./OfflineTileSettings";
 import Calculator from "../TileCalculator";
+import Warning from "../components/Warning";
 
 export const defaultOfflineTilingSettings: OfflineTileSettingsForCalculationFragment =
   {
@@ -52,7 +53,7 @@ function addTileLayers(
 ) {
   manager.addSource("project-region", {
     type: "geojson",
-    data: region,
+    data: splitGeojson(cleanCoords(region) as Feature<Polygon>),
   });
 
   manager.addSource("tile-corners", {
@@ -183,7 +184,7 @@ export default function BasemapOfflineSettings({
         detailedShoreline: Boolean(dbSettings.maxShorelineZ),
         maxZ: dbSettings.maxZ,
         maxShorelineZ: dbSettings.maxShorelineZ || undefined,
-        projectRegion: dbSettings.region.geojson,
+        projectRegion: data.projectBySlug?.region.geojson,
         useDefault: data.basemap.useDefaultOfflineTileSettings,
       });
     }
@@ -239,6 +240,7 @@ export default function BasemapOfflineSettings({
   const [stats, setStats] = useState<
     {
       calculating: boolean;
+      error?: string;
     } & { totalTiles?: number }
   >({ calculating: true });
   const [simulate, setSimulate] = useState(false);
@@ -250,12 +252,16 @@ export default function BasemapOfflineSettings({
     if (settings.detailedShoreline) {
       return {
         maxZ: settings.maxZ,
-        region: settings.projectRegion!,
+        region: splitGeojson(
+          cleanCoords(data?.projectBySlug?.region.geojson) as Feature<Polygon>
+        ),
         maxShorelineZ: Math.max(settings.maxShorelineZ!, settings.maxZ),
       };
     } else {
       return {
-        region: settings.projectRegion!,
+        region: splitGeojson(
+          cleanCoords(data?.projectBySlug?.region.geojson) as Feature<Polygon>
+        ),
         maxZ: settings.maxZ,
       };
     }
@@ -344,39 +350,47 @@ export default function BasemapOfflineSettings({
         ],
         z,
         settingsToOfflineSettings(settings)
-      ).then((tiles: number[][]) => {
-        const polygons = {
-          type: "FeatureCollection",
-          features: [],
-        } as FeatureCollection<Polygon>;
-        const points = {
-          type: "FeatureCollection",
-          features: [],
-        } as FeatureCollection<Point>;
-        for (const tile of tiles) {
-          const [polygon, point] = tileToFeatures(tile);
-          polygons.features.push(polygon);
-          points.features.push(point);
-          points.features.reverse();
-        }
-        if (mapContext.manager?.map) {
-          let source = mapContext.manager.map.getSource("tile-bounds");
-          if (!source) {
-            addTileLayers(mapContext.manager, region, {
-              polygons,
-              points,
-            });
-          } else {
-            if (source && source.type === "geojson") {
-              source.setData(polygons);
-            }
-            const corners = mapContext.manager.map.getSource("tile-corners");
-            if (corners && corners.type === "geojson") {
-              corners.setData(points);
+      )
+        .then((tiles: number[][]) => {
+          const polygons = {
+            type: "FeatureCollection",
+            features: [],
+          } as FeatureCollection<Polygon>;
+          const points = {
+            type: "FeatureCollection",
+            features: [],
+          } as FeatureCollection<Point>;
+          for (const tile of tiles) {
+            const [polygon, point] = tileToFeatures(tile);
+            polygons.features.push(polygon);
+            points.features.push(point);
+            points.features.reverse();
+          }
+          if (mapContext.manager?.map) {
+            let source = mapContext.manager.map.getSource("tile-bounds");
+            if (!source) {
+              addTileLayers(mapContext.manager, region, {
+                polygons,
+                points,
+              });
+            } else {
+              if (source && source.type === "geojson") {
+                source.setData(polygons);
+              }
+              const corners = mapContext.manager.map.getSource("tile-corners");
+              if (corners && corners.type === "geojson") {
+                corners.setData(points);
+              }
             }
           }
-        }
-      });
+        })
+        .catch((e) => {
+          if (/region/.test(e)) {
+            // do nothing, region is too big
+          } else {
+            throw e;
+          }
+        });
     } else {
       if (mapContext.manager?.map) {
         let source = mapContext.manager.map.getSource("tile-bounds");
@@ -427,13 +441,19 @@ export default function BasemapOfflineSettings({
         abortController.current = new AbortController();
         setStats((prev) => ({ calculating: true }));
         const ac = abortController.current;
-        Calculator.countChildTiles(settingsToOfflineSettings(settings)).then(
-          (totalTiles) => {
+        Calculator.countChildTiles(settingsToOfflineSettings(settings))
+          .then((totalTiles) => {
             if (!ac.signal.aborted) {
               setStats((prev) => ({ calculating: false, totalTiles }));
             }
-          }
-        );
+          })
+          .catch((e) => {
+            setStats((prev) => ({
+              ...prev,
+              error: e.toString(),
+              calculating: false,
+            }));
+          });
       }
     })();
   }, [settings, data?.basemap?.id, mapContext?.manager?.map, style.data]);
@@ -506,7 +526,7 @@ export default function BasemapOfflineSettings({
             detailedShoreline: Boolean(newSettings.maxShorelineZ),
             maxZ: newSettings.maxZ,
             maxShorelineZ: newSettings.maxShorelineZ || undefined,
-            projectRegion: newSettings.region.geojson,
+            projectRegion: data?.projectBySlug?.region.geojson,
             useDefault: value,
           }));
         }}
@@ -612,11 +632,14 @@ export default function BasemapOfflineSettings({
         <span>
           {stats.calculating ? (
             <Spinner />
-          ) : (
+          ) : stats.totalTiles ? (
             `$${Math.round((stats.totalTiles! / 1000) * 0.25 * 100) / 100}`
+          ) : (
+            ""
           )}
         </span>
       </div>
+      {stats.error && <Warning level="error">{stats.error.toString()}</Warning>}
     </div>
   );
 }
