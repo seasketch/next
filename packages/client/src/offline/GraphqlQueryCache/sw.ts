@@ -113,7 +113,12 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
         return cached;
       } else {
         const response = await fetch(event.request);
-        this.putToCaches(strategies, cacheReq, response.clone());
+        if (response.ok) {
+          const json = await response.clone().json();
+          if (!("errors" in json) || json.errors.length === 0) {
+            this.putToCaches(strategies, cacheReq, response.clone());
+          }
+        }
         return response;
       }
     } else {
@@ -124,8 +129,7 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
       } catch (e) {
         // This is will fail only due to a network error, such as being offline
         // or a CORS issue
-        // TODO: notify client they could be offline
-        return new Response("Failed to fetch", { status: 500 });
+        return new Response("Failed to fetch", { status: 408 });
       }
     }
   }
@@ -157,21 +161,24 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
       // 1) fetch in background
       const response = await fetch(request);
       if (response.ok) {
-        // 2) update caches for each strategy (all with same query, regardless of swr flag)
-        // make sure to await this operation so the cache is ready for
-        await this.putToCaches(strategies, cacheKey, response);
-        // 3) signal to main window that cache has been updated
-        if (!("serviceWorker" in navigator) && self) {
-          const clients = await self.clients.matchAll({ type: "window" });
-          for (const client of clients) {
-            client.postMessage({
-              type: MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION,
-              queryName,
-              variables,
-            });
+        const json = await response.clone().json();
+        if (!("errors" in json) || json.errors.length === 0) {
+          // 2) update caches for each strategy (all with same query, regardless of swr flag)
+          // make sure to await this operation so the cache is ready for
+          await this.putToCaches(strategies, cacheKey, response);
+          // 3) signal to main window that cache has been updated
+          if (!("serviceWorker" in navigator) && self) {
+            const clients = await self.clients.matchAll({ type: "window" });
+            for (const client of clients) {
+              // 4) update apollo cache in main window...
+              //    see postmessage handler in constructor
+              client.postMessage({
+                type: MESSAGE_TYPES.GRAPHQL_CACHE_REVALIDATION,
+                queryName,
+                variables,
+              });
+            }
           }
-          // 4) update apollo cache in main window...
-          //    see postmessage handler in constructor
         }
       }
     } catch (e) {
