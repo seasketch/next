@@ -4,7 +4,7 @@ jobs:
   deploy_client:
     name: Deploy Staging Client
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     concurrency: staging_client
     environment:
       name: staging_client
