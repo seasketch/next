@@ -3,10 +3,7 @@ import { useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import useProjectId from "../../useProjectId";
 import SurveyList from "./SurveyList";
-import {
-  SurveyListDetailsFragmentDoc,
-  useCreateSurveyMutation,
-} from "../../generated/graphql";
+import { useCreateSurveyMutation } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { gql } from "@apollo/client";
 import { useParams } from "react-router";
@@ -15,9 +12,9 @@ import SurveyDetail from "./SurveyDetail";
 export default function SurveyAdmin() {
   const projectId = useProjectId();
   const { t } = useTranslation("admin:surveys");
-  const { slug, surveyId } = useParams<{ slug: string; surveyId?: string }>();
+  const { surveyId } = useParams<{ slug: string; surveyId?: string }>();
   const onError = useGlobalErrorHandler();
-  const [createSurvey, createSurveyState] = useCreateSurveyMutation({
+  const [createSurvey] = useCreateSurveyMutation({
     onError,
   });
 
@@ -44,7 +41,7 @@ export default function SurveyAdmin() {
                     t("Choose a name for your survey")
                   );
                   if (name) {
-                    const result = await createSurvey({
+                    await createSurvey({
                       variables: {
                         projectId: projectId!,
                         name,

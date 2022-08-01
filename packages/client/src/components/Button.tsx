@@ -1,7 +1,7 @@
 // import Color from "color";
 import React, { CSSProperties, useState, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
-import { colord, extend } from "colord";
+import { colord } from "colord";
 import { ChevronDownIcon } from "@heroicons/react/outline";
 
 export interface ButtonProps {
@@ -38,7 +38,7 @@ export interface ButtonProps {
   shadowSize?: "shadow-sm" | "shadow" | "shadow-md" | "shadow-lg" | "shadow-xl";
   segmentItems?: string[];
   onSegmentClick?: (index: number) => void;
-  'data-cy'?: string
+  "data-cy"?: string;
 }
 
 export default function Button(props: ButtonProps) {
@@ -81,11 +81,13 @@ export default function Button(props: ButtonProps) {
     label = props.children;
   }
 
-  let cyLabel = label as string
+  let cyLabel = label as string;
   if (!props.label) {
-    cyLabel = props.name?.toLowerCase() as string || props.title?.toLowerCase() as string
+    cyLabel =
+      (props.name?.toLowerCase() as string) ||
+      (props.title?.toLowerCase() as string);
   } else {
-    cyLabel = `button-${label}`.toLowerCase().replaceAll(' ', '-')
+    cyLabel = `button-${label}`.toLowerCase().replaceAll(" ", "-");
   }
   // eslint-disable-next-line i18next/no-literal-string
   const buttonClassName = `select-none ${
@@ -180,7 +182,7 @@ export default function Button(props: ButtonProps) {
           autoFocus={props.autofocus}
           className={`${buttonClassName} ${props.buttonClassName}`}
           style={style}
-          data-cy = {cyLabel}
+          data-cy={cyLabel}
         >
           {label}
           {props.loading && spinner}

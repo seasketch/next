@@ -2,7 +2,6 @@ import { CameraIcon } from "@heroicons/react/solid";
 import { useContext } from "react";
 import { Trans } from "react-i18next";
 import { FormElementLayout } from "../generated/graphql";
-import { SurveyStyleContext } from "./appearance";
 import { SurveyLayoutContext } from "./SurveyAppLayout";
 
 export default function UnsplashCredit({

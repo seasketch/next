@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useContext, useEffect, useState } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
@@ -15,6 +15,9 @@ import { HeadProvider, Meta } from "react-head";
 import { useAuth0 } from "@auth0/auth0-react";
 import * as Sentry from "@sentry/react";
 import { CameraOptions } from "mapbox-gl";
+import { ClientCacheManagerProvider } from "./offline/ClientCacheManager";
+import OfflineToastNotification from "./offline/OfflineToastNotification";
+import OfflineResponsesToastNotification from "./offline/OfflineResponsesToastNotification";
 
 const LazyProjectApp = React.lazy(
   () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
@@ -43,6 +46,19 @@ const LazySurveyFormEditor = React.lazy(
       /* webpackChunkName: "AdminSurveyFormEditor" */ "./admin/surveys/SurveyFormEditor"
     )
 );
+const LazySubmitOfflineResponsesPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "OfflineSurveys" */ "./offline/SubmitOfflineResponsesPage"
+    )
+);
+
+const LazyFullScreenOfflinePage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "OfflineSurveys" */ "./offline/FullScreenOfflineNavigation"
+    )
+);
 
 const LazyAccountSettingsPage = React.lazy(
   () =>
@@ -55,7 +71,6 @@ function App() {
   const { user } = useAuth0();
   const { t } = useTranslation(["homepage"]);
   const [error, setError] = useState<Error | null>(null);
-
   useEffect(() => {
     if (user) {
       Sentry.setUser({ email: user.email, id: user.sub });
@@ -78,154 +93,168 @@ function App() {
           }
         >
           <GlobalErrorHandlerContext.Provider value={{ error, setError }}>
-            <Route
-              path={[
-                "/signin",
-                "/projects",
-                "/new-project",
-                "/authenticate",
-                "/",
-                "/api",
-                "/team",
-              ]}
-              exact
-            >
-              <Header />
-            </Route>
-            <Switch>
-              <Route path="/auth/projectInvite">
-                <LazyAuthLanding />
+            <ClientCacheManagerProvider>
+              <Route
+                path={[
+                  "/signin",
+                  "/projects",
+                  "/new-project",
+                  "/authenticate",
+                  "/",
+                  "/api",
+                  "/team",
+                  "/submit-offline-surveys",
+                ]}
+                exact
+              >
+                <Header />
               </Route>
-              <Route path="/signin">
-                <SignInPage />
+              <Route
+                path={["/projects", "/new-project", "/api", "/team"]}
+                exact
+              >
+                <OfflineToastNotification />
+                <OfflineResponsesToastNotification />
               </Route>
-              <Route exact path="/projects">
-                <ProjectsPage />
-              </Route>
-              <Route exact path="/api"></Route>
-              <Route exact path="/team"></Route>
-              <Route path="/new-project">
-                <NewProjectPage />
-              </Route>
-              <Route path="/authenticate">
-                <span>
-                  <Trans>authenticating...</Trans>
-                </span>
-              </Route>
-              <Route path="/account-settings">
-                <LazyAccountSettingsPage />
-              </Route>
-              <Route exact path="/">
-                <div className="p-4 pb-12 bg-white">
-                  <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
-                    {t(
-                      "SeaSketch Supports Collaborative Planning for our Oceans"
-                    )}
-                  </h1>
-                  <p className="max-w-4xl mx-auto">
-                    {t(`SeaSketch puts powerful tools into the hands of ocean planners,
+              <Switch>
+                <Route path="/auth/projectInvite">
+                  <LazyAuthLanding />
+                </Route>
+                <Route path="/signin">
+                  <SignInPage />
+                </Route>
+                <Route exact path="/projects">
+                  <ProjectsPage />
+                </Route>
+                <Route exact path="/api"></Route>
+                <Route exact path="/team"></Route>
+                <Route path="/new-project">
+                  <NewProjectPage />
+                </Route>
+                <Route path="/authenticate">
+                  <span>
+                    <Trans>authenticating...</Trans>
+                  </span>
+                </Route>
+                <Route path="/account-settings">
+                  <LazyAccountSettingsPage />
+                </Route>
+                <Route path="/submit-offline-surveys">
+                  <LazySubmitOfflineResponsesPage />
+                </Route>
+                <Route exact path="/">
+                  <OfflineResponsesToastNotification />
+                  <LazyFullScreenOfflinePage />
+                  <div className="p-4 pb-12 bg-white">
+                    <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
+                      {t(
+                        "SeaSketch Supports Collaborative Planning for our Oceans"
+                      )}
+                    </h1>
+                    <p className="max-w-4xl mx-auto">
+                      {t(`SeaSketch puts powerful tools into the hands of ocean planners,
               stakeholders and the public that were once limited to GIS
               professionals, enabling participatory marine spatial planning
               processes that are closely tied to the relevant science and
               information. SeaSketch is being used around the globe in small
               agency teams and large community-driven initiatives to make better
               management decisions every day.`)}
-                  </p>
-                </div>
-                <NewProjectCTA />
-              </Route>
-              <Route
-                exact
-                path="/:slug"
-                render={(params) => (
-                  <Redirect to={`/${params.match.params.slug}/app`} />
-                )}
-              />
-              <Route path="/:slug">
-                <Route
-                  exact
-                  path={`/:slug/edit-basemap/:id`}
-                  render={(history) => {
-                    const { slug, id } = history.match.params;
-                    const search = new URLSearchParams(
-                      history.location.search || ""
-                    );
-                    const encodedCameraOptions = search.get("camera");
-                    let cameraOptions: CameraOptions | undefined = undefined;
-                    if (encodedCameraOptions) {
-                      try {
-                        const decoded = atob(encodedCameraOptions);
-                        cameraOptions = JSON.parse(decoded);
-                      } catch (e) {
-                        console.warn(
-                          "Problem decoding cameraOptions search parameter"
-                        );
-                        console.warn(e);
-                      }
-                    }
-                    return (
-                      <ProjectAccessGate admin={true}>
-                        <LazyBasemapEditor
-                          id={parseInt(id)}
-                          returnToUrl={search.get("returnToUrl")}
-                          cameraOptions={cameraOptions}
-                        />
-                      </ProjectAccessGate>
-                    );
-                  }}
-                ></Route>
-
-                <Route
-                  path="/:slug/survey-editor/:surveyId/:subpath?"
-                  render={(history) => {
-                    const { slug, surveyId, subpath } = history.match.params;
-                    let formElementId: number | null = null;
-                    let route: "formElement" | "basic" | "logic" =
-                      "formElement";
-                    if (subpath) {
-                      if (subpath === "basic") {
-                        route = "basic";
-                      } else if (subpath === "logic") {
-                        route = "logic";
-                      } else {
-                        formElementId = parseInt(subpath);
-                      }
-                    }
-                    return (
-                      <ProjectAccessGate admin={true}>
-                        <LazySurveyFormEditor
-                          slug={slug}
-                          surveyId={parseInt(surveyId)}
-                          formElementId={formElementId}
-                          route={route}
-                        />
-                      </ProjectAccessGate>
-                    );
-                  }}
-                ></Route>
-                <Route path="/:slug/admin">
-                  <LazyProjectAdmin />
-                </Route>
-                <Route path="/:slug/app/:sidebar?">
-                  <LazyProjectApp />
+                    </p>
+                  </div>
+                  <NewProjectCTA />
                 </Route>
                 <Route
-                  path="/:slug/surveys/:surveyId"
                   exact
-                  render={(history) => {
-                    const { slug, surveyId } = history.match.params;
-                    return <Redirect to={`/${slug}/surveys/${surveyId}/0`} />;
-                  }}
+                  path="/:slug"
+                  render={(params) => (
+                    <Redirect to={`/${params.match.params.slug}/app`} />
+                  )}
                 />
-                <Route path="/:slug/surveys/:surveyId/:position/:practice?">
-                  {/* eslint-disable-next-line i18next/no-literal-string */}
-                  <ProjectAccessGate>
+                <Route path="/:slug">
+                  <Route
+                    exact
+                    path={`/:slug/edit-basemap/:id`}
+                    render={(history) => {
+                      const { slug, id } = history.match.params;
+                      const search = new URLSearchParams(
+                        history.location.search || ""
+                      );
+                      const encodedCameraOptions = search.get("camera");
+                      let cameraOptions: CameraOptions | undefined = undefined;
+                      if (encodedCameraOptions) {
+                        try {
+                          const decoded = atob(encodedCameraOptions);
+                          cameraOptions = JSON.parse(decoded);
+                        } catch (e) {
+                          console.warn(
+                            "Problem decoding cameraOptions search parameter"
+                          );
+                          console.warn(e);
+                        }
+                      }
+                      return (
+                        <ProjectAccessGate admin={true}>
+                          <LazyBasemapEditor
+                            id={parseInt(id)}
+                            returnToUrl={search.get("returnToUrl")}
+                            cameraOptions={cameraOptions}
+                          />
+                        </ProjectAccessGate>
+                      );
+                    }}
+                  ></Route>
+
+                  <Route
+                    path="/:slug/survey-editor/:surveyId/:subpath?"
+                    render={(history) => {
+                      const { slug, surveyId, subpath } = history.match.params;
+                      let formElementId: number | null = null;
+                      let route: "formElement" | "basic" | "logic" =
+                        "formElement";
+                      if (subpath) {
+                        if (subpath === "basic") {
+                          route = "basic";
+                        } else if (subpath === "logic") {
+                          route = "logic";
+                        } else {
+                          formElementId = parseInt(subpath);
+                        }
+                      }
+                      return (
+                        <ProjectAccessGate admin={true}>
+                          <LazySurveyFormEditor
+                            slug={slug}
+                            surveyId={parseInt(surveyId)}
+                            formElementId={formElementId}
+                            route={route}
+                          />
+                        </ProjectAccessGate>
+                      );
+                    }}
+                  ></Route>
+                  <Route path="/:slug/admin">
+                    <LazyProjectAdmin />
+                  </Route>
+                  <Route path="/:slug/app/:sidebar?">
+                    <ProjectAccessGate>
+                      <LazyProjectApp />
+                    </ProjectAccessGate>
+                  </Route>
+                  <Route
+                    path="/:slug/surveys/:surveyId"
+                    exact
+                    render={(history) => {
+                      const { slug, surveyId } = history.match.params;
+                      return <Redirect to={`/${slug}/surveys/${surveyId}/0`} />;
+                    }}
+                  />
+                  <Route path="/:slug/surveys/:surveyId/:position/:practice?">
                     <LazySurveyApp />
-                  </ProjectAccessGate>
+                  </Route>
                 </Route>
-              </Route>
-            </Switch>
-            <GlobalErrorHandler />
+              </Switch>
+              <GlobalErrorHandler />
+            </ClientCacheManagerProvider>
           </GlobalErrorHandlerContext.Provider>
         </Suspense>
       </HeadProvider>

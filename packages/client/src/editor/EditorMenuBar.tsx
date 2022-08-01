@@ -1,15 +1,13 @@
 import { EditorView } from "prosemirror-view";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
-import { MarkType, NodeType, Schema } from "prosemirror-model";
+import { MarkType, Schema } from "prosemirror-model";
 // import { schema } from "./config";
 import { EditorState } from "prosemirror-state";
-import { cursorTo } from "readline";
 import { markActive, marks } from "./utils";
 import Modal from "../components/Modal";
 import Button from "../components/Button";
 import TextInput from "../components/TextInput";
-import { link } from "fs";
 import { useTranslation } from "react-i18next";
 
 interface EditorMenuBarProps {
@@ -24,10 +22,11 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const [menuState, setMenuState] = useState<any>({});
   const schema = props.schema;
   const { t } = useTranslation("admin");
-  const [linkModalState, setLinkModalState] = useState<{
-    href: string;
-    title?: string;
-  } | null>(null);
+  const [linkModalState, setLinkModalState] =
+    useState<{
+      href: string;
+      title?: string;
+    } | null>(null);
 
   useEffect(() => {
     if (props.state) {

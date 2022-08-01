@@ -6,14 +6,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import {
-  ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
@@ -30,7 +23,6 @@ import {
   useUpdateFormElementBackgroundMutation,
   useSetFormElementBackgroundMutation,
   useClearFormElementStyleMutation,
-  FormElement,
   FormElementFullDetailsFragment,
   LogicRuleDetailsFragment,
   useCopyAppearanceMutation,
@@ -44,7 +36,6 @@ import {
   FormEditorPortalContext,
   SurveyButtonFooterPortalContext,
   SurveyContext,
-  SurveyMapPortal,
   useUpdateFormElement,
 } from "../../formElements/FormElement";
 import { sortFormElements } from "../../formElements/sortFormElements";
@@ -67,12 +58,9 @@ import SurveyFlowMap from "./SurveyFlowMap";
 import LogicRuleEditor from "./LogicRuleEditor";
 import { components } from "../../formElements";
 import bbox from "@turf/bbox";
-import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
 import languages, { LangDetails } from "../../lang/supported";
-import i18n from "../../i18n";
 import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
-import DropdownButton from "../../components/DropdownButton";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -157,37 +145,33 @@ export default function SurveyFormEditor({
     }
   }, [data, route]);
 
-  const [
-    updateBackground,
-    updateBackgroundState,
-  ] = useUpdateFormElementBackgroundMutation({
-    onError,
-    // @ts-ignore
-    optimisticResponse: (data) => ({
-      updateFormElement: {
-        formElement: {
-          ...selectedFormElement,
-          ...data,
+  const [updateBackground, updateBackgroundState] =
+    useUpdateFormElementBackgroundMutation({
+      onError,
+      // @ts-ignore
+      optimisticResponse: (data) => ({
+        updateFormElement: {
+          formElement: {
+            ...selectedFormElement,
+            ...data,
+          },
         },
-      },
-    }),
-  });
+      }),
+    });
 
-  const [
-    setBackground,
-    setBackgroundState,
-  ] = useSetFormElementBackgroundMutation({
-    onError,
-    // @ts-ignore
-    optimisticResponse: (data) => {
-      return {
-        setFormElementBackground: {
-          ...data,
-          backgroundImage: data.backgroundUrl,
-        },
-      };
-    },
-  });
+  const [setBackground, setBackgroundState] =
+    useSetFormElementBackgroundMutation({
+      onError,
+      // @ts-ignore
+      optimisticResponse: (data) => {
+        return {
+          setFormElementBackground: {
+            ...data,
+            backgroundImage: data.backgroundUrl,
+          },
+        };
+      },
+    });
 
   const [clearStyle, clearStyleState] = useClearFormElementStyleMutation({
     onError,
@@ -213,12 +197,10 @@ export default function SurveyFormEditor({
     },
   });
 
-  const [
-    updateBaseSettingsMutation,
-    updateBaseSettingsState,
-  ] = useUpdateSurveyBaseSettingsMutation({
-    onError,
-  });
+  const [updateBaseSettingsMutation, updateBaseSettingsState] =
+    useUpdateSurveyBaseSettingsMutation({
+      onError,
+    });
   function updateBaseSetting(settings: {
     showProgress?: boolean;
     showFacilitationOption?: boolean;
@@ -266,12 +248,10 @@ export default function SurveyFormEditor({
     }),
   });
 
-  const [
-    deleteFormElement,
-    deleteFormElementState,
-  ] = useDeleteFormElementMutation({
-    onError,
-  });
+  const [deleteFormElement, deleteFormElementState] =
+    useDeleteFormElementMutation({
+      onError,
+    });
 
   const formElements = sortFormElements([
     ...(data?.survey?.form?.formElements || []),
@@ -297,24 +277,22 @@ export default function SurveyFormEditor({
     }
   }
 
-  const [
-    updateMapSettings,
-    updateMapSettingsState,
-  ] = useUpdateFormElementBasemapsMutation({
-    onError,
-    optimisticResponse: (data) => {
-      return {
-        __typename: "Mutation",
-        updateFormElement: {
-          __typename: "UpdateFormElementPayload",
-          formElement: {
-            id: data.id,
-            mapBasemaps: data.mapBasemaps as number[] | undefined,
+  const [updateMapSettings, updateMapSettingsState] =
+    useUpdateFormElementBasemapsMutation({
+      onError,
+      optimisticResponse: (data) => {
+        return {
+          __typename: "Mutation",
+          updateFormElement: {
+            __typename: "UpdateFormElementPayload",
+            formElement: {
+              id: data.id,
+              mapBasemaps: data.mapBasemaps as number[] | undefined,
+            },
           },
-        },
-      };
-    },
-  });
+        };
+      },
+    });
 
   const [stage, setStage] = useState(0);
   useEffect(() => {
@@ -332,9 +310,8 @@ export default function SurveyFormEditor({
   );
   const formId = data?.survey?.form?.id;
 
-  let selectedFormElementParent:
-    | FormElementFullDetailsFragment
-    | undefined = undefined;
+  let selectedFormElementParent: FormElementFullDetailsFragment | undefined =
+    undefined;
   if (selectedFormElement?.formId !== formId) {
     selectedFormElementParent = formElements.find(
       (f) => f.sketchClass?.form?.id === selectedFormElement?.formId
@@ -515,12 +492,16 @@ export default function SurveyFormEditor({
                 isAdmin: true,
                 isFacilitatedResponse: true,
                 surveySupportsFacilitation: data.survey.showFacilitationOption,
-                projectName: data.currentProject!.name,
-                projectUrl: data.currentProject!.url!,
-                projectBounds: bbox(data.currentProject!.region.geojson),
-                surveyUrl: `${data.currentProject!.url!}/surveys/${
+                projectName: data.projectBySlug!.name,
+                projectUrl: data.projectBySlug!.url!,
+                projectId: data.projectBySlug!.id,
+                projectBounds: bbox(data.projectBySlug!.region.geojson),
+                surveyUrl: `${data.projectBySlug!.url!}/surveys/${
                   data.survey.id
                 }`,
+                clientIsPreppedForOfflineUse: false,
+                offlineResponseCount: 0,
+                saveResponseToOfflineStore: () => Promise.resolve(),
               }}
             >
               <SurveyAppLayout

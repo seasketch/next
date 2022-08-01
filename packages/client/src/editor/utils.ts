@@ -1,4 +1,4 @@
-import { Mark, MarkType, Node } from "prosemirror-model";
+import { Mark, MarkType } from "prosemirror-model";
 import { EditorState } from "prosemirror-state";
 
 export function markActive(state: EditorState, type: MarkType): boolean {

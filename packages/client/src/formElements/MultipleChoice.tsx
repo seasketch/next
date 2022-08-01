@@ -1,10 +1,7 @@
 import { CheckIcon } from "@heroicons/react/outline";
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import EditableResponseCell, {
-  CellEditorComponent,
-} from "../admin/surveys/EditableResponseCell";
-import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
+import EditableResponseCell from "../admin/surveys/EditableResponseCell";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";

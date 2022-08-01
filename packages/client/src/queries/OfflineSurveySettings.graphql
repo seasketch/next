@@ -1,0 +1,223 @@
+fragment OfflineTilePackageDetails on OfflineTilePackage {
+  id
+  bytes
+  projectId
+  region {
+    geojson
+  }
+  sourceType
+  jobStatus
+  tilesFetched
+  totalTiles
+  createdAt
+  jobErrors
+  dataSourceUrl
+  isMapboxHosted
+  maxZ
+  maxShorelineZ
+  presignedUrl
+  originalUrlTemplate
+}
+
+fragment BasemapOfflineSupportInfo on OfflineSupportInformation {
+  id
+  styleLastModified
+  staticAssets {
+    url
+    cacheKey
+    type
+  }
+  sources {
+    templateUrl
+    dataSourceUrl
+    tilePackages {
+      ...OfflineTilePackageDetails
+    }
+    type
+  }
+}
+
+fragment OfflineBasemapDetails on Basemap {
+  ...BasemapDetails
+  useDefaultOfflineTileSettings
+  offlineTileSettings {
+    basemapId
+    id
+    maxShorelineZ
+    maxZ
+  }
+  offlineSupportInformation {
+    ...BasemapOfflineSupportInfo
+  }
+}
+
+fragment OfflineTileSettingsForCalculation on OfflineTileSetting {
+  maxShorelineZ
+  maxZ
+}
+
+query OfflineSurveyMaps($slug: String!) {
+  projectBySlug(slug: $slug) {
+    region {
+      geojson
+    }
+    mapboxPublicKey
+    id
+    offlineTileSettings {
+      maxShorelineZ
+      maxZ
+      basemapId
+    }
+    surveys {
+      id
+      name
+      form {
+        id
+      }
+      basemaps {
+        ...OfflineBasemapDetails
+      }
+    }
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+
+fragment OfflineTileSettings on OfflineTileSetting {
+  id
+  projectId
+  basemapId
+  maxZ
+  maxShorelineZ
+  region {
+    geojson
+  }
+}
+
+query BasemapOfflineSettings($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    mapboxPublicKey
+    region {
+      geojson
+    }
+    offlineTileSettings {
+      ...OfflineTileSettings
+    }
+  }
+
+  basemap(id: $id) {
+    id
+    name
+    url
+    useDefaultOfflineTileSettings
+    project {
+      id
+      region {
+        geojson
+      }
+    }
+    offlineSupportInformation {
+      id
+      hasUncacheableSources
+      sources {
+        dataSourceUrl
+        type
+      }
+    }
+  }
+}
+
+mutation UpdateBasemapOfflineTileSettings(
+  $projectId: Int!
+  $maxZ: Int!
+  $maxShorelineZ: Int
+  $basemapId: Int!
+  $useDefault: Boolean!
+) {
+  updateBasemapOfflineTileSettings(
+    input: {
+      basemapId: $basemapId
+      maxShorelineZ: $maxShorelineZ
+      maxZ: $maxZ
+      projectId: $projectId
+      useDefault: $useDefault
+    }
+  ) {
+    basemap {
+      id
+      useDefaultOfflineTileSettings
+      project {
+        id
+        offlineTileSettings {
+          ...OfflineTileSettings
+        }
+      }
+    }
+  }
+}
+
+mutation generateOfflineTilePackage(
+  $dataSourceUrl: String!
+  $projectId: Int!
+  $maxZ: Int!
+  $maxShorelineZ: Int
+  $sourceType: OfflineTilePackageSourceType
+  $originalUrlTemplate: String!
+) {
+  generateOfflineTilePackage(
+    input: {
+      dataSourceUrl: $dataSourceUrl
+      projectId: $projectId
+      maxZ: $maxZ
+      maxShorelineZ: $maxShorelineZ
+      sourceType: $sourceType
+      originalUrlTemplate: $originalUrlTemplate
+    }
+  ) {
+    offlineTilePackage {
+      project {
+        id
+        surveys {
+          id
+          basemaps {
+            id
+            offlineSupportInformation {
+              id
+              staticAssets {
+                url
+                type
+              }
+              sources {
+                templateUrl
+                dataSourceUrl
+                tilePackages {
+                  ...OfflineTilePackageDetails
+                }
+                type
+              }
+            }
+          }
+        }
+      }
+      ...OfflineTilePackageDetails
+    }
+  }
+}
+
+mutation deleteTilePackage($id: UUID!) {
+  deleteOfflineTilePackage(input: { id: $id }) {
+    offlineTilePackage {
+      id
+    }
+  }
+}
+
+query getTilePackage($id: UUID!) {
+  offlineTilePackage(id: $id) {
+    ...OfflineTilePackageDetails
+  }
+}

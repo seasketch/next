@@ -1,9 +1,12 @@
 import { PrecacheEntry } from "workbox-precaching/_types";
-import ServiceWorkerWindow from "./offline/ServiceWorkerWindow";
+import ServiceWorkerWindow from "./ServiceWorkerWindow";
 import localforage from "localforage";
 import pTimeout from "p-timeout";
-
-const PRECACHING_ENABLED_KEY = "ENABLE_STATIC_ASSET_PRECACHING";
+import {
+  ClientCacheSettings,
+  CLIENT_CACHE_SETTINGS_KEY,
+} from "./ClientCacheSettings";
+import { cacheFirst, networkFirst } from "./handlerStrategies";
 const STATIC_ASSET_CACHE_NAME = "static-assets";
 type PrecacheManifest = (string | PrecacheEntry)[];
 
@@ -29,11 +32,15 @@ export interface StaticAssetCacheState {
 class StaticAssetCache {
   private readonly urlsToCacheKeys: Map<string, string> = new Map();
   private manifest?: PrecacheManifest;
+  private cache = caches.open(STATIC_ASSET_CACHE_NAME);
 
   constructor(manifest?: PrecacheManifest) {
     if (manifest) {
       this.setManifest(manifest);
-    } else if ("serviceWorker" in navigator) {
+    } else if (
+      "serviceWorker" in navigator &&
+      navigator.serviceWorker.controller
+    ) {
       this.setManifestFromServiceWorker();
     }
   }
@@ -44,15 +51,32 @@ class StaticAssetCache {
    * precached in bulk by the ServiceWorker upon registration.
    */
   async precacheEnabled() {
-    return !!(await localforage.getItem(PRECACHING_ENABLED_KEY));
+    // return !!(await localforage.getItem(PRECACHING_ENABLED_KEY));
+    const settings = await localforage.getItem<string | undefined>(
+      CLIENT_CACHE_SETTINGS_KEY
+    );
+    const defaultCacheSetting = ClientCacheSettings.find(
+      (c) => c.id === "default"
+    )!;
+    if (settings) {
+      const clientCacheSetting = ClientCacheSettings.find(
+        ({ id }) => id === settings
+      );
+      return (
+        clientCacheSetting?.prefetchEnabled ||
+        defaultCacheSetting.prefetchEnabled
+      );
+    } else {
+      return defaultCacheSetting.prefetchEnabled;
+    }
   }
 
-  /**
-   * Enables static asset prefetching upon service worker registration.
-   */
-  setPrecacheEnabled(enable: boolean) {
-    return localforage.setItem(PRECACHING_ENABLED_KEY, enable);
-  }
+  // /**
+  //  * Enables static asset prefetching upon service worker registration.
+  //  */
+  // setPrecacheEnabled(enable: boolean) {
+  //   return localforage.setItem(PRECACHING_ENABLED_KEY, enable);
+  // }
 
   /**
    * Manifest must be set before most Cache operation can be performed.
@@ -206,15 +230,17 @@ class StaticAssetCache {
    * @returns
    */
   async hasFile(entry: string | PrecacheEntry) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [url, cacheKey] = this.cacheKeyForEntry(entry);
-    const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+    const cache = await this.cache;
     const match = await cache.match(cacheKey);
     return match;
   }
 
   /** Deletes entire cache regardless of entry presence in manifest */
-  clearCache() {
-    return caches.delete(STATIC_ASSET_CACHE_NAME);
+  async clearCache() {
+    await caches.delete(STATIC_ASSET_CACHE_NAME);
+    this.cache = caches.open(STATIC_ASSET_CACHE_NAME);
   }
 
   /**
@@ -227,7 +253,7 @@ class StaticAssetCache {
         "Manifest has not been set. Cannot purge cache without information about current bundles."
       );
     }
-    const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
+    const cache = await this.cache;
     const cachedUrls = (await cache.keys()).map((req) => {
       const url = new URL(req.url);
       return `${url.pathname}${url.search}`;
@@ -254,24 +280,11 @@ class StaticAssetCache {
   async handleRequest(url: URL, event: FetchEvent): Promise<Response> {
     const cacheKey = this.urlsToCacheKeys.get(url.pathname);
     if (cacheKey) {
-      const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-      const responseFromCache = await cache.match(cacheKey);
-      if (responseFromCache) {
-        return responseFromCache;
+      if (process.env.NODE_ENV === "development") {
+        return networkFirst(await this.cache, cacheKey, event.request);
       } else {
-        try {
-          const response = await fetch(event.request);
-          if (response.ok) {
-            await cache.put(cacheKey, response.clone());
-          }
-          return response;
-        } catch (e) {
-          console.error(e);
-          return new Response("Failed to fetch", {
-            status: 408,
-            headers: { "Content-Type": "text/plain" },
-          });
-        }
+        const cache = await this.cache;
+        return cacheFirst(await cache, cacheKey, event.request, true);
       }
     } else {
       console.warn(
@@ -282,36 +295,7 @@ class StaticAssetCache {
   }
 
   async networkThenIndexHtmlCache(event: FetchEvent) {
-    try {
-      const response = await fetch(event.request);
-      if (response) {
-        const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-        await cache.put("/index.html", response.clone());
-        return response;
-      } else {
-        const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-        const response = await cache.match("/index.html");
-        if (response) {
-          return response;
-        } else {
-          return new Response("Failed to fetch or retrieve from cache", {
-            status: 408,
-            headers: { "Content-Type": "text/plain" },
-          });
-        }
-      }
-    } catch (e) {
-      const cache = await caches.open(STATIC_ASSET_CACHE_NAME);
-      const response = await cache.match("/index.html");
-      if (response) {
-        return response;
-      } else {
-        return new Response("Failed to fetch or retrieve from cache", {
-          status: 408,
-          headers: { "Content-Type": "text/plain" },
-        });
-      }
-    }
+    return networkFirst(await this.cache, "/index.html", event.request, true);
   }
 }
 

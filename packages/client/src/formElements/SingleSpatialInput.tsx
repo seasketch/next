@@ -8,7 +8,6 @@ import SketchGeometryTypeSelector, {
 import { useMapContext } from "../dataLayers/MapContextManager";
 import {
   BasemapDetailsFragment,
-  FormElementLayout,
   SketchGeometryType,
   useGetBasemapsQuery,
 } from "../generated/graphql";
@@ -18,13 +17,10 @@ import {
   FormElementEditorPortal,
   SurveyContext,
   SurveyMapPortal,
-  SurveyMapPortalContext,
   toFeatureCollection,
-  UnsavedSketches,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { motion } from "framer-motion";
-import { SurveyStyleContext } from "../surveys/appearance";
 import DigitizingTools from "./DigitizingTools";
 import { LngLatBoundsLike, Map, Style } from "mapbox-gl";
 import { useParams } from "react-router";
@@ -46,10 +42,7 @@ import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 const defaultStartingBounds = [
-  -119.91579655058345,
-  33.87415760617607,
-  -119.24033098014716,
-  34.2380902987356,
+  -119.91579655058345, 33.87415760617607, -119.24033098014716, 34.2380902987356,
 ] as BBox;
 
 export type SingleSpatialInputProps = {

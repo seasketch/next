@@ -9,10 +9,8 @@ import { useGlobalErrorHandler } from "./components/GlobalErrorHandler";
 
 export function useDelete<Mutation>(document: DocumentNode) {
   const onError = useGlobalErrorHandler();
-  const { mutationName, subjectName, kind, selectionSet } = getDocumentDetails(
-    document
-  );
-  const [mutate, mutationState] = useMutation(document, {
+  const { mutationName, subjectName, kind } = getDocumentDetails(document);
+  const [mutate] = useMutation(document, {
     onError,
     optimisticResponse: (data) => {
       return {
@@ -52,9 +50,8 @@ export function useCreate<Mutation, Variables>(
   }
 ) {
   let generatedId = 999999999999;
-  const { mutationName, subjectName, kind, selectionSet } = getDocumentDetails(
-    document
-  );
+  const { mutationName, subjectName, kind, selectionSet } =
+    getDocumentDetails(document);
   const onError = useGlobalErrorHandler();
   const [mutate, mutationState] = useMutation(document, {
     onError: options.onError || onError,

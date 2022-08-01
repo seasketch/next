@@ -1,9 +1,24 @@
 /// <reference lib="webworker" />
-/* eslint-disable no-restricted-globals */
-import { clientsClaim, skipWaiting } from "workbox-core";
+import { clientsClaim } from "workbox-core";
 import { PrecacheEntry } from "workbox-precaching/_types";
+import { GraphqlQueryCache } from "./offline/GraphqlQueryCache/sw";
 import { MESSAGE_TYPES } from "./offline/ServiceWorkerWindow";
-import StaticAssetCache from "./StaticAssetCache";
+import StaticAssetCache from "./offline/StaticAssetCache";
+import { strategies } from "./offline/GraphqlQueryCache/strategies";
+import * as SurveyAssetCache from "./offline/SurveyAssetCache";
+import LRUCache from "mnemonist/lru-cache-with-delete";
+import {
+  handleMapTileRequest,
+  handleSimulatorRequest,
+  isMapTileOrAssetRequest,
+  isSimulatorUrl,
+} from "./offline/MapTileCacheHandlers";
+import { OfflineTileSettings } from "./offline/OfflineTileSettings";
+
+const graphqlQueryCache = new GraphqlQueryCache(
+  process.env.REACT_APP_GRAPHQL_ENDPOINT,
+  strategies
+);
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: (PrecacheEntry | string)[];
@@ -12,27 +27,30 @@ declare const self: ServiceWorkerGlobalScope & {
 clientsClaim();
 
 const MANIFEST = self.__WB_MANIFEST;
-
 const staticAssetCache = new StaticAssetCache(MANIFEST);
 
+const offlineTileSimulatorSettings = new LRUCache<string, OfflineTileSettings>(
+  5
+);
+
 self.addEventListener("install", (event) => {
-  skipWaiting();
+  // Ensure stale query data that no longer matches application code are removed
+  graphqlQueryCache.invalidateChangedQuerySchemas();
+  // These can happen in the background, so are not await'd
   (async () => {
     if (await staticAssetCache.precacheEnabled()) {
       await staticAssetCache.populateCache();
+      self.skipWaiting();
     }
   })();
 });
 
-self.addEventListener("waiting", (event) => {
-  console.log(
-    `A new service worker has installed, but it can't activate` +
-      `until all tabs running the current version have fully unloaded.`
-  );
+self.addEventListener("activate", () => {
+  staticAssetCache.purgeStaleEntries();
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
+  if (event.data && event.data.type === MESSAGE_TYPES.SKIP_WAITING) {
     // This allows the web app to trigger skipWaiting via
     // registration.waiting.postMessage({type: 'SKIP_WAITING'})
     self.skipWaiting();
@@ -40,6 +58,40 @@ self.addEventListener("message", (event) => {
     event.ports[0].postMessage(MANIFEST);
   } else if (event.data && event.data.type === MESSAGE_TYPES.GET_BUILD) {
     event.ports[0].postMessage(process.env.REACT_APP_BUILD || "local");
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.UPDATE_GRAPHQL_STRATEGY_ARGS
+  ) {
+    graphqlQueryCache.updateStrategyArgs();
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.UPDATE_GRAPHQL_CACHE_ENABLED
+  ) {
+    graphqlQueryCache.restoreEnabledState();
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.ENABLE_OFFLINE_TILE_SIMULATOR
+  ) {
+    const sourceId = (event.source as any).id as string;
+    if (sourceId) {
+      console.warn(
+        "Enabling offline tile simulator. Tile requests will be intercepted and blocked if not in offline tileset settings.",
+        event.data.settings,
+        sourceId
+      );
+      offlineTileSimulatorSettings.set(sourceId, event.data.settings);
+      event.ports[0].postMessage(true);
+    }
+  } else if (
+    event.data &&
+    event.data.type === MESSAGE_TYPES.DISABLE_OFFLINE_TILE_SIMULATOR
+  ) {
+    console.warn("Disabling offline tile simulator.");
+    const sourceId = (event.source as any).id as string;
+    if (sourceId) {
+      offlineTileSimulatorSettings.delete(sourceId);
+    }
+    event.ports[0].postMessage(false);
   }
 });
 
@@ -52,10 +104,24 @@ self.addEventListener("fetch", (event) => {
     staticAssetCache.urlInManifest(url)
   ) {
     event.respondWith(staticAssetCache.handleRequest(url, event));
+  } else if (graphqlQueryCache.isGraphqlRequest(event.request)) {
+    event.respondWith(graphqlQueryCache.handleRequest(url, event));
   } else if (
     url.host === self.location.host &&
     !fileExtensionRegexp.test(url.pathname)
   ) {
     event.respondWith(staticAssetCache.networkThenIndexHtmlCache(event));
+  } else if (
+    /unsplash/.test(url.host) ||
+    (/consentDocs/.test(url.pathname) && url.host === self.location.host)
+  ) {
+    event.respondWith(SurveyAssetCache.handler(event));
+  } else if (isSimulatorUrl(url)) {
+    const settings = offlineTileSimulatorSettings.get(event.clientId);
+    if (settings) {
+      event.respondWith(handleSimulatorRequest(url, event, settings));
+    }
+  } else if (isMapTileOrAssetRequest(url)) {
+    event.respondWith(handleMapTileRequest(url, event));
   }
 });

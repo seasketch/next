@@ -1,0 +1,34 @@
+query DownloadableOfflineTilePackages($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+
+query DownloadBasemapDetails($id: Int!) {
+  basemap(id: $id) {
+    ...OfflineBasemapDetails
+  }
+}
+
+query ImportBasemapDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      basemaps {
+        id
+        thumbnail
+        name
+        offlineSupportInformation {
+          hasUncacheableSources
+          ...BasemapOfflineSupportInfo
+        }
+      }
+    }
+  }
+}

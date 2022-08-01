@@ -1,5 +1,5 @@
 import { MutationResult } from "@apollo/client";
-import React, { CSSProperties, FunctionComponent, ReactNode } from "react";
+import { FunctionComponent, ReactNode } from "react";
 import MutationStatusIndicator from "./MutationStatusIndicator";
 
 export interface InputBlockProps {

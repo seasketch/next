@@ -1,19 +1,13 @@
 import Switch from "../components/Switch";
 import InputBlock from "../components/InputBlock";
 import {
-  Basemap,
-  useGetBasemapsQuery,
-  useDeleteBasemapMutation,
-  GetBasemapDocument,
-  useGetProjectBySlugQuery,
-  useCreateOptionalLayerMutation,
   OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
   useGetOptionalBasemapLayerMetadataQuery,
 } from "../generated/graphql";
 import { useContext, useState } from "react";
 import { MapContext } from "./MapContextManager";
-import { useTranslation, Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import RadioGroup from "../components/RadioGroup";
 import MetadataIcon from "../components/MetadataIcon";
 import MetadataModal from "./MetadataModal";

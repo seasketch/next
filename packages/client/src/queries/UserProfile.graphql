@@ -52,6 +52,7 @@ mutation UpdateProfile(
     }
   ) {
     profile {
+      userId
       user {
         id
         profile {

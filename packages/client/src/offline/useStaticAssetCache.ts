@@ -55,31 +55,31 @@ export default function useStaticAssetCache() {
    * outstanding assets that haven't been cached during runtime. `cacheState`
    * will be updated as files are added to the cache.
    */
-  const togglePrefetchCaching = useCallback(
-    async (enable: boolean) => {
-      if (cache) {
-        await cache.setPrecacheEnabled(enable);
-        setState((prev) => {
-          if (prev.cacheState) {
-            return {
-              ...prev,
-              loading: enable,
-              cacheState: {
-                ...prev.cacheState,
-                precacheEnabled: enable,
-              },
-            };
-          } else {
-            return prev;
-          }
-        });
-        if (enable) {
-          populateCache();
-        }
-      }
-    },
-    [cache]
-  );
+  // const togglePrefetchCaching = useCallback(
+  //   async (enable: boolean) => {
+  //     if (cache) {
+  //       await cache.setPrecacheEnabled(enable);
+  //       setState((prev) => {
+  //         if (prev.cacheState) {
+  //           return {
+  //             ...prev,
+  //             loading: enable,
+  //             cacheState: {
+  //               ...prev.cacheState,
+  //               precacheEnabled: enable,
+  //             },
+  //           };
+  //         } else {
+  //           return prev;
+  //         }
+  //       });
+  //       if (enable) {
+  //         populateCache();
+  //       }
+  //     }
+  //   },
+  //   [cache]
+  // );
 
   const clearCache = useCallback(async () => {
     await cache.clearCache();
@@ -109,7 +109,7 @@ export default function useStaticAssetCache() {
 
   return {
     ...state,
-    togglePrefetchCaching,
+    // togglePrefetchCaching,
     clearCache,
     populateCache,
   };

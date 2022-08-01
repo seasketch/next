@@ -2,16 +2,10 @@ import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/outline";
 import bbox from "@turf/bbox";
 import { AnimatePresence, motion } from "framer-motion";
 import { BBox, Feature, FeatureCollection } from "geojson";
-import {
-  CameraOptions,
-  FreeCameraOptions,
-  LngLatBoundsLike,
-  Map,
-} from "mapbox-gl";
+import { CameraOptions, LngLatBoundsLike, Map } from "mapbox-gl";
 import React, {
   FunctionComponent,
   useState,
-  UIEventHandler,
   useCallback,
   useContext,
   useEffect,

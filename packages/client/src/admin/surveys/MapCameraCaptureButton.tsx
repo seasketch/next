@@ -1,13 +1,7 @@
 import { CameraIcon } from "@heroicons/react/outline";
 import { CameraOptions, Map } from "mapbox-gl";
-import { useContext } from "react";
 import { Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
-import {
-  SurveyMapPortal,
-  SurveyMapPortalContext,
-} from "../../formElements/FormElement";
-import useDebounce from "../../useDebounce";
 
 interface Props {
   onClick?: (value: CameraOptions) => void;

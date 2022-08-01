@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ReactNode, useMemo } from "react";
 import {
   useRouteMatch,
   useParams,
@@ -9,7 +9,6 @@ import {
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
-import useBreadcrumbs from "use-react-router-breadcrumbs";
 import { Trans } from "react-i18next";
 import UserSettingsSidebarSkeleton from "./users/UserSettingsSidebarSkeleton";
 import AdminMobileHeader, {
@@ -19,8 +18,6 @@ import AdminMobileHeader, {
 import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import Spinner from "../components/Spinner";
-import EditBasemapPage from "./data/EditBasemapPage";
-import { useProjectMetadataQuery } from "../generated/graphql";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 const LazyBasicSettings = React.lazy(
@@ -37,6 +34,19 @@ const LazyUserSettings = React.lazy(
 const LazySurveyAdmin = React.lazy(
   () => import(/* webpackChunkName: "AdminSurveys" */ "./surveys/SurveyAdmin")
 );
+const LazyOfflineAdmin = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminOffline" */ "../offline/AdminOfflineSettingsPage"
+    )
+);
+
+const LazyBasemapTilingSettingsPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminEditBasemapPage" */ "../offline/BasemapTilingSettingsPage"
+    )
+);
 
 interface Section {
   breadcrumb: string;
@@ -49,6 +59,8 @@ const iconClassName =
 
 export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
+  const { data } = useCurrentProjectMetadata();
+
   const { t } = useTranslation(["admin"]);
   const sections: Section[] = [
     {
@@ -216,35 +228,79 @@ export default function AdminApp() {
       ),
       path: "/admin/surveys",
     },
+    ...(data?.project?.isOfflineEnabled
+      ? [
+          {
+            breadcrumb: "Offline Support",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={iconClassName}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"
+                />
+              </svg>
+            ),
+            path: "/admin/offline",
+          },
+        ]
+      : []),
   ];
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [
-    mobileHeaderState,
-    setMobileHeaderState,
-  ] = useState<AdminMobileHeaderState>({});
+  const [mobileHeaderState, setMobileHeaderState] =
+    useState<AdminMobileHeaderState>({});
 
-  const routeConfig = [
-    ...sections,
-    ...[
-      {
-        breadcrumb: "Add Data",
-        path: "/admin/data/add-data",
-      },
-      {
-        breadcrumb: "ArcGIS Server",
-        path: "/admin/data/add-data/arcgis",
-      },
-    ],
-  ]
-    .map((section) => ({
-      ...section,
-      path: `/:slug${section.path}`,
-    }))
-    .filter((route) => route.breadcrumb !== "Settings");
-  let { path } = useRouteMatch();
-  const breadcrumbs = useBreadcrumbs(routeConfig, { disableDefaults: true });
+  let { path, url } = useRouteMatch();
 
-  const { data, loading, error } = useCurrentProjectMetadata();
+  const Container = useMemo(() => {
+    const isFullscreenRoute = /offline\/basemap/.test(window.location.pathname);
+    let Container = ({ children }: { children?: ReactNode }) => (
+      <>
+        <AdminMobileHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
+        <div className="pt-12 md:pt-0 flex bg-gray-100">
+          {/* <!-- Off-canvas menu for mobile --> */}
+          <MobileSidebar
+            sections={sections}
+            slug={slug}
+            projectName={data?.project?.name || "▌"}
+            open={mobileSidebarOpen}
+            onRequestClose={() => setMobileSidebarOpen(false)}
+          />
+
+          {/* <!-- Static sidebar for desktop --> */}
+          <StaticSidebar
+            sections={sections}
+            slug={slug}
+            projectName={data?.project?.name || "▌"}
+          />
+          <div className="flex w-0 flex-1 max-h-screen">
+            {/* Header (mobile-only) */}
+            <main
+              className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-auto"
+              tabIndex={0}
+            >
+              {children}
+            </main>
+          </div>
+        </div>
+      </>
+    );
+    if (isFullscreenRoute) {
+      Container = ({ children }: { children?: ReactNode }) => <>{children}</>;
+    }
+    return Container;
+  }, [
+    window.location.pathname,
+    data?.project?.name,
+    data?.project?.isOfflineEnabled,
+  ]);
 
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
@@ -254,81 +310,76 @@ export default function AdminApp() {
     <AdminMobileHeaderContext.Provider
       value={{ ...mobileHeaderState, setState: setMobileHeaderState }}
     >
-      <AdminMobileHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
-      <div className="pt-12 md:pt-0 flex bg-gray-100">
-        {/* <!-- Off-canvas menu for mobile --> */}
-        <MobileSidebar
-          sections={sections}
-          slug={slug}
-          projectName={data?.project?.name || "▌"}
-          open={mobileSidebarOpen}
-          onRequestClose={() => setMobileSidebarOpen(false)}
-        />
-
-        {/* <!-- Static sidebar for desktop --> */}
-        <StaticSidebar
-          sections={sections}
-          slug={slug}
-          projectName={data?.project?.name || "▌"}
-        />
-        <div className="flex w-0 flex-1 max-h-screen">
-          {/* Header (mobile-only) */}
-          <main
-            className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-auto"
-            tabIndex={0}
+      <Container>
+        <Switch>
+          <Route exact path={`${path}`}>
+            <React.Suspense fallback={<div></div>}>
+              <LazyBasicSettings />
+            </React.Suspense>
+          </Route>
+          <Route exact path={`${path}/activity`}></Route>
+          <Route
+            path={[
+              `${path}/users`,
+              `${path}/users`,
+              `${path}/users/participants`,
+              `${path}/users/invited`,
+              `${path}/users/admins`,
+              `${path}/users/invites/unsent`,
+              `${path}/users/invites/sent`,
+              `${path}/users/invites/bounced`,
+              `${path}/users/invites/requests`,
+              `${path}/users/groups/:group`,
+            ]}
           >
-            <Switch>
-              <Route exact path={`${path}`}>
-                <React.Suspense fallback={<div></div>}>
-                  <LazyBasicSettings />
-                </React.Suspense>
-              </Route>
-              <Route exact path={`${path}/activity`}></Route>
-              <Route
-                path={[
-                  `${path}/users`,
-                  `${path}/users`,
-                  `${path}/users/participants`,
-                  `${path}/users/invited`,
-                  `${path}/users/admins`,
-                  `${path}/users/invites/unsent`,
-                  `${path}/users/invites/sent`,
-                  `${path}/users/invites/bounced`,
-                  `${path}/users/invites/requests`,
-                  `${path}/users/groups/:group`,
-                ]}
-              >
-                <React.Suspense fallback={<UserSettingsSidebarSkeleton />}>
-                  <LazyUserSettings />
-                </React.Suspense>
-              </Route>
-              <Route path={`${path}/data`}>
-                {/* <div className="h-screen"> */}
-                <PhoneAccessGate
-                  heading={t("Data Layers")}
-                  message={t(
-                    "Data layer administration requires at least a tablet-sized screen."
-                  )}
-                >
-                  <React.Suspense fallback={<div></div>}>
-                    <LazyDataSettings />
-                  </React.Suspense>
-                </PhoneAccessGate>
-                {/* </div> */}
-              </Route>
-              <Route exact path={`${path}/sketching`}></Route>
-              <Route exact path={`${path}/forums`}></Route>
-              <Route path={`${path}/surveys/:surveyId?`}>
-                <React.Suspense fallback={<Spinner />}>
-                  <LazySurveyAdmin />
-                </React.Suspense>
-              </Route>
-            </Switch>
-            {/* <!-- Replace with your content --> */}
-            {/* <!-- /End replace --> */}
-          </main>
-        </div>
-      </div>
+            <React.Suspense fallback={<UserSettingsSidebarSkeleton />}>
+              <LazyUserSettings />
+            </React.Suspense>
+          </Route>
+          <Route path={`${path}/data`}>
+            {/* <div className="h-screen"> */}
+            <PhoneAccessGate
+              heading={t("Data Layers")}
+              message={t(
+                "Data layer administration requires at least a tablet-sized screen."
+              )}
+            >
+              <React.Suspense fallback={<div></div>}>
+                <LazyDataSettings />
+              </React.Suspense>
+            </PhoneAccessGate>
+            {/* </div> */}
+          </Route>
+          <Route exact path={`${path}/sketching`}></Route>
+          <Route exact path={`${path}/forums`}></Route>
+          <Route path={`${path}/surveys/:surveyId?`}>
+            <React.Suspense fallback={<Spinner />}>
+              <LazySurveyAdmin />
+            </React.Suspense>
+          </Route>
+          <Route
+            exact
+            path={`${path}/offline/basemap/:id`}
+            render={(history) => {
+              const { id } = history.match.params;
+              const search = new URLSearchParams(history.location.search || "");
+              return (
+                <LazyBasemapTilingSettingsPage
+                  id={parseInt(id)}
+                  returnToUrl={search.get("returnToUrl")}
+                />
+              );
+            }}
+          ></Route>
+          <Route path={`${path}/offline/:subpath?`}>
+            <React.Suspense fallback={<Spinner />}>
+              <LazyOfflineAdmin />
+            </React.Suspense>
+          </Route>
+        </Switch>
+        {/* <!-- Replace with your content --> */}
+        {/* <!-- /End replace --> */}
+      </Container>
     </AdminMobileHeaderContext.Provider>
   );
 }
@@ -379,7 +430,7 @@ function SidebarContents(props: {
               exact
               key={section.path}
               to={`/${props.slug}${section.path}`}
-              activeClassName="bg-primary-700 text-white"
+              activeClassName="bg-primary-600 text-white"
               className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
             >
               {section.icon}

@@ -1,8 +1,4 @@
-import {
-  CalendarIcon,
-  LocationMarkerIcon,
-  UsersIcon,
-} from "@heroicons/react/solid";
+import { UsersIcon } from "@heroicons/react/solid";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import Badge from "../../components/Badge";
@@ -16,7 +12,7 @@ export default function SurveyList() {
   const projectId = useProjectId();
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation("admin:surveys");
-  const { data, loading, error, refetch } = useSurveysQuery({
+  const { data } = useSurveysQuery({
     variables: {
       projectId: projectId!,
     },

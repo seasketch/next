@@ -7,7 +7,6 @@ mutation UpdateProjectSettings(
   $logoLink: String
   $isFeatured: Boolean
   $mapboxPublicKey: String
-  $mapboxSecretKey: String
 ) {
   updateProjectBySlug(
     input: {
@@ -20,7 +19,6 @@ mutation UpdateProjectSettings(
         logoLink: $logoLink
         isFeatured: $isFeatured
         mapboxPublicKey: $mapboxPublicKey
-        mapboxSecretKey: $mapboxSecretKey
       }
     }
   ) {

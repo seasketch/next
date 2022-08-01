@@ -1,0 +1,51 @@
+{
+  "name": "@seasketch/vector-data-source",
+  "version": "1.0.0",
+  "description": "WIP break out of VectorDataSource from @seasketch/geoprocessing",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "dist/bundled.js",
+  "module": "dist/index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "build": "tsc && esbuild --bundle --platform=node --format=cjs lib/index.ts > dist/bundled.js && cp ./dist/index.d.ts ./dist/bundled.d.ts",
+    "install": "npm run build"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "dependencies": {
+    "@turf/bbox": "^6.5.0",
+    "@turf/helpers": "^6.5.0",
+    "@types/flatbush": "^3.3.0",
+    "@types/geobuf": "^3.0.1",
+    "@types/geojson": "^7946.0.8",
+    "@types/pbf": "^3.0.2",
+    "@types/rbush": "^3.0.0",
+    "flatbush": "^4.0.0",
+    "geobuf": "^3.0.2",
+    "mnemonist": "^0.39.2",
+    "pbf": "^3.2.1",
+    "rbush": "^3.0.1",
+    "union-subdivided-polygons": "^0.9.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.14.48",
+    "typescript": "~4.7.4"
+  }
+}

@@ -1,0 +1,33 @@
+query OfflineSurveys($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      name
+    }
+  }
+}
+
+query SurveysById($surveyIds: [Int]!) {
+  getSurveys(ids: $surveyIds) {
+    id
+    projectId
+    name
+    project {
+      id
+      name
+      slug
+    }
+  }
+  me {
+    id
+    canonicalEmail
+    profile {
+      userId
+      email
+      fullname
+      nickname
+      picture
+    }
+  }
+}

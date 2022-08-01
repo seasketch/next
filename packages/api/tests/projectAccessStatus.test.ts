@@ -19,7 +19,7 @@ describe("currentProjectAccessStatus", () => {
       async (conn, projectId, adminId, [userA]) => {
         await createSession(conn, undefined, false, false, projectId);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("GRANTED");
       }
@@ -32,7 +32,7 @@ describe("currentProjectAccessStatus", () => {
       async (conn, projectId, adminId, [userA]) => {
         await createSession(conn, undefined, false, false, 9999999);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${99999999})`
         );
         expect(status).toBe("PROJECT_DOES_NOT_EXIST");
       }
@@ -45,7 +45,7 @@ describe("currentProjectAccessStatus", () => {
       async (conn, projectId, adminId, [userA]) => {
         await createSession(conn, userA, true, false, projectId);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("DENIED_ADMINS_ONLY");
       }
@@ -58,7 +58,7 @@ describe("currentProjectAccessStatus", () => {
       async (conn, projectId, adminId, [userA]) => {
         await createSession(conn, adminId, true, false, projectId);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("GRANTED");
       }
@@ -71,7 +71,7 @@ describe("currentProjectAccessStatus", () => {
       async (conn, projectId, adminId, [userA]) => {
         await createSession(conn, adminId, false, false, projectId);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("DENIED_EMAIL_NOT_VERIFIED");
       }
@@ -84,7 +84,7 @@ describe("currentProjectAccessStatus", () => {
       async (conn, projectId, adminId, [userA]) => {
         await createSession(conn, undefined, false, false, projectId);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("DENIED_ANON");
       }
@@ -98,7 +98,7 @@ describe("currentProjectAccessStatus", () => {
         const userB = await createUser(conn);
         await createSession(conn, userB, true, false, projectId);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("DENIED_NOT_REQUESTED");
       }
@@ -113,7 +113,7 @@ describe("currentProjectAccessStatus", () => {
         await createSession(conn, userB, true, false, projectId);
         await conn.oneFirst(sql`select join_project(${projectId})`);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("DENIED_NOT_APPROVED");
       }
@@ -133,12 +133,12 @@ describe("currentProjectAccessStatus", () => {
         );
         await createSession(conn, userB, false, false, projectId);
         const status = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(status).toBe("DENIED_EMAIL_NOT_VERIFIED");
         await createSession(conn, userB, true, false, projectId);
         const statusAfterVerified = await conn.oneFirst(
-          sql`select current_project_access_status()`
+          sql`select project_access_status(${projectId})`
         );
         expect(statusAfterVerified).toBe("GRANTED");
       }

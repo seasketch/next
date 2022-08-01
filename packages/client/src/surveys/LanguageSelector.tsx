@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import languages, { LangDetails } from "../lang/supported";
 

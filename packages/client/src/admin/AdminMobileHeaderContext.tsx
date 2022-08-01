@@ -1,5 +1,5 @@
 import React, { Dispatch, SetStateAction, useContext } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export interface AdminMobileHeaderState {
   heading?: string;
@@ -20,7 +20,7 @@ export default function AdminMobileHeader({
 }: {
   onOpenSidebar: () => void;
 }) {
-  const { heading, backHref, setState } = useContext(AdminMobileHeaderContext);
+  const { heading, backHref } = useContext(AdminMobileHeaderContext);
   return (
     <div className="fixed w-full z-10 flex-shrink-0 flex md:hidden h-12 bg-white shadow">
       <button

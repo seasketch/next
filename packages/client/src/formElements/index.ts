@@ -1,6 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
 import { ConsentProps, ConsentValue } from "./Consent";
-import { FormElementComponent } from "./FormElement";
 import { MatrixProps, MatrixValue } from "./Matrix";
 import { MultipleChoiceProps, MultipleChoiceValue } from "./MultipleChoice";
 import { NameProps, NameType } from "./Name";

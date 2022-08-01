@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
-  TableOfContentsItem,
   useGetBasemapsQuery,
   useLayersAndSourcesForItemsQuery,
   usePublishedTableOfContentsQuery,
 } from "../generated/graphql";
-import MapContextManager, {
+import {
   ClientBasemap,
   ClientDataLayer,
   ClientDataSource,

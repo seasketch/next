@@ -1,5 +1,6 @@
 import { Style } from "mapbox-gl";
 import { useCallback, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useMapboxKeysQuery } from "../../generated/graphql";
 
 interface State {
@@ -14,10 +15,15 @@ interface State {
 }
 
 export default function useMapboxAccountStyles() {
-  const { data, loading, error } = useMapboxKeysQuery();
+  const { slug } = useParams<{ slug: string }>();
+  const { data, loading, error } = useMapboxKeysQuery({
+    variables: {
+      slug,
+    },
+  });
   const [state, setState] = useState<State>({ loading: true });
   useEffect(() => {
-    if (!loading && !data?.currentProject?.mapboxSecretKey) {
+    if (!loading && !data?.projectBySlug?.mapboxSecretKey) {
       setState({
         error: "MapBox Secret Key not provided",
         loading: false,
@@ -25,7 +31,7 @@ export default function useMapboxAccountStyles() {
     } else if (loading) {
       setState((prev) => ({ ...prev, loading: true }));
     }
-  }, [data?.currentProject?.mapboxSecretKey, loading]);
+  }, [data?.projectBySlug?.mapboxSecretKey, loading]);
 
   const fetchData = useCallback(
     function fetchData(
@@ -75,10 +81,10 @@ export default function useMapboxAccountStyles() {
   );
 
   useEffect(() => {
-    if (data?.currentProject?.mapboxSecretKey) {
-      const key = data?.currentProject?.mapboxSecretKey;
+    if (data?.projectBySlug?.mapboxSecretKey) {
+      const key = data?.projectBySlug?.mapboxSecretKey;
       const publicKey =
-        data?.currentProject?.mapboxPublicKey ||
+        data?.projectBySlug?.mapboxPublicKey ||
         process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
       const { u: username } = JSON.parse(
         atob(key.replace(/sk\./, "").split(".")[0])
@@ -91,7 +97,7 @@ export default function useMapboxAccountStyles() {
         publicKey!
       );
     }
-  }, [data?.currentProject?.mapboxSecretKey]);
+  }, [data?.projectBySlug?.mapboxSecretKey]);
 
   return state;
 }

@@ -3,7 +3,6 @@ import {
   FormElementTextVariant,
   FormElementLayout,
   FormElementDetailsFragment,
-  Maybe,
   FormElementFullDetailsFragment,
 } from "../generated/graphql";
 import { colord, extend } from "colord";
@@ -184,7 +183,7 @@ export function surveyBackground(
   color: string
 ) {
   let position = "";
-  image = /data\:/.test(image)
+  image = /data:/.test(image)
     ? // eslint-disable-next-line i18next/no-literal-string
       `url(${image})`
     : // eslint-disable-next-line i18next/no-literal-string

@@ -1,16 +1,13 @@
 import { FlagIcon } from "@heroicons/react/outline";
 import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import InputBlock from "../components/InputBlock";
-import NumberInput from "../components/NumberInput";
-import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
 } from "./FormElement";
-import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
+import { questionBodyFromMarkdown } from "./fromMarkdown";
 
 export type FeatureNameProps = {
   generatedNamePrefix: string;

@@ -1,11 +1,5 @@
-import React, { ReactNode, useState } from "react";
-import {
-  AnimatePresence,
-  AnimationControls,
-  AnimationProps,
-  motion,
-  TargetAndTransition,
-} from "framer-motion";
+import { ReactNode, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
 
 interface SidebarButtonProps {
@@ -19,18 +13,21 @@ interface SidebarButtonProps {
   sidebarOpen?: boolean;
 }
 
-const curry = (icon: ReactNode) => (
-  props: Pick<
-    SidebarButtonProps,
-    | "className"
-    | "onClick"
-    | "tabIndex"
-    | "tooltip"
-    | "href"
-    | "anySidebarOpen"
-    | "sidebarOpen"
-  >
-) => <SidebarButton {...props} icon={icon} />;
+const curry =
+  (icon: ReactNode) =>
+  (
+    props: Pick<
+      SidebarButtonProps,
+      | "className"
+      | "onClick"
+      | "tabIndex"
+      | "tooltip"
+      | "href"
+      | "anySidebarOpen"
+      | "sidebarOpen"
+    >
+  ) =>
+    <SidebarButton {...props} icon={icon} />;
 
 export default function SidebarButton(props: SidebarButtonProps) {
   const [hovered, setHovered] = useState(false);
@@ -72,7 +69,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
             animate={{
               opacity: 1,
               scale: 1,
-              transition: { delay: props.anySidebarOpen ? 1 : 0.2 },
+              transition: { delay: props.anySidebarOpen ? 0.5 : 0.2 },
             }}
             exit={{ opacity: 0, transition: { duration: 0.1 } }}
             className="absolute left-14 z-0 top-1 bg-black px-2 py-1 rounded overflow-visible whitespace-nowrap pointer-events-none select-none"
@@ -187,3 +184,21 @@ export const AdminButton = curry(
   //   />
   // </svg>
 );
+
+export const SettingsIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    role="img"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+    />
+  </svg>
+);
+export const SettingsButton = curry(SettingsIcon);

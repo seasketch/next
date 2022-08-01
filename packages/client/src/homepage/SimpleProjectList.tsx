@@ -4,15 +4,18 @@ import { Link } from "react-router-dom";
 import { Trans } from "react-i18next";
 
 export default function SimpleProjectList() {
-  const { data, loading, error } = useSimpleProjectListQuery();
-  if (loading)
+  const { data, loading, error } = useSimpleProjectListQuery({
+    fetchPolicy: "cache-and-network",
+    returnPartialData: true,
+  });
+  if (loading && !data)
     return (
       <span>
         <Trans>loading...</Trans>
       </span>
     );
 
-  if (error) {
+  if (error && !data) {
     // @ts-ignore
     if (error.networkError?.bodyText) {
       return (

@@ -22,6 +22,8 @@ export type Scalars = {
   BigInt: any;
   /** A location in a connection that can be used for resuming pagination. */
   Cursor: any;
+  /** The day, does not include a time. */
+  Date: any;
   /**
    * A point in time as described by the [ISO
    * 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
@@ -247,6 +249,10 @@ export type Basemap = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Only available on supported projects by authorized users */
+  offlineSupportInformation?: Maybe<OfflineSupportInformation>;
+  /** Reads and enables pagination through a set of `OfflineTileSetting`. */
+  offlineTileSettings: Array<OfflineTileSetting>;
   /** Reads and enables pagination through a set of `OptionalBasemapLayer`. */
   optionalBasemapLayers: Array<OptionalBasemapLayer>;
   /** Reads a single `Project` that is related to this `Basemap`. */
@@ -284,6 +290,15 @@ export type Basemap = Node & {
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
   url: Scalars['String'];
+  useDefaultOfflineTileSettings: Scalars['Boolean'];
+};
+
+
+export type BasemapOfflineTileSettingsArgs = {
+  condition?: Maybe<OfflineTileSettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTileSettingsOrderBy>>;
 };
 
 
@@ -369,6 +384,7 @@ export type BasemapInput = {
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
   url: Scalars['String'];
+  useDefaultOfflineTileSettings?: Maybe<Scalars['Boolean']>;
 };
 
 /** Represents an update to a `Basemap`. Fields that are set will be updated. */
@@ -420,6 +436,7 @@ export type BasemapPatch = {
    * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
    */
   url?: Maybe<Scalars['String']>;
+  useDefaultOfflineTileSettings?: Maybe<Scalars['Boolean']>;
 };
 
 /** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
@@ -464,6 +481,25 @@ export enum BasemapsOrderBy {
 }
 
 
+
+export type CacheableOfflineAsset = {
+  __typename?: 'CacheableOfflineAsset';
+  /**
+   * If provided, is a "bare" url with query strings such as access_token
+   * stripped out.
+   */
+  cacheKey?: Maybe<Scalars['String']>;
+  type: CacheableOfflineAssetType;
+  url: Scalars['String'];
+};
+
+export enum CacheableOfflineAssetType {
+  Font = 'FONT',
+  Image = 'IMAGE',
+  Json = 'JSON',
+  MapboxGlStyle = 'MAPBOX_GL_STYLE',
+  Sprite = 'SPRITE'
+}
 
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
@@ -1028,6 +1064,35 @@ export type CreateInteractivitySettingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OfflineTileSetting` mutation. */
+export type CreateOfflineTileSettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OfflineTileSetting` to be created by this mutation. */
+  offlineTileSetting: OfflineTileSettingInput;
+};
+
+/** The output of our create `OfflineTileSetting` mutation. */
+export type CreateOfflineTileSettingPayload = {
+  __typename?: 'CreateOfflineTileSettingPayload';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OfflineTileSetting` that was created by this mutation. */
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the create `OptionalBasemapLayer` mutation. */
 export type CreateOptionalBasemapLayerInput = {
   /**
@@ -1388,6 +1453,7 @@ export type CreateSurveyResponseInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   draft?: Maybe<Scalars['Boolean']>;
   facilitated?: Maybe<Scalars['Boolean']>;
+  offlineId?: Maybe<Scalars['UUID']>;
   practice?: Maybe<Scalars['Boolean']>;
   responseData?: Maybe<Scalars['JSON']>;
   surveyId?: Maybe<Scalars['Int']>;
@@ -2188,6 +2254,7 @@ export enum DataSourcesOrderBy {
 }
 
 
+
 /** All input for the `deleteBasemapByNodeId` mutation. */
 export type DeleteBasemapByNodeIdInput = {
   /**
@@ -2670,6 +2737,90 @@ export type DeleteGroupPayload = {
   /** The `Group` that was deleted by this mutation. */
   group?: Maybe<Group>;
   /** Reads a single `Project` that is related to this `Group`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `deleteOfflineTilePackage` mutation. */
+export type DeleteOfflineTilePackageInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `deleteOfflineTilePackage` mutation. */
+export type DeleteOfflineTilePackagePayload = {
+  __typename?: 'DeleteOfflineTilePackagePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  offlineTilePackage?: Maybe<OfflineTilePackage>;
+  /** An edge for our `OfflineTilePackage`. May be used by Relay 1. */
+  offlineTilePackageEdge?: Maybe<OfflineTilePackagesEdge>;
+  /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `deleteOfflineTilePackage` mutation. */
+export type DeleteOfflineTilePackagePayloadOfflineTilePackageEdgeArgs = {
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
+};
+
+/** All input for the `deleteOfflineTileSettingByNodeId` mutation. */
+export type DeleteOfflineTileSettingByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `OfflineTileSetting` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteOfflineTileSettingByProjectIdAndBasemapId` mutation. */
+export type DeleteOfflineTileSettingByProjectIdAndBasemapIdInput = {
+  basemapId: Scalars['Int'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+};
+
+/** All input for the `deleteOfflineTileSetting` mutation. */
+export type DeleteOfflineTileSettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `OfflineTileSetting` mutation. */
+export type DeleteOfflineTileSettingPayload = {
+  __typename?: 'DeleteOfflineTileSettingPayload';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedOfflineTileSettingNodeId?: Maybe<Scalars['ID']>;
+  /** The `OfflineTileSetting` that was deleted by this mutation. */
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
@@ -3460,6 +3611,40 @@ export type EnableForumPostingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `enableOfflineSupport` mutation. */
+export type EnableOfflineSupportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enable?: Maybe<Scalars['Boolean']>;
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `enableOfflineSupport` mutation. */
+export type EnableOfflineSupportPayload = {
+  __typename?: 'EnableOfflineSupportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `enableOfflineSupport` mutation. */
+export type EnableOfflineSupportPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 export enum FieldRuleOperator {
   Contains = 'CONTAINS',
   Equal = 'EQUAL',
@@ -4246,6 +4431,44 @@ export enum ForumsOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
+
+/** All input for the `generateOfflineTilePackage` mutation. */
+export type GenerateOfflineTilePackageInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataSourceUrl?: Maybe<Scalars['String']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  originalUrlTemplate?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  sourceType?: Maybe<OfflineTilePackageSourceType>;
+};
+
+/** The output of our `generateOfflineTilePackage` mutation. */
+export type GenerateOfflineTilePackagePayload = {
+  __typename?: 'GenerateOfflineTilePackagePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  offlineTilePackage?: Maybe<OfflineTilePackage>;
+  /** An edge for our `OfflineTilePackage`. May be used by Relay 1. */
+  offlineTilePackageEdge?: Maybe<OfflineTilePackagesEdge>;
+  /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `generateOfflineTilePackage` mutation. */
+export type GenerateOfflineTilePackagePayloadOfflineTilePackageEdgeArgs = {
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
+};
 
 
 /** All geography XY types implement this interface */
@@ -5128,6 +5351,8 @@ export type Mutation = {
   createGroup?: Maybe<CreateGroupPayload>;
   /** Creates a single `InteractivitySetting`. */
   createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
+  /** Creates a single `OfflineTileSetting`. */
+  createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
   /**
@@ -5223,6 +5448,13 @@ export type Mutation = {
   deleteGroupByNodeId?: Maybe<DeleteGroupPayload>;
   /** Deletes a single `Group` using a unique key. */
   deleteGroupByProjectIdAndName?: Maybe<DeleteGroupPayload>;
+  deleteOfflineTilePackage?: Maybe<DeleteOfflineTilePackagePayload>;
+  /** Deletes a single `OfflineTileSetting` using a unique key. */
+  deleteOfflineTileSetting?: Maybe<DeleteOfflineTileSettingPayload>;
+  /** Deletes a single `OfflineTileSetting` using its globally unique id. */
+  deleteOfflineTileSettingByNodeId?: Maybe<DeleteOfflineTileSettingPayload>;
+  /** Deletes a single `OfflineTileSetting` using a unique key. */
+  deleteOfflineTileSettingByProjectIdAndBasemapId?: Maybe<DeleteOfflineTileSettingPayload>;
   /** Deletes a single `OptionalBasemapLayer` using a unique key. */
   deleteOptionalBasemapLayer?: Maybe<DeleteOptionalBasemapLayerPayload>;
   /** Deletes a single `OptionalBasemapLayer` using its globally unique id. */
@@ -5292,6 +5524,8 @@ export type Mutation = {
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
+  enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
+  generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -5417,6 +5651,7 @@ export type Mutation = {
   updateBasemap?: Maybe<UpdateBasemapPayload>;
   /** Updates a single `Basemap` using its globally unique id and a patch. */
   updateBasemapByNodeId?: Maybe<UpdateBasemapPayload>;
+  updateBasemapOfflineTileSettings?: Maybe<UpdateBasemapOfflineTileSettingsPayload>;
   /** Updates a single `CommunityGuideline` using a unique key and a patch. */
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
@@ -5467,6 +5702,13 @@ export type Mutation = {
   updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
+  updateMapboxSecretKey?: Maybe<UpdateMapboxSecretKeyPayload>;
+  /** Updates a single `OfflineTileSetting` using a unique key and a patch. */
+  updateOfflineTileSetting?: Maybe<UpdateOfflineTileSettingPayload>;
+  /** Updates a single `OfflineTileSetting` using its globally unique id and a patch. */
+  updateOfflineTileSettingByNodeId?: Maybe<UpdateOfflineTileSettingPayload>;
+  /** Updates a single `OfflineTileSetting` using a unique key and a patch. */
+  updateOfflineTileSettingByProjectIdAndBasemapId?: Maybe<UpdateOfflineTileSettingPayload>;
   /** Updates a single `OptionalBasemapLayer` using a unique key and a patch. */
   updateOptionalBasemapLayer?: Maybe<UpdateOptionalBasemapLayerPayload>;
   /** Updates a single `OptionalBasemapLayer` using its globally unique id and a patch. */
@@ -5690,6 +5932,12 @@ export type MutationCreateGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateInteractivitySettingArgs = {
   input: CreateInteractivitySettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOfflineTileSettingArgs = {
+  input: CreateOfflineTileSettingInput;
 };
 
 
@@ -5922,6 +6170,30 @@ export type MutationDeleteGroupByProjectIdAndNameArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTilePackageArgs = {
+  input: DeleteOfflineTilePackageInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTileSettingArgs = {
+  input: DeleteOfflineTileSettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTileSettingByNodeIdArgs = {
+  input: DeleteOfflineTileSettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteOfflineTileSettingByProjectIdAndBasemapIdArgs = {
+  input: DeleteOfflineTileSettingByProjectIdAndBasemapIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteOptionalBasemapLayerArgs = {
   input: DeleteOptionalBasemapLayerInput;
 };
@@ -6104,6 +6376,18 @@ export type MutationDisableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableForumPostingArgs = {
   input: EnableForumPostingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationEnableOfflineSupportArgs = {
+  input: EnableOfflineSupportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGenerateOfflineTilePackageArgs = {
+  input: GenerateOfflineTilePackageInput;
 };
 
 
@@ -6344,6 +6628,12 @@ export type MutationUpdateBasemapByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateBasemapOfflineTileSettingsArgs = {
+  input: UpdateBasemapOfflineTileSettingsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineArgs = {
   input: UpdateCommunityGuidelineInput;
 };
@@ -6490,6 +6780,30 @@ export type MutationUpdateInteractivitySettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateInteractivitySettingByNodeIdArgs = {
   input: UpdateInteractivitySettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateMapboxSecretKeyArgs = {
+  input: UpdateMapboxSecretKeyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOfflineTileSettingArgs = {
+  input: UpdateOfflineTileSettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOfflineTileSettingByNodeIdArgs = {
+  input: UpdateOfflineTileSettingByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOfflineTileSettingByProjectIdAndBasemapIdArgs = {
+  input: UpdateOfflineTileSettingByProjectIdAndBasemapIdInput;
 };
 
 
@@ -6714,6 +7028,174 @@ export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
 };
+
+export type OfflineSourceDetails = {
+  __typename?: 'OfflineSourceDetails';
+  dataSourceUrl: Scalars['String'];
+  templateUrl: Scalars['String'];
+  /** Whether a tile packages is available for download */
+  tilePackages: Array<OfflineTilePackage>;
+  type: OfflineTilePackageSourceType;
+};
+
+/** Provides information on resources necessary to use a basemap offline */
+export type OfflineSupportInformation = {
+  __typename?: 'OfflineSupportInformation';
+  hasUncacheableSources: Scalars['Boolean'];
+  id: Scalars['ID'];
+  sources: Array<OfflineSourceDetails>;
+  staticAssets: Array<CacheableOfflineAsset>;
+  styleLastModified?: Maybe<Scalars['Date']>;
+};
+
+export type OfflineTilePackage = Node & {
+  __typename?: 'OfflineTilePackage';
+  bytes: Scalars['Int'];
+  createdAt: Scalars['Datetime'];
+  dataSourceUrl: Scalars['String'];
+  /** @deprecated Use jobErrors instead */
+  error?: Maybe<Scalars['String']>;
+  id: Scalars['UUID'];
+  isMapboxHosted: Scalars['Boolean'];
+  jobErrors?: Maybe<Scalars['String']>;
+  jobStatus?: Maybe<OfflineTilePackageStatus>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  originalUrlTemplate: Scalars['String'];
+  /** Can be used to download a tilepackage (if permitted) */
+  presignedUrl: Scalars['String'];
+  /** Reads a single `Project` that is related to this `OfflineTilePackage`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  region: GeometryPolygon;
+  sourceType: OfflineTilePackageSourceType;
+  /** @deprecated Use jobStatus instead */
+  status: OfflineTilePackageStatus;
+  tilesFetched: Scalars['Int'];
+  totalTiles: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `OfflineTilePackage` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type OfflineTilePackageCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+export enum OfflineTilePackageSourceType {
+  Raster = 'RASTER',
+  RasterDem = 'RASTER_DEM',
+  Vector = 'VECTOR'
+}
+
+export enum OfflineTilePackageStatus {
+  Complete = 'COMPLETE',
+  Failed = 'FAILED',
+  Generating = 'GENERATING',
+  Queued = 'QUEUED',
+  Uploading = 'UPLOADING'
+}
+
+/** A connection to a list of `OfflineTilePackage` values. */
+export type OfflineTilePackagesConnection = {
+  __typename?: 'OfflineTilePackagesConnection';
+  /** A list of edges which contains the `OfflineTilePackage` and cursor to aid in pagination. */
+  edges: Array<OfflineTilePackagesEdge>;
+  /** A list of `OfflineTilePackage` objects. */
+  nodes: Array<OfflineTilePackage>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OfflineTilePackage` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OfflineTilePackage` edge in the connection. */
+export type OfflineTilePackagesEdge = {
+  __typename?: 'OfflineTilePackagesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OfflineTilePackage` at the end of the edge. */
+  node: OfflineTilePackage;
+};
+
+/** Methods to use when ordering `OfflineTilePackage`. */
+export enum OfflineTilePackagesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+export type OfflineTileSetting = Node & {
+  __typename?: 'OfflineTileSetting';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  basemapId?: Maybe<Scalars['Int']>;
+  id: Scalars['Int'];
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  region: GeometryPolygon;
+};
+
+/**
+ * A condition to be used against `OfflineTileSetting` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type OfflineTileSettingCondition = {
+  /** Checks for equality with the object’s `basemapId` field. */
+  basemapId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OfflineTileSetting` */
+export type OfflineTileSettingInput = {
+  basemapId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  projectId: Scalars['Int'];
+  region: Scalars['GeoJSON'];
+};
+
+/** Represents an update to a `OfflineTileSetting`. Fields that are set will be updated. */
+export type OfflineTileSettingPatch = {
+  basemapId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  region?: Maybe<Scalars['GeoJSON']>;
+};
+
+/** Methods to use when ordering `OfflineTileSetting`. */
+export enum OfflineTileSettingsOrderBy {
+  BasemapIdAsc = 'BASEMAP_ID_ASC',
+  BasemapIdDesc = 'BASEMAP_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
 
 /** Available only for MapBox GL Style-based basemaps. Specifies optional components of the basemap that can be shown or hidden. */
 export type OptionalBasemapLayer = Node & {
@@ -7039,6 +7521,7 @@ export type Project = Node & {
    * public project listing via Query.projectsConnection.
    */
   isListed: Scalars['Boolean'];
+  isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
   /**
@@ -7055,6 +7538,10 @@ export type Project = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `OfflineTilePackage`. */
+  offlineTilePackagesConnection: OfflineTilePackagesConnection;
+  /** Reads and enables pagination through a set of `OfflineTileSetting`. */
+  offlineTileSettings: Array<OfflineTileSetting>;
   /** Count of all users who have opted into participating in the project, sharing their profile with project administrators. */
   participantCount?: Maybe<Scalars['Int']>;
   /**
@@ -7264,6 +7751,33 @@ export type ProjectMyFoldersArgs = {
 export type ProjectMySketchesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectOfflineTilePackagesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OfflineTilePackageCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectOfflineTileSettingsArgs = {
+  condition?: Maybe<OfflineTileSettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTileSettingsOrderBy>>;
 };
 
 
@@ -7640,7 +8154,6 @@ export type ProjectPatch = {
    */
   logoUrl?: Maybe<Scalars['Upload']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
   region?: Maybe<Scalars['GeoJSON']>;
 };
@@ -7745,6 +8258,7 @@ export enum ProjectsSharedBasemapsOrderBy {
 export type PublicProjectDetail = {
   __typename?: 'PublicProjectDetail';
   accessControl?: Maybe<ProjectAccessControlSetting>;
+  accessStatus?: Maybe<ProjectAccessStatus>;
   id?: Maybe<Scalars['Int']>;
   logoUrl?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
@@ -7800,15 +8314,10 @@ export type Query = Node & {
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
-  /**
-   * The current SeaSketch Project, which is determined by the `referer` or
-   * `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
-   */
+  /** @deprecated Use projectBySlug() instead */
   currentProject?: Maybe<Project>;
-  /** Use to indicate to a user why they cannot access the given project, if denied. */
+  /** @deprecated Use project_access_status(slug) instead */
   currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
-  /** Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization. */
-  currentProjectPublicDetails?: Maybe<PublicProjectDetail>;
   currentUserIsSuperuser: Scalars['Boolean'];
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
@@ -7850,6 +8359,8 @@ export type Query = Node & {
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `Survey`. */
+  getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
   group?: Maybe<Group>;
   /** Reads a single `Group` using its globally unique `ID`. */
@@ -7867,6 +8378,17 @@ export type Query = Node & {
   node?: Maybe<Node>;
   /** The root query type must be a `Node` to work well with Relay 1 mutations. This just resolves to `query`. */
   nodeId: Scalars['ID'];
+  offlineTilePackage?: Maybe<OfflineTilePackage>;
+  /** Reads a single `OfflineTilePackage` using its globally unique `ID`. */
+  offlineTilePackageByNodeId?: Maybe<OfflineTilePackage>;
+  /** Reads and enables pagination through a set of `OfflineTilePackage`. */
+  offlineTilePackagesConnection?: Maybe<OfflineTilePackagesConnection>;
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `OfflineTileSetting` using its globally unique `ID`. */
+  offlineTileSettingByNodeId?: Maybe<OfflineTileSetting>;
+  offlineTileSettingByProjectIdAndBasemapId?: Maybe<OfflineTileSetting>;
+  /** Reads a set of `OfflineTileSetting`. */
+  offlineTileSettings?: Maybe<Array<OfflineTileSetting>>;
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
@@ -7877,6 +8399,7 @@ export type Query = Node & {
   postsConnection?: Maybe<PostsConnection>;
   profileByUserId?: Maybe<Profile>;
   project?: Maybe<Project>;
+  projectAccessStatus?: Maybe<ProjectAccessStatus>;
   /** Reads a single `Project` using its globally unique `ID`. */
   projectByNodeId?: Maybe<Project>;
   projectBySlug?: Maybe<Project>;
@@ -7887,6 +8410,7 @@ export type Query = Node & {
   projectInviteGroupByInviteIdAndGroupId?: Maybe<ProjectInviteGroup>;
   /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
   projectInviteGroupsConnection?: Maybe<ProjectInviteGroupsConnection>;
+  projectPublicDetails?: Maybe<PublicProjectDetail>;
   /** Reads and enables pagination through a set of `Project`. */
   projectsConnection?: Maybe<ProjectsConnection>;
   projectsSharedBasemapByBasemapIdAndProjectId?: Maybe<ProjectsSharedBasemap>;
@@ -8213,6 +8737,14 @@ export type QueryForumByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryGetSurveysArgs = {
+  first?: Maybe<Scalars['Int']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryGetUnsplashPhotosArgs = {
   query: Scalars['String'];
 };
@@ -8268,6 +8800,58 @@ export type QueryNodeArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOfflineTilePackageArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTilePackageByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTilePackagesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OfflineTilePackageCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTilePackagesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingByProjectIdAndBasemapIdArgs = {
+  basemapId: Scalars['Int'];
+  projectId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOfflineTileSettingsArgs = {
+  condition?: Maybe<OfflineTileSettingCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OfflineTileSettingsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryOptionalBasemapLayerArgs = {
   id: Scalars['Int'];
 };
@@ -8312,6 +8896,12 @@ export type QueryProfileByUserIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectArgs = {
   id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryProjectAccessStatusArgs = {
+  pid?: Maybe<Scalars['Int']>;
 };
 
 
@@ -8362,6 +8952,12 @@ export type QueryProjectInviteGroupsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ProjectInviteGroupsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryProjectPublicDetailsArgs = {
+  slug?: Maybe<Scalars['String']>;
 };
 
 
@@ -9471,6 +10067,8 @@ export type Survey = Node & {
   /** PUBLIC or INVITE_ONLY */
   accessType: SurveyAccessType;
   archivedResponseCount?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `Basemap`. */
+  basemaps?: Maybe<Array<Basemap>>;
   /** Reads a single `Form` that is related to this `Survey`. */
   form?: Maybe<Form>;
   /**
@@ -9517,6 +10115,12 @@ export type Survey = Node & {
   surveyInvites: Array<SurveyInvite>;
   /** Reads and enables pagination through a set of `SurveyResponse`. */
   surveyResponsesConnection: SurveyResponsesConnection;
+};
+
+
+export type SurveyBasemapsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -9822,6 +10426,14 @@ export type SurveyResponse = Node & {
   lastUpdatedById?: Maybe<Scalars['Int']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /**
+   * Should be used by clients to uniquely identify responses that are collected
+   * offline. Survey facilitators can download their responses to disk as json so
+   * that they may be recovered/submitted in the case of the client machine being
+   * damaged or stolen. Tracking an offline uuid ensures that these responses are
+   * not somehow submitted in duplicate.
+   */
+  offlineId?: Maybe<Scalars['UUID']>;
   /**
    * Checked on SUBMISSION, so adding or changing a survey geofence after responses
    * have been submitted will not update values. GPS coordinates and IP addresses
@@ -10424,6 +11036,45 @@ export type UpdateBasemapInput = {
   patch: BasemapPatch;
 };
 
+/** All input for the `updateBasemapOfflineTileSettings` mutation. */
+export type UpdateBasemapOfflineTileSettingsInput = {
+  basemapId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  maxZ?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  useDefault?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `updateBasemapOfflineTileSettings` mutation. */
+export type UpdateBasemapOfflineTileSettingsPayload = {
+  __typename?: 'UpdateBasemapOfflineTileSettingsPayload';
+  basemap?: Maybe<Basemap>;
+  /** An edge for our `Basemap`. May be used by Relay 1. */
+  basemapEdge?: Maybe<BasemapsEdge>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
+  interactivitySettings?: Maybe<InteractivitySetting>;
+  /** Reads a single `Project` that is related to this `Basemap`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateBasemapOfflineTileSettings` mutation. */
+export type UpdateBasemapOfflineTileSettingsPayloadBasemapEdgeArgs = {
+  orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
 /** The output of our update `Basemap` mutation. */
 export type UpdateBasemapPayload = {
   __typename?: 'UpdateBasemapPayload';
@@ -10995,6 +11646,96 @@ export type UpdateInteractivitySettingPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** The `InteractivitySetting` that was updated by this mutation. */
   interactivitySetting?: Maybe<InteractivitySetting>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  secret?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyPayload = {
+  __typename?: 'UpdateMapboxSecretKeyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateMapboxSecretKey` mutation. */
+export type UpdateMapboxSecretKeyPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `updateOfflineTileSettingByNodeId` mutation. */
+export type UpdateOfflineTileSettingByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `OfflineTileSetting` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `OfflineTileSetting` being updated. */
+  patch: OfflineTileSettingPatch;
+};
+
+/** All input for the `updateOfflineTileSettingByProjectIdAndBasemapId` mutation. */
+export type UpdateOfflineTileSettingByProjectIdAndBasemapIdInput = {
+  basemapId: Scalars['Int'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `OfflineTileSetting` being updated. */
+  patch: OfflineTileSettingPatch;
+  projectId: Scalars['Int'];
+};
+
+/** All input for the `updateOfflineTileSetting` mutation. */
+export type UpdateOfflineTileSettingInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `OfflineTileSetting` being updated. */
+  patch: OfflineTileSettingPatch;
+};
+
+/** The output of our update `OfflineTileSetting` mutation. */
+export type UpdateOfflineTileSettingPayload = {
+  __typename?: 'UpdateOfflineTileSettingPayload';
+  /** Reads a single `Basemap` that is related to this `OfflineTileSetting`. */
+  basemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OfflineTileSetting` that was updated by this mutation. */
+  offlineTileSetting?: Maybe<OfflineTileSetting>;
+  /** Reads a single `Project` that is related to this `OfflineTileSetting`. */
+  project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -12077,31 +12818,49 @@ export type UpdateBodyFragment = (
   & Pick<FormElement, 'body'>
 );
 
-export type MapboxApiKeysQueryVariables = Exact<{ [key: string]: never; }>;
+export type MapboxApiKeysQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type MapboxApiKeysQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
   )> }
 );
 
-export type UpdateKeysMutationVariables = Exact<{
+export type UpdatePublicKeyMutationVariables = Exact<{
   id: Scalars['Int'];
   public?: Maybe<Scalars['String']>;
-  secret?: Maybe<Scalars['String']>;
 }>;
 
 
-export type UpdateKeysMutation = (
+export type UpdatePublicKeyMutation = (
   { __typename?: 'Mutation' }
   & { updateProject?: Maybe<(
     { __typename?: 'UpdateProjectPayload' }
     & { project?: Maybe<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+      & Pick<Project, 'id' | 'mapboxPublicKey'>
+    )> }
+  )> }
+);
+
+export type UpdateSecretKeyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  mapboxSecretKey?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateSecretKeyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateMapboxSecretKey?: Maybe<(
+    { __typename?: 'UpdateMapboxSecretKeyPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'mapboxSecretKey'>
     )> }
   )> }
 );
@@ -12795,12 +13554,14 @@ export type UpdateInteractivitySettingsLayersMutation = (
   )> }
 );
 
-export type MapboxKeysQueryVariables = Exact<{ [key: string]: never; }>;
+export type MapboxKeysQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type MapboxKeysQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
   )> }
@@ -12819,6 +13580,65 @@ export type CreateProjectMutation = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'url' | 'slug'>
+    )> }
+  )> }
+);
+
+export type DownloadableOfflineTilePackagesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DownloadableOfflineTilePackagesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'mapboxPublicKey'>
+    & { offlineTilePackagesConnection: (
+      { __typename?: 'OfflineTilePackagesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'OfflineTilePackage' }
+        & OfflineTilePackageDetailsFragment
+      )> }
+    ) }
+  )> }
+);
+
+export type DownloadBasemapDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DownloadBasemapDetailsQuery = (
+  { __typename?: 'Query' }
+  & { basemap?: Maybe<(
+    { __typename?: 'Basemap' }
+    & OfflineBasemapDetailsFragment
+  )> }
+);
+
+export type ImportBasemapDetailsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ImportBasemapDetailsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id'>
+      & { basemaps?: Maybe<Array<(
+        { __typename?: 'Basemap' }
+        & Pick<Basemap, 'id' | 'thumbnail' | 'name'>
+        & { offlineSupportInformation?: Maybe<(
+          { __typename?: 'OfflineSupportInformation' }
+          & Pick<OfflineSupportInformation, 'hasUncacheableSources'>
+          & BasemapOfflineSupportInfoFragment
+        )> }
+      )>> }
     )> }
   )> }
 );
@@ -13266,6 +14086,307 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type MapEssentialsFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+  & { basemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, surveyBasemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, region: (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  ) }
+);
+
+export type GetBasemapsAndRegionQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type GetBasemapsAndRegionQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & MapEssentialsFragment
+  )> }
+);
+
+export type OfflineSurveysQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OfflineSurveysQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'name'>
+    )> }
+  )> }
+);
+
+export type SurveysByIdQueryVariables = Exact<{
+  surveyIds: Array<Maybe<Scalars['Int']>> | Maybe<Scalars['Int']>;
+}>;
+
+
+export type SurveysByIdQuery = (
+  { __typename?: 'Query' }
+  & { getSurveys?: Maybe<Array<(
+    { __typename?: 'Survey' }
+    & Pick<Survey, 'id' | 'projectId' | 'name'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'name' | 'slug'>
+    )> }
+  )>>, me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'canonicalEmail'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
+    )> }
+  )> }
+);
+
+export type OfflineTilePackageDetailsFragment = (
+  { __typename?: 'OfflineTilePackage' }
+  & Pick<OfflineTilePackage, 'id' | 'bytes' | 'projectId' | 'sourceType' | 'jobStatus' | 'tilesFetched' | 'totalTiles' | 'createdAt' | 'jobErrors' | 'dataSourceUrl' | 'isMapboxHosted' | 'maxZ' | 'maxShorelineZ' | 'presignedUrl' | 'originalUrlTemplate'>
+  & { region: (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  ) }
+);
+
+export type BasemapOfflineSupportInfoFragment = (
+  { __typename?: 'OfflineSupportInformation' }
+  & Pick<OfflineSupportInformation, 'id' | 'styleLastModified'>
+  & { staticAssets: Array<(
+    { __typename?: 'CacheableOfflineAsset' }
+    & Pick<CacheableOfflineAsset, 'url' | 'cacheKey' | 'type'>
+  )>, sources: Array<(
+    { __typename?: 'OfflineSourceDetails' }
+    & Pick<OfflineSourceDetails, 'templateUrl' | 'dataSourceUrl' | 'type'>
+    & { tilePackages: Array<(
+      { __typename?: 'OfflineTilePackage' }
+      & OfflineTilePackageDetailsFragment
+    )> }
+  )> }
+);
+
+export type OfflineBasemapDetailsFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'useDefaultOfflineTileSettings'>
+  & { offlineTileSettings: Array<(
+    { __typename?: 'OfflineTileSetting' }
+    & Pick<OfflineTileSetting, 'basemapId' | 'id' | 'maxShorelineZ' | 'maxZ'>
+  )>, offlineSupportInformation?: Maybe<(
+    { __typename?: 'OfflineSupportInformation' }
+    & BasemapOfflineSupportInfoFragment
+  )> }
+  & BasemapDetailsFragment
+);
+
+export type OfflineTileSettingsForCalculationFragment = (
+  { __typename?: 'OfflineTileSetting' }
+  & Pick<OfflineTileSetting, 'maxShorelineZ' | 'maxZ'>
+);
+
+export type OfflineSurveyMapsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OfflineSurveyMapsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'mapboxPublicKey' | 'id'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ), offlineTileSettings: Array<(
+      { __typename?: 'OfflineTileSetting' }
+      & Pick<OfflineTileSetting, 'maxShorelineZ' | 'maxZ' | 'basemapId'>
+    )>, surveys: Array<(
+      { __typename?: 'Survey' }
+      & Pick<Survey, 'id' | 'name'>
+      & { form?: Maybe<(
+        { __typename?: 'Form' }
+        & Pick<Form, 'id'>
+      )>, basemaps?: Maybe<Array<(
+        { __typename?: 'Basemap' }
+        & OfflineBasemapDetailsFragment
+      )>> }
+    )>, offlineTilePackagesConnection: (
+      { __typename?: 'OfflineTilePackagesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'OfflineTilePackage' }
+        & OfflineTilePackageDetailsFragment
+      )> }
+    ) }
+  )> }
+);
+
+export type OfflineTileSettingsFragment = (
+  { __typename?: 'OfflineTileSetting' }
+  & Pick<OfflineTileSetting, 'id' | 'projectId' | 'basemapId' | 'maxZ' | 'maxShorelineZ'>
+  & { region: (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  ) }
+);
+
+export type BasemapOfflineSettingsQueryVariables = Exact<{
+  id: Scalars['Int'];
+  slug: Scalars['String'];
+}>;
+
+
+export type BasemapOfflineSettingsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'mapboxPublicKey'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ), offlineTileSettings: Array<(
+      { __typename?: 'OfflineTileSetting' }
+      & OfflineTileSettingsFragment
+    )> }
+  )>, basemap?: Maybe<(
+    { __typename?: 'Basemap' }
+    & Pick<Basemap, 'id' | 'name' | 'url' | 'useDefaultOfflineTileSettings'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id'>
+      & { region: (
+        { __typename?: 'GeometryPolygon' }
+        & Pick<GeometryPolygon, 'geojson'>
+      ) }
+    )>, offlineSupportInformation?: Maybe<(
+      { __typename?: 'OfflineSupportInformation' }
+      & Pick<OfflineSupportInformation, 'id' | 'hasUncacheableSources'>
+      & { sources: Array<(
+        { __typename?: 'OfflineSourceDetails' }
+        & Pick<OfflineSourceDetails, 'dataSourceUrl' | 'type'>
+      )> }
+    )> }
+  )> }
+);
+
+export type UpdateBasemapOfflineTileSettingsMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  maxZ: Scalars['Int'];
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  basemapId: Scalars['Int'];
+  useDefault: Scalars['Boolean'];
+}>;
+
+
+export type UpdateBasemapOfflineTileSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemapOfflineTileSettings?: Maybe<(
+    { __typename?: 'UpdateBasemapOfflineTileSettingsPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'useDefaultOfflineTileSettings'>
+      & { project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id'>
+        & { offlineTileSettings: Array<(
+          { __typename?: 'OfflineTileSetting' }
+          & OfflineTileSettingsFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type GenerateOfflineTilePackageMutationVariables = Exact<{
+  dataSourceUrl: Scalars['String'];
+  projectId: Scalars['Int'];
+  maxZ: Scalars['Int'];
+  maxShorelineZ?: Maybe<Scalars['Int']>;
+  sourceType?: Maybe<OfflineTilePackageSourceType>;
+  originalUrlTemplate: Scalars['String'];
+}>;
+
+
+export type GenerateOfflineTilePackageMutation = (
+  { __typename?: 'Mutation' }
+  & { generateOfflineTilePackage?: Maybe<(
+    { __typename?: 'GenerateOfflineTilePackagePayload' }
+    & { offlineTilePackage?: Maybe<(
+      { __typename?: 'OfflineTilePackage' }
+      & { project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id'>
+        & { surveys: Array<(
+          { __typename?: 'Survey' }
+          & Pick<Survey, 'id'>
+          & { basemaps?: Maybe<Array<(
+            { __typename?: 'Basemap' }
+            & Pick<Basemap, 'id'>
+            & { offlineSupportInformation?: Maybe<(
+              { __typename?: 'OfflineSupportInformation' }
+              & Pick<OfflineSupportInformation, 'id'>
+              & { staticAssets: Array<(
+                { __typename?: 'CacheableOfflineAsset' }
+                & Pick<CacheableOfflineAsset, 'url' | 'type'>
+              )>, sources: Array<(
+                { __typename?: 'OfflineSourceDetails' }
+                & Pick<OfflineSourceDetails, 'templateUrl' | 'dataSourceUrl' | 'type'>
+                & { tilePackages: Array<(
+                  { __typename?: 'OfflineTilePackage' }
+                  & OfflineTilePackageDetailsFragment
+                )> }
+              )> }
+            )> }
+          )>> }
+        )> }
+      )> }
+      & OfflineTilePackageDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteTilePackageMutationVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type DeleteTilePackageMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteOfflineTilePackage?: Maybe<(
+    { __typename?: 'DeleteOfflineTilePackagePayload' }
+    & { offlineTilePackage?: Maybe<(
+      { __typename?: 'OfflineTilePackage' }
+      & Pick<OfflineTilePackage, 'id'>
+    )> }
+  )> }
+);
+
+export type GetTilePackageQueryVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type GetTilePackageQuery = (
+  { __typename?: 'Query' }
+  & { offlineTilePackage?: Maybe<(
+    { __typename?: 'OfflineTilePackage' }
+    & OfflineTilePackageDetailsFragment
+  )> }
+);
+
 export type ProjectAccessControlSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13298,6 +14419,25 @@ export type UpdateProjectAccessControlSettingsMutation = (
   )> }
 );
 
+export type ProjectMetadataFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled'>
+);
+
+export type ProjectPublicDetailsMetadataFragment = (
+  { __typename?: 'PublicProjectDetail' }
+  & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail' | 'accessStatus'>
+);
+
+export type ProjectMetadataMeFragFragment = (
+  { __typename?: 'User' }
+  & Pick<User, 'id'>
+  & { profile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
+  )> }
+);
+
 export type ProjectMetadataQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13305,20 +14445,15 @@ export type ProjectMetadataQueryVariables = Exact<{
 
 export type ProjectMetadataQuery = (
   { __typename?: 'Query' }
-  & Pick<Query, 'currentProjectAccessStatus'>
   & { project?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured'>
-  )>, currentProjectPublicDetails?: Maybe<(
+    & ProjectMetadataFragment
+  )>, projectPublicDetails?: Maybe<(
     { __typename?: 'PublicProjectDetail' }
-    & Pick<PublicProjectDetail, 'id' | 'accessControl' | 'slug' | 'name' | 'logoUrl' | 'supportEmail'>
+    & ProjectPublicDetailsMetadataFragment
   )>, me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'id'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
-    )> }
+    & ProjectMetadataMeFragFragment
   )> }
 );
 
@@ -13332,7 +14467,7 @@ export type MeQuery = (
     & Pick<User, 'id'>
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
-      & Pick<Profile, 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
+      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
     )> }
   )> }
 );
@@ -13554,10 +14689,7 @@ export type SurveyFormEditorDetailsQueryVariables = Exact<{
 
 export type SurveyFormEditorDetailsQuery = (
   { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name'>
-  )>, formElementTypes?: Maybe<Array<(
+  & { formElementTypes?: Maybe<Array<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
   )>>, survey?: Maybe<(
@@ -13574,7 +14706,7 @@ export type SurveyFormEditorDetailsQuery = (
       )>> }
     )> }
     & SurveyListDetailsFragment
-  )>, currentProject?: Maybe<(
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'name' | 'url'>
     & { region: (
@@ -14191,12 +15323,14 @@ export type UpdateFormElementMapCameraMutation = (
   )> }
 );
 
-export type AllBasemapsQueryVariables = Exact<{ [key: string]: never; }>;
+export type AllBasemapsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type AllBasemapsQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { basemaps?: Maybe<Array<(
@@ -14226,6 +15360,23 @@ export type GetFormElementQuery = (
   )> }
 );
 
+export type UpdateOfflineEnabledMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateOfflineEnabledMutation = (
+  { __typename?: 'Mutation' }
+  & { enableOfflineSupport?: Maybe<(
+    { __typename?: 'EnableOfflineSupportPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'isOfflineEnabled'>
+    )> }
+  )> }
+);
+
 export type SurveyAppRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'formElementId' | 'id' | 'jumpToId' | 'position'>
@@ -14250,7 +15401,10 @@ export type SurveyAppFormElementFragment = (
 export type SurveyAppSurveyFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
-  & { form?: Maybe<(
+  & { basemaps?: Maybe<Array<(
+    { __typename?: 'Basemap' }
+    & BasemapDetailsFragment
+  )>>, form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
     & { logicRules?: Maybe<Array<(
@@ -14265,25 +15419,28 @@ export type SurveyAppSurveyFragment = (
 
 export type SurveyQueryVariables = Exact<{
   id: Scalars['Int'];
+  slug: Scalars['String'];
 }>;
 
 
 export type SurveyQuery = (
   { __typename?: 'Query' }
-  & { me?: Maybe<(
+  & { projectPublicDetails?: Maybe<(
+    { __typename?: 'PublicProjectDetail' }
+    & ProjectPublicDetailsMetadataFragment
+  )>, me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'isAdmin'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & Pick<Profile, 'email' | 'fullname'>
-    )> }
+    & Pick<User, 'id' | 'isAdmin'>
+    & ProjectMetadataMeFragFragment
   )>, currentProject?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'name' | 'url'>
+    & Pick<Project, 'id' | 'name' | 'url'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
     ) }
+    & MapEssentialsFragment
+    & ProjectMetadataFragment
   )>, survey?: Maybe<(
     { __typename?: 'Survey' }
     & SurveyAppSurveyFragment
@@ -14297,6 +15454,7 @@ export type CreateResponseMutationVariables = Exact<{
   responseData: Scalars['JSON'];
   facilitated: Scalars['Boolean'];
   practice: Scalars['Boolean'];
+  offlineId?: Maybe<Scalars['UUID']>;
 }>;
 
 
@@ -14309,27 +15467,6 @@ export type CreateResponseMutation = (
       { __typename?: 'SurveyResponse' }
       & Pick<SurveyResponse, 'id'>
     )> }
-  )> }
-);
-
-export type GetBasemapsAndRegionQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type GetBasemapsAndRegionQuery = (
-  { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
-    & { basemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, surveyBasemaps?: Maybe<Array<(
-      { __typename?: 'Basemap' }
-      & BasemapDetailsFragment
-    )>>, region: (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    ) }
   )> }
 );
 
@@ -14361,7 +15498,6 @@ export type UpdateProjectSettingsMutationVariables = Exact<{
   logoLink?: Maybe<Scalars['String']>;
   isFeatured?: Maybe<Scalars['Boolean']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -14419,7 +15555,7 @@ export type ParticipantListDetailsFragment = (
   & Pick<User, 'id' | 'bannedFromForums' | 'isAdmin' | 'canonicalEmail'>
   & { profile?: Maybe<(
     { __typename?: 'Profile' }
-    & Pick<Profile, 'email' | 'fullname' | 'nickname' | 'picture'>
+    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )>, groups?: Maybe<Array<(
     { __typename?: 'Group' }
     & Pick<Group, 'id' | 'name'>
@@ -14490,16 +15626,18 @@ export type UserListDetailsFragment = (
     & Pick<Group, 'name' | 'id'>
   )>>, profile?: Maybe<(
     { __typename?: 'Profile' }
-    & Pick<Profile, 'email' | 'fullname' | 'nickname' | 'picture'>
+    & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )> }
 );
 
-export type UserSettingsListsQueryVariables = Exact<{ [key: string]: never; }>;
+export type UserSettingsListsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type UserSettingsListsQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'accessControl'>
     & { groups: Array<(
@@ -14520,6 +15658,7 @@ export type UserSettingsListsQuery = (
 
 export type UserInfoQueryVariables = Exact<{
   userId: Scalars['Int'];
+  slug: Scalars['String'];
 }>;
 
 
@@ -14536,9 +15675,9 @@ export type UserInfoQuery = (
       & Pick<Group, 'name' | 'id'>
     )>>, profile?: Maybe<(
       { __typename?: 'Profile' }
-      & Pick<Profile, 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
+      & Pick<Profile, 'userId' | 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
     )> }
-  )>, currentProject?: Maybe<(
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { groups: Array<(
@@ -14674,12 +15813,13 @@ export type InviteEmailDetailsFragment = (
 
 export type InviteEditorModalQueryQueryVariables = Exact<{
   inviteId: Scalars['Int'];
+  slug: Scalars['String'];
 }>;
 
 
 export type InviteEditorModalQueryQuery = (
   { __typename?: 'Query' }
-  & { currentProject?: Maybe<(
+  & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { groups: Array<(
@@ -14831,6 +15971,7 @@ export type UpdateProfileMutation = (
     { __typename?: 'UpdateProfilePayload' }
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
+      & Pick<Profile, 'userId'>
       & { user?: Maybe<(
         { __typename?: 'User' }
         & Pick<User, 'id'>
@@ -15092,6 +16233,138 @@ export const BasemapDetailsFragmentDoc = gql`
   surveysOnly
 }
     `;
+export const MapEssentialsFragmentDoc = gql`
+    fragment MapEssentials on Project {
+  id
+  basemaps {
+    ...BasemapDetails
+  }
+  surveyBasemaps {
+    ...BasemapDetails
+  }
+  region {
+    geojson
+  }
+  mapboxPublicKey
+  mapboxSecretKey
+}
+    ${BasemapDetailsFragmentDoc}`;
+export const OfflineTilePackageDetailsFragmentDoc = gql`
+    fragment OfflineTilePackageDetails on OfflineTilePackage {
+  id
+  bytes
+  projectId
+  region {
+    geojson
+  }
+  sourceType
+  jobStatus
+  tilesFetched
+  totalTiles
+  createdAt
+  jobErrors
+  dataSourceUrl
+  isMapboxHosted
+  maxZ
+  maxShorelineZ
+  presignedUrl
+  originalUrlTemplate
+}
+    `;
+export const BasemapOfflineSupportInfoFragmentDoc = gql`
+    fragment BasemapOfflineSupportInfo on OfflineSupportInformation {
+  id
+  styleLastModified
+  staticAssets {
+    url
+    cacheKey
+    type
+  }
+  sources {
+    templateUrl
+    dataSourceUrl
+    tilePackages {
+      ...OfflineTilePackageDetails
+    }
+    type
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+export const OfflineBasemapDetailsFragmentDoc = gql`
+    fragment OfflineBasemapDetails on Basemap {
+  ...BasemapDetails
+  useDefaultOfflineTileSettings
+  offlineTileSettings {
+    basemapId
+    id
+    maxShorelineZ
+    maxZ
+  }
+  offlineSupportInformation {
+    ...BasemapOfflineSupportInfo
+  }
+}
+    ${BasemapDetailsFragmentDoc}
+${BasemapOfflineSupportInfoFragmentDoc}`;
+export const OfflineTileSettingsForCalculationFragmentDoc = gql`
+    fragment OfflineTileSettingsForCalculation on OfflineTileSetting {
+  maxShorelineZ
+  maxZ
+}
+    `;
+export const OfflineTileSettingsFragmentDoc = gql`
+    fragment OfflineTileSettings on OfflineTileSetting {
+  id
+  projectId
+  basemapId
+  maxZ
+  maxShorelineZ
+  region {
+    geojson
+  }
+}
+    `;
+export const ProjectMetadataFragmentDoc = gql`
+    fragment ProjectMetadata on Project {
+  id
+  slug
+  url
+  name
+  description
+  logoLink
+  logoUrl
+  accessControl
+  sessionIsAdmin
+  isFeatured
+  supportEmail
+  isOfflineEnabled
+}
+    `;
+export const ProjectPublicDetailsMetadataFragmentDoc = gql`
+    fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
+  id
+  accessControl
+  slug
+  name
+  logoUrl
+  supportEmail
+  accessStatus
+}
+    `;
+export const ProjectMetadataMeFragFragmentDoc = gql`
+    fragment ProjectMetadataMeFrag on User {
+  id
+  profile {
+    userId
+    fullname
+    nickname
+    email
+    picture
+    bio
+    affiliations
+  }
+}
+    `;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -15299,6 +16572,9 @@ export const SurveyAppSurveyFragmentDoc = gql`
   showProgress
   showFacilitationOption
   supportedLanguages
+  basemaps {
+    ...BasemapDetails
+  }
   form {
     id
     logicRules {
@@ -15309,7 +16585,8 @@ export const SurveyAppSurveyFragmentDoc = gql`
     }
   }
 }
-    ${SurveyAppRuleFragmentDoc}
+    ${BasemapDetailsFragmentDoc}
+${SurveyAppRuleFragmentDoc}
 ${SurveyAppFormElementFragmentDoc}`;
 export const ParticipantListDetailsFragmentDoc = gql`
     fragment ParticipantListDetails on User {
@@ -15317,6 +16594,7 @@ export const ParticipantListDetailsFragmentDoc = gql`
   bannedFromForums
   isAdmin
   profile {
+    userId
     email
     fullname
     nickname
@@ -15342,6 +16620,7 @@ export const UserListDetailsFragmentDoc = gql`
   onboarded
   participationStatus
   profile {
+    userId
     email
     fullname
     nickname
@@ -15473,8 +16752,8 @@ export type UpdateProjectStorageBucketMutationHookResult = ReturnType<typeof use
 export type UpdateProjectStorageBucketMutationResult = Apollo.MutationResult<UpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
 export const MapboxApiKeysDocument = gql`
-    query MapboxAPIKeys {
-  currentProject {
+    query MapboxAPIKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     mapboxPublicKey
     mapboxSecretKey
@@ -15494,10 +16773,11 @@ export const MapboxApiKeysDocument = gql`
  * @example
  * const { data, loading, error } = useMapboxApiKeysQuery({
  *   variables: {
+ *      slug: // value for 'slug'
  *   },
  * });
  */
-export function useMapboxApiKeysQuery(baseOptions?: Apollo.QueryHookOptions<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>) {
+export function useMapboxApiKeysQuery(baseOptions: Apollo.QueryHookOptions<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>(MapboxApiKeysDocument, options);
       }
@@ -15508,47 +16788,80 @@ export function useMapboxApiKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type MapboxApiKeysQueryHookResult = ReturnType<typeof useMapboxApiKeysQuery>;
 export type MapboxApiKeysLazyQueryHookResult = ReturnType<typeof useMapboxApiKeysLazyQuery>;
 export type MapboxApiKeysQueryResult = Apollo.QueryResult<MapboxApiKeysQuery, MapboxApiKeysQueryVariables>;
-export const UpdateKeysDocument = gql`
-    mutation updateKeys($id: Int!, $public: String, $secret: String) {
-  updateProject(
-    input: {id: $id, patch: {mapboxPublicKey: $public, mapboxSecretKey: $secret}}
-  ) {
+export const UpdatePublicKeyDocument = gql`
+    mutation updatePublicKey($id: Int!, $public: String) {
+  updateProject(input: {id: $id, patch: {mapboxPublicKey: $public}}) {
     project {
       id
       mapboxPublicKey
-      mapboxSecretKey
     }
   }
 }
     `;
-export type UpdateKeysMutationFn = Apollo.MutationFunction<UpdateKeysMutation, UpdateKeysMutationVariables>;
+export type UpdatePublicKeyMutationFn = Apollo.MutationFunction<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>;
 
 /**
- * __useUpdateKeysMutation__
+ * __useUpdatePublicKeyMutation__
  *
- * To run a mutation, you first call `useUpdateKeysMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateKeysMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useUpdatePublicKeyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdatePublicKeyMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [updateKeysMutation, { data, loading, error }] = useUpdateKeysMutation({
+ * const [updatePublicKeyMutation, { data, loading, error }] = useUpdatePublicKeyMutation({
  *   variables: {
  *      id: // value for 'id'
  *      public: // value for 'public'
- *      secret: // value for 'secret'
  *   },
  * });
  */
-export function useUpdateKeysMutation(baseOptions?: Apollo.MutationHookOptions<UpdateKeysMutation, UpdateKeysMutationVariables>) {
+export function useUpdatePublicKeyMutation(baseOptions?: Apollo.MutationHookOptions<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateKeysMutation, UpdateKeysMutationVariables>(UpdateKeysDocument, options);
+        return Apollo.useMutation<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>(UpdatePublicKeyDocument, options);
       }
-export type UpdateKeysMutationHookResult = ReturnType<typeof useUpdateKeysMutation>;
-export type UpdateKeysMutationResult = Apollo.MutationResult<UpdateKeysMutation>;
-export type UpdateKeysMutationOptions = Apollo.BaseMutationOptions<UpdateKeysMutation, UpdateKeysMutationVariables>;
+export type UpdatePublicKeyMutationHookResult = ReturnType<typeof useUpdatePublicKeyMutation>;
+export type UpdatePublicKeyMutationResult = Apollo.MutationResult<UpdatePublicKeyMutation>;
+export type UpdatePublicKeyMutationOptions = Apollo.BaseMutationOptions<UpdatePublicKeyMutation, UpdatePublicKeyMutationVariables>;
+export const UpdateSecretKeyDocument = gql`
+    mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
+  updateMapboxSecretKey(input: {projectId: $id, secret: $mapboxSecretKey}) {
+    project {
+      id
+      mapboxSecretKey
+    }
+  }
+}
+    `;
+export type UpdateSecretKeyMutationFn = Apollo.MutationFunction<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>;
+
+/**
+ * __useUpdateSecretKeyMutation__
+ *
+ * To run a mutation, you first call `useUpdateSecretKeyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSecretKeyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSecretKeyMutation, { data, loading, error }] = useUpdateSecretKeyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      mapboxSecretKey: // value for 'mapboxSecretKey'
+ *   },
+ * });
+ */
+export function useUpdateSecretKeyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>(UpdateSecretKeyDocument, options);
+      }
+export type UpdateSecretKeyMutationHookResult = ReturnType<typeof useUpdateSecretKeyMutation>;
+export type UpdateSecretKeyMutationResult = Apollo.MutationResult<UpdateSecretKeyMutation>;
+export type UpdateSecretKeyMutationOptions = Apollo.BaseMutationOptions<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>;
 export const GetAclDocument = gql`
     query GetAcl($nodeId: ID!) {
   aclByNodeId(nodeId: $nodeId) {
@@ -17145,8 +18458,8 @@ export type UpdateInteractivitySettingsLayersMutationHookResult = ReturnType<typ
 export type UpdateInteractivitySettingsLayersMutationResult = Apollo.MutationResult<UpdateInteractivitySettingsLayersMutation>;
 export type UpdateInteractivitySettingsLayersMutationOptions = Apollo.BaseMutationOptions<UpdateInteractivitySettingsLayersMutation, UpdateInteractivitySettingsLayersMutationVariables>;
 export const MapboxKeysDocument = gql`
-    query MapboxKeys {
-  currentProject {
+    query MapboxKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     mapboxPublicKey
     mapboxSecretKey
@@ -17166,10 +18479,11 @@ export const MapboxKeysDocument = gql`
  * @example
  * const { data, loading, error } = useMapboxKeysQuery({
  *   variables: {
+ *      slug: // value for 'slug'
  *   },
  * });
  */
-export function useMapboxKeysQuery(baseOptions?: Apollo.QueryHookOptions<MapboxKeysQuery, MapboxKeysQueryVariables>) {
+export function useMapboxKeysQuery(baseOptions: Apollo.QueryHookOptions<MapboxKeysQuery, MapboxKeysQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<MapboxKeysQuery, MapboxKeysQueryVariables>(MapboxKeysDocument, options);
       }
@@ -17218,6 +18532,128 @@ export function useCreateProjectMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateProjectMutationHookResult = ReturnType<typeof useCreateProjectMutation>;
 export type CreateProjectMutationResult = Apollo.MutationResult<CreateProjectMutation>;
 export type CreateProjectMutationOptions = Apollo.BaseMutationOptions<CreateProjectMutation, CreateProjectMutationVariables>;
+export const DownloadableOfflineTilePackagesDocument = gql`
+    query DownloadableOfflineTilePackages($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+
+/**
+ * __useDownloadableOfflineTilePackagesQuery__
+ *
+ * To run a query within a React component, call `useDownloadableOfflineTilePackagesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDownloadableOfflineTilePackagesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDownloadableOfflineTilePackagesQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useDownloadableOfflineTilePackagesQuery(baseOptions: Apollo.QueryHookOptions<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>(DownloadableOfflineTilePackagesDocument, options);
+      }
+export function useDownloadableOfflineTilePackagesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>(DownloadableOfflineTilePackagesDocument, options);
+        }
+export type DownloadableOfflineTilePackagesQueryHookResult = ReturnType<typeof useDownloadableOfflineTilePackagesQuery>;
+export type DownloadableOfflineTilePackagesLazyQueryHookResult = ReturnType<typeof useDownloadableOfflineTilePackagesLazyQuery>;
+export type DownloadableOfflineTilePackagesQueryResult = Apollo.QueryResult<DownloadableOfflineTilePackagesQuery, DownloadableOfflineTilePackagesQueryVariables>;
+export const DownloadBasemapDetailsDocument = gql`
+    query DownloadBasemapDetails($id: Int!) {
+  basemap(id: $id) {
+    ...OfflineBasemapDetails
+  }
+}
+    ${OfflineBasemapDetailsFragmentDoc}`;
+
+/**
+ * __useDownloadBasemapDetailsQuery__
+ *
+ * To run a query within a React component, call `useDownloadBasemapDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDownloadBasemapDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDownloadBasemapDetailsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDownloadBasemapDetailsQuery(baseOptions: Apollo.QueryHookOptions<DownloadBasemapDetailsQuery, DownloadBasemapDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DownloadBasemapDetailsQuery, DownloadBasemapDetailsQueryVariables>(DownloadBasemapDetailsDocument, options);
+      }
+export function useDownloadBasemapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DownloadBasemapDetailsQuery, DownloadBasemapDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DownloadBasemapDetailsQuery, DownloadBasemapDetailsQueryVariables>(DownloadBasemapDetailsDocument, options);
+        }
+export type DownloadBasemapDetailsQueryHookResult = ReturnType<typeof useDownloadBasemapDetailsQuery>;
+export type DownloadBasemapDetailsLazyQueryHookResult = ReturnType<typeof useDownloadBasemapDetailsLazyQuery>;
+export type DownloadBasemapDetailsQueryResult = Apollo.QueryResult<DownloadBasemapDetailsQuery, DownloadBasemapDetailsQueryVariables>;
+export const ImportBasemapDetailsDocument = gql`
+    query ImportBasemapDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      basemaps {
+        id
+        thumbnail
+        name
+        offlineSupportInformation {
+          hasUncacheableSources
+          ...BasemapOfflineSupportInfo
+        }
+      }
+    }
+  }
+}
+    ${BasemapOfflineSupportInfoFragmentDoc}`;
+
+/**
+ * __useImportBasemapDetailsQuery__
+ *
+ * To run a query within a React component, call `useImportBasemapDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useImportBasemapDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useImportBasemapDetailsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useImportBasemapDetailsQuery(baseOptions: Apollo.QueryHookOptions<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>(ImportBasemapDetailsDocument, options);
+      }
+export function useImportBasemapDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>(ImportBasemapDetailsDocument, options);
+        }
+export type ImportBasemapDetailsQueryHookResult = ReturnType<typeof useImportBasemapDetailsQuery>;
+export type ImportBasemapDetailsLazyQueryHookResult = ReturnType<typeof useImportBasemapDetailsLazyQuery>;
+export type ImportBasemapDetailsQueryResult = Apollo.QueryResult<ImportBasemapDetailsQuery, ImportBasemapDetailsQueryVariables>;
 export const DraftTableOfContentsDocument = gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -18352,6 +19788,440 @@ export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationH
 export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
+export const GetBasemapsAndRegionDocument = gql`
+    query GetBasemapsAndRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
+    ...MapEssentials
+  }
+}
+    ${MapEssentialsFragmentDoc}`;
+
+/**
+ * __useGetBasemapsAndRegionQuery__
+ *
+ * To run a query within a React component, call `useGetBasemapsAndRegionQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetBasemapsAndRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetBasemapsAndRegionQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useGetBasemapsAndRegionQuery(baseOptions: Apollo.QueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
+      }
+export function useGetBasemapsAndRegionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
+        }
+export type GetBasemapsAndRegionQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionQuery>;
+export type GetBasemapsAndRegionLazyQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionLazyQuery>;
+export type GetBasemapsAndRegionQueryResult = Apollo.QueryResult<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>;
+export const OfflineSurveysDocument = gql`
+    query OfflineSurveys($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      name
+    }
+  }
+}
+    `;
+
+/**
+ * __useOfflineSurveysQuery__
+ *
+ * To run a query within a React component, call `useOfflineSurveysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOfflineSurveysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOfflineSurveysQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useOfflineSurveysQuery(baseOptions: Apollo.QueryHookOptions<OfflineSurveysQuery, OfflineSurveysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OfflineSurveysQuery, OfflineSurveysQueryVariables>(OfflineSurveysDocument, options);
+      }
+export function useOfflineSurveysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OfflineSurveysQuery, OfflineSurveysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OfflineSurveysQuery, OfflineSurveysQueryVariables>(OfflineSurveysDocument, options);
+        }
+export type OfflineSurveysQueryHookResult = ReturnType<typeof useOfflineSurveysQuery>;
+export type OfflineSurveysLazyQueryHookResult = ReturnType<typeof useOfflineSurveysLazyQuery>;
+export type OfflineSurveysQueryResult = Apollo.QueryResult<OfflineSurveysQuery, OfflineSurveysQueryVariables>;
+export const SurveysByIdDocument = gql`
+    query SurveysById($surveyIds: [Int]!) {
+  getSurveys(ids: $surveyIds) {
+    id
+    projectId
+    name
+    project {
+      id
+      name
+      slug
+    }
+  }
+  me {
+    id
+    canonicalEmail
+    profile {
+      userId
+      email
+      fullname
+      nickname
+      picture
+    }
+  }
+}
+    `;
+
+/**
+ * __useSurveysByIdQuery__
+ *
+ * To run a query within a React component, call `useSurveysByIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSurveysByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSurveysByIdQuery({
+ *   variables: {
+ *      surveyIds: // value for 'surveyIds'
+ *   },
+ * });
+ */
+export function useSurveysByIdQuery(baseOptions: Apollo.QueryHookOptions<SurveysByIdQuery, SurveysByIdQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SurveysByIdQuery, SurveysByIdQueryVariables>(SurveysByIdDocument, options);
+      }
+export function useSurveysByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SurveysByIdQuery, SurveysByIdQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SurveysByIdQuery, SurveysByIdQueryVariables>(SurveysByIdDocument, options);
+        }
+export type SurveysByIdQueryHookResult = ReturnType<typeof useSurveysByIdQuery>;
+export type SurveysByIdLazyQueryHookResult = ReturnType<typeof useSurveysByIdLazyQuery>;
+export type SurveysByIdQueryResult = Apollo.QueryResult<SurveysByIdQuery, SurveysByIdQueryVariables>;
+export const OfflineSurveyMapsDocument = gql`
+    query OfflineSurveyMaps($slug: String!) {
+  projectBySlug(slug: $slug) {
+    region {
+      geojson
+    }
+    mapboxPublicKey
+    id
+    offlineTileSettings {
+      maxShorelineZ
+      maxZ
+      basemapId
+    }
+    surveys {
+      id
+      name
+      form {
+        id
+      }
+      basemaps {
+        ...OfflineBasemapDetails
+      }
+    }
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+    ${OfflineBasemapDetailsFragmentDoc}
+${OfflineTilePackageDetailsFragmentDoc}`;
+
+/**
+ * __useOfflineSurveyMapsQuery__
+ *
+ * To run a query within a React component, call `useOfflineSurveyMapsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOfflineSurveyMapsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOfflineSurveyMapsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useOfflineSurveyMapsQuery(baseOptions: Apollo.QueryHookOptions<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>(OfflineSurveyMapsDocument, options);
+      }
+export function useOfflineSurveyMapsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>(OfflineSurveyMapsDocument, options);
+        }
+export type OfflineSurveyMapsQueryHookResult = ReturnType<typeof useOfflineSurveyMapsQuery>;
+export type OfflineSurveyMapsLazyQueryHookResult = ReturnType<typeof useOfflineSurveyMapsLazyQuery>;
+export type OfflineSurveyMapsQueryResult = Apollo.QueryResult<OfflineSurveyMapsQuery, OfflineSurveyMapsQueryVariables>;
+export const BasemapOfflineSettingsDocument = gql`
+    query BasemapOfflineSettings($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    mapboxPublicKey
+    region {
+      geojson
+    }
+    offlineTileSettings {
+      ...OfflineTileSettings
+    }
+  }
+  basemap(id: $id) {
+    id
+    name
+    url
+    useDefaultOfflineTileSettings
+    project {
+      id
+      region {
+        geojson
+      }
+    }
+    offlineSupportInformation {
+      id
+      hasUncacheableSources
+      sources {
+        dataSourceUrl
+        type
+      }
+    }
+  }
+}
+    ${OfflineTileSettingsFragmentDoc}`;
+
+/**
+ * __useBasemapOfflineSettingsQuery__
+ *
+ * To run a query within a React component, call `useBasemapOfflineSettingsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useBasemapOfflineSettingsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useBasemapOfflineSettingsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useBasemapOfflineSettingsQuery(baseOptions: Apollo.QueryHookOptions<BasemapOfflineSettingsQuery, BasemapOfflineSettingsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<BasemapOfflineSettingsQuery, BasemapOfflineSettingsQueryVariables>(BasemapOfflineSettingsDocument, options);
+      }
+export function useBasemapOfflineSettingsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<BasemapOfflineSettingsQuery, BasemapOfflineSettingsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<BasemapOfflineSettingsQuery, BasemapOfflineSettingsQueryVariables>(BasemapOfflineSettingsDocument, options);
+        }
+export type BasemapOfflineSettingsQueryHookResult = ReturnType<typeof useBasemapOfflineSettingsQuery>;
+export type BasemapOfflineSettingsLazyQueryHookResult = ReturnType<typeof useBasemapOfflineSettingsLazyQuery>;
+export type BasemapOfflineSettingsQueryResult = Apollo.QueryResult<BasemapOfflineSettingsQuery, BasemapOfflineSettingsQueryVariables>;
+export const UpdateBasemapOfflineTileSettingsDocument = gql`
+    mutation UpdateBasemapOfflineTileSettings($projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $basemapId: Int!, $useDefault: Boolean!) {
+  updateBasemapOfflineTileSettings(
+    input: {basemapId: $basemapId, maxShorelineZ: $maxShorelineZ, maxZ: $maxZ, projectId: $projectId, useDefault: $useDefault}
+  ) {
+    basemap {
+      id
+      useDefaultOfflineTileSettings
+      project {
+        id
+        offlineTileSettings {
+          ...OfflineTileSettings
+        }
+      }
+    }
+  }
+}
+    ${OfflineTileSettingsFragmentDoc}`;
+export type UpdateBasemapOfflineTileSettingsMutationFn = Apollo.MutationFunction<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>;
+
+/**
+ * __useUpdateBasemapOfflineTileSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateBasemapOfflineTileSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateBasemapOfflineTileSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateBasemapOfflineTileSettingsMutation, { data, loading, error }] = useUpdateBasemapOfflineTileSettingsMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      maxZ: // value for 'maxZ'
+ *      maxShorelineZ: // value for 'maxShorelineZ'
+ *      basemapId: // value for 'basemapId'
+ *      useDefault: // value for 'useDefault'
+ *   },
+ * });
+ */
+export function useUpdateBasemapOfflineTileSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>(UpdateBasemapOfflineTileSettingsDocument, options);
+      }
+export type UpdateBasemapOfflineTileSettingsMutationHookResult = ReturnType<typeof useUpdateBasemapOfflineTileSettingsMutation>;
+export type UpdateBasemapOfflineTileSettingsMutationResult = Apollo.MutationResult<UpdateBasemapOfflineTileSettingsMutation>;
+export type UpdateBasemapOfflineTileSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateBasemapOfflineTileSettingsMutation, UpdateBasemapOfflineTileSettingsMutationVariables>;
+export const GenerateOfflineTilePackageDocument = gql`
+    mutation generateOfflineTilePackage($dataSourceUrl: String!, $projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $sourceType: OfflineTilePackageSourceType, $originalUrlTemplate: String!) {
+  generateOfflineTilePackage(
+    input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType, originalUrlTemplate: $originalUrlTemplate}
+  ) {
+    offlineTilePackage {
+      project {
+        id
+        surveys {
+          id
+          basemaps {
+            id
+            offlineSupportInformation {
+              id
+              staticAssets {
+                url
+                type
+              }
+              sources {
+                templateUrl
+                dataSourceUrl
+                tilePackages {
+                  ...OfflineTilePackageDetails
+                }
+                type
+              }
+            }
+          }
+        }
+      }
+      ...OfflineTilePackageDetails
+    }
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+export type GenerateOfflineTilePackageMutationFn = Apollo.MutationFunction<GenerateOfflineTilePackageMutation, GenerateOfflineTilePackageMutationVariables>;
+
+/**
+ * __useGenerateOfflineTilePackageMutation__
+ *
+ * To run a mutation, you first call `useGenerateOfflineTilePackageMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateOfflineTilePackageMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateOfflineTilePackageMutation, { data, loading, error }] = useGenerateOfflineTilePackageMutation({
+ *   variables: {
+ *      dataSourceUrl: // value for 'dataSourceUrl'
+ *      projectId: // value for 'projectId'
+ *      maxZ: // value for 'maxZ'
+ *      maxShorelineZ: // value for 'maxShorelineZ'
+ *      sourceType: // value for 'sourceType'
+ *      originalUrlTemplate: // value for 'originalUrlTemplate'
+ *   },
+ * });
+ */
+export function useGenerateOfflineTilePackageMutation(baseOptions?: Apollo.MutationHookOptions<GenerateOfflineTilePackageMutation, GenerateOfflineTilePackageMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateOfflineTilePackageMutation, GenerateOfflineTilePackageMutationVariables>(GenerateOfflineTilePackageDocument, options);
+      }
+export type GenerateOfflineTilePackageMutationHookResult = ReturnType<typeof useGenerateOfflineTilePackageMutation>;
+export type GenerateOfflineTilePackageMutationResult = Apollo.MutationResult<GenerateOfflineTilePackageMutation>;
+export type GenerateOfflineTilePackageMutationOptions = Apollo.BaseMutationOptions<GenerateOfflineTilePackageMutation, GenerateOfflineTilePackageMutationVariables>;
+export const DeleteTilePackageDocument = gql`
+    mutation deleteTilePackage($id: UUID!) {
+  deleteOfflineTilePackage(input: {id: $id}) {
+    offlineTilePackage {
+      id
+    }
+  }
+}
+    `;
+export type DeleteTilePackageMutationFn = Apollo.MutationFunction<DeleteTilePackageMutation, DeleteTilePackageMutationVariables>;
+
+/**
+ * __useDeleteTilePackageMutation__
+ *
+ * To run a mutation, you first call `useDeleteTilePackageMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteTilePackageMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteTilePackageMutation, { data, loading, error }] = useDeleteTilePackageMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteTilePackageMutation(baseOptions?: Apollo.MutationHookOptions<DeleteTilePackageMutation, DeleteTilePackageMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteTilePackageMutation, DeleteTilePackageMutationVariables>(DeleteTilePackageDocument, options);
+      }
+export type DeleteTilePackageMutationHookResult = ReturnType<typeof useDeleteTilePackageMutation>;
+export type DeleteTilePackageMutationResult = Apollo.MutationResult<DeleteTilePackageMutation>;
+export type DeleteTilePackageMutationOptions = Apollo.BaseMutationOptions<DeleteTilePackageMutation, DeleteTilePackageMutationVariables>;
+export const GetTilePackageDocument = gql`
+    query getTilePackage($id: UUID!) {
+  offlineTilePackage(id: $id) {
+    ...OfflineTilePackageDetails
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+
+/**
+ * __useGetTilePackageQuery__
+ *
+ * To run a query within a React component, call `useGetTilePackageQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetTilePackageQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetTilePackageQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetTilePackageQuery(baseOptions: Apollo.QueryHookOptions<GetTilePackageQuery, GetTilePackageQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetTilePackageQuery, GetTilePackageQueryVariables>(GetTilePackageDocument, options);
+      }
+export function useGetTilePackageLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetTilePackageQuery, GetTilePackageQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetTilePackageQuery, GetTilePackageQueryVariables>(GetTilePackageDocument, options);
+        }
+export type GetTilePackageQueryHookResult = ReturnType<typeof useGetTilePackageQuery>;
+export type GetTilePackageLazyQueryHookResult = ReturnType<typeof useGetTilePackageLazyQuery>;
+export type GetTilePackageQueryResult = Apollo.QueryResult<GetTilePackageQuery, GetTilePackageQueryVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -18436,39 +20306,18 @@ export type UpdateProjectAccessControlSettingsMutationOptions = Apollo.BaseMutat
 export const ProjectMetadataDocument = gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
-    id
-    slug
-    url
-    name
-    description
-    logoLink
-    logoUrl
-    accessControl
-    sessionIsAdmin
-    isFeatured
+    ...ProjectMetadata
   }
-  currentProjectPublicDetails {
-    id
-    accessControl
-    slug
-    name
-    logoUrl
-    supportEmail
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
   }
-  currentProjectAccessStatus
   me {
-    id
-    profile {
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
-    }
+    ...ProjectMetadataMeFrag
   }
 }
-    `;
+    ${ProjectMetadataFragmentDoc}
+${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}`;
 
 /**
  * __useProjectMetadataQuery__
@@ -18502,6 +20351,7 @@ export const MeDocument = gql`
   me {
     id
     profile {
+      userId
       fullname
       nickname
       email
@@ -18898,10 +20748,6 @@ export type SurveyByIdLazyQueryHookResult = ReturnType<typeof useSurveyByIdLazyQ
 export type SurveyByIdQueryResult = Apollo.QueryResult<SurveyByIdQuery, SurveyByIdQueryVariables>;
 export const SurveyFormEditorDetailsDocument = gql`
     query SurveyFormEditorDetails($id: Int!, $slug: String!) {
-  projectBySlug(slug: $slug) {
-    id
-    name
-  }
   formElementTypes {
     ...AddFormElementTypeDetails
   }
@@ -18921,7 +20767,7 @@ export const SurveyFormEditorDetailsDocument = gql`
       }
     }
   }
-  currentProject {
+  projectBySlug(slug: $slug) {
     id
     name
     url
@@ -20303,8 +22149,8 @@ export type UpdateFormElementMapCameraMutationHookResult = ReturnType<typeof use
 export type UpdateFormElementMapCameraMutationResult = Apollo.MutationResult<UpdateFormElementMapCameraMutation>;
 export type UpdateFormElementMapCameraMutationOptions = Apollo.BaseMutationOptions<UpdateFormElementMapCameraMutation, UpdateFormElementMapCameraMutationVariables>;
 export const AllBasemapsDocument = gql`
-    query AllBasemaps {
-  currentProject {
+    query AllBasemaps($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     basemaps {
       ...BasemapDetails
@@ -20331,10 +22177,11 @@ export const AllBasemapsDocument = gql`
  * @example
  * const { data, loading, error } = useAllBasemapsQuery({
  *   variables: {
+ *      slug: // value for 'slug'
  *   },
  * });
  */
-export function useAllBasemapsQuery(baseOptions?: Apollo.QueryHookOptions<AllBasemapsQuery, AllBasemapsQueryVariables>) {
+export function useAllBasemapsQuery(baseOptions: Apollo.QueryHookOptions<AllBasemapsQuery, AllBasemapsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<AllBasemapsQuery, AllBasemapsQueryVariables>(AllBasemapsDocument, options);
       }
@@ -20380,27 +22227,72 @@ export function useGetFormElementLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type GetFormElementQueryHookResult = ReturnType<typeof useGetFormElementQuery>;
 export type GetFormElementLazyQueryHookResult = ReturnType<typeof useGetFormElementLazyQuery>;
 export type GetFormElementQueryResult = Apollo.QueryResult<GetFormElementQuery, GetFormElementQueryVariables>;
-export const SurveyDocument = gql`
-    query Survey($id: Int!) {
-  me {
-    isAdmin
-    profile {
-      email
-      fullname
+export const UpdateOfflineEnabledDocument = gql`
+    mutation UpdateOfflineEnabled($projectId: Int!, $enabled: Boolean!) {
+  enableOfflineSupport(input: {projectId: $projectId, enable: $enabled}) {
+    project {
+      id
+      isOfflineEnabled
     }
   }
-  currentProject {
+}
+    `;
+export type UpdateOfflineEnabledMutationFn = Apollo.MutationFunction<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>;
+
+/**
+ * __useUpdateOfflineEnabledMutation__
+ *
+ * To run a mutation, you first call `useUpdateOfflineEnabledMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateOfflineEnabledMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateOfflineEnabledMutation, { data, loading, error }] = useUpdateOfflineEnabledMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      enabled: // value for 'enabled'
+ *   },
+ * });
+ */
+export function useUpdateOfflineEnabledMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>(UpdateOfflineEnabledDocument, options);
+      }
+export type UpdateOfflineEnabledMutationHookResult = ReturnType<typeof useUpdateOfflineEnabledMutation>;
+export type UpdateOfflineEnabledMutationResult = Apollo.MutationResult<UpdateOfflineEnabledMutation>;
+export type UpdateOfflineEnabledMutationOptions = Apollo.BaseMutationOptions<UpdateOfflineEnabledMutation, UpdateOfflineEnabledMutationVariables>;
+export const SurveyDocument = gql`
+    query Survey($id: Int!, $slug: String!) {
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
+  }
+  me {
+    id
+    isAdmin
+    ...ProjectMetadataMeFrag
+  }
+  currentProject: projectBySlug(slug: $slug) {
+    id
     name
     url
+    ...MapEssentials
     region {
       geojson
     }
+    ...ProjectMetadata
   }
   survey(id: $id) {
     ...SurveyAppSurvey
   }
 }
-    ${SurveyAppSurveyFragmentDoc}`;
+    ${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}
+${MapEssentialsFragmentDoc}
+${ProjectMetadataFragmentDoc}
+${SurveyAppSurveyFragmentDoc}`;
 
 /**
  * __useSurveyQuery__
@@ -20415,6 +22307,7 @@ export const SurveyDocument = gql`
  * const { data, loading, error } = useSurveyQuery({
  *   variables: {
  *      id: // value for 'id'
+ *      slug: // value for 'slug'
  *   },
  * });
  */
@@ -20430,9 +22323,9 @@ export type SurveyQueryHookResult = ReturnType<typeof useSurveyQuery>;
 export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
 export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
 export const CreateResponseDocument = gql`
-    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {
+    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!, $offlineId: UUID) {
   createSurveyResponse(
-    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice}
+    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice, offlineId: $offlineId}
   ) {
     clientMutationId
     surveyResponse {
@@ -20462,6 +22355,7 @@ export type CreateResponseMutationFn = Apollo.MutationFunction<CreateResponseMut
  *      responseData: // value for 'responseData'
  *      facilitated: // value for 'facilitated'
  *      practice: // value for 'practice'
+ *      offlineId: // value for 'offlineId'
  *   },
  * });
  */
@@ -20472,51 +22366,6 @@ export function useCreateResponseMutation(baseOptions?: Apollo.MutationHookOptio
 export type CreateResponseMutationHookResult = ReturnType<typeof useCreateResponseMutation>;
 export type CreateResponseMutationResult = Apollo.MutationResult<CreateResponseMutation>;
 export type CreateResponseMutationOptions = Apollo.BaseMutationOptions<CreateResponseMutation, CreateResponseMutationVariables>;
-export const GetBasemapsAndRegionDocument = gql`
-    query GetBasemapsAndRegion {
-  currentProject {
-    id
-    basemaps {
-      ...BasemapDetails
-    }
-    surveyBasemaps {
-      ...BasemapDetails
-    }
-    region {
-      geojson
-    }
-    mapboxPublicKey
-    mapboxSecretKey
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
-
-/**
- * __useGetBasemapsAndRegionQuery__
- *
- * To run a query within a React component, call `useGetBasemapsAndRegionQuery` and pass it any options that fit your needs.
- * When your component renders, `useGetBasemapsAndRegionQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGetBasemapsAndRegionQuery({
- *   variables: {
- *   },
- * });
- */
-export function useGetBasemapsAndRegionQuery(baseOptions?: Apollo.QueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
-      }
-export function useGetBasemapsAndRegionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>(GetBasemapsAndRegionDocument, options);
-        }
-export type GetBasemapsAndRegionQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionQuery>;
-export type GetBasemapsAndRegionLazyQueryHookResult = ReturnType<typeof useGetBasemapsAndRegionLazyQuery>;
-export type GetBasemapsAndRegionQueryResult = Apollo.QueryResult<GetBasemapsAndRegionQuery, GetBasemapsAndRegionQueryVariables>;
 export const UpdateProjectNameDocument = gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(
@@ -20559,9 +22408,9 @@ export type UpdateProjectNameMutationHookResult = ReturnType<typeof useUpdatePro
 export type UpdateProjectNameMutationResult = Apollo.MutationResult<UpdateProjectNameMutation>;
 export type UpdateProjectNameMutationOptions = Apollo.BaseMutationOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
 export const UpdateProjectSettingsDocument = gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $mapboxSecretKey: String) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, mapboxSecretKey: $mapboxSecretKey}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey}}
   ) {
     clientMutationId
     project {
@@ -20600,7 +22449,6 @@ export type UpdateProjectSettingsMutationFn = Apollo.MutationFunction<UpdateProj
  *      logoLink: // value for 'logoLink'
  *      isFeatured: // value for 'isFeatured'
  *      mapboxPublicKey: // value for 'mapboxPublicKey'
- *      mapboxSecretKey: // value for 'mapboxSecretKey'
  *   },
  * });
  */
@@ -20817,8 +22665,8 @@ export type GroupMembersQueryHookResult = ReturnType<typeof useGroupMembersQuery
 export type GroupMembersLazyQueryHookResult = ReturnType<typeof useGroupMembersLazyQuery>;
 export type GroupMembersQueryResult = Apollo.QueryResult<GroupMembersQuery, GroupMembersQueryVariables>;
 export const UserSettingsListsDocument = gql`
-    query UserSettingsLists {
-  currentProject {
+    query UserSettingsLists($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     groups {
       name
@@ -20850,10 +22698,11 @@ ${UserListDetailsFragmentDoc}`;
  * @example
  * const { data, loading, error } = useUserSettingsListsQuery({
  *   variables: {
+ *      slug: // value for 'slug'
  *   },
  * });
  */
-export function useUserSettingsListsQuery(baseOptions?: Apollo.QueryHookOptions<UserSettingsListsQuery, UserSettingsListsQueryVariables>) {
+export function useUserSettingsListsQuery(baseOptions: Apollo.QueryHookOptions<UserSettingsListsQuery, UserSettingsListsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<UserSettingsListsQuery, UserSettingsListsQueryVariables>(UserSettingsListsDocument, options);
       }
@@ -20865,7 +22714,7 @@ export type UserSettingsListsQueryHookResult = ReturnType<typeof useUserSettings
 export type UserSettingsListsLazyQueryHookResult = ReturnType<typeof useUserSettingsListsLazyQuery>;
 export type UserSettingsListsQueryResult = Apollo.QueryResult<UserSettingsListsQuery, UserSettingsListsQueryVariables>;
 export const UserInfoDocument = gql`
-    query UserInfo($userId: Int!) {
+    query UserInfo($userId: Int!, $slug: String!) {
   user(id: $userId) {
     id
     isAdmin
@@ -20881,6 +22730,7 @@ export const UserInfoDocument = gql`
     onboarded
     participationStatus
     profile {
+      userId
       affiliations
       bio
       email
@@ -20889,7 +22739,7 @@ export const UserInfoDocument = gql`
       picture
     }
   }
-  currentProject {
+  projectBySlug(slug: $slug) {
     id
     groups {
       name
@@ -20912,6 +22762,7 @@ export const UserInfoDocument = gql`
  * const { data, loading, error } = useUserInfoQuery({
  *   variables: {
  *      userId: // value for 'userId'
+ *      slug: // value for 'slug'
  *   },
  * });
  */
@@ -21164,8 +23015,8 @@ export type ProjectInvitesQueryHookResult = ReturnType<typeof useProjectInvitesQ
 export type ProjectInvitesLazyQueryHookResult = ReturnType<typeof useProjectInvitesLazyQuery>;
 export type ProjectInvitesQueryResult = Apollo.QueryResult<ProjectInvitesQuery, ProjectInvitesQueryVariables>;
 export const InviteEditorModalQueryDocument = gql`
-    query InviteEditorModalQuery($inviteId: Int!) {
-  currentProject {
+    query InviteEditorModalQuery($inviteId: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     groups {
       id
@@ -21203,6 +23054,7 @@ export const InviteEditorModalQueryDocument = gql`
  * const { data, loading, error } = useInviteEditorModalQueryQuery({
  *   variables: {
  *      inviteId: // value for 'inviteId'
+ *      slug: // value for 'slug'
  *   },
  * });
  */
@@ -21457,6 +23309,7 @@ export const UpdateProfileDocument = gql`
     input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
   ) {
     profile {
+      userId
       user {
         id
         profile {
@@ -21543,6 +23396,9 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
+    DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
+    DownloadBasemapDetails: 'DownloadBasemapDetails',
+    ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
@@ -21552,6 +23408,12 @@ export const namedOperations = {
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
+    GetBasemapsAndRegion: 'GetBasemapsAndRegion',
+    OfflineSurveys: 'OfflineSurveys',
+    SurveysById: 'SurveysById',
+    OfflineSurveyMaps: 'OfflineSurveyMaps',
+    BasemapOfflineSettings: 'BasemapOfflineSettings',
+    getTilePackage: 'getTilePackage',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
@@ -21570,7 +23432,6 @@ export const namedOperations = {
     AllBasemaps: 'AllBasemaps',
     GetFormElement: 'GetFormElement',
     Survey: 'Survey',
-    GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     UserAdminCounts: 'UserAdminCounts',
     Participants: 'Participants',
     Admins: 'Admins',
@@ -21583,7 +23444,8 @@ export const namedOperations = {
   },
   Mutation: {
     UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
-    updateKeys: 'updateKeys',
+    updatePublicKey: 'updatePublicKey',
+    updateSecretKey: 'updateSecretKey',
     UpdateAclType: 'UpdateAclType',
     AddGroupToAcl: 'AddGroupToAcl',
     RemoveGroupFromAcl: 'RemoveGroupFromAcl',
@@ -21630,6 +23492,9 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
+    generateOfflineTilePackage: 'generateOfflineTilePackage',
+    deleteTilePackage: 'deleteTilePackage',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSurvey: 'CreateSurvey',
@@ -21660,6 +23525,7 @@ export const namedOperations = {
     copyAppearance: 'copyAppearance',
     updateFormElementBasemaps: 'updateFormElementBasemaps',
     updateFormElementMapCamera: 'updateFormElementMapCamera',
+    UpdateOfflineEnabled: 'UpdateOfflineEnabled',
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',
@@ -21702,6 +23568,15 @@ export const namedOperations = {
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
+    MapEssentials: 'MapEssentials',
+    OfflineTilePackageDetails: 'OfflineTilePackageDetails',
+    BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',
+    OfflineBasemapDetails: 'OfflineBasemapDetails',
+    OfflineTileSettingsForCalculation: 'OfflineTileSettingsForCalculation',
+    OfflineTileSettings: 'OfflineTileSettings',
+    ProjectMetadata: 'ProjectMetadata',
+    ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
+    ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

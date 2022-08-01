@@ -1,11 +1,10 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { createApi } from "unsplash-js";
-const nodeFetch = require("node-fetch");
 
 const unsplash = createApi({
   accessKey: process.env.UNSPLASH_KEY!,
   // @ts-ignore
-  fetch: nodeFetch,
+  fetch,
 });
 
 const UnsplashPlugin = makeExtendSchemaPlugin((build) => {

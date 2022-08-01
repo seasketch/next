@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useContext } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -13,6 +13,9 @@ import logo from "../header/seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { StatusOfflineIcon } from "@heroicons/react/outline";
+import SignedInAs from "../components/SignedInAs";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 
 export default function FullSidebar({
   open,
@@ -29,24 +32,7 @@ export default function FullSidebar({
   const { loginWithRedirect } = useAuth0();
   const { data, loading, error, refetch } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
-  let social: string | false = false;
-  if (user?.sub) {
-    if (/twitter/.test(user.sub)) {
-      social = "twitter";
-    } else if (/google/.test(user.sub)) {
-      social = "google";
-    } else if (/github/.test(user.sub)) {
-      social = "github";
-    }
-  }
-  const userId = user
-    ? `${user.email || user.name} ${social ? `(${social})` : ""}`
-    : false;
-
-  // if (!data?.currentProject && !loading && !error) {
-  //   refetch();
-  //   return <div></div>;
-  // }
+  const cache = useContext(GraphqlQueryCacheContext);
 
   const chooseSidebar = (sidebar: string) => () => {
     history.replace(`/${slug}/app/${sidebar}`);
@@ -169,20 +155,7 @@ export default function FullSidebar({
       {user && (
         <>
           <nav className="mt-4">
-            <div className="flex mb-1">
-              <ProfileStatusButton />
-              <div className="ml-2">
-                <p className="text-base md:text-sm leading-5">
-                  {t("Signed in as")}
-                </p>
-                <p
-                  title={userId as string}
-                  className="text-base md:text-sm leading-8 md:leading-5 font-medium truncate"
-                >
-                  {userId}
-                </p>
-              </div>
-            </div>
+            <SignedInAs className="mb-1" />
             <div className="py-1">
               <NavItem
                 icon={
@@ -201,12 +174,14 @@ export default function FullSidebar({
                   </svg>
                 }
                 label={t("Account Settings")}
-                onClick={() => history.push("/account-settings")}
+                onClick={chooseSidebar("settings")}
               />
               <a
                 target="_blank"
                 rel="noreferrer"
-                href="mailto:support@seasketch.org"
+                href={`mailto:${
+                  data?.project?.supportEmail || "support@seasketch.org"
+                }`}
                 className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
                 role="menuitem"
               >
@@ -245,15 +220,16 @@ export default function FullSidebar({
                   </svg>
                 }
                 label={t("Sign Out")}
-                onClick={() =>
+                onClick={() => {
+                  cache?.logout();
                   logout({
                     returnTo:
                       window.location.protocol +
                       "//" +
                       window.location.host +
                       "/",
-                  })
-                }
+                  });
+                }}
               />
             </div>
           </nav>

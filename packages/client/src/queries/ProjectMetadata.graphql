@@ -1,35 +1,50 @@
+fragment ProjectMetadata on Project {
+  id
+  slug
+  url
+  name
+  description
+  logoLink
+  logoUrl
+  accessControl
+  sessionIsAdmin
+  isFeatured
+  supportEmail
+  isOfflineEnabled
+}
+
+fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
+  id
+  accessControl
+  slug
+  name
+  logoUrl
+  supportEmail
+  accessStatus
+}
+
+fragment ProjectMetadataMeFrag on User {
+  id
+  profile {
+    userId
+    fullname
+    nickname
+    email
+    picture
+    bio
+    affiliations
+  }
+}
+
 query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
-    id
-    slug
-    url
-    name
-    description
-    logoLink
-    logoUrl
-    accessControl
-    sessionIsAdmin
-    isFeatured
+    ...ProjectMetadata
   }
-  currentProjectPublicDetails {
-    id
-    accessControl
-    slug
-    name
-    logoUrl
-    supportEmail
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
   }
-  currentProjectAccessStatus
   me {
-    id
-    profile {
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
-    }
+    ...ProjectMetadataMeFrag
   }
 }
 
@@ -37,6 +52,7 @@ query Me {
   me {
     id
     profile {
+      userId
       fullname
       nickname
       email

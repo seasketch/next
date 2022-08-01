@@ -61,6 +61,9 @@ fragment SurveyAppSurvey on Survey {
   showProgress
   showFacilitationOption
   supportedLanguages
+  basemaps {
+    ...BasemapDetails
+  }
   form {
     id
     logicRules {
@@ -72,21 +75,28 @@ fragment SurveyAppSurvey on Survey {
   }
 }
 
-query Survey($id: Int!) {
-  me {
-    isAdmin
-    profile {
-      email
-      fullname
-    }
+query Survey($id: Int!, $slug: String!) {
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
   }
-  currentProject {
+
+  me {
+    id
+    isAdmin
+    ...ProjectMetadataMeFrag
+  }
+
+  currentProject: projectBySlug(slug: $slug) {
+    id
     name
     url
+    ...MapEssentials
     region {
       geojson
     }
+    ...ProjectMetadata
   }
+
   survey(id: $id) {
     ...SurveyAppSurvey
   }
@@ -99,6 +109,7 @@ mutation CreateResponse(
   $responseData: JSON!
   $facilitated: Boolean!
   $practice: Boolean!
+  $offlineId: UUID
 ) {
   createSurveyResponse(
     input: {
@@ -108,28 +119,12 @@ mutation CreateResponse(
       bypassedSubmissionControl: $bypassedDuplicateSubmissionControl
       facilitated: $facilitated
       practice: $practice
+      offlineId: $offlineId
     }
   ) {
     clientMutationId
     surveyResponse {
       id
     }
-  }
-}
-
-query GetBasemapsAndRegion {
-  currentProject {
-    id
-    basemaps {
-      ...BasemapDetails
-    }
-    surveyBasemaps {
-      ...BasemapDetails
-    }
-    region {
-      geojson
-    }
-    mapboxPublicKey
-    mapboxSecretKey
   }
 }

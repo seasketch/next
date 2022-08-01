@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import Badge from "../components/Badge";
-import Skeleton from "../components/Skeleton";
+import Spinner from "../components/Spinner";
 
 function AssetTypeCount({ label, count }: { label: string; count: number }) {
   return (
@@ -32,17 +32,18 @@ function CacheProgress({
     <div className={className}>
       {" "}
       <div className="bg-gray-200 w-full h-2 my-2">
-        {loading ? (
-          <Skeleton className="h-full w-full" />
-        ) : (
-          <div
-            className={`h-full ${barColor} transition-all`}
-            style={{ width: `${percent}%` }}
-          ></div>
-        )}
+        <div
+          className={`h-full ${barColor} transition-all`}
+          style={{ width: `${percent}%` }}
+        ></div>
       </div>
       <div className="flex text-sm text-gray-500">
-        <p className="flex-1">{description}</p>
+        <div className="flex-1 truncate pr-5">{description}</div>
+        {loading && (
+          <div className="overflow-visible h-5 w-1">
+            <Spinner className="" />
+          </div>
+        )}
         <span className="text-mono ml-5">{formatPercent(percent)}%</span>
       </div>
     </div>

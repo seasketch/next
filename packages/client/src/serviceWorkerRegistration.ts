@@ -2,6 +2,8 @@
 // Great reference for understanding what is going on here:
 // https://web.dev/service-worker-lifecycle/
 
+import ServiceWorkerWindow from "./offline/ServiceWorkerWindow";
+
 const isLocalhost = Boolean(
   window.location.hostname === "localhost" ||
     // [::1] is the IPv6 localhost address.
@@ -58,8 +60,8 @@ function registerValidSW(swUrl: string, config?: Config) {
               // At this point, the updated precached content has been fetched,
               // but the previous service worker will still serve the older
               // content until all client tabs are closed.
-              console.log("New service worker available.");
-
+              console.log("New service worker available");
+              ServiceWorkerWindow.skipWaiting();
               // Execute callback
               if (config && config.onUpdate) {
                 config.onUpdate(registration);
@@ -92,6 +94,7 @@ function checkValidServiceWorker(swUrl: string, config?: Config) {
         (contentType != null && contentType.indexOf("javascript") === -1)
       ) {
         // No service worker found. Probably a different app. Reload the page.
+        console.log("no service worker found, reloading");
         navigator.serviceWorker.ready.then((registration) => {
           registration.unregister().then(() => {
             window.location.reload();

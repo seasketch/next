@@ -54,14 +54,19 @@ async function fetchGlStyle(url: string) {
   if (id in fetchedStyles) {
     return fetchedStyles[id];
   } else {
-    const originalUrl = url;
-    if (/mapbox:\/\//.test(url)) {
-      // eslint-disable-next-line
-      url = `https://api.mapbox.com/styles/v1/${
-        url.split("mapbox://styles/")[1]
-      }?access_token=${TOKEN}`;
+    let Url = new URL(url);
+    if (Url.protocol === "mapbox:") {
+      const sources = Url.pathname.replace("//", "");
+      Url = new URL(
+        // eslint-disable-next-line i18next/no-literal-string
+        `https://api.mapbox.com/styles/v1/${
+          url.split("mapbox://styles/")[1]
+        }?access_token=${TOKEN}`
+      );
     }
-    fetchedStyles[id] = fetch(url)
+    // Indicate to service-worker that this request should served from cache if available
+    Url.searchParams.set("ssn-tr", "true");
+    fetchedStyles[id] = fetch(Url.toString())
       .then((res) => res.json())
       .then((style) => {
         if (style.version && style.sources) {
@@ -69,7 +74,7 @@ async function fetchGlStyle(url: string) {
         } else {
           throw new Error(
             // eslint-disable-next-line
-            `Content at ${originalUrl} does not appear to be a Mapbox GL Style`
+            `Content at ${url} does not appear to be a Mapbox GL Style`
           );
         }
       });

@@ -1,11 +1,7 @@
-import { CheckIcon, TableIcon } from "@heroicons/react/outline";
+import { TableIcon } from "@heroicons/react/outline";
 import React, { useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import Button from "../components/Button";
-import InputBlock from "../components/InputBlock";
-import Switch from "../components/Switch";
 import { SurveyStyleContext } from "../surveys/appearance";
-import { ChoiceAdminValueInput } from "./ComboBox";
 import {
   FormElementBody,
   FormElementComponent,

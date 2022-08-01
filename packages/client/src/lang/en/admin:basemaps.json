@@ -1,0 +1,16 @@
+{
+  "Cache higher detail near shore": "Cache higher detail near shore",
+  "Calculated Tile Count": "Calculated Tile Count",
+  "Configure custom tiling settings that apply to just this basemap. This can be useful for specifying a higher level of detail that the defaults for particular maps.": "Configure custom tiling settings that apply to just this basemap. This can be useful for specifying a higher level of detail that the defaults for particular maps.",
+  "Data Sources": "Data Sources",
+  "Estimated tile package size": "Estimated tile package size",
+  "MapBox fees to generate package (w/o free tier)": "MapBox fees to generate package (w/o free tier)",
+  "Max Zoom": "Max Zoom",
+  "Max Zoom At Shoreline": "Max Zoom At Shoreline",
+  "Show cached tile outlines": "Show cached tile outlines",
+  "Simulate offline settings on the map": "Simulate offline settings on the map",
+  "Tiling Settings": "Tiling Settings",
+  "Use map-specific settings": "Use map-specific settings",
+  "Use project defaults": "Use project defaults",
+  "Use project-wide settings to create tile packages for this basemap. Any changes to tiling settings will also impact all other basemaps using these default settings": "Use project-wide settings to create tile packages for this basemap. Any changes to tiling settings will also impact all other basemaps using these default settings"
+}

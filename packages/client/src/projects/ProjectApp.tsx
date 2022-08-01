@@ -1,5 +1,5 @@
 import bytes from "bytes";
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useContext, useState } from "react";
 import { Route, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import MapboxMap from "../components/MapboxMap";
 import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
@@ -12,8 +12,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import BasemapControl from "../dataLayers/BasemapControl";
 import useMapData from "../dataLayers/useMapData";
 import Spinner from "../components/Spinner";
+import { OfflineStateContext } from "../offline/OfflineStateContext";
+import OfflineToastNotification from "../offline/OfflineToastNotification";
+import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
+);
+const LazyAccountSettingsPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AccountSettings" */ "../auth/AccountSettingsPage"
+    )
 );
 
 export default function ProjectApp() {
@@ -34,8 +43,10 @@ export default function ProjectApp() {
     overlays: t("Overlay Layers"),
     sketches: t("Sketching Tools"),
     forums: t("Discussion Forums"),
+    settings: t("Account Settings"),
   };
   const { basemaps, tableOfContentsItems } = useMapData(mapContext);
+  const { online } = useContext(OfflineStateContext);
   const dark = true;
   return (
     <div
@@ -75,9 +86,9 @@ export default function ProjectApp() {
               <Route path={`/${slug}/app/overlays`}>
                 <Suspense
                   fallback={
-                    <p className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                    <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
                       Loading <Spinner />
-                    </p>
+                    </div>
                   }
                 >
                   <motion.div
@@ -92,6 +103,24 @@ export default function ProjectApp() {
                   </motion.div>
                 </Suspense>
               </Route>
+              <Route path={`/${slug}/app/settings`}>
+                <Suspense
+                  fallback={
+                    <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                      Loading <Spinner />
+                    </div>
+                  }
+                >
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <LazyAccountSettingsPage />
+                  </motion.div>
+                </Suspense>
+              </Route>
             </ProjectAppSidebar>
           )}
         </AnimatePresence>
@@ -102,6 +131,8 @@ export default function ProjectApp() {
             setExpandSidebar((prev) => false);
           }}
         />
+        <OfflineToastNotification />
+        <OfflineResponsesToastNotification />
       </MapContext.Provider>
     </div>
   );

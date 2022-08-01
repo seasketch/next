@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import mapboxgl, { LngLatLike, Map, MapboxOptions, Style } from "mapbox-gl";
+import mapboxgl, { Map, Style } from "mapbox-gl";
 import { DigitizingDragTarget } from "../draw/useMapboxGLDraw";
 import { motion } from "framer-motion";
 import { useMediaQuery } from "beautiful-react-hooks";

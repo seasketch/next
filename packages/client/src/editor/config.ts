@@ -1,4 +1,4 @@
-import { Schema, DOMParser, Node, NodeSpec } from "prosemirror-model";
+import { Schema, Node } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";

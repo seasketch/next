@@ -104,7 +104,7 @@ jobs:
     name: Deploy Server
     if: always() && needs.run_migrations.result != 'failure' && (github.event.inputs.force == 'true' || needs.detect_changes.outputs.api == 'true')
     concurrency: ${{github.event.inputs.environment }}_server
-    timeout-minutes: 12
+    timeout-minutes: 20
     environment:
       name: ${{github.event.inputs.environment }}_server
       url: https://api.seasket.ch/graphiql
@@ -155,12 +155,13 @@ jobs:
           COMMIT: ${{ needs.detect_changes.outputs.build_label }}
           UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer
   deploy_client:
     name: Deploy Client
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true'
     concurrency: ${{github.event.inputs.environment }}_client
     environment:
@@ -207,6 +208,7 @@ jobs:
           REACT_APP_PUBLIC_URL: ${{ secrets.REACT_APP_PUBLIC_URL }}
           REACT_APP_BUILD: ${{ needs.detect_changes.outputs.build_label }}
           REACT_APP_SENTRY_DSN: ${{ secrets.REACT_APP_SENTRY_DSN }}
+          REACT_APP_CLOUDFRONT_DOCS_DISTRO: ${{ secrets.REACT_APP_CLOUDFRONT_DOCS_DISTRO }}
         run: |
           CI=false npm run build
       - name: Configure AWS credentials

@@ -1,4 +1,3 @@
-import Gravatar from "react-gravatar";
 import React from "react";
 import Badge from "../../components/Badge";
 import { Trans } from "react-i18next";

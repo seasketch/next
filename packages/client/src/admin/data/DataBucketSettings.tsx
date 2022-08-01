@@ -18,10 +18,8 @@ function DataBucketSettings(props: { className?: string }) {
   const buckets = useProjectBucketSettingQuery({
     variables: { slug },
   });
-  const [
-    mutate,
-    { data, error, loading },
-  ] = useUpdateProjectStorageBucketMutation();
+  const [mutate, { data, error, loading }] =
+    useUpdateProjectStorageBucketMutation();
 
   useEffect(() => {
     if (!region && buckets.data?.projectBySlug?.dataSourcesBucket) {
@@ -31,7 +29,11 @@ function DataBucketSettings(props: { className?: string }) {
 
   useEffect(() => {
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
-    if (!map && mapContainer.current) {
+    if (
+      !map &&
+      mapContainer.current &&
+      buckets.data?.dataSourcesBucketsConnection
+    ) {
       const mapInstance = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/underbluewaters/ckhgrw8pq0n2j19ldoa5z1d72", // stylesheet location
@@ -49,7 +51,7 @@ function DataBucketSettings(props: { className?: string }) {
         // @ts-ignore
       });
     }
-  }, [map, mapContainer.current]);
+  }, [map, mapContainer.current, buckets.data?.dataSourcesBucketsConnection]);
 
   useEffect(() => {
     if (

@@ -1,5 +1,5 @@
-import React, { ReactElement, ReactNode, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { ReactNode } from "react";
+import { motion } from "framer-motion";
 import Spinner from "./Spinner";
 
 interface ModalProps {

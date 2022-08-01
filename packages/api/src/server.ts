@@ -23,6 +23,7 @@ import { getFeatureCollection, getMVT } from "./exportSurvey";
 import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
+import { makeDataLoaders } from "./dataLoaders";
 
 interface SSNRequest extends Request {
   user?: { id: number; canonicalEmail: string };
@@ -44,6 +45,7 @@ if (process.env.SENTRY_DSN) {
     // of transactions for performance monitoring.
     // We recommend adjusting this value in production
     tracesSampleRate: 1.0,
+    environment: process.env.REACT_APP_SENTRY_ENV || "production",
   });
 
   // RequestHandler creates a separate execution context using domains, so that every
@@ -75,6 +77,7 @@ app.use(
       "content-length",
       "x-postgraphile-explain",
       "if-none-match",
+      "pragma",
     ],
     exposedHeaders: ["ETag"],
     maxAge: 600,
@@ -196,6 +199,7 @@ run({
 });
 
 const tilesetPool = createPool();
+const loadersPool = createPool({}, "admin");
 
 app.use(
   "/export-survey/:id/spatial/:element_id/tiles/:z/:x/:y.pbf",
@@ -286,6 +290,7 @@ app.use(
       return {
         user: req.user,
         projectId: req.projectId,
+        loaders: makeDataLoaders(loadersPool),
       };
     },
   })

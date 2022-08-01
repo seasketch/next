@@ -2,17 +2,11 @@ import { LinkIcon } from "@heroicons/react/outline";
 import { AnimatePresence, motion } from "framer-motion";
 import { setBlockType, toggleMark } from "prosemirror-commands";
 import { Mark, Schema } from "prosemirror-model";
-import {
-  EditorState,
-  Selection,
-  StateField,
-  Transaction,
-} from "prosemirror-state";
+import { EditorState, Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { TFunction, useTranslation } from "react-i18next";
 import { getActiveMarks } from "./EditorMenuBar";
-import { markActive } from "./utils";
 
 export default function TooltipMenu({
   state,

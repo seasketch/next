@@ -66,6 +66,14 @@ export function srcSet(imageUrl: string) {
     .join(", ");
 }
 
+export function srcVariants(imageUrl: string) {
+  return (
+    [960, 1280, 1920, 2560]
+      // eslint-disable-next-line i18next/no-literal-string
+      .map((rez) => `${imageUrl}&auto=compress&fm=jpg&w=${rez}`)
+  );
+}
+
 /**
  * Returns a string that can be used for img[sizes]. Use in conjunction with
  * srcSet() and <ImagePreloader /> to support responsive background images in surveys

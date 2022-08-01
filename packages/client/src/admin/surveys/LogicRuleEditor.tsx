@@ -16,7 +16,6 @@ import {
   FormLogicCondition,
   FormLogicOperator,
   LogicRuleEditorRuleFragment,
-  LogicRuleEditorFormElementFragment,
   useCreateLogicRuleForSurveyMutation,
   useUpdateFormElementMutation,
   useUpdateFormLogicRuleMutation,
@@ -57,10 +56,7 @@ export default function LogicRuleEditor({
     );
     parentFormElementId = parent?.id || null;
   }
-  const [
-    initializeRule,
-    initializeRuleState,
-  ] = useCreateLogicRuleForSurveyMutation({
+  const [initializeRule] = useCreateLogicRuleForSurveyMutation({
     onError,
     optimisticResponse: (data) => ({
       __typename: "Mutation",
@@ -121,14 +117,11 @@ export default function LogicRuleEditor({
       }
     },
   });
-  const [
-    updateFormElement,
-    updateFormElementState,
-  ] = useUpdateFormElementMutation({
+  const [updateFormElement] = useUpdateFormElementMutation({
     onError,
   });
 
-  const [updateRule, updateRuleState] = useUpdateFormLogicRuleMutation({
+  const [updateRule] = useUpdateFormLogicRuleMutation({
     onError,
     // @ts-ignore
     optimisticResponse: (data) => ({
@@ -144,10 +137,7 @@ export default function LogicRuleEditor({
     }),
   });
 
-  const [
-    updateCondition,
-    updateConditionState,
-  ] = useUpdateLogicConditionMutation({
+  const [updateCondition] = useUpdateLogicConditionMutation({
     onError,
     // @ts-ignore
     optimisticResponse: (data) => {

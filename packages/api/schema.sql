@@ -350,6 +350,30 @@ CREATE TYPE public.invite_stats AS (
 
 
 --
+-- Name: offline_tile_package_source_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.offline_tile_package_source_type AS ENUM (
+    'vector',
+    'raster',
+    'raster-dem'
+);
+
+
+--
+-- Name: offline_tile_package_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.offline_tile_package_status AS ENUM (
+    'QUEUED',
+    'GENERATING',
+    'UPLOADING',
+    'COMPLETE',
+    'FAILED'
+);
+
+
+--
 -- Name: optional_basemap_layers_group_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -441,7 +465,8 @@ CREATE TYPE public.public_project_details AS (
 	slug text,
 	logo_url text,
 	access_control public.project_access_control_setting,
-	support_email text
+	support_email text,
+	access_status public.project_access_status
 );
 
 
@@ -1887,6 +1912,7 @@ CREATE TABLE public.survey_responses (
     is_practice boolean DEFAULT false NOT NULL,
     archived boolean DEFAULT false NOT NULL,
     last_updated_by_id integer,
+    offline_id uuid,
     CONSTRAINT survey_responses_data_check CHECK ((char_length((data)::text) < 10000))
 );
 
@@ -1976,6 +2002,13 @@ COMMENT ON COLUMN public.survey_responses.is_facilitated IS 'If true, a logged-i
 
 
 --
+-- Name: COLUMN survey_responses.offline_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.survey_responses.offline_id IS 'Should be used by clients to uniquely identify responses that are collected offline. Survey facilitators can download their responses to disk as json so that they may be recovered/submitted in the case of the client machine being damaged or stolen. Tracking an offline uuid ensures that these responses are not somehow submitted in duplicate.';
+
+
+--
 -- Name: archive_responses(integer[], boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2025,7 +2058,8 @@ CREATE TABLE public.basemaps (
     description text,
     interactivity_settings_id integer NOT NULL,
     is_disabled boolean DEFAULT false NOT NULL,
-    surveys_only boolean DEFAULT false NOT NULL
+    surveys_only boolean DEFAULT false NOT NULL,
+    use_default_offline_tile_settings boolean DEFAULT true NOT NULL
 );
 
 
@@ -3052,6 +3086,18 @@ $$;
 
 
 --
+-- Name: cleanup_tile_package(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.cleanup_tile_package() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+  PERFORM graphile_worker.add_job('cleanupDeletedTilePackage', json_build_object('packageId', OLD.id));
+  RETURN OLD;
+END;$$;
+
+
+--
 -- Name: clear_form_element_style(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3803,6 +3849,7 @@ You have been invited to join the {{projectName}} SeaSketch project. To sign up,
     creator_id integer NOT NULL,
     mapbox_secret_key text,
     mapbox_public_key text,
+    is_offline_enabled boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -3889,6 +3936,15 @@ COMMENT ON COLUMN public.projects.is_deleted IS '@omit';
 --
 
 COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
+
+
+--
+-- Name: COLUMN projects.mapbox_secret_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.mapbox_secret_key IS '
+@omit
+';
 
 
 --
@@ -4268,10 +4324,10 @@ Initializes a new FormLogicRule with a single condition and command=JUMP.
 
 
 --
--- Name: create_survey_response(integer, json, boolean, boolean, boolean, boolean); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_survey_response(integer, json, boolean, boolean, boolean, boolean, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean) RETURNS public.survey_responses
+CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid) RETURNS public.survey_responses
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -4294,7 +4350,7 @@ CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data 
         surveys.id = "surveyId";
       -- TODO: improve access control to consider group membership
       if session_is_admin(pid) or (is_disabled = false and (access_type = 'PUBLIC'::survey_access_type) or (access_type = 'INVITE_ONLY'::survey_access_type and session_member_of_group((select array_agg(group_id) from survey_invited_groups where survey_id = "surveyId")))) then
-        insert into survey_responses (survey_id, data, user_id, is_draft, is_facilitated, bypassed_duplicate_submission_control, is_practice) values ("surveyId", response_data, nullif(current_setting('session.user_id', TRUE), '')::int, draft, facilitated, bypassed_submission_control, practice) returning * into response;
+        insert into survey_responses (survey_id, data, user_id, is_draft, is_facilitated, bypassed_duplicate_submission_control, is_practice, offline_id) values ("surveyId", response_data, nullif(current_setting('session.user_id', TRUE), '')::int, draft, facilitated, bypassed_submission_control, practice, offline_id) returning * into response;
         return response;
       else
         raise exception 'Access denied to % survey. is_disabled = %', access_type, is_disabled;
@@ -4435,9 +4491,7 @@ $$;
 -- Name: FUNCTION current_project(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.current_project() IS '
-The current SeaSketch Project, which is determined by the `referer` or `x-ss-slug` request headers. Most queries used by the app should be rooted on this field.
-';
+COMMENT ON FUNCTION public.current_project() IS '@deprecated Use projectBySlug() instead';
 
 
 --
@@ -4511,39 +4565,7 @@ $$;
 -- Name: FUNCTION current_project_access_status(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.current_project_access_status() IS '
-Use to indicate to a user why they cannot access the given project, if denied.
-';
-
-
---
--- Name: current_project_public_details(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.current_project_public_details() RETURNS public.public_project_details
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-  SELECT
-    id,
-    name,
-    slug,
-    logo_url,
-    access_control,
-    support_email
-  FROM
-    projects
-  WHERE
-    id = nullif (current_setting('session.project_id', TRUE), '')::integer
-$$;
-
-
---
--- Name: FUNCTION current_project_public_details(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.current_project_public_details() IS '
-Executable by all users and used to display a "gate" should a user arrive directly on a project url without authorization.
-';
+COMMENT ON FUNCTION public.current_project_access_status() IS '@deprecated Use project_access_status(slug) instead';
 
 
 --
@@ -4676,6 +4698,63 @@ $$;
 --
 
 COMMENT ON FUNCTION public.data_layers_sprites(l public.data_layers) IS '@simpleCollections only';
+
+
+--
+-- Name: offline_tile_packages; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.offline_tile_packages (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    project_id integer NOT NULL,
+    data_source_url text NOT NULL,
+    is_mapbox_hosted boolean NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    status public.offline_tile_package_status DEFAULT 'QUEUED'::public.offline_tile_package_status NOT NULL,
+    total_tiles integer DEFAULT 0 NOT NULL,
+    tiles_fetched integer DEFAULT 0 NOT NULL,
+    bytes integer DEFAULT 0 NOT NULL,
+    region public.geometry(Polygon,4326) NOT NULL,
+    max_z integer DEFAULT 11 NOT NULL,
+    max_shoreline_z integer,
+    source_type public.offline_tile_package_source_type NOT NULL,
+    error text,
+    original_url_template text NOT NULL,
+    CONSTRAINT offline_tile_packages_check CHECK (((max_shoreline_z > max_z) AND (max_shoreline_z <= 16))),
+    CONSTRAINT offline_tile_packages_max_z_check CHECK (((max_z >= 6) AND (max_z <= 16)))
+);
+
+
+--
+-- Name: TABLE offline_tile_packages; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.offline_tile_packages IS '@simpleConnections only';
+
+
+--
+-- Name: COLUMN offline_tile_packages.status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.offline_tile_packages.status IS '@deprecated Use jobStatus instead';
+
+
+--
+-- Name: COLUMN offline_tile_packages.error; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.offline_tile_packages.error IS '@deprecated Use jobErrors instead';
+
+
+--
+-- Name: delete_offline_tile_package(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_offline_tile_package(id uuid) RETURNS public.offline_tile_packages
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    delete from offline_tile_packages where offline_tile_packages.id = delete_offline_tile_package.id and session_is_admin(offline_tile_packages.project_id) returning *;
+  $$;
 
 
 --
@@ -4815,6 +4894,17 @@ CREATE FUNCTION public.enable_forum_posting("userId" integer, "projectId" intege
 --
 
 COMMENT ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" integer) IS 'Re-enable discussion forum posting for a user that was previously banned.';
+
+
+--
+-- Name: enable_offline_support(integer, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enable_offline_support(project_id integer, enable boolean) RETURNS public.projects
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update projects set is_offline_enabled = enable where projects.id = project_id and session_is_superuser() returning *; 
+  $$;
 
 
 --
@@ -5063,6 +5153,36 @@ COMMENT ON FUNCTION public.forms_logic_rules(form public.forms) IS '
 
 
 --
+-- Name: generate_offline_tile_package(integer, text, integer, integer, public.offline_tile_package_source_type, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text) RETURNS public.offline_tile_packages
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pkg offline_tile_packages;
+    begin
+      if session_is_admin("projectId") and (select is_offline_enabled from projects where id = "projectId") = true then
+        insert into offline_tile_packages (project_id, region, data_source_url, is_mapbox_hosted, max_z, max_shoreline_z, source_type, original_url_template) values (
+          "projectId",
+          (select region from projects where id = "projectId"),
+          "dataSourceUrl",
+          true,
+          "maxZ",
+          "maxShorelineZ",
+          "sourceType",
+          "originalUrlTemplate"
+        ) returning * into pkg;
+        return pkg;
+      else
+        raise exception 'Permission denied';  
+      end if;
+      return pkg;
+    end;
+  $$;
+
+
+--
 -- Name: get_or_create_user_by_sub(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5164,6 +5284,24 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
+
+
+--
+-- Name: get_surveys(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_surveys(ids integer[]) RETURNS SETOF public.surveys
+    LANGUAGE sql STABLE
+    AS $$
+    select * from surveys where id = any(ids);
+$$;
+
+
+--
+-- Name: FUNCTION get_surveys(ids integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_surveys(ids integer[]) IS '@simpleCollections only';
 
 
 --
@@ -5842,6 +5980,59 @@ COMMENT ON FUNCTION public.my_sketches("projectId" integer) IS '
 
 
 --
+-- Name: offline_tile_packages_insert_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.offline_tile_packages_insert_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM graphile_worker.add_job('createTilePackage', json_build_object('packageId', NEW.id), queue_name := 'create-tile-package', max_attempts := 1);
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: offline_tile_packages_job_errors(public.offline_tile_packages); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.offline_tile_packages_job_errors(pkg public.offline_tile_packages) RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      job_error text;
+    begin
+      select last_error into job_error from graphile_worker.jobs where payload->>'packageId' = pkg.id::text;
+      if pkg.error is null then
+        return job_error;
+      end if;
+      return pkg.error;
+    end;
+  $$;
+
+
+--
+-- Name: offline_tile_packages_job_status(public.offline_tile_packages); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.offline_tile_packages_job_status(pkg public.offline_tile_packages) RETURNS public.offline_tile_package_status
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      job_error text;
+    begin
+      select last_error into job_error from graphile_worker.jobs where payload->>'packageId' = pkg.id::text;
+      if job_error is null then
+        return pkg.status;
+      else
+        return 'FAILED';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: on_user_insert_create_notification_preferences(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5985,6 +6176,71 @@ case the client should explain such.
 Message could also be null if `hiddenByModerator` is set. In that case the 
 client should explain that the post violated the `CommunityGuidelines`, if set.
 ';
+
+
+--
+-- Name: project_access_status(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_access_status(pid integer) RETURNS public.project_access_status
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      access_control_setting project_access_control_setting;
+      approved_request boolean;
+      uid int;
+      admin_bit boolean;
+      email_verified boolean;
+    begin
+      select nullif (current_setting('session.user_id', TRUE), '')::integer into 
+      uid;
+      select is_admin(pid, uid) into admin_bit;
+      if current_setting('session.email_verified', TRUE) = 'true' then
+        email_verified = true;
+      else
+        email_verified = false;
+      end if;
+      SELECT
+        access_control
+      into
+        access_control_setting
+      FROM
+        projects
+      WHERE
+        id = pid;
+      if access_control_setting is null then
+        return 'PROJECT_DOES_NOT_EXIST'::project_access_status;
+      end if;
+      if session_has_project_access(pid) then
+        return 'GRANTED'::project_access_status;
+      end if;
+      if uid is null then
+        return 'DENIED_ANON'::project_access_status;
+      end if;
+      if access_control_setting = 'admins_only'::project_access_control_setting then
+        if admin_bit and email_verified = false then
+          return 'DENIED_EMAIL_NOT_VERIFIED'::project_access_status;
+        else
+          return 'DENIED_ADMINS_ONLY'::project_access_status;
+        end if;
+      end if;
+      -- access control setting must be invite_only
+      select 
+        approved into approved_request 
+      from 
+        project_participants 
+      where 
+        user_id = uid and project_id = pid;
+      if approved_request is null then
+        return 'DENIED_NOT_REQUESTED'::project_access_status;
+      elsif approved_request is false then
+        return 'DENIED_NOT_APPROVED'::project_access_status;
+      elsif email_verified is false then
+        return 'DENIED_EMAIL_NOT_VERIFIED'::project_access_status;
+      end if;
+      raise exception 'Unknown reason for denying project access. userid = %, project_id = %', uid, pid;
+    end;
+$$;
 
 
 --
@@ -6204,6 +6460,28 @@ CREATE FUNCTION public.project_invites_status(invite public.project_invites) RET
       end if;
     end;      
   $$;
+
+
+--
+-- Name: project_public_details(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_public_details(slug text) RETURNS public.public_project_details
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  SELECT
+    id,
+    name,
+    slug,
+    logo_url,
+    access_control,
+    support_email,
+    project_access_status(id) as access_status
+  FROM
+    projects
+  WHERE
+    projects.slug = project_public_details.slug
+$$;
 
 
 --
@@ -6998,18 +7276,26 @@ Returns true if the given user is an administrator of the project. Informaiton i
 -- Name: projects_mapbox_secret_key(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.projects_mapbox_secret_key(project public.projects) RETURNS text
+CREATE FUNCTION public.projects_mapbox_secret_key(p public.projects) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select mapbox_secret_key from projects where projects.id = project.id and session_is_admin(project.id);
+    -- begin
+      select mapbox_secret_key from projects where projects.id = p.id and session_is_admin(p.id);
+      -- if session_is_admin(p.id) then
+      --   return (select mapbox_secret_key from projects where projects.id = project.id and session_is_admin(project.id));
+      -- else
+      --   return '*********'::text;
+      --   -- raise exception 'Must be project admin';
+      -- end if;
+    -- end;
   $$;
 
 
 --
--- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION projects_mapbox_secret_key(p public.projects); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.projects_mapbox_secret_key(project public.projects) IS 'Only available to project admins. Use to query basemaps from a specified account.';
+COMMENT ON FUNCTION public.projects_mapbox_secret_key(p public.projects) IS '@fieldName mapboxSecretKey';
 
 
 --
@@ -9047,6 +9333,35 @@ $$;
 
 
 --
+-- Name: surveys_basemaps(public.surveys); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.surveys_basemaps(survey public.surveys) RETURNS SETOF public.basemaps
+    LANGUAGE sql STABLE
+    AS $$
+    select * from basemaps where id = any(select distinct(unnest(array_cat(
+      (select array_agg(c) from (
+        select unnest(map_basemaps) from form_elements where form_id = (
+          select id from forms where survey_id = survey.id) and layout = any('{MAP_STACKED,MAP_SIDEBAR_LEFT,MAP_SIDEBAR_RIGHT,MAP_FULLSCREEN,MAP_TOP}')
+        ) as dt(c)
+      ),
+      (select array_agg(basemaps) from (
+        select jsonb_array_elements(component_settings->'basemaps') as basemaps from form_elements where form_id = (
+          select id from forms where survey_id = survey.id
+        ) and component_settings->'basemaps' is not null
+      ) as f)::int[]
+    ))));
+  $$;
+
+
+--
+-- Name: FUNCTION surveys_basemaps(survey public.surveys); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.surveys_basemaps(survey public.surveys) IS '@simpleCollections only';
+
+
+--
 -- Name: surveys_invited_groups(public.surveys); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9287,6 +9602,63 @@ $$;
 --
 
 COMMENT ON FUNCTION public.unsubscribed("userId" integer) IS '@omit';
+
+
+--
+-- Name: update_basemap_offline_tile_settings(integer, integer, boolean, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer) RETURNS public.basemaps
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      existing_settings_id int;
+      return_value basemaps;
+    begin
+      if session_is_admin("projectId") then
+        update basemaps set use_default_offline_tile_settings = use_default where id = "basemapId";
+        if use_default then
+          select id into existing_settings_id from offline_tile_settings where project_id = "projectId" and basemap_id is null;
+          if existing_settings_id is null then
+            insert into offline_tile_settings (project_id, max_z, max_shoreline_z, region) values ("projectId", "maxZ", "maxShorelineZ", (select region from projects where id = "projectId"));
+          else
+            update offline_tile_settings set max_z = "maxZ", max_shoreline_z = "maxShorelineZ" where id = existing_settings_id;
+          end if;
+        else
+          select id into existing_settings_id from offline_tile_settings where project_id = "projectId" and basemap_id = "basemapId";
+          if existing_settings_id is null then
+            insert into offline_tile_settings (project_id, basemap_id, max_z, max_shoreline_z, region) values ("projectId", "basemapId", "maxZ", "maxShorelineZ", (select region from projects where id = "projectId"));
+          else
+            update offline_tile_settings set max_z = "maxZ", max_shoreline_z = "maxShorelineZ" where id = existing_settings_id;
+          end if;
+        end if;
+        select * into return_value from basemaps where id = "basemapId" and session_is_admin(basemaps.project_id);
+        return return_value;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: update_mapbox_secret_key(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) RETURNS public.projects
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      p projects;
+    begin
+      if session_is_admin(project_id) then
+        update projects set mapbox_secret_key = secret where projects.id = project_id returning * into p;
+        return p;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -10267,6 +10639,43 @@ JSON web key set table. Design guided by https://tools.ietf.org/html/rfc7517
 
 
 --
+-- Name: offline_tile_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.offline_tile_settings (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    basemap_id integer,
+    region public.geometry(Polygon,4326) NOT NULL,
+    max_z integer DEFAULT 11 NOT NULL,
+    max_shoreline_z integer DEFAULT 14,
+    CONSTRAINT offline_tile_settings_check CHECK (((max_shoreline_z > max_z) AND (max_shoreline_z <= 16))),
+    CONSTRAINT offline_tile_settings_max_z_check CHECK (((max_z >= 6) AND (max_z <= 16)))
+);
+
+
+--
+-- Name: TABLE offline_tile_settings; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.offline_tile_settings IS '@simpleCollections only';
+
+
+--
+-- Name: offline_tile_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.offline_tile_settings ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.offline_tile_settings_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: optional_basemap_layers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -11073,6 +11482,30 @@ ALTER TABLE ONLY public.jwks
 
 
 --
+-- Name: offline_tile_packages offline_tile_packages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.offline_tile_packages
+    ADD CONSTRAINT offline_tile_packages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: offline_tile_settings offline_tile_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.offline_tile_settings
+    ADD CONSTRAINT offline_tile_settings_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: offline_tile_settings offline_tile_settings_project_id_basemap_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.offline_tile_settings
+    ADD CONSTRAINT offline_tile_settings_project_id_basemap_id_key UNIQUE (project_id, basemap_id);
+
+
+--
 -- Name: optional_basemap_layers optional_basemap_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11600,6 +12033,440 @@ CREATE INDEX invite_emails_survey_invite_id_to_address_idx ON public.invite_emai
 --
 
 CREATE INDEX invite_emails_token_idx ON public.invite_emails USING btree (token);
+
+
+--
+-- Name: offline_tile_packages_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_packages_project_id_idx ON public.offline_tile_packages USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx1 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx10; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx10 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx11; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx11 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx12; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx12 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx13; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx13 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx14; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx14 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx15; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx15 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx16; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx16 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx17; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx17 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx18; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx18 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx19; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx19 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx2 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx20; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx20 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx21; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx21 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx22; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx22 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx23; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx23 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx24; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx24 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx25; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx25 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx26; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx26 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx27; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx27 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx28; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx28 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx29; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx29 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx3 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx4; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx4 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx5; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx5 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx6 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx7; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx7 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx8; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx8 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_basemap_id_idx9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_basemap_id_idx9 ON public.offline_tile_settings USING btree (basemap_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx1 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx10; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx10 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx11; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx11 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx12; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx12 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx13; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx13 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx14; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx14 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx15; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx15 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx16; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx16 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx17; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx17 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx18; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx18 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx19; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx19 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx2; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx2 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx20; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx20 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx21; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx21 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx22; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx22 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx23; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx23 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx24; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx24 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx25; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx25 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx26; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx26 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx27; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx27 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx28; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx28 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx29; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx29 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx3; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx3 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx4; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx4 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx5; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx5 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx6; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx6 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx7; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx7 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx8; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx8 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_project_id_idx9; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX offline_tile_settings_project_id_idx9 ON public.offline_tile_settings USING btree (project_id);
+
+
+--
+-- Name: offline_tile_settings_unique_project_default; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX offline_tile_settings_unique_project_default ON public.offline_tile_settings USING btree (project_id, ((basemap_id IS NULL))) WHERE (basemap_id IS NULL);
 
 
 --
@@ -12177,6 +13044,20 @@ CREATE TRIGGER form_elements_check_allowed_layouts_002 BEFORE INSERT OR UPDATE O
 
 
 --
+-- Name: offline_tile_packages offline_tile_packages_on_insert_1; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER offline_tile_packages_on_insert_1 AFTER INSERT ON public.offline_tile_packages FOR EACH ROW EXECUTE FUNCTION public.offline_tile_packages_insert_trigger();
+
+
+--
+-- Name: offline_tile_packages on_delete_offline_tile_package_001; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline_tile_packages FOR EACH ROW EXECUTE FUNCTION public.cleanup_tile_package();
+
+
+--
 -- Name: sketch_classes sketch_classes_prohibit_delete_t; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -12564,6 +13445,30 @@ ALTER TABLE ONLY public.invite_emails
 COMMENT ON CONSTRAINT invite_emails_survey_invite_id_fkey ON public.invite_emails IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: offline_tile_packages offline_tile_packages_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.offline_tile_packages
+    ADD CONSTRAINT offline_tile_packages_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
+
+
+--
+-- Name: offline_tile_settings offline_tile_settings_basemap_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.offline_tile_settings
+    ADD CONSTRAINT offline_tile_settings_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id);
+
+
+--
+-- Name: offline_tile_settings offline_tile_settings_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.offline_tile_settings
+    ADD CONSTRAINT offline_tile_settings_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
 
 
 --
@@ -13431,6 +14336,32 @@ CREATE POLICY invite_emails_admin ON public.invite_emails FOR SELECT TO seasketc
    FROM (public.survey_invites
      JOIN public.surveys ON ((surveys.id = survey_invites.survey_id)))
   WHERE (survey_invites.id = invite_emails.survey_invite_id)))));
+
+
+--
+-- Name: offline_tile_packages; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.offline_tile_packages ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: offline_tile_packages offline_tile_packages_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY offline_tile_packages_admin ON public.offline_tile_packages FOR SELECT USING (public.session_is_admin(project_id));
+
+
+--
+-- Name: offline_tile_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.offline_tile_settings ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: offline_tile_settings offline_tile_settings_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY offline_tile_settings_admin ON public.offline_tile_settings USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
 
 
 --
@@ -15578,6 +16509,13 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 
 
 --
+-- Name: FUNCTION cleanup_tile_package(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.cleanup_tile_package() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION clear_form_element_style(form_element_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -15770,11 +16708,19 @@ GRANT SELECT ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(name) ON TABLE public.projects TO anon;
 
 
 --
@@ -15783,6 +16729,21 @@ GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(description) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.legacy_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(legacy_id) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.slug; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 
 --
@@ -15791,6 +16752,7 @@ GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 
 
 --
@@ -15799,6 +16761,7 @@ GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 
 
 --
@@ -15807,6 +16770,7 @@ GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 
 
 --
@@ -15815,6 +16779,7 @@ GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 
 
 --
@@ -15822,6 +16787,21 @@ GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
+GRANT SELECT(is_featured) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.is_deleted; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_deleted) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.deleted_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 
 --
@@ -15830,6 +16810,7 @@ GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
 
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(region) ON TABLE public.projects TO anon;
 
 
 --
@@ -15838,6 +16819,7 @@ GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 
 
 --
@@ -15845,6 +16827,7 @@ GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(invite_email_template_text) ON TABLE public.projects TO anon;
 
 
 --
@@ -15852,6 +16835,7 @@ GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON T
 --
 
 GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(invite_email_subject) ON TABLE public.projects TO anon;
 
 
 --
@@ -15869,10 +16853,17 @@ GRANT SELECT(created_at) ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.creator_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(creator_id) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -15880,6 +16871,7 @@ GRANT UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
+GRANT SELECT(mapbox_public_key) ON TABLE public.projects TO anon;
 
 
 --
@@ -15980,11 +16972,11 @@ GRANT ALL ON FUNCTION public.create_survey_jump_rule("formElementId" integer, "j
 
 
 --
--- Name: FUNCTION create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean) TO anon;
+REVOKE ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_survey_response("surveyId" integer, response_data json, facilitated boolean, draft boolean, bypassed_submission_control boolean, practice boolean, offline_id uuid) TO anon;
 
 
 --
@@ -16048,14 +17040,6 @@ GRANT ALL ON FUNCTION public.current_project_access_status() TO anon;
 
 
 --
--- Name: FUNCTION current_project_public_details(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.current_project_public_details() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.current_project_public_details() TO anon;
-
-
---
 -- Name: FUNCTION data_hosting_quota_left(pid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16100,6 +17084,29 @@ GRANT SELECT(sprite_ids) ON TABLE public.data_layers TO anon;
 
 REVOKE ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
+
+
+--
+-- Name: FUNCTION uuid_generate_v4(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.uuid_generate_v4() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
+
+
+--
+-- Name: TABLE offline_tile_packages; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.offline_tile_packages TO anon;
+
+
+--
+-- Name: FUNCTION delete_offline_tile_package(id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_offline_tile_package(id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.delete_offline_tile_package(id uuid) TO seasketch_user;
 
 
 --
@@ -16192,6 +17199,14 @@ GRANT ALL ON FUNCTION public.enable_forum_posting("userId" integer, "projectId" 
 
 
 --
+-- Name: FUNCTION enable_offline_support(project_id integer, enable boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enable_offline_support(project_id integer, enable boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enable_offline_support(project_id integer, enable boolean) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION enablelongtransactions(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16281,6 +17296,14 @@ GRANT ALL ON FUNCTION public.forms_form_elements(f public.forms) TO anon;
 
 REVOKE ALL ON FUNCTION public.forms_logic_rules(form public.forms) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.forms_logic_rules(form public.forms) TO anon;
+
+
+--
+-- Name: FUNCTION generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.generate_offline_tile_package("projectId" integer, "dataSourceUrl" text, "maxZ" integer, "maxShorelineZ" integer, "sourceType" public.offline_tile_package_source_type, "originalUrlTemplate" text) TO seasketch_user;
 
 
 --
@@ -17070,6 +18093,14 @@ GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
 
 
 --
+-- Name: FUNCTION get_surveys(ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_surveys(ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_surveys(ids integer[]) TO anon;
+
+
+--
 -- Name: FUNCTION gettransactionid(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17671,6 +18702,29 @@ REVOKE ALL ON FUNCTION public.nlevel(public.ltree) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION offline_tile_packages_insert_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.offline_tile_packages_insert_trigger() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION offline_tile_packages_job_errors(pkg public.offline_tile_packages); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.offline_tile_packages_job_errors(pkg public.offline_tile_packages) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.offline_tile_packages_job_errors(pkg public.offline_tile_packages) TO anon;
+
+
+--
+-- Name: FUNCTION offline_tile_packages_job_status(pkg public.offline_tile_packages); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.offline_tile_packages_job_status(pkg public.offline_tile_packages) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.offline_tile_packages_job_status(pkg public.offline_tile_packages) TO anon;
+
+
+--
 -- Name: FUNCTION on_user_insert_create_notification_preferences(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18187,6 +19241,14 @@ GRANT ALL ON FUNCTION public.posts_message(post public.posts) TO anon;
 
 
 --
+-- Name: FUNCTION project_access_status(pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_access_status(pid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_access_status(pid integer) TO anon;
+
+
+--
 -- Name: FUNCTION project_groups_member_count(g public.project_groups); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18240,6 +19302,14 @@ GRANT ALL ON FUNCTION public.project_invites_groups(invite public.project_invite
 
 REVOKE ALL ON FUNCTION public.project_invites_status(invite public.project_invites) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_invites_status(invite public.project_invites) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION project_public_details(slug text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_public_details(slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_public_details(slug text) TO anon;
 
 
 --
@@ -18632,10 +19702,11 @@ GRANT ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integ
 
 
 --
--- Name: FUNCTION projects_mapbox_secret_key(project public.projects); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION projects_mapbox_secret_key(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.projects_mapbox_secret_key(project public.projects) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.projects_mapbox_secret_key(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_mapbox_secret_key(p public.projects) TO anon;
 
 
 --
@@ -22105,6 +23176,14 @@ GRANT ALL ON FUNCTION public.surveys_archived_response_count(survey public.surve
 
 
 --
+-- Name: FUNCTION surveys_basemaps(survey public.surveys); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.surveys_basemaps(survey public.surveys) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.surveys_basemaps(survey public.surveys) TO anon;
+
+
+--
 -- Name: FUNCTION surveys_invited_groups(survey public.surveys); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22307,6 +23386,22 @@ GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
 
 
 --
+-- Name: FUNCTION update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_mapbox_secret_key(project_id integer, secret text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION update_post("postId" integer, message jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22457,14 +23552,6 @@ REVOKE ALL ON FUNCTION public.uuid_generate_v1mc() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.uuid_generate_v3(namespace uuid, name text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION uuid_generate_v4(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.uuid_generate_v4() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
 
 
 --
@@ -22724,6 +23811,13 @@ GRANT INSERT,UPDATE ON TABLE public.interactivity_settings TO seasketch_user;
 --
 
 GRANT ALL ON TABLE public.jwks TO graphile;
+
+
+--
+-- Name: TABLE offline_tile_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.offline_tile_settings TO seasketch_user;
 
 
 --

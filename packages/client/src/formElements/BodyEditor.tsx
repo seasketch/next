@@ -7,7 +7,6 @@ import {
   useUpdateAlternateLanguageSettingsMutation,
   useUpdateComponentSettingsMutation,
   useUpdateFormElementBodyMutation,
-  useUpdateFormElementMutation,
 } from "../generated/graphql";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { useApolloClient } from "@apollo/client";
@@ -16,7 +15,6 @@ import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
 import TooltipMenu from "../editor/TooltipMenu";
 import { SurveyContext } from "./FormElement";
-import languages from "../lang/supported";
 import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
 
 export default function BodyEditor({
@@ -66,22 +64,14 @@ export default function BodyEditor({
     }
   }
 
-  const [update, updateState] = useUpdateFormElementBodyMutation();
-  const [updateComponentSettings, updateComponentSettingsState] =
-    useUpdateComponentSettingsMutation();
-  const [
-    updateAlternateLanguageSettings,
-    updateAlternateLanguageSettingsState,
-  ] = useUpdateAlternateLanguageSettingsMutation();
+  const [update] = useUpdateFormElementBodyMutation();
+  const [updateComponentSettings] = useUpdateComponentSettingsMutation();
+  const [updateAlternateLanguageSettings] =
+    useUpdateAlternateLanguageSettingsMutation();
   const client = useApolloClient();
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<EditorState>();
-  const supportedLanguages = languages.filter(
-    (lang) =>
-      (context?.supportedLanguages || []).indexOf(lang.code) !== -1 ||
-      lang.code === "EN"
-  );
 
   useEffect(() => {
     const doc = body ? Node.fromJSON(schema, body) : undefined;

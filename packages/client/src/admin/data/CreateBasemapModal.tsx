@@ -1,14 +1,6 @@
-import { ApolloCache, gql, useApolloClient } from "@apollo/client";
-import { prepareDataForValidation } from "formik";
+import { ApolloCache, gql } from "@apollo/client";
 import { Map, Style } from "mapbox-gl";
-import React, {
-  CSSProperties,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
@@ -18,11 +10,9 @@ import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
   BasemapType,
-  CursorType,
   useCreateBasemapMutation,
   useUpdateInteractivitySettingsLayersMutation,
   useUpdateInteractivitySettingsMutation,
-  useMapboxKeysQuery,
   BasemapDetailsFragment,
   useUploadBasemapMutation,
 } from "../../generated/graphql";

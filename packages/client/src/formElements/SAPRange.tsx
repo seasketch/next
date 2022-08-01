@@ -1,11 +1,10 @@
 import { StarIcon } from "@heroicons/react/solid";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   adminValueInputCommonClassNames,
   FormElementBody,
   FormElementComponent,
-  FormElementEditorPortal,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 require("./SAPRange.css");
@@ -33,10 +32,6 @@ const SAPRange: FormElementComponent<SAPRangeProps, number> = (props) => {
     averageText: t("Average"),
     lowText: t("Low"),
   };
-  const [state, setState] = useState({
-    hovered: 0,
-    selected: props.value || 0,
-  });
 
   const defaultValue =
     props.componentSettings.defaultValue || Math.round((max - min) / 2);

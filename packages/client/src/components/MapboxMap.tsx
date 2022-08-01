@@ -5,6 +5,7 @@ import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Spinner from "./Spinner";
+import { Trans } from "react-i18next";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -89,7 +90,24 @@ export default function MapboxMap(props: OverlayMapProps) {
       {showSpinner && (
         <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
       )}
-
+      <div className="w-full absolute top-0 z-10 items-center justify-center">
+        <AnimatePresence>
+          {mapContext.offlineTileSimulatorActive ? (
+            <motion.div
+              initial={{ opacity: 0, translateY: -40 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              exit={{ opacity: 0, translateY: -40 }}
+              transition={{ duration: 0.2 }}
+              className="text-lg p-0.5 px-4 py-2"
+              style={{
+                backgroundColor: "orange",
+              }}
+            >
+              <Trans ns="basemaps:offline">Offline Tile Simulator Active</Trans>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>
           {mapContext.bannerMessages?.length ? (

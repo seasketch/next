@@ -7,7 +7,6 @@ import {
   FormElementEditorPortal,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import { SurveyStyleContext } from "../surveys/appearance";
 import { MinusIcon, PlusIcon } from "@heroicons/react/outline";
 import NumberInput from "../components/NumberInput";
 import InputBlock from "../components/InputBlock";

@@ -1,18 +1,17 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { GeoJSONSource, LngLatLike, Map } from "mapbox-gl";
+import { LngLatLike, Map } from "mapbox-gl";
 import { useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature, FeatureCollection, Point } from "geojson";
+import { Feature, FeatureCollection } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
 import DrawPoint from "./DrawPoint";
 import DirectSelect from "./DirectSelect";
 import SimpleSelect from "./SimpleSelect";
 import getKinks from "@turf/kinks";
 import styles from "./styles";
-import debounce from "lodash.debounce";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 
 function hasKinks(feature?: Feature<any>) {
@@ -82,9 +81,8 @@ export default function useMapboxGLDraw(
   const drawMode = glDrawMode(isSmall, geometryType);
   const [state, _setState] = useState(DigitizingState.NO_SELECTION);
   const [disabled, setDisabled] = useState(false);
-  const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
-    null
-  );
+  const [dragTarget, setDragTarget] =
+    useState<DigitizingDragTarget | null>(null);
   const [selection, setSelection] = useState<null | Feature<any>>(null);
   const handlerState = useRef<{
     draw?: MapboxDraw;

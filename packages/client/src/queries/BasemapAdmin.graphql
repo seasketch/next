@@ -365,8 +365,8 @@ mutation UpdateInteractivitySettingsLayers($id: Int!, $layers: [String]) {
   }
 }
 
-query MapboxKeys {
-  currentProject {
+query MapboxKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     mapboxPublicKey
     mapboxSecretKey

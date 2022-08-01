@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
+import plurals from "./lang/plurals.json";
 
 i18n
   .use(LanguageDetector)
@@ -15,7 +16,14 @@ i18n
         /* webpackChunkName: "lang" */ `./lang/${language}/${namespace}.json`
       )
         .then((resources) => {
-          callback(null, resources);
+          if (language === "en") {
+            callback(null, {
+              ...resources,
+              ...plurals,
+            });
+          } else {
+            callback(null, resources);
+          }
         })
         .catch((error) => {
           callback(error, null);

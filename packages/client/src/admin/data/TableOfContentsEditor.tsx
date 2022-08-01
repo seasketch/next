@@ -1,9 +1,7 @@
-import { LngLatBoundsLike, LngLatLike } from "mapbox-gl";
-import React, { useContext, useEffect, useState } from "react";
-import { Item, Menu, Separator } from "react-contexify";
-import { Link, useParams } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { Item } from "react-contexify";
+import { useParams } from "react-router-dom";
 import Button from "../../components/Button";
-import Modal from "../../components/Modal";
 import { useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
@@ -14,16 +12,11 @@ import TableOfContents, {
   nestItems,
 } from "../../dataLayers/tableOfContents/TableOfContents";
 import {
-  TableOfContentsItem,
   useDraftTableOfContentsQuery,
   useLayersAndSourcesForItemsQuery,
-  useCreateFolderMutation,
-  DraftTableOfContentsDocument,
   useUpdateTableOfContentsItemChildrenMutation,
 } from "../../generated/graphql";
 import useLocalStorage from "../../useLocalStorage";
-import useProjectId from "../../useProjectId";
-import { generateStableId } from "./arcgis/arcgis";
 import DeleteTableOfContentsItemModal from "./DeleteTableOfContentsItemModal";
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
@@ -35,19 +28,18 @@ export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
   const { slug } = useParams<{ slug: string }>();
   const { manager } = useContext(MapContext);
-  const { t, i18n } = useTranslation(["nav"]);
+  const { t } = useTranslation(["nav"]);
 
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });
-  const projectId = useProjectId();
   const [treeItems, setTreeItems] = useState<ClientTableOfContentsItem[]>([]);
   const [openLayerItemId, setOpenLayerItemId] = useState<number>();
   const [createNewFolderModalOpen, setCreateNewFolderModalOpen] =
     useState<boolean>(false);
   const [itemForDeletion, setItemForDeletion] =
     useState<ClientTableOfContentsItem>();
-  const [updateChildrenMutation, updateChildrenMutationState] =
+  const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
   const [expansionState, setExpansionState] = useLocalStorage<{
     [id: number]: boolean;

@@ -1,26 +1,14 @@
-import bbox from "@turf/bbox";
-import bboxPolygon from "@turf/bbox-polygon";
-import { CameraOptions, LngLatBoundsLike, Map } from "mapbox-gl";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { CameraOptions } from "mapbox-gl";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import Button from "../../components/Button";
-import truncate from "@turf/truncate";
-import { encode } from "@mapbox/polyline";
-import { BBox } from "geojson";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import DrawRectangle from "mapbox-gl-draw-rectangle-mode";
-import {
-  BasemapDetailsFragment,
-  useAllBasemapsQuery,
-} from "../../generated/graphql";
+import { useAllBasemapsQuery } from "../../generated/graphql";
 import { Link, useParams } from "react-router-dom";
-import { PencilIcon, TrashIcon } from "@heroicons/react/outline";
+import { TrashIcon } from "@heroicons/react/outline";
 import SelectBasemapsModal from "./SelectBasemapsModal";
 import { FormEditorHeader } from "./SurveyFormEditor";
 import DropdownButton from "../../components/DropdownButton";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import CreateBasemapModal from "../data/CreateBasemapModal";
-import BasemapEditorPanel from "../data/BasemapEditorPanel";
 
 function filterBasemaps<T extends { id: number }>(
   basemaps: T[],
@@ -46,16 +34,20 @@ export default function BasemapMultiSelectInput({
   returnToUrl?: string;
 }) {
   const { t } = useTranslation("admin:surveys");
-  const { data, loading, error, refetch } = useAllBasemapsQuery({});
+  const { slug } = useParams<{ slug: string }>();
+  const { data, refetch } = useAllBasemapsQuery({
+    variables: {
+      slug,
+    },
+  });
   const [state, setState] = useState(value || []);
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const { slug } = useParams<{ slug: string }>();
 
   const basemaps = useMemo(() => {
-    if (data?.currentProject?.basemaps && data.currentProject.surveyBasemaps) {
+    if (data?.projectBySlug?.basemaps && data.projectBySlug?.surveyBasemaps) {
       return [
-        ...data.currentProject.basemaps,
-        ...data.currentProject.surveyBasemaps,
+        ...data.projectBySlug?.basemaps,
+        ...data.projectBySlug?.surveyBasemaps,
       ];
     }
     return [];

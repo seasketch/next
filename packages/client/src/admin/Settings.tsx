@@ -14,8 +14,9 @@ import {
   ProjectAccessControlSetting,
   useProjectRegionQuery,
   useUpdateProjectRegionMutation,
-  useUpdateKeysMutation,
   useMapboxApiKeysQuery,
+  UpdateSecretKeyDocument,
+  useUpdateOfflineEnabledMutation,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -38,11 +39,14 @@ import {
   MapboxTokenType,
 } from "./data/useMapboxAccountStyles";
 import Badge from "../components/Badge";
+import useIsSuperuser from "../useIsSuperuser";
+import InputBlock from "../components/InputBlock";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
   const { user } = useAuth0();
   const { setState: setHeaderState } = useContext(AdminMobileHeaderContext);
+  const superuser = useIsSuperuser();
   useEffect(() => {
     setHeaderState({
       heading: "Settings",
@@ -72,7 +76,7 @@ export default function Settings() {
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <DataBucketSettings />
         </div>
-        {user && user["https://seasketch.org/superuser"] ? (
+        {superuser ? (
           <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
             <SuperUserSettings />
           </div>
@@ -305,10 +309,8 @@ function AccessControlSettings() {
       slug,
     },
   });
-  const [
-    mutate,
-    mutationState,
-  ] = useUpdateProjectAccessControlSettingsMutation();
+  const [mutate, mutationState] =
+    useUpdateProjectAccessControlSettingsMutation();
   const [accessControl, setAccessControl] = useState<string | null>(null);
   const [isListedOn, setIsListedOn] = useState<boolean | null>(null);
   const updateAccessControl = (type: string) => {
@@ -579,7 +581,7 @@ function MapExtentSettings() {
 
   useEffect(() => {
     mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
-    if (!map && mapContainer.current) {
+    if (!map && mapContainer.current && data?.projectBySlug) {
       const mapInstance = new mapboxgl.Map({
         container: mapContainer.current,
         style: "mapbox://styles/mapbox/streets-v11", // stylesheet location
@@ -606,8 +608,6 @@ function MapExtentSettings() {
         // when mode drawing should be activated
         // draw.changeMode("draw_rectangle", {});
         mapInstance.resize();
-        // @ts-ignore
-        window.map = mapInstance;
       });
 
       mapInstance.on("draw.create", (e) => {
@@ -624,7 +624,7 @@ function MapExtentSettings() {
         setDrawing(false);
       });
     }
-  }, [map, mapContainer.current]);
+  }, [map, mapContainer.current, slug, data]);
 
   useEffect(() => {
     if (data && map && draw && draw.getAll().features.length === 0) {
@@ -691,6 +691,8 @@ function SuperUserSettings() {
   const [isFeatured, setIsFeatured] = useState<boolean | null>(null);
   const { data, loading, error } = useCurrentProjectMetadata();
   const [mutate, mutationState] = useUpdateProjectSettingsMutation();
+  const [updateOfflineEnabled, updateOfflineEnabledState] =
+    useUpdateOfflineEnabledMutation();
 
   if (loading) {
     return null;
@@ -715,7 +717,7 @@ function SuperUserSettings() {
       <div className="mt-5">
         <form action="#" method="POST">
           <div className="shadow sm:rounded-md sm:overflow-hidden">
-            <div className="px-4 py-5 bg-white sm:p-6">
+            <div className="px-4 py-5 bg-white sm:p-6 space-y-5">
               <h3 className="text-lg font-medium leading-6 text-gray-900">
                 {t("SeaSketch Developer Settings")}
               </h3>
@@ -732,30 +734,48 @@ function SuperUserSettings() {
                   {t("Error fetching settings.")} {error.message}
                 </p>
               )}
-              <div className="mt-5">
-                <div className="relative flex items-start">
-                  <div className="ml-3 text-sm leading-5">
-                    <div className="flex items-center -mt-2 py-4">
-                      <label
-                        htmlFor="candidates"
-                        className="font-medium text-gray-700"
-                      >
-                        {t("Featured Project")}
-                      </label>
-                      <Switch
-                        className="absolute right-2"
-                        isToggled={isFeaturedToggled}
-                        onClick={toggleIsFeatured}
-                      />
-                    </div>
-                    <p className="text-gray-500">
-                      {t(
-                        "Featured projects will be displayed more prominently on project listing pages."
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={isFeaturedToggled}
+                    onClick={toggleIsFeatured}
+                  />
+                }
+                title={t("Featured Project")}
+                description={t(
+                  "Featured projects will be displayed more prominently on project listing pages."
+                )}
+              />
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={Boolean(data?.project?.isOfflineEnabled)}
+                    onClick={(enabled) => {
+                      updateOfflineEnabled({
+                        variables: {
+                          enabled,
+                          projectId: data!.project!.id,
+                        },
+                        optimisticResponse: {
+                          __typename: "Mutation",
+                          enableOfflineSupport: {
+                            __typename: "EnableOfflineSupportPayload",
+                            project: {
+                              __typename: "Project",
+                              id: data!.project!.id,
+                              isOfflineEnabled: enabled,
+                            },
+                          },
+                        },
+                      });
+                    }}
+                  />
+                }
+                title={t("Enable Offline Support")}
+                description={t(
+                  "If enabled, project administrators will have access to experimental offline survey functionality. Otherwise these options will be hidden."
+                )}
+              />
             </div>
           </div>
         </form>
@@ -768,7 +788,10 @@ function MapboxAPIKeys() {
   const { t, i18n } = useTranslation(["admin"]);
   const onError = useGlobalErrorHandler();
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useMapboxApiKeysQuery({ onError });
+  const { data, loading, error } = useMapboxApiKeysQuery({
+    variables: { slug },
+    onError,
+  });
   const [validationError, setValidationError] = useState<string | null>(null);
   const [accountName, setAccount] = useState<{
     public?: string;
@@ -785,8 +808,8 @@ function MapboxAPIKeys() {
     let publicClaims: undefined | MapboxTokeClaims;
     let secretClaims: undefined | MapboxTokeClaims;
     try {
-      if (data?.currentProject?.mapboxPublicKey) {
-        publicClaims = getTokenClaims(data.currentProject.mapboxPublicKey);
+      if (data?.projectBySlug?.mapboxPublicKey) {
+        publicClaims = getTokenClaims(data.projectBySlug.mapboxPublicKey);
         setAccountName("public", publicClaims.u);
       }
     } catch (e) {
@@ -798,8 +821,8 @@ function MapboxAPIKeys() {
       return;
     }
     try {
-      if (data?.currentProject?.mapboxSecretKey) {
-        secretClaims = getTokenClaims(data.currentProject.mapboxSecretKey);
+      if (data?.projectBySlug?.mapboxSecretKey) {
+        secretClaims = getTokenClaims(data.projectBySlug.mapboxSecretKey);
         setAccountName("secret", secretClaims.u);
       }
     } catch (e) {
@@ -826,8 +849,8 @@ function MapboxAPIKeys() {
       setValidationError(null);
     }
   }, [
-    data?.currentProject?.mapboxPublicKey,
-    data?.currentProject?.mapboxSecretKey,
+    data?.projectBySlug?.mapboxPublicKey,
+    data?.projectBySlug?.mapboxSecretKey,
   ]);
 
   if (loading) {
@@ -881,7 +904,7 @@ function MapboxAPIKeys() {
                   )}
                 </div>
               }
-              value={data?.currentProject?.mapboxPublicKey || ""}
+              value={data?.projectBySlug?.mapboxPublicKey || ""}
               slug={slug}
             />
           </div>
@@ -889,6 +912,7 @@ function MapboxAPIKeys() {
             <ProjectAutosaveInput
               convertEmptyToNull={true}
               propName="mapboxSecretKey"
+              mutation={UpdateSecretKeyDocument}
               description={
                 <Trans ns="admin" key={"mapbox-secret-key"}>
                   Provide a secret key if you would like to list and add
@@ -910,8 +934,9 @@ function MapboxAPIKeys() {
                 </div>
               }
               placeholder={t("sk.12345678910")}
-              value={data?.currentProject?.mapboxSecretKey || ""}
+              value={data?.projectBySlug?.mapboxSecretKey || ""}
               slug={slug}
+              additionalVariables={{ id: data?.projectBySlug?.id }}
             />
           </div>
           {validationError && (
