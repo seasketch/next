@@ -93,11 +93,16 @@ jobs:
             --acl public-read
 
           echo "Uploading service-worker.js"
-            aws s3 cp build/service-worker.js $S3_BUCKET/service-worker.js \
-              --metadata-directive REPLACE \
-              --cache-control max-age=300 \
-              --content-type text/javascript \
-              --acl public-read
+          aws s3 cp build/service-worker.js $S3_BUCKET/service-worker.js \
+            --metadata-directive REPLACE \
+            --cache-control max-age=300 \
+            --content-type text/javascript \
+            --acl public-read
+          aws s3 cp build/service-worker.js.map $S3_BUCKET/service-worker.js.map \
+            --metadata-directive REPLACE \
+            --cache-control max-age=300 \
+            --content-type text/javascript \
+            --acl public-read
       - name: Create Sentry release
         uses: getsentry/action-release@v1
         env:
