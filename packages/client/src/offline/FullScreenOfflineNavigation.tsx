@@ -63,7 +63,7 @@ export default function FullScreenOfflineNavigation() {
               internet and adjust your account settings.
             </Trans>
           </p>
-          <div className="space-x-5 mt-3">
+          <div className="space-y-3 mt-3">
             {projects.map((project) => (
               <div key={project.name}>
                 <h2 className="py-2 font-medium">{project.name}</h2>
