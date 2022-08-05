@@ -112,14 +112,18 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
         });
         return cached;
       } else {
-        const response = await fetch(event.request);
-        if (response.ok) {
-          const json = await response.clone().json();
-          if (!("errors" in json) || json.errors.length === 0) {
-            this.putToCaches(strategies, cacheReq, response.clone());
+        try {
+          const response = await fetch(event.request);
+          if (response.ok) {
+            const json = await response.clone().json();
+            if (!("errors" in json) || json.errors.length === 0) {
+              this.putToCaches(strategies, cacheReq, response.clone());
+            }
           }
+          return response;
+        } catch (e) {
+          return new Response("Failed to fetch", { status: 408 });
         }
-        return response;
       }
     } else {
       try {
