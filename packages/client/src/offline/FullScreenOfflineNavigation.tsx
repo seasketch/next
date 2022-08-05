@@ -104,6 +104,7 @@ export default function FullScreenOfflineNavigation() {
 }
 
 async function getOfflineSurveyData(graphqlQueryCache: GraphqlQueryCache) {
+  await graphqlQueryCache.updateStrategyArgs();
   const cachedArguments = graphqlQueryCache.getStrategyArgs(
     offlineSurveyChoiceStrategy.key
   );
