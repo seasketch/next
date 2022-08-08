@@ -99,7 +99,12 @@ function ProfileStatusButton({
       onClick={onClickHandler}
     >
       {user.picture ? (
-        <img className="h-8 w-8 rounded-full" src={user.picture} alt="" />
+        <img
+          className="h-8 w-8 rounded-full"
+          src={user.picture}
+          referrerPolicy="no-referrer"
+          alt=""
+        />
       ) : (
         <svg
           xmlns="http://www.w3.org/2000/svg"
