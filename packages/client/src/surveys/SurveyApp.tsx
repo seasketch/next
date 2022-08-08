@@ -43,6 +43,11 @@ import { ProjectAccessGate } from "../auth/ProjectAccessGate";
 import useOfflineSurveyResponses from "../offline/useOfflineSurveyResponses";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { offlineSurveyChoiceStrategy } from "../offline/GraphqlQueryCache/strategies";
+import CenteredCardListLayout, {
+  Card,
+} from "../components/CenteredCardListLayout";
+import { ExclamationIcon, LockClosedIcon } from "@heroicons/react/outline";
+import Spinner from "../components/Spinner";
 
 require("./surveys.css");
 
@@ -76,7 +81,7 @@ function SurveyApp() {
 
   const [backwards, setBackwards] = useState(false);
   const onError = useGlobalErrorHandler();
-  const { data } = useSurveyQuery({
+  const { data, loading } = useSurveyQuery({
     variables: { id: parseInt(surveyId), slug },
     onError,
     // This could help improve resilience of the app when working offline with a stale cache
@@ -296,10 +301,54 @@ function SurveyApp() {
     setResponseState,
   ]);
 
-  if (!data?.survey?.form?.formElements || !pagingState) {
-    return <div></div>;
-  } else if (!data?.survey) {
-    return <div>{t("Survey not found")}</div>;
+  if (loading) {
+    return <Spinner />;
+  }
+
+  if (!data?.survey || !data?.survey?.form?.formElements || !pagingState) {
+    return (
+      // <CenteredCardListLayout>
+      <div
+        className="w-full h-screen z-50 inset-0 overflow-y-auto overflow-x-hidden max-w-full flex items-center justify-center"
+        aria-labelledby="modal-title"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div className="sm:-mt-40 bg-white block sm:align-middle sm:max-w-lg sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap w-screen h-screen sm:w-max sm:h-auto max-h-full">
+          <div className="sm:flex sm:items-start pt-5 pb-4">
+            <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 sm:mx-0 sm:h-10 sm:w-10">
+              <ExclamationIcon className="h-6 w-6 text-gray-700" />
+            </div>
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+              <h3
+                className="text-lg leading-6 font-medium text-gray-900"
+                id="modal-title"
+              >
+                {t("Survey not found")}
+              </h3>
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">
+                  {t(
+                    "This survey either does not exist or your account does not have access to it. Surveys marked as draft require special permission to access."
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-5 sm:mt-4 flex w-full justify-center sm:justify-end sm:space-x-1">
+            {data?.currentProject?.slug ? (
+              <Button
+                href={`/${data.currentProject.slug}/app`}
+                label={t("Return to project")}
+              />
+            ) : (
+              <Button href="/" label={t("Back to Homepage")} />
+            )}
+          </div>
+        </div>
+      </div>
+      // </CenteredCardListLayout>
+    );
   } else if (!formElement.current) {
     return null;
   } else {
