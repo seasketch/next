@@ -60,6 +60,7 @@ export default function SelectBasemapsModal(props: {
           />
         </div>
       }
+      className="max-h-128 overflow-y-scroll"
     >
       <div className="px-2 space-y-3 w-96 max-w-full">
         {basemaps.survey.length > 0 && (
