@@ -138,7 +138,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   redisHost: redis.cluster.attrRedisEndpointAddress,
   emailSource: SES_EMAIL_SOURCE,
   tilePackagesBucket: tilePackages.bucket,
-  clientDomain: DOMAIN_NAME,
+  clientDomain: SUBDOMAIN + "." + DOMAIN_NAME,
 });
 
 new MailerLambdaStack(app, "SeaSketchMailers", {

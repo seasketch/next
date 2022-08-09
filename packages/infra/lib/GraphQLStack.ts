@@ -111,8 +111,8 @@ export class GraphQLStack extends cdk.Stack {
         desiredCount: 2,
         listenerPort: 443,
         domainName: "api.seasket.ch",
-        domainZone: HostedZone.fromLookup(this, props.clientDomain, {
-          domainName: `${props.clientDomain}.`,
+        domainZone: HostedZone.fromLookup(this, "seasket.ch", {
+          domainName: "seasket.ch.",
         }),
         protocol: ApplicationProtocol.HTTPS,
         vpc: props.vpc,
