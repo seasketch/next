@@ -1,9 +1,41 @@
+
 describe ('Production site monitoring test', () => {
-  it('Loads the homepage', () => {
+  beforeEach(() => {
+    cy.intercept('https://seasketch.auth0.com/oauth/token').as('auth')
+  })
+  it ('Loads the homepage', () => {
     cy.visit("https://next.seasket.ch/");
     cy.contains('SeaSketch');
     cy.get('a').contains('Get started')
       .should('be.visible');
+    cy.get('#user-menu')
+      .should('not.exist');
+  });
+  it ('Logs in the user', () => {
+    cy.contains('Sign In').click();
+    cy.url().then((url)=> {
+      if (!url.includes ("https://seasketch.auth0.com")) {
+        cy.url().should('eq', "https://next.seasket.ch/");
+        cy.contains('Get started')
+          .should('be.visible');
+        cy.get('#user-menu')
+          .should('be.visible')
+          .click();
+        cy.contains('Sign out')
+          .click();
+        cy.contains('Sign In')
+          .click();
+        cy.get('[id="username"]').type("test_user_1@seasketch.org");
+        cy.get('[id="password"]').type("uUGPXmq7iDsh3XA");
+        cy.get('[name="action"]').contains('Continue').click();
+        cy.get('#user-menu').should('be.visible');
+      } else {
+        cy.get('[id="username"]').type("test_user_1@seasketch.org");
+        cy.get('[id="password"]').type("uUGPXmq7iDsh3XA");
+        cy.get('[name="action"]').contains('Continue').click();
+        cy.get('#user-menu').should('be.visible');
+      }
+    });
   }); 
   it ('Loads the project page', () => {
     cy.get('[id = "nav-projects"]')
@@ -18,5 +50,26 @@ describe ('Production site monitoring test', () => {
     }).then(() => {
       expect(projects.length).to.be.gt(1)
     });
+  });
+  it ('Loads the project', () => {
+    cy.contains('Cypress Production Test Project - cyprod')
+      .should('be.visible')
+      .click();
+    cy.contains('cyprod');
+    cy.contains('Project Administration')
+      .click();
+    cy.contains('Basic Settings');
+  });
+  it ('Loads the survey admin', () => {
+    cy.get('a').contains('Surveys').click({force:true});
+    cy.contains('Cypress Production Test Survey')
+      .click();
+    cy.contains('Cypress Production Test Survey');
+    cy.contains("https://next.seasket.ch/").click()
+  });
+  it('Loads the survey', () => {
+    cy.contains('Welcome to the Survey');
+    cy.get('button')
+      .contains('Begin');
   });
 });
