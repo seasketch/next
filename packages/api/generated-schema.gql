@@ -8603,7 +8603,6 @@ type Project implements Node {
     offset: Int
   ): [InviteStat!]
   inviteEmailSubject: String!
-  inviteEmailTemplateText: String!
 
   """List project invites by status"""
   invitesConnection(
@@ -9198,7 +9197,6 @@ input ProjectPatch {
   """Should be a short length in order to fit in the project header."""
   description: String
   inviteEmailSubject: String
-  inviteEmailTemplateText: String
 
   """
   Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers.

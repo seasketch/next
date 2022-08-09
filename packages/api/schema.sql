@@ -3839,10 +3839,6 @@ CREATE TABLE public.projects (
     deleted_at timestamp with time zone,
     region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
     data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket(),
-    invite_email_template_text text DEFAULT 'Hello {{name}},
-You have been invited to join the {{projectName}} SeaSketch project. To sign up, just follow this link and you will be able to create an account and start exploring the application.
-
-{{inviteLink}}'::text NOT NULL,
     invite_email_subject text DEFAULT 'You have been invited to a SeaSketch project'::text NOT NULL,
     support_email text NOT NULL,
     created_at timestamp without time zone DEFAULT now(),
@@ -16820,14 +16816,6 @@ GRANT SELECT(region) ON TABLE public.projects TO anon;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.invite_email_template_text; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(invite_email_template_text),UPDATE(invite_email_template_text) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(invite_email_template_text) ON TABLE public.projects TO anon;
 
 
 --

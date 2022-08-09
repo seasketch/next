@@ -30,6 +30,7 @@ export class GraphQLStack extends cdk.Stack {
       uploadsUrl: string;
       redisHost: string;
       emailSource: string;
+      clientDomain: string;
     }
   ) {
     super(scope, id, props);
@@ -103,14 +104,15 @@ export class GraphQLStack extends cdk.Stack {
             UNSPLASH_KEY,
             SENTRY_DSN,
             MAPBOX_ACCESS_TOKEN,
+            CLIENT_DOMAIN: props.clientDomain,
           },
           containerPort: 3857,
         },
         desiredCount: 2,
         listenerPort: 443,
         domainName: "api.seasket.ch",
-        domainZone: HostedZone.fromLookup(this, "seasket.ch", {
-          domainName: "seasket.ch.",
+        domainZone: HostedZone.fromLookup(this, props.clientDomain, {
+          domainName: `${props.clientDomain}.`,
         }),
         protocol: ApplicationProtocol.HTTPS,
         vpc: props.vpc,

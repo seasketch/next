@@ -10,7 +10,6 @@ import { PublicUploadsStack } from "../lib/PublicUploadsStack";
 import { DataHostDbUpdaterStack } from "../lib/DataHostDbUpdaterStack";
 import { RedisStack } from "../lib/RedisStack";
 import { GraphQLStack } from "../lib/GraphQLStack";
-import { Vpc } from "@aws-cdk/aws-ec2";
 import { MailerLambdaStack } from "../lib/MailerLambdaStack";
 import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadStack";
 let env = require("./env.production");
@@ -139,6 +138,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   redisHost: redis.cluster.attrRedisEndpointAddress,
   emailSource: SES_EMAIL_SOURCE,
   tilePackagesBucket: tilePackages.bucket,
+  clientDomain: DOMAIN_NAME,
 });
 
 new MailerLambdaStack(app, "SeaSketchMailers", {

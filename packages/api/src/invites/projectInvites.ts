@@ -8,6 +8,8 @@ import { DBClient } from "../dbClient";
 import { default as mustache } from "mustache";
 import sendEmail from "./sendEmail";
 import * as cache from "../cache";
+import htmlTemplate from "./projectInviteTemplate";
+import textTemplate from "./projectInviteTemplateText";
 
 export type ProjectInviteTokenClaims = {
   projectId: number;
@@ -37,6 +39,7 @@ export async function sendProjectInviteEmail(
     template: string;
     projectName: string;
     projectSlug: string;
+    supportEmail: string;
   }[] = (
     await client.query(
       `
@@ -49,9 +52,9 @@ export async function sendProjectInviteEmail(
         project_invites.id as "inviteId",
         email_unsubscribed(invite_emails.to_address) as "unsubscribed",
         projects.invite_email_subject as "subject",
-        projects.invite_email_template_text as "template",
         projects.name as "projectName",
-        projects.slug as "projectSlug"
+        projects.slug as "projectSlug",
+        projects.support_email as "supportEmail"
       from
         invite_emails
       inner join
@@ -97,14 +100,13 @@ export async function sendProjectInviteEmail(
       const templateVars = {
         name: inviteData.fullname,
         email: inviteData.email,
-        inviteLink: `https://${process.env.HOST}/auth/projectInvite?token=${token}`,
-        projectName: inviteData.projectName,
+        action_url: `https://${process.env.CLIENT_DOMAIN}/auth/projectInvite?token=${token}`,
+        project_name: inviteData.projectName,
+        support_email: inviteData.supportEmail || "support@seasketch.org",
+        docs_url: "http://help.seasketch.org",
       };
-      const textEmail = mustache.render(inviteData.template, templateVars);
-      const htmlEmail = mustache.render(
-        inviteData.template.replace(/\n/g, "<br>"),
-        templateVars
-      );
+      const textEmail = mustache.render(textTemplate, templateVars);
+      const htmlEmail = mustache.render(htmlTemplate, templateVars);
 
       const response = await sendEmail(
         inviteData.email,

@@ -25,5 +25,6 @@ declare namespace NodeJS {
     PUBLIC_UPLOADS_DOMAIN: string;
     UNSPLASH_KEY: string;
     TILE_PACKAGES_BUCKET: string;
+    CLIENT_DOMAIN: string;
   }
 }

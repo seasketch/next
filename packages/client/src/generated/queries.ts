@@ -7504,7 +7504,6 @@ export type Project = Node & {
    */
   inviteCounts?: Maybe<Array<InviteStat>>;
   inviteEmailSubject: Scalars['String'];
-  inviteEmailTemplateText: Scalars['String'];
   /** List project invites by status */
   invitesConnection: ProjectInvitesConnection;
   /**
@@ -8136,7 +8135,6 @@ export type ProjectPatch = {
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   inviteEmailSubject?: Maybe<Scalars['String']>;
-  inviteEmailTemplateText?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
   isFeatured?: Maybe<Scalars['Boolean']>;
   /**
