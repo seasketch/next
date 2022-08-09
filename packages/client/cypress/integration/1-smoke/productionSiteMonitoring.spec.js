@@ -2,41 +2,38 @@
 describe ('Production site monitoring test', () => {
   beforeEach(() => {
     cy.intercept('https://seasketch.auth0.com/oauth/token').as('auth')
-  })
-  it ('Loads the homepage', () => {
+  }); 
+  before(() => {
     cy.visit("https://next.seasket.ch/");
     cy.contains('SeaSketch');
     cy.get('a').contains('Get started')
       .should('be.visible');
-    cy.get('#user-menu')
-      .should('not.exist');
-  });
-  it ('Logs in the user', () => {
     cy.contains('Sign In').click();
-    cy.url().then((url)=> {
-      if (!url.includes ("https://seasketch.auth0.com")) {
-        cy.url().should('eq', "https://next.seasket.ch/");
-        cy.contains('Get started')
-          .should('be.visible');
+    cy.get('[id="username"]').type("test_user_1@seasketch.org");
+    cy.get('[id="password"]').type("uUGPXmq7iDsh3XA");
+    cy.get('[name="action"]').contains('Continue').click();
+    cy.get('#user-menu').should('be.visible');
+  });
+  after(() => {
+    cy.visit("https://next.seasket.ch/");
+    cy.get('button').then((btn) => {
+      if (btn.text().includes('Sign In')) {
+        cy.get('button').contains('Sign In')
+          .click();
         cy.get('#user-menu')
           .should('be.visible')
           .click();
         cy.contains('Sign out')
           .click();
-        cy.contains('Sign In')
-          .click();
-        cy.get('[id="username"]').type("test_user_1@seasketch.org");
-        cy.get('[id="password"]').type("uUGPXmq7iDsh3XA");
-        cy.get('[name="action"]').contains('Continue').click();
-        cy.get('#user-menu').should('be.visible');
       } else {
-        cy.get('[id="username"]').type("test_user_1@seasketch.org");
-        cy.get('[id="password"]').type("uUGPXmq7iDsh3XA");
-        cy.get('[name="action"]').contains('Continue').click();
-        cy.get('#user-menu').should('be.visible');
+        cy.get('#user-menu')
+          .should('be.visible')
+          .click();
+        cy.contains('Sign out')
+          .click();
       }
     });
-  }); 
+  });
   it ('Loads the project page', () => {
     cy.get('[id = "nav-projects"]')
       .click();
