@@ -110,7 +110,7 @@ export async function sendProjectInviteEmail(
 
       const response = await sendEmail(
         inviteData.email,
-        inviteData.subject,
+        `You have been invited to ${inviteData.projectName}`,
         htmlEmail,
         textEmail
       );
