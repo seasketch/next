@@ -474,22 +474,6 @@ export default `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "
     "
     bgcolor="#F4F4F7"
   >
-    <span
-      class="preheader"
-      style="
-        display: none !important;
-        visibility: hidden;
-        mso-hide: all;
-        font-size: 1px;
-        line-height: 1px;
-        max-height: 0;
-        max-width: 0;
-        opacity: 0;
-        overflow: hidden;
-      "
-      >Thanks for trying out [Product Name]. We’ve pulled together some
-      information and resources to help you get started.</span
-    >
     <table
       class="email-wrapper"
       width="100%"
