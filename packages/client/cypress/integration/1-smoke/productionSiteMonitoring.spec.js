@@ -1,8 +1,5 @@
 
 describe ('Production site monitoring test', () => {
-  beforeEach(() => {
-    cy.intercept('https://seasketch.auth0.com/oauth/token').as('auth')
-  }); 
   before(() => {
     cy.visit("https://next.seasket.ch/");
     cy.contains('SeaSketch');
