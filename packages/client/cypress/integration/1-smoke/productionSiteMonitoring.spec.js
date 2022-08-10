@@ -27,8 +27,6 @@ describe ('Production site monitoring test', () => {
     cy.visit('https://next.seasket.ch/cyprod/surveys/127/0');
     cy.contains('Welcome to the Survey');
     cy.get('button')
-      .contains('Begin')
-      .click();
-    cy.contains('What is your name?')
+      .contains('Begin');
     });
 });
