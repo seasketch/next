@@ -30,7 +30,11 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
         className={`flex items-center mb-2 `}
         style={{ flexDirection: flexDirection || "row" }}
       >
-        <div className="flex-1 flex-rows items-center pr-4">
+        <div
+          className={`flex-1 flex-row items-center pr-4 ${
+            flexDirection === "column" && "w-full"
+          }`}
+        >
           <div className="flex flex-row items-center">
             <span
               className={
@@ -50,7 +54,13 @@ const InputBlock: FunctionComponent<InputBlockProps> = ({
           </div>
           <div className="text-sm text-gray-600 font-normal">{children}</div>
         </div>
-        <div className="text-right flex items-center">{input}</div>
+        <div
+          className={`text-right flex items-center ${
+            flexDirection === "column" && "w-full"
+          }`}
+        >
+          {input}
+        </div>
       </div>
       {description && <p className="text-gray-500 text-sm">{description}</p>}
     </div>
