@@ -21,7 +21,7 @@ export default function ProfilePhoto({
       <img
         alt={alt}
         src={picture}
-        className="h-full p-2 w-auto inline rounded-full"
+        className="h-full p-1 w-auto inline rounded-full"
       />
     );
   } else {
@@ -32,7 +32,7 @@ export default function ProfilePhoto({
         default={defaultImg || "404"}
         // @ts-ignore
         fallback={defaultImg ? undefined : <div></div>}
-        className="h-auto p-2 w-auto inline rounded-full flex-shrink-0"
+        className="h-full p-1 w-auto inline rounded-full flex-shrink-0"
       />
     );
   }
