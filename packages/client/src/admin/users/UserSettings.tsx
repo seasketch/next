@@ -1,5 +1,5 @@
-import { ApolloClient, gql, useQuery, useSubscription } from "@apollo/client";
-import React, { useContext, useEffect, useState } from "react";
+import { ApolloClient, useQuery, useSubscription } from "@apollo/client";
+import { useContext, useEffect, useState } from "react";
 import debounce from "lodash.debounce";
 
 import { Route, useParams } from "react-router-dom";
