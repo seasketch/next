@@ -349,7 +349,7 @@ mutation SendInvites($ids: [Int]!) {
 subscription ProjectInviteEmailStatusSubscription {
   projectInviteStateUpdated {
     invite {
-      opaqueId: id
+      id
       status
     }
   }

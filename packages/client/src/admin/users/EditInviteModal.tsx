@@ -51,14 +51,15 @@ export default function EditInviteModal({
       }
     },
   });
-  const [state, setState] = useState<{
-    fullname: string;
-    email: string;
-    groups: { id: number; name: string }[];
-    makeAdmin: boolean;
-    error?: string;
-    hasChanged: boolean;
-  }>();
+  const [state, setState] =
+    useState<{
+      fullname: string;
+      email: string;
+      groups: { id: number; name: string }[];
+      makeAdmin: boolean;
+      error?: string;
+      hasChanged: boolean;
+    }>();
   const [expandedEmails, setExpandedEmails] = useState<{
     [id: number]: boolean;
   }>({});
@@ -97,26 +98,31 @@ export default function EditInviteModal({
     // refetchQueries: ["UserAdminCounts", "ProjectInvites"],
     onError: (e) => window.alert(e),
     // @ts-ignore
-    optimisticResponse: () => {
-      const res = {
-        sendProjectInvites: {
-          inviteEmails: [
-            {
-              __typename: "InviteEmail",
-              id: 99999,
-              toAddress: data?.projectInvite?.email,
-              createdAt: new Date().toISOString(),
-              status: EmailStatus.Queued,
-              projectInviteId: data!.projectInvite!.id,
-              tokenExpiresAt: null,
-              error: null,
-              updatedAt: null,
-            },
-          ],
-        },
-      };
-      return res;
-    },
+    // optimisticResponse: () => {
+    //   const res = {
+    //     sendProjectInvites: {
+    //       inviteEmails: [
+    //         {
+    //           __typename: "InviteEmail",
+    //           id: 99999,
+    //           toAddress: data?.projectInvite?.email,
+    //           createdAt: new Date().toISOString(),
+    //           status: EmailStatus.Queued,
+    //           projectInviteId: data!.projectInvite!.id,
+    //           tokenExpiresAt: null,
+    //           error: null,
+    //           updatedAt: null,
+    //           projectInvite: {
+    //             __typename: "ProjectInvite",
+    //             id,
+    //             status: data?.projectInvite?.status,
+    //           },
+    //         },
+    //       ],
+    //     },
+    //   };
+    //   return res;
+    // },
     update: (cache, mutationResult) => {
       if (
         (mutationResult.data?.sendProjectInvites?.inviteEmails?.length || 0) > 0

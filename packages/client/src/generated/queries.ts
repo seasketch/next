@@ -15945,8 +15945,7 @@ export type ProjectInviteEmailStatusSubscriptionSubscription = (
     { __typename?: 'ProjectInviteStateSubscriptionPayload' }
     & { invite?: Maybe<(
       { __typename?: 'ProjectInvite' }
-      & Pick<ProjectInvite, 'status'>
-      & { opaqueId: ProjectInvite['id'] }
+      & Pick<ProjectInvite, 'id' | 'status'>
     )> }
   )> }
 );
@@ -18988,7 +18987,7 @@ export const ProjectInviteEmailStatusSubscriptionDocument = /*#__PURE__*/ gql`
     subscription ProjectInviteEmailStatusSubscription {
   projectInviteStateUpdated {
     invite {
-      opaqueId: id
+      id
       status
     }
   }

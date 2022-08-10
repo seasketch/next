@@ -16,9 +16,19 @@ const jwtCheck = jwt({
   algorithms: ["RS256"],
   credentialsRequired: false,
   getToken: (req) => {
-    return (
-      req.query["token"] || req.header("authorization")?.split("Bearer ")[1]
-    );
+    if ("normalizedConnectionParams" in req) {
+      // websocket connection
+      // @ts-ignore
+      return req.normalizedConnectionParams["authorization"]?.split(
+        "Bearer "
+      )[1];
+    } else {
+      // normal post or get request
+      return (
+        req.query["token"] || req.header("authorization")?.split("Bearer ")[1]
+      );
+    }
+    return undefined;
   },
 });
 

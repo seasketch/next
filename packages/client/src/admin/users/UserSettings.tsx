@@ -136,7 +136,7 @@ function UserSettings() {
       const invite =
         data.subscriptionData.data.projectInviteStateUpdated.invite;
       debouncedUpdatedInviteStatus({
-        id: invite.opaqueId,
+        id: invite.id,
         status: invite.status,
         client: data.client,
       });
