@@ -131,7 +131,7 @@ function UserSettings() {
     data?.projectBySlug,
   ]);
 
-  const sub = useSubscription(ProjectInviteEmailStatusSubscriptionDocument, {
+  useSubscription(ProjectInviteEmailStatusSubscriptionDocument, {
     onSubscriptionData: (data) => {
       const invite =
         data.subscriptionData.data.projectInviteStateUpdated.invite;

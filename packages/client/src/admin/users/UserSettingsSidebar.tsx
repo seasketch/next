@@ -1,4 +1,4 @@
-import react, { useMemo, useState } from "react";
+import react, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -81,12 +81,6 @@ export default function UserSettingsSidebar({
   }, [invites, groups, users]);
 
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
-  // if (error) {
-  //   return <div className="p-8">{error.message}</div>;
-  // }
-  if (loading) {
-    return <UserSettingsSidebarSkeleton />;
-  }
   // eslint-disable-next-line i18next/no-literal-string
   const baseUrl = `/${slug}/admin/users`;
 
@@ -104,109 +98,129 @@ export default function UserSettingsSidebar({
     }
   };
 
-  let navItems: NavSidebarItem[] = [
-    {
-      label: t("Participants"),
-      description: t(
-        "Users will appear in the list if they have shared their profile"
-      ),
-      href: `${baseUrl}/participants`,
-      icon: UserGroupIcon,
-      ...badge(users.length, "primary"),
-    },
-    {
-      label: t("Admins"),
-      description: t("Admins have full access to project settings"),
-      href: `${baseUrl}/admins`,
-      icon: () => (
-        <svg
-          className="w-7 h-6"
-          viewBox="0 0 24 24"
-          role="img"
-          fill="currentColor"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect width="24" height="24" fill="none"></rect>
-          <g fillRule="evenodd">
-            <circle cx="17" cy="15.5" r="1.12"></circle>
-            <path d="M17 17.5c-.73 0-2.19.36-2.24 1.08.5.71 1.32 1.17 2.24 1.17s1.74-.46 2.24-1.17c-.05-.72-1.51-1.08-2.24-1.08z"></path>
-            <path d="M18 11.09V6.27L10.5 3 3 6.27v4.91c0 4.54 3.2 8.79 7.5 9.82.55-.13 1.08-.32 1.6-.55A5.973 5.973 0 0017 23c3.31 0 6-2.69 6-6 0-2.97-2.16-5.43-5-5.91zM11 17c0 .56.08 1.11.23 1.62-.24.11-.48.22-.73.3-3.17-1-5.5-4.24-5.5-7.74v-3.6l5.5-2.4 5.5 2.4v3.51c-2.84.48-5 2.94-5 5.91zm6 4c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"></path>
-          </g>
-        </svg>
-      ),
-      ...badge(counts.admins, "primary"),
-    },
-    {
-      isGroup: true,
-      label: t("Invites"),
-      button: (
-        <Button
-          small
-          label={t("Invite Users")}
-          onClick={() => setInviteUsersOpen(true)}
-        />
-      ),
-    },
-    {
-      label: t("Draft Invitations"),
-      description: t("Unsent invites that need to be mailed"),
-      href: `${baseUrl}/invites/pending`,
-      icon: PaperClipIcon,
-      ...badge(counts.pending, "warning"),
-    },
-    {
-      label: t("Sent Invitations"),
-      description: t(
-        "Monitor the status of invites that have been emailed to users"
-      ),
-      href: `${baseUrl}/invites/sent`,
-      icon: MailIcon,
-      ...badge(counts.sent, "primary"),
-    },
-    {
-      label: t("Bounces, Complaints, and Errors"),
-      description: t(
-        "Invites can fail due to incorrect addresses, or problems with a destination server, or being marked as spam"
-      ),
-      href: `${baseUrl}/invites/problems`,
-      icon: ExclamationIcon,
-      ...badge(counts.problems, "error"),
-    },
-    ...(accessControl === ProjectAccessControlSetting.InviteOnly
-      ? [
-          {
-            label: t("Access Requests"),
-            description: t(
-              "Your project is set to invite-only. Requests to participate can be approved or denied."
-            ),
-            href: `${baseUrl}/accessRequests`,
-            icon: IdentificationIcon,
-            ...badge(
-              // data?.projectBySlug?.unapprovedParticipantCount,
-              0,
-              "primary"
-            ),
-          },
-        ]
-      : []),
-    {
-      isGroup: true,
-      label: t("User Groups"),
-      button: (
-        <Button
-          small
-          label={t("Create Group")}
-          onClick={() => setCreateGroupModalOpen(true)}
-        />
-      ),
-    },
-    ...(groups || []).map((g) => ({
-      label: g.name!,
-      // eslint-disable-next-line i18next/no-literal-string
-      href: `${baseUrl}/groups/${g.id}`,
-      ...badge(counts.groups[g.id] || 0, "primary"),
-    })),
-  ];
+  let navItems: NavSidebarItem[] = useMemo(() => {
+    return [
+      {
+        label: t("Participants"),
+        description: t(
+          "Users will appear in the list if they have shared their profile"
+        ),
+        href: `${baseUrl}/participants`,
+        icon: UserGroupIcon,
+        ...badge(users.length, "primary"),
+      },
+      {
+        label: t("Admins"),
+        description: t("Admins have full access to project settings"),
+        href: `${baseUrl}/admins`,
+        icon: () => (
+          <svg
+            className="w-7 h-6"
+            viewBox="0 0 24 24"
+            role="img"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect width="24" height="24" fill="none"></rect>
+            <g fillRule="evenodd">
+              <circle cx="17" cy="15.5" r="1.12"></circle>
+              <path d="M17 17.5c-.73 0-2.19.36-2.24 1.08.5.71 1.32 1.17 2.24 1.17s1.74-.46 2.24-1.17c-.05-.72-1.51-1.08-2.24-1.08z"></path>
+              <path d="M18 11.09V6.27L10.5 3 3 6.27v4.91c0 4.54 3.2 8.79 7.5 9.82.55-.13 1.08-.32 1.6-.55A5.973 5.973 0 0017 23c3.31 0 6-2.69 6-6 0-2.97-2.16-5.43-5-5.91zM11 17c0 .56.08 1.11.23 1.62-.24.11-.48.22-.73.3-3.17-1-5.5-4.24-5.5-7.74v-3.6l5.5-2.4 5.5 2.4v3.51c-2.84.48-5 2.94-5 5.91zm6 4c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"></path>
+            </g>
+          </svg>
+        ),
+        ...badge(counts.admins, "primary"),
+      },
+      {
+        isGroup: true,
+        label: t("Invites"),
+        button: (
+          <Button
+            small
+            label={t("Invite Users")}
+            onClick={() => setInviteUsersOpen(true)}
+          />
+        ),
+      },
+      {
+        label: t("Draft Invitations"),
+        description: t("Unsent invites that need to be mailed"),
+        href: `${baseUrl}/invites/pending`,
+        icon: PaperClipIcon,
+        ...badge(counts.pending, "warning"),
+      },
+      {
+        label: t("Sent Invitations"),
+        description: t(
+          "Monitor the status of invites that have been emailed to users"
+        ),
+        href: `${baseUrl}/invites/sent`,
+        icon: MailIcon,
+        ...badge(counts.sent, "primary"),
+      },
+      {
+        label: t("Bounces, Complaints, and Errors"),
+        description: t(
+          "Invites can fail due to incorrect addresses, or problems with a destination server, or being marked as spam"
+        ),
+        href: `${baseUrl}/invites/problems`,
+        icon: ExclamationIcon,
+        ...badge(counts.problems, "error"),
+      },
+      ...(accessControl === ProjectAccessControlSetting.InviteOnly
+        ? [
+            {
+              label: t("Access Requests"),
+              description: t(
+                "Your project is set to invite-only. Requests to participate can be approved or denied."
+              ),
+              href: `${baseUrl}/accessRequests`,
+              icon: IdentificationIcon,
+              ...badge(
+                // data?.projectBySlug?.unapprovedParticipantCount,
+                0,
+                "primary"
+              ),
+            },
+          ]
+        : []),
+      {
+        isGroup: true,
+        label: t("User Groups"),
+        button: (
+          <Button
+            small
+            label={t("Create Group")}
+            onClick={() => setCreateGroupModalOpen(true)}
+          />
+        ),
+      },
+      ...(groups || []).map((g) => ({
+        label: g.name!,
+        // eslint-disable-next-line i18next/no-literal-string
+        href: `${baseUrl}/groups/${g.id}`,
+        ...badge(counts.groups[g.id] || 0, "primary"),
+      })),
+    ];
+  }, [
+    users.length,
+    counts.admins,
+    counts.groups,
+    counts.pending,
+    counts.problems,
+    counts.sent,
+    accessControl,
+    baseUrl,
+    groups,
+    t,
+  ]);
+
+  // if (error) {
+  //   return <div className="p-8">{error.message}</div>;
+  // }
+  if (loading) {
+    return <UserSettingsSidebarSkeleton />;
+  }
 
   return (
     <>

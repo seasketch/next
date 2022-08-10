@@ -259,8 +259,12 @@ export default function AdminApp() {
 
   let { path, url } = useRouteMatch();
 
+  const isFullscreenRoute = useMemo(
+    () => /offline\/basemap/.test(window.location.pathname),
+    [window.location.pathname]
+  );
+
   const Container = useMemo(() => {
-    const isFullscreenRoute = /offline\/basemap/.test(window.location.pathname);
     let Container = ({ children }: { children?: ReactNode }) => (
       <>
         <AdminMobileHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
@@ -296,11 +300,7 @@ export default function AdminApp() {
       Container = ({ children }: { children?: ReactNode }) => <>{children}</>;
     }
     return Container;
-  }, [
-    window.location.pathname,
-    data?.project?.name,
-    data?.project?.isOfflineEnabled,
-  ]);
+  }, [isFullscreenRoute, data?.project?.name, data?.project?.isOfflineEnabled]);
 
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
