@@ -2,19 +2,14 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
+import { verify } from "crypto";
 
 let surveyId: any;
-let authToken: any;
-let formId: any;
 
 const FormData = require('form-data');
 const fetch = require('node-fetch');
 
 const basemapNames = ["Maldives Light", "Satellite"];
-
-const handleClick = (event) => {
-  console.log(event)
-}
 
 const basemaps = {
   "Maldives Light": {
@@ -91,11 +86,11 @@ const generateSlug = () => {
 };
 
 const checkForNavAndLang = () => {
-    //navigation and language buttons
-    cy.get('[title="Previous Question"]').should('be.visible').and('exist');
-    cy.get('[title="Next Question"]').should('be.visible').and('exist');
-    cy.get('button.px-3')
-      .should('be.visible');
+  //navigation and language buttons
+  cy.get('[title="Previous Question"]').should('be.visible').and('exist');
+  cy.get('[title="Next Question"]').should('be.visible').and('exist');
+  cy.get('button.px-3')
+    .should('be.visible');
 };
 
 const drawPolygon = () => {
@@ -108,11 +103,11 @@ const drawPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  cy.get('@el').click(300,300)        
-    .click(300, 100)
-    .click(100, 100)
-    .click(100, 300)
-    .dblclick(300, 300)
+  cy.get('@el').click(100,100)     
+    .click(50, 100)
+    .click(50, 50)
+    .click(100, 50)
+    .dblclick(100, 100)
 };
 
 const drawInvalidPolygon = () => {
@@ -125,11 +120,11 @@ const drawInvalidPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  cy.get('@el').click(300,300)        
-    .click(100, 300)
-    .click(150, 200)
+  cy.get('@el').click(100, 200)        
+    .click(100, 100)
+    .click(200, 200)
     .click(50, 200)
-    .dblclick(300, 300)
+    .dblclick(100, 200)
 };
 
 const drawSecondPolygon = () => {
@@ -142,45 +137,14 @@ const drawSecondPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  cy.get('@el').click(250,250)     
-    .click(50, 250)
+  cy.get('@el').click(100,100)     
+    .click(50, 100)
     .click(50, 50)
-    .click(250, 50)
-    .dblclick(250, 250)
+    .click(100, 50)
+    .dblclick(100, 100)
 };
 
-const devices: any = [ "iphone-x", "iphone-5", "macbook-15", "ipad-2"];
-
-//function getKeyAndMove(e) {
-//  var key_code = e.which || e.keyCode;
-//  switch (key_code) {
-//      case 37: //left arrow key
-//          moveLeft();
-//          break;
-//      case 38: //Up arrow key
-//          moveUp();
-//          break;
-//      case 39: //right arrow key
-//          moveRight();
-//          break;
-//      case 40: //down arrow key
-//          moveDown();
-//          break;
-//  }
-//}
-function moveLeft(e) {
-  console.log(e.style)
-  //e.style.left = parseInt(e.style.left) - 5 + "px";
-}
-//function moveUp(e) {
-//  e.style.top = parseInt(e.style.top) - 5 + "px";
-//}
-//function moveRight(e) {
-//  e.style.left = parseInt(e.style.left) + 5 + "px";
-//}
-//function moveDown() {
-//  e.style.top = parseInt(e.style.top) + 5 + "px";
-//}
+const devices: any = ["macbook-15"]//, "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -203,6 +167,7 @@ describe("Survey creation smoke test", () => {
         }
       });
       cy.intercept(/mapbox/).as('mapboxApiCall');
+      
     });
     before(() => {
       const slug: string = generateSlug();
@@ -363,6 +328,7 @@ describe("Survey creation smoke test", () => {
         });
         cy.get("@surveyId").then((id) => {
         cy.visit(`${slug}/surveys/${id}`)
+        //cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         })
       });
     })
@@ -381,647 +347,732 @@ describe("Survey creation smoke test", () => {
         cy.deleteProject(`${slug}`)
       })
     })
-    it("Can visit the survey", () => {
-      cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
-      cy.get('.select-none').should('be.visible').then(($btn) => {
-        {$btn.trigger('click')}
-      });
-    });
-    it("Cannot advance until name is provided", () => {
-      cy.contains('What is your name?')
-        .get('[title = "Next Question"]')
-        .should('have.class', 'pointer-events-none')
-      cy.get('input').type("Test User 1") 
-      cy.get('button').contains('Next').click()
-    })
-    it("Can input email address or can skip question", () => {
-      cy.contains("What is your email address?")
-      cy.get("input").should('be.visible')
-      cy.get("input")
-        .type("test_user_1@seasketch.org")
-      cy.contains("Next").click()
-    })
-    it("Cannot advance until atoll selection is made", () => {
-      cy.contains("Which Atoll do you reside on?")
-        .get('[title = "Next Question"]')
-        .should('have.class', "pointer-events-none")
-      cy.contains('N').click()
-    })
-    it("Advances to appropriate island selection page", () => {
-      cy.contains('Which island of N atoll do you reside on?')
-      cy.contains('Lhohi')
-    })
-    it("Cannot advance until island selection is made", () => {
-      cy.get('[title = "Next Question"]')
-        .should('have.class', "pointer-events-none")
-      cy.contains('Kudafari').click()
-    })
-    it("Cannot advance until sector selection(s) is made", () => {
-      cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden')
-      cy.get('[title = "Fisheries - Commercial, Tuna"]').click()
-      cy.get('[title = "Fisheries - Commercial, Non-Tuna Species"]').click()
-      cy.get('[title = "Fisheries - Recreational"]').click()
-      cy.get('[title = "Fisheries- Artisanal/Subsistence"]').click()
-      cy.get('@nextBtn').scrollIntoView()
-        .should('exist')
-        .and('be.visible')
-        .then(($btn) => {
-           {$btn.trigger('click')}
-        })
-    })
-    it ("Advances to SAP page", () => {
-      cy.get('[type = "button"]').then(($btn) => {
-        if($btn.html() === "Next") {
-          cy.wrap($btn).as('nextBtn')
-          {$btn.trigger('click')}
+    devices.forEach((device) => {
+      it(`Can visit the survey - ${device}`, () => {
+        cy.viewport(device);
+        if (device === "macbook-15") {
+          cy.wait('@getSurvey').its('response.statusCode').should('eq', 200);
         }
-      })
-    })
-    it("Can draw a polygon - Fisheries - Commercial, Tuna", () => {
-      cy.get('[type = "button"]').as('nextBtn').then(($btn) => {
-        if($btn.html() === "Next") {
+      });
+      it(`Can view and toggle settings - ${device}`, () => {
+        cy.viewport(device)
+        cy.get('button').contains('Settings')
+          .should('be.visible')
+          .then(($btn) => {
+            {$btn.trigger('click')}
+          });
+        cy.get('span').contains('Facilitated Response');
+        cy.get('span').contains('Practice Mode');
+        cy.get('[role="switch"]').as('switches')
+        cy.get('@switches').each(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`false`)
+          {$switch.trigger('click')}
+          //setToggle($switch)
+          expect ($switch.attr('aria-checked')).to.equal(`true`)
+          {$switch.trigger('click')}
+        });
+        cy.get('body').click('bottom');
+        cy.get('[role="dialog"]')
+          .should('not.exist')
+        cy.get('[name="Begin Survey"]').should('be.visible').then(($btn) => {
           {$btn.trigger('click')}
-        } 
+        });
+      });
+      it(`Cannot advance until name is provided - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.contains('What is your name?')
+          .get('[title = "Next Question"]')
+          .should('have.class', 'pointer-events-none')
+        cy.get('input').type("Test User 1") 
+        cy.get('button').contains('Next').click()
       })
-      cy.get('h4').contains('Fisheries - Commercial, Tuna')
-        .should('exist')
-        .and('be.visible')
-      //Check that basemaps are loaded in window
-      cy.window().its('mapContext.basemaps').then((maps) => {
-        Object.keys(maps).forEach((key) => {
-          expect (basemaps[maps[key].name]).to.exist
+      it(`Can input email address or can skip question - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.contains("What is your email address?")
+        cy.get("input").should('be.visible')
+        cy.get("input")
+          .type("test_user_1@seasketch.org")
+        cy.contains("Next").click()
+      })
+      it(`Cannot advance until atoll selection is made - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.contains("Which Atoll do you reside on?")
+          .get('[title = "Next Question"]')
+          .should('have.class', "pointer-events-none")
+        cy.contains('N').click()
+      });
+      it(`Cannot advance until island selection is made - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.restoreLocalStorage();
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.getLocalStorage("surveyId").then((id) => {
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/7/`);
+          })
         })
+        cy.contains("Which Atoll do you reside on?")
+          .should('not.exist')
+        cy.contains('Which island of N atoll do you reside on?')
+        cy.contains('Lhohi')
+        cy.get('[title = "Next Question"]')
+          .should('have.class', "pointer-events-none")
+        cy.contains('Kudafari').click()
       })
-      //cy.wait('@mapboxApiCall')
-      //wait on all calls to Mapbox Api
-      waitOnMapbox(3)
-      cy.get('[role="progressbar"]')
-        .should('not.exist')
-      drawPolygon()
-    })
-    it('Can view basemap selector', () => {
-      cy.get('img').click()
-      let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-      values.forEach((val) => {
-        cy.get('.fixed > .overflow-y-auto').children().contains(val)
-      })
-    })
-    it ('Can show scale bar', () => {
-      cy.get('h4').contains('Show scale bar')
-      cy.get('[role="switch"]').then(($switch) => {
-        {$switch.trigger('click')}
-      })
-      cy.contains('10000 km')
-    })
-    it ('Renders the correct basemap', () => {
-      cy.contains('Maldives Light').as('maldivesLightBasemap')
-      cy.get('@maldivesLightBasemap').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-      cy.contains('Satellite')
-        .should('not.have.class', 'font-semibold')
-    })
-    it ('Can select different basemap', () => {
-      cy.contains('Satellite').as('satelliteBasemap')
-        cy.get('@satelliteBasemap').then(($btn) => {
+      it(`Cannot advance until sector selection(s) is made - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden')
+        cy.get('[title = "Fisheries - Commercial, Tuna"]').click()
+        cy.get('[title = "Fisheries - Commercial, Non-Tuna Species"]').click()
+        //cy.get('[title = "Fisheries - Recreational"]').click()
+        //cy.get('[title = "Fisheries- Artisanal/Subsistence"]').click()
+        cy.get('@nextBtn').scrollIntoView()
+          .should('exist')
+          .and('be.visible')
+          .then(($btn) => {
+             {$btn.trigger('click')}
+          });
+      });
+      it(`Can draw a polygon - Fisheries - Commercial, Tuna - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('[title = "Fisheries - Commercial, Tuna"]')
+          .should('not.exist');
+        cy.get('button').contains('Next')
+          .should('not.exist');
+        cy.get('h4').contains('Fisheries - Commercial, Tuna')
+          .should('exist')
+          .and('be.visible');
+        cy.window().its('mapContext.basemaps').then((maps) => {
+          Object.keys(maps).forEach((key) => {
+            expect (basemaps[maps[key].name]).to.exist
+          });
+        });
+        if (device === "iphone-x" || device === "iphone-5") {
+          Cypress.on('uncaught:exception', (err, runnable) => {
+            if (err) {
+              cy.log(`${err}`)
+              return false
+            }
+          });
+        }
+        //polygon path for mobile devices
+        if (device === "iphone-x" || device === "iphone-5") {
+          cy.get('[data-cy="button-begin"]')
+            .should('exist')
+            .and('be.visible')
+            .as('beginBtn');
+          cy.get('@beginBtn').then(($btn) => {
+            {$btn.trigger('click')}
+          });
+          waitOnMapbox(5);
+          cy.get('[role="progressbar"]')
+            .should('not.exist');
+          drawPolygon();
+        } else {
+          if (device === "macbook-15") {
+            waitOnMapbox(9);
+            cy.get('div.MapPicker')
+              .should('exist')
+              .and('be.visible');
+            cy.get('[role="progressbar"]')
+              .should('not.exist');
+            drawPolygon();
+          } else {
+            cy.get('div.MapPicker')
+              .should('exist')
+              .and('be.visible')
+            cy.get('[role="progressbar"]').then((progressBar) => {
+              if (progressBar.children().hasClass('animate-spin')) {
+                cy.wait(500);
+                cy.get('[role="progressbar"]').should('not.have.class', 'animate-spin')
+              }
+            });
+            waitOnMapbox(3);
+            cy.get('[role="progressbar"]')
+              .should('not.exist');
+            drawPolygon();
+          }
+        }
+      });
+      it(`Can view basemap selector - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('img').click();
+        let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+        values.forEach((val) => {
+          cy.get('.fixed > .overflow-y-auto').children().contains(val);
+        });
+        cy.get('img[alt="Satellite basemap"]')
+          .should('be.visible');
+        cy.get('img[alt="Maldives Light basemap"]')
+          .should('be.visible');
+      });
+      it (`Can show scale bar - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('h4').contains('Show scale bar');
+        cy.get('[role="switch"]').as('scaleSwitch').then(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`false`);
+          {$switch.trigger('click')}
+        })
+        cy.get('@scaleSwitch').then(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`true`);
+        });
+        if (device !== "iphone-x") {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('5,000')
+            .should('be.visible');
+        } else {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('10000')
+            .should('be.visible');
+        }
+        
+          
+          //.as("scaleBar").then((scaleBar) => {
+          //  cy.setLocalStorage("scale bar", scaleBar.html())
+          //  cy.saveLocalStorage()
+          //})
+      });
+      it (`Renders the correct basemap - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains('Maldives Light').as('maldivesLightBasemap')
+        cy.get('@maldivesLightBasemap').then(($btn) => {
           {$btn.trigger('click')}
         })
-        .should('have.class', 'font-semibold')   
-      cy.contains('Maldives Light')
-        .should('not.have.class', 'font-semibold')
-    })
-    it('Shows option to focus on location', () => {
-      cy.restoreLocalStorage()
-      cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-        cy.setLocalStorage("lat", `${center["lat"]}`)
-        cy.setLocalStorage("long", `${center["lng"]}`)
+        cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+        cy.contains('Satellite')
+          .should('not.have.class', 'font-semibold')
+      })
+      it (`Can select different basemap - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains('Satellite').as('satelliteBasemap')
+          cy.get('@satelliteBasemap').then(($btn) => {
+            {$btn.trigger('click')}
+          })
+          .should('have.class', 'font-semibold')   
+        cy.contains('Maldives Light')
+          .should('not.have.class', 'font-semibold')
+      })
+      it(`Shows option to focus on location - ${device}`, () => {
+        cy.viewport(device)
+        cy.restoreLocalStorage()
         cy.getLocalStorage("surveyId").then((id) => {
           cy.setLocalStorage("surveyId", id)
         });
-        cy.saveLocalStorage();
-        cy.get('h4').contains('Focus on location').click();
-      });
-    });
-    it('Focuses on location', () => {
-      cy.restoreLocalStorage()
-      cy.getLocalStorage('lat').then((lat) => {
-        cy.getLocalStorage('long').then((lng) => {
-          cy.window().its('mapContext.map.transform._center').then((coords) => {
-            expect (coords["lat"]).to.not.equal(lat)
-            expect (coords["lng"]).to.not.equal(lng)
-          });
+        cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+          cy.setLocalStorage("lat", `${center["lat"]}`)
+          cy.setLocalStorage("long", `${center["lng"]}`)
+          
+          cy.saveLocalStorage();
+          cy.get('h4').contains('Focus on location').click();
         });
       });
-    });
-    it('Renders sector specific attributes - Fisheries - Commercial, Tuna', () => {
-      cy.get('img').then((imgs) => {
-        imgs[0].click()
-      })
-      cy.get('h1').contains('Area Name')
-        .should('exist')
-        .and('be.visible')
-      cy.get(".mt-1 > .block").scrollIntoView().clear()
-        .type("Yellowfin tuna fishing area.")
-      cy.contains('What type of gear do you use here?')
-      cy.contains('What species do you fish here')
-      cy.get('[title="Pole and Line"]').click()
-      cy.get('[title="Yellowfin"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.")
-    })
-    it ('Can set area importance using SAP range slider', () => {
-      cy.get('h1').contains('How important is this area?').scrollIntoView();
-      cy.get('input[type=range]').as('range')
-        .should('exist');
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      cy.get('@range').then(($range) => {
-        // get the DOM node
-        const range = $range[0];
-        // set the value manually
-        nativeInputValueSetter.call(range, 15);
-        // dispatch the event
-        //@ts-ignore
-        range.dispatchEvent(new Event('change', { value: 15, bubbles: true }));
-      });
-      cy.get('@range')
-        .should('have.value', 15);
-      cy.contains('Save').click();
-      cy.get('.SAPRangeMini')
-        .should('exist')
-        .and('have.value', 15);
-    });
-    it('Can finish sector - Fisheries - Commercial, Tuna', () => {
-      cy.contains('Fisheries - Commercial, Tuna')
-        .should('be.visible');
-      cy.contains("Yellowfin tuna fishing area.");
-      cy.get(".space-y-2 > :nth-child(2) > .select-none").as('finishSector').should('be.visible').then(($el) => {
-        console.log($el)
-        {$el.trigger('click')}
-      });
-      cy.get('@finishSector').should('not.exist')
-      cy.contains("Next sector").as("nextSector")
-      cy.get('@nextSector').then(($btn) => {
-        {$btn.trigger('click')}
-      });
-    });
-    it('Can draw a polygon - Fisheries - Commercial, Non-Tuna Species', () => {
-      let ary = []
-      cy.get('button').then(($btn) => {
-        //@ts-ignore
-        $btn.toArray().forEach((t) => {
-          ary.push(t.innerText)
-        })
-        if(ary.includes('Next sector')) {
-          console.log("true")
-          cy.get('button').contains('Next sector').then(($btn) => {
-            console.log($btn)
-            {$btn.trigger('click')}
-            
-          })
-        }
-      })
-      cy.get('button').contains('Next sector').should('not.exist')
-      waitOnMapbox(3)
-      cy.get('[role="progressbar"]')
-          .should('not.exist')
-      cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
-        .should('exist')
-        .and('be.visible')
-     
-      drawPolygon()
-    })
-    it("Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species", () => {
-      cy.get('h1').contains('Area Name')
-        .should('exist')
-        .and('be.visible')
-      cy.get(".mt-1 > .block").clear()
-        .type("Sea cucumber fishing area.")
-      cy.contains('What type of gear do you use here?')
-      cy.contains('What type of species do you fish here?')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Sea cucumber"]').click()
-      cy.get('[title="Jigging"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
-      cy.contains('Save').click()
-    })
-    it('Can finish sector - Fisheries - Commercial, Non-Tuna Species', () => {
-      cy.contains("Sea cucumber fishing area.")
-      cy.contains("Fisheries - Commercial, Non-Tuna Species")
-      cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
-        {$el.trigger('click')}
-      })
-      cy.contains("Finish Sector").as("finishSector")
-      cy.get('@finishSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
-    it ('Shows completed sectors - Fisheries - Commercial, Non-Tuna Species', () => {
-      cy.get('h1').contains('Your sectors')
-      cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
-        expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
-      })
-      //completed sector
-      cy.get('button').contains('Fisheries - Commercial, Non-Tuna Species').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //completed sector
-      cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //not yet completed sector
-      cy.get('button').contains('Fisheries - Recreational').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //not yet completed sector
-      cy.get('button').contains('Fisheries- Artisanal/Subsistence').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      cy.contains("Next sector").as("nextSector")
-      cy.get('@nextSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
-    it('Can draw a polygon - Fisheries - Recreational', () => {
-      cy.get('[type = "button"]').contains('Next')
-        .should('not.exist')
-      cy.get('h4').contains('Fisheries - Recreational')
-        .should('exist')
-        .and('be.visible')
-      waitOnMapbox(3)
-      cy.get('[role="progressbar"]')
-        .should('not.exist')
-      drawPolygon()
-    })
-    it("Renders sector specific attributes - Fisheries - Recreational", () => {
-      cy.get('h1').contains('Area Name')
-        .should('exist')
-        .and('be.visible')
-      cy.get(".mt-1 > .block").clear()
-        .type("Reef fishing area.")
-      cy.contains('What type of recreational fishing do you do here?')
-      cy.contains('What type of species do you fish here?')
-        .should('not.exist')
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist')
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist')
-      cy.get('[title="Reef Fishing"]').click()
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.")
-      cy.contains('Save').click()
-    })
-    it('Can draw second shape - Fisheries - Recreational', () => {
-      cy.contains('New Shape').as('newShape')
-      cy.get('@newShape').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('[type = "button"]').then(($btn) => {
-        if ($btn.text().includes('New Shape')) {
-          cy.get('button').contains('New Shape').as('newShapeBtn').then(($btn) => {
-            {$btn.trigger('click', {multiple: true})}
-          });
-        }; 
-      });
-      cy.get('h4').contains('Fisheries - Recreational')
-        .should('not.exist');
-      cy.contains('Area Name')
-        .should('exist')
-        .and('be.visible');
-      cy.contains('How important is this area?')
-        .should('exist')
-        .and('be.visible');
-      drawSecondPolygon();
-    });
-    it("Renders sector specific attributes for second shape - Fisheries - Recreational", () => {
-      cy.get('h1').contains('Area Name')
-        .should('exist')
-        .and('be.visible')
-      cy.get(".mt-1 > .block").clear()
-        .type("Sports fishing area.");
-      cy.contains('What type of recreational fishing do you do here?');
-      cy.contains('What type of species do you fish here?')
-        .should('not.exist');
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist');
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist');
-      cy.get('[title="Big Game / Sports Fishing"]').click();
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Exciting sport fishing.");
-      cy.contains('Save').click();
-    })
-    it('Can finish sector - Fisheries - Recreational', () => {
-      cy.contains("Fisheries - Recreational");
-      cy.contains("Reef fishing area.");
-      cy.contains("Sports fishing area");
-      cy.contains("Finish Sector").as("finishSector");
-      cy.get('button').then(($btn) => {
-        if ($btn.text().includes("Finish Sector")) {
-          cy.get('button').contains("Finish Sector").then(($btn) => {
-            {$btn.trigger('click', {multiple: true})};
-          });
-        };
-      });
-      cy.get('@finishSector').then(($btn) => {
-        {$btn.trigger('click')};
-      });
-    });
-    it ('Shows completed sectors - Fisheries - Recreational', () => {
-      cy.get('button').then(($btn) => {
-        if ($btn.text().includes("Finish Sector")) {
-          cy.get('button').contains("Finish Sector").then(($btn) => {
-            {$btn.trigger('click', {multiple: true})}
-          })
-        }
-      })
-      cy.get('h1').contains('Your sectors')
-        .should('be.visible')
-      //additional completed sector
-      cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
-      expect ($btn.css('background'))
-      .to
-      .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      //not yet completed sector
-      cy.get('button').contains('Fisheries- Artisanal/Subsistence').parent().then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(23, 52, 53, 0.8) none repeat scroll 0% 0% / auto padding-box border-box')
-      })
-      cy.contains("Next sector").as("nextSector")
-      cy.get('@nextSector').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    })
-    it('Errors when invalid polygon is drawn - Fisheries - Artisanal/Subsistence', () => {
-      let ary = []
-      cy.get('button').then(($btn) => {
-        //@ts-ignore
-        $btn.toArray().forEach((t) => {
-          ary.push(t.innerText)
-        });
-        if (ary.includes('Next sector')) {
-          console.log("true")
-          cy.get('button').contains('Next sector').then(($btn) => {
-            console.log($btn)
-            {$btn.trigger('click')}
-          });
-        };
-      });
-      cy.get('button').contains('Next sector').should('not.exist');
-      cy.get('h4').contains('Fisheries- Artisanal/Subsistence')
-        .should('exist')
-        .and('be.visible')
-      waitOnMapbox(3)
-      cy.get('[role="progressbar"]')
-        .should('not.exist')
-      drawInvalidPolygon()
-      cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
-      cy.get('@invalidShapeBtn').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('[role="dialog"]').contains('Invalid Shape')
-      cy.get('video').should('be.visible')
-      cy.get('button').contains('Okay').as('okayBtn')
-      cy.get('@okayBtn').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.get('button').contains('Done').as('doneBtn')
-      const stub = cy.stub()  
-      cy.on ('window:alert', stub)
-      cy
-      cy.get('@doneBtn').then(($btn) => {
-        {$btn.trigger('click')}
-        expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
-      })
-    })  
-    it('Can delete invalid shape - Fisheries - Artisanal/Subsistence', () => {
-      //trash icon
-      cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn');
-      const stub = cy.stub();
-      cy.on ('window:confirm', stub);
-      cy.get('@trashBtn').then(($btn) => {
-        {$btn.trigger('click')};
-        expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?');
-      });
-      cy.contains('New Shape').as('newShape');
-      cy.get('@newShape').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-    });
-    it('Can draw new shape - Fisheries - Artisanal/Subsistence', () => {
-      cy.get('[type = "button"]').then(($btn) => {
-        if ($btn.text().includes('New Shape')) {
-          cy.get('button').contains('New Shape').as('newShapeBtn').then(($btn) => {
-            {$btn.trigger('click', {multiple: true})}
-          });
-        }; 
-      });
-      cy.get('h4').contains('Fisheries - Artisanal/Subsistence')
-        .should('not.exist')
-      cy.contains('Area Name')
-        .should('exist')
-        .and('be.visible')
-      cy.contains('How important is this area?')
-        .should('exist')
-        .and('be.visible')
-      drawPolygon();
-    })
-    it("Renders sector specific attributes - Fisheries - Artisanal/Subsistence", () => {
-      cy.get('h1').contains('Area Name')
-        .should('exist')
-        .and('be.visible')
-      cy.get(".mt-1 > .block").clear()
-        .type("Grouper fishing area.")
-      cy.contains('What type of recreational fishing do you do here?')
-        .should('not.exist');
-      cy.contains('What species do you fish here?');
-      cy.get('[title="Pole and Line"]')
-        .should('not.exist');
-      cy.get('[title="Yellowfin"]')
-        .should('not.exist');
-      cy.get('[title="Grouper"]').click();
-      cy.get('[style="max-height: 60vh;"] > .w-full').type("Prolific grouper population here.");
-      cy.contains('Save').click();
-    });
-    it('Can finish sector - Fisheries - Recreational', () => {
-      cy.contains("Fisheries- Artisanal/Subsistence");
-      cy.contains("Grouper fishing area.");
-      cy.get(".space-y-2 > :nth-child(2) > .select-none")
-        .should('be.visible').then(($el) => {
-          {$el.trigger('click')}
-        });
-      cy.contains("Finish Sector").as("finishSector");
-      cy.get('@finishSector').then(($btn) => {
-        {$btn.trigger('click')}
-      });
-    });
-    it('Shows completed sectors - Fisheries - Recreational', () => {
-      cy.get('h1').contains('Your sectors')
-        .should('be.visible');
-      //additional completed sector
-      cy.get('div').contains(/\BFisheries - Recreational|Fisheries - Recreational\B/).then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      });
-      //not yet completed sector
-      cy.get('div').contains("Fisheries- Artisanal/Subsistence").then(($btn) => {
-        expect ($btn.css('background'))
-        .to
-        .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      });
-    });
-    it('Can input number of people reflected in response', () => {
-      cy.get('button').contains('Next Question').as('nextQuestionBtn')
-        .should('be.visible')
-        .and('exist')
-        .then(($btn) => {
-          {$btn.trigger('click')}
-        })
-      cy.get('[data-question="yes"]').contains('Please indicate how many people are reflected in this response')
-        .should('be.visible')
-        .and('exist')
-      cy.get('input[type="number"]').as('numberInput')
-        .should('exist');
-      cy.log('A user can use navigation arrows to skip question')
-      cy.get('@numberInput').then(($input) => {
-        expect ($input.val()).to.equal('0')
-      })
-      cy.get('a[title="Next Question"]').click()
-      cy.contains('vessel')
-      cy.get('a[title="Previous Question"]').click()
-      cy.contains('response')
-      cy.log('A user can input number by typing')
-      cy.get('@numberInput').type('4').then(($input) => {
-        expect ($input.val()).to.equal('04')
-      });
-      cy.log('Using substract button to adjust number')
-      cy.get('button[title="Subtract"]')
-        .click()
-        .click();
-      cy.get('@numberInput').then(($input) => {
-        expect ($input.val()).to.equal('2');
-      });
-      cy.log('Using add button to adjust number')
-      cy.get('button[title=Add]')
-        .click()
-      cy.get('@numberInput').then(($input) => {
-        expect ($input.val()).to.equal('3');
-      });
-      cy.get('button').contains('Next').click()
-    });
-    it("Can input name or number of vessel", () => {
-      cy.contains('vessel')
-        .should('exist')
-        .and('be.visible')
-      cy.log('Skipping question without inputting value')
-      cy.get('input').as('vesselInput')
-        .should('be.empty')
-      cy.get('button').contains('Skip Question').click()
-      cy.contains('willing')
-        .should('exist')
-        .and('be.visible')
-      cy.get('a[title="Previous Question"]').click()
-      cy.contains('vessel')
-        .should('be.visible')
-        .and('exist')
-      cy.get('@vesselInput').type("Queen Ann's Revenge")
-      cy.get('@vesselInput').then(($input) => {
-        expect ($input.val()).to.equal("Queen Ann's Revenge");
-      });
-      cy.get('button').contains('Next').click()
-    });
-    
-    it("Can answer additional questions", () => {
-      //cy.restoreLocalStorage()
-      //cy.getLocalStorage('surveyId').then((id) => {
-      //  cy.getLocalStorage('slug').then((slug) => {
-      //    cy.visit(Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`);
-      //    cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28`)
-      //  })
-      //  
-      //})
-      ////cy.wait('@getProjectMetadata')
-      //  .its('response.statusCode').should('eq', 200)
-      cy.contains('additional')
-        .should('exist')
-        .and('be.visible')
-      cy.get('[title="Yes"]')
-        .should('exist')
-        .and('be.visible')
-        .click()
-    })
-    it("Can input age", () => {
-      cy.contains("Your age")
-      cy.get('input').clear().type("30")
-      cy.contains('Next').click()
-    })
-    it("Can select gender", () => {
-      cy.contains("Gender")
-      cy.contains("Female").click()
-    })
-    it("Can add comments", () => {
-      cy.get("textarea").type("My general comments.")
-    })
-    it("Records the correct response", () => {
-      cy.contains("Complete Submission").as('completeSubmission')
-      cy.get('@completeSubmission').should('be.visible').then(($btn) => {
-        {$btn.trigger('click')}
-      })
-      cy.wait("@createResponse").then((req) => {
-        const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
-        expect (surveyResponseId).to.not.equal(null)
+      it(`Focuses on location - ${device}`, () => {
+        cy.viewport(device)
         cy.restoreLocalStorage()
-        cy.getLocalStorage("access_token").then((token) => {
-          cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
-            const data = resp.query.surveyResponse.data
-            const responseAry = []
-            Object.entries(data).forEach(([, value]) => {
-              responseAry.push(value)
-            })
-            const sketchIds = []
-            Object.entries(responseAry[4].collection).forEach(([, value]) => {
-              sketchIds.push(value)
-            })
-            expect(responseAry.length).to.eq(11)
-            sketchIds.forEach((id) => {
-             cy.getSketch(id, token).then((sketch) => {
-               expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
-             })
-            })
-            expect (responseAry[0].name).to.eq('Test User 1')
-            expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
-            expect (responseAry[2][0]).to.eq('N')
-            expect (responseAry[3][0]).to.eq('Kudafari')
-            expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
-            expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
-            expect (responseAry[4].sectors[2]).to.eq("Fisheries - Recreational")
-            expect (responseAry[4].sectors[3]).to.eq("Fisheries- Artisanal/Subsistence")
-            expect (responseAry[5]).to.eq(3)
-            expect (responseAry[6]).to.eq("Queen Ann's Revenge")
-            expect (responseAry[7]).to.eq(true)
-            expect (responseAry[8]).to.eq(30)
-            expect (responseAry[9][0]).to.eq("Female")
-            expect (responseAry[10]).to.eq("My general comments.")
+        cy.getLocalStorage('lat').then((lat) => {
+          cy.getLocalStorage('long').then((lng) => {
+            cy.window().its('mapContext.map.transform._center').then((coords) => {
+              expect (coords["lat"]).to.not.equal(lat)
+              expect (coords["lng"]).to.not.equal(lng)
             });
           });
         });
-        cy.contains('Thank You')
-          .should('be.visible')
+        cy.getLocalStorage("surveyId").then((id) => {
+          cy.setLocalStorage("surveyId", id)
+        });
+        //cy.getLocalStorage("scale bar").then((unfocusedScale) => {
+        //  cy.get('.mapboxgl-ctrl-scale')
+        //    .should('be.visible')
+        //    .then((focusedScale) => {
+        //      expect (focusedScale.html()).to.not.equal(unfocusedScale)
+        //  })
+        //})
       });
-    });
- 
-  })
-  
+      it(`Renders sector specific attributes - Fisheries - Commercial, Tuna - ${device}`, () => {
+        cy.viewport(device); 
+        cy.get('img').then((imgs) => {
+          imgs[0].click()
+        });
+        if (device === "iphone-5" || device === "iphone-x") {
+          cy.get('[data-cy="button-done"]')
+            .should('exist')
+            .and('be.visible')
+            .as('doneBtn')
+            //.click()
+            //cy.get('@doneBtn').then(($btn) => {
+            //  {$btn.trigger('click')}
+            //})
+          cy.get('button').then((btn) => {
+            if(btn.text().includes('Done')) {
+              cy.get('button').contains('Done').click()
+            }
+          });
+        }
+        cy.get('h1').contains('Area Name')
+          .should('exist')
+          .and('be.visible');
+        cy.get(".mt-1 > .block").scrollIntoView().clear()
+          .type("Yellowfin tuna fishing area.");
+        cy.contains('What type of gear do you use here?');
+        cy.contains('What species do you fish here');
+        cy.get('[title="Pole and Line"]').click();
+        cy.get('[title="Yellowfin"]').click();
+        cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.");
+      });
+      it (`Can set area importance using SAP range slider - ${device}`, () => {
+        cy.viewport(device)
+        cy.get('h1').contains('How important is this area?').scrollIntoView();
+        cy.get('input[type=range]').as('range')
+          .should('exist');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        cy.get('@range').then(($range) => {
+          // get the DOM node
+          const range = $range[0];
+          // set the value manually
+          nativeInputValueSetter.call(range, 15);
+          // dispatch the event
+          //@ts-ignore
+          range.dispatchEvent(new Event('change', { value: 15, bubbles: true }));
+        });
+        cy.get('@range')
+          .should('have.value', 15);
+        cy.get('button').contains('Save').then(($save) => {
+          {$save.trigger('click')}
+        });
+        cy.get('button').then((button) => {
+          if(button.text().includes('Save')) {
+            cy.get('button').contains('Save').then(($btn) => {
+              {$btn.trigger('click')}
+            })
+          }
+          
+        })
+        cy.get('button').contains('Yellowfin')
+          .should('not.exist')
+        cy.wait(500)
+        cy.get('button').contains('Save')
+          .should('not.exist')
+        
+        
+        cy.get('.SAPRangeMini')
+          .should('exist')
+          .and('be.visible')
+          .and('have.value', 15);
+      });
+      //it(`Can finish sector - Fisheries - Commercial, Tuna - ${device}`, () => {
+      //  cy.viewport(device); 
+      //  cy.contains('Fisheries - Commercial, Tuna')
+      //    .should('be.visible');
+      //  cy.contains("Yellowfin tuna fishing area.");
+      //  if (device === "iphone-x") {
+      //    cy.get('button').contains('New Shape')
+      //      .should('be.visible')
+      //    cy.contains('View Map')
+      //      .should('be.visible')
+      //  }
+      //  cy.get("button").contains('Finish Sector').as('finishSector').should('be.visible').then(($el) => {
+      //    {$el.trigger('click')}
+      //  });
+      //  cy.get('@finishSector')
+      //    .should('not.exist')
+      //  cy.get('h1').contains('Your sectors')
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.get('.space-y-2')
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.get('button').contains('Next sector').as('nextSectorBtn')
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.get('@nextSectorBtn').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      // 
+      //});
+      //it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device); 
+      //  cy.get('button').contains('Next sector')
+      //    .should('not.exist')
+      //  if (device === "iphone-x" || device === "iphone-5") {
+      //    Cypress.on('uncaught:exception', (err, runnable) => {
+      //      // returning false here prevents Cypress from
+      //      // failing the test
+      //      if (err) {
+      //        cy.log(`${err}`)
+      //        return false
+      //      }
+      //    })
+      //    cy.get('[data-cy="button-begin"]')
+      //      .should('exist')
+      //      .and('be.visible')
+      //      .as('beginBtn').then(($btn) => {
+      //        {$btn.trigger('click')}
+      //      })
+      //    cy.get('[data-cy="button-begin"]')
+      //      .should('not.be.visible')
+      //    cy.get('p').contains('Click on the map')
+      //      .should('exist')
+      //      .and('be.visible');
+      //    cy.get('[role="progressbar"]')
+      //      .should('not.exist')
+      //    drawPolygon()
+      //    cy.get('[data-cy="button-done"]').as('doneBtn')
+      //      .should('exist')
+      //      .and('be.visible')
+      //      .click()
+      //  } else {
+      //    waitOnMapbox(5)
+      //    cy.get('[role="progressbar"]')
+      //      .should('not.exist')
+      //    cy.get('h4').contains('Fisheries - Commercial, Non-Tuna Species')
+      //      .should('exist')
+      //      .and('be.visible')
+      //    drawPolygon()
+      //  }
+      //})//;
+      //it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device); 
+      //  cy.get('button').then(($button) => {
+      //    if ($button.text().includes('Done')) {
+      //      cy.get('button').contains('Done').then(($btn) => {
+      //        {$btn.trigger('click')}
+      //      });
+      //    }
+      //  });
+      //  cy.get('button').contains('Done')
+      //    .should('not.exist')
+      //  if (device === "iphone-5" || device ==="iphone-x") {
+      //    cy.get('.mapboxgl-ctrl-scale')
+      //    //.should('not.exist')
+      //    .should('not.be.visible')
+      //    cy.contains('Fisheries')
+      //      .should('not.exist')
+      //  //cy.get('img[alt="Satellite map preview')
+      //  //  .should('not.exist')
+//
+      //}
+      //  cy.contains('Area Name')
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.contains('How important')
+      //  cy.get(".mt-1 > .block")
+      //    .should('be.visible')
+      //    .clear()
+      //    .type("Sea cucumber fishing area.")
+      //  cy.contains('What type of gear')
+      //  cy.contains('What type of species')
+      //  cy.get('[title="Pole and Line"]')
+      //    .should('not.exist')
+      //  cy.get('[title="Pole and Line"]')
+      //    .should('not.exist')
+      //  cy.get('[title="Yellowfin"]')
+      //    .should('not.exist')
+      //  cy.get('[title="Sea cucumber"]').click()
+      //  cy.get('[title="Jigging"]').click()
+      //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
+      //  cy.contains('Save').click()
+      //});
+      //it(`Errors when invalid polygon is drawn - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device)
+      //  cy.contains("Save").should('not.exist')
+      //  cy.contains('New Shape').as('newShape')
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.get('@newShape').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  });
+      //  cy.get('@newShape')
+      //    .should('not.exist')
+      //  cy.get('[role="progressbar"]')
+      //    .should('not.exist')
+      //  drawInvalidPolygon()
+      //  cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
+      //  cy.get('@invalidShapeBtn').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //  cy.get('[role="dialog"]').contains('Invalid Shape')
+      //  cy.get('video').should('be.visible')
+      //  cy.get('button').contains('Okay').as('okayBtn')
+      //  cy.get('@okayBtn').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //  cy.get('button').contains('Done').as('doneBtn')
+      //  const stub = cy.stub()  
+      //  cy.on ('window:alert', stub)
+      //  cy.get('@doneBtn').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //    expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
+      //  })
+      //}); 
+      //it(`Can delete invalid shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device);
+      //  cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn');
+      //  const stub = cy.stub();
+      //  cy.on ('window:confirm', stub);
+      //  cy.get('@trashBtn').then(($btn) => {
+      //    {$btn.trigger('click')};
+      //    expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?');
+      //  });
+      //});
+      //it(`Can draw second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device)
+      //  if (device === "macbook-15" || device === "ipad-2") {
+      //    cy.contains('New Shape').as('newShape');
+      //    cy.get('@newShape').then(($btn) => {
+      //      {$btn.trigger('click')}
+      //    })
+      //    cy.get('[type = "button"]').then(($btn) => {
+      //      if ($btn.text().includes('New Shape')) {
+      //        cy.get('button').contains('New Shape').as('newShapeBtn').then(($btn) => {
+      //          {$btn.trigger('click', {multiple: true})}
+      //        });
+      //      }; 
+      //    });
+      //    cy.get('h4').contains('Fisheries - Recreational')
+      //      .should('not.exist');
+      //    cy.contains('Area Name')
+      //      .should('exist')
+      //      .and('be.visible');
+      //    cy.contains('How important is this area?')
+      //      .should('exist')
+      //      .and('be.visible');
+      //  }
+      //  drawSecondPolygon();
+      //  if (device === "iphone-x" || device === "iphone-5") {
+      //    cy.get('[data-cy="button-done"]').as('doneBtn')
+      //      .should('exist')
+      //      .and('be.visible')
+      //      .click()
+      //  }
+      //});
+      //it(`Renders sector specific attributes for second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device);
+      //  cy.get('h1').contains('Area Name')
+      //    .should('exist')
+      //    .and('be.visible');
+      //  cy.get(".mt-1 > .block").clear()
+      //    .type("Reef fishing area.");
+      //  cy.contains('What type of gear');
+      //  cy.contains('What type of species');
+      //  cy.get('[title="Pole and Line"]')
+      //    .should('not.exist');
+      //  cy.get('[title="Yellowfin"]')
+      //    .should('not.exist');
+      //  cy.get('button').contains('Handline')
+      //    .should('be.visible')
+      //    .click();
+      //  cy.get('button').contains('Reef fish')
+      //    .should('be.visible')
+      //    .click();
+      //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.");
+      //  cy.contains('Save').click();
+      //})
+      //it(`Can finish sector - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device);
+      //  cy.contains("Sea cucumber fishing area.");
+      //  cy.contains("Reef fishing area.");
+      //  cy.contains("Fisheries - Commercial, Non-Tuna Species")
+      //  //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+      //  //  {$el.trigger('click')}
+      //  //})
+      //  cy.contains("Finish Sector").as("finishSector")
+      //  cy.get('@finishSector').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //})
+      //it (`Shows completed sectors - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+      //  cy.viewport(device);
+      //  if (device !== "iphone-x") {
+      //    //these don't exist on this page for iphone-x
+      //    checkForNavAndLang();
+      //  }
+      //  
+      //  cy.get('button').then(($btn) => {
+      //    if ($btn.text().includes("Finish Sector")) {
+      //      cy.get('button').contains("Finish Sector").then(($btn) => {
+      //        {$btn.trigger('click', {multiple: true})};
+      //      });
+      //    };
+      //  });
+      //  cy.get('h1').contains('Your sectors')
+      //  //completed sector
+      //  cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
+      //    expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
+      //  })
+      //  //completed sector
+      //  cy.get('button').contains('Fisheries - Commercial, Non-Tuna Species').parent().then(($btn) => {
+      //    expect ($btn.css('background'))
+      //    .to
+      //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+      //  })
+      //  cy.contains("Next Question").as('nextQuestion')
+      //  cy.get('@nextQuestion').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //})
+      //it(`Can input number of people reflected in response - ${device}`, () => {
+      //  cy.viewport(device);
+      //  checkForNavAndLang();
+      //  cy.get('[data-question="yes"]').contains('Please indicate how many people are reflected in this response')
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.get('input[type="number"]').as('numberInput')
+      //    .should('exist');
+      //  cy.log('A user can skip question')
+      //  cy.get('@numberInput').then(($input) => {
+      //    expect ($input.val()).to.equal('0')
+      //  })
+      //  cy.contains('response')
+      //  cy.log('A user can input number by typing')
+      //  cy.get('@numberInput').type('4').then(($input) => {
+      //    expect ($input.val()).to.equal('04')
+      //  });
+      //  cy.log('Using substract button to adjust number')
+      //  cy.get('button[title="Subtract"]')
+      //    .click()
+      //    .click();
+      //  cy.get('@numberInput').then(($input) => {
+      //    expect ($input.val()).to.equal('2');
+      //  });
+      //  cy.log('Using add button to adjust number')
+      //  cy.get('button[title=Add]')
+      //    .click()
+      //  cy.get('@numberInput').then(($input) => {
+      //    expect ($input.val()).to.equal('3');
+      //  });
+      //  cy.get('button').contains('Next').as('nextQuestionBtn')
+      //    .should('exist')
+      //    //.and('be.visible')
+      //    .then(($btn) => {
+      //      {$btn.trigger('click')}
+      //    });
+      //});
+      //it(`Can input name or number of vessel - ${device}`, () => {
+      //  cy.viewport(device); 
+      //  checkForNavAndLang();
+      //  cy.contains('vessel')
+      //    .should('exist')
+      //    .and('be.visible');
+      //  cy.log('Skipping question without inputting value');
+      //  cy.get('input').as('vesselInput')
+      //    .should('be.empty');
+      //  cy.get('button').contains('Skip Question').click();
+      //  cy.restoreLocalStorage();
+      //  cy.getLocalStorage('slug').then((slug) => {
+      //    cy.getLocalStorage('surveyId').then((id) => {
+      //      cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28/`);
+      //    })
+      //  })
+      //  cy.contains('willing')
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.get('a[title="Previous Question"]').click()
+      //  cy.contains('vessel')
+      //    .should('be.visible')
+      //    .and('exist')
+      //  cy.get('@vesselInput').type("Queen Ann's Revenge")
+      //  cy.get('@vesselInput').then(($input) => {
+      //    expect ($input.val()).to.equal("Queen Ann's Revenge");
+      //  });
+      //  cy.get('button').contains('Next').click()
+      //});
+      //it(`Can answer additional questions - ${device}`, () => {
+      //  cy.viewport(device);
+      //  checkForNavAndLang();
+      //  cy.contains('additional')
+      //    .should('exist')
+      //    .and('be.visible');
+      //  cy.get('[title="Yes"]')
+      //    .should('exist')
+      //    .and('be.visible')
+      //    .click()
+      //});
+      //it(`Can input age - ${device}`, () => {
+      //  cy.viewport(device);
+      //  checkForNavAndLang();
+      //  cy.restoreLocalStorage()
+      //  cy.getLocalStorage('slug').then((slug) => {
+      //    cy.getLocalStorage('surveyId').then((id) => {
+      //      cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/29/`);
+      //    })
+      //  })
+      //  cy.contains('willing')
+      //    .should('not.exist')
+      //  cy.contains("Your age")
+      //    .should('exist')
+      //    .and('be.visible')
+      //  cy.get('input').clear().type("30")
+      //  cy.contains('Next').as('nextBtn');
+      //  cy.get('@nextBtn').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //})
+      //it(`Can select gender - ${device}`, () => {
+      //  cy.viewport(device); 
+      //  checkForNavAndLang();
+      //  cy.contains("Gender")
+      //  cy.contains("Female").click()
+      //})
+      //it(`Can add comments - ${device}`, () => {
+      //  cy.viewport(device);
+      //  checkForNavAndLang();
+      //  cy.get("textarea").type("My general comments.")
+      //  cy.contains("Complete Submission").as('completeSubmission')
+      //  cy.get('@completeSubmission').should('be.visible').then(($btn) => {
+      //    {$btn.trigger('click')}
+      //  })
+      //  cy.contains('General Comments')
+      //    .should('not.exist')
+      //})
+      //it(`Records the correct response - ${device} `, () => {
+      //  cy.wait("@createResponse").then((req) => {
+      //    expect (req.response.statusCode).to.eq(200)
+      //    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+      //    expect (surveyResponseId).to.not.equal(null)
+      //    cy.restoreLocalStorage()
+      //    cy.getLocalStorage("access_token").then((token) => {
+      //      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
+      //      const data = resp.query.surveyResponse.data
+      //      const responseAry = []
+      //      Object.entries(data).forEach(([, value]) => {
+      //          responseAry.push(value)
+      //      });
+      //        const sketchIds = []
+      //        Object.entries(responseAry[4].collection).forEach(([, value]) => {
+      //          sketchIds.push(value)
+      //        });
+      //        expect(responseAry.length).to.eq(11)
+      //        sketchIds.forEach((id) => {
+      //         cy.getSketch(id, token).then((sketch) => {
+      //           expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
+      //         });
+      //        });
+      //        expect (responseAry[0].name).to.eq('Test User 1')
+      //        expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
+      //        expect (responseAry[2][0]).to.eq('N')
+      //        expect (responseAry[3][0]).to.eq('Kudafari')
+      //        expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
+      //        expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
+      //        expect (responseAry[5]).to.eq(3)
+      //        expect (responseAry[6]).to.eq("Queen Ann's Revenge")
+      //        expect (responseAry[7]).to.eq(true)
+      //        expect (responseAry[8]).to.eq(30)
+      //        expect (responseAry[9][0]).to.eq("Female")
+      //        expect (responseAry[10]).to.eq("My general comments.")
+      //      });
+      //    });
+      //  });
+      //  if (device === "macbook-15" || device === "ipad-2") {
+      //    cy.get('h1').contains('Thank You')
+      //      .should('be.visible');
+      //    cy.get('button').contains('Submit Another Response')
+      //      .should('exist')
+      //      .click();
+      //    }
+      //  });
+      });
+    })//;
+  });//
