@@ -64,45 +64,47 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
           editable={props.editable}
           alternateLanguageSettings={props.alternateLanguageSettings}
         />
-        {context?.offlineResponseCount && context?.offlineResponseCount > 0 && (
-          <div className="border my-4 p-4 rounded border-opacity-30 flex">
-            <StatusOfflineIcon className="w-8 h-8 block mr-4" />
-            <div className="flex-1">
-              <h2 className="text-lg mb-1 font-semibold">
-                <Trans
-                  i18nKey="offlineResponseCount"
-                  count={context.offlineResponseCount}
-                >
-                  {{ count: context.offlineResponseCount }} offline responses
-                  collected
-                </Trans>
-              </h2>
-              {!online && (
-                <>
-                  <p>
-                    <Trans ns="offline">
-                      These responses have been saved to your device but will
-                      need to be resubmitted to the SeaSketch server once you
-                      are back online. You can continue to collect additional
-                      responses until then.
-                    </Trans>
-                  </p>
-                  <p className="mt-1">
-                    <Trans ns="offline">
-                      Once online, you can resubmit from the this page, the
-                      begining of the survey, or from the SeaSketch homepage.
-                    </Trans>
-                  </p>
-                </>
+        {context &&
+          "offlineResponseCount" in context &&
+          context.offlineResponseCount > 0 && (
+            <div className="border my-4 p-4 rounded border-opacity-30 flex">
+              <StatusOfflineIcon className="w-8 h-8 block mr-4" />
+              <div className="flex-1">
+                <h2 className="text-lg mb-1 font-semibold">
+                  <Trans
+                    i18nKey="offlineResponseCount"
+                    count={context.offlineResponseCount}
+                  >
+                    {{ count: context.offlineResponseCount }} offline responses
+                    collected
+                  </Trans>
+                </h2>
+                {!online && (
+                  <>
+                    <p>
+                      <Trans ns="offline">
+                        These responses have been saved to your device but will
+                        need to be resubmitted to the SeaSketch server once you
+                        are back online. You can continue to collect additional
+                        responses until then.
+                      </Trans>
+                    </p>
+                    <p className="mt-1">
+                      <Trans ns="offline">
+                        Once online, you can resubmit from the this page, the
+                        begining of the survey, or from the SeaSketch homepage.
+                      </Trans>
+                    </p>
+                  </>
+                )}
+              </div>
+              {online && (
+                <Link to={`/submit-offline-surveys`} className="underline">
+                  <Trans ns="offline">Submit them now</Trans>
+                </Link>
               )}
             </div>
-            {online && (
-              <Link to={`/submit-offline-surveys`} className="underline">
-                <Trans ns="offline">Submit them now</Trans>
-              </Link>
-            )}
-          </div>
-        )}
+          )}
 
         {props.componentSettings.shareButtons && (
           <div className="my-5 space-x-2 rtl:space-x-reverse flex items-center">
