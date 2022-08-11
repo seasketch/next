@@ -473,7 +473,7 @@ describe("Survey creation smoke test", () => {
           drawPolygon();
         } else {
           if (device === "macbook-15") {
-            waitOnMapbox(7);
+            waitOnMapbox(8);
             cy.get('div.MapPicker')
               .should('exist')
               .and('be.visible');
