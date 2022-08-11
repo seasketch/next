@@ -144,7 +144,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["macbook-15"]//, "ipad-2", "iphone-x"]
+const devices: any = ["macbook-15"]//, "ipad-2", "iphone-x"]//, "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -350,9 +350,9 @@ describe("Survey creation smoke test", () => {
     devices.forEach((device) => {
       it(`Can visit the survey - ${device}`, () => {
         cy.viewport(device);
-        if (device === "macbook-15") {
-          cy.wait('@getSurvey').its('response.statusCode').should('eq', 200);
-        }
+        //if (device === "macbook-15") {
+        //  cy.wait('@getSurvey').its('response.statusCode').should('eq', 200);
+        //}
       });
       it(`Can view and toggle settings - ${device}`, () => {
         cy.viewport(device)
@@ -650,48 +650,43 @@ describe("Survey creation smoke test", () => {
           }
           
         })
-        cy.get('button').contains('Yellowfin')
-          .should('not.exist')
-        cy.wait(500)
         cy.get('button').contains('Save')
           .should('not.exist')
-        
-        
         cy.get('.SAPRangeMini')
           .should('exist')
           .and('be.visible')
           .and('have.value', 15);
       });
-      //it(`Can finish sector - Fisheries - Commercial, Tuna - ${device}`, () => {
-      //  cy.viewport(device); 
-      //  cy.contains('Fisheries - Commercial, Tuna')
-      //    .should('be.visible');
-      //  cy.contains("Yellowfin tuna fishing area.");
-      //  if (device === "iphone-x") {
-      //    cy.get('button').contains('New Shape')
-      //      .should('be.visible')
-      //    cy.contains('View Map')
-      //      .should('be.visible')
-      //  }
-      //  cy.get("button").contains('Finish Sector').as('finishSector').should('be.visible').then(($el) => {
-      //    {$el.trigger('click')}
-      //  });
-      //  cy.get('@finishSector')
-      //    .should('not.exist')
-      //  cy.get('h1').contains('Your sectors')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('.space-y-2')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('button').contains('Next sector').as('nextSectorBtn')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('@nextSectorBtn').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      // 
-      //});
+      it(`Can finish sector - Fisheries - Commercial, Tuna - ${device}`, () => {
+        cy.viewport(device); 
+        cy.contains('Fisheries - Commercial, Tuna')
+          .should('be.visible');
+        cy.contains("Yellowfin tuna fishing area.");
+        if (device === "iphone-x") {
+          cy.get('button').contains('New Shape')
+            .should('be.visible')
+          cy.contains('View Map')
+            .should('be.visible')
+        }
+        cy.get("button").contains('Finish Sector').as('finishSector').should('be.visible').then(($el) => {
+          {$el.trigger('click')}
+        });
+        cy.get('@finishSector')
+          .should('not.exist')
+        cy.get('h1').contains('Your sectors')
+          .should('exist')
+          .and('be.visible')
+        cy.get('.space-y-2')
+          .should('exist')
+          .and('be.visible')
+        cy.get('button').contains('Next sector').as('nextSectorBtn')
+          .should('exist')
+          .and('be.visible')
+        cy.get('@nextSectorBtn').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+       
+      });
       //it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
       //  cy.viewport(device); 
       //  cy.get('button').contains('Next sector')
