@@ -473,7 +473,7 @@ describe("Survey creation smoke test", () => {
           drawPolygon();
         } else {
           if (device === "macbook-15") {
-            waitOnMapbox(9);
+            waitOnMapbox(7);
             cy.get('div.MapPicker')
               .should('exist')
               .and('be.visible');
@@ -650,8 +650,8 @@ describe("Survey creation smoke test", () => {
           }
           
         })
-        cy.get('button').contains('Save')
-          .should('not.exist')
+        //cy.get('button').contains('Save')
+        //  .should('not.exist')
         cy.get('.SAPRangeMini')
           .should('exist')
           .and('be.visible')
