@@ -1299,6 +1299,7 @@ CREATE TABLE public.surveys (
     show_progress boolean DEFAULT true NOT NULL,
     show_facilitation_option boolean DEFAULT true NOT NULL,
     supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
+    CONSTRAINT namechk CHECK (((char_length(name) <= 200) AND (char_length(name) > 0))),
     CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
 );
 
