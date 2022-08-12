@@ -475,7 +475,7 @@ describe("Survey creation smoke test", () => {
           if (device === "macbook-15") {
             cy.contains('Fisheries')
               .should('be.visible')
-              waitOnMapbox(7);
+              waitOnMapbox(8);
             cy.get('span.mapboxgl-ctrl-icon')
               .should('be.visible')
            
