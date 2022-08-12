@@ -25,7 +25,6 @@ interface ModalProps {
   className?: string;
   loading?: boolean;
   children?: ReactNode;
-  description?: string;
   icon?: "delete" | "alert";
   autoWidth?: boolean;
   tipyTop?: boolean;
@@ -72,17 +71,7 @@ export default function Modal(props: ModalProps) {
                   {props.title}
                 </Dialog.Title>
 
-                {props.description && (
-                  <Dialog.Description>{props.description}</Dialog.Description>
-                )}
-                <div className="mt-2">
-                  {props.children}
-                  {/* <p className="text-sm text-gray-500">
-                    Are you sure you want to deactivate your account? All of
-                    your data will be permanently removed from our servers
-                    forever. This action cannot be undone.
-                  </p> */}
-                </div>
+                <div className="mt-2">{props.children}</div>
               </div>
             </div>
             <div

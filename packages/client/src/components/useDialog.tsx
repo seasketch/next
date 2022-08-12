@@ -42,7 +42,7 @@ export default function useDialog() {
     ) => {
       return new Promise((resolve, reject) => {
         context.setState({
-          type: "prompt",
+          type: "confirm",
           open: true,
           description: options?.description,
           message: message,
