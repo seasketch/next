@@ -21,7 +21,7 @@ import { useCurrentStyle } from "./appearance";
 import ImagePreloader from "./ImagePreloader";
 import SurveyAppLayout from "./SurveyAppLayout";
 import FormElementFactory from "./FormElementFactory";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0User } from "../auth/Auth0User";
 import {
@@ -678,7 +678,7 @@ function SurveyApp() {
                   />
                 )}
             </SurveyAppLayout>
-            <Modal
+            <ModalDeprecated
               open={practiceModalOpen}
               onRequestClose={() => setPracticeModalOpen(false)}
               title={t("Practice Mode")}
@@ -712,7 +712,7 @@ function SurveyApp() {
                 Practice mode saves your responses seperately so that they are
                 not counted in the survey results.
               </Trans>
-            </Modal>
+            </ModalDeprecated>
             <ImagePreloader formElements={elements} />
           </SurveyContext.Provider>
         </ProjectAccessGate>

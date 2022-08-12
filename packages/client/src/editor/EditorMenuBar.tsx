@@ -5,7 +5,7 @@ import { MarkType, Schema } from "prosemirror-model";
 // import { schema } from "./config";
 import { EditorState } from "prosemirror-state";
 import { markActive, marks } from "./utils";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import Button from "../components/Button";
 import TextInput from "../components/TextInput";
 import { useTranslation } from "react-i18next";
@@ -178,8 +178,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           e.preventDefault();
           props.view!.focus();
           const linkMarks = marks(props.state!, schema.marks.link);
-          // if (linkMarks.length > 1) {
-          //   window.confirm("More than one link selected. Clear these links?");
           if (markActive(props.state!, schema.marks.link)) {
             toggleMark(schema.marks.link)(
               props.view!.state,
@@ -211,7 +209,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           />
         </svg>
       </button>
-      <Modal
+      <ModalDeprecated
         title={t(`Edit Link`)}
         open={!!linkModalState}
         footer={
@@ -266,7 +264,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             }
           />
         </div>
-      </Modal>
+      </ModalDeprecated>
     </div>
   );
 }

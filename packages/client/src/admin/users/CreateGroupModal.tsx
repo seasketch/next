@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import { useTranslation, Trans } from "react-i18next";
 import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import { useCreateGroupMutation } from "../../generated/graphql";
 import { gql } from "@apollo/client";
+import Modal from "../../components/ModalRevisited";
 
 export default function CreateGroupModal({
   projectId,
@@ -61,6 +62,42 @@ export default function CreateGroupModal({
   };
   return (
     <Modal
+      autoWidth
+      title={t("Name this new group")}
+      onRequestClose={onRequestClose}
+      footer={[
+        {
+          label: t("Create Group"),
+          disabled: mutationState.loading,
+          onClick: onSubmit,
+          variant: "primary",
+        },
+        {
+          label: t("Cancel"),
+          onClick: onRequestClose,
+        },
+      ]}
+    >
+      <div className="w-80">
+        <TextInput
+          name="name"
+          error={error}
+          label={t("")}
+          // required
+          value={name}
+          onChange={setName}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onSubmit();
+            }
+          }}
+        />
+      </div>
+    </Modal>
+  );
+  return (
+    <ModalDeprecated
       open={true}
       title={t("Create a User Group")}
       footer={
@@ -96,6 +133,6 @@ export default function CreateGroupModal({
         }}
       />
       {/* </div> */}
-    </Modal>
+    </ModalDeprecated>
   );
 }

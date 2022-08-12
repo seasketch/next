@@ -1,7 +1,7 @@
 import React, { FormEvent, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
@@ -45,9 +45,8 @@ export default function EditFolderModal({
   const [state, setState] = useState<{ title: string; folderType: FolderType }>(
     { title: "", folderType: FolderType.DEFAULT }
   );
-  const [postCreateActionFinishing, setPostCreateActionFinishing] = useState(
-    false
-  );
+  const [postCreateActionFinishing, setPostCreateActionFinishing] =
+    useState(false);
 
   useEffect(() => {
     if (folder) {
@@ -112,7 +111,7 @@ export default function EditFolderModal({
     createFolderState.loading ||
     postCreateActionFinishing;
   return (
-    <Modal
+    <ModalDeprecated
       className={`${className}`}
       open={!!folderId || !!createNew}
       footer={
@@ -277,7 +276,7 @@ export default function EditFolderModal({
           </form>
         </div>
       )}
-    </Modal>
+    </ModalDeprecated>
   );
 }
 

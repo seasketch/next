@@ -29,6 +29,7 @@ import { strategies } from "./offline/GraphqlQueryCache/strategies";
 import { GraphqlQueryCacheContext } from "./offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { OfflineStateDetector } from "./offline/OfflineStateContext";
 import { onError } from "@apollo/client/link/error";
+import { DialogProvider } from "./components/useDialog";
 
 const history = createBrowserHistory();
 
@@ -241,7 +242,9 @@ ReactDOM.render(
             cacheLocation="localstorage"
           >
             <ApolloProviderWithToken>
-              <App />
+              <DialogProvider>
+                <App />
+              </DialogProvider>
             </ApolloProviderWithToken>
           </Auth0ProviderWithRouter>
         </Router>

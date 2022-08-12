@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { useApolloClient } from "@apollo/client";
 import { useParams } from "react-router-dom";
 import BasemapControl from "../../dataLayers/BasemapControl";
+import useDialog from "../../components/useDialog";
 
 export default function BaseMapEditor() {
   const mapContext = useContext(MapContext);
@@ -36,6 +37,7 @@ export default function BaseMapEditor() {
     }
   }, [data?.projectBySlug?.basemaps, mapContext.manager]);
 
+  const { confirmDelete } = useDialog();
   return (
     <>
       <div>
@@ -61,48 +63,52 @@ export default function BaseMapEditor() {
               }
               label={t("Delete")}
               onClick={() => {
-                if (
-                  window.confirm(
-                    t("Are you sure you want to delete the basemap?")
-                  )
-                ) {
-                  deleteBasemap({
-                    variables: {
-                      id: parseInt(mapContext.selectedBasemap!),
-                    },
-                    update: (cache) => {
-                      const id = cache.identify(
-                        data!.projectBySlug!.basemaps!.find(
-                          (b) => b.id === parseInt(mapContext.selectedBasemap!)
-                        )!
-                      );
+                confirmDelete({
+                  message: t("Are you sure you want to delete this map?"),
+                  description: t("This action cannot be undone."),
+                  onDelete: async () => {
+                    await deleteBasemap({
+                      variables: {
+                        id: parseInt(mapContext.selectedBasemap!),
+                      },
+                      update: (cache) => {
+                        const id = cache.identify(
+                          data!.projectBySlug!.basemaps!.find(
+                            (b) =>
+                              b.id === parseInt(mapContext.selectedBasemap!)
+                          )!
+                        );
 
-                      client.cache.evict({
-                        id,
-                      });
+                        client.cache.evict({
+                          id,
+                        });
 
-                      const projectId = cache.identify(
-                        projectData.data!.projectBySlug!
-                      );
-                      cache.modify({
-                        id: projectId,
-                        fields: {
-                          basemaps(existingBasemapRefs, { readField }) {
-                            return existingBasemapRefs.filter(
-                              // @ts-ignore
-                              (basemapRef) => {
-                                return (
-                                  mapContext.selectedBasemap !==
-                                  readField("id", basemapRef)
-                                );
-                              }
-                            );
+                        const projectId = cache.identify(
+                          projectData.data!.projectBySlug!
+                        );
+                        cache.modify({
+                          id: projectId,
+                          fields: {
+                            basemaps(existingBasemapRefs, { readField }) {
+                              return existingBasemapRefs.filter(
+                                // @ts-ignore
+                                (basemapRef) => {
+                                  return (
+                                    mapContext.selectedBasemap !==
+                                    readField("id", basemapRef)
+                                  );
+                                }
+                              );
+                            },
                           },
-                        },
-                      });
-                    },
-                  });
-                }
+                        });
+                      },
+                    }).catch((e) => {
+                      console.error(e);
+                      throw e;
+                    });
+                  },
+                });
               }}
             />
           </div>

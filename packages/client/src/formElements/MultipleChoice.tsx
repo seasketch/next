@@ -6,6 +6,7 @@ import Badge from "../components/Badge";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
+import useDialog from "../components/useDialog";
 import { ChoiceAdminValueInput, SingleSelectCellEditor } from "./ComboBox";
 import {
   FormElementBody,
@@ -37,6 +38,7 @@ const MultipleChoice: FormElementComponent<
     "options",
     props
   ) as FormElementOption[];
+  const { confirm } = useDialog();
   return (
     <>
       <FormElementBody
@@ -113,9 +115,9 @@ const MultipleChoice: FormElementComponent<
               />
               <Button
                 small
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
+                    await confirm(
                       t(
                         "Are you sure? ComboBox's do not support multiple-select. You can always change back.",
                         { ns: "admin:surveys" }

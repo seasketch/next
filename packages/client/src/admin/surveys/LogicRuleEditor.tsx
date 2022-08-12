@@ -4,6 +4,7 @@ import React from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import useDialog from "../../components/useDialog";
 import { components } from "../../formElements";
 import {
   adminValueInputCommonClassNames,
@@ -174,7 +175,7 @@ export default function LogicRuleEditor({
     };
   }
 
-  const deleteRule = useDelete(DeleteLogicRuleDocument);
+  const deleteRule = useDelete(DeleteLogicRuleDocument, true);
 
   const createCondition = useCreate<
     AddConditionMutation,
@@ -193,6 +194,7 @@ export default function LogicRuleEditor({
   });
 
   const deleteCondition = useDelete(DeleteLogicConditionDocument);
+  const { confirmDelete } = useDialog();
 
   if (!formElement?.type?.isInput) {
     return (
@@ -261,13 +263,15 @@ export default function LogicRuleEditor({
                   <button
                     className=""
                     onClick={() => {
-                      if (
-                        window.confirm(
-                          t("Are you sure you want to delete this rule?")
-                        )
-                      ) {
-                        deleteRule(rule);
-                      }
+                      confirmDelete({
+                        message: t(
+                          "Are you sure you want to delete this rule?"
+                        ),
+                        description: t("This action cannot be undone."),
+                        onDelete: async () => {
+                          await deleteRule(rule);
+                        },
+                      });
                     }}
                   >
                     <TrashIcon className="w-4 h-4 mx-2 opacity-60" />

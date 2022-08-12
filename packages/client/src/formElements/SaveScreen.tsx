@@ -8,7 +8,7 @@ import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import IndeterminantLoadingBar from "../admin/surveys/IndeterminantLoadingBar";
 import Button from "../components/Button";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import SurveyButton from "../surveys/SurveyButton";
 import { FormElementComponent, SurveyContext } from "./FormElement";
@@ -135,7 +135,7 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
           </>
         )}
         {showResetModal && (
-          <Modal
+          <ModalDeprecated
             open={true}
             onRequestClose={() => setShowResetModal(false)}
             title={t("Reset Survey")}
@@ -163,7 +163,7 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
                 </Trans>
               </p>
             </div>
-          </Modal>
+          </ModalDeprecated>
         )}
       </div>
     </>

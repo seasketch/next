@@ -1,7 +1,7 @@
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Spinner from "../../components/Spinner";
 import Switch from "../../components/Switch";
 import {
@@ -89,7 +89,7 @@ export default function ParticipantModal({
     data?.user?.canonicalEmail;
 
   return (
-    <Modal
+    <ModalDeprecated
       // title={title || "Loading"}
       open={true}
       loading={loading}
@@ -200,6 +200,6 @@ export default function ParticipantModal({
           {/*  */}
         </div>
       )}
-    </Modal>
+    </ModalDeprecated>
   );
 }

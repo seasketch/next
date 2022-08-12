@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import {
   OptionalBasemapLayer,
   useGetBasemapQuery,
@@ -53,14 +53,10 @@ export default function OptionalBasemapLayerSetLayersModal({
   });
   const styleRequest = useMapboxStyle(data?.basemap?.url);
   const style = styleRequest.data;
-  const [
-    mutate,
-    mutationState,
-  ] = useUpdateOptionalBasemapLayerLayerListMutation();
-  const [
-    updateOptionsMutation,
-    updateOptionsMutationState,
-  ] = useUpdateOptionalBasemapLayerOptionsMutation();
+  const [mutate, mutationState] =
+    useUpdateOptionalBasemapLayerLayerListMutation();
+  const [updateOptionsMutation, updateOptionsMutationState] =
+    useUpdateOptionalBasemapLayerOptionsMutation();
 
   const onSave = async () => {
     if (optionName) {
@@ -99,7 +95,7 @@ export default function OptionalBasemapLayerSetLayersModal({
   };
 
   return (
-    <Modal
+    <ModalDeprecated
       title={t("Set Layers")}
       open={true}
       footer={
@@ -172,6 +168,6 @@ export default function OptionalBasemapLayerSetLayersModal({
           </>
         )}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

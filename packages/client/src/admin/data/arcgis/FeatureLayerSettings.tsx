@@ -25,6 +25,7 @@ import ArcGISServiceMetadata from "./ArcGISServiceMetadata";
 import Warning from "../../../components/Warning";
 import { RenderUnderType } from "../../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
+import useDialog from "../../../components/useDialog";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -156,6 +157,8 @@ export function FeatureLayerSettings(props: {
     }
     updateSettings("outFields", outFields);
   };
+
+  const { confirm } = useDialog();
 
   return (
     <div
@@ -573,9 +576,9 @@ export function FeatureLayerSettings(props: {
               className={`text-sm underline text-primary-600 ${
                 style === undefined ? "pointer-events-none opacity-50" : ""
               }`}
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  window.confirm("Are you sure you want to clear your changes?")
+                  await confirm("Are you sure you want to clear your changes?")
                 ) {
                   updateSettings("mapboxLayers", undefined);
                 }

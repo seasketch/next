@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Button from "../components/Button";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 // const url = require("./bowtie.mp4");
 // @ts-ignore
 import url from "./bowtie.mp4";
@@ -18,7 +18,7 @@ export default function BowtieInstructions({
   const { t } = useTranslation("digitizing");
   const videoRef = useRef<HTMLVideoElement>(null);
   return (
-    <Modal
+    <ModalDeprecated
       zeroPadding={true}
       open={open}
       title={t("Invalid Shape")}
@@ -67,6 +67,6 @@ export default function BowtieInstructions({
           </Trans>
         </p>
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

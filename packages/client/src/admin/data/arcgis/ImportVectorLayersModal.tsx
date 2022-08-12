@@ -3,7 +3,7 @@ import React from "react";
 import Button from "../../../components/Button";
 import DownloadIcon from "../../../components/DownloadIcon";
 import LinkIcon from "../../../components/LinkIcon";
-import Modal from "../../../components/Modal";
+import ModalDeprecated from "../../../components/ModalDeprecated";
 import ProgressBar from "../../../components/ProgressBar";
 import Spinner from "../../../components/Spinner";
 import Warning from "../../../components/Warning";
@@ -19,6 +19,7 @@ import QuotaBar from "./QuotaBar";
 import { useHistory, useParams } from "react-router-dom";
 import { useProjectHostingQuotaQuery } from "../../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
+import useDialog from "../../../components/useDialog";
 
 interface ImportVectorLayersProps {
   layers?: LayerInfo[];
@@ -40,6 +41,7 @@ export default function ImportVectorLayersModal(
     settings?.vectorSublayerSettings
   );
   const history = useHistory();
+  const { confirm } = useDialog();
 
   const [importService, importServiceState] = useImportArcGISService(
     props.serviceRoot
@@ -219,12 +221,12 @@ export default function ImportVectorLayersModal(
   );
 
   return (
-    <Modal
+    <ModalDeprecated
       open={open}
-      onRequestClose={() => {
+      onRequestClose={async () => {
         if (importServiceState.inProgress) {
           if (
-            window.confirm(
+            await confirm(
               t(
                 "Are you sure you want to cancel importing this service? Proceeding may leave partially imported service items in the layer list."
               )
@@ -356,6 +358,6 @@ export default function ImportVectorLayersModal(
           );
         })}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

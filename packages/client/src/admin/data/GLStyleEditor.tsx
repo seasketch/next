@@ -9,7 +9,7 @@ import "codemirror/addon/lint/lint.css";
 // @ts-ignore
 import { validate } from "@mapbox/mapbox-gl-style-spec";
 import useDebounce from "../../useDebounce";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Spinner from "../../components/Spinner";
 import Button from "../../components/Button";
 import { styleForFeatureLayer } from "mapbox-gl-esri-feature-layers";
@@ -23,6 +23,7 @@ import {
 } from "../../generated/graphql";
 import useProjectId from "../../useProjectId";
 import { Trans, useTranslation } from "react-i18next";
+import useDialog from "../../components/useDialog";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -84,6 +85,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     }
   }, [debouncedStyle]);
 
+  const { confirm } = useDialog();
+
   return (
     <>
       <CodeMirror
@@ -139,10 +142,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           className={`text-sm underline text-primary-600 ${
             style === undefined ? "pointer-events-none opacity-50" : ""
           }`}
-          onClick={() => {
-            if (
-              window.confirm("Are you sure you want to clear your changes?")
-            ) {
+          onClick={async () => {
+            if (await confirm("Are you sure you want to clear your changes?")) {
               // updateSettings("mapboxLayers", undefined);
               setResettingStyle(true);
               styleForFeatureLayer(
@@ -197,7 +198,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           <Trans ns="admin">Reset to original ArcGIS style</Trans>
         </button>
       )}
-      <Modal
+      <ModalDeprecated
         open={resettingStyle || !!errorResettingStyle}
         footer={
           errorResettingStyle ? (
@@ -234,7 +235,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           </div>
         )}
         {errorResettingStyle && <span>{errorResettingStyle}</span>}
-      </Modal>
+      </ModalDeprecated>
     </>
   );
 }

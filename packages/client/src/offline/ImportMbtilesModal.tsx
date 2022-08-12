@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { Trans as T, useTranslation } from "react-i18next";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import {
   OfflineSupportInformation,
   OfflineTilePackageDetailsFragment,
@@ -357,7 +357,7 @@ function ImportMbtilesModal({
   );
 
   return (
-    <Modal
+    <ModalDeprecated
       zeroPadding
       loading={loading || state.length === 0}
       open={Boolean(files.length)}
@@ -485,7 +485,7 @@ function ImportMbtilesModal({
           ))}
         </div>
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }
 

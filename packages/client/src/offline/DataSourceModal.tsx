@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../components/Button";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import Spinner from "../components/Spinner";
 import Warning from "../components/Warning";
 import {
@@ -125,7 +125,7 @@ export default function DataSourceModal({
 
   const [generate, generateState] = useGenerateOfflineTilePackageMutation();
   return (
-    <Modal
+    <ModalDeprecated
       loading={loading || !matchingMaps}
       open={true}
       onRequestClose={onRequestClose}
@@ -260,7 +260,7 @@ export default function DataSourceModal({
           </div>
         )}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }
 

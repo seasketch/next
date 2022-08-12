@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import InputBlock from "../../components/InputBlock";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Switch from "../../components/Switch";
 import { FormElementDetailsFragment } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
@@ -23,7 +23,7 @@ export default function ExportResponsesModal({
   const token = useAccessToken();
   const [includePractice, setIncludePractice] = useState(false);
   return (
-    <Modal
+    <ModalDeprecated
       open={open}
       title={t("Export Responses")}
       onRequestClose={onRequestClose}
@@ -87,7 +87,7 @@ export default function ExportResponsesModal({
           </a>
         </div>
       ))}
-    </Modal>
+    </ModalDeprecated>
   );
 }
 

@@ -72,6 +72,7 @@ import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";
 import MapPicker from "../../components/MapPicker";
+import useDialog from "../../components/useDialog";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -143,6 +144,7 @@ const SpatialAccessPriority: FormElementComponent<
       ? props.componentSettings.sectorOptions[0]
       : null
   );
+  const { alert } = useDialog();
 
   const localizedSectors: FormElementOption[] = useLocalizedComponentSetting(
     "sectorOptions",
@@ -268,6 +270,8 @@ const SpatialAccessPriority: FormElementComponent<
       : (EMPTY_FEATURE_COLLECTION as FC);
   }, [props.value?.collection, sector]);
 
+  const { confirm } = useDialog();
+
   const {
     digitizingState,
     disable,
@@ -283,11 +287,11 @@ const SpatialAccessPriority: FormElementComponent<
     mapContext.manager?.map,
     props.sketchClass!.geometryType,
     filteredFeatures,
-    (updatedFeature, hasKinks) => {
+    async (updatedFeature, hasKinks) => {
       // Handle deletion of all vertexes
       if (updatedFeature?.geometry.coordinates.length === 0) {
         if (
-          window.confirm(
+          await confirm(
             t("This will delete your entire shape. Are you sure?", {
               ns: "surveys",
             })
@@ -452,7 +456,7 @@ const SpatialAccessPriority: FormElementComponent<
 
   function onClickSave() {
     if (selfIntersects) {
-      return window.alert(
+      return alert(
         t("Please fix problems with your shape first.", { ns: "surveys" })
       );
     }
@@ -482,9 +486,9 @@ const SpatialAccessPriority: FormElementComponent<
         ...prev,
         submissionAttempted: true,
       }));
-      window.alert(t("Please fill in required fields", { ns: "surveys" }));
+      alert(t("Please fill in required fields", { ns: "surveys" }));
     } else if (!geometryEditingState?.feature || selfIntersects) {
-      return window.alert(
+      return alert(
         t("Please complete your shape on the map", { ns: "surveys" })
       );
     } else {
@@ -520,7 +524,7 @@ const SpatialAccessPriority: FormElementComponent<
 
   function onClickDoneMobile() {
     if (selfIntersects) {
-      return window.alert(
+      return alert(
         t("Please fix problems with your shape first.", { ns: "surveys" })
       );
     } else {
@@ -932,7 +936,7 @@ const SpatialAccessPriority: FormElementComponent<
                   <SurveyButton
                     secondary={true}
                     label={<Trans ns="surveys">Cancel</Trans>}
-                    onClick={() => {
+                    onClick={async () => {
                       if (!geometryEditingState?.isNew) {
                         throw new Error(
                           "Editor is not in state geometryEditingState.isNew"
@@ -940,11 +944,11 @@ const SpatialAccessPriority: FormElementComponent<
                       }
                       if (
                         !geometryEditingState.feature ||
-                        window.confirm(
+                        (await confirm(
                           t("Are you sure you want to delete this shape?", {
                             ns: "surveys",
                           })
-                        )
+                        ))
                       ) {
                         if (geometryEditingState.feature) {
                           const collection = removeFeatureFromValue(
@@ -976,7 +980,7 @@ const SpatialAccessPriority: FormElementComponent<
                     />
                     <SurveyButton
                       label={t("Delete", { ns: "surveys" })}
-                      onClick={() => {
+                      onClick={async () => {
                         if (!selection?.id) {
                           throw new Error("No selection to delete");
                         }
@@ -986,7 +990,7 @@ const SpatialAccessPriority: FormElementComponent<
                           );
                         }
                         if (
-                          window.confirm(
+                          await confirm(
                             t("Are you sure you want to delete this shape?", {
                               ns: "surveys",
                             })
@@ -1125,7 +1129,7 @@ const SpatialAccessPriority: FormElementComponent<
                     }
                   }
                 }}
-                onRequestDelete={() => {
+                onRequestDelete={async () => {
                   if (!selection?.id) {
                     throw new Error("No selection to delete");
                   }
@@ -1133,7 +1137,7 @@ const SpatialAccessPriority: FormElementComponent<
                     throw new Error("No collection to delete feature from");
                   }
                   if (
-                    window.confirm(
+                    await confirm(
                       t("Are you sure you want to delete this shape?", {
                         ns: "surveys",
                       })

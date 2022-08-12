@@ -3,7 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { useHistory } from "react-router";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Switch from "../../components/Switch";
 import TextInput from "../../components/TextInput";
 import {
@@ -132,7 +132,7 @@ export default function InviteUsersModal({
   }, [createInvitesState.error]);
 
   return (
-    <Modal
+    <ModalDeprecated
       disableBackdropClick={true}
       disableEscapeKeyDown={true}
       open={true}
@@ -365,6 +365,6 @@ export default function InviteUsersModal({
           />
         </div>
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

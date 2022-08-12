@@ -10,7 +10,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import Switch from "../components/Switch";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import LanguageSelector from "../surveys/LanguageSelector";
@@ -86,7 +86,7 @@ const WelcomeMessage: FormElementComponent<
             <Trans ns="surveys">Settings</Trans>
           </button>
         </div>
-        <Modal
+        <ModalDeprecated
           className="text-black"
           // title={t("Survey Settings", { ns: "surveys" })}
           open={settingsModalOpen}
@@ -156,7 +156,7 @@ const WelcomeMessage: FormElementComponent<
             )}
             <span></span>
           </div>
-        </Modal>
+        </ModalDeprecated>
       </div>
       {context.offlineResponseCount > 0 && (
         <div className="w-full flex align-middle mt-6 mb-10 border rounded p-2 border-opacity-50">

@@ -12,6 +12,7 @@ import {
   UserListDetailsFragment,
 } from "../../generated/graphql";
 import { useHistory } from "react-router";
+import useDialog from "../../components/useDialog";
 
 interface UserListProps {
   users: UserListDetailsFragment[];
@@ -80,6 +81,8 @@ export default function UserList(props: UserListProps) {
     }
   };
 
+  const { prompt, confirmDelete } = useDialog();
+
   return (
     <div className="min-h-full flex-1 flex-col flex max-w-6xl border-r">
       <div
@@ -92,40 +95,56 @@ export default function UserList(props: UserListProps) {
               small
               label={t("Rename Group")}
               onClick={() => {
-                const newName = window.prompt(
-                  t("Enter a new group name"),
-                  props.groupName
-                );
-                if (newName && newName.length > 0) {
-                  renameGroup({
-                    variables: {
-                      name: newName,
-                      id: props.groupId!,
-                    },
-                    optimisticResponse: {
-                      updateGroup: {
-                        group: {
-                          id: props.groupId!,
-                          name: newName,
-                        },
-                      },
-                    },
-                  });
-                }
+                prompt({
+                  message: "Enter a new group name",
+                  defaultValue: props.groupName,
+                  onSubmit: async (value) => {
+                    if (!value || value.length < 1) {
+                      throw new Error(t("You must specify a group name"));
+                    } else {
+                      try {
+                        await renameGroup({
+                          variables: {
+                            name: value,
+                            id: props.groupId!,
+                          },
+                          optimisticResponse: {
+                            updateGroup: {
+                              group: {
+                                id: props.groupId!,
+                                name: value,
+                              },
+                            },
+                          },
+                        });
+                      } catch (e) {
+                        if (/namechk/.test(e.toString() || "")) {
+                          throw new Error(
+                            t(
+                              "Name is required and must be less than 33 characters"
+                            ).toString()
+                          );
+                        } else {
+                          throw e;
+                        }
+                      }
+                    }
+                  },
+                });
               }}
             />
             <Button
               small
               label={t("Delete Group")}
               onClick={() => {
-                if (
-                  window.confirm(
-                    t("Are you sure you want to delete this group?")
-                  )
-                ) {
-                  deleteGroup();
-                  history.push(`/${props.slug}/admin/users/`);
-                }
+                confirmDelete({
+                  message: t("Are you sure you want to delete this group?"),
+                  description: t("This action cannot be undone."),
+                  onDelete: async () => {
+                    await deleteGroup();
+                    history.push(`/${props.slug}/admin/users/`);
+                  },
+                });
               }}
             />
           </>

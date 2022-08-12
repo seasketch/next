@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Button from "../../components/Button";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import TextInput from "../../components/TextInput";
 import {
   OptionalBasemapLayersGroupType,
@@ -81,7 +81,7 @@ export default function CreateOptionalLayerModal({
   }
 
   return (
-    <Modal
+    <ModalDeprecated
       open={true}
       footer={
         <>
@@ -174,6 +174,6 @@ export default function CreateOptionalLayerModal({
           </div>
         )}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

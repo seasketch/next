@@ -14,6 +14,7 @@ import { useApolloClient, gql } from "@apollo/client";
 import OptionalBasemapLayerSetLayersModal from "../admin/data/OptionalBasemapLayerSetLayersModal";
 import Spinner from "../components/Spinner";
 import OptionalLayerMetadataEditor from "../admin/data/OptionalLayerMetadataEditor";
+import useDialog from "../components/useDialog";
 
 export default function OptionalBasemapLayerEditor({
   layerId,
@@ -37,6 +38,7 @@ export default function OptionalBasemapLayerEditor({
   const client = useApolloClient();
   const [updateOptionsMutation, updateOptionsMutationState] =
     useUpdateOptionalBasemapLayerOptionsMutation();
+  const { confirmDelete } = useDialog();
 
   if (!layer || layerRequest.loading) {
     return <Spinner />;
@@ -163,43 +165,45 @@ export default function OptionalBasemapLayerEditor({
           className="m-1"
           small
           label={t("Delete")}
-          onClick={() => {
-            if (
-              window.confirm(t("Are you sure you want to delete this layer?"))
-            ) {
-              del({
-                variables: {
-                  id: layer.id,
-                },
-                update: (cache) => {
-                  const basemapId = cache.identify({
-                    __typename: "Basemap",
-                    id: layer.basemapId,
-                  });
+          onClick={async () => {
+            confirmDelete({
+              message: t("Are you sure you want to delete this layer?"),
+              description: t("This action cannot be undone."),
+              onDelete: async () => {
+                await del({
+                  variables: {
+                    id: layer.id,
+                  },
+                  update: (cache) => {
+                    const basemapId = cache.identify({
+                      __typename: "Basemap",
+                      id: layer.basemapId,
+                    });
 
-                  cache.evict({
-                    id: cache.identify(layer),
-                  });
+                    cache.evict({
+                      id: cache.identify(layer),
+                    });
 
-                  cache.modify({
-                    id: basemapId,
-                    fields: {
-                      optionalBasemapLayers(
-                        existingOptionalLayerRefs,
-                        { readField }
-                      ) {
-                        return existingOptionalLayerRefs.filter(
-                          // @ts-ignore
-                          (layerRef) => {
-                            return layer.id !== readField("id", layerRef);
-                          }
-                        );
+                    cache.modify({
+                      id: basemapId,
+                      fields: {
+                        optionalBasemapLayers(
+                          existingOptionalLayerRefs,
+                          { readField }
+                        ) {
+                          return existingOptionalLayerRefs.filter(
+                            // @ts-ignore
+                            (layerRef) => {
+                              return layer.id !== readField("id", layerRef);
+                            }
+                          );
+                        },
                       },
-                    },
-                  });
-                },
-              });
-            }
+                    });
+                  },
+                });
+              },
+            });
           }}
         />
         {layer.groupType === OptionalBasemapLayersGroupType.None && (

@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import languages, { LangDetails } from "../lang/supported";
 
 export default function LanguageSelector(props: {
@@ -24,7 +24,7 @@ export default function LanguageSelector(props: {
     <>
       {props.button(() => setOpen(true))}
 
-      <Modal
+      <ModalDeprecated
         // title={t("Select a language")}
         onRequestClose={() => setOpen(false)}
         className="text-black"
@@ -47,7 +47,7 @@ export default function LanguageSelector(props: {
             />
           ))}
         </div>
-      </Modal>
+      </ModalDeprecated>
     </>
   );
 }

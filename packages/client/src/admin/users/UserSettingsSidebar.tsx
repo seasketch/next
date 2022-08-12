@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -16,11 +16,14 @@ import {
   InviteDetailsFragment,
   Group,
   UserListDetailsFragment,
+  useCreateGroupMutation,
 } from "../../generated/graphql";
 import UserSettingsSidebarSkeleton from "./UserSettingsSidebarSkeleton";
 import CreateGroupModal from "./CreateGroupModal";
 import InviteUsersModal from "./InviteUsersModal";
 import { sentStatus, unsentStatus, problemStatus } from "./UserSettings";
+import useDialog from "../../components/useDialog";
+import { gql } from "@apollo/client";
 
 export default function UserSettingsSidebar({
   invites,
@@ -40,11 +43,63 @@ export default function UserSettingsSidebar({
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation(["admin"]);
   const [inviteUsersOpen, setInviteUsersOpen] = useState(false);
-  // const { data, loading, error } = useUserAdminCountsQuery({
-  //   variables: {
-  //     slug,
-  //   },
-  // });
+  const [mutate, mutationState] = useCreateGroupMutation();
+  const { prompt } = useDialog();
+  const promptToCreateGroup = useCallback(() => {
+    prompt({
+      message: "Name this new group",
+      onSubmit: async (name) => {
+        if (!projectId) {
+          throw new Error("Unknown project id");
+        }
+        try {
+          await mutate({
+            variables: {
+              projectId,
+              name,
+            },
+            update: (cache, { data }) => {
+              if (data?.createGroup?.group) {
+                const newGroupData = data.createGroup.group;
+                cache.modify({
+                  id: cache.identify({
+                    __typename: "Project",
+                    id: projectId,
+                  }),
+                  fields: {
+                    groups(existingGroupRefs = [], { readField }) {
+                      const newGroupRef = cache.writeFragment({
+                        data: newGroupData,
+                        fragment: gql`
+                          fragment NewGroup on Group {
+                            id
+                            projectId
+                            name
+                          }
+                        `,
+                      });
+
+                      return [...existingGroupRefs, newGroupRef];
+                    },
+                  },
+                });
+              }
+            },
+          });
+        } catch (e) {
+          if (/namechk/.test(e.toString() || "")) {
+            throw new Error(
+              t(
+                "Name is required and must be less than 33 characters"
+              ).toString()
+            );
+          } else {
+            throw e;
+          }
+        }
+      },
+    });
+  }, [mutate, projectId, prompt, t]);
 
   const counts = useMemo(() => {
     let results = {
@@ -188,7 +243,8 @@ export default function UserSettingsSidebar({
           <Button
             small
             label={t("Create Group")}
-            onClick={() => setCreateGroupModalOpen(true)}
+            onClick={promptToCreateGroup}
+            // onClick={() => setCreateGroupModalOpen(true)}
           />
         ),
       },

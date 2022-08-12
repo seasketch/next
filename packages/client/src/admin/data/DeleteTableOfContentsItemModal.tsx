@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Button from "../../components/Button";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import { ClientTableOfContentsItem } from "../../dataLayers/tableOfContents/TableOfContents";
 import { useDeleteBranchMutation } from "../../generated/graphql";
 import { Trans, useTranslation } from "react-i18next";
@@ -21,7 +21,7 @@ export default function DeleteTableOfContentsItemModal(props: {
     }
   };
   return (
-    <Modal
+    <ModalDeprecated
       onRequestClose={onRequestClose}
       open={!!props.item}
       footer={
@@ -81,6 +81,6 @@ export default function DeleteTableOfContentsItemModal(props: {
         {/* eslint-disable-next-line */}
         {error && <p className="text-red-900 mt-2">Error: {error.message}</p>}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

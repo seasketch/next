@@ -30,6 +30,7 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import ProfileAvatarUploader from "../components/ProfileAvatarUploader";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { useParams } from "react-router-dom";
+import useDialog from "../components/useDialog";
 
 interface ProfileFormValues {
   fullname: string;
@@ -52,6 +53,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
     useResendEmailVerificationMutation();
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [madeRequest, setMadeRequest] = useState(false);
+  const { alert } = useDialog();
   // const [reverseTransition, setReverseTransition] = useState(false);
   const initialFocusRef = useRef();
   let title = <></>;
@@ -249,14 +251,14 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
             onClick={() =>
               resendVerification().then((response) => {
                 if (response.data?.resendVerificationEmail.success === true) {
-                  window.alert(t("Verification email sent. Check your inbox."));
+                  alert(t("Verification email sent. Check your inbox."));
                 } else {
                   if (response.errors) {
-                    window.alert(
+                    alert(
                       `Problem sending verification email. ${response.errors.toString()}`
                     );
                   } else if (response.data?.resendVerificationEmail.error) {
-                    window.alert(
+                    alert(
                       `Problem sending verification email. ${response.data?.resendVerificationEmail.error}`
                     );
                   }
@@ -611,7 +613,7 @@ export const ProfileForm = ({
                     <input
                       checked
                       onClick={() => {
-                        window.alert(
+                        alert(
                           t(
                             "Profile sharing is required to access private projects so that administrators know who is requesting access.\n\nYour profile will only be shared more broadly if you post in the forums, and you can turn off profile sharing at any time while losing access to these features."
                           )

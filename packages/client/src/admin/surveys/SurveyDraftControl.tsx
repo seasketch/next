@@ -2,7 +2,7 @@ import { QrcodeIcon } from "@heroicons/react/outline";
 import { CheckCircleIcon } from "@heroicons/react/solid";
 import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import QRCode from "qrcode";
 import {
   useSurveyByIdQuery,
@@ -180,7 +180,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
             aria-hidden="true"
           ></div>
         </label>
-        <Modal
+        <ModalDeprecated
           open={qrOpen}
           onRequestClose={() => setQROpen(false)}
           zeroPadding={true}
@@ -194,7 +194,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
               <Trans ns="admin:surveys">click to download</Trans>
             </p>
           </div>
-        </Modal>
+        </ModalDeprecated>
       </div>
     </fieldset>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import "prosemirror-menu/style/menu.css";
@@ -12,6 +12,7 @@ import EditorMenuBar from "../editor/EditorMenuBar";
 import { EditorView } from "prosemirror-view";
 import { MutationResult } from "@apollo/client";
 import { Trans, useTranslation } from "react-i18next";
+import useDialog from "../components/useDialog";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
@@ -41,6 +42,7 @@ export default function MetadataEditor({
   const [originalDoc, setOriginalDoc] = useState<Node>();
   const viewRef = useRef<{ view: EditorView }>();
   const { t } = useTranslation("admin");
+  const { confirm } = useDialog();
 
   useEffect(() => {
     if (!loading) {
@@ -64,7 +66,7 @@ export default function MetadataEditor({
   }, [loading]);
 
   return (
-    <Modal
+    <ModalDeprecated
       open={true}
       onRequestClose={() => {
         if (!changes && onRequestClose) {
@@ -79,10 +81,10 @@ export default function MetadataEditor({
           {changes && (
             <button
               disabled={mutationState.loading}
-              onClick={() => {
+              onClick={async () => {
                 if (
                   onRequestClose &&
-                  window.confirm("Are you sure you want to discard changes?")
+                  (await confirm("Are you sure you want to discard changes?"))
                 ) {
                   onRequestClose();
                 }
@@ -142,6 +144,6 @@ export default function MetadataEditor({
           />
         )}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

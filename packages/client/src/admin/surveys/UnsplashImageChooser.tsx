@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import { UnsplashPhoto, useGetPhotosQuery } from "../../generated/graphql";
 import useDebounce from "../../useDebounce";
 import Masonry from "react-masonry-css";
@@ -32,7 +32,7 @@ export default function UnsplashImageChooser({
   const [processing, setProcessing] = useState<string | null>(null);
 
   return (
-    <Modal
+    <ModalDeprecated
       onRequestClose={onRequestClose}
       open={open}
       title={t("Search Unsplash for Photos")}
@@ -116,6 +116,6 @@ export default function UnsplashImageChooser({
           )}
         </div>
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

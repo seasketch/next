@@ -3,7 +3,7 @@ import bytes from "bytes";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Card } from "../components/CenteredCardListLayout";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import {
   ClientCacheSettings,
   defaultCacheSetting,
@@ -260,7 +260,11 @@ function ClientCacheDetailsModal({
     return items;
   }, [stats]);
   return (
-    <Modal onRequestClose={onRequestClose} open={true} loading={loading}>
+    <ModalDeprecated
+      onRequestClose={onRequestClose}
+      open={true}
+      loading={loading}
+    >
       {stats && (
         <div className="max-w-xl space-y-4">
           <div className="mb-4">
@@ -316,6 +320,6 @@ function ClientCacheDetailsModal({
           </div>
         </div>
       )}
-    </Modal>
+    </ModalDeprecated>
   );
 }

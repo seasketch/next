@@ -1,5 +1,5 @@
 import React from "react";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import { useTranslation, Trans } from "react-i18next";
 import Button from "../../components/Button";
 import { usePublishTableOfContentsMutation } from "../../generated/graphql";
@@ -12,7 +12,7 @@ export default function PublishTableOfContentsModal(props: {
   const [publish, publishState] = usePublishTableOfContentsMutation();
   const projectId = useProjectId();
   return (
-    <Modal
+    <ModalDeprecated
       open={true}
       title={t("Publish Overlays")}
       footer={
@@ -61,6 +61,6 @@ export default function PublishTableOfContentsModal(props: {
           </p>
         )}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

@@ -19,6 +19,8 @@ import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import Spinner from "../components/Spinner";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import Modal from "../components/ModalRevisited";
+import { AnimatePresence } from "framer-motion";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")

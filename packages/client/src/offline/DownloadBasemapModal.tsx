@@ -1,4 +1,4 @@
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import { Trans as T } from "react-i18next";
 import { Header } from "../components/CenteredCardListLayout";
 import { useMapDownloadManager } from "./MapDownloadManager";
@@ -13,6 +13,7 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/solid";
 import { ReactNode, useMemo } from "react";
 import Warning from "../components/Warning";
+import useDialog from "../components/useDialog";
 
 const Trans = (props: any) => <T {...props} ns="offline"></T>;
 
@@ -40,6 +41,8 @@ export default function DownloadBasemapModal({
     (cacheStatus?.status?.sources || []).find((source) => source.hasUpdates)
   );
 
+  const { confirm } = useDialog();
+
   const footer = useMemo(() => {
     return (
       <>
@@ -62,10 +65,13 @@ export default function DownloadBasemapModal({
                 <Trans>Clear Map Data</Trans>
               </span>
             }
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
-                  `Are you sure you want to delete this offline map data? You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps.`
+                await confirm(
+                  `Are you sure you want to delete this offline map data? You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps.`,
+                  {
+                    icon: "delete",
+                  }
                 )
               ) {
                 clearCache();
@@ -103,7 +109,7 @@ export default function DownloadBasemapModal({
   ]);
 
   return (
-    <Modal
+    <ModalDeprecated
       disableBackdropClick={!!downloadState.working}
       disableEscapeKeyDown={!!downloadState.working}
       onRequestClose={onRequestClose}
@@ -355,7 +361,7 @@ export default function DownloadBasemapModal({
           )}
         </div>
       )}
-    </Modal>
+    </ModalDeprecated>
   );
 }
 

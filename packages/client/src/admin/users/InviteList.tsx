@@ -23,6 +23,7 @@ import { SearchIcon } from "@heroicons/react/outline";
 import Fuse from "fuse.js";
 import { useHotkeys } from "react-hotkeys-hook";
 import { XCircleIcon } from "@heroicons/react/solid";
+import useDialog from "../../components/useDialog";
 
 interface Props {
   invites: InviteDetailsFragment[];
@@ -72,9 +73,8 @@ function InviteList(props: Props) {
   });
   const [query, setQuery] = useState("");
   const searchIndex = useRef<Fuse<InviteDetailsFragment>>();
-  const [searchResults, setSearchResults] = useState<
-    Fuse.FuseResult<InviteDetailsFragment>[]
-  >();
+  const [searchResults, setSearchResults] =
+    useState<Fuse.FuseResult<InviteDetailsFragment>[]>();
 
   useEffect(() => {
     searchIndex.current = new Fuse(invites, {
@@ -105,6 +105,8 @@ function InviteList(props: Props) {
     () => setOpenModalInviteId(undefined),
     [setOpenModalInviteId]
   );
+
+  const { confirm } = useDialog();
 
   const count = invites.length;
   if (searchResults && invites) {
@@ -194,9 +196,9 @@ function InviteList(props: Props) {
           <Button
             className="mt-1"
             label={<Trans ns="admin">Send All Invites</Trans>}
-            onClick={() => {
+            onClick={async () => {
               if (
-                window.confirm(
+                await confirm(
                   t(
                     `Are you sure you want to email all {{count}} draft invites?`,
                     { count: invites.length }

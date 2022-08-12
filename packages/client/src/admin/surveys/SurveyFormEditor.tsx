@@ -61,6 +61,7 @@ import bbox from "@turf/bbox";
 import languages, { LangDetails } from "../../lang/supported";
 import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
+import useDialog from "../../components/useDialog";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -325,6 +326,8 @@ export default function SurveyFormEditor({
 
   const layout =
     selectedFormElement?.layout || style.layout || FormElementLayout.Top;
+
+  const { confirm, confirmDelete } = useDialog();
 
   return (
     <div className="w-screen h-screen flex flex-col">
@@ -759,50 +762,56 @@ export default function SurveyFormEditor({
                       label={t("Delete Element")}
                       small
                       onClick={() => {
-                        if (window.confirm(t("Are you sure?"))) {
-                          const formElement = selectedFormElement!;
-                          history.replace(`../${surveyId}/basic`);
-                          deleteFormElement({
-                            variables: { id: formElement.id },
-                            optimisticResponse: {
-                              __typename: "Mutation",
-                              deleteFormElement: {
-                                __typename: "DeleteFormElementPayload",
-                                formElement: {
-                                  __typename: "FormElement",
-                                  id: formElement.id,
-                                },
-                              },
-                            },
-                            update: (cache) => {
-                              const id = cache.identify(formElement!);
-
-                              cache.evict({
-                                id,
-                              });
-                              const formId = cache.identify(
-                                data!.survey!.form!
-                              );
-
-                              cache.modify({
-                                id: formId,
-                                fields: {
-                                  formElements(existingRefs, { readField }) {
-                                    return existingRefs.filter(
-                                      // @ts-ignore
-                                      (elementRef) => {
-                                        return (
-                                          formElement.id !==
-                                          readField("id", elementRef)
-                                        );
-                                      }
-                                    );
+                        confirmDelete({
+                          message: t(
+                            "Are you sure you want to delete this element?"
+                          ),
+                          description: t("This action cannot be undone."),
+                          onDelete: async () => {
+                            const formElement = selectedFormElement!;
+                            history.replace(`../${surveyId}/basic`);
+                            await deleteFormElement({
+                              variables: { id: formElement.id },
+                              optimisticResponse: {
+                                __typename: "Mutation",
+                                deleteFormElement: {
+                                  __typename: "DeleteFormElementPayload",
+                                  formElement: {
+                                    __typename: "FormElement",
+                                    id: formElement.id,
                                   },
                                 },
-                              });
-                            },
-                          });
-                        }
+                              },
+                              update: (cache) => {
+                                const id = cache.identify(formElement!);
+
+                                cache.evict({
+                                  id,
+                                });
+                                const formId = cache.identify(
+                                  data!.survey!.form!
+                                );
+
+                                cache.modify({
+                                  id: formId,
+                                  fields: {
+                                    formElements(existingRefs, { readField }) {
+                                      return existingRefs.filter(
+                                        // @ts-ignore
+                                        (elementRef) => {
+                                          return (
+                                            formElement.id !==
+                                            readField("id", elementRef)
+                                          );
+                                        }
+                                      );
+                                    },
+                                  },
+                                });
+                              },
+                            });
+                          },
+                        });
                       }}
                     />
                   </div>

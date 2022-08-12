@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Switch from "../../components/Switch";
 import TextInput from "../../components/TextInput";
 import {
@@ -20,6 +20,7 @@ import InviteIcon from "./InviteIcon";
 import { TrashIcon } from "@heroicons/react/outline";
 import gql from "graphql-tag";
 import { useSubscription } from "@apollo/client";
+import useDialog from "../../components/useDialog";
 
 export default function EditInviteModal({
   id,
@@ -30,6 +31,7 @@ export default function EditInviteModal({
   slug: string;
   onRequestClose: () => void;
 }) {
+  const { alert } = useDialog();
   const { t } = useTranslation("admin");
   const { data, loading, error, refetch } = useInviteEditorModalQueryQuery({
     variables: {
@@ -95,34 +97,7 @@ export default function EditInviteModal({
     variables: {
       id,
     },
-    // refetchQueries: ["UserAdminCounts", "ProjectInvites"],
-    onError: (e) => window.alert(e),
-    // @ts-ignore
-    // optimisticResponse: () => {
-    //   const res = {
-    //     sendProjectInvites: {
-    //       inviteEmails: [
-    //         {
-    //           __typename: "InviteEmail",
-    //           id: 99999,
-    //           toAddress: data?.projectInvite?.email,
-    //           createdAt: new Date().toISOString(),
-    //           status: EmailStatus.Queued,
-    //           projectInviteId: data!.projectInvite!.id,
-    //           tokenExpiresAt: null,
-    //           error: null,
-    //           updatedAt: null,
-    //           projectInvite: {
-    //             __typename: "ProjectInvite",
-    //             id,
-    //             status: data?.projectInvite?.status,
-    //           },
-    //         },
-    //       ],
-    //     },
-    //   };
-    //   return res;
-    // },
+    onError: (e) => alert(e.toString()),
     update: (cache, mutationResult) => {
       if (
         (mutationResult.data?.sendProjectInvites?.inviteEmails?.length || 0) > 0
@@ -212,8 +187,10 @@ export default function EditInviteModal({
     }
   };
 
+  const { confirmDelete } = useDialog();
+
   return (
-    <Modal
+    <ModalDeprecated
       disableBackdropClick={state?.hasChanged}
       disableEscapeKeyDown={state?.hasChanged}
       open={true}
@@ -240,7 +217,7 @@ export default function EditInviteModal({
                 .then(() => {
                   onRequestClose();
                 })
-                .catch((e) => window.alert(e));
+                .catch((e) => alert(e));
             }}
           />
           {data?.projectInvite?.status !== InviteStatus.Confirmed && (
@@ -248,19 +225,17 @@ export default function EditInviteModal({
               disabled={mutationState.loading || deleteInviteState.loading}
               className="right-4 absolute"
               onClick={() => {
-                if (
-                  window.confirm(
-                    t("Are you sure you want to delete this project invite?")
-                  )
-                ) {
-                  deleteInvite()
-                    .then(() => {
+                confirmDelete({
+                  message: t(
+                    "Are you sure you want to delete this project invite?"
+                  ),
+                  description: t("This action cannot be undone."),
+                  onDelete: async () => {
+                    await deleteInvite().then(() => {
                       onRequestClose();
-                    })
-                    .catch((e) => {
-                      alert(e);
                     });
-                }
+                  },
+                });
               }}
               label={
                 <>
@@ -492,7 +467,7 @@ export default function EditInviteModal({
           </div>
         </div>
       )}
-    </Modal>
+    </ModalDeprecated>
   );
 }
 

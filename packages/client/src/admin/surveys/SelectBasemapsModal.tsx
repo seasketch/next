@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import Button from "../../components/Button";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Switch from "../../components/Switch";
 import {
   DeleteBasemapDocument,
@@ -48,7 +48,7 @@ export default function SelectBasemapsModal(props: {
     };
   }, [data]);
   return (
-    <Modal
+    <ModalDeprecated
       open={true}
       title={t("Choose basemaps")}
       onRequestClose={() => props.onRequestClose(state)}
@@ -120,6 +120,6 @@ export default function SelectBasemapsModal(props: {
           </>
         )}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }

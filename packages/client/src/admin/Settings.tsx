@@ -41,6 +41,7 @@ import {
 import Badge from "../components/Badge";
 import useIsSuperuser from "../useIsSuperuser";
 import InputBlock from "../components/InputBlock";
+import useDialog from "../components/useDialog";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
@@ -352,6 +353,7 @@ function AccessControlSettings() {
       await update({ isListed });
     }
   };
+  const { confirm } = useDialog();
   if (!data?.projectBySlug) {
     return null;
   }
@@ -387,7 +389,7 @@ function AccessControlSettings() {
                   onClick={async (e) => {
                     if (!showPublicOption) {
                       if (
-                        window.confirm(
+                        await confirm(
                           t(
                             "Enabling public access will also enable public listing. Are you sure?"
                           )

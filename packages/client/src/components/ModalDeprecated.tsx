@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useEffect } from "react";
 import { motion } from "framer-motion";
 import Spinner from "./Spinner";
 
@@ -14,7 +14,10 @@ interface ModalProps {
   loading?: boolean;
 }
 
-const Modal: React.FunctionComponent<ModalProps> = ({
+/**
+ * @deprecated Use components/Modal instead
+ */
+const ModalDeprecated: React.FunctionComponent<ModalProps> = ({
   open,
   children,
   disableBackdropClick,
@@ -26,6 +29,9 @@ const Modal: React.FunctionComponent<ModalProps> = ({
   zeroPadding,
   loading,
 }) => {
+  useEffect(() => {
+    console.warn("Using deprecated Modal component.");
+  }, []);
   return (
     // <AnimatePresence>
     <div>
@@ -140,4 +146,4 @@ const Modal: React.FunctionComponent<ModalProps> = ({
   );
 };
 
-export default Modal;
+export default ModalDeprecated;

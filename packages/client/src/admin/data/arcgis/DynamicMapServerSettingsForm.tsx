@@ -1,7 +1,7 @@
 import { useHistory, useParams } from "react-router-dom";
 import Button from "../../../components/Button";
 import InputBlock from "../../../components/InputBlock";
-import Modal from "../../../components/Modal";
+import ModalDeprecated from "../../../components/ModalDeprecated";
 import ProgressBar from "../../../components/ProgressBar";
 import Switch from "../../../components/Switch";
 import { useTranslation, Trans } from "react-i18next";
@@ -136,7 +136,7 @@ export default function DynamicMapServerSettingsForm(props: {
           }}
         />
       </div>
-      <Modal
+      <ModalDeprecated
         open={!!importServiceState.inProgress || !!importServiceState.error}
         title={t("Import Image Service")}
       >
@@ -163,7 +163,7 @@ export default function DynamicMapServerSettingsForm(props: {
             </div>
           )}
         </div>
-      </Modal>
+      </ModalDeprecated>
     </div>
   );
 }

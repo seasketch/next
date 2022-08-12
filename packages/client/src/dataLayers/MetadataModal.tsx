@@ -1,6 +1,6 @@
 import { DOMSerializer, Node } from "prosemirror-model";
 import React, { useEffect, useRef } from "react";
-import Modal from "../components/Modal";
+import ModalDeprecated from "../components/ModalDeprecated";
 import Spinner from "../components/Spinner";
 import { metadata as editorConfig } from "../editor/config";
 
@@ -33,7 +33,7 @@ export default function MetadataModal({
     }
   }, [target.current, document]);
   return (
-    <Modal title={title} onRequestClose={onRequestClose} open={true}>
+    <ModalDeprecated title={title} onRequestClose={onRequestClose} open={true}>
       <>
         <div className="w-full h-full sm:h-auto md:w-160 lg:pb-4 relative metadata">
           <button
@@ -62,6 +62,6 @@ export default function MetadataModal({
           <div className="ProseMirror" ref={target}></div>
         </div>
       </>
-    </Modal>
+    </ModalDeprecated>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import { useUpdateInteractivitySettingsLayersMutation } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import { useMapboxStyle } from "../../useMapboxStyle";
@@ -22,10 +22,8 @@ export default function SetBasemapInteractivityLayers({
   const styleRequest = useMapboxStyle(styleUrl);
   const style = styleRequest.data;
 
-  const [
-    mutate,
-    mutationState,
-  ] = useUpdateInteractivitySettingsLayersMutation();
+  const [mutate, mutationState] =
+    useUpdateInteractivitySettingsLayersMutation();
 
   const onSave = async () => {
     await mutate({
@@ -40,7 +38,7 @@ export default function SetBasemapInteractivityLayers({
   };
 
   return (
-    <Modal
+    <ModalDeprecated
       title={t("Set Layers")}
       open={true}
       footer={
@@ -108,6 +106,6 @@ export default function SetBasemapInteractivityLayers({
           </>
         )}
       </div>
-    </Modal>
+    </ModalDeprecated>
   );
 }
