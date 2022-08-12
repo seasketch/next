@@ -208,7 +208,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
             {state.description && (
               <p className="text-gray-500 text-sm">{state.description}</p>
             )}
-            {state.type === "confirm" && (
+            {state.type === "prompt" && (
               <TextInput
                 name="name"
                 error={error}

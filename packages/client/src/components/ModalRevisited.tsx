@@ -91,7 +91,10 @@ export default function Modal(props: ModalProps) {
               } sm:flex space-y-2 sm:space-y-0 sm:space-x-2`}
             >
               {(props.footer || []).map((footerProps) => (
-                <FooterButton {...footerProps} />
+                <FooterButton
+                  key={footerProps.label!.toString()}
+                  {...footerProps}
+                />
               ))}
             </div>
           </Panel>
