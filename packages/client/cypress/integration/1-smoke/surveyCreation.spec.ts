@@ -107,7 +107,7 @@ const drawPolygon = () => {
     .click(50, 100)
     .click(50, 50)
     .click(100, 50)
-    .dblclick(100, 100)
+    .click(100, 100)
 };
 
 const drawInvalidPolygon = () => {
@@ -478,7 +478,7 @@ describe("Survey creation smoke test", () => {
               waitOnMapbox(8);
             cy.get('span.mapboxgl-ctrl-icon')
               .should('be.visible')
-           
+            //cy.wait(500)
             cy.get('div.MapPicker')
               .should('exist')
               .and('be.visible');
