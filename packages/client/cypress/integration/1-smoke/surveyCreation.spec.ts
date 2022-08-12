@@ -144,7 +144,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["macbook-15"]//, "ipad-2", "iphone-x"]//, "ipad-2", "iphone-x"]
+const devices: any = ["ipad-2"]//"macbook-15", "ipad-2", "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -459,7 +459,7 @@ describe("Survey creation smoke test", () => {
           });
         }
         //polygon path for mobile devices
-        if (device === "iphone-x" || device === "iphone-5") {
+        if (device === "iphone-x") {
           cy.get('[data-cy="button-begin"]')
             .should('exist')
             .and('be.visible')
@@ -486,18 +486,21 @@ describe("Survey creation smoke test", () => {
             //  .should('not.be.visible');
             drawPolygon();
           } else {
+            cy.contains('Fisheries')
+              .should('be.visible')
+            cy.get('span.mapboxgl-ctrl-icon')
+              .should('be.visible')
             cy.get('div.MapPicker')
               .should('exist')
               .and('be.visible')
-            cy.get('[role="progressbar"]').then((progressBar) => {
-              if (progressBar.children().hasClass('animate-spin')) {
-                cy.wait(500);
-                cy.get('[role="progressbar"]').should('not.have.class', 'animate-spin')
-              }
-            });
+            //cy.get('[role="progressbar"]').then((progressBar) => {
+            //  if (progressBar.children().hasClass('animate-spin')) {
+            //    cy.get('[role="progressbar"]').should('not.have.class', 'animate-spin')
+            //  }
+            //});
             waitOnMapbox(3);
-            cy.get('[role="progressbar"]')
-              .should('not.exist');
+            //cy.get('[role="progressbar"]')
+            // .should('not.exist');
             drawPolygon();
           }
         }
