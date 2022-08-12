@@ -59,7 +59,7 @@ export default function useDialog() {
       onCancel?: () => void;
     }) => {
       context.setState({
-        type: "prompt",
+        type: "confirm",
         open: true,
         description: options.description,
         message: options.message,

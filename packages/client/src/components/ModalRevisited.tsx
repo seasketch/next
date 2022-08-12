@@ -2,7 +2,7 @@
 import { ReactNode } from "react";
 import Spinner from "./Spinner";
 import { Fragment, useRef, useState } from "react";
-import { Dialog, Transition } from "@headlessui/react";
+import { Dialog, Tab, Transition } from "@headlessui/react";
 import {
   ExclamationCircleIcon,
   ExclamationIcon,
@@ -28,9 +28,33 @@ interface ModalProps {
   icon?: "delete" | "alert";
   autoWidth?: boolean;
   tipyTop?: boolean;
+  tabs?: string[];
+  scrollable?: boolean;
 }
 
 export default function Modal(props: ModalProps) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  if (props.scrollable && props.icon) {
+    throw new Error("Cannot combine scrollable and icon settings in Modal");
+  }
+
+  let grid = `
+    [row1-start] "icon header" auto [row1-end]
+    [row2-start] "icon body" 1fr [row2-end]
+    [row3-start] "icon footer" 25px [row3-end]
+    / 50px auto
+  `;
+
+  if (props.scrollable) {
+    grid = `
+      [row1-start] "header" auto [row1-end]
+      [row2-start] "body" 1fr [row2-end]
+      [row3-start] "footer" auto [row3-end]
+      / auto
+    `;
+  }
+
   return (
     <Dialog
       open={true}
@@ -39,55 +63,86 @@ export default function Modal(props: ModalProps) {
       onClose={props.onRequestClose}
     >
       <Backdrop />
-      <div className="fixed z-10 inset-0 overflow-y-auto">
-        <div className="flex items-end sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
-          <Panel autoWidth={props.autoWidth}>
-            <div className="sm:flex sm:items-start">
-              {props.icon && props.icon === "delete" && (
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                  <ExclamationIcon
-                    className="h-6 w-6 text-red-600"
-                    aria-hidden="true"
-                  />
-                </div>
-              )}
-              {props.icon && props.icon === "alert" && (
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-300 bg-opacity-10 sm:mx-0 sm:h-10 sm:w-10">
-                  <ExclamationCircleIcon
-                    className="h-6 w-6 text-gray-500"
-                    aria-hidden="true"
-                  />
-                </div>
-              )}
-              <div
-                className={`mt-3 text-center sm:mt-0 ${
-                  props.icon && "sm:ml-4"
-                } sm:text-left`}
-              >
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg leading-6 font-medium text-gray-900 pb-1"
-                >
-                  {props.title}
-                </Dialog.Title>
 
-                <div className="mt-2">{props.children}</div>
+      <div className="fixed z-10 inset-0 overflow-y-auto sm:overflow-y-hidden">
+        <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+          <div className="flex items-end sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
+            <Panel autoWidth={props.autoWidth} grid={grid}>
+              <div
+                className={`sm:flex sm:items-start justify-center ${
+                  props.icon && "sm:pl-4"
+                }`}
+              >
+                {props.icon && props.icon === "delete" && (
+                  <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <ExclamationIcon
+                      className="h-6 w-6 text-red-600"
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
+                {props.icon && props.icon === "alert" && (
+                  <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-300 bg-opacity-10 sm:mx-0 sm:h-10 sm:w-10">
+                    <ExclamationCircleIcon
+                      className="h-6 w-6 text-gray-500"
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
+                <div
+                  className={`sm:flex sm:flex-col mt-3 text-center sm:mt-0 ${
+                    props.icon && "sm:ml-4"
+                  } sm:text-left sm:max-h-almost-full`}
+                >
+                  <Dialog.Title
+                    as="h3"
+                    className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
+                      props.tabs !== undefined ? "pb-0" : "pb-4"
+                    } ${
+                      (props.tabs !== undefined || props.scrollable) &&
+                      "border-b"
+                    } ${props.icon && "pl-0"}`}
+                  >
+                    {props.title}
+
+                    {props.tabs && props.tabs.length > 0 && (
+                      <>
+                        <Tabs
+                          selectedIndex={selectedIndex}
+                          labels={props.tabs}
+                          setSelectedIndex={setSelectedIndex}
+                        />
+                      </>
+                    )}
+                  </Dialog.Title>
+
+                  <div
+                    className={`sm:flex-1 mt-0 p-6 ${
+                      props.scrollable ? "py-4" : "py-0"
+                    } sm:overflow-y-auto ${props.icon && "pl-0"}`}
+                  >
+                    {props.children}
+                  </div>
+                  <div
+                    className={`${
+                      ""
+                      // props.icon && "sm:ml-10 sm:pl-4"
+                    } sm:flex space-y-2 sm:space-y-0 sm:space-x-2 px-6 py-4 ${
+                      props.scrollable && "sm:bg-gray-100"
+                    } ${props.icon && "pl-0"}`}
+                  >
+                    {(props.footer || []).map((footerProps) => (
+                      <FooterButton
+                        key={footerProps.label!.toString()}
+                        {...footerProps}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div
-              className={`mt-5 sm:mt-4 ${
-                props.icon && "sm:ml-10 sm:pl-4"
-              } sm:flex space-y-2 sm:space-y-0 sm:space-x-2`}
-            >
-              {(props.footer || []).map((footerProps) => (
-                <FooterButton
-                  key={footerProps.label!.toString()}
-                  {...footerProps}
-                />
-              ))}
-            </div>
-          </Panel>
-        </div>
+            </Panel>
+          </div>
+        </Tab.Group>
       </div>
     </Dialog>
   );
@@ -126,9 +181,11 @@ function Backdrop() {
 function Panel({
   children,
   autoWidth,
+  grid,
 }: {
   children?: ReactNode;
   autoWidth?: boolean;
+  grid: string;
 }) {
   return (
     <Dialog.Panel
@@ -158,7 +215,7 @@ function Panel({
       exit="exit"
       className={`relative bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-xl lg:max-w-2xl ${
         autoWidth ? "w-auto" : "w-full"
-      } sm:p-6`}
+      } sm:p-0`}
     >
       {children}
     </Dialog.Panel>
@@ -196,4 +253,61 @@ function FooterButton(props: FooterButtonProps) {
       {props.loading && <Spinner className="ml-2" color="white" />}
     </button>
   );
+}
+
+export function Tabs({
+  labels,
+  selectedIndex,
+  setSelectedIndex,
+}: {
+  labels: string[];
+  selectedIndex: number;
+  setSelectedIndex: (i: number) => void;
+}) {
+  return (
+    <div>
+      <div className="sm:hidden">
+        <label htmlFor="tabs" className="sr-only">
+          Select a tab
+        </label>
+        {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
+        <select
+          id="tabs"
+          name="tabs"
+          className="mt-3 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+          value={selectedIndex.toString()}
+          onChange={(e) => setSelectedIndex(parseInt(e.target.value))}
+        >
+          {labels.map((label, i) => (
+            <option value={i.toString()} key={label}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="hidden sm:block">
+        <div className=" border-gray-200">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            {labels.map((label) => (
+              <Tab
+                key={label}
+                className={classNames(
+                  labels.indexOf(label) === selectedIndex
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
+                  "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                )}
+              >
+                {label}
+              </Tab>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function classNames(...classes: string[]) {
+  return classes.filter(Boolean).join(" ");
 }
