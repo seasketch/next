@@ -144,7 +144,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["ipad-2"]//"macbook-15", "ipad-2", "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
+const devices: any = ["iphone-x"]//"macbook-15", "ipad-2", "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -467,9 +467,9 @@ describe("Survey creation smoke test", () => {
           cy.get('@beginBtn').then(($btn) => {
             {$btn.trigger('click')}
           });
-          waitOnMapbox(5);
-          cy.get('[role="progressbar"]')
-            .should('not.exist');
+          waitOnMapbox(6);
+          cy.get('span.mapboxgl-ctrl-icon')
+            .should('be.visible')
           drawPolygon();
         } else {
           if (device === "macbook-15") {
