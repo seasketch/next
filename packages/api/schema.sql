@@ -13457,7 +13457,7 @@ ALTER TABLE ONLY public.offline_tile_packages
 --
 
 ALTER TABLE ONLY public.offline_tile_settings
-    ADD CONSTRAINT offline_tile_settings_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id);
+    ADD CONSTRAINT offline_tile_settings_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id) ON DELETE CASCADE;
 
 
 --
