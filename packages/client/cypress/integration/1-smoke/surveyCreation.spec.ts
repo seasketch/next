@@ -3,7 +3,7 @@
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { verify } from "crypto";
-import "cypress-real-events"
+//import "cypress-real-events"
 
 let surveyId: any;
 
