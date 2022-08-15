@@ -107,7 +107,7 @@ const drawPolygon = () => {
     .click(50, 100)
     .click(50, 50)
     .click(100, 50)
-    .click(100, 100)
+    .dblclick(150, 100)
 };
 
 const drawInvalidPolygon = () => {
@@ -144,7 +144,7 @@ const drawSecondPolygon = () => {
     .dblclick(100, 100)
 };
 
-const devices: any = ["iphone-x"]//"macbook-15", "ipad-2", "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
+const devices: any = ["macbook-15"]//"macbook-15", "ipad-2", "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -505,44 +505,44 @@ describe("Survey creation smoke test", () => {
           }
         }
       });
-      //it(`Can view basemap selector - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.get('img').click();
-      //  let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-      //  values.forEach((val) => {
-      //    cy.get('.fixed > .overflow-y-auto').children().contains(val);
-      //  });
-      //  cy.get('img[alt="Satellite basemap"]')
-      //    .should('be.visible');
-      //  cy.get('img[alt="Maldives Light basemap"]')
-      //    .should('be.visible');
-      //});
-      //it (`Can show scale bar - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.get('h4').contains('Show scale bar');
-      //  cy.get('[role="switch"]').as('scaleSwitch').then(($switch) => {
-      //    expect ($switch.attr('aria-checked')).to.equal(`false`);
-      //    {$switch.trigger('click')}
-      //  })
-      //  cy.get('@scaleSwitch').then(($switch) => {
-      //    expect ($switch.attr('aria-checked')).to.equal(`true`);
-      //  });
-      //  if (device !== "iphone-x") {
-      //    cy.get('.mapboxgl-ctrl-scale')
-      //      .contains('5,000')
-      //      .should('be.visible');
-      //  } else {
-      //    cy.get('.mapboxgl-ctrl-scale')
-      //      .contains('10000')
-      //      .should('be.visible');
-      //  }
-      //  
-      //    
-      //    //.as("scaleBar").then((scaleBar) => {
-      //    //  cy.setLocalStorage("scale bar", scaleBar.html())
-      //    //  cy.saveLocalStorage()
-      //    //})
-      //});
+      it(`Can view basemap selector - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('img').click();
+        let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+        values.forEach((val) => {
+          cy.get('.fixed > .overflow-y-auto').children().contains(val);
+        });
+        cy.get('img[alt="Satellite basemap"]')
+          .should('be.visible');
+        cy.get('img[alt="Maldives Light basemap"]')
+          .should('be.visible');
+      });
+      it (`Can show scale bar - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('h4').contains('Show scale bar');
+        cy.get('[role="switch"]').as('scaleSwitch').then(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`false`);
+          {$switch.trigger('click')}
+        })
+        cy.get('@scaleSwitch').then(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`true`);
+        });
+        if (device !== "iphone-x") {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('5,000')
+            .should('be.visible');
+        } else {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('10000')
+            .should('be.visible');
+        }
+        
+          
+          //.as("scaleBar").then((scaleBar) => {
+          //  cy.setLocalStorage("scale bar", scaleBar.html())
+          //  cy.saveLocalStorage()
+          //})
+      });
       //it (`Renders the correct basemap - ${device}`, () => {
       //  cy.viewport(device)
       //  cy.contains('Maldives Light').as('maldivesLightBasemap')
