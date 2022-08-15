@@ -38,7 +38,7 @@ export default function OptionalBasemapLayerEditor({
   const client = useApolloClient();
   const [updateOptionsMutation, updateOptionsMutationState] =
     useUpdateOptionalBasemapLayerOptionsMutation();
-  const { confirmDelete } = useDialog();
+  const { confirmDelete, prompt } = useDialog();
 
   if (!layer || layerRequest.loading) {
     return <Spinner />;
@@ -99,16 +99,21 @@ export default function OptionalBasemapLayerEditor({
           className="m-1"
           small
           label={t("Change label")}
-          onClick={() => {
-            const newName = window.prompt(t("Enter a new label"), layer.name);
-            if (newName?.length) {
-              mutate({
-                variables: {
-                  id: layer.id,
-                  name: newName,
-                },
-              });
-            }
+          onClick={async () => {
+            await prompt({
+              message: t("Enter a new label"),
+              defaultValue: layer.name,
+              onSubmit: async (newName) => {
+                if (newName?.length) {
+                  await mutate({
+                    variables: {
+                      id: layer.id,
+                      name: newName,
+                    },
+                  });
+                }
+              },
+            });
           }}
         />
         <Button
@@ -119,15 +124,17 @@ export default function OptionalBasemapLayerEditor({
               ? t("Edit description")
               : t("Add description")
           }
-          onClick={() => {
-            const newDescription = window.prompt(
-              t("Enter a new description"),
-              layer.description || ""
-            );
-            mutate({
-              variables: {
-                id: layer.id,
-                description: newDescription || "",
+          onClick={async () => {
+            await prompt({
+              message: t("Enter a new description"),
+              defaultValue: layer.description || "",
+              onSubmit: async (newDescription) => {
+                await mutate({
+                  variables: {
+                    id: layer.id,
+                    description: newDescription || "",
+                  },
+                });
               },
             });
           }}

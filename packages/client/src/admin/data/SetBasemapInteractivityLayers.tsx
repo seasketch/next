@@ -1,10 +1,9 @@
-import React, { useState } from "react";
-import ModalDeprecated from "../../components/ModalDeprecated";
+import { useState } from "react";
 import { useUpdateInteractivitySettingsLayersMutation } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import { useMapboxStyle } from "../../useMapboxStyle";
 import Spinner from "../../components/Spinner";
-import Button from "../../components/Button";
+import Modal from "../../components/Modal";
 
 export default function SetBasemapInteractivityLayers({
   initialLayers,
@@ -25,61 +24,57 @@ export default function SetBasemapInteractivityLayers({
   const [mutate, mutationState] =
     useUpdateInteractivitySettingsLayersMutation();
 
-  const onSave = async () => {
-    await mutate({
-      variables: {
-        id,
-        layers,
-      },
-    });
-    if (onRequestClose) {
-      onRequestClose();
-    }
-  };
-
   return (
-    <ModalDeprecated
-      title={t("Set Layers")}
-      open={true}
-      footer={
-        <div className="text-left">
-          <Button
-            small
-            className="float-right ml-2 mt-1"
-            label={t("Select All")}
-            onClick={() => setLayers(style?.layers?.map((l) => l.id) || [])}
-          />
-          <Button
-            small
-            className="float-right mt-1"
-            label={t("Select None")}
-            onClick={() => setLayers([])}
-          />
-          <Button
-            label={t("Cancel")}
-            className="mr-2"
-            onClick={onRequestClose}
-          />
-          <Button
-            label={t("Save")}
-            primary
-            onClick={onSave}
-            disabled={mutationState.loading}
-            loading={mutationState.loading}
-          />
-        </div>
+    <Modal
+      scrollable
+      title={
+        <>
+          <h3>{t("Set Layers")}</h3>
+          <p className="text-gray-500 text-sm mt-4">
+            <Trans ns={["admin"]}>
+              Select all layers in the basemap that you would like to be
+              interactive.
+            </Trans>
+          </p>
+        </>
       }
+      onRequestClose={onRequestClose!}
+      footer={[
+        {
+          label: t("Save"),
+          variant: "primary",
+          loading: mutationState.loading,
+          disabled: mutationState.loading,
+          onClick: async () => {
+            await mutate({
+              variables: {
+                id,
+                layers,
+              },
+            });
+            if (onRequestClose) {
+              onRequestClose();
+            }
+          },
+        },
+        {
+          label: t("Cancel"),
+          onClick: onRequestClose,
+        },
+        {
+          label: t("Select All"),
+          onClick: () => setLayers(style?.layers?.map((l) => l.id) || []),
+        },
+        {
+          label: t("Select None"),
+          onClick: () => setLayers([]),
+        },
+      ]}
     >
-      <div className="w-128 h-96">
+      <div>
         {mutationState.loading || (styleRequest.loading && <Spinner />)}
         {style && (
           <>
-            <p className="text-gray-500 text-sm mb-4">
-              <Trans ns={["admin"]}>
-                Select all layers in the basemap that you would like to be
-                interactive.
-              </Trans>
-            </p>
             <ul>
               {style.layers?.map((lyr, i) => {
                 const checked = layers.indexOf(lyr.id) !== -1;
@@ -106,6 +101,6 @@ export default function SetBasemapInteractivityLayers({
           </>
         )}
       </div>
-    </ModalDeprecated>
+    </Modal>
   );
 }

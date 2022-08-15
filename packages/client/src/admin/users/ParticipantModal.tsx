@@ -1,7 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
-import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
-import ModalDeprecated from "../../components/ModalDeprecated";
+import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import Switch from "../../components/Switch";
 import {
@@ -89,17 +88,16 @@ export default function ParticipantModal({
     data?.user?.canonicalEmail;
 
   return (
-    <ModalDeprecated
-      // title={title || "Loading"}
-      open={true}
+    <Modal
+      scrollable
       loading={loading}
       title={
         <div
           className={`flex ${
             data?.user?.bannedFromForums
               ? "bg-red-50 text-red-900"
-              : "bg-cool-gray-100"
-          } p-2 items-center`}
+              : "bg-transparent"
+          } items-center`}
         >
           <ProfilePhoto
             canonicalEmail={data?.user?.canonicalEmail!}
@@ -110,17 +108,17 @@ export default function ParticipantModal({
         </div>
       }
       onRequestClose={onRequestClose}
-      footer={<Button label={t("Close")} onClick={onRequestClose} />}
+      footer={[{ label: t("Close"), onClick: onRequestClose }]}
     >
       {!data?.user && <Spinner />}
 
       {data?.user && data?.projectBySlug && (
-        <div className="md:max-w-lg">
+        <div className="">
           <UserProfile
             profile={data.user!.profile!}
             canonicalEmail={data.user.canonicalEmail!}
           />
-          <div className="mt-2 mb-2 rounded-md shadow-sm flex border border-gray-300">
+          <div className="mt-2 mb-2 rounded-md shadow-sm flex border border-gray-300 max-w-lg">
             <span className="bg-gray-50 rounded-l-md px-3 inline-flex items-center text-gray-500 sm:text-sm py-1">
               <Trans ns="admin">Canonical Email</Trans>
             </span>
@@ -128,7 +126,7 @@ export default function ParticipantModal({
               {data.user.canonicalEmail}
             </span>
           </div>
-          <p className="mt-1 mb-3 max-w-2xl text-sm text-gray-500">
+          <p className="mt-1 mb-3 text-sm text-gray-500">
             <Trans ns="admin">
               Unlike the email in a user's public profile, the{" "}
               <em>canonical email</em> is determined during registration and
@@ -197,9 +195,8 @@ export default function ParticipantModal({
             }
             title={t("Ban from Forums")}
           />
-          {/*  */}
         </div>
       )}
-    </ModalDeprecated>
+    </Modal>
   );
 }

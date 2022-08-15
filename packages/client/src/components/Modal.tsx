@@ -9,7 +9,7 @@ import {
 } from "@heroicons/react/outline";
 import { AnimatePresence, motion } from "framer-motion";
 
-type FooterButtonProps = {
+export type FooterButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
@@ -21,7 +21,7 @@ interface ModalProps {
   onRequestClose: () => void;
   disableBackdropClick?: boolean;
   footer?: FooterButtonProps[];
-  title: string | ReactNode;
+  title?: string | ReactNode;
   className?: string;
   loading?: boolean;
   children?: ReactNode;
@@ -30,6 +30,7 @@ interface ModalProps {
   tipyTop?: boolean;
   tabs?: string[];
   scrollable?: boolean;
+  zeroPadding?: boolean;
 }
 
 export default function Modal(props: ModalProps) {
@@ -55,6 +56,11 @@ export default function Modal(props: ModalProps) {
     `;
   }
 
+  let hasTitle = Boolean(props.title);
+  if (props.title && typeof props.title === "string") {
+    hasTitle = props.title.length > 0;
+  }
+
   return (
     <Dialog
       open={true}
@@ -71,10 +77,14 @@ export default function Modal(props: ModalProps) {
       <div className="fixed z-10 inset-0 overflow-y-auto sm:overflow-y-hidden">
         <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
           <div className="flex items-end sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
-            <Panel autoWidth={props.autoWidth} grid={grid}>
+            <Panel
+              zeroPadding={props.zeroPadding || false}
+              autoWidth={props.autoWidth}
+              grid={grid}
+            >
               <div
-                className={`sm:flex sm:items-start justify-center ${
-                  props.icon && "sm:pl-4"
+                className={`w-full justify-center ${
+                  props.icon && "sm:pl-4 sm:flex sm:items-start"
                 }`}
               >
                 {props.icon && props.icon === "delete" && (
@@ -98,50 +108,57 @@ export default function Modal(props: ModalProps) {
                     props.icon && "sm:ml-4"
                   } sm:text-left sm:max-h-almost-full`}
                 >
-                  <Dialog.Title
-                    as="h3"
-                    className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
-                      props.tabs !== undefined ? "pb-0" : "pb-4"
-                    } ${
-                      (props.tabs !== undefined || props.scrollable) &&
-                      "border-b"
-                    } ${props.icon && "pl-0"}`}
-                  >
-                    {props.title}
+                  {hasTitle && (
+                    <Dialog.Title
+                      as="h3"
+                      className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
+                        props.tabs !== undefined ? "pb-0" : "pb-4"
+                      } ${
+                        (props.tabs !== undefined || props.scrollable) &&
+                        "border-b"
+                      } ${props.icon && "pl-0"}`}
+                    >
+                      {props.title}
 
-                    {props.tabs && props.tabs.length > 0 && (
-                      <>
-                        <Tabs
-                          selectedIndex={selectedIndex}
-                          labels={props.tabs}
-                          setSelectedIndex={setSelectedIndex}
-                        />
-                      </>
-                    )}
-                  </Dialog.Title>
+                      {props.tabs && props.tabs.length > 0 && (
+                        <>
+                          <Tabs
+                            selectedIndex={selectedIndex}
+                            labels={props.tabs}
+                            setSelectedIndex={setSelectedIndex}
+                          />
+                        </>
+                      )}
+                    </Dialog.Title>
+                  )}
 
                   <div
-                    className={`sm:flex-1 mt-0 p-6 ${
+                    className={`sm:flex-1 mt-0 ${
+                      props.zeroPadding ? "" : "p-6"
+                    } ${
                       props.scrollable ? "py-4" : "py-0"
                     } sm:overflow-y-auto ${props.icon && "pl-0"}`}
                   >
                     {props.children}
                   </div>
-                  <div
-                    className={`${
-                      ""
-                      // props.icon && "sm:ml-10 sm:pl-4"
-                    } sm:flex space-y-2 sm:space-y-0 sm:space-x-2 px-6 py-4 ${
-                      props.scrollable && "sm:bg-gray-100"
-                    } ${props.icon && "pl-0"}`}
-                  >
-                    {(props.footer || []).map((footerProps) => (
-                      <FooterButton
-                        key={footerProps.label!.toString()}
-                        {...footerProps}
-                      />
-                    ))}
-                  </div>
+                  {((props.footer && props.footer.length > 0) ||
+                    !props.zeroPadding) && (
+                    <div
+                      className={`${
+                        ""
+                        // props.icon && "sm:ml-10 sm:pl-4"
+                      } sm:flex space-y-2 sm:space-y-0 sm:space-x-2 px-6 py-4 ${
+                        props.scrollable && "sm:bg-gray-100"
+                      } ${props.icon && "pl-0"}`}
+                    >
+                      {(props.footer || []).map((footerProps) => (
+                        <FooterButton
+                          key={footerProps.label!.toString()}
+                          {...footerProps}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </Panel>
@@ -186,10 +203,12 @@ function Panel({
   children,
   autoWidth,
   grid,
+  zeroPadding,
 }: {
   children?: ReactNode;
   autoWidth?: boolean;
   grid: string;
+  zeroPadding: boolean;
 }) {
   return (
     <Dialog.Panel
@@ -217,7 +236,9 @@ function Panel({
       initial={{ scale: 0.5, opacity: 0 }}
       animate="enter"
       exit="exit"
-      className={`relative bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-xl lg:max-w-2xl ${
+      className={`relative bg-white rounded-lg ${
+        zeroPadding ? "" : "px-4"
+      } pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-xl lg:max-w-2xl ${
         autoWidth ? "w-auto" : "w-full"
       } sm:p-0`}
     >

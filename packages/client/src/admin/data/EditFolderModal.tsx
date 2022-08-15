@@ -1,7 +1,6 @@
-import React, { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import Button from "../../components/Button";
-import ModalDeprecated from "../../components/ModalDeprecated";
+import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
@@ -111,38 +110,32 @@ export default function EditFolderModal({
     createFolderState.loading ||
     postCreateActionFinishing;
   return (
-    <ModalDeprecated
+    <Modal
       className={`${className}`}
-      open={!!folderId || !!createNew}
-      footer={
-        <>
-          {" "}
-          <Button
-            disabled={isLoading}
-            label={t("Cancel")}
-            onClick={() => {
-              if (onRequestClose) {
-                onRequestClose(false);
-              }
-            }}
-          />{" "}
-          <Button
-            disabled={isLoading}
-            loading={isLoading}
-            className="ml-2"
-            primary
-            label={t("Save")}
-            onClick={onSave}
-          />
-        </>
-      }
+      footer={[
+        {
+          disabled: isLoading,
+          label: t("Save"),
+          loading: isLoading,
+          variant: "primary",
+          onClick: onSave,
+        },
+        {
+          disabled: isLoading,
+          label: t("Cancel"),
+          onClick: () => {
+            if (onRequestClose) {
+              onRequestClose(false);
+            }
+          },
+        },
+      ]}
+      onRequestClose={() => {}}
+      title={createNew ? t("New Folder") : t("Edit Folder")}
     >
       {loading && <Spinner />}
       {(folder || !!createNew) && (
-        <div className={`w-96 md:w-144`}>
-          <h2 className="text-lg font-semibold mb-4">
-            {createNew ? "New Folder" : "Edit Folder"}
-          </h2>
+        <div className={``}>
           <form onSubmit={onSave}>
             <div className="max-w-xs">
               <TextInput
@@ -276,7 +269,7 @@ export default function EditFolderModal({
           </form>
         </div>
       )}
-    </ModalDeprecated>
+    </Modal>
   );
 }
 

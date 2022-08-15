@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import InputBlock from "../../components/InputBlock";
-import ModalDeprecated from "../../components/ModalDeprecated";
+import Modal from "../../components/Modal";
 import Switch from "../../components/Switch";
 import { FormElementDetailsFragment } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
@@ -22,11 +22,10 @@ export default function ExportResponsesModal({
   const { t } = useTranslation("admin:surveys");
   const token = useAccessToken();
   const [includePractice, setIncludePractice] = useState(false);
-  return (
-    <ModalDeprecated
-      open={open}
+  return !open ? null : (
+    <Modal
       title={t("Export Responses")}
-      onRequestClose={onRequestClose}
+      onRequestClose={onRequestClose || (() => {})}
     >
       <h4 className="text-lg py-1">
         <Trans ns="admin:surveys">Response Data</Trans>
@@ -87,7 +86,7 @@ export default function ExportResponsesModal({
           </a>
         </div>
       ))}
-    </ModalDeprecated>
+    </Modal>
   );
 }
 

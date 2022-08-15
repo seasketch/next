@@ -1,6 +1,4 @@
-import React, { useState } from "react";
-import Button from "../../components/Button";
-import ModalDeprecated from "../../components/ModalDeprecated";
+import { useState } from "react";
 import TextInput from "../../components/TextInput";
 import {
   OptionalBasemapLayersGroupType,
@@ -8,6 +6,7 @@ import {
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import RadioGroup from "../../components/RadioGroup";
+import Modal from "../../components/Modal";
 
 export interface CreateOptionaLayerProps {
   groupLabel?: string;
@@ -81,35 +80,32 @@ export default function CreateOptionalLayerModal({
   }
 
   return (
-    <ModalDeprecated
-      open={true}
-      footer={
-        <>
-          {" "}
-          <Button
-            disabled={isLoading}
-            label={t("Cancel")}
-            onClick={() => {
-              if (onRequestClose) {
-                onRequestClose();
-              }
-            }}
-          />{" "}
-          <Button
-            disabled={isLoading}
-            loading={isLoading}
-            className="ml-2"
-            primary
-            label={t("Save")}
-            onClick={onSave}
-          />
-        </>
-      }
+    <Modal
+      title={<Trans ns="admin">New Optional Layer</Trans>}
+      onRequestClose={() => {
+        if (onRequestClose) {
+          onRequestClose();
+        }
+      }}
+      footer={[
+        {
+          label: t("Cancel"),
+          disabled: isLoading,
+          onClick: () => {
+            if (onRequestClose) {
+              onRequestClose();
+            }
+          },
+        },
+        {
+          variant: "primary",
+          disabled: isLoading,
+          label: t("Save"),
+          onClick: onSave,
+        },
+      ]}
     >
-      <div className={`w-96 md:w-144`}>
-        <h2 className="text-lg font-semibold mb-4">
-          <Trans ns="admin">New Optional Layer</Trans>
-        </h2>
+      <div className={`space-y-5 mb-5`}>
         <div className="max-w-xs">
           <TextInput
             autoFocus
@@ -126,7 +122,7 @@ export default function CreateOptionalLayerModal({
             }
           />
         </div>
-        <div className="mt-5">
+        <div className="">
           <RadioGroup
             legend={t("Option Type")}
             value={state.groupType}
@@ -157,7 +153,7 @@ export default function CreateOptionalLayerModal({
           />
         </div>
         {state.groupType !== OptionalBasemapLayersGroupType.None && (
-          <div className="max-w-xs mt-5">
+          <div className="max-w-xs">
             <TextInput
               error={error ? error.message : undefined}
               name="firstOptionName"
@@ -174,6 +170,6 @@ export default function CreateOptionalLayerModal({
           </div>
         )}
       </div>
-    </ModalDeprecated>
+    </Modal>
   );
 }

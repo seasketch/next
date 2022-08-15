@@ -1,6 +1,6 @@
 import { DOMSerializer, Node } from "prosemirror-model";
-import React, { useEffect, useRef } from "react";
-import ModalDeprecated from "../components/ModalDeprecated";
+import { useEffect, useRef } from "react";
+import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
 import { metadata as editorConfig } from "../editor/config";
 
@@ -31,13 +31,14 @@ export default function MetadataModal({
         )
       );
     }
-  }, [target.current, document]);
+  }, [document]);
+
   return (
-    <ModalDeprecated title={title} onRequestClose={onRequestClose} open={true}>
+    <Modal title="" onRequestClose={onRequestClose}>
       <>
-        <div className="w-full h-full sm:h-auto md:w-160 lg:pb-4 relative metadata">
+        <div className="relative metadata mt-3">
           <button
-            className="bg-gray-400 bg-opacity-25 z-10 absolute right-0 top-0 rounded-full p-1 cursor-pointer focus:ring-blue-300"
+            className="bg-gray-400 bg-opacity-25 z-10 absolute right-0 top-0 -mr-2 rounded-full p-1 cursor-pointer focus:ring-blue-300"
             onClick={onRequestClose}
           >
             <svg
@@ -62,6 +63,6 @@ export default function MetadataModal({
           <div className="ProseMirror" ref={target}></div>
         </div>
       </>
-    </ModalDeprecated>
+    </Modal>
   );
 }

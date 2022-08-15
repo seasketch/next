@@ -12,7 +12,7 @@ import { EditorView } from "prosemirror-view";
 import { MutationResult } from "@apollo/client";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../components/useDialog";
-import Modal from "../components/ModalRevisited";
+import Modal from "../components/Modal";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
@@ -112,7 +112,7 @@ export default function MetadataEditor({
         </div>
       }
     >
-      <div className="relative">
+      <div className="relative min-w-full">
         <EditorMenuBar
           view={viewRef.current?.view}
           className="mb-2 border-t"
