@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
-import ModalDeprecated from "../components/ModalDeprecated";
+import { useEffect, useRef, useState } from "react";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import "prosemirror-menu/style/menu.css";
@@ -64,7 +63,7 @@ export default function MetadataEditor({
       // applyDevTools(view.current);
       // return () => view.current!.destroy();
     }
-  }, [loading]);
+  }, [loading, setState, startingDocument]);
 
   return (
     <Modal
