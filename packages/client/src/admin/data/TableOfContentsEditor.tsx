@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { Item } from "react-contexify";
 import { useParams } from "react-router-dom";
 import Button from "../../components/Button";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
@@ -12,17 +12,18 @@ import TableOfContents, {
   nestItems,
 } from "../../dataLayers/tableOfContents/TableOfContents";
 import {
+  useDeleteBranchMutation,
   useDraftTableOfContentsQuery,
   useLayersAndSourcesForItemsQuery,
   useUpdateTableOfContentsItemChildrenMutation,
 } from "../../generated/graphql";
 import useLocalStorage from "../../useLocalStorage";
-import DeleteTableOfContentsItemModal from "./DeleteTableOfContentsItemModal";
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
 import ZIndexEditor from "./ZIndexEditor";
 import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
+import useDialog from "../../components/useDialog";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -48,6 +49,7 @@ export default function TableOfContentsEditor() {
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
+  const [deleteItem] = useDeleteBranchMutation();
 
   useEffect(() => {
     if (tocQuery.data?.projectBySlug?.draftTableOfContentsItems) {
@@ -85,9 +87,11 @@ export default function TableOfContentsEditor() {
     tocQuery.refetch();
   }, [slug]);
 
+  const { confirmDelete } = useDialog();
+
   return (
     <div className="">
-      {
+      {(folderId || createNewFolderModalOpen) && (
         <EditFolderModal
           className="z-30"
           folderId={folderId}
@@ -100,7 +104,7 @@ export default function TableOfContentsEditor() {
           }}
           createNew={createNewFolderModalOpen}
         />
-      }
+      )}
       {publishOpen && (
         <PublishTableOfContentsModal
           onRequestClose={() => setPublishOpen(false)}
@@ -269,8 +273,27 @@ export default function TableOfContentsEditor() {
               <Item
                 key="4"
                 className="text-sm"
-                onClick={(args) => {
-                  setItemForDeletion(args.props.item);
+                onClick={async (args) => {
+                  if (args.props?.item) {
+                    await confirmDelete({
+                      message: t("Delete Item"),
+                      description: t(
+                        "Are you sure you want to delete {{name}}?",
+                        {
+                          name: args.props.item.title.replace(/\.$/, ""),
+                        }
+                      ),
+                      onDelete: async () => {
+                        await deleteItem({
+                          variables: {
+                            id: args.props.item.id as number,
+                          },
+                        }).then(async () => {
+                          await tocQuery.refetch();
+                        });
+                      },
+                    });
+                  }
                 }}
               >
                 Delete
@@ -302,11 +325,6 @@ export default function TableOfContentsEditor() {
             }
           />
         )}
-        <DeleteTableOfContentsItemModal
-          item={itemForDeletion}
-          onRequestClose={() => setItemForDeletion(undefined)}
-          onDelete={async () => await tocQuery.refetch()}
-        />
       </div>
       {openLayerItemId && (
         <LayerTableOfContentsItemEditor

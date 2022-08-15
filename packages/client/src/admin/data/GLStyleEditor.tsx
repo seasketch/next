@@ -9,9 +9,7 @@ import "codemirror/addon/lint/lint.css";
 // @ts-ignore
 import { validate } from "@mapbox/mapbox-gl-style-spec";
 import useDebounce from "../../useDebounce";
-import ModalDeprecated from "../../components/ModalDeprecated";
 import Spinner from "../../components/Spinner";
-import Button from "../../components/Button";
 import { styleForFeatureLayer } from "mapbox-gl-esri-feature-layers";
 import {
   getOrCreateSpritesFromImageSet,
@@ -24,6 +22,7 @@ import {
 import useProjectId from "../../useProjectId";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../../components/useDialog";
+import Modal from "../../components/Modal";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -48,7 +47,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [jsonErrors, setJsonErrors] = useState<boolean>(false);
   const [resettingStyle, setResettingStyle] = useState(false);
   const [errorResettingStyle, setErrorResettingStyle] = useState<string>();
-  const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
+  const [createSprite] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
   const projectId = useProjectId();
   const { t } = useTranslation("admin");
@@ -83,7 +82,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     } else {
       setStyleErrors([]);
     }
-  }, [debouncedStyle]);
+  }, [debouncedStyle, jsonErrors, props]);
 
   const { confirm } = useDialog();
 
@@ -198,44 +197,48 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           <Trans ns="admin">Reset to original ArcGIS style</Trans>
         </button>
       )}
-      <ModalDeprecated
-        open={resettingStyle || !!errorResettingStyle}
-        footer={
-          errorResettingStyle ? (
-            <>
-              <Button
-                label={t("Cancel")}
-                onClick={() => {
-                  setErrorResettingStyle(undefined);
-                  setResettingStyle(false);
-                }}
-              />
-            </>
-          ) : null
-        }
-      >
-        {resettingStyle && (
-          <div className="sm:max-w-lg flex">
-            <div className="align-middle mr-2 flex-0 flex justify-center">
-              <Spinner className="" />
+      {(resettingStyle || !!errorResettingStyle) && (
+        <Modal
+          footer={
+            errorResettingStyle
+              ? [
+                  {
+                    label: t("Cancel"),
+                    onClick: () => {
+                      setErrorResettingStyle(undefined);
+                      setResettingStyle(false);
+                    },
+                  },
+                ]
+              : []
+          }
+          title=""
+          onRequestClose={() => {}}
+          autoWidth
+        >
+          {resettingStyle && (
+            <div className="sm:max-w-lg flex">
+              <div className="align-middle mr-2 flex-0 flex justify-center">
+                <Spinner className="" />
+              </div>
+              <div className="flex-1">
+                <Trans ns="admin">
+                  Resetting style from{" "}
+                  <a
+                    className="underline text-primary-500"
+                    href={props.arcgisServerSource}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    original source
+                  </a>
+                </Trans>
+              </div>
             </div>
-            <div className="flex-1">
-              <Trans ns="admin">
-                Resetting style from{" "}
-                <a
-                  className="underline text-primary-500"
-                  href={props.arcgisServerSource}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  original source
-                </a>
-              </Trans>
-            </div>
-          </div>
-        )}
-        {errorResettingStyle && <span>{errorResettingStyle}</span>}
-      </ModalDeprecated>
+          )}
+          {errorResettingStyle && <span>{errorResettingStyle}</span>}
+        </Modal>
+      )}
     </>
   );
 }

@@ -3,7 +3,6 @@ import bytes from "bytes";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Card } from "../components/CenteredCardListLayout";
-import ModalDeprecated from "../components/ModalDeprecated";
 import {
   ClientCacheSettings,
   defaultCacheSetting,
@@ -22,6 +21,7 @@ import { useProjectMetadataQuery } from "../generated/graphql";
 import getSlug from "../getSlug";
 import { ErrorBoundary } from "@sentry/react";
 import { DownloadManagerContext } from "./MapDownloadManager";
+import Modal from "../components/Modal";
 
 function label(id: string) {
   switch (id) {
@@ -260,13 +260,13 @@ function ClientCacheDetailsModal({
     return items;
   }, [stats]);
   return (
-    <ModalDeprecated
+    <Modal
       onRequestClose={onRequestClose}
-      open={true}
       loading={loading}
+      title={<Trans>Cache Status</Trans>}
     >
       {stats && (
-        <div className="max-w-xl space-y-4">
+        <div className="space-y-4">
           <div className="mb-4">
             <h2
               className={`flex-1 mb-1 ${quotaPercent > 0.8 && "text-red-800"}`}
@@ -320,6 +320,6 @@ function ClientCacheDetailsModal({
           </div>
         </div>
       )}
-    </ModalDeprecated>
+    </Modal>
   );
 }

@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useHistory } from "react-router";
-import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
-import ModalDeprecated from "../../components/ModalDeprecated";
 import Switch from "../../components/Switch";
 import TextInput from "../../components/TextInput";
 import {
@@ -14,9 +12,8 @@ import {
 import GroupMultiSelect from "./GroupMultiSelect";
 import Papa from "papaparse";
 import Badge from "../../components/Badge";
-import Modal from "../../components/ModalRevisited";
+import Modal from "../../components/Modal";
 import { Tab } from "@headlessui/react";
-import useDialog from "../../components/useDialog";
 
 export default function InviteUsersModal({
   projectId,
@@ -52,7 +49,7 @@ export default function InviteUsersModal({
     userDetails: [],
     textareaValue: "email,name",
   });
-  const { data, loading, error } = useUserAdminCountsQuery({
+  const { data, loading } = useUserAdminCountsQuery({
     variables: {
       slug,
     },
@@ -139,11 +136,6 @@ export default function InviteUsersModal({
       scrollable={true}
       footer={[
         {
-          label: t("Cancel"),
-          onClick: onRequestClose,
-          disabled: createInvitesState.loading,
-        },
-        {
           label: t("Submit"),
           variant: "primary",
           disabled: createInvitesState.loading,
@@ -156,6 +148,11 @@ export default function InviteUsersModal({
               })
               .catch((e) => console.error(e));
           },
+        },
+        {
+          label: t("Cancel"),
+          onClick: onRequestClose,
+          disabled: createInvitesState.loading,
         },
       ]}
     >

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import ModalDeprecated from "../../components/ModalDeprecated";
 import { UnsplashPhoto, useGetPhotosQuery } from "../../generated/graphql";
 import useDebounce from "../../useDebounce";
 import Masonry from "react-masonry-css";
@@ -8,6 +7,7 @@ import { SearchIcon } from "@heroicons/react/outline";
 import Spinner from "../../components/Spinner";
 // @ts-ignore
 import { default as ColorThief } from "colorthief";
+import Modal from "../../components/Modal";
 
 export default function UnsplashImageChooser({
   open,
@@ -31,29 +31,31 @@ export default function UnsplashImageChooser({
 
   const [processing, setProcessing] = useState<string | null>(null);
 
-  return (
-    <ModalDeprecated
-      onRequestClose={onRequestClose}
-      open={open}
-      title={t("Search Unsplash for Photos")}
-      zeroPadding={true}
+  return !open ? null : (
+    <Modal
+      onRequestClose={onRequestClose || (() => {})}
+      title={
+        <>
+          <h3>{t("Search Unsplash for Photos")}</h3>
+          <div className="w-full relative mt-4">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+              className="pl-12 w-full outline-none border-gray-300 border-1 active:outline-none active:border-none focus:ring-blue-200 focus:border-blue-300 focus:ring-opacity-50 focus:ring focus:outline-none rounded"
+              type="text"
+              placeholder={t(
+                "Try Kelp, Coral Reef, Atoll, Santa Barbara Ocean..."
+              )}
+            />
+            <SearchIcon className="text-gray-300 w-6 h-6 absolute left-3 top-2 mt-0.5" />
+            {loading && <Spinner className="absolute right-6 top-5" />}
+          </div>
+        </>
+      }
     >
-      <div className="" style={{ width: 640 }}>
-        <div className="w-full relative p-2">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-            className="pl-12 w-full outline-none border-gray-300 border-1 active:outline-none active:border-none focus:ring-blue-200 focus:border-blue-300 focus:ring-opacity-50 focus:ring focus:outline-none rounded"
-            type="text"
-            placeholder={t(
-              "Try Kelp, Coral Reef, Atoll, Santa Barbara Ocean..."
-            )}
-          />
-          <SearchIcon className="text-gray-300 w-6 h-6 absolute left-5 top-4 mt-0.5" />
-          {loading && <Spinner className="absolute right-6 top-5" />}
-        </div>
-        <div className="w-full h-144 overflow-y-auto mt-5 px-2">
+      <div>
+        <div className="mt-5 px-2" style={{ minHeight: 300 }}>
           <Masonry
             breakpointCols={3}
             className="my-masonry-grid"
@@ -116,6 +118,6 @@ export default function UnsplashImageChooser({
           )}
         </div>
       </div>
-    </ModalDeprecated>
+    </Modal>
   );
 }

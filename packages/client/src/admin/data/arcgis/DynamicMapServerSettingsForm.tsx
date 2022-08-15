@@ -1,7 +1,6 @@
 import { useHistory, useParams } from "react-router-dom";
 import Button from "../../../components/Button";
 import InputBlock from "../../../components/InputBlock";
-import ModalDeprecated from "../../../components/ModalDeprecated";
 import ProgressBar from "../../../components/ProgressBar";
 import Switch from "../../../components/Switch";
 import { useTranslation, Trans } from "react-i18next";
@@ -13,6 +12,7 @@ import {
   MapServerImageFormat,
   useImportArcGISService,
 } from "./arcgis";
+import Modal from "../../../components/Modal";
 
 export default function DynamicMapServerSettingsForm(props: {
   settings: ArcGISServiceSettings;
@@ -136,34 +136,37 @@ export default function DynamicMapServerSettingsForm(props: {
           }}
         />
       </div>
-      <ModalDeprecated
-        open={!!importServiceState.inProgress || !!importServiceState.error}
-        title={t("Import Image Service")}
-      >
-        <div className="w-128">
-          {importServiceState.error && (
-            <>
-              <div className="mb-2 mt-4 text-red-900">
-                <h4>{importServiceState.error.name}</h4>
-                {importServiceState.error.message}
+      {(!!importServiceState.inProgress || !!importServiceState.error) && (
+        <Modal
+          autoWidth
+          title={t("Import Image Service")}
+          onRequestClose={() => {}}
+        >
+          <div className="w-128">
+            {importServiceState.error && (
+              <>
+                <div className="mb-2 mt-4 text-red-900">
+                  <h4>{importServiceState.error.name}</h4>
+                  {importServiceState.error.message}
+                </div>
+                <Button
+                  onClick={() => history.push(`/${slug}/admin/data`)}
+                  label={t("Cancel")}
+                  className="mr-2"
+                />
+              </>
+            )}
+            {importServiceState.inProgress && (
+              <div>
+                <ProgressBar progress={importServiceState.progress!} />
+                <div className="mb-2 text-sm">
+                  {importServiceState.statusMessage}
+                </div>
               </div>
-              <Button
-                onClick={() => history.push(`/${slug}/admin/data`)}
-                label={t("Cancel")}
-                className="mr-2"
-              />
-            </>
-          )}
-          {importServiceState.inProgress && (
-            <div>
-              <ProgressBar progress={importServiceState.progress!} />
-              <div className="mb-2 text-sm">
-                {importServiceState.statusMessage}
-              </div>
-            </div>
-          )}
-        </div>
-      </ModalDeprecated>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

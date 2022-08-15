@@ -21,7 +21,6 @@ import { useCurrentStyle } from "./appearance";
 import ImagePreloader from "./ImagePreloader";
 import SurveyAppLayout from "./SurveyAppLayout";
 import FormElementFactory from "./FormElementFactory";
-import ModalDeprecated from "../components/ModalDeprecated";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0User } from "../auth/Auth0User";
 import {
@@ -43,11 +42,9 @@ import { ProjectAccessGate } from "../auth/ProjectAccessGate";
 import useOfflineSurveyResponses from "../offline/useOfflineSurveyResponses";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { offlineSurveyChoiceStrategy } from "../offline/GraphqlQueryCache/strategies";
-import CenteredCardListLayout, {
-  Card,
-} from "../components/CenteredCardListLayout";
-import { ExclamationIcon, LockClosedIcon } from "@heroicons/react/outline";
+import { ExclamationIcon } from "@heroicons/react/outline";
 import Spinner from "../components/Spinner";
+import Modal from "../components/Modal";
 
 require("./surveys.css");
 
@@ -678,41 +675,40 @@ function SurveyApp() {
                   />
                 )}
             </SurveyAppLayout>
-            <ModalDeprecated
-              open={practiceModalOpen}
-              onRequestClose={() => setPracticeModalOpen(false)}
-              title={t("Practice Mode")}
-              footer={
-                <div className="space-x-1 rtl:space-x-reverse text-center md:text-right space-y-2 md:space-y-0">
-                  <Button
-                    label={
-                      practice
-                        ? t("Continue Practice Mode")
-                        : t("Enable Practice Mode")
-                    }
-                    onClick={() => {
+            {practiceModalOpen && (
+              <Modal
+                onRequestClose={() => {
+                  setPracticeModalOpen(false);
+                }}
+                title={t("Practice Mode")}
+                footer={[
+                  {
+                    label: t("Count My Response"),
+                    variant: "primary",
+                    onClick: () => {
+                      setPracticeModalOpen(false);
+                      history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
+                    },
+                  },
+                  {
+                    label: practice
+                      ? t("Continue Practice Mode")
+                      : t("Enable Practice Mode"),
+                    onClick: () => {
                       setPracticeModalOpen(false);
                       history.replace(
                         `/${slug}/surveys/${surveyId}/${index}/practice`
                       );
-                    }}
-                  />
-                  <Button
-                    primary
-                    label={t("Count My Response")}
-                    onClick={() => {
-                      setPracticeModalOpen(false);
-                      history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
-                    }}
-                  />
-                </div>
-              }
-            >
-              <Trans ns="surveys">
-                Practice mode saves your responses seperately so that they are
-                not counted in the survey results.
-              </Trans>
-            </ModalDeprecated>
+                    },
+                  },
+                ]}
+              >
+                <Trans ns="surveys">
+                  Practice mode saves your responses seperately so that they are
+                  not counted in the survey results.
+                </Trans>
+              </Modal>
+            )}
             <ImagePreloader formElements={elements} />
           </SurveyContext.Provider>
         </ProjectAccessGate>

@@ -2,14 +2,14 @@ import { QrcodeIcon } from "@heroicons/react/outline";
 import { CheckCircleIcon } from "@heroicons/react/solid";
 import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import ModalDeprecated from "../../components/ModalDeprecated";
 import QRCode from "qrcode";
 import {
   useSurveyByIdQuery,
   useUpdateSurveyDraftStatusMutation,
 } from "../../generated/graphql";
 import { useEffect, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
+import Modal from "../../components/Modal";
 
 export default function SurveyDraftControl({ id }: { id: number }) {
   const { slug } = useParams<{ slug: string }>();
@@ -20,11 +20,10 @@ export default function SurveyDraftControl({ id }: { id: number }) {
       id,
     },
   });
-  const { t } = useTranslation("admin:surveys");
 
   const isDraft =
     data?.survey?.isDisabled !== undefined ? data?.survey?.isDisabled : true;
-  const [mutation, mutationState] = useUpdateSurveyDraftStatusMutation({
+  const [mutation] = useUpdateSurveyDraftStatusMutation({
     onError,
     optimisticResponse: (data) => {
       return {
@@ -80,7 +79,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
             <div className="flex flex-col w-full">
               <span
                 id="project-type-1-label"
-                className={`block text-sm w-full font-medium flex align-middle ${
+                className={`text-sm w-full font-medium flex align-middle ${
                   !isDraft ? "text-gray-500" : "text-gray-900"
                 }`}
               >
@@ -137,7 +136,7 @@ export default function SurveyDraftControl({ id }: { id: number }) {
             <div className="flex flex-col w-full">
               <span
                 id="project-type-1-label"
-                className={`block text-sm font-medium flex align-middle ${
+                className={`text-sm font-medium flex align-middle ${
                   isDraft ? "text-gray-500" : "text-gray-900"
                 }`}
               >
@@ -180,21 +179,20 @@ export default function SurveyDraftControl({ id }: { id: number }) {
             aria-hidden="true"
           ></div>
         </label>
-        <ModalDeprecated
-          open={qrOpen}
-          onRequestClose={() => setQROpen(false)}
-          zeroPadding={true}
-        >
-          <div className="m-2 flex flex-col justify-center align-middle">
-            <img
-              src={qr}
-              onClick={() => downloadURI(qr, "seasketch-survey-qr-code")}
-            />
-            <p className="text-sm text-center">
-              <Trans ns="admin:surveys">click to download</Trans>
-            </p>
-          </div>
-        </ModalDeprecated>
+        {qrOpen && (
+          <Modal autoWidth onRequestClose={() => setQROpen(false)} title="">
+            <div className="m-2 flex flex-col justify-center align-middle">
+              <img
+                alt="qr code for public survey link"
+                src={qr}
+                onClick={() => downloadURI(qr, "seasketch-survey-qr-code")}
+              />
+              <p className="text-sm text-center">
+                <Trans ns="admin:surveys">click to download</Trans>
+              </p>
+            </div>
+          </Modal>
+        )}
       </div>
     </fieldset>
   );

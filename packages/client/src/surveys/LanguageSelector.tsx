@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
-import ModalDeprecated from "../components/ModalDeprecated";
+import Modal from "../components/Modal";
 import languages, { LangDetails } from "../lang/supported";
 
 export default function LanguageSelector(props: {
@@ -24,30 +24,32 @@ export default function LanguageSelector(props: {
     <>
       {props.button(() => setOpen(true))}
 
-      <ModalDeprecated
-        // title={t("Select a language")}
-        onRequestClose={() => setOpen(false)}
-        className="text-black"
-        open={open}
-        zeroPadding={true}
-      >
-        <div className="md:w-80 pt-2 sm:pt-0">
-          {options.map((o) => (
-            <Option
-              key={o.code}
-              language={o}
-              selected={
-                (o.code === "EN" && !matchesAnyTranslation) ||
-                i18n.language?.toUpperCase() === o.code.toUpperCase()
-              }
-              onClick={(lang) => {
-                i18n.changeLanguage(lang.code);
-                setOpen(false);
-              }}
-            />
-          ))}
-        </div>
-      </ModalDeprecated>
+      {open && (
+        <Modal
+          // title={t("Select a language")}
+          onRequestClose={() => setOpen(false)}
+          className="text-black"
+          autoWidth
+          zeroPadding
+        >
+          <div className="md:w-80 pt-2 sm:pt-0">
+            {options.map((o) => (
+              <Option
+                key={o.code}
+                language={o}
+                selected={
+                  (o.code === "EN" && !matchesAnyTranslation) ||
+                  i18n.language?.toUpperCase() === o.code.toUpperCase()
+                }
+                onClick={(lang) => {
+                  i18n.changeLanguage(lang.code);
+                  setOpen(false);
+                }}
+              />
+            ))}
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

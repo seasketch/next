@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createContext, ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
-import Modal from "./ModalRevisited";
+import Modal from "./Modal";
 import TextInput from "./TextInput";
 
 export default function useDialog() {
@@ -204,7 +204,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                 ]
           }
         >
-          <div className="w-80">
+          <div className="">
             {state.description && (
               <p className="text-gray-500 text-sm">{state.description}</p>
             )}

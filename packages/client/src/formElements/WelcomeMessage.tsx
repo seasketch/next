@@ -10,7 +10,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../components/Button";
 import InputBlock from "../components/InputBlock";
-import ModalDeprecated from "../components/ModalDeprecated";
+import Modal from "../components/Modal";
 import Switch from "../components/Switch";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import LanguageSelector from "../surveys/LanguageSelector";
@@ -86,77 +86,76 @@ const WelcomeMessage: FormElementComponent<
             <Trans ns="surveys">Settings</Trans>
           </button>
         </div>
-        <ModalDeprecated
-          className="text-black"
-          // title={t("Survey Settings", { ns: "surveys" })}
-          open={settingsModalOpen}
-          onRequestClose={() => setSettingsModalOpen(false)}
-        >
-          <div className="text-black sm:max-w-lg space-y-4">
-            <h3 className="text-lg mb-2">
-              {t("Survey Settings", { ns: "surveys" })}
-            </h3>
-            {context.surveySupportsFacilitation && (
+        {settingsModalOpen && (
+          <Modal
+            title={t("Survey Settings", { ns: "surveys" })}
+            className="text-black"
+            // title={t("Survey Settings", { ns: "surveys" })}
+            onRequestClose={() => setSettingsModalOpen(false)}
+          >
+            <div className="text-black space-y-4">
+              {context.surveySupportsFacilitation && (
+                <InputBlock
+                  input={
+                    <Switch
+                      isToggled={context.isFacilitatedResponse}
+                      onClick={(enable) => context.toggleFacilitation(enable)}
+                    />
+                  }
+                  title={t("Facilitated Response", { ns: "surveys" })}
+                  description={
+                    <Trans ns="surveys">
+                      If enabled, the survey will prompt for both a respondent
+                      name and the name of the facilitator.
+                    </Trans>
+                  }
+                />
+              )}
               <InputBlock
                 input={
                   <Switch
-                    isToggled={context.isFacilitatedResponse}
-                    onClick={(enable) => context.toggleFacilitation(enable)}
+                    isToggled={context.practiceMode}
+                    onClick={(enable) => context.togglePracticeMode(enable)}
                   />
                 }
-                title={t("Facilitated Response", { ns: "surveys" })}
+                title={t("Practice Mode", { ns: "surveys" })}
                 description={
                   <Trans ns="surveys">
-                    If enabled, the survey will prompt for both a respondent
-                    name and the name of the facilitator.
+                    Practice responses are stored seperately in the database and
+                    not counted in analyses.
                   </Trans>
                 }
               />
-            )}
-            <InputBlock
-              input={
-                <Switch
-                  isToggled={context.practiceMode}
-                  onClick={(enable) => context.togglePracticeMode(enable)}
-                />
-              }
-              title={t("Practice Mode", { ns: "surveys" })}
-              description={
-                <Trans ns="surveys">
-                  Practice responses are stored seperately in the database and
-                  not counted in analyses.
-                </Trans>
-              }
-            />
 
-            {context.isAdmin && (
-              <>
-                <h4 className="text-lg pt-1">
-                  <Trans ns="admin:surveys">Administrator Tools</Trans>
-                </h4>
-                <Link
-                  className="flex"
-                  to={`/${context.slug}/admin/surveys/${context.surveyId}`}
-                >
-                  <span className="flex-1">
-                    <Trans ns="admin:surveys">View responses</Trans>
-                  </span>
-                  <TableIcon className="w-5 h-5" />
-                </Link>
-                <Link
-                  className="flex"
-                  to={`/${context.slug}/survey-editor/${context.surveyId}`}
-                >
-                  <span className="flex-1">
-                    <Trans ns="admin:surveys">Edit this survey</Trans>
-                  </span>
-                  <PencilIcon className="w-5 h-5" />
-                </Link>
-              </>
-            )}
-            <span></span>
-          </div>
-        </ModalDeprecated>
+              {context.isAdmin && (
+                <>
+                  <h4 className="text-lg pt-1">
+                    <Trans ns="admin:surveys">Administrator Tools</Trans>
+                  </h4>
+                  <Link
+                    className="flex"
+                    to={`/${context.slug}/admin/surveys/${context.surveyId}`}
+                  >
+                    <span className="flex-1">
+                      <Trans ns="admin:surveys">View responses</Trans>
+                    </span>
+                    <TableIcon className="w-5 h-5" />
+                  </Link>
+                  <Link
+                    className="flex"
+                    to={`/${context.slug}/survey-editor/${context.surveyId}`}
+                  >
+                    <span className="flex-1">
+                      <Trans ns="admin:surveys">Edit this survey</Trans>
+                    </span>
+                    <PencilIcon className="w-5 h-5" />
+                  </Link>
+                </>
+              )}
+              <span></span>
+            </div>
+          </Modal>
+        )}
       </div>
       {context.offlineResponseCount > 0 && (
         <div className="w-full flex align-middle mt-6 mb-10 border rounded p-2 border-opacity-50">

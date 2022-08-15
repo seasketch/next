@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import InputBlock from "../../components/InputBlock";
-import ModalDeprecated from "../../components/ModalDeprecated";
 import Switch from "../../components/Switch";
 import TextInput from "../../components/TextInput";
 import {
@@ -17,10 +16,11 @@ import {
 } from "../../generated/graphql";
 import GroupMultiSelect from "./GroupMultiSelect";
 import InviteIcon from "./InviteIcon";
-import { TrashIcon } from "@heroicons/react/outline";
 import gql from "graphql-tag";
 import { useSubscription } from "@apollo/client";
 import useDialog from "../../components/useDialog";
+import Modal from "../../components/Modal";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function EditInviteModal({
   id,
@@ -65,7 +65,7 @@ export default function EditInviteModal({
   const [expandedEmails, setExpandedEmails] = useState<{
     [id: number]: boolean;
   }>({});
-
+  const onError = useGlobalErrorHandler();
   const updateState = (prop: string) => (val: any) => {
     // @ts-ignore
     setState((prev) => ({ ...prev, [prop]: val, hasChanged: true }));
@@ -77,6 +77,7 @@ export default function EditInviteModal({
       groups: (state?.groups || []).map((g) => g.id),
       id,
     },
+    onError,
     // refetchQueries: ["UserAdminCounts", "ProjectInvites"],
   });
 
@@ -190,67 +191,59 @@ export default function EditInviteModal({
   const { confirmDelete } = useDialog();
 
   return (
-    <ModalDeprecated
+    <Modal
+      scrollable
       disableBackdropClick={state?.hasChanged}
-      disableEscapeKeyDown={state?.hasChanged}
-      open={true}
       loading={!data && !state}
       title={t("Edit Invite")}
       onRequestClose={onRequestClose}
-      footer={
-        <>
-          <Button
-            label={state?.hasChanged ? t("Cancel") : t("Close")}
-            onClick={onRequestClose}
-            disabled={mutationState.loading || deleteInviteState.loading}
-          />
-          <Button
-            disabled={
-              mutationState.loading ||
-              !state?.hasChanged ||
-              deleteInviteState.loading
-            }
-            primary
-            label={t("Submit Changes")}
-            onClick={() => {
-              updateInvite()
-                .then(() => {
-                  onRequestClose();
-                })
-                .catch((e) => alert(e));
-            }}
-          />
-          {data?.projectInvite?.status !== InviteStatus.Confirmed && (
-            <Button
-              disabled={mutationState.loading || deleteInviteState.loading}
-              className="right-4 absolute"
-              onClick={() => {
-                confirmDelete({
-                  message: t(
-                    "Are you sure you want to delete this project invite?"
-                  ),
-                  description: t("This action cannot be undone."),
-                  onDelete: async () => {
-                    await deleteInvite().then(() => {
-                      onRequestClose();
-                    });
-                  },
-                });
-              }}
-              label={
-                <>
-                  <TrashIcon className="w-4 h-4 mr-2 -ml-1" />
-                  {t("Delete Invite")}
-                </>
-              }
-            />
-          )}
-        </>
-      }
+      footer={[
+        {
+          label: t("Submit Changes"),
+          disabled:
+            mutationState.loading ||
+            !state?.hasChanged ||
+            deleteInviteState.loading,
+          loading: mutationState.loading,
+          variant: "primary",
+          onClick: async () => {
+            await updateInvite().then(() => {
+              onRequestClose();
+            });
+          },
+        },
+        {
+          label: state?.hasChanged ? t("Cancel") : t("Close"),
+          onClick: onRequestClose,
+        },
+        ...(data?.projectInvite?.status !== InviteStatus.Confirmed
+          ? [
+              {
+                label: t("Delete Invite"),
+                variant: "danger" as "danger",
+                disabled: mutationState.loading || deleteInviteState.loading,
+                loading: deleteInviteState.loading,
+                onClick: async () => {
+                  confirmDelete({
+                    message: t(
+                      "Are you sure you want to delete this project invite?"
+                    ),
+                    description: t("This action cannot be undone."),
+                    onDelete: async () => {
+                      await deleteInvite().then(() => {
+                        onRequestClose();
+                      });
+                    },
+                  });
+                },
+              },
+            ]
+          : []),
+      ]}
     >
       {state && data?.projectInvite && data.projectBySlug && (
-        <div className="w-full sm:w-auto">
-          <div className="max-w-lg mb-4">
+        <div className="">
+          <div className="mb-4">
             <TextInput
               autoFocus
               disabled={data.projectInvite.status !== InviteStatus.Unsent}
@@ -275,7 +268,7 @@ export default function EditInviteModal({
               onChange={updateState("email")}
             />
           </div>
-          <div className="max-w-lg mb-4">
+          <div className="mb-4">
             <TextInput
               name="fullname"
               label={t("Full Name")}
@@ -284,7 +277,7 @@ export default function EditInviteModal({
               onChange={updateState("fullname")}
             />
           </div>
-          <div className="max-w-lg mb-4">
+          <div className="mb-4">
             <InputBlock
               className=""
               children={
@@ -305,7 +298,7 @@ export default function EditInviteModal({
               title={t("Assign Administrator Access")}
             />
           </div>
-          <div className="max-w-lg mb-4">
+          <div className="mb-4">
             <GroupMultiSelect
               title={t("Assign Group Membership")}
               groups={(data?.projectBySlug?.groups || []).map((g) => ({
@@ -330,7 +323,7 @@ export default function EditInviteModal({
               }}
             />
           </div>
-          <div className="max-w-lg mb-4">
+          <div className="mb-4">
             <h2 className="font-medium">{t("Email Status")}</h2>
             {data.projectInvite.inviteEmails.length === 0 && (
               <div className="text-sm mt-1">
@@ -467,7 +460,7 @@ export default function EditInviteModal({
           </div>
         </div>
       )}
-    </ModalDeprecated>
+    </Modal>
   );
 }
 
