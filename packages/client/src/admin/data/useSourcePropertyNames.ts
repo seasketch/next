@@ -29,7 +29,8 @@ export default function useSourcePropertyNames(
           queryParameters,
         } = propsQuery.data.dataSource;
         if (type === DataSourceTypes.SeasketchVector) {
-          fetch(`https://${bucketId}/${objectKey}`)
+          console.log(propsQuery.data.dataSource);
+          fetch(`${bucketId}/${objectKey}`)
             .then((r) => r.json())
             .then((data: GeoJSON) => {
               let example: Feature;
