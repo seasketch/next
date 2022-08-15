@@ -13,6 +13,7 @@ import { EditorView } from "prosemirror-view";
 import { MutationResult } from "@apollo/client";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../components/useDialog";
+import Modal from "../components/ModalRevisited";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
@@ -66,15 +67,15 @@ export default function MetadataEditor({
   }, [loading]);
 
   return (
-    <ModalDeprecated
-      open={true}
+    <Modal
       onRequestClose={() => {
         if (!changes && onRequestClose) {
           onRequestClose();
         }
       }}
+      disableBackdropClick={true}
       title={
-        <div className="flex p-4 px-5 items-center">
+        <div className="w-full flex items-center">
           <div className="text-lg flex-1">
             <Trans ns="admin">Edit Metadata</Trans>
           </div>
@@ -112,11 +113,10 @@ export default function MetadataEditor({
         </div>
       }
     >
-      <div className="w-full h-full sm:h-auto md:w-160 lg:pb-4 relative">
+      <div className="relative">
         <EditorMenuBar
           view={viewRef.current?.view}
-          className="-mt-6 -ml-6 mb-2"
-          style={{ width: "calc(100% + 3rem)" }}
+          className="mb-2 border-t"
           state={state}
           schema={schema}
         />
@@ -144,6 +144,6 @@ export default function MetadataEditor({
           />
         )}
       </div>
-    </ModalDeprecated>
+    </Modal>
   );
 }

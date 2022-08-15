@@ -60,7 +60,11 @@ export default function Modal(props: ModalProps) {
       open={true}
       as={motion.div}
       className={`relative ${props.tipyTop ? "z-50" : "z-20"}`}
-      onClose={props.onRequestClose}
+      onClose={() => {
+        if (!props.disableBackdropClick) {
+          props.onRequestClose();
+        }
+      }}
     >
       <Backdrop />
 

@@ -57,10 +57,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   }, [props.state]);
 
   return (
-    <div
-      style={{ ...props.style }}
-      className={`${props.className} px-4 border-b`}
-    >
+    <div style={{ ...props.style }} className={`${props.className} border-b`}>
       <button
         disabled={menuState?.disabled?.strong}
         onClick={(e) => {

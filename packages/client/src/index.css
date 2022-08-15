@@ -96,6 +96,7 @@ code {
 .metadata .ProseMirror a {
   color: rgb(49, 115, 201);
   text-decoration: underline;
+  word-break: break-all;
 }
 
 .metadata .ProseMirror ul,
