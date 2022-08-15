@@ -195,8 +195,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
     </>
   );
 
-  console.log(Object.values(DigitizingState)[state], selfIntersects);
-
   if (bottomToolbar) {
     return (
       <>
