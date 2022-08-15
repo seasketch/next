@@ -3,6 +3,7 @@
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { verify } from "crypto";
+import "cypress-real-events"
 
 let surveyId: any;
 
@@ -103,11 +104,9 @@ const drawPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  cy.get('@el').click(100,100)     
-    .click(50, 100)
-    .click(50, 50)
-    .click(100, 50)
-    .dblclick(150, 100)
+  cy.get('@el').click(300,300)     
+    .click(300, 100)
+    .dblclick(200, 400);
 };
 
 const drawInvalidPolygon = () => {
