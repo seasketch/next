@@ -326,7 +326,13 @@ describe("Survey creation smoke test", () => {
           });
         });
         cy.get("@surveyId").then((id) => {
-        cy.visit(`${slug}/surveys/${id}`)
+        cy.visit(`${slug}/surveys/${id}`);
+        cy.get('[role="progressbar"]')
+          .should('not.exist');
+        cy.contains('Begin')
+          .should('be.visible')
+        cy.contains('Welcome')
+          .should('be.visible')
         //cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
         })
       });
@@ -449,7 +455,7 @@ describe("Survey creation smoke test", () => {
             expect (basemaps[maps[key].name]).to.exist
           });
         });
-        if (device === "iphone-x" || device === "iphone-5") {
+        if (device === "iphone-x") {
           Cypress.on('uncaught:exception', (err, runnable) => {
             if (err) {
               cy.log(`${err}`)
@@ -474,7 +480,7 @@ describe("Survey creation smoke test", () => {
           if (device === "macbook-15") {
             cy.contains('Fisheries')
               .should('be.visible')
-              waitOnMapbox(9);
+              waitOnMapbox(10);
             cy.get('span.mapboxgl-ctrl-icon')
               .should('be.visible')
             //cy.wait(500)
