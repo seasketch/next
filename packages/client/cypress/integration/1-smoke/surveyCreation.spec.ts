@@ -455,14 +455,12 @@ describe("Survey creation smoke test", () => {
             expect (basemaps[maps[key].name]).to.exist
           });
         });
-        if (device === "iphone-x") {
-          Cypress.on('uncaught:exception', (err, runnable) => {
-            if (err) {
-              cy.log(`${err}`)
-              return false
-            }
-          });
-        }
+        Cypress.on('uncaught:exception', (err, runnable) => {
+          if (err) {
+            cy.log(`${err}`)
+            return false
+          }
+        });
         //polygon path for mobile devices
         if (device === "iphone-x") {
           cy.get('[data-cy="button-begin"]')
@@ -480,13 +478,13 @@ describe("Survey creation smoke test", () => {
           if (device === "macbook-15") {
             cy.contains('Fisheries')
               .should('be.visible')
-              waitOnMapbox(10);
+              waitOnMapbox(14)
             cy.get('span.mapboxgl-ctrl-icon')
-              .should('be.visible')
+              .should('be.visible');
+            
             //cy.wait(500)
             cy.get('div.MapPicker')
-              .should('exist')
-              .and('be.visible');
+              .and('be.visible')//.pause()
             //cy.get('[role="progressbar"]')
             //  .should('not.be.visible');
             drawPolygon();
