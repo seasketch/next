@@ -450,8 +450,14 @@ describe("Survey creation smoke test", () => {
         cy.get('h4').contains('Fisheries - Commercial, Tuna')
           .should('exist')
           .and('be.visible');
-        cy.window().its('mapContext.basemaps').then((maps) => {
+        cy.log('Checking mapContext readiness')
+        cy.window().its('mapContext').then((mapContext) => {
+          console.log(mapContext.basemaps)
+          const maps = mapContext.basemaps
+          console.log(mapContext.internalState)
+          expect (mapContext.internalState.ready).to.eq(true)
           Object.keys(maps).forEach((key) => {
+            console.log(basemaps[maps[key].name])
             expect (basemaps[maps[key].name]).to.exist
           });
         });
@@ -478,15 +484,16 @@ describe("Survey creation smoke test", () => {
           if (device === "macbook-15") {
             cy.contains('Fisheries')
               .should('be.visible')
-              waitOnMapbox(14)
+            //cy.get('[role="progressbar"]')
+            //  .should('not.be.visible');
+            waitOnMapbox(12)
             cy.get('span.mapboxgl-ctrl-icon')
               .should('be.visible');
             
             //cy.wait(500)
             cy.get('div.MapPicker')
               .and('be.visible')//.pause()
-            //cy.get('[role="progressbar"]')
-            //  .should('not.be.visible');
+            
             drawPolygon();
           } else {
             cy.contains('Fisheries')
