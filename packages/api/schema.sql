@@ -7540,7 +7540,7 @@ to. Details on how to handle survey invites [can be found on the wiki](https://g
 --
 
 CREATE FUNCTION public.projects_session_participation_status(p public.projects) RETURNS public.participation_status
-    LANGUAGE sql STABLE
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select users_participation_status(users.*, p.id) from users where it_me(users.id);
 $$;
@@ -19769,6 +19769,7 @@ GRANT ALL ON FUNCTION public.projects_session_outstanding_survey_invites(project
 
 REVOKE ALL ON FUNCTION public.projects_session_participation_status(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO anon;
 
 
 --
