@@ -629,18 +629,18 @@ describe("Survey creation smoke test", () => {
           }
         }
       });
-      //it(`Can view basemap selector - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.get('img').click();
-      //  let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
-      //  values.forEach((val) => {
-      //    cy.get('.fixed > .overflow-y-auto').children().contains(val);
-      //  });
-      //  cy.get('img[alt="Satellite basemap"]')
-      //    .should('be.visible');
-      //  cy.get('img[alt="Maldives Light basemap"]')
-      //    .should('be.visible');
-      //});
+      it(`Can view basemap selector - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('img').click();
+        let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
+        values.forEach((val) => {
+          cy.get('.fixed > .overflow-y-auto').children().contains(val);
+        });
+        cy.get('img[alt="Satellite basemap"]')
+          .should('be.visible');
+        cy.get('img[alt="Maldives Light basemap"]')
+          .should('be.visible');
+      });
       //it (`Can show scale bar - ${device}`, () => {
       //  cy.viewport(device);
       //  cy.get('h4').contains('Show scale bar');
