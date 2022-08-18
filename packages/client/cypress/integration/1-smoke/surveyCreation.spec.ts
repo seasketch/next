@@ -3,6 +3,7 @@
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { verify } from "crypto";
+import { callbackify } from "util";
 //import "cypress-real-events"
 
 let surveyId: any;
@@ -95,15 +96,20 @@ const checkForNavAndLang = () => {
 };
 
 const drawPolygon = () => {
+  console.log('drawpoly')
   cy.get('.mapboxgl-canvas').each((t) => {
+    console.log('canvas')
+    console.log(t)
     expect (t).to.exist
     const canvases = [];
     canvases.push(t);
     return canvases
   }).then((ary) => {
+    console.log('canvasAry')
     const el = ary[0]
     return el
   }).as('el');
+  console.log('draw')
   cy.get('@el').click(300,300)     
     .click(300, 100)
     .dblclick(200, 400);
@@ -344,13 +350,13 @@ describe("Survey creation smoke test", () => {
         //cy.getLocalStorage("responseId").then((responseId) => {
         //  cy.deleteResponse
         //})
-        //cy.getLocalStorage("token").then((token) => {
-        //  cy.deleteSurvey(surveyId, token)
-        //})
+        cy.getLocalStorage("token").then((token) => {
+          cy.deleteSurvey(surveyId, token)
+        })
       })
-      cy.getLocalStorage("slug").then((slug) => {
-        cy.deleteProject(`${slug}`)
-      })
+      //cy.getLocalStorage("slug").then((slug) => {
+      //  cy.deleteProject(`${slug}`)
+      //})
     })
     devices.forEach((device) => {
       it(`Can visit the survey - ${device}`, () => {
@@ -452,13 +458,9 @@ describe("Survey creation smoke test", () => {
           .and('be.visible');
         cy.log('Checking mapContext readiness')
         cy.window().its('mapContext').then((mapContext) => {
-          console.log(mapContext.basemaps)
-          console.log(mapContext.map)
           const maps = mapContext.basemaps
-          console.log(mapContext.internalState)
           expect (mapContext.internalState.ready).to.eq(true)
           Object.keys(maps).forEach((key) => {
-            console.log(basemaps[maps[key].name])
             expect (basemaps[maps[key].name]).to.exist
           });
         });
@@ -496,29 +498,110 @@ describe("Survey creation smoke test", () => {
             //cy.get('[role="progressbar"]')
             //  .should('not.be.visible');
             waitOnMapbox(12)
-            cy.get('span.mapboxgl-ctrl-icon')
-              .should('be.visible');
-          
-            ////cy.wait(500)
-            cy.get('div.MapPicker')
-              .and('be.visible')//.pause()
+           
             cy.window().its('mapContext').then((mapContext) => {
-              let map = mapContext.map
-              expect (map.loaded()).to.eq(true)
-              drawPolygon()
-              //if (map.loaded()) {
+              let map = mapContext.map 
+              const checkIdle = () => {
+                map.on('idle', () => {
+                  expect (map.loaded()).to.eq(true)
+                })
+              }
+              if (!map.loaded()) {
+                map.on('load', () => {
+                  cy.log('Map not loaded')
+                  const myTimeout = setTimeout(checkIdle, 1000)
+                  myTimeout
+                })
+              } else {
+                cy.log('Map loaded')
+                expect(map.loaded()).to.eq(true)
+                drawPolygon()
+              }
+              })
+              //let style = map.style.stylesheet.name
+              //let countAry = []
+              //let condition
+              //let count = 0
+              //map.getCanvas().then((canvas) => {
+              //  console.log(canvas)
+              //})
+              //if (!map.loaded()) {
+              //  console.log('no')
+              //
+              //  do {
+              //    map.on('data', (data) => {
+              //      countAry.push(data)
+              //     // count +=1
+              //    if ((style === "Mapbox Satellite Streets") && (countAry.length === 59)) {
+              //      console.log("satellite")
+              //      condition === false
+              //      drawPolygon()
+              //    } else if ((style === "Maldives Light") && (countAry.length === 44)) {
+              //      console.log('maldives')
+              //      condition === false
+              //      drawPolygon()
+              //    }
+              //    console.log(map.style.stylesheet.name)
+              //    console.log(countAry)
+              //  }) } while (condition === true)
               //  
-              //} else {
-              //  cy.log('Not loaded')
               //}
-              ////console.log(map.loaded())
+            
+
+              //const waiting = () => {
+                //  if (!myMap.isStyleLoaded()) {
+                //    setTimeout(waiting, 200);
+                //  } else {
+                //    loadMyLayers();
+                //  }
+                //};
+                //waiting();
+              //cy.wait(10000)
               //console.log(map.loaded())
-              //map.on('data', (data) => {
-              //  console.log(data.isSourceLoaded)
-              //  console.log(data)
-              //});
-            })
+              //console.log(map.isSourceLoaded())
+              //console.log(map.isStyleLoaded())
+              ////let condition
+              //  let countAry = []
+              //  const firstFunction = () => {
+              //    return new Promise ((resolve, reject) => {
+              //      console.log('inner')
+              //      let condition
+              //      map.on('data', (data) => {
+              //        do {
+              //          countAry.push(data)
+              //          console.log(countAry)
+              //          if (countAry.length === 45) {
+              //            console.log('condition met')
+              //            condition === false
+              //            //drawPolygon()
+              //            resolve('condition met')
+              //          } else {
+              //            //reject('condition not met')
+              //          }
+              //        } while(condition === true)
+              //      })
+              //    })
+        //
+              //  }
+//
+              //  const getResult = async () => {
+              //    return await firstFunction();
+              //  }
+              //  
+              //  (async () => (await getResult()))().then(() => {
+              //    console.log('done')
+              //  }).then(() => {
+              //    drawPolygon()
+              //  })
+                
+
             //cy.get('span.mapboxgl-ctrl-icon')
+            //.should('be.visible');
+        
+          ////cy.wait(500)
+          //cy.get('div.MapPicker')
+          //  .and('be.visible')//.pause()
+          //  //cy.get('span.mapboxgl-ctrl-icon')
             //  .should('be.visible');
             //
             ////cy.wait(500)
