@@ -502,14 +502,17 @@ describe("Survey creation smoke test", () => {
             cy.window().its('mapContext').then((mapContext) => {
               let map = mapContext.map 
               const checkIdle = () => {
+                console.log('idle 1')
                 map.on('idle', () => {
+                  console.log('idle 2')
                   expect (map.loaded()).to.eq(true)
                 })
               }
               if (!map.loaded()) {
                 map.on('load', () => {
                   cy.log('Map not loaded')
-                  const myTimeout = setTimeout(checkIdle, 1000)
+                    //checkIdle()
+                  const myTimeout = setTimeout(checkIdle, 5000)
                   myTimeout
                 })
               } else {
