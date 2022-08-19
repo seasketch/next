@@ -492,7 +492,7 @@ describe("Survey creation smoke test", () => {
               .should('be.visible');
             cy.get('div.MapPicker')
               .and('be.visible');
-            cy.wait(5000);
+            cy.wait(2000);
             drawPolygon();
           } else {
             cy.contains('Fisheries')
