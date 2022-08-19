@@ -526,88 +526,88 @@ describe("Survey creation smoke test", () => {
         cy.get('img[alt="Maldives Light basemap"]')
           .should('be.visible');
       });
-      //it (`Can show scale bar - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.get('h4').contains('Show scale bar');
-      //  cy.get('[role="switch"]').as('scaleSwitch').then(($switch) => {
-      //    expect ($switch.attr('aria-checked')).to.equal(`false`);
-      //    {$switch.trigger('click')}
-      //  })
-      //  cy.get('@scaleSwitch').then(($switch) => {
-      //    expect ($switch.attr('aria-checked')).to.equal(`true`);
-      //  });
-      //  if (device !== "iphone-x") {
-      //    cy.get('.mapboxgl-ctrl-scale')
-      //      .contains('5,000')
-      //      .should('be.visible');
-      //  } else {
-      //    cy.get('.mapboxgl-ctrl-scale')
-      //      .contains('10000')
-      //      .should('be.visible');
-      //  }
-      //  
-      //    
-      //    //.as("scaleBar").then((scaleBar) => {
-      //    //  cy.setLocalStorage("scale bar", scaleBar.html())
-      //    //  cy.saveLocalStorage()
-      //    //})
-      //});
-      //it (`Renders the correct basemap - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.contains('Maldives Light').as('maldivesLightBasemap')
-      //  cy.get('@maldivesLightBasemap').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //  cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-      //  cy.contains('Satellite')
-      //    .should('not.have.class', 'font-semibold')
-      //})
-      //it (`Can select different basemap - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.contains('Satellite').as('satelliteBasemap')
-      //    cy.get('@satelliteBasemap').then(($btn) => {
-      //      {$btn.trigger('click')}
-      //    })
-      //    .should('have.class', 'font-semibold')   
-      //  cy.contains('Maldives Light')
-      //    .should('not.have.class', 'font-semibold')
-      //})
-      //it(`Shows option to focus on location - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.restoreLocalStorage()
-      //  cy.getLocalStorage("surveyId").then((id) => {
-      //    cy.setLocalStorage("surveyId", id)
-      //  });
-      //  cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
-      //    cy.setLocalStorage("lat", `${center["lat"]}`)
-      //    cy.setLocalStorage("long", `${center["lng"]}`)
-      //    
-      //    cy.saveLocalStorage();
-      //    cy.get('h4').contains('Focus on location').click();
-      //  });
-      //});
-      //it(`Focuses on location - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.restoreLocalStorage()
-      //  cy.getLocalStorage('lat').then((lat) => {
-      //    cy.getLocalStorage('long').then((lng) => {
-      //      cy.window().its('mapContext.map.transform._center').then((coords) => {
-      //        expect (coords["lat"]).to.not.equal(lat)
-      //        expect (coords["lng"]).to.not.equal(lng)
-      //      });
-      //    });
-      //  });
-      //  cy.getLocalStorage("surveyId").then((id) => {
-      //    cy.setLocalStorage("surveyId", id)
-      //  });
-      //  //cy.getLocalStorage("scale bar").then((unfocusedScale) => {
-      //  //  cy.get('.mapboxgl-ctrl-scale')
-      //  //    .should('be.visible')
-      //  //    .then((focusedScale) => {
-      //  //      expect (focusedScale.html()).to.not.equal(unfocusedScale)
-      //  //  })
-      //  //})
-      //});
+      it (`Can show scale bar - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('h4').contains('Show scale bar');
+        cy.get('[role="switch"]').as('scaleSwitch').then(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`false`);
+          {$switch.trigger('click')}
+        })
+        cy.get('@scaleSwitch').then(($switch) => {
+          expect ($switch.attr('aria-checked')).to.equal(`true`);
+        });
+        if (device !== "iphone-x") {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('5,000')
+            .should('be.visible');
+        } else {
+          cy.get('.mapboxgl-ctrl-scale')
+            .contains('10000')
+            .should('be.visible');
+        }
+        
+          
+          //.as("scaleBar").then((scaleBar) => {
+          //  cy.setLocalStorage("scale bar", scaleBar.html())
+          //  cy.saveLocalStorage()
+          //})
+      });
+      it (`Renders the correct basemap - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains('Maldives Light').as('maldivesLightBasemap')
+        cy.get('@maldivesLightBasemap').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+        cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+        cy.contains('Satellite')
+          .should('not.have.class', 'font-semibold')
+      })
+      it (`Can select different basemap - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains('Satellite').as('satelliteBasemap')
+          cy.get('@satelliteBasemap').then(($btn) => {
+            {$btn.trigger('click')}
+          })
+          .should('have.class', 'font-semibold')   
+        cy.contains('Maldives Light')
+          .should('not.have.class', 'font-semibold')
+      })
+      it(`Shows option to focus on location - ${device}`, () => {
+        cy.viewport(device)
+        cy.restoreLocalStorage()
+        cy.getLocalStorage("surveyId").then((id) => {
+          cy.setLocalStorage("surveyId", id)
+        });
+        cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
+          cy.setLocalStorage("lat", `${center["lat"]}`)
+          cy.setLocalStorage("long", `${center["lng"]}`)
+          
+          cy.saveLocalStorage();
+          cy.get('h4').contains('Focus on location').click();
+        });
+      });
+      it(`Focuses on location - ${device}`, () => {
+        cy.viewport(device)
+        cy.restoreLocalStorage()
+        cy.getLocalStorage('lat').then((lat) => {
+          cy.getLocalStorage('long').then((lng) => {
+            cy.window().its('mapContext.map.transform._center').then((coords) => {
+              expect (coords["lat"]).to.not.equal(lat)
+              expect (coords["lng"]).to.not.equal(lng)
+            });
+          });
+        });
+        cy.getLocalStorage("surveyId").then((id) => {
+          cy.setLocalStorage("surveyId", id)
+        });
+        //cy.getLocalStorage("scale bar").then((unfocusedScale) => {
+        //  cy.get('.mapboxgl-ctrl-scale')
+        //    .should('be.visible')
+        //    .then((focusedScale) => {
+        //      expect (focusedScale.html()).to.not.equal(unfocusedScale)
+        //  })
+        //})
+      });
       //it(`Renders sector specific attributes - Fisheries - Commercial, Tuna - ${device}`, () => {
       //  cy.viewport(device); 
       //  cy.get('img').then((imgs) => {
