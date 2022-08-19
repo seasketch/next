@@ -497,7 +497,7 @@ describe("Survey creation smoke test", () => {
               //})
             //cy.get('[role="progressbar"]')
             //  .should('not.be.visible');
-            waitOnMapbox(12)
+            waitOnMapbox(15)
            
             cy.window().its('mapContext').then((mapContext) => {
               let map = mapContext.map 
