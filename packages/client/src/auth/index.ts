@@ -93,7 +93,7 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
               state: IngressState.Error,
             }));
           } else {
-            history.replace(`/${data.confirmProjectInvite.projectSlug}`);
+            history.replace(`/${data.confirmProjectInvite.projectSlug}/join`);
             // Note that our token isn't replaced so email verification claims
             // won't be updated
           }

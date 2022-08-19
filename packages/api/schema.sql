@@ -7451,7 +7451,13 @@ COMMENT ON FUNCTION public.projects_session_has_posts(project public.projects) I
 CREATE FUNCTION public.projects_session_has_privileged_access(p public.projects) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select projects_session_is_admin(p) or exists(select 1 from project_group_members where group_id = any (select id from project_groups where project_id = p.id) and it_me(user_id));
+    select exists (
+      select project_id from project_participants where user_id = nullif(current_setting('session.user_id', TRUE), '')::integer and project_id = p.id and is_admin = true
+    ) or (
+      select count(*) > 0 from project_group_members where user_id = nullif(current_setting('session.user_id', TRUE), '')::integer and project_group_members.group_id in (select id from project_groups where project_id = p.id)
+    ) or (
+      select count(*) > 0 from project_invites where project_id = p.id and user_id = nullif(current_setting('session.user_id', TRUE), '')::integer and make_admin = true
+    ) or session_is_superuser()
   $$;
 
 
@@ -19744,6 +19750,7 @@ GRANT ALL ON FUNCTION public.projects_session_has_posts(project public.projects)
 
 REVOKE ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO anon;
 
 
 --

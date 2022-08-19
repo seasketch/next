@@ -6,6 +6,7 @@ import {
   Switch,
   Route,
   Redirect,
+  useHistory,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
@@ -21,6 +22,8 @@ import Spinner from "../components/Spinner";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import Modal from "../components/Modal";
 import { AnimatePresence } from "framer-motion";
+import { ParticipationStatus } from "../generated/graphql";
+import useDialog from "../components/useDialog";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
@@ -62,8 +65,28 @@ const iconClassName =
 export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
   const { data } = useCurrentProjectMetadata();
+  const { alert } = useDialog();
 
+  const history = useHistory();
   const { t } = useTranslation(["admin"]);
+
+  useEffect(() => {
+    if (
+      data?.project?.sessionParticipationStatus &&
+      data?.project?.sessionParticipationStatus !==
+        ParticipationStatus.ParticipantSharedProfile
+    ) {
+      alert(t("The admin dashboard is limited to project participants"), {
+        description: t(
+          "You must join the project and share a profile to enable admin privileges."
+        ),
+      }).then(() => {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/join?redirectUrl=${window.location.pathname}`);
+      });
+    }
+  }, [data?.project?.sessionParticipationStatus]);
+
   const sections: Section[] = [
     {
       breadcrumb: t("Back to Project"),

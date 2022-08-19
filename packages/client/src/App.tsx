@@ -67,10 +67,15 @@ const LazyAccountSettingsPage = React.lazy(
     )
 );
 
+const LazyJoinProject = React.lazy(
+  () => import(/* webpackChunkName: "JoinProject" */ "./auth/JoinProject")
+);
+
 function App() {
   const { user } = useAuth0();
   const { t } = useTranslation(["homepage"]);
   const [error, setError] = useState<Error | null>(null);
+  console.log("user", user);
   useEffect(() => {
     if (user) {
       Sentry.setUser({ email: user.email, id: user.sub });
@@ -170,6 +175,9 @@ function App() {
                     <Redirect to={`/${params.match.params.slug}/app`} />
                   )}
                 />
+                <Route exact path="/:slug/join">
+                  <LazyJoinProject />
+                </Route>
                 <Route path="/:slug">
                   <Route
                     exact

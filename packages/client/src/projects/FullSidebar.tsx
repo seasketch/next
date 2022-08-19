@@ -1,4 +1,4 @@
-import React, { ReactNode, useContext } from "react";
+import React, { ReactNode, useContext, useEffect } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
@@ -16,6 +16,8 @@ import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { StatusOfflineIcon } from "@heroicons/react/outline";
 import SignedInAs from "../components/SignedInAs";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
+import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
+import { ParticipationStatus, ProjectAccessStatus } from "../generated/graphql";
 
 export default function FullSidebar({
   open,
@@ -33,6 +35,22 @@ export default function FullSidebar({
   const { data, loading, error, refetch } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
   const cache = useContext(GraphqlQueryCacheContext);
+
+  useEffect(() => {
+    if (/pj/.test(window.location.search)) {
+      if (
+        data?.project?.sessionParticipationStatus &&
+        data?.project?.sessionParticipationStatus !==
+          ParticipationStatus.ParticipantSharedProfile
+      ) {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/join?redirectUrl=${window.location.pathname}`);
+      } else {
+        // remove the entire search string from the path to remove ?pj
+        history.push(window.location.pathname);
+      }
+    }
+  }, [window.location.search]);
 
   const chooseSidebar = (sidebar: string) => () => {
     history.replace(`/${slug}/app/${sidebar}`);
@@ -254,9 +272,16 @@ export default function FullSidebar({
           }
           label={t("Sign In")}
           onClick={() => {
+            const hasSkippedJoinPrompt = localStorage.getItem(
+              HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY
+            );
             loginWithRedirect({
               appState: {
-                returnTo: window.location.pathname,
+                returnTo:
+                  hasSkippedJoinPrompt === "true"
+                    ? window.location.pathname
+                    : window.location.pathname + "?pj",
+                promptToJoin: true,
               },
               redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
             });

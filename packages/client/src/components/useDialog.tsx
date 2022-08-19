@@ -24,13 +24,21 @@ export default function useDialog() {
         submitting: false,
       });
     },
-    alert: (message: string) => {
-      context.setState({
-        type: "alert",
-        open: true,
-        message: message,
-        onSubmit: () => {},
-        submitting: false,
+    alert: (
+      message: string,
+      options?: {
+        description?: string;
+      }
+    ) => {
+      return new Promise((resolve, reject) => {
+        context.setState({
+          type: "alert",
+          open: true,
+          message: message,
+          description: options?.description,
+          onSubmit: resolve,
+          submitting: false,
+        });
       });
     },
     confirm: (

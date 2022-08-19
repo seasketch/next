@@ -14082,6 +14082,25 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type JoinProjectMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type JoinProjectMutation = (
+  { __typename?: 'Mutation' }
+  & { joinProject?: Maybe<(
+    { __typename?: 'JoinProjectPayload' }
+    & { query?: Maybe<(
+      { __typename?: 'Query' }
+      & { project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id' | 'sessionParticipationStatus'>
+      )> }
+    )> }
+  )> }
+);
+
 export type MapEssentialsFragment = (
   { __typename?: 'Project' }
   & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
@@ -14443,6 +14462,7 @@ export type ProjectMetadataQuery = (
   { __typename?: 'Query' }
   & { project?: Maybe<(
     { __typename?: 'Project' }
+    & Pick<Project, 'sessionParticipationStatus' | 'sessionHasPrivilegedAccess'>
     & ProjectMetadataFragment
   )>, projectPublicDetails?: Maybe<(
     { __typename?: 'PublicProjectDetail' }
@@ -15957,6 +15977,7 @@ export type UpdateProfileMutationVariables = Exact<{
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['Upload']>;
+  bio?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -15972,7 +15993,7 @@ export type UpdateProfileMutation = (
         & Pick<User, 'id'>
         & { profile?: Maybe<(
           { __typename?: 'Profile' }
-          & Pick<Profile, 'picture'>
+          & Pick<Profile, 'picture' | 'bio' | 'affiliations' | 'userId' | 'email' | 'fullname' | 'nickname'>
         )> }
       )> }
     )> }
@@ -17764,6 +17785,18 @@ export const PublishTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const JoinProjectDocument = /*#__PURE__*/ gql`
+    mutation JoinProject($projectId: Int!) {
+  joinProject(input: {projectId: $projectId}) {
+    query {
+      project(id: $projectId) {
+        id
+        sessionParticipationStatus
+      }
+    }
+  }
+}
+    `;
 export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
     query GetBasemapsAndRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17971,6 +18004,8 @@ export const ProjectMetadataDocument = /*#__PURE__*/ gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
     ...ProjectMetadata
+    sessionParticipationStatus
+    sessionHasPrivilegedAccess
   }
   projectPublicDetails(slug: $slug) {
     ...ProjectPublicDetailsMetadata
@@ -18994,9 +19029,9 @@ export const ProjectInviteEmailStatusSubscriptionDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateProfileDocument = /*#__PURE__*/ gql`
-    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload) {
+    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload, $bio: String) {
   updateProfileByUserId(
-    input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
+    input: {userId: $userId, patch: {bio: $bio, affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
   ) {
     profile {
       userId
@@ -19004,6 +19039,12 @@ export const UpdateProfileDocument = /*#__PURE__*/ gql`
         id
         profile {
           picture
+          bio
+          affiliations
+          userId
+          email
+          fullname
+          nickname
         }
       }
     }
@@ -19124,6 +19165,7 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',

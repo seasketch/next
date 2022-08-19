@@ -39,6 +39,8 @@ fragment ProjectMetadataMeFrag on User {
 query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
     ...ProjectMetadata
+    sessionParticipationStatus
+    sessionHasPrivilegedAccess
   }
   projectPublicDetails(slug: $slug) {
     ...ProjectPublicDetailsMetadata

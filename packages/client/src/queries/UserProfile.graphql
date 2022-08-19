@@ -38,11 +38,13 @@ mutation UpdateProfile(
   $fullname: String
   $nickname: String
   $picture: Upload
+  $bio: String
 ) {
   updateProfileByUserId(
     input: {
       userId: $userId
       patch: {
+        bio: $bio
         affiliations: $affiliations
         email: $email
         fullname: $fullname
@@ -57,6 +59,12 @@ mutation UpdateProfile(
         id
         profile {
           picture
+          bio
+          affiliations
+          userId
+          email
+          fullname
+          nickname
         }
       }
     }

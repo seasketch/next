@@ -14084,6 +14084,25 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type JoinProjectMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type JoinProjectMutation = (
+  { __typename?: 'Mutation' }
+  & { joinProject?: Maybe<(
+    { __typename?: 'JoinProjectPayload' }
+    & { query?: Maybe<(
+      { __typename?: 'Query' }
+      & { project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id' | 'sessionParticipationStatus'>
+      )> }
+    )> }
+  )> }
+);
+
 export type MapEssentialsFragment = (
   { __typename?: 'Project' }
   & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
@@ -14445,6 +14464,7 @@ export type ProjectMetadataQuery = (
   { __typename?: 'Query' }
   & { project?: Maybe<(
     { __typename?: 'Project' }
+    & Pick<Project, 'sessionParticipationStatus' | 'sessionHasPrivilegedAccess'>
     & ProjectMetadataFragment
   )>, projectPublicDetails?: Maybe<(
     { __typename?: 'PublicProjectDetail' }
@@ -15959,6 +15979,7 @@ export type UpdateProfileMutationVariables = Exact<{
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['Upload']>;
+  bio?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -15974,7 +15995,7 @@ export type UpdateProfileMutation = (
         & Pick<User, 'id'>
         & { profile?: Maybe<(
           { __typename?: 'Profile' }
-          & Pick<Profile, 'picture'>
+          & Pick<Profile, 'picture' | 'bio' | 'affiliations' | 'userId' | 'email' | 'fullname' | 'nickname'>
         )> }
       )> }
     )> }
@@ -19785,6 +19806,44 @@ export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationH
 export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
+export const JoinProjectDocument = gql`
+    mutation JoinProject($projectId: Int!) {
+  joinProject(input: {projectId: $projectId}) {
+    query {
+      project(id: $projectId) {
+        id
+        sessionParticipationStatus
+      }
+    }
+  }
+}
+    `;
+export type JoinProjectMutationFn = Apollo.MutationFunction<JoinProjectMutation, JoinProjectMutationVariables>;
+
+/**
+ * __useJoinProjectMutation__
+ *
+ * To run a mutation, you first call `useJoinProjectMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useJoinProjectMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [joinProjectMutation, { data, loading, error }] = useJoinProjectMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useJoinProjectMutation(baseOptions?: Apollo.MutationHookOptions<JoinProjectMutation, JoinProjectMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<JoinProjectMutation, JoinProjectMutationVariables>(JoinProjectDocument, options);
+      }
+export type JoinProjectMutationHookResult = ReturnType<typeof useJoinProjectMutation>;
+export type JoinProjectMutationResult = Apollo.MutationResult<JoinProjectMutation>;
+export type JoinProjectMutationOptions = Apollo.BaseMutationOptions<JoinProjectMutation, JoinProjectMutationVariables>;
 export const GetBasemapsAndRegionDocument = gql`
     query GetBasemapsAndRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -20304,6 +20363,8 @@ export const ProjectMetadataDocument = gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
     ...ProjectMetadata
+    sessionParticipationStatus
+    sessionHasPrivilegedAccess
   }
   projectPublicDetails(slug: $slug) {
     ...ProjectPublicDetailsMetadata
@@ -23301,9 +23362,9 @@ export function useProjectInviteEmailStatusSubscriptionSubscription(baseOptions?
 export type ProjectInviteEmailStatusSubscriptionSubscriptionHookResult = ReturnType<typeof useProjectInviteEmailStatusSubscriptionSubscription>;
 export type ProjectInviteEmailStatusSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ProjectInviteEmailStatusSubscriptionSubscription>;
 export const UpdateProfileDocument = gql`
-    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload) {
+    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload, $bio: String) {
   updateProfileByUserId(
-    input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
+    input: {userId: $userId, patch: {bio: $bio, affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
   ) {
     profile {
       userId
@@ -23311,6 +23372,12 @@ export const UpdateProfileDocument = gql`
         id
         profile {
           picture
+          bio
+          affiliations
+          userId
+          email
+          fullname
+          nickname
         }
       }
     }
@@ -23338,6 +23405,7 @@ export type UpdateProfileMutationFn = Apollo.MutationFunction<UpdateProfileMutat
  *      fullname: // value for 'fullname'
  *      nickname: // value for 'nickname'
  *      picture: // value for 'picture'
+ *      bio: // value for 'bio'
  *   },
  * });
  */
@@ -23489,6 +23557,7 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',

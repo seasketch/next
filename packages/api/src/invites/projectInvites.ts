@@ -258,8 +258,12 @@ export async function confirmProjectInvite(
   ).rows[0];
   const auth0 = await getManagementClient();
   if (!emailVerified) {
-    // TODO: test this operation on the production system manually
-    await auth0.updateUser({ id: sub as string }, { email_verified: true });
+    try {
+      await auth0.updateUser({ id: sub as string }, { email_verified: true });
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
     await cache.set(`user:${sub}:emailVerified`, "true");
   }
   await client.query(`select confirm_project_invite($1)`, [claims.inviteId]);
