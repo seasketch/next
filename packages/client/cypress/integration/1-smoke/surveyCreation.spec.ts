@@ -492,7 +492,30 @@ describe("Survey creation smoke test", () => {
               .should('be.visible');
             cy.get('div.MapPicker')
               .and('be.visible');
-            cy.wait(2000);
+            cy.wait(5000)
+            //cy.window().its('mapContext').then((mapContext) => {
+            //  let map = mapContext.map 
+            //  const checkIdle = () => {
+            //    
+            //    console.log('idle 1')
+            //    cy.wait(3000);
+            //    map.on('idle', () => {
+            //      console.log('idle 2')
+            //      expect (map.loaded()).to.eq(true)
+            //      drawPolygon()
+            //    })
+            //  }
+            //  if (!map.loaded()) {
+            //    map.on('load', () => {
+            //      const myTimeout = setTimeout(checkIdle, 5000)
+            //      myTimeout
+            //    })
+            //  } else {
+            //    expect(map.loaded()).to.eq(true)
+            //    drawPolygon()
+            //  }
+            //})
+            
             drawPolygon();
           } else {
             cy.contains('Fisheries')
