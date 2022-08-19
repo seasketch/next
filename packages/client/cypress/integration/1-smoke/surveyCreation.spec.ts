@@ -497,31 +497,42 @@ describe("Survey creation smoke test", () => {
               //})
             //cy.get('[role="progressbar"]')
             //  .should('not.be.visible');
-            waitOnMapbox(15)
+            waitOnMapbox(12)
+            
+
+            cy.get('span.mapboxgl-ctrl-icon')
+              .should('be.visible');
+            
+          ////cy.wait(500)
+            cy.get('div.MapPicker')
+              .and('be.visible')
+            cy.wait(5000)
+            drawPolygon()
            
-            cy.window().its('mapContext').then((mapContext) => {
-              let map = mapContext.map 
-              const checkIdle = () => {
-                console.log('idle 1')
-                map.on('idle', () => {
-                  console.log('idle 2')
-                  expect (map.loaded()).to.eq(true)
-                })
-              }
-              if (!map.loaded()) {
-                map.on('load', () => {
-                  cy.log('Map not loaded')
-                    //checkIdle()
-                  const myTimeout = setTimeout(checkIdle, 5000)
-                  myTimeout
-                })
-              } else {
-                cy.log('Map loaded')
-                expect(map.loaded()).to.eq(true)
-                drawPolygon()
-              }
-              })
-              //let style = map.style.stylesheet.name
+            //cy.window().its('mapContext').then((mapContext) => {
+            //  let map = mapContext.map 
+            //  const checkIdle = () => {
+            //    cy.wait(500)
+            //    console.log('idle 1')
+            //    map.on('idle', () => {
+            //      console.log('idle 2')
+            //      expect (map.loaded()).to.eq(true)
+            //    })
+            //  }
+            //  if (!map.loaded()) {
+            //    map.on('load', () => {
+            //      cy.log('Map not loaded')
+            //        //checkIdle()
+            //      const myTimeout = setTimeout(checkIdle, 5000)
+            //      myTimeout
+            //    })
+            //  } else {
+            //    cy.log('Map loaded')
+            //    expect(map.loaded()).to.eq(true)
+            //    drawPolygon()
+            //  }
+            //  })
+            //  //let style = map.style.stylesheet.name
               //let countAry = []
               //let condition
               //let count = 0
@@ -597,13 +608,7 @@ describe("Survey creation smoke test", () => {
               //    drawPolygon()
               //  })
                 
-
-            //cy.get('span.mapboxgl-ctrl-icon')
-            //.should('be.visible');
-        
-          ////cy.wait(500)
-          //cy.get('div.MapPicker')
-          //  .and('be.visible')//.pause()
+          //.pause()
           //  //cy.get('span.mapboxgl-ctrl-icon')
             //  .should('be.visible');
             //
