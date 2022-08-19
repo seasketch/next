@@ -109,10 +109,11 @@ const drawPolygon = () => {
     const el = ary[0]
     return el
   }).as('el');
-  console.log('draw')
-  cy.get('@el').click(300,300)     
-    .click(300, 100)
-    .dblclick(200, 400);
+  cy.get('@el').click(100,100)     
+    .click(50, 100)
+    .click(50, 50)
+    .click(100, 50)
+    .click(100, 100)
 };
 
 const drawInvalidPolygon = () => {
@@ -631,72 +632,69 @@ describe("Survey creation smoke test", () => {
         //  })
         //})
       });
-      //it(`Renders sector specific attributes - Fisheries - Commercial, Tuna - ${device}`, () => {
-      //  cy.viewport(device); 
-      //  cy.get('img').then((imgs) => {
-      //    imgs[0].click()
-      //  });
-      //  if (device === "iphone-5" || device === "iphone-x") {
-      //    cy.get('[data-cy="button-done"]')
-      //      .should('exist')
-      //      .and('be.visible')
-      //      .as('doneBtn')
-      //      //.click()
-      //      //cy.get('@doneBtn').then(($btn) => {
-      //      //  {$btn.trigger('click')}
-      //      //})
-      //    cy.get('button').then((btn) => {
-      //      if(btn.text().includes('Done')) {
-      //        cy.get('button').contains('Done').click()
-      //      }
-      //    });
-      //  }
-      //  cy.get('h1').contains('Area Name')
-      //    .should('exist')
-      //    .and('be.visible');
-      //  cy.get(".mt-1 > .block").scrollIntoView().clear()
-      //    .type("Yellowfin tuna fishing area.");
-      //  cy.contains('What type of gear do you use here?');
-      //  cy.contains('What species do you fish here');
-      //  cy.get('[title="Pole and Line"]').click();
-      //  cy.get('[title="Yellowfin"]').click();
-      //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.");
-      //});
-      //it (`Can set area importance using SAP range slider - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.get('h1').contains('How important is this area?').scrollIntoView();
-      //  cy.get('input[type=range]').as('range')
-      //    .should('exist');
-      //  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-      //  cy.get('@range').then(($range) => {
-      //    // get the DOM node
-      //    const range = $range[0];
-      //    // set the value manually
-      //    nativeInputValueSetter.call(range, 15);
-      //    // dispatch the event
-      //    //@ts-ignore
-      //    range.dispatchEvent(new Event('change', { value: 15, bubbles: true }));
-      //  });
-      //  cy.get('@range')
-      //    .should('have.value', 15);
-      //  cy.get('button').contains('Save').then(($save) => {
-      //    {$save.trigger('click')}
-      //  });
-      //  cy.get('button').then((button) => {
-      //    if(button.text().includes('Save')) {
-      //      cy.get('button').contains('Save').then(($btn) => {
-      //        {$btn.trigger('click')}
-      //      })
-      //    }
-      //    
-      //  })
-      //  //cy.get('button').contains('Save')
-      //  //  .should('not.exist')
-      //  cy.get('.SAPRangeMini')
-      //    .should('exist')
-      //    .and('be.visible')
-      //    .and('have.value', 15);
-      //});
+      it(`Renders sector specific attributes - Fisheries - Commercial, Tuna - ${device}`, () => {
+        cy.viewport(device); 
+        cy.get('img').then((imgs) => {
+          imgs[0].click()
+        });
+        if (device === "iphone-5" || device === "iphone-x") {
+          cy.get('[data-cy="button-done"]')
+            .should('exist')
+            .and('be.visible')
+            .as('doneBtn')
+            //.click()
+            //cy.get('@doneBtn').then(($btn) => {
+            //  {$btn.trigger('click')}
+            //})
+          cy.get('button').then((btn) => {
+            if(btn.text().includes('Done')) {
+              cy.get('button').contains('Done').click()
+            }
+          });
+        }
+        cy.get('h1').contains('Area Name')
+          .should('exist')
+          .and('be.visible');
+        cy.get(".mt-1 > .block").scrollIntoView().clear()
+          .type("Yellowfin tuna fishing area.");
+        cy.contains('What type of gear do you use here?');
+        cy.contains('What species do you fish here');
+        cy.get('[title="Pole and Line"]').click();
+        cy.get('[title="Yellowfin"]').click();
+        cy.get('[style="max-height: 60vh;"] > .w-full').type("Heavy use in spring and summer.");
+      });
+      it (`Can set area importance using SAP range slider - ${device}`, () => {
+        cy.viewport(device)
+        cy.get('h1').contains('How important is this area?').scrollIntoView();
+        cy.get('input[type=range]').as('range')
+          .should('exist');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        cy.get('@range').then(($range) => {
+          // get the DOM node
+          const range = $range[0];
+          // set the value manually
+          nativeInputValueSetter.call(range, 15);
+          // dispatch the event
+          //@ts-ignore
+          range.dispatchEvent(new Event('change', { value: 15, bubbles: true }));
+        });
+        cy.get('@range')
+          .should('have.value', 15);
+        cy.get('button').contains('Save').then(($save) => {
+          {$save.trigger('click')}
+        });
+        cy.get('button').then((button) => {
+          if(button.text().includes('Save')) {
+            cy.get('button').contains('Save').then(($btn) => {
+              {$btn.trigger('click')}
+            })
+          }
+          
+        })
+        cy.get('.SAPRangeMini')
+          .and('be.visible')
+          .and('have.value', 15);
+      });
       //it(`Can finish sector - Fisheries - Commercial, Tuna - ${device}`, () => {
       //  cy.viewport(device); 
       //  cy.contains('Fisheries - Commercial, Tuna')
