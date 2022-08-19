@@ -486,137 +486,14 @@ describe("Survey creation smoke test", () => {
         } else {
           if (device === "macbook-15") {
             cy.contains('Fisheries')
-              .should('be.visible')
-              //cy.window().its('mapContext').then((mapContext) => {
-              //  let map = mapContext.map
-              //  //console.log(map.loaded())
-              //  map.on('data', (data) => {
-              //    console.log(data.isSourceLoaded)
-              //    console.log(data)
-              //  });
-              //})
-            //cy.get('[role="progressbar"]')
-            //  .should('not.be.visible');
-            waitOnMapbox(12)
-            
-
+              .should('be.visible');
+            waitOnMapbox(8)
             cy.get('span.mapboxgl-ctrl-icon')
               .should('be.visible');
-            
-          ////cy.wait(500)
             cy.get('div.MapPicker')
-              .and('be.visible')
-            cy.wait(5000)
-            drawPolygon()
-           
-            //cy.window().its('mapContext').then((mapContext) => {
-            //  let map = mapContext.map 
-            //  const checkIdle = () => {
-            //    cy.wait(500)
-            //    console.log('idle 1')
-            //    map.on('idle', () => {
-            //      console.log('idle 2')
-            //      expect (map.loaded()).to.eq(true)
-            //    })
-            //  }
-            //  if (!map.loaded()) {
-            //    map.on('load', () => {
-            //      cy.log('Map not loaded')
-            //        //checkIdle()
-            //      const myTimeout = setTimeout(checkIdle, 5000)
-            //      myTimeout
-            //    })
-            //  } else {
-            //    cy.log('Map loaded')
-            //    expect(map.loaded()).to.eq(true)
-            //    drawPolygon()
-            //  }
-            //  })
-            //  //let style = map.style.stylesheet.name
-              //let countAry = []
-              //let condition
-              //let count = 0
-              //map.getCanvas().then((canvas) => {
-              //  console.log(canvas)
-              //})
-              //if (!map.loaded()) {
-              //  console.log('no')
-              //
-              //  do {
-              //    map.on('data', (data) => {
-              //      countAry.push(data)
-              //     // count +=1
-              //    if ((style === "Mapbox Satellite Streets") && (countAry.length === 59)) {
-              //      console.log("satellite")
-              //      condition === false
-              //      drawPolygon()
-              //    } else if ((style === "Maldives Light") && (countAry.length === 44)) {
-              //      console.log('maldives')
-              //      condition === false
-              //      drawPolygon()
-              //    }
-              //    console.log(map.style.stylesheet.name)
-              //    console.log(countAry)
-              //  }) } while (condition === true)
-              //  
-              //}
-            
-
-              //const waiting = () => {
-                //  if (!myMap.isStyleLoaded()) {
-                //    setTimeout(waiting, 200);
-                //  } else {
-                //    loadMyLayers();
-                //  }
-                //};
-                //waiting();
-              //cy.wait(10000)
-              //console.log(map.loaded())
-              //console.log(map.isSourceLoaded())
-              //console.log(map.isStyleLoaded())
-              ////let condition
-              //  let countAry = []
-              //  const firstFunction = () => {
-              //    return new Promise ((resolve, reject) => {
-              //      console.log('inner')
-              //      let condition
-              //      map.on('data', (data) => {
-              //        do {
-              //          countAry.push(data)
-              //          console.log(countAry)
-              //          if (countAry.length === 45) {
-              //            console.log('condition met')
-              //            condition === false
-              //            //drawPolygon()
-              //            resolve('condition met')
-              //          } else {
-              //            //reject('condition not met')
-              //          }
-              //        } while(condition === true)
-              //      })
-              //    })
-        //
-              //  }
-//
-              //  const getResult = async () => {
-              //    return await firstFunction();
-              //  }
-              //  
-              //  (async () => (await getResult()))().then(() => {
-              //    console.log('done')
-              //  }).then(() => {
-              //    drawPolygon()
-              //  })
-                
-          //.pause()
-          //  //cy.get('span.mapboxgl-ctrl-icon')
-            //  .should('be.visible');
-            //
-            ////cy.wait(500)
-            //cy.get('div.MapPicker')
-            //  .and('be.visible')//.pause()
-            
-            //drawPolygon();
+              .and('be.visible');
+            cy.wait(5000);
+            drawPolygon();
           } else {
             cy.contains('Fisheries')
               .should('be.visible')
