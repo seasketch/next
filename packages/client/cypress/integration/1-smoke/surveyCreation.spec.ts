@@ -926,11 +926,18 @@ describe("Survey creation smoke test", () => {
       })
       it (`Shows completed sectors - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device);
+        cy.get('button').then((btn) => {
+          if (btn.text().includes('Finish Sector')) {
+            cy.get('button').contains('Finish Sector').as('finishSector')
+            cy.get('@finishSector').then(($btn) => {
+              {$btn.trigger('click')}
+            })
+          }
+        })
         if (device !== "iphone-x") {
           //these don't exist on this page for iphone-x
           checkForNavAndLang();
         }
-        
         cy.get('button').then(($btn) => {
           if ($btn.text().includes("Finish Sector")) {
             cy.get('button').contains("Finish Sector").then(($btn) => {
@@ -951,7 +958,7 @@ describe("Survey creation smoke test", () => {
         })
         cy.contains("Next Question").as('nextQuestion')
         cy.get('@nextQuestion').then(($btn) => {
-          {$btn.trigger('click')}
+          {$btn.trigger('click', {multiple:true})}
         })
       })
       it(`Can input number of people reflected in response - ${device}`, () => {
