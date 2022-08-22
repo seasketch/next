@@ -655,8 +655,10 @@ describe("Survey creation smoke test", () => {
         cy.get('h1').contains('Area Name')
           .should('exist')
           .and('be.visible');
-        cy.get(".mt-1 > .block").scrollIntoView().clear()
+        cy.get(".mt-1 > .block").scrollIntoView().clear({force:true})
           .type("Yellowfin tuna fishing area.");
+        cy.get(".mt-1 > .block")
+          .should('have.value', 'Yellowfin tuna fishing area.');
         cy.contains('What type of gear do you use here?');
         cy.contains('What species do you fish here');
         cy.get('[title="Pole and Line"]').click();
@@ -790,24 +792,26 @@ describe("Survey creation smoke test", () => {
       }
         cy.contains('Area Name')
           .should('exist')
-          .and('be.visible')
-        cy.contains('How important')
+          .and('be.visible');
+        cy.contains('How important');
         cy.get(".mt-1 > .block")
           .should('be.visible')
-          .clear()
-          .type("Sea cucumber fishing area.")
-        cy.contains('What type of gear')
-        cy.contains('What type of species')
+          .clear({force:true})
+          .type("Sea cucumber fishing area.");
+        cy.get('.mt-1 > .block')
+          .should('have.value', 'Sea cucumber fishing area.');
+        cy.contains('What type of gear');
+        cy.contains('What type of species');
         cy.get('[title="Pole and Line"]')
-          .should('not.exist')
+          .should('not.exist');
         cy.get('[title="Pole and Line"]')
-          .should('not.exist')
+          .should('not.exist');
         cy.get('[title="Yellowfin"]')
-          .should('not.exist')
-        cy.get('[title="Sea cucumber"]').click()
-        cy.get('[title="Jigging"]').click()
-        cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!")
-        cy.contains('Save').click()
+          .should('not.exist');
+        cy.get('[title="Sea cucumber"]').click();
+        cy.get('[title="Jigging"]').click();
+        cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!");
+        cy.contains('Save').click();
       });
       it(`Errors when invalid polygon is drawn - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device)
@@ -887,8 +891,10 @@ describe("Survey creation smoke test", () => {
         cy.get('h1').contains('Area Name')
           .should('exist')
           .and('be.visible');
-        cy.get(".mt-1 > .block").clear()
+        cy.get(".mt-1 > .block").clear({force:true})
           .type("Reef fishing area.");
+        cy.get('.mt-1 > .block')
+          .should('have.value', "Reef fishing area.")
         cy.contains('What type of gear');
         cy.contains('What type of species');
         cy.get('[title="Pole and Line"]')
@@ -901,7 +907,8 @@ describe("Survey creation smoke test", () => {
         cy.get('button').contains('Reef fish')
           .should('be.visible')
           .click();
-        cy.get('[style="max-height: 60vh;"] > .w-full').type("Bountiful reef fishing.");
+        cy.get('[style="max-height: 60vh;"] > .w-full')
+          .type("Bountiful reef fishing.");
         cy.contains('Save').click();
       });
       //it(`Can finish sector - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
