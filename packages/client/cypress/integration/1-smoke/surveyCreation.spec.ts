@@ -465,12 +465,6 @@ describe("Survey creation smoke test", () => {
             expect (basemaps[maps[key].name]).to.exist
           });
         });
-        Cypress.on('uncaught:exception', (err, runnable) => {
-          if (err) {
-            cy.log(`${err}`)
-            return false
-          }
-        });
         //polygon path for mobile devices
         if (device === "iphone-x") {
           cy.get('[data-cy="button-begin"]')
