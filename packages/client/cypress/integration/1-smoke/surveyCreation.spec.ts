@@ -351,9 +351,9 @@ describe("Survey creation smoke test", () => {
         //cy.getLocalStorage("responseId").then((responseId) => {
         //  cy.deleteResponse
         //})
-        cy.getLocalStorage("token").then((token) => {
-          cy.deleteSurvey(surveyId, token)
-        })
+        //cy.getLocalStorage("token").then((token) => {
+        //  cy.deleteSurvey(surveyId, token)
+        //})
       })
       //cy.getLocalStorage("slug").then((slug) => {
       //  cy.deleteProject(`${slug}`)
@@ -998,129 +998,129 @@ describe("Survey creation smoke test", () => {
             {$btn.trigger('click')}
           });
       });
-      //it(`Can input name or number of vessel - ${device}`, () => {
-      //  cy.viewport(device); 
-      //  checkForNavAndLang();
-      //  cy.contains('vessel')
-      //    .should('exist')
-      //    .and('be.visible');
-      //  cy.log('Skipping question without inputting value');
-      //  cy.get('input').as('vesselInput')
-      //    .should('be.empty');
-      //  cy.get('button').contains('Skip Question').click();
-      //  cy.restoreLocalStorage();
-      //  cy.getLocalStorage('slug').then((slug) => {
-      //    cy.getLocalStorage('surveyId').then((id) => {
-      //      cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28/`);
-      //    })
-      //  })
-      //  cy.contains('willing')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('a[title="Previous Question"]').click()
-      //  cy.contains('vessel')
-      //    .should('be.visible')
-      //    .and('exist')
-      //  cy.get('@vesselInput').type("Queen Ann's Revenge")
-      //  cy.get('@vesselInput').then(($input) => {
-      //    expect ($input.val()).to.equal("Queen Ann's Revenge");
-      //  });
-      //  cy.get('button').contains('Next').click()
-      //});
-      //it(`Can answer additional questions - ${device}`, () => {
-      //  cy.viewport(device);
-      //  checkForNavAndLang();
-      //  cy.contains('additional')
-      //    .should('exist')
-      //    .and('be.visible');
-      //  cy.get('[title="Yes"]')
-      //    .should('exist')
-      //    .and('be.visible')
-      //    .click()
-      //});
-      //it(`Can input age - ${device}`, () => {
-      //  cy.viewport(device);
-      //  checkForNavAndLang();
-      //  cy.restoreLocalStorage()
-      //  cy.getLocalStorage('slug').then((slug) => {
-      //    cy.getLocalStorage('surveyId').then((id) => {
-      //      cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/29/`);
-      //    })
-      //  })
-      //  cy.contains('willing')
-      //    .should('not.exist')
-      //  cy.contains("Your age")
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('input').clear().type("30")
-      //  cy.contains('Next').as('nextBtn');
-      //  cy.get('@nextBtn').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //})
-      //it(`Can select gender - ${device}`, () => {
-      //  cy.viewport(device); 
-      //  checkForNavAndLang();
-      //  cy.contains("Gender")
-      //  cy.contains("Female").click()
-      //})
-      //it(`Can add comments - ${device}`, () => {
-      //  cy.viewport(device);
-      //  checkForNavAndLang();
-      //  cy.get("textarea").type("My general comments.")
-      //  cy.contains("Complete Submission").as('completeSubmission')
-      //  cy.get('@completeSubmission').should('be.visible').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //  cy.contains('General Comments')
-      //    .should('not.exist')
-      //})
-      //it(`Records the correct response - ${device} `, () => {
-      //  cy.wait("@createResponse").then((req) => {
-      //    expect (req.response.statusCode).to.eq(200)
-      //    const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
-      //    expect (surveyResponseId).to.not.equal(null)
-      //    cy.restoreLocalStorage()
-      //    cy.getLocalStorage("access_token").then((token) => {
-      //      cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
-      //      const data = resp.query.surveyResponse.data
-      //      const responseAry = []
-      //      Object.entries(data).forEach(([, value]) => {
-      //          responseAry.push(value)
-      //      });
-      //        const sketchIds = []
-      //        Object.entries(responseAry[4].collection).forEach(([, value]) => {
-      //          sketchIds.push(value)
-      //        });
-      //        expect(responseAry.length).to.eq(11)
-      //        sketchIds.forEach((id) => {
-      //         cy.getSketch(id, token).then((sketch) => {
-      //           expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
-      //         });
-      //        });
-      //        expect (responseAry[0].name).to.eq('Test User 1')
-      //        expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
-      //        expect (responseAry[2][0]).to.eq('N')
-      //        expect (responseAry[3][0]).to.eq('Kudafari')
-      //        expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
-      //        expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
-      //        expect (responseAry[5]).to.eq(3)
-      //        expect (responseAry[6]).to.eq("Queen Ann's Revenge")
-      //        expect (responseAry[7]).to.eq(true)
-      //        expect (responseAry[8]).to.eq(30)
-      //        expect (responseAry[9][0]).to.eq("Female")
-      //        expect (responseAry[10]).to.eq("My general comments.")
-      //      });
-      //    });
-      //  });
-      //  if (device === "macbook-15" || device === "ipad-2") {
-      //    cy.get('h1').contains('Thank You')
-      //      .should('be.visible');
-      //    cy.get('button').contains('Submit Another Response')
-      //      .should('exist')
-      //      .click();
-      //    }
-      //  });
+      it(`Can input name or number of vessel - ${device}`, () => {
+        cy.viewport(device); 
+        checkForNavAndLang();
+        cy.contains('vessel')
+          .should('exist')
+          .and('be.visible');
+        cy.log('Skipping question without inputting value');
+        cy.get('input').as('vesselInput')
+          .should('be.empty');
+        cy.get('button').contains('Skip Question').click();
+        cy.restoreLocalStorage();
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.getLocalStorage('surveyId').then((id) => {
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28/`);
+          })
+        })
+        cy.contains('willing')
+          .should('exist')
+          .and('be.visible')
+        cy.get('a[title="Previous Question"]').click()
+        cy.contains('vessel')
+          .should('be.visible')
+          .and('exist')
+        cy.get('@vesselInput').type("Queen Ann's Revenge")
+        cy.get('@vesselInput').then(($input) => {
+          expect ($input.val()).to.equal("Queen Ann's Revenge");
+        });
+        cy.get('button').contains('Next').click()
+      });
+      it(`Can answer additional questions - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.contains('additional')
+          .should('exist')
+          .and('be.visible');
+        cy.get('[title="Yes"]')
+          .should('exist')
+          .and('be.visible')
+          .click()
+      });
+      it(`Can input age - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.restoreLocalStorage()
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.getLocalStorage('surveyId').then((id) => {
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/29/`);
+          })
+        })
+        cy.contains('willing')
+          .should('not.exist')
+        cy.contains("Your age")
+          .should('exist')
+          .and('be.visible')
+        cy.get('input').clear().type("30")
+        cy.contains('Next').as('nextBtn');
+        cy.get('@nextBtn').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+      })
+      it(`Can select gender - ${device}`, () => {
+        cy.viewport(device); 
+        checkForNavAndLang();
+        cy.contains("Gender")
+        cy.contains("Female").click()
+      })
+      it(`Can add comments - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.get("textarea").type("My general comments.")
+        cy.contains("Complete Submission").as('completeSubmission')
+        cy.get('@completeSubmission').should('be.visible').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+        cy.contains('General Comments')
+          .should('not.exist')
+      })
+      it(`Records the correct response - ${device} `, () => {
+        cy.wait("@createResponse").then((req) => {
+          expect (req.response.statusCode).to.eq(200)
+          const surveyResponseId = req.response.body.data.createSurveyResponse.surveyResponse.id
+          expect (surveyResponseId).to.not.equal(null)
+          cy.restoreLocalStorage()
+          cy.getLocalStorage("access_token").then((token) => {
+            cy.getSurveyResponse(surveyResponseId, token).then((resp) => {
+            const data = resp.query.surveyResponse.data
+            const responseAry = []
+            Object.entries(data).forEach(([, value]) => {
+                responseAry.push(value)
+            });
+              const sketchIds = []
+              Object.entries(responseAry[4].collection).forEach(([, value]) => {
+                sketchIds.push(value)
+              });
+              expect(responseAry.length).to.eq(11)
+              sketchIds.forEach((id) => {
+               cy.getSketch(id, token).then((sketch) => {
+                 expect (sketch.sketch.userGeom.geojson.coordinates[0]).to.not.be.empty
+               });
+              });
+              expect (responseAry[0].name).to.eq('Test User 1')
+              expect (responseAry[1]).to.eq('test_user_1@seasketch.org')
+              expect (responseAry[2][0]).to.eq('N')
+              expect (responseAry[3][0]).to.eq('Kudafari')
+              expect (responseAry[4].sectors[0]).to.eq("Fisheries - Commercial, Tuna")
+              expect (responseAry[4].sectors[1]).to.eq("Fisheries - Commercial, Non-Tuna Species")
+              expect (responseAry[5]).to.eq(3)
+              expect (responseAry[6]).to.eq("Queen Ann's Revenge")
+              expect (responseAry[7]).to.eq(true)
+              expect (responseAry[8]).to.eq(30)
+              expect (responseAry[9][0]).to.eq("Female")
+              expect (responseAry[10]).to.eq("My general comments.")
+            });
+          });
+        });
+        //if (device === "macbook-15" || device === "ipad-2") {
+        //  cy.get('h1').contains('Thank You')
+        //    .should('be.visible');
+        //  cy.get('button').contains('Submit Another Response')
+        //    .should('exist')
+        //    .click();
+        //  }
+        });
       });
     })//;
   });//
