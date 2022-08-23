@@ -113,7 +113,7 @@ const drawPolygon = () => {
     .click(100, 600)
     .click(200, 600)
     .click(200, 500)
-    .dblclick(100, 500)
+    .click(100, 500)
 };
 
 const drawInvalidPolygon = () => {
