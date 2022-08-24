@@ -150,7 +150,7 @@ const drawSecondPolygon = () => {
     .click(200, 200)
 };
 
-const devices: any = ["ipad-2"]//"macbook-15", "ipad-2", "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
+const devices: any = ["iphone-x"]//"macbook-15", "ipad-2", "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -561,7 +561,7 @@ describe("Survey creation smoke test", () => {
             .should('be.visible');
         } else {
           cy.get('.mapboxgl-ctrl-scale')
-            .contains('10000')
+            .contains('10,000')
             .should('be.visible');
         }
         
