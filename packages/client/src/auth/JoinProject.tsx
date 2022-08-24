@@ -6,13 +6,11 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import { useHistory, useParams } from "react-router-dom";
 import Spinner from "../components/Spinner";
-import TextInput from "../components/TextInput";
 import {
   ParticipationStatus,
   useJoinProjectMutation,
   useProjectMetadataLazyQuery,
   useProjectMetadataQuery,
-  useUpdateProfileMutation,
 } from "../generated/graphql";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
@@ -20,6 +18,7 @@ import Warning from "../components/Warning";
 import useDialog from "../components/useDialog";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { strategies } from "../offline/GraphqlQueryCache/strategies";
+import UserProfileForm, { useUserProfileState } from "./UserProfileForm";
 
 export const HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY =
   "has-skipped-join-project-prompt";
@@ -34,9 +33,6 @@ export default function JoinProject() {
     },
   });
   const onError = useGlobalErrorHandler();
-  const [updateProfile, updateProfileState] = useUpdateProfileMutation({
-    onError,
-  });
   const [joinProject, joinProjectState] = useJoinProjectMutation({ onError });
   const [lazyProjectMetadata] = useProjectMetadataLazyQuery();
   const graphqlQueryCache = useContext(GraphqlQueryCacheContext);
@@ -46,31 +42,12 @@ export default function JoinProject() {
     // eslint-disable-next-line i18next/no-literal-string
     location.searchParams.get("redirectUrl") || `/${slug}/app`;
 
-  const [profile, setProfile] = useState<{
-    fullname: string;
-    nickname?: string;
-    email?: string;
-    affiliations?: string;
-  }>({
-    ...(data?.me?.profile as {
-      fullname?: string;
-      nickname?: string;
-      email?: string;
-      affiliations?: string;
-    }),
-    fullname: data?.me?.profile?.fullname || "",
-  });
+  const profile = useUserProfileState();
 
   const updateProfileAndJoin = useCallback(async () => {
     if (data?.me?.id && data.project?.id) {
       const projectId = data.project.id;
-      const userId = data.me.id;
-      return updateProfile({
-        variables: {
-          userId,
-          ...profile,
-        },
-      }).then(async () => {
+      return profile.submit().then(async () => {
         await joinProject({
           variables: {
             projectId,
@@ -103,45 +80,20 @@ export default function JoinProject() {
         "User.id and/or Project.id not set yet. Waiting for graphql query data."
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     data?.me?.id,
     data?.project?.id,
-    updateProfile,
-    profile,
+    profile.submit,
     joinProject,
     graphqlQueryCache,
     slug,
     lazyProjectMetadata,
   ]);
 
-  useEffect(() => {
-    if (data?.me?.profile) {
-      setProfile({
-        ...(data?.me.profile as {
-          fullname: string;
-          nickname?: string;
-          email?: string;
-          affiliations?: string;
-        }),
-      });
-    }
-  }, [data?.me?.profile]);
-
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
-  const [errors, setErrors] = useState<{ fullname?: string }>({});
 
   const hasPrivacyPolicy = false;
-
-  useEffect(() => {
-    if (profile.fullname.length < 1) {
-      setErrors((prev) => ({
-        ...prev,
-        fullname: "Name is required",
-      }));
-    } else {
-      setErrors((prev) => ({}));
-    }
-  }, [profile.fullname]);
 
   const { alert } = useDialog();
 
@@ -271,78 +223,41 @@ export default function JoinProject() {
           <h2 className="text-lg">
             <Trans>Your Profile</Trans>
           </h2>
-          <TextInput
-            required
-            name="fullname"
-            onChange={(fullname) =>
-              setProfile((prev) => ({ ...prev, fullname }))
-            }
-            error={submissionAttempted ? errors.fullname : undefined}
-            value={profile.fullname}
-            label={<Trans>Full Name</Trans>}
-          />
-          <TextInput
-            name="nickname"
-            onChange={(nickname) =>
-              setProfile((prev) => ({ ...prev, nickname }))
-            }
-            value={profile.nickname || ""}
-            label={<Trans>Nickname</Trans>}
-            description={
-              <Trans>
-                If included, this will be shown as your primary username while
-                participating in the discussion forums.
-              </Trans>
-            }
-          />
-          <TextInput
-            name="email"
-            onChange={(email) => setProfile((prev) => ({ ...prev, email }))}
-            value={profile.email || ""}
-            description={
-              <Trans>
-                Will be shown in your posts to the discussion forums if
-                provided.
-              </Trans>
-            }
-            label={<Trans>Email Address</Trans>}
-          />
-          <TextInput
-            textarea
-            name="affiliations"
-            onChange={(affiliations) =>
-              setProfile((prev) => ({ ...prev, affiliations }))
-            }
-            value={profile.affiliations || ""}
-            placeholder="e.g. University of California Santa Barbara"
-            label={<Trans>Affiliations and Bio</Trans>}
+          <UserProfileForm
+            showValidationErrors={submissionAttempted}
+            onChange={profile.setState}
+            state={profile.state}
           />
           <div className="w-full flex flex-col items-center justify-center pt-2 pb-2">
             <button
               onClick={() => {
                 setSubmissionAttempted(true);
-                if (Object.values(errors).length === 0) {
+                if (!profile.hasErrors) {
                   updateProfileAndJoin().then(() => {
                     history.push(redirectUrl);
                   });
                 }
               }}
-              disabled={updateProfileState.loading || joinProjectState.loading}
+              disabled={
+                profile.mutationState.loading || joinProjectState.loading
+              }
               className={`${
-                submissionAttempted && Object.values(errors).length > 0
+                submissionAttempted && profile.hasErrors
                   ? "bg-red-600 hover:bg-red-700"
                   : "bg-primary-500 hover:bg-primary-600"
               } text-white shadow rounded w-full p-2 text-lg ${
-                (updateProfileState.loading || joinProjectState.loading) &&
+                (profile.mutationState.loading || joinProjectState.loading) &&
                 "opacity-50"
               }`}
             >
               <Trans>Join Project</Trans>
             </button>
             <button
-              disabled={updateProfileState.loading || joinProjectState.loading}
+              disabled={
+                profile.mutationState.loading || joinProjectState.loading
+              }
               className={`pt-2 text-base mt-2 border-b border-gray-300 hover:border-black ${
-                (updateProfileState.loading || joinProjectState.loading) &&
+                (profile.mutationState.loading || joinProjectState.loading) &&
                 "opacity-50"
               }`}
               onClick={() => {

@@ -14481,7 +14481,7 @@ export type MeQuery = (
     & Pick<User, 'id'>
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'affiliations'>
+      & UserProfileDetailsFragment
     )> }
   )> }
 );
@@ -15970,7 +15970,7 @@ export type ProjectInviteEmailStatusSubscriptionSubscription = (
 
 export type UserProfileDetailsFragment = (
   { __typename?: 'Profile' }
-  & Pick<Profile, 'userId'>
+  & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
 );
 
 export type UpdateProfileMutationVariables = Exact<{
@@ -15995,9 +15995,24 @@ export type UpdateProfileMutation = (
         & Pick<User, 'id'>
         & { profile?: Maybe<(
           { __typename?: 'Profile' }
-          & Pick<Profile, 'userId' | 'picture' | 'affiliations' | 'email' | 'fullname' | 'nickname'>
+          & UserProfileDetailsFragment
         )> }
       )> }
+    )> }
+  )> }
+);
+
+export type MyProfileQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyProfileQuery = (
+  { __typename?: 'Query' }
+  & { me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & UserProfileDetailsFragment
     )> }
   )> }
 );
@@ -16674,6 +16689,11 @@ export const InviteEmailDetailsFragmentDoc = /*#__PURE__*/ gql`
 export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment UserProfileDetails on Profile {
   userId
+  fullname
+  affiliations
+  email
+  nickname
+  picture
 }
     `;
 export const ProjectBucketSettingDocument = /*#__PURE__*/ gql`
@@ -18028,16 +18048,11 @@ export const MeDocument = /*#__PURE__*/ gql`
   me {
     id
     profile {
-      userId
-      fullname
-      nickname
-      email
-      picture
-      affiliations
+      ...UserProfileDetails
     }
   }
 }
-    `;
+    ${UserProfileDetailsFragmentDoc}`;
 export const ProjectRegionDocument = /*#__PURE__*/ gql`
     query ProjectRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -19042,19 +19057,23 @@ export const UpdateProfileDocument = /*#__PURE__*/ gql`
       user {
         id
         profile {
-          userId
-          picture
-          affiliations
-          userId
-          email
-          fullname
-          nickname
+          ...UserProfileDetails
         }
       }
     }
   }
 }
-    `;
+    ${UserProfileDetailsFragmentDoc}`;
+export const MyProfileDocument = /*#__PURE__*/ gql`
+    query MyProfile {
+  me {
+    id
+    profile {
+      ...UserProfileDetails
+    }
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
 export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
     query UserIsSuperuser {
   currentUserIsSuperuser
@@ -19117,6 +19136,7 @@ export const namedOperations = {
     UserInfo: 'UserInfo',
     ProjectInvites: 'ProjectInvites',
     InviteEditorModalQuery: 'InviteEditorModalQuery',
+    MyProfile: 'MyProfile',
     UserIsSuperuser: 'UserIsSuperuser'
   },
   Mutation: {

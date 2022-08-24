@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import useTimeout from "use-timeout";
+import { useMyProfileQuery } from "../generated/graphql";
 
 export interface ProfileStatusButtonProps {
   children?: React.ReactNode;
@@ -41,6 +42,8 @@ function ProfileStatusButton({
 
   const onClickHandler = onClick ? () => onClick() : undefined;
   const { user, isLoading, error, isAuthenticated } = useAuth0();
+  const { data } = useMyProfileQuery();
+
   if (error) {
     return (
       <div
@@ -98,10 +101,10 @@ function ProfileStatusButton({
       aria-haspopup="true"
       onClick={onClickHandler}
     >
-      {user.picture ? (
+      {data?.me?.profile?.picture || user.picture ? (
         <img
           className="h-8 w-8 rounded-full"
-          src={user.picture}
+          src={data?.me?.profile?.picture || user.picture}
           referrerPolicy="no-referrer"
           alt=""
         />

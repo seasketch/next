@@ -76,14 +76,17 @@ export default function MiniSidebar({
         tabIndex={5}
         anySidebarOpen={!!sidebar}
       />
-      <SettingsButton
+      {/* <SettingsButton
         tooltip={t("Account Settings")}
         sidebarOpen={sidebar === "settings"}
         onClick={openSidebar("settings")}
         tabIndex={6}
         anySidebarOpen={!!sidebar}
-      />
+      /> */}
 
+      <div className="w-8 my-3" style={{ filter: "grayscale(50%)" }}>
+        <ProfileStatusButton onClick={onExpand} />
+      </div>
       {data?.project?.sessionIsAdmin && (
         <AdminButton
           href={`/${slug}/admin`}
@@ -92,9 +95,6 @@ export default function MiniSidebar({
           anySidebarOpen={!!sidebar}
         />
       )}
-      <div className="w-8 mt-3" style={{ filter: "grayscale(50%)" }}>
-        <ProfileStatusButton onClick={onExpand} />
-      </div>
       <a className={`w-8 bottom-6 -ml-0.5 absolute`} href="/">
         <motion.img src={logo} />
       </a>

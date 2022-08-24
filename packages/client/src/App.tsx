@@ -63,7 +63,7 @@ const LazyFullScreenOfflinePage = React.lazy(
 const LazyAccountSettingsPage = React.lazy(
   () =>
     import(
-      /* webpackChunkName: "AccountSettingsPage" */ "./auth/AccountSettingsPage"
+      /* webpackChunkName: "AccountSettingsPage" */ "./auth/CacheSettingsPage"
     )
 );
 
@@ -75,7 +75,6 @@ function App() {
   const { user } = useAuth0();
   const { t } = useTranslation(["homepage"]);
   const [error, setError] = useState<Error | null>(null);
-  console.log("user", user);
   useEffect(() => {
     if (user) {
       Sentry.setUser({ email: user.email, id: user.sub });
@@ -243,7 +242,7 @@ function App() {
                   <Route path="/:slug/admin">
                     <LazyProjectAdmin />
                   </Route>
-                  <Route path="/:slug/app/:sidebar?">
+                  <Route path={["/:slug/profile", "/:slug/app/:sidebar?"]}>
                     <ProjectAccessGate>
                       <LazyProjectApp />
                     </ProjectAccessGate>

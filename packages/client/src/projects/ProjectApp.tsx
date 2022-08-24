@@ -16,13 +16,14 @@ import { OfflineStateContext } from "../offline/OfflineStateContext";
 import OfflineToastNotification from "../offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 import JoinProjectPrompt from "../auth/JoinProjectPrompt";
+import UserProfileModal from "./UserProfileModal";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
 const LazyAccountSettingsPage = React.lazy(
   () =>
     import(
-      /* webpackChunkName: "AccountSettings" */ "../auth/AccountSettingsPage"
+      /* webpackChunkName: "AccountSettings" */ "../auth/CacheSettingsPage"
     )
 );
 
@@ -67,6 +68,11 @@ export default function ProjectApp() {
             history.replace(`/${slug}/app`);
           }}
         />
+        <Route path={`/${slug}/profile`}>
+          <UserProfileModal
+            onRequestClose={() => history.push(`/${slug}/app`)}
+          />
+        </Route>
         <AnimatePresence initial={false}>
           {showSidebar && (
             <ProjectAppSidebar

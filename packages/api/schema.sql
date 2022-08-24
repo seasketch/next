@@ -5580,7 +5580,7 @@ COMMENT ON FUNCTION public.it_me("userId" integer) IS '@omit';
 CREATE FUNCTION public.join_project(project_id integer) RETURNS void
     LANGUAGE sql SECURITY DEFINER
     AS $$
-    insert into project_participants (user_id, project_id, share_profile) values (current_setting('session.user_id', true)::integer, project_id, true) on conflict on constraint project_participants_pkey do update set share_profile = true;
+    insert into project_participants (user_id, project_id, share_profile, approved) values (current_setting('session.user_id', true)::integer, project_id, true, session_is_superuser()) on conflict on constraint project_participants_pkey do update set share_profile = true;
   $$;
 
 

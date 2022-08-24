@@ -3,7 +3,7 @@ import { useOnlineState } from "beautiful-react-hooks";
 import { CacheSettingCards } from "../offline/ClientCacheSettingsCards";
 import useIsSuperuser from "../useIsSuperuser";
 
-export default function AccountSettingsPage() {
+export default function CacheSettingsPage() {
   const isSuperuser = useIsSuperuser();
   const online = useOnlineState();
   return (

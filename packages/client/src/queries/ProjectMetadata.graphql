@@ -53,12 +53,7 @@ query Me {
   me {
     id
     profile {
-      userId
-      fullname
-      nickname
-      email
-      picture
-      affiliations
+      ...UserProfileDetails
     }
   }
 }

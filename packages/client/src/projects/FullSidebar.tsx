@@ -1,5 +1,5 @@
 import React, { ReactNode, useContext, useEffect } from "react";
-import { useHistory, useParams } from "react-router-dom";
+import { Link, useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
@@ -162,94 +162,116 @@ export default function FullSidebar({
           icon={ForumsIcon}
           onClick={chooseSidebar("forums")}
         />
-        {project?.sessionIsAdmin && (
+        {project?.isOfflineEnabled && (
           <NavItem
-            onClick={() => history.push("./admin")}
-            label={t("Project Administration")}
-            icon={AdminIcon}
+            icon={
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+                />
+              </svg>
+            }
+            label={t("Cache Settings")}
+            onClick={chooseSidebar("settings")}
           />
         )}
+        <a
+          target="_blank"
+          rel="noreferrer"
+          href={`mailto:${
+            data?.project?.supportEmail || "support@seasketch.org"
+          }`}
+          className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
+          role="menuitem"
+        >
+          <div className="w-6 h-6 mr-3 opacity-80">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+          </div>
+          {t("Contact support")}
+        </a>
       </nav>
+
       {user && (
         <>
           <nav className="mt-4">
             <SignedInAs className="mb-1" />
-            <div className="py-1">
-              <NavItem
-                icon={
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
+            <NavItem
+              icon={
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-6 h-6"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              }
+              label={t("My Profile")}
+              onClick={() => {
+                if (
+                  data?.project?.sessionParticipationStatus !==
+                  ParticipationStatus.ParticipantSharedProfile
+                ) {
+                  history.push(`/${slug}/join`);
+                } else {
+                  history.push(`/${slug}/profile`);
                 }
-                label={t("Account Settings")}
-                onClick={chooseSidebar("settings")}
-              />
-              <a
-                target="_blank"
-                rel="noreferrer"
-                href={`mailto:${
-                  data?.project?.supportEmail || "support@seasketch.org"
-                }`}
-                className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
-                role="menuitem"
-              >
-                <div className="w-6 h-6 mr-3 opacity-80">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"
-                    />
-                  </svg>
-                </div>
-                {t("Contact support")}
-              </a>
-              <NavItem
-                icon={
-                  <svg
-                    className="left-0.5 relative"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                }
-                label={t("Sign Out")}
-                onClick={() => {
-                  cache?.logout();
-                  logout({
-                    returnTo:
-                      window.location.protocol +
-                      "//" +
-                      window.location.host +
-                      "/",
-                  });
-                }}
-              />
-            </div>
+              }}
+            />
+            <NavItem
+              icon={
+                <svg
+                  className="left-0.5 relative"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+              }
+              label={t("Sign Out")}
+              onClick={() => {
+                cache?.logout();
+                logout({
+                  returnTo:
+                    window.location.protocol +
+                    "//" +
+                    window.location.host +
+                    "/",
+                });
+              }}
+            />
           </nav>
         </>
       )}
@@ -288,9 +310,36 @@ export default function FullSidebar({
           }}
         />
       )}
+      {project?.sessionIsAdmin && (
+        <Link
+          to="./admin"
+          className="bg-cool-gray-700 block w-full p-4 rounded text-center mt-8"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-6 h-6 inline-block mr-3 -mt-1 text-gray-300"
+          >
+            <path
+              fillRule="evenodd"
+              d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span className="flex-1">{t("Project Admin Dashboard")}</span>
+        </Link>
+      )}
 
       <div className="fixed bottom-0 mb-7">
-        <div className=" flex">
+        {/* {project?.sessionIsAdmin && (
+          <NavItem
+            onClick={() => history.push("./admin")}
+            label={t("Project Administration")}
+            icon={AdminIcon}
+          />
+        )} */}
+        <div className="flex">
           <div className="flex items-center">
             <a href="/">
               <img
