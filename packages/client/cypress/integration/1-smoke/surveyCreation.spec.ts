@@ -766,25 +766,25 @@ describe("Survey creation smoke test", () => {
       })//;
       it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device); 
-        cy.get('button').then(($button) => {
-          if ($button.text().includes('Done')) {
-            cy.get('button').contains('Done').then(($btn) => {
-              {$btn.trigger('click')}
-            });
-          }
-        });
-        cy.get('button').contains('Done')
-          .should('not.exist')
-        if (device === "iphone-5" || device ==="iphone-x") {
-          cy.get('.mapboxgl-ctrl-scale')
-          //.should('not.exist')
-          .should('not.be.visible')
-          cy.contains('Fisheries')
-            .should('not.exist')
-        //cy.get('img[alt="Satellite map preview')
+        //cy.get('button').then(($button) => {
+        //  if ($button.text().includes('Done')) {
+        //    cy.get('button').contains('Done').then(($btn) => {
+        //      {$btn.trigger('click')}
+        //    });
+        //  }
+        //});
+        //cy.get('button').contains('Done')
         //  .should('not.exist')
-
-      }
+        //if (device === "iphone-5" || device ==="iphone-x") {
+        //  cy.get('.mapboxgl-ctrl-scale')
+        //  //.should('not.exist')
+        //  .should('not.be.visible')
+        //  cy.contains('Fisheries')
+        //    .should('not.exist')
+        ////cy.get('img[alt="Satellite map preview')
+        ////  .should('not.exist')
+//
+      //}
         cy.contains('Area Name')
           .should('exist')
           .and('be.visible');
