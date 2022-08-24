@@ -6078,7 +6078,6 @@ CREATE TABLE public.user_profiles (
     picture text,
     email public.email,
     affiliations text,
-    bio text,
     CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
 

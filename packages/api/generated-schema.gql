@@ -8391,7 +8391,6 @@ means of listing out all profiles in bulk.
 """
 type Profile {
   affiliations: String
-  bio: String
   email: Email
   fullname: String
   nickname: String
@@ -8407,7 +8406,6 @@ Represents an update to a `Profile`. Fields that are set will be updated.
 """
 input ProfilePatch {
   affiliations: String
-  bio: String
   email: Email
   fullname: String
   nickname: String

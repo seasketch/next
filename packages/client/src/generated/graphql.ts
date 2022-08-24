@@ -7404,7 +7404,6 @@ export enum PostsOrderBy {
 export type Profile = {
   __typename?: 'Profile';
   affiliations?: Maybe<Scalars['String']>;
-  bio?: Maybe<Scalars['String']>;
   email?: Maybe<Scalars['Email']>;
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
@@ -7417,7 +7416,6 @@ export type Profile = {
 /** Represents an update to a `Profile`. Fields that are set will be updated. */
 export type ProfilePatch = {
   affiliations?: Maybe<Scalars['String']>;
-  bio?: Maybe<Scalars['String']>;
   email?: Maybe<Scalars['Email']>;
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
@@ -14451,7 +14449,7 @@ export type ProjectMetadataMeFragFragment = (
   & Pick<User, 'id'>
   & { profile?: Maybe<(
     { __typename?: 'Profile' }
-    & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
+    & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'affiliations'>
   )> }
 );
 
@@ -14485,7 +14483,7 @@ export type MeQuery = (
     & Pick<User, 'id'>
     & { profile?: Maybe<(
       { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'bio' | 'affiliations'>
+      & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'email' | 'picture' | 'affiliations'>
     )> }
   )> }
 );
@@ -15693,7 +15691,7 @@ export type UserInfoQuery = (
       & Pick<Group, 'name' | 'id'>
     )>>, profile?: Maybe<(
       { __typename?: 'Profile' }
-      & Pick<Profile, 'userId' | 'affiliations' | 'bio' | 'email' | 'fullname' | 'nickname' | 'picture'>
+      & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
     )> }
   )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
@@ -15972,6 +15970,11 @@ export type ProjectInviteEmailStatusSubscriptionSubscription = (
   )> }
 );
 
+export type UserProfileDetailsFragment = (
+  { __typename?: 'Profile' }
+  & Pick<Profile, 'userId'>
+);
+
 export type UpdateProfileMutationVariables = Exact<{
   userId: Scalars['Int'];
   affiliations?: Maybe<Scalars['String']>;
@@ -15979,7 +15982,6 @@ export type UpdateProfileMutationVariables = Exact<{
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['Upload']>;
-  bio?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -15995,7 +15997,7 @@ export type UpdateProfileMutation = (
         & Pick<User, 'id'>
         & { profile?: Maybe<(
           { __typename?: 'Profile' }
-          & Pick<Profile, 'picture' | 'bio' | 'affiliations' | 'userId' | 'email' | 'fullname' | 'nickname'>
+          & Pick<Profile, 'userId' | 'picture' | 'affiliations' | 'email' | 'fullname' | 'nickname'>
         )> }
       )> }
     )> }
@@ -16378,7 +16380,6 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
     nickname
     email
     picture
-    bio
     affiliations
   }
 }
@@ -16670,6 +16671,11 @@ export const InviteEmailDetailsFragmentDoc = gql`
   tokenExpiresAt
   error
   updatedAt
+}
+    `;
+export const UserProfileDetailsFragmentDoc = gql`
+    fragment UserProfileDetails on Profile {
+  userId
 }
     `;
 export const ProjectBucketSettingDocument = gql`
@@ -20414,7 +20420,6 @@ export const MeDocument = gql`
       nickname
       email
       picture
-      bio
       affiliations
     }
   }
@@ -22790,7 +22795,6 @@ export const UserInfoDocument = gql`
     profile {
       userId
       affiliations
-      bio
       email
       fullname
       nickname
@@ -23362,17 +23366,17 @@ export function useProjectInviteEmailStatusSubscriptionSubscription(baseOptions?
 export type ProjectInviteEmailStatusSubscriptionSubscriptionHookResult = ReturnType<typeof useProjectInviteEmailStatusSubscriptionSubscription>;
 export type ProjectInviteEmailStatusSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ProjectInviteEmailStatusSubscriptionSubscription>;
 export const UpdateProfileDocument = gql`
-    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload, $bio: String) {
+    mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload) {
   updateProfileByUserId(
-    input: {userId: $userId, patch: {bio: $bio, affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
+    input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
   ) {
     profile {
       userId
       user {
         id
         profile {
+          userId
           picture
-          bio
           affiliations
           userId
           email
@@ -23405,7 +23409,6 @@ export type UpdateProfileMutationFn = Apollo.MutationFunction<UpdateProfileMutat
  *      fullname: // value for 'fullname'
  *      nickname: // value for 'nickname'
  *      picture: // value for 'picture'
- *      bio: // value for 'bio'
  *   },
  * });
  */
@@ -23657,6 +23660,7 @@ export const namedOperations = {
     ParticipantListDetails: 'ParticipantListDetails',
     UserListDetails: 'UserListDetails',
     InviteDetails: 'InviteDetails',
-    InviteEmailDetails: 'InviteEmailDetails'
+    InviteEmailDetails: 'InviteEmailDetails',
+    UserProfileDetails: 'UserProfileDetails'
   }
 }

@@ -50,14 +50,12 @@ export default function JoinProject() {
     fullname: string;
     nickname?: string;
     email?: string;
-    bio?: string;
     affiliations?: string;
   }>({
     ...(data?.me?.profile as {
       fullname?: string;
       nickname?: string;
       email?: string;
-      bio?: string;
       affiliations?: string;
     }),
     fullname: data?.me?.profile?.fullname || "",
@@ -123,7 +121,6 @@ export default function JoinProject() {
           fullname: string;
           nickname?: string;
           email?: string;
-          bio?: string;
           affiliations?: string;
         }),
       });
@@ -311,28 +308,15 @@ export default function JoinProject() {
             label={<Trans>Email Address</Trans>}
           />
           <TextInput
+            textarea
             name="affiliations"
             onChange={(affiliations) =>
               setProfile((prev) => ({ ...prev, affiliations }))
             }
             value={profile.affiliations || ""}
             placeholder="e.g. University of California Santa Barbara"
-            label={<Trans>Affiliations</Trans>}
+            label={<Trans>Affiliations and Bio</Trans>}
           />
-          <TextInput
-            textarea
-            name="bio"
-            onChange={(bio) => setProfile((prev) => ({ ...prev, bio }))}
-            value={profile.bio || ""}
-            label={<Trans>Bio</Trans>}
-            placeholder={t("Include any additional info about yourself here.")}
-          />
-          {/* <InputBlock
-            title={<Trans>Name</Trans>}
-            input={
-              
-            }
-          /> */}
           <div className="w-full flex flex-col items-center justify-center pt-2 pb-2">
             <button
               onClick={() => {

@@ -128,7 +128,6 @@ query UserInfo($userId: Int!, $slug: String!) {
     profile {
       userId
       affiliations
-      bio
       email
       fullname
       nickname

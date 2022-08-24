@@ -31,7 +31,6 @@ fragment ProjectMetadataMeFrag on User {
     nickname
     email
     picture
-    bio
     affiliations
   }
 }
@@ -59,7 +58,6 @@ query Me {
       nickname
       email
       picture
-      bio
       affiliations
     }
   }
