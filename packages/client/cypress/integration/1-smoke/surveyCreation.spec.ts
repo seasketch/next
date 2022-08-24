@@ -99,30 +99,28 @@ const drawPolygon = () => {
   cy.window().its('mapContext').then((mapContext) => {
     let map = mapContext.map 
     if (!map.loaded()) {
-      console.log('not loaded')
-      map.on('load', () => {
-        cy.wait(5000)
-      })
+      cy.log('Map not loaded')
+      cy.wait(5000)
     } else {
-   console.log('loaded')
-    expect(map.loaded()).to.eq(true)
-    cy.get('.mapboxgl-canvas').each((t) => {
-      console.log('canvas')
-      console.log(t)
-      expect (t).to.exist
-      const canvases = [];
-      canvases.push(t);
-      return canvases
-    }).then((ary) => {
-      console.log('canvasAry')
-      const el = ary[0]
-      return el
-    }).as('el');
-    cy.get('@el').click(100,500)     
-      .click(100, 600)
-      .click(200, 600)
-      .click(200, 500)
-      .click(100, 500)
+      cy.log('Map loaded')
+      expect(map.loaded()).to.eq(true)
+      cy.get('.mapboxgl-canvas').each((t) => {
+        console.log('canvas')
+        console.log(t)
+        expect (t).to.exist
+        const canvases = [];
+        canvases.push(t);
+        return canvases
+      }).then((ary) => {
+        console.log('canvasAry')
+        const el = ary[0]
+        return el
+      }).as('el');
+      cy.get('@el').click(100,500)     
+        .click(100, 600)
+        .click(200, 600)
+        .click(200, 500)
+        .click(100, 500)
 
     }
   });
@@ -486,7 +484,7 @@ describe("Survey creation smoke test", () => {
           cy.get('@beginBtn').then(($btn) => {
             {$btn.trigger('click')}
           });
-          waitOnMapbox(9);
+          waitOnMapbox(10);
           cy.get('span.mapboxgl-ctrl-icon')
             .should('be.visible')
           drawPolygon();
@@ -583,26 +581,26 @@ describe("Survey creation smoke test", () => {
           //  cy.saveLocalStorage()
           //})
       });
-      //it (`Renders the correct basemap - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.contains('Maldives Light').as('maldivesLightBasemap')
-      //  cy.get('@maldivesLightBasemap').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //  cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
-      //  cy.contains('Satellite')
-      //    .should('not.have.class', 'font-semibold')
-      //})
-      //it (`Can select different basemap - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.contains('Satellite').as('satelliteBasemap')
-      //    cy.get('@satelliteBasemap').then(($btn) => {
-      //      {$btn.trigger('click')}
-      //    })
-      //    .should('have.class', 'font-semibold')   
-      //  cy.contains('Maldives Light')
-      //    .should('not.have.class', 'font-semibold')
-      //})
+      it (`Renders the correct basemap - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains('Maldives Light').as('maldivesLightBasemap')
+        cy.get('@maldivesLightBasemap').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+        cy.get('@maldivesLightBasemap').should('have.class', 'font-semibold')
+        cy.contains('Satellite')
+          .should('not.have.class', 'font-semibold')
+      })
+      it (`Can select different basemap - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains('Satellite').as('satelliteBasemap')
+          cy.get('@satelliteBasemap').then(($btn) => {
+            {$btn.trigger('click')}
+          })
+          .should('have.class', 'font-semibold')   
+        cy.contains('Maldives Light')
+          .should('not.have.class', 'font-semibold')
+      })
       //it(`Shows option to focus on location - ${device}`, () => {
       //  cy.viewport(device)
       //  cy.restoreLocalStorage()
