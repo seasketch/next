@@ -885,158 +885,158 @@ describe("Survey creation smoke test", () => {
             .click()
         }
       });
-      //it(`Renders sector specific attributes for second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.get('h1').contains('Area Name')
-      //    .should('exist')
-      //    .and('be.visible');
-      //  cy.get(".mt-1 > .block").clear({force:true})
-      //    .type("Reef fishing area.");
-      //  cy.get('.mt-1 > .block')
-      //    .should('have.value', "Reef fishing area.")
-      //  cy.contains('What type of gear');
-      //  cy.contains('What type of species');
-      //  cy.get('[title="Pole and Line"]')
-      //    .should('not.exist');
-      //  cy.get('[title="Yellowfin"]')
-      //    .should('not.exist');
-      //  cy.get('button').contains('Handline')
-      //    .should('be.visible')
-      //    .click();
-      //  cy.get('button').contains('Reef fish')
-      //    .should('be.visible')
-      //    .click();
-      //  cy.get('[style="max-height: 60vh;"] > .w-full')
-      //    .type("Bountiful reef fishing.");
-      //  cy.contains('Save').click();
-      //});
-      //it(`Can finish sector - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.contains("Sea cucumber fishing area.");
-      //  cy.contains("Reef fishing area.");
-      //  cy.contains("Fisheries - Commercial, Non-Tuna Species")
-      //  //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
-      //  //  {$el.trigger('click')}
-      //  //})
-      //  cy.contains("Finish Sector").as("finishSector")
-      //  cy.get('@finishSector').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //})
-      //it (`Shows completed sectors - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.get('button').then((btn) => {
-      //    if (btn.text().includes('Finish Sector')) {
-      //      cy.get('button').contains('Finish Sector').as('finishSector')
-      //      cy.get('@finishSector').then(($btn) => {
-      //        {$btn.trigger('click')}
-      //      })
-      //    }
-      //  })
-      //  if (device !== "iphone-x") {
-      //    //these don't exist on this page for iphone-x
-      //    checkForNavAndLang();
-      //  }
-      //  cy.get('button').then(($btn) => {
-      //    if ($btn.text().includes("Finish Sector")) {
-      //      cy.get('button').contains("Finish Sector").then(($btn) => {
-      //        {$btn.trigger('click', {multiple: true})};
-      //      });
-      //    };
-      //  });
-      //  cy.get('h1').contains('Your sectors')
-      //  //completed sector
-      //  cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
-      //    expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
-      //  })
-      //  //completed sector
-      //  cy.get('button').contains('Fisheries - Commercial, Non-Tuna Species').parent().then(($btn) => {
-      //    expect ($btn.css('background'))
-      //    .to
-      //    .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
-      //  })
-      //  cy.contains("Next Question").as('nextQuestion')
-      //  cy.get('@nextQuestion').then(($btn) => {
-      //    {$btn.trigger('click', {multiple:true})}
-      //  })
-      //})
-      //it(`Can input number of people reflected in response - ${device}`, () => {
-      //  cy.viewport(device);
-      //  checkForNavAndLang();
-      //  cy.get('[data-question="yes"]').contains('Please indicate how many people are reflected in this response')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('input[type="number"]').as('numberInput')
-      //    .should('exist');
-      //  cy.log('A user can skip question')
-      //  cy.get('@numberInput').then(($input) => {
-      //    expect ($input.val()).to.equal('0')
-      //  })
-      //  cy.contains('response')
-      //  cy.log('A user can input number by typing')
-      //  cy.get('@numberInput').type('4').then(($input) => {
-      //    expect ($input.val()).to.equal('04')
-      //  });
-      //  cy.log('Using substract button to adjust number')
-      //  cy.get('button[title="Subtract"]')
-      //    .click()
-      //    .click();
-      //  cy.get('@numberInput').then(($input) => {
-      //    expect ($input.val()).to.equal('2');
-      //  });
-      //  cy.log('Using add button to adjust number')
-      //  cy.get('button[title=Add]')
-      //    .click()
-      //  cy.get('@numberInput').then(($input) => {
-      //    expect ($input.val()).to.equal('3');
-      //  });
-      //  cy.get('button').contains('Next').as('nextQuestionBtn')
-      //    .should('exist')
-      //    //.and('be.visible')
-      //    .then(($btn) => {
-      //      {$btn.trigger('click')}
-      //    });
-      //});
-      //it(`Can input name or number of vessel - ${device}`, () => {
-      //  cy.viewport(device); 
-      //  checkForNavAndLang();
-      //  cy.contains('vessel')
-      //    .should('exist')
-      //    .and('be.visible');
-      //  cy.log('Skipping question without inputting value');
-      //  cy.get('input').as('vesselInput')
-      //    .should('be.empty');
-      //  cy.get('button').contains('Skip Question').click();
-      //  cy.restoreLocalStorage();
-      //  cy.getLocalStorage('slug').then((slug) => {
-      //    cy.getLocalStorage('surveyId').then((id) => {
-      //      cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28/`);
-      //    })
-      //  })
-      //  cy.contains('willing')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('a[title="Previous Question"]').click()
-      //  cy.contains('vessel')
-      //    .should('be.visible')
-      //    .and('exist')
-      //  cy.get('@vesselInput').type("Queen Ann's Revenge")
-      //  cy.get('@vesselInput').then(($input) => {
-      //    expect ($input.val()).to.equal("Queen Ann's Revenge");
-      //  });
-      //  cy.get('button').contains('Next').click()
-      //});
-      //it(`Can answer additional questions - ${device}`, () => {
-      //  cy.viewport(device);
-      //  checkForNavAndLang();
-      //  cy.contains('additional')
-      //    .should('exist')
-      //    .and('be.visible');
-      //  cy.get('[title="Yes"]')
-      //    .should('exist')
-      //    .and('be.visible')
-      //    .click()
-      //});
+      it(`Renders sector specific attributes for second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('h1').contains('Area Name')
+          .should('exist')
+          .and('be.visible');
+        cy.get(".mt-1 > .block").clear({force:true})
+          .type("Reef fishing area.");
+        cy.get('.mt-1 > .block')
+          .should('have.value', "Reef fishing area.")
+        cy.contains('What type of gear');
+        cy.contains('What type of species');
+        cy.get('[title="Pole and Line"]')
+          .should('not.exist');
+        cy.get('[title="Yellowfin"]')
+          .should('not.exist');
+        cy.get('button').contains('Handline')
+          .should('be.visible')
+          .click();
+        cy.get('button').contains('Reef fish')
+          .should('be.visible')
+          .click();
+        cy.get('[style="max-height: 60vh;"] > .w-full')
+          .type("Bountiful reef fishing.");
+        cy.contains('Save').click();
+      });
+      it(`Can finish sector - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device);
+        cy.contains("Sea cucumber fishing area.");
+        cy.contains("Reef fishing area.");
+        cy.contains("Fisheries - Commercial, Non-Tuna Species")
+        //cy.get(".space-y-2 > :nth-child(2) > .select-none").should('be.visible').then(($el) => {
+        //  {$el.trigger('click')}
+        //})
+        cy.contains("Finish Sector").as("finishSector")
+        cy.get('@finishSector').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+      })
+      it (`Shows completed sectors - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('button').then((btn) => {
+          if (btn.text().includes('Finish Sector')) {
+            cy.get('button').contains('Finish Sector').as('finishSector')
+            cy.get('@finishSector').then(($btn) => {
+              {$btn.trigger('click')}
+            })
+          }
+        })
+        if (device !== "iphone-x") {
+          //these don't exist on this page for iphone-x
+          checkForNavAndLang();
+        }
+        cy.get('button').then(($btn) => {
+          if ($btn.text().includes("Finish Sector")) {
+            cy.get('button').contains("Finish Sector").then(($btn) => {
+              {$btn.trigger('click', {multiple: true})};
+            });
+          };
+        });
+        cy.get('h1').contains('Your sectors')
+        //completed sector
+        cy.get('button').contains('Fisheries - Commercial, Tuna').parent().then(($btn) => {
+          expect ($btn.css('background')).to.include('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153))')
+        })
+        //completed sector
+        cy.get('button').contains('Fisheries - Commercial, Non-Tuna Species').parent().then(($btn) => {
+          expect ($btn.css('background'))
+          .to
+          .equal('rgba(0, 0, 0, 0) linear-gradient(rgb(62, 188, 181), rgb(39, 160, 153)) repeat scroll 0% 0% / auto padding-box border-box')
+        })
+        cy.contains("Next Question").as('nextQuestion')
+        cy.get('@nextQuestion').then(($btn) => {
+          {$btn.trigger('click', {multiple:true})}
+        })
+      })
+      it(`Can input number of people reflected in response - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.get('[data-question="yes"]').contains('Please indicate how many people are reflected in this response')
+          .should('exist')
+          .and('be.visible')
+        cy.get('input[type="number"]').as('numberInput')
+          .should('exist');
+        cy.log('A user can skip question')
+        cy.get('@numberInput').then(($input) => {
+          expect ($input.val()).to.equal('0')
+        })
+        cy.contains('response')
+        cy.log('A user can input number by typing')
+        cy.get('@numberInput').type('4').then(($input) => {
+          expect ($input.val()).to.equal('04')
+        });
+        cy.log('Using substract button to adjust number')
+        cy.get('button[title="Subtract"]')
+          .click()
+          .click();
+        cy.get('@numberInput').then(($input) => {
+          expect ($input.val()).to.equal('2');
+        });
+        cy.log('Using add button to adjust number')
+        cy.get('button[title=Add]')
+          .click()
+        cy.get('@numberInput').then(($input) => {
+          expect ($input.val()).to.equal('3');
+        });
+        cy.get('button').contains('Next').as('nextQuestionBtn')
+          .should('exist')
+          //.and('be.visible')
+          .then(($btn) => {
+            {$btn.trigger('click')}
+          });
+      });
+      it(`Can input name or number of vessel - ${device}`, () => {
+        cy.viewport(device); 
+        checkForNavAndLang();
+        cy.contains('vessel')
+          .should('exist')
+          .and('be.visible');
+        cy.log('Skipping question without inputting value');
+        cy.get('input').as('vesselInput')
+          .should('be.empty');
+        cy.get('button').contains('Skip Question').click();
+        cy.restoreLocalStorage();
+        cy.getLocalStorage('slug').then((slug) => {
+          cy.getLocalStorage('surveyId').then((id) => {
+            cy.url().should('eq', Cypress.config().baseUrl + `/${slug}/surveys/${id}/28/`);
+          })
+        })
+        cy.contains('willing')
+          .should('exist')
+          .and('be.visible')
+        cy.get('a[title="Previous Question"]').click()
+        cy.contains('vessel')
+          .should('be.visible')
+          .and('exist')
+        cy.get('@vesselInput').type("Queen Ann's Revenge")
+        cy.get('@vesselInput').then(($input) => {
+          expect ($input.val()).to.equal("Queen Ann's Revenge");
+        });
+        cy.get('button').contains('Next').click()
+      });
+      it(`Can answer additional questions - ${device}`, () => {
+        cy.viewport(device);
+        checkForNavAndLang();
+        cy.contains('additional')
+          .should('exist')
+          .and('be.visible');
+        cy.get('[title="Yes"]')
+          .should('exist')
+          .and('be.visible')
+          .click()
+      });
       //it(`Can input age - ${device}`, () => {
       //  cy.viewport(device);
       //  checkForNavAndLang();
