@@ -39,6 +39,8 @@ const project = {
   description: "",
   sessionIsAdmin: false,
   isFeatured: true,
+  sessionParticipationStatus: "participant_shared_profile",
+  sessionHasPrivilegedAccess: true,
 };
 
 const mockedProjectMetadata = {
