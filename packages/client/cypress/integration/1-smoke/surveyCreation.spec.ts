@@ -2,9 +2,6 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
-import { verify } from "crypto";
-import { callbackify } from "util";
-//import "cypress-real-events"
 
 let surveyId: any;
 
@@ -62,9 +59,6 @@ const createBasemaps = (id, token, name) => {
   });
   body.append('map', JSON.stringify({ 1: ['variables.input.basemap.thumbnail'] }));
   body.append('1', file);
-  //var xhr = new XMLHttpRequest;
-  //xhr.open('POST', 'http://localhost:3857/graphql', true);
-  //xhr.send(body);
   const fetchResponse = fetch(
     'http://localhost:3857/graphql', 
     { method: 'POST', 
@@ -107,7 +101,6 @@ const drawPolygon = () => {
         canvases.push(t);
         return canvases
       }).then((ary) => {
-        console.log('canvasAry')
         const el = ary[0]
         return el
       }).as('el');
@@ -120,14 +113,11 @@ const drawPolygon = () => {
       cy.log('Map loaded')
       expect(map.loaded()).to.eq(true)
       cy.get('.mapboxgl-canvas').each((t) => {
-        console.log('canvas')
-        console.log(t)
         expect (t).to.exist
         const canvases = [];
         canvases.push(t);
         return canvases
       }).then((ary) => {
-        console.log('canvasAry')
         const el = ary[0]
         return el
       }).as('el');
@@ -136,7 +126,6 @@ const drawPolygon = () => {
         .click(200, 600)
         .click(200, 500)
         .click(100, 500)
-
     }
   });
 };
@@ -175,7 +164,7 @@ const drawSecondPolygon = () => {
     .click(200, 200)
 };
 
-const devices: any = ["macbook-15", "ipad-2", "iphone-x"]//, "iphone-x"]//, ]//, "ipad-2", "iphone-x"]
+const devices: any = ["macbook-15", "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -362,34 +351,29 @@ describe("Survey creation smoke test", () => {
         cy.get('[role="progressbar"]')
           .should('not.exist');
         cy.contains('Begin')
-          .should('be.visible')
+          .should('be.visible');
         cy.contains('Welcome')
-          .should('be.visible')
-        //cy.wait('@getSurvey').its('response.statusCode').should('eq', 200)
-        })
+          .should('be.visible');
+        });
       });
-    })
+    });
     after(() => {
       cy.restoreLocalStorage()
       cy.getLocalStorage("surveyId").then((id) => {
-        surveyId = parseInt(id)
-        //cy.getLocalStorage("responseId").then((responseId) => {
-        //  cy.deleteResponse
-        //})
+        surveyId = parseInt(id);
         //cy.getLocalStorage("token").then((token) => {
         //  cy.deleteSurvey(surveyId, token)
         //})
-      })
+      });
       //cy.getLocalStorage("slug").then((slug) => {
       //  cy.deleteProject(`${slug}`)
       //})
-    })
+    });
     devices.forEach((device) => {
       it(`Can visit the survey - ${device}`, () => {
         cy.viewport(device);
-        //if (device === "macbook-15") {
-        //  cy.wait('@getSurvey').its('response.statusCode').should('eq', 200);
-        //}
+        cy.contains("Welcome")
+          .should('be.visible');
       });
       it(`Can view and toggle settings - ${device}`, () => {
         cy.viewport(device)
@@ -509,31 +493,24 @@ describe("Survey creation smoke test", () => {
           if (device === "macbook-15") {
             cy.contains('Fisheries')
               .should('be.visible');
-            waitOnMapbox(8)
+            waitOnMapbox(8);
             cy.get('span.mapboxgl-ctrl-icon')
               .should('be.visible');
             cy.get('div.MapPicker')
               .and('be.visible');
-            cy.wait(5000);
             drawPolygon();
           } else {
             cy.contains('Fisheries')
-              .should('be.visible')
+              .should('be.visible');
             cy.get('span.mapboxgl-ctrl-icon')
-              .should('be.visible')
+              .should('be.visible');
             cy.get('div.MapPicker')
               .should('exist')
-              .and('be.visible')
-            //cy.get('[role="progressbar"]').then((progressBar) => {
-            //  if (progressBar.children().hasClass('animate-spin')) {
-            //    cy.get('[role="progressbar"]').should('not.have.class', 'animate-spin')
-            //  }
-            //});
+              .and('be.visible');
             waitOnMapbox(8);
             cy.get('[role="progressbar"]')
              .should('not.exist');
             drawPolygon();
-            //cy.contains("Done").click()
           }
         }
       });
@@ -568,12 +545,6 @@ describe("Survey creation smoke test", () => {
             .contains('10,000')
             .should('be.visible');
         }
-        
-          
-          //.as("scaleBar").then((scaleBar) => {
-          //  cy.setLocalStorage("scale bar", scaleBar.html())
-          //  cy.saveLocalStorage()
-          //})
       });
       it (`Renders the correct basemap - ${device}`, () => {
         cy.viewport(device)
