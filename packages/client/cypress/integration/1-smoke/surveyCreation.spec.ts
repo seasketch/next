@@ -768,123 +768,123 @@ describe("Survey creation smoke test", () => {
           drawPolygon()
         }
       })//;
-      //it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device); 
-      //  //cy.get('button').then(($button) => {
-      //  //  if ($button.text().includes('Done')) {
-      //  //    cy.get('button').contains('Done').then(($btn) => {
-      //  //      {$btn.trigger('click')}
-      //  //    });
-      //  //  }
-      //  //});
-      //  //cy.get('button').contains('Done')
-      //  //  .should('not.exist')
-      //  //if (device === "iphone-5" || device ==="iphone-x") {
-      //  //  cy.get('.mapboxgl-ctrl-scale')
-      //  //  //.should('not.exist')
-      //  //  .should('not.be.visible')
-      //  //  cy.contains('Fisheries')
-      //  //    .should('not.exist')
-      //  ////cy.get('img[alt="Satellite map preview')
-      //  ////  .should('not.exist')
-////
-      ////}
-      //  cy.contains('Area Name')
-      //    .should('exist')
-      //    .and('be.visible');
-      //  cy.contains('How important');
-      //  cy.get(".mt-1 > .block")
-      //    .should('be.visible')
-      //    .clear({force:true})
-      //    .type("Sea cucumber fishing area.");
-      //  cy.get('.mt-1 > .block')
-      //    .should('have.value', 'Sea cucumber fishing area.');
-      //  cy.contains('What type of gear');
-      //  cy.contains('What type of species');
-      //  cy.get('[title="Pole and Line"]')
-      //    .should('not.exist');
-      //  cy.get('[title="Pole and Line"]')
-      //    .should('not.exist');
-      //  cy.get('[title="Yellowfin"]')
-      //    .should('not.exist');
-      //  cy.get('[title="Sea cucumber"]').click();
-      //  cy.get('[title="Jigging"]').click();
-      //  cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!");
-      //  cy.contains('Save').click();
-      //});
-      //it(`Errors when invalid polygon is drawn - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device)
-      //  cy.contains("Save").should('not.exist')
-      //  cy.contains('New Shape').as('newShape')
-      //    .should('exist')
-      //    .and('be.visible')
-      //  cy.get('@newShape').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  });
-      //  cy.get('@newShape')
-      //    .should('not.exist')
-      //  cy.get('[role="progressbar"]')
-      //    .should('not.exist')
-      //  drawInvalidPolygon()
-      //  cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
-      //  cy.get('@invalidShapeBtn').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //  cy.get('[role="dialog"]').contains('Invalid Shape')
-      //  cy.get('video').should('be.visible')
-      //  cy.get('button').contains('Okay').as('okayBtn')
-      //  cy.get('@okayBtn').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //  })
-      //  cy.get('button').contains('Done').as('doneBtn')
-      //  const stub = cy.stub()  
-      //  cy.on ('window:alert', stub)
-      //  cy.get('@doneBtn').then(($btn) => {
-      //    {$btn.trigger('click')}
-      //    expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
-      //  })
-      //}); 
-      //it(`Can delete invalid shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device);
-      //  cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn');
-      //  const stub = cy.stub();
-      //  cy.on ('window:confirm', stub);
-      //  cy.get('@trashBtn').then(($btn) => {
-      //    {$btn.trigger('click')};
-      //    expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?');
-      //  });
-      //});
-      //it(`Can draw second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
-      //  cy.viewport(device)
-      //  if (device === "macbook-15" || device === "ipad-2") {
-      //    cy.contains('New Shape').as('newShape');
-      //    cy.get('@newShape').then(($btn) => {
-      //      {$btn.trigger('click')}
-      //    })
-      //    cy.get('[type = "button"]').then(($btn) => {
-      //      if ($btn.text().includes('New Shape')) {
-      //        cy.get('button').contains('New Shape').as('newShapeBtn').then(($btn) => {
-      //          {$btn.trigger('click', {multiple: true})}
-      //        });
-      //      }; 
-      //    });
-      //    cy.get('h4').contains('Fisheries - Recreational')
-      //      .should('not.exist');
-      //    cy.contains('Area Name')
-      //      .should('exist')
-      //      .and('be.visible');
-      //    cy.contains('How important is this area?')
-      //      .should('exist')
-      //      .and('be.visible');
-      //  }
-      //  drawSecondPolygon();
-      //  if (device === "iphone-x" || device === "iphone-5") {
-      //    cy.get('[data-cy="button-done"]').as('doneBtn')
-      //      .should('exist')
-      //      .and('be.visible')
-      //      .click()
-      //  }
-      //});
+      it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device); 
+        //cy.get('button').then(($button) => {
+        //  if ($button.text().includes('Done')) {
+        //    cy.get('button').contains('Done').then(($btn) => {
+        //      {$btn.trigger('click')}
+        //    });
+        //  }
+        //});
+        //cy.get('button').contains('Done')
+        //  .should('not.exist')
+        //if (device === "iphone-5" || device ==="iphone-x") {
+        //  cy.get('.mapboxgl-ctrl-scale')
+        //  //.should('not.exist')
+        //  .should('not.be.visible')
+        //  cy.contains('Fisheries')
+        //    .should('not.exist')
+        ////cy.get('img[alt="Satellite map preview')
+        ////  .should('not.exist')
+//
+      //}
+        cy.contains('Area Name')
+          .should('exist')
+          .and('be.visible');
+        cy.contains('How important');
+        cy.get(".mt-1 > .block")
+          .should('be.visible')
+          .clear({force:true})
+          .type("Sea cucumber fishing area.");
+        cy.get('.mt-1 > .block')
+          .should('have.value', 'Sea cucumber fishing area.');
+        cy.contains('What type of gear');
+        cy.contains('What type of species');
+        cy.get('[title="Pole and Line"]')
+          .should('not.exist');
+        cy.get('[title="Pole and Line"]')
+          .should('not.exist');
+        cy.get('[title="Yellowfin"]')
+          .should('not.exist');
+        cy.get('[title="Sea cucumber"]').click();
+        cy.get('[title="Jigging"]').click();
+        cy.get('[style="max-height: 60vh;"] > .w-full').type("Sea cucumber love this spot!");
+        cy.contains('Save').click();
+      });
+      it(`Errors when invalid polygon is drawn - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device)
+        cy.contains("Save").should('not.exist')
+        cy.contains('New Shape').as('newShape')
+          .should('exist')
+          .and('be.visible')
+        cy.get('@newShape').then(($btn) => {
+          {$btn.trigger('click')}
+        });
+        cy.get('@newShape')
+          .should('not.exist')
+        cy.get('[role="progressbar"]')
+          .should('not.exist')
+        drawInvalidPolygon()
+        cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
+        cy.get('@invalidShapeBtn').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+        cy.get('[role="dialog"]').contains('Invalid Shape')
+        cy.get('video').should('be.visible')
+        cy.get('button').contains('Okay').as('okayBtn')
+        cy.get('@okayBtn').then(($btn) => {
+          {$btn.trigger('click')}
+        })
+        cy.get('button').contains('Done').as('doneBtn')
+        const stub = cy.stub()  
+        cy.on ('window:alert', stub)
+        cy.get('@doneBtn').then(($btn) => {
+          {$btn.trigger('click')}
+          expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
+        })
+      }); 
+      it(`Can delete invalid shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device);
+        cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn');
+        const stub = cy.stub();
+        cy.on ('window:confirm', stub);
+        cy.get('@trashBtn').then(($btn) => {
+          {$btn.trigger('click')};
+          expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?');
+        });
+      });
+      it(`Can draw second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
+        cy.viewport(device)
+        if (device === "macbook-15" || device === "ipad-2") {
+          cy.contains('New Shape').as('newShape');
+          cy.get('@newShape').then(($btn) => {
+            {$btn.trigger('click')}
+          })
+          cy.get('[type = "button"]').then(($btn) => {
+            if ($btn.text().includes('New Shape')) {
+              cy.get('button').contains('New Shape').as('newShapeBtn').then(($btn) => {
+                {$btn.trigger('click', {multiple: true})}
+              });
+            }; 
+          });
+          cy.get('h4').contains('Fisheries - Recreational')
+            .should('not.exist');
+          cy.contains('Area Name')
+            .should('exist')
+            .and('be.visible');
+          cy.contains('How important is this area?')
+            .should('exist')
+            .and('be.visible');
+        }
+        drawSecondPolygon();
+        if (device === "iphone-x" || device === "iphone-5") {
+          cy.get('[data-cy="button-done"]').as('doneBtn')
+            .should('exist')
+            .and('be.visible')
+            .click()
+        }
+      });
       //it(`Renders sector specific attributes for second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
       //  cy.viewport(device);
       //  cy.get('h1').contains('Area Name')
