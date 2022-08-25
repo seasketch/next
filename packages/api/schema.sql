@@ -6385,6 +6385,17 @@ COMMENT ON FUNCTION public.project_invites_groups(invite public.project_invites)
 
 
 --
+-- Name: project_invites_participation_status(public.project_invites); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_invites_participation_status(invite public.project_invites) RETURNS public.participation_status
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select users_participation_status(users.*, invite.project_id) from users where users.id = invite.user_id and session_is_admin(invite.project_id);
+  $$;
+
+
+--
 -- Name: project_invites_status(public.project_invites); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12546,6 +12557,13 @@ CREATE INDEX project_invites_project_id_idx ON public.project_invites USING btre
 --
 
 CREATE INDEX project_invites_user_id_idx ON public.project_invites USING btree (user_id);
+
+
+--
+-- Name: project_invites_user_id_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_invites_user_id_idx1 ON public.project_invites USING btree (user_id);
 
 
 --
@@ -19288,6 +19306,14 @@ GRANT ALL ON FUNCTION public.project_invite_was_used(invite_id integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.project_invites_groups(invite public.project_invites) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_invites_groups(invite public.project_invites) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION project_invites_participation_status(invite public.project_invites); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_invites_participation_status(invite public.project_invites) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_invites_participation_status(invite public.project_invites) TO seasketch_user;
 
 
 --

@@ -7934,6 +7934,7 @@ export type ProjectInvite = Node & {
   makeAdmin: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  participationStatus?: Maybe<ParticipationStatus>;
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `ProjectInviteGroup`. */
   projectInviteGroupsByInviteIdConnection: ProjectInviteGroupsConnection;
@@ -15842,7 +15843,7 @@ export type InviteEditorModalQueryQuery = (
     )> }
   )>, projectInvite?: Maybe<(
     { __typename?: 'ProjectInvite' }
-    & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname' | 'status' | 'wasUsed'>
+    & Pick<ProjectInvite, 'id' | 'makeAdmin' | 'email' | 'fullname' | 'status' | 'wasUsed' | 'participationStatus'>
     & { groups?: Maybe<Array<(
       { __typename?: 'Group' }
       & Pick<Group, 'id' | 'name'>
@@ -18967,6 +18968,7 @@ export const InviteEditorModalQueryDocument = /*#__PURE__*/ gql`
     inviteEmails {
       ...InviteEmailDetails
     }
+    participationStatus
   }
 }
     ${InviteEmailDetailsFragmentDoc}`;
