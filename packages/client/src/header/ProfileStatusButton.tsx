@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import useTimeout from "use-timeout";
 import { useMyProfileQuery } from "../generated/graphql";
+import ProfilePhoto from "../admin/users/ProfilePhoto";
 
 export interface ProfileStatusButtonProps {
   children?: React.ReactNode;
@@ -101,13 +102,14 @@ function ProfileStatusButton({
       aria-haspopup="true"
       onClick={onClickHandler}
     >
-      {data?.me?.profile?.picture || user.picture ? (
-        <img
-          className="h-8 w-8 rounded-full"
-          src={data?.me?.profile?.picture || user.picture}
-          referrerPolicy="no-referrer"
-          alt=""
-        />
+      {data?.me?.profile?.picture || user.email ? (
+        <div className="w-8 h-8">
+          <ProfilePhoto
+            email={data?.me?.profile?.email}
+            canonicalEmail={user.email!}
+            picture={data?.me?.profile?.picture}
+          />
+        </div>
       ) : (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -127,6 +129,32 @@ function ProfileStatusButton({
         </svg>
       )}
     </button>
+    // {data?.me?.profile?.picture ? (
+    //   <img
+    //     className="h-8 w-8 rounded-full"
+    //     src={data?.me?.profile?.picture}
+    //     referrerPolicy="no-referrer"
+    //     alt=""
+    //   />
+    // ) : (
+    //   <svg
+    //     xmlns="http://www.w3.org/2000/svg"
+    //     viewBox="0 0 20 20"
+    //     className="w-8 h-8"
+    //     fill="#ddd"
+    //   >
+    //     <path
+    //       fillRule="evenodd"
+    //       d={`
+    //         M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014
+    //         0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986
+    //         0 004.546-2.084A5 5 0 0010 11z
+    //       `}
+    //       clipRule="evenodd"
+    //     />
+    //   </svg>
+    // )}
+    // </button>
   );
 }
 

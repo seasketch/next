@@ -44,12 +44,14 @@ export default function ParticipantRow({
           checked={checked}
         />
       ) : null}
-      <ProfilePhoto
-        fullname={fullname}
-        email={email}
-        canonicalEmail={canonicalEmail}
-        picture={picture}
-      />
+      <div className="w-8 h-full py-1 mr-2">
+        <ProfilePhoto
+          fullname={fullname}
+          email={email}
+          canonicalEmail={canonicalEmail}
+          picture={picture}
+        />
+      </div>
       <span
         className="truncate text-sm xl:text-base flex-grow"
         style={{ lineHeight: "1.5rem" }}

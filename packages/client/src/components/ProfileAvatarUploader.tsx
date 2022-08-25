@@ -6,6 +6,7 @@ import ProfilePhoto from "../admin/users/ProfilePhoto";
 import { useMeQuery, useUpdateProfileMutation } from "../generated/graphql";
 import Button from "./Button";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
+import Spinner from "./Spinner";
 
 export default function ProfileAvatarUploader() {
   const auth0 = useAuth0();
@@ -47,7 +48,7 @@ export default function ProfileAvatarUploader() {
             : ""
         }`}
       >
-        <div className="w-16 h-16">
+        <div className="w-12 h-12 mr-2 ml-1">
           <ProfilePhoto
             canonicalEmail={auth0.user?.email || ""}
             fullname={data?.me?.profile?.fullname}
@@ -60,21 +61,13 @@ export default function ProfileAvatarUploader() {
             defaultImg="mm"
           />
         </div>
-        <Button
-          small
-          label={
-            mutationState.loading ? t("Uploading") : t("Upload Avatar Photo")
-          }
-          loading={mutationState.loading}
-          labelFor="profile-picture-input"
-        />
         <input
-          // {...getInputProps()}
           id="profile-picture-input"
           type="file"
           title="choose"
           accept="image/png, image/jpeg, image/gif"
           disabled={mutationState.loading}
+          // {...getInputProps()}
           onChange={(e) => {
             if (e.target.files && e.target.files.length > 0) {
               const target = e.target;
@@ -92,6 +85,16 @@ export default function ProfileAvatarUploader() {
           }}
           className="hidden py-2 px-1 text-sm leading-1 font-medium text-gray-700 hover:text-gray-500 focus:outline-none focus:border-blue-300 focus:shadow-outline-blue active:bg-gray-50 active:text-gray-800 transition duration-150 ease-in-out"
         />
+        <label
+          className="z-50 border shadow-sm p-1 px-2 text-sm rounded cursor-pointer flex items-center space-x-2"
+          // loading={mutationState.loading}
+          htmlFor="profile-picture-input"
+        >
+          {mutationState.loading && <Spinner />}
+          <span>
+            {mutationState.loading ? t("Uploading") : t("Choose Avatar Photo")}
+          </span>
+        </label>
       </div>
     </>
   );

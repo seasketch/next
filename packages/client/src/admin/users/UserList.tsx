@@ -69,6 +69,7 @@ export default function UserList(props: UserListProps) {
         <ParticipantRow
           index={index}
           style={style}
+          picture={user.profile?.picture || undefined}
           email={user.profile?.email}
           fullname={user.profile?.fullname || undefined}
           isAdmin={!!user.isAdmin}

@@ -99,12 +99,14 @@ export default function ParticipantModal({
               : "bg-transparent"
           } items-center`}
         >
-          <ProfilePhoto
-            canonicalEmail={data?.user?.canonicalEmail!}
-            {...data?.user?.profile}
-            defaultImg="mm"
-          />
-          <h2 className={`ml-2 text-xl`}>{title}</h2>
+          <div className="w-8 h-8 lg:w-12 lg:h-12 lg:mr-1">
+            <ProfilePhoto
+              canonicalEmail={data?.user?.canonicalEmail!}
+              {...data?.user?.profile}
+              defaultImg="mm"
+            />
+          </div>
+          <h2 className={`ml-2 text-xl lg:text-2xl`}>{title}</h2>
         </div>
       }
       onRequestClose={onRequestClose}

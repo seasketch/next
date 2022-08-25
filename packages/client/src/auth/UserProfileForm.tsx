@@ -129,7 +129,10 @@ export function useUserProfileState() {
   }, [mutate, setSubmissionAttempted, data?.me?.id, state]);
 
   useEffect(() => {
-    if (data?.me?.profile) {
+    if (
+      data?.me?.profile &&
+      !(state.fullname || state.affiliations || state.email || state.nickname)
+    ) {
       const profile = data.me.profile;
       setState({
         fullname: profile.fullname || undefined,
@@ -138,6 +141,7 @@ export function useUserProfileState() {
         affiliations: profile.affiliations || undefined,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   const hasErrors = useMemo(() => {
