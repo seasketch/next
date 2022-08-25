@@ -1,4 +1,10 @@
-import React, { useState, useEffect, ReactNode, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  ReactNode,
+  useMemo,
+  useContext,
+} from "react";
 import {
   useRouteMatch,
   useParams,
@@ -24,6 +30,7 @@ import Modal from "../components/Modal";
 import { AnimatePresence } from "framer-motion";
 import { ParticipationStatus } from "../generated/graphql";
 import useDialog from "../components/useDialog";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
@@ -414,6 +421,7 @@ function SidebarContents(props: {
   projectName: string;
   sections: Section[];
 }) {
+  const cache = useContext(GraphqlQueryCacheContext);
   const { t } = useTranslation(["admin"]);
   const { user, logout } = useAuth0();
   let social: string | false = false;
@@ -479,11 +487,12 @@ function SidebarContents(props: {
                 </div>
               </div>
               <button
-                onClick={() =>
+                onClick={() => {
+                  cache?.logout();
                   logout({
                     returnTo: window.location.origin,
-                  })
-                }
+                  });
+                }}
                 className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-gray-300 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75 w-full"
               >
                 <svg
