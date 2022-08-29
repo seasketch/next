@@ -15,6 +15,7 @@ export type FooterButtonProps = {
   onClick?: () => void;
   variant?: "primary" | "secondary" | "danger";
   label: string | ReactNode;
+  autoFocus?: boolean;
 };
 
 interface ModalProps {
@@ -268,6 +269,7 @@ function FooterButton(props: FooterButtonProps) {
   }
   return (
     <button
+      autoFocus={props.autoFocus || false}
       type="button"
       className={`${
         props.disabled && "pointer-events-none opacity-50"

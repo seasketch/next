@@ -22,6 +22,7 @@ export default function useDialog() {
         onSubmit: options.onSubmit,
         onCancel: options.onCancel,
         submitting: false,
+        disableBackdropClick: true,
       });
     },
     alert: (
@@ -38,6 +39,7 @@ export default function useDialog() {
           description: options?.description,
           onSubmit: resolve,
           submitting: false,
+          disableBackdropClick: true,
         });
       });
     },
@@ -94,6 +96,7 @@ type DialogContextState = {
   icon?: "alert" | "delete";
   primaryButtonVariant?: "primary" | "danger";
   primaryButtonText?: string;
+  disableBackdropClick?: boolean;
 };
 
 const ResetState: DialogContextState = {
@@ -159,6 +162,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
               reset();
             }
           }}
+          disableBackdropClick={state.disableBackdropClick}
           autoWidth
           footer={
             state.type === "alert"
@@ -169,6 +173,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     onClick: onSubmit,
                     variant: state.primaryButtonVariant || "primary",
                     loading: false,
+                    autoFocus: true,
                   },
                 ]
               : state.type === "confirm"
@@ -179,6 +184,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     onClick: onSubmit,
                     variant: state.primaryButtonVariant || "primary",
                     loading: state.submitting,
+                    autoFocus: true,
                   },
                   {
                     disabled: state.submitting,
