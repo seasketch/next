@@ -7,6 +7,7 @@ import { Trans, useTranslation } from "react-i18next";
 import ParticipantModal from "./ParticipantModal";
 import Button from "../../components/Button";
 import {
+  ParticipationStatus,
   useDeleteGroupMutation,
   useRenameGroupMutation,
   UserListDetailsFragment,
@@ -77,6 +78,9 @@ export default function UserList(props: UserListProps) {
           groups={(user.groups || []).map((g) => g.name!)}
           onClick={() => setOpenModalUserId(user.id)}
           isBanned={user.bannedFromForums || false}
+          needsApproval={user.needsAccessRequestApproval || false}
+          approved={Boolean(user.approvedBy)}
+          denied={Boolean(user.deniedBy)}
         />
       );
     }

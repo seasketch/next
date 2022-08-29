@@ -1,12 +1,18 @@
 import { Trans, useTranslation } from "react-i18next";
+import Button from "../../components/Button";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import InputBlock from "../../components/InputBlock";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import Switch from "../../components/Switch";
+import useDialog from "../../components/useDialog";
+import Warning from "../../components/Warning";
 import {
   useToggleAdminAccessMutation,
   useUserInfoQuery,
   useToggleForumPostingBanMutation,
+  useApproveAccessRequestMutation,
+  useDenyAccessRequestMutation,
 } from "../../generated/graphql";
 import MutableGroupMembershipField from "./MutableGroupMembershipField";
 import ProfilePhoto from "./ProfilePhoto";
@@ -44,7 +50,25 @@ export default function ParticipantModal({
     variables: {
       userId,
       slug: projectSlug,
+      projectId,
     },
+  });
+  const onError = useGlobalErrorHandler();
+  const [approve, approveState] = useApproveAccessRequestMutation({
+    variables: {
+      projectId,
+      slug: projectSlug,
+      userId,
+    },
+    onError,
+  });
+  const [deny, denyState] = useDenyAccessRequestMutation({
+    variables: {
+      projectId,
+      slug: projectSlug,
+      userId,
+    },
+    onError,
   });
   const [toggleForumPostingBan] = useToggleForumPostingBanMutation({
     variables: {
@@ -87,6 +111,8 @@ export default function ParticipantModal({
     data?.user?.profile?.email ||
     data?.user?.canonicalEmail;
 
+  const { confirm } = useDialog();
+
   return (
     <Modal
       scrollable
@@ -116,6 +142,90 @@ export default function ParticipantModal({
 
       {data?.user && data?.projectBySlug && (
         <div className="">
+          {data?.user?.needsAccessRequestApproval && !data.user.deniedBy && (
+            <div className="mb-4">
+              <Warning level="info" className="bg-gray-50">
+                <Trans ns="admin">
+                  This user access request has yet to be approved.
+                </Trans>
+                <br />
+                <div className="mt-2 space-x-2">
+                  <Button
+                    disabled={approveState.loading || denyState.loading}
+                    loading={approveState.loading}
+                    primary
+                    small
+                    onClick={() => approve()}
+                    label={t("Approve")}
+                  />
+                  <Button
+                    disabled={approveState.loading || denyState.loading}
+                    loading={denyState.loading}
+                    small
+                    label={t("Deny")}
+                    onClick={() => deny()}
+                  />
+                </div>
+              </Warning>
+            </div>
+          )}
+          {data?.user?.approvedBy && (
+            <div className="mb-4">
+              <Warning level="info" className="bg-gray-50">
+                <Trans ns="admin">
+                  This user's access request was approved by
+                  <br />
+                  {data.user.approvedBy.canonicalEmail} on{" "}
+                  {data.user.approvedOrDeniedOn
+                    ? new Date(data.user.approvedOrDeniedOn).toLocaleString()
+                    : "unknown"}
+                </Trans>
+                <br />
+                <Button
+                  className="block mt-2"
+                  disabled={approveState.loading || denyState.loading}
+                  loading={denyState.loading}
+                  small
+                  label={t("Block user access")}
+                  onClick={async () => {
+                    if (
+                      await confirm(
+                        t(
+                          "Are you sure you want to deny this user access to the project?"
+                        )
+                      )
+                    ) {
+                      deny();
+                    }
+                  }}
+                />
+              </Warning>
+            </div>
+          )}
+          {data?.user?.deniedBy && (
+            <div className="mb-4">
+              <Warning className="bg-gray-50">
+                <Trans ns="admin">
+                  This user's access request was denied by
+                  <br />
+                  {data.user.deniedBy.canonicalEmail} on{" "}
+                  {data.user.approvedOrDeniedOn
+                    ? new Date(data.user.approvedOrDeniedOn).toLocaleString()
+                    : "unknown"}
+                </Trans>
+                <br />
+                <div className="mt-2 space-x-2">
+                  <Button
+                    disabled={approveState.loading || denyState.loading}
+                    loading={approveState.loading}
+                    small
+                    onClick={() => approve()}
+                    label={t("Approve access")}
+                  />
+                </div>
+              </Warning>
+            </div>
+          )}
           <UserProfile
             profile={data.user!.profile!}
             canonicalEmail={data.user.canonicalEmail!}

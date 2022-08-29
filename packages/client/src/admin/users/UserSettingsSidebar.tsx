@@ -32,10 +32,12 @@ export default function UserSettingsSidebar({
   loading,
   accessControl,
   projectId,
+  accessRequests,
 }: {
   invites: InviteDetailsFragment[];
   groups: Pick<Group, "name" | "id">[];
   users: UserListDetailsFragment[];
+  accessRequests: UserListDetailsFragment[];
   loading: boolean;
   accessControl?: ProjectAccessControlSetting;
   projectId?: number;
@@ -107,6 +109,7 @@ export default function UserSettingsSidebar({
       pending: 0,
       problems: 0,
       admins: 0,
+      accessRequests: 0,
       groups: {} as { [groupId: number]: number },
     };
     for (const invite of invites) {
@@ -129,8 +132,9 @@ export default function UserSettingsSidebar({
         results.groups[group.id] += 1;
       }
     }
+    results.accessRequests = accessRequests.length;
     return results;
-  }, [invites, groups, users]);
+  }, [invites, groups, users, accessRequests]);
 
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
   // eslint-disable-next-line i18next/no-literal-string
@@ -230,7 +234,7 @@ export default function UserSettingsSidebar({
               icon: IdentificationIcon,
               ...badge(
                 // data?.projectBySlug?.unapprovedParticipantCount,
-                0,
+                counts.accessRequests,
                 "primary"
               ),
             },
@@ -261,6 +265,7 @@ export default function UserSettingsSidebar({
     counts.groups,
     counts.pending,
     counts.problems,
+    counts.accessRequests,
     counts.sent,
     accessControl,
     baseUrl,

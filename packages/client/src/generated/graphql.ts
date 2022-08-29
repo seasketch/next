@@ -197,6 +197,15 @@ export type ApproveParticipantPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+  user?: Maybe<User>;
+  /** An edge for our `User`. May be used by Relay 1. */
+  userEdge?: Maybe<UsersEdge>;
+};
+
+
+/** The output of our `approveParticipant` mutation. */
+export type ApproveParticipantPayloadUserEdgeArgs = {
+  orderBy?: Maybe<Array<UsersOrderBy>>;
 };
 
 /** All input for the `archiveResponses` mutation. */
@@ -3461,6 +3470,38 @@ export type DeleteTopicPayloadTopicEdgeArgs = {
   orderBy?: Maybe<Array<TopicsOrderBy>>;
 };
 
+/** All input for the `denyParticipant` mutation. */
+export type DenyParticipantInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  userId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `denyParticipant` mutation. */
+export type DenyParticipantPayload = {
+  __typename?: 'DenyParticipantPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  user?: Maybe<User>;
+  /** An edge for our `User`. May be used by Relay 1. */
+  userEdge?: Maybe<UsersEdge>;
+};
+
+
+/** The output of our `denyParticipant` mutation. */
+export type DenyParticipantPayloadUserEdgeArgs = {
+  orderBy?: Maybe<Array<UsersOrderBy>>;
+};
+
 /** All input for the `disableForumPosting` mutation. */
 export type DisableForumPostingInput = {
   /**
@@ -5288,7 +5329,6 @@ export type Mutation = {
   addUserToGroup?: Maybe<AddUserToGroupPayload>;
   /** Add a SketchClass to the list of valid children for a Collection-type SketchClass. */
   addValidChildSketchClass?: Maybe<AddValidChildSketchClassPayload>;
-  /** For invite_only projects. Approve access request by a user. Must be an administrator of the project. */
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
@@ -5520,6 +5560,7 @@ export type Mutation = {
   deleteTopic?: Maybe<DeleteTopicPayload>;
   /** Deletes a single `Topic` using its globally unique id. */
   deleteTopicByNodeId?: Maybe<DeleteTopicPayload>;
+  denyParticipant?: Maybe<DenyParticipantPayload>;
   /** Ban a user from posting in the discussion forum */
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
@@ -6364,6 +6405,12 @@ export type MutationDeleteTopicArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteTopicByNodeIdArgs = {
   input: DeleteTopicByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDenyParticipantArgs = {
+  input: DenyParticipantInput;
 };
 
 
@@ -7447,6 +7494,8 @@ export type Project = Node & {
   __typename?: 'Project';
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl: ProjectAccessControlSetting;
+  /** Reads and enables pagination through a set of `User`. */
+  accessRequestsConnection: UsersConnection;
   adminCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
@@ -7603,6 +7652,21 @@ export type Project = Node & {
   url?: Maybe<Scalars['String']>;
   /** List of all banned users. Listing only accessible to admins. */
   usersBannedFromForums?: Maybe<Array<User>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectAccessRequestsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  direction?: Maybe<SortByDirection>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<ParticipantSortBy>;
 };
 
 
@@ -12531,6 +12595,9 @@ export type UpdateZIndexesPayload = {
  */
 export type User = Node & {
   __typename?: 'User';
+  accessRequestDenied?: Maybe<Scalars['Boolean']>;
+  approvedBy?: Maybe<User>;
+  approvedOrDeniedOn?: Maybe<Scalars['Datetime']>;
   /**
    * Whether the user has been banned from the forums. Use `disableForumPosting()`
    * and `enableForumPosting()` mutations to modify this state. Accessible only to admins.
@@ -12542,6 +12609,7 @@ export type User = Node & {
    * privileges until this email has been confirmed.
    */
   canonicalEmail?: Maybe<Scalars['String']>;
+  deniedBy?: Maybe<User>;
   /** Reads a single `EmailNotificationPreference` that is related to this `User`. */
   emailNotificationPreference?: Maybe<EmailNotificationPreference>;
   /**
@@ -12554,6 +12622,7 @@ export type User = Node & {
   id: Scalars['Int'];
   /** Indicates if user is admin on the current project, indicated by the `x-ss-slug` header. */
   isAdmin?: Maybe<Scalars['Boolean']>;
+  needsAccessRequestApproval?: Maybe<Scalars['Boolean']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -12568,6 +12637,62 @@ export type User = Node & {
   participationStatus?: Maybe<ParticipationStatus>;
   /** Reads a single `Profile` that is related to this `User`. */
   profile?: Maybe<Profile>;
+};
+
+
+/**
+ * The SeaSketch User type is quite sparse since authentication is handled by Auth0
+ * and we store no personal information unless the user explicitly adds it to the
+ * user `Profile`.
+ *
+ * During operation of the system, users identify themselves using bearer tokens.
+ * These tokens contain ephemeral information like `canonical_email` which can be
+ * used to accept project invite tokens.
+ */
+export type UserAccessRequestDeniedArgs = {
+  slug?: Maybe<Scalars['String']>;
+};
+
+
+/**
+ * The SeaSketch User type is quite sparse since authentication is handled by Auth0
+ * and we store no personal information unless the user explicitly adds it to the
+ * user `Profile`.
+ *
+ * During operation of the system, users identify themselves using bearer tokens.
+ * These tokens contain ephemeral information like `canonical_email` which can be
+ * used to accept project invite tokens.
+ */
+export type UserApprovedByArgs = {
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * The SeaSketch User type is quite sparse since authentication is handled by Auth0
+ * and we store no personal information unless the user explicitly adds it to the
+ * user `Profile`.
+ *
+ * During operation of the system, users identify themselves using bearer tokens.
+ * These tokens contain ephemeral information like `canonical_email` which can be
+ * used to accept project invite tokens.
+ */
+export type UserApprovedOrDeniedOnArgs = {
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * The SeaSketch User type is quite sparse since authentication is handled by Auth0
+ * and we store no personal information unless the user explicitly adds it to the
+ * user `Profile`.
+ *
+ * During operation of the system, users identify themselves using bearer tokens.
+ * These tokens contain ephemeral information like `canonical_email` which can be
+ * used to accept project invite tokens.
+ */
+export type UserDeniedByArgs = {
+  projectId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -12615,8 +12740,35 @@ export type UserGroupsArgs = {
  * These tokens contain ephemeral information like `canonical_email` which can be
  * used to accept project invite tokens.
  */
+export type UserNeedsAccessRequestApprovalArgs = {
+  slug?: Maybe<Scalars['String']>;
+};
+
+
+/**
+ * The SeaSketch User type is quite sparse since authentication is handled by Auth0
+ * and we store no personal information unless the user explicitly adds it to the
+ * user `Profile`.
+ *
+ * During operation of the system, users identify themselves using bearer tokens.
+ * These tokens contain ephemeral information like `canonical_email` which can be
+ * used to accept project invite tokens.
+ */
 export type UserParticipationStatusArgs = {
   projectId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `User` values. */
+export type UsersConnection = {
+  __typename?: 'UsersConnection';
+  /** A list of edges which contains the `User` and cursor to aid in pagination. */
+  edges: Array<UsersEdge>;
+  /** A list of `User` objects. */
+  nodes: Array<User>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `User` you could get from the connection. */
+  totalCount: Scalars['Int'];
 };
 
 /** A `User` edge in the connection. */
@@ -15637,11 +15789,17 @@ export type GroupMembersQuery = (
 
 export type UserListDetailsFragment = (
   { __typename?: 'User' }
-  & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
+  & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'needsAccessRequestApproval' | 'approvedOrDeniedOn' | 'onboarded'>
   & { groups?: Maybe<Array<(
     { __typename?: 'Group' }
     & Pick<Group, 'name' | 'id'>
-  )>>, profile?: Maybe<(
+  )>>, approvedBy?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'canonicalEmail'>
+  )>, deniedBy?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'canonicalEmail'>
+  )>, profile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )> }
@@ -15649,6 +15807,7 @@ export type UserListDetailsFragment = (
 
 export type UserSettingsListsQueryVariables = Exact<{
   slug: Scalars['String'];
+  projectId: Scalars['Int'];
 }>;
 
 
@@ -15669,13 +15828,20 @@ export type UserSettingsListsQuery = (
     ), participants?: Maybe<Array<(
       { __typename?: 'User' }
       & UserListDetailsFragment
-    )>> }
+    )>>, accessRequestsConnection: (
+      { __typename?: 'UsersConnection' }
+      & { nodes: Array<(
+        { __typename?: 'User' }
+        & UserListDetailsFragment
+      )> }
+    ) }
   )> }
 );
 
 export type UserInfoQueryVariables = Exact<{
   userId: Scalars['Int'];
   slug: Scalars['String'];
+  projectId: Scalars['Int'];
 }>;
 
 
@@ -15683,17 +15849,26 @@ export type UserInfoQuery = (
   { __typename?: 'Query' }
   & { user?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus'>
+    & Pick<User, 'id' | 'isAdmin' | 'canonicalEmail' | 'bannedFromForums' | 'onboarded' | 'participationStatus' | 'needsAccessRequestApproval' | 'approvedOrDeniedOn'>
     & { emailNotificationPreference?: Maybe<(
       { __typename?: 'EmailNotificationPreference' }
       & Pick<EmailNotificationPreference, 'unsubscribeAll'>
     )>, groups?: Maybe<Array<(
       { __typename?: 'Group' }
       & Pick<Group, 'name' | 'id'>
-    )>>, profile?: Maybe<(
+    )>>, deniedBy?: Maybe<(
+      { __typename?: 'User' }
+      & Pick<User, 'id' | 'canonicalEmail'>
+    )>, approvedBy?: Maybe<(
+      { __typename?: 'User' }
+      & Pick<User, 'id' | 'canonicalEmail'>
+    )>, profile?: Maybe<(
       { __typename?: 'Profile' }
       & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
     )> }
+  )>, project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
   )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
@@ -15967,6 +16142,56 @@ export type ProjectInviteEmailStatusSubscriptionSubscription = (
     & { invite?: Maybe<(
       { __typename?: 'ProjectInvite' }
       & Pick<ProjectInvite, 'id' | 'status'>
+    )> }
+  )> }
+);
+
+export type ApproveAccessRequestMutationVariables = Exact<{
+  userId: Scalars['Int'];
+  projectId: Scalars['Int'];
+  slug: Scalars['String'];
+}>;
+
+
+export type ApproveAccessRequestMutation = (
+  { __typename?: 'Mutation' }
+  & { approveParticipant?: Maybe<(
+    { __typename?: 'ApproveParticipantPayload' }
+    & { user?: Maybe<(
+      { __typename?: 'User' }
+      & Pick<User, 'id' | 'needsAccessRequestApproval' | 'approvedOrDeniedOn'>
+      & { approvedBy?: Maybe<(
+        { __typename?: 'User' }
+        & Pick<User, 'id' | 'canonicalEmail'>
+      )>, deniedBy?: Maybe<(
+        { __typename?: 'User' }
+        & Pick<User, 'id' | 'canonicalEmail'>
+      )> }
+    )> }
+  )> }
+);
+
+export type DenyAccessRequestMutationVariables = Exact<{
+  userId: Scalars['Int'];
+  projectId: Scalars['Int'];
+  slug: Scalars['String'];
+}>;
+
+
+export type DenyAccessRequestMutation = (
+  { __typename?: 'Mutation' }
+  & { denyParticipant?: Maybe<(
+    { __typename?: 'DenyParticipantPayload' }
+    & { user?: Maybe<(
+      { __typename?: 'User' }
+      & Pick<User, 'id' | 'needsAccessRequestApproval' | 'approvedOrDeniedOn'>
+      & { approvedBy?: Maybe<(
+        { __typename?: 'User' }
+        & Pick<User, 'id' | 'canonicalEmail'>
+      )>, deniedBy?: Maybe<(
+        { __typename?: 'User' }
+        & Pick<User, 'id' | 'canonicalEmail'>
+      )> }
     )> }
   )> }
 );
@@ -16652,8 +16877,17 @@ export const UserListDetailsFragmentDoc = gql`
     name
     id
   }
+  needsAccessRequestApproval(slug: $slug)
+  approvedBy(projectId: $projectId) {
+    id
+    canonicalEmail
+  }
+  deniedBy(projectId: $projectId) {
+    id
+    canonicalEmail
+  }
+  approvedOrDeniedOn(projectId: $projectId)
   onboarded
-  participationStatus
   profile {
     userId
     email
@@ -22744,7 +22978,7 @@ export type GroupMembersQueryHookResult = ReturnType<typeof useGroupMembersQuery
 export type GroupMembersLazyQueryHookResult = ReturnType<typeof useGroupMembersLazyQuery>;
 export type GroupMembersQueryResult = Apollo.QueryResult<GroupMembersQuery, GroupMembersQueryVariables>;
 export const UserSettingsListsDocument = gql`
-    query UserSettingsLists($slug: String!) {
+    query UserSettingsLists($slug: String!, $projectId: Int!) {
   projectBySlug(slug: $slug) {
     id
     groups {
@@ -22758,6 +22992,11 @@ export const UserSettingsListsDocument = gql`
     }
     participants {
       ...UserListDetails
+    }
+    accessRequestsConnection {
+      nodes {
+        ...UserListDetails
+      }
     }
     accessControl
   }
@@ -22778,6 +23017,7 @@ ${UserListDetailsFragmentDoc}`;
  * const { data, loading, error } = useUserSettingsListsQuery({
  *   variables: {
  *      slug: // value for 'slug'
+ *      projectId: // value for 'projectId'
  *   },
  * });
  */
@@ -22793,7 +23033,7 @@ export type UserSettingsListsQueryHookResult = ReturnType<typeof useUserSettings
 export type UserSettingsListsLazyQueryHookResult = ReturnType<typeof useUserSettingsListsLazyQuery>;
 export type UserSettingsListsQueryResult = Apollo.QueryResult<UserSettingsListsQuery, UserSettingsListsQueryVariables>;
 export const UserInfoDocument = gql`
-    query UserInfo($userId: Int!, $slug: String!) {
+    query UserInfo($userId: Int!, $slug: String!, $projectId: Int!) {
   user(id: $userId) {
     id
     isAdmin
@@ -22808,6 +23048,16 @@ export const UserInfoDocument = gql`
     }
     onboarded
     participationStatus
+    needsAccessRequestApproval(slug: $slug)
+    deniedBy(projectId: $projectId) {
+      id
+      canonicalEmail
+    }
+    approvedBy(projectId: $projectId) {
+      id
+      canonicalEmail
+    }
+    approvedOrDeniedOn(projectId: $projectId)
     profile {
       userId
       affiliations
@@ -22816,6 +23066,9 @@ export const UserInfoDocument = gql`
       nickname
       picture
     }
+  }
+  project(id: $projectId) {
+    id
   }
   projectBySlug(slug: $slug) {
     id
@@ -22841,6 +23094,7 @@ export const UserInfoDocument = gql`
  *   variables: {
  *      userId: // value for 'userId'
  *      slug: // value for 'slug'
+ *      projectId: // value for 'projectId'
  *   },
  * });
  */
@@ -23382,6 +23636,100 @@ export function useProjectInviteEmailStatusSubscriptionSubscription(baseOptions?
       }
 export type ProjectInviteEmailStatusSubscriptionSubscriptionHookResult = ReturnType<typeof useProjectInviteEmailStatusSubscriptionSubscription>;
 export type ProjectInviteEmailStatusSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ProjectInviteEmailStatusSubscriptionSubscription>;
+export const ApproveAccessRequestDocument = gql`
+    mutation ApproveAccessRequest($userId: Int!, $projectId: Int!, $slug: String!) {
+  approveParticipant(input: {projectId: $projectId, userId: $userId}) {
+    user {
+      id
+      needsAccessRequestApproval(slug: $slug)
+      approvedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      deniedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      approvedOrDeniedOn(projectId: $projectId)
+    }
+  }
+}
+    `;
+export type ApproveAccessRequestMutationFn = Apollo.MutationFunction<ApproveAccessRequestMutation, ApproveAccessRequestMutationVariables>;
+
+/**
+ * __useApproveAccessRequestMutation__
+ *
+ * To run a mutation, you first call `useApproveAccessRequestMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useApproveAccessRequestMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [approveAccessRequestMutation, { data, loading, error }] = useApproveAccessRequestMutation({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      projectId: // value for 'projectId'
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useApproveAccessRequestMutation(baseOptions?: Apollo.MutationHookOptions<ApproveAccessRequestMutation, ApproveAccessRequestMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ApproveAccessRequestMutation, ApproveAccessRequestMutationVariables>(ApproveAccessRequestDocument, options);
+      }
+export type ApproveAccessRequestMutationHookResult = ReturnType<typeof useApproveAccessRequestMutation>;
+export type ApproveAccessRequestMutationResult = Apollo.MutationResult<ApproveAccessRequestMutation>;
+export type ApproveAccessRequestMutationOptions = Apollo.BaseMutationOptions<ApproveAccessRequestMutation, ApproveAccessRequestMutationVariables>;
+export const DenyAccessRequestDocument = gql`
+    mutation DenyAccessRequest($userId: Int!, $projectId: Int!, $slug: String!) {
+  denyParticipant(input: {projectId: $projectId, userId: $userId}) {
+    user {
+      id
+      needsAccessRequestApproval(slug: $slug)
+      approvedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      deniedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      approvedOrDeniedOn(projectId: $projectId)
+    }
+  }
+}
+    `;
+export type DenyAccessRequestMutationFn = Apollo.MutationFunction<DenyAccessRequestMutation, DenyAccessRequestMutationVariables>;
+
+/**
+ * __useDenyAccessRequestMutation__
+ *
+ * To run a mutation, you first call `useDenyAccessRequestMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDenyAccessRequestMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [denyAccessRequestMutation, { data, loading, error }] = useDenyAccessRequestMutation({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *      projectId: // value for 'projectId'
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useDenyAccessRequestMutation(baseOptions?: Apollo.MutationHookOptions<DenyAccessRequestMutation, DenyAccessRequestMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DenyAccessRequestMutation, DenyAccessRequestMutationVariables>(DenyAccessRequestDocument, options);
+      }
+export type DenyAccessRequestMutationHookResult = ReturnType<typeof useDenyAccessRequestMutation>;
+export type DenyAccessRequestMutationResult = Apollo.MutationResult<DenyAccessRequestMutation>;
+export type DenyAccessRequestMutationOptions = Apollo.BaseMutationOptions<DenyAccessRequestMutation, DenyAccessRequestMutationVariables>;
 export const UpdateProfileDocument = gql`
     mutation UpdateProfile($userId: Int!, $affiliations: String, $email: Email, $fullname: String, $nickname: String, $picture: Upload) {
   updateProfileByUserId(
@@ -23658,6 +24006,8 @@ export const namedOperations = {
     SendInvite: 'SendInvite',
     RenameGroup: 'RenameGroup',
     SendInvites: 'SendInvites',
+    ApproveAccessRequest: 'ApproveAccessRequest',
+    DenyAccessRequest: 'DenyAccessRequest',
     UpdateProfile: 'UpdateProfile'
   },
   Subscription: {

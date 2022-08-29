@@ -214,6 +214,7 @@ describe("Static strategy", () => {
       }
     );
     const response = await cache.handleRequest(ENDPOINT_URL, request);
+    await sleep(50);
     const json = await response.json();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.id).toBe(1);
@@ -228,6 +229,7 @@ describe("Static strategy", () => {
       }
     );
     const response2 = await cache.handleRequest(ENDPOINT_URL, secondRequest);
+    await sleep(50);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect((await response2.json()).data.projectBySlug.name).toBe("Azores");
     const thirdRequest = await mockGqlRequest(
@@ -240,6 +242,7 @@ describe("Static strategy", () => {
       }
     );
     const response3 = await cache.handleRequest(ENDPOINT_URL, thirdRequest);
+    await sleep(50);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect((await response3.json()).data.projectBySlug.name).toBe("Azores");
     await cache.clear();
