@@ -18,6 +18,7 @@ import SignedInAs from "../components/SignedInAs";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
 import { ParticipationStatus, ProjectAccessStatus } from "../generated/graphql";
+import { CogIcon } from "@heroicons/react/solid";
 
 export default function FullSidebar({
   open,
@@ -313,20 +314,9 @@ export default function FullSidebar({
       {project?.sessionIsAdmin && (
         <Link
           to="./admin"
-          className="bg-cool-gray-700 block w-full p-4 rounded text-center mt-8"
+          className="bg-cool-gray-700 bg-opacity-50 block w-full p-4 rounded text-center mt-8 hover:bg-opacity-40"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="w-6 h-6 inline-block mr-3 -mt-1 text-gray-300"
-          >
-            <path
-              fillRule="evenodd"
-              d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <CogIcon className="w-6 h-6 inline-block mr-3 -mt-0.5 text-gray-300" />
           <span className="flex-1">{t("Project Admin Dashboard")}</span>
         </Link>
       )}
