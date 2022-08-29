@@ -45,6 +45,7 @@ import { offlineSurveyChoiceStrategy } from "../offline/GraphqlQueryCache/strate
 import { ExclamationIcon } from "@heroicons/react/outline";
 import Spinner from "../components/Spinner";
 import Modal from "../components/Modal";
+import useResetLanguage from "./useResetLanguage";
 
 require("./surveys.css");
 
@@ -297,6 +298,8 @@ function SurveyApp() {
     practice,
     setResponseState,
   ]);
+
+  useResetLanguage(data?.survey?.supportedLanguages as string[]);
 
   if (loading) {
     return <Spinner />;

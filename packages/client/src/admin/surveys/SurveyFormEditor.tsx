@@ -62,6 +62,7 @@ import languages, { LangDetails } from "../../lang/supported";
 import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
 import useDialog from "../../components/useDialog";
+import useResetLanguage from "../../surveys/useResetLanguage";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -97,6 +98,9 @@ export default function SurveyFormEditor({
       id: surveyId,
     },
   });
+
+  useResetLanguage(data?.survey?.supportedLanguages as string[]);
+
   const [imageChooserOpen, setImageChooserOpen] = useState(false);
   const [updateOrder, updateOrderState] = useUpdateFormElementOrderMutation();
   const history = useHistory();
