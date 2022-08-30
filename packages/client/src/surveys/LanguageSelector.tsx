@@ -20,6 +20,10 @@ export default function LanguageSelector(props: {
   const matchesAnyTranslation = filteredLanguages.find(
     (l) => l.code === i18n.language
   );
+  if (options.length <= 1) {
+    return null;
+  }
+
   return (
     <>
       {props.button(() => setOpen(true))}

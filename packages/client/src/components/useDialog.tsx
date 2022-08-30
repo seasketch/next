@@ -22,15 +22,25 @@ export default function useDialog() {
         onSubmit: options.onSubmit,
         onCancel: options.onCancel,
         submitting: false,
+        disableBackdropClick: true,
       });
     },
-    alert: (message: string) => {
-      context.setState({
-        type: "alert",
-        open: true,
-        message: message,
-        onSubmit: () => {},
-        submitting: false,
+    alert: (
+      message: string,
+      options?: {
+        description?: string;
+      }
+    ) => {
+      return new Promise((resolve, reject) => {
+        context.setState({
+          type: "alert",
+          open: true,
+          message: message,
+          description: options?.description,
+          onSubmit: resolve,
+          submitting: false,
+          disableBackdropClick: true,
+        });
       });
     },
     confirm: (
@@ -86,6 +96,7 @@ type DialogContextState = {
   icon?: "alert" | "delete";
   primaryButtonVariant?: "primary" | "danger";
   primaryButtonText?: string;
+  disableBackdropClick?: boolean;
 };
 
 const ResetState: DialogContextState = {
@@ -151,6 +162,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
               reset();
             }
           }}
+          disableBackdropClick={state.disableBackdropClick}
           autoWidth
           footer={
             state.type === "alert"
@@ -161,6 +173,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     onClick: onSubmit,
                     variant: state.primaryButtonVariant || "primary",
                     loading: false,
+                    autoFocus: true,
                   },
                 ]
               : state.type === "confirm"
@@ -171,6 +184,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     onClick: onSubmit,
                     variant: state.primaryButtonVariant || "primary",
                     loading: state.submitting,
+                    autoFocus: true,
                   },
                   {
                     disabled: state.submitting,
@@ -190,6 +204,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     onClick: onSubmit,
                     variant: state.primaryButtonVariant || "primary",
                     loading: state.submitting,
+                    autoFocus: true,
                   },
                   {
                     disabled: state.submitting,

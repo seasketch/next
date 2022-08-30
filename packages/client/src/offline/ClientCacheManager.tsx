@@ -14,7 +14,7 @@ import {
   FormElementDetailsFragment,
 } from "../generated/graphql";
 import getSlug from "../getSlug";
-import { sleep } from "../sleep";
+import sleep from "../sleep";
 import { srcVariants } from "../surveys/ImagePreloader";
 import useIsSuperuser from "../useIsSuperuser";
 import {

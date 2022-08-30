@@ -16,6 +16,7 @@ import { AdminMobileHeaderContext } from "../AdminMobileHeaderContext";
 import InviteList from "./InviteList";
 import UserList from "./UserList";
 import UserSettingsSidebar from "./UserSettingsSidebar";
+import useProjectId from "../../useProjectId";
 
 export const problemStatus = [
   InviteStatus.Complaint,
@@ -74,6 +75,7 @@ const updateCache = debounce(
 
 function UserSettings() {
   const { slug } = useParams<{ slug: string }>();
+  const projectId = useProjectId();
   const { setState: setHeaderState } = useContext(AdminMobileHeaderContext);
 
   const { data, loading, error } = useQuery<UserSettingsListsQuery>(
@@ -82,6 +84,7 @@ function UserSettings() {
       pollInterval: 15000,
       variables: {
         slug,
+        projectId,
       },
     }
   );
@@ -90,13 +93,15 @@ function UserSettings() {
     invites: InviteDetailsFragment[];
     groups: Pick<Group, "id" | "name">[];
     users: ParticipantListDetailsFragment[];
-  }>({ invites: [], groups: [], users: [] });
+    accessRequests: ParticipantListDetailsFragment[];
+  }>({ invites: [], groups: [], users: [], accessRequests: [] });
   useEffect(() => {
     if (
       data?.projectBySlug &&
       data?.projectBySlug?.invitesConnection.nodes &&
       data?.projectBySlug?.participants &&
-      data?.projectBySlug?.groups
+      data?.projectBySlug?.groups &&
+      data?.projectBySlug?.accessRequestsConnection
     ) {
       setLists({
         invites: [...data.projectBySlug.invitesConnection.nodes].sort(
@@ -116,12 +121,22 @@ function UserSettings() {
             );
           }),
         ],
+        accessRequests: [
+          ...[...data.projectBySlug.accessRequestsConnection.nodes].sort(
+            (a, b) => {
+              return (a.profile?.fullname || a.canonicalEmail)!.localeCompare(
+                (b.profile?.fullname || b.canonicalEmail)!
+              );
+            }
+          ),
+        ],
       });
     } else {
       setLists({
         invites: [],
         groups: [],
         users: [],
+        accessRequests: [],
       });
     }
   }, [
@@ -158,6 +173,7 @@ function UserSettings() {
         users={lists.users}
         accessControl={data?.projectBySlug?.accessControl}
         projectId={data?.projectBySlug?.id}
+        accessRequests={lists.accessRequests}
       />
       {error && <div className="p-8">{error.message}</div>}
       {!error && data?.projectBySlug?.id && (
@@ -176,6 +192,14 @@ function UserSettings() {
               projectId={data.projectBySlug.id}
               slug={slug}
               adminsOnly={true}
+            />
+          </Route>
+          <Route path={`/${slug}/admin/users/accessRequests`}>
+            <UserList
+              users={lists.accessRequests}
+              projectId={data.projectBySlug.id}
+              slug={slug}
+              adminsOnly={false}
             />
           </Route>
           <Route

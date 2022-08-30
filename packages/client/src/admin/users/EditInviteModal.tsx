@@ -13,6 +13,7 @@ import {
   useDeleteProjectInviteMutation,
   useSendInviteMutation,
   ProjectInviteEmailStatusSubscriptionDocument,
+  ParticipationStatus,
 } from "../../generated/graphql";
 import GroupMultiSelect from "./GroupMultiSelect";
 import InviteIcon from "./InviteIcon";
@@ -21,6 +22,7 @@ import { useSubscription } from "@apollo/client";
 import useDialog from "../../components/useDialog";
 import Modal from "../../components/Modal";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import Warning from "../../components/Warning";
 
 export default function EditInviteModal({
   id,
@@ -456,6 +458,49 @@ export default function EditInviteModal({
                   />
                 )}
               </div>
+            )}
+          </div>
+          <div className="mb-4">
+            <h2 className="font-medium">{t("Participation Status")}</h2>
+            {data.projectInvite.participationStatus ===
+              ParticipationStatus.PendingApproval && (
+              <p>
+                <Trans ns="admin">
+                  Recipient is awaiting approval of their project access
+                  request. (This should not happen for invite recipients! Please
+                  contact support@seasketch.org)
+                </Trans>
+              </p>
+            )}
+            {data.projectInvite.participationStatus ===
+              ParticipationStatus.None && (
+              <p>
+                <Trans ns="admin">
+                  Recipient has not used the invite to create an account. They
+                  may or may not have a SeaSketch account for an unrelated
+                  project.
+                </Trans>
+              </p>
+            )}
+            {data.projectInvite.participationStatus ===
+              ParticipationStatus.ParticipantSharedProfile && (
+              <p>
+                <Trans ns="admin">
+                  Recipient has created an account and shared a profile. They
+                  should appear in the participants list.
+                </Trans>
+              </p>
+            )}
+            {data.projectInvite.participationStatus ===
+              ParticipationStatus.ParticipantHiddenProfile && (
+              <Warning>
+                <Trans ns="admin">
+                  Recipient has created an account but has chosen not to join
+                  the project and share a public profile. For this reason they
+                  will <i className="italic">not</i> appear in the participants
+                  list or recieve any assigned access control permissions.
+                </Trans>
+              </Warning>
             )}
           </div>
         </div>

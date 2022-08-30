@@ -77,7 +77,9 @@ function Auth0ProviderWithRouter(props: any) {
         if (appState?.returnTo) {
           history.replace(appState.returnTo);
         } else {
-          history.replace("/");
+          if (!/projectInvite/.test(window.location.pathname)) {
+            history.replace("/");
+          }
         }
       }}
       scope={process.env.REACT_APP_AUTH0_SCOPE}

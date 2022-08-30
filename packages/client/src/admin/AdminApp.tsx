@@ -1,4 +1,10 @@
-import React, { useState, useEffect, ReactNode, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  ReactNode,
+  useMemo,
+  useContext,
+} from "react";
 import {
   useRouteMatch,
   useParams,
@@ -6,6 +12,7 @@ import {
   Switch,
   Route,
   Redirect,
+  useHistory,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
@@ -21,6 +28,9 @@ import Spinner from "../components/Spinner";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import Modal from "../components/Modal";
 import { AnimatePresence } from "framer-motion";
+import { ParticipationStatus } from "../generated/graphql";
+import useDialog from "../components/useDialog";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
@@ -62,8 +72,28 @@ const iconClassName =
 export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
   const { data } = useCurrentProjectMetadata();
+  const { alert } = useDialog();
 
+  const history = useHistory();
   const { t } = useTranslation(["admin"]);
+
+  useEffect(() => {
+    if (
+      data?.project?.sessionParticipationStatus &&
+      data?.project?.sessionParticipationStatus !==
+        ParticipationStatus.ParticipantSharedProfile
+    ) {
+      alert(t("The admin dashboard is limited to project participants"), {
+        description: t(
+          "You must join the project and share a profile to enable admin privileges."
+        ),
+      }).then(() => {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/join?redirectUrl=${window.location.pathname}`);
+      });
+    }
+  }, [data?.project?.sessionParticipationStatus]);
+
   const sections: Section[] = [
     {
       breadcrumb: t("Back to Project"),
@@ -391,6 +421,7 @@ function SidebarContents(props: {
   projectName: string;
   sections: Section[];
 }) {
+  const cache = useContext(GraphqlQueryCacheContext);
   const { t } = useTranslation(["admin"]);
   const { user, logout } = useAuth0();
   let social: string | false = false;
@@ -456,11 +487,12 @@ function SidebarContents(props: {
                 </div>
               </div>
               <button
-                onClick={() =>
+                onClick={() => {
+                  cache?.logout();
                   logout({
                     returnTo: window.location.origin,
-                  })
-                }
+                  });
+                }}
                 className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-gray-300 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75 w-full"
               >
                 <svg

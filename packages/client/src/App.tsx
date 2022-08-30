@@ -63,8 +63,12 @@ const LazyFullScreenOfflinePage = React.lazy(
 const LazyAccountSettingsPage = React.lazy(
   () =>
     import(
-      /* webpackChunkName: "AccountSettingsPage" */ "./auth/AccountSettingsPage"
+      /* webpackChunkName: "AccountSettingsPage" */ "./auth/CacheSettingsPage"
     )
+);
+
+const LazyJoinProject = React.lazy(
+  () => import(/* webpackChunkName: "JoinProject" */ "./auth/JoinProject")
 );
 
 function App() {
@@ -170,6 +174,9 @@ function App() {
                     <Redirect to={`/${params.match.params.slug}/app`} />
                   )}
                 />
+                <Route exact path="/:slug/join">
+                  <LazyJoinProject />
+                </Route>
                 <Route path="/:slug">
                   <Route
                     exact
@@ -235,7 +242,7 @@ function App() {
                   <Route path="/:slug/admin">
                     <LazyProjectAdmin />
                   </Route>
-                  <Route path="/:slug/app/:sidebar?">
+                  <Route path={["/:slug/profile", "/:slug/app/:sidebar?"]}>
                     <ProjectAccessGate>
                       <LazyProjectApp />
                     </ProjectAccessGate>

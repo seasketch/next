@@ -173,7 +173,7 @@ describe("Ingress initial scenarios", () => {
         expect(confirmFn).toBeCalledTimes(1);
         // User should be redirected to the project page
       });
-      expect(history.location.pathname).toBe("/test");
+      expect(history.location.pathname).toBe("/test/join");
     });
 
     test("with invite sent to different email address", async () => {
@@ -404,7 +404,7 @@ describe("Ingress initial scenarios", () => {
           expect(confirmFn).toBeCalledTimes(1);
         });
         // App should be redirected to project
-        expect(history.location.pathname).toBe("/test");
+        expect(history.location.pathname).toBe("/test/join");
       });
       test("Accepting as another user logs out current session and redirects to confirmation page after authentication", async () => {
         const history = createMemoryHistory();
@@ -575,7 +575,7 @@ describe("Ingress initial scenarios", () => {
         expect(verifyFn).toBeCalledTimes(1);
         expect(confirmFn).toBeCalledTimes(1);
       });
-      expect(history.location.pathname).toBe("/test");
+      expect(history.location.pathname).toBe("/test/join");
     });
   });
 

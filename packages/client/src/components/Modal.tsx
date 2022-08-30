@@ -1,5 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import Spinner from "./Spinner";
 import { Fragment, useRef, useState } from "react";
 import { Dialog, Tab, Transition } from "@headlessui/react";
@@ -15,6 +15,7 @@ export type FooterButtonProps = {
   onClick?: () => void;
   variant?: "primary" | "secondary" | "danger";
   label: string | ReactNode;
+  autoFocus?: boolean;
 };
 
 interface ModalProps {
@@ -266,8 +267,17 @@ function FooterButton(props: FooterButtonProps) {
         ? deleteColors
         : secondaryColors;
   }
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (ref.current && props.autoFocus) {
+      ref.current.focus();
+    }
+  }, []);
   return (
     <button
+      ref={ref}
+      autoFocus={props.autoFocus || false}
       type="button"
       className={`${
         props.disabled && "pointer-events-none opacity-50"
