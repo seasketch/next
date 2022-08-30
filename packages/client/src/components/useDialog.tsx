@@ -204,6 +204,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     onClick: onSubmit,
                     variant: state.primaryButtonVariant || "primary",
                     loading: state.submitting,
+                    autoFocus: true,
                   },
                   {
                     disabled: state.submitting,
