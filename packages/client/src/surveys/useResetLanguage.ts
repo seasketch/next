@@ -27,7 +27,11 @@ export default function useResetLanguage(supportedLanguages?: string[] | null) {
           )
         );
         if (!supported) {
-          i18n.changeLanguage(supportedLanguages[0]);
+          if (!i18n.language || /en/.test(i18n.language.toLowerCase())) {
+            // don't change
+          } else {
+            i18n.changeLanguage(supportedLanguages[0]);
+          }
         }
       }
     }
