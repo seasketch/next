@@ -39,6 +39,7 @@ import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
 import DigitizingMiniMap from "./DigitizingMiniMap";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import useDialog from "../components/useDialog";
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 const defaultStartingBounds = [
@@ -152,6 +153,8 @@ const SingleSpatialInput: FormElementComponent<
     }
   }, [mapContext.manager, data?.projectBySlug?.basemaps]);
 
+  const { confirm } = useDialog();
+
   return (
     <>
       <div className="mb-5">
@@ -194,9 +197,9 @@ const SingleSpatialInput: FormElementComponent<
               geometryType={geometryType}
               onRequestFinishEditing={actions.finishEditing}
               onRequestResetFeature={() => {}}
-              onRequestDelete={() => {
+              onRequestDelete={async () => {
                 if (
-                  window.confirm(
+                  await confirm(
                     t("Are you sure you want to delete this shape?", {
                       ns: "surveys",
                     })

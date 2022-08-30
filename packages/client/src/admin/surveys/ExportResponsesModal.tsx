@@ -22,11 +22,10 @@ export default function ExportResponsesModal({
   const { t } = useTranslation("admin:surveys");
   const token = useAccessToken();
   const [includePractice, setIncludePractice] = useState(false);
-  return (
+  return !open ? null : (
     <Modal
-      open={open}
       title={t("Export Responses")}
-      onRequestClose={onRequestClose}
+      onRequestClose={onRequestClose || (() => {})}
     >
       <h4 className="text-lg py-1">
         <Trans ns="admin:surveys">Response Data</Trans>

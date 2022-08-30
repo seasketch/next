@@ -7,11 +7,14 @@ import {
 import { DocumentNode, SelectionSetNode } from "graphql";
 import { useGlobalErrorHandler } from "./components/GlobalErrorHandler";
 
-export function useDelete<Mutation>(document: DocumentNode) {
+export function useDelete<Mutation>(
+  document: DocumentNode,
+  skipGlobalErrorHandler?: boolean
+) {
   const onError = useGlobalErrorHandler();
   const { mutationName, subjectName, kind } = getDocumentDetails(document);
   const [mutate] = useMutation(document, {
-    onError,
+    onError: skipGlobalErrorHandler ? undefined : onError,
     optimisticResponse: (data) => {
       return {
         __typename: "Mutation",

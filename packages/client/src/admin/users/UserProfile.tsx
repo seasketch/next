@@ -4,7 +4,7 @@ import { Profile } from "../../generated/graphql";
 interface ProfileProps {
   profile: Pick<
     Profile,
-    "affiliations" | "fullname" | "nickname" | "bio" | "email" | "picture"
+    "affiliations" | "fullname" | "nickname" | "email" | "picture"
   >;
   canonicalEmail: string;
 }
@@ -73,26 +73,11 @@ export default function UserProfile({ profile, canonicalEmail }: ProfileProps) {
             </div>
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
               <dt className="text-sm font-medium text-gray-500">
-                <Trans ns="admin">Affiliations</Trans>
+                <Trans ns="admin">Affiliations and Bio</Trans>
               </dt>
               <dd className="mt-1 flex text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                 <span className="flex-grow">
                   {profile.affiliations || (
-                    <span className="italic text-gray-500">
-                      <Trans ns="admin">Not provided</Trans>
-                    </span>
-                  )}
-                </span>
-              </dd>
-            </div>
-            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-              <dt className="text-sm font-medium text-gray-500">
-                <Trans ns="admin">Bio</Trans>
-              </dt>
-              <dd className="mt-1 flex text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                <span className="flex-grow">
-                  {/* eslint-disable-next-line */}
-                  {profile.bio || (
                     <span className="italic text-gray-500">
                       <Trans ns="admin">Not provided</Trans>
                     </span>

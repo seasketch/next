@@ -31,7 +31,6 @@ fragment ProjectMetadataMeFrag on User {
     nickname
     email
     picture
-    bio
     affiliations
   }
 }
@@ -39,6 +38,8 @@ fragment ProjectMetadataMeFrag on User {
 query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
     ...ProjectMetadata
+    sessionParticipationStatus
+    sessionHasPrivilegedAccess
   }
   projectPublicDetails(slug: $slug) {
     ...ProjectPublicDetailsMetadata
@@ -52,13 +53,7 @@ query Me {
   me {
     id
     profile {
-      userId
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
+      ...UserProfileDetails
     }
   }
 }

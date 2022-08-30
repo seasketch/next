@@ -1,0 +1,10 @@
+mutation JoinProject($projectId: Int!) {
+  joinProject(input: { projectId: $projectId }) {
+    query {
+      project(id: $projectId) {
+        id
+        sessionParticipationStatus
+      }
+    }
+  }
+}

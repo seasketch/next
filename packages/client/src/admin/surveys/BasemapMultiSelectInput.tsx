@@ -9,6 +9,7 @@ import { FormEditorHeader } from "./SurveyFormEditor";
 import DropdownButton from "../../components/DropdownButton";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import CreateBasemapModal from "../data/CreateBasemapModal";
+import useDialog from "../../components/useDialog";
 
 function filterBasemaps<T extends { id: number }>(
   basemaps: T[],
@@ -61,6 +62,7 @@ export default function BasemapMultiSelectInput({
   }, [value, basemaps]);
 
   const [selectBasemapsModalOpen, setSelectBasemapsModalOpen] = useState(false);
+  const { confirm } = useDialog();
 
   return (
     <>
@@ -190,9 +192,9 @@ export default function BasemapMultiSelectInput({
                                         <Trans ns="admin:surveys">edit</Trans>
                                       </Link>
                                       <button
-                                        onClick={() => {
+                                        onClick={async () => {
                                           if (
-                                            window.confirm(
+                                            await confirm(
                                               t(
                                                 "Are you sure you want to remove this map?"
                                               )

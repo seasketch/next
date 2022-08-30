@@ -1,143 +1,348 @@
-import React, { ReactNode } from "react";
-import { motion } from "framer-motion";
+/* eslint-disable i18next/no-literal-string */
+import { ReactNode, useEffect } from "react";
 import Spinner from "./Spinner";
+import { Fragment, useRef, useState } from "react";
+import { Dialog, Tab, Transition } from "@headlessui/react";
+import {
+  ExclamationCircleIcon,
+  ExclamationIcon,
+} from "@heroicons/react/outline";
+import { AnimatePresence, motion } from "framer-motion";
+
+export type FooterButtonProps = {
+  disabled?: boolean;
+  loading?: boolean;
+  onClick?: () => void;
+  variant?: "primary" | "secondary" | "danger";
+  label: string | ReactNode;
+  autoFocus?: boolean;
+};
 
 interface ModalProps {
-  open: boolean;
-  onRequestClose?: () => void;
-  disableEscapeKeyDown?: boolean;
+  onRequestClose: () => void;
   disableBackdropClick?: boolean;
-  footer?: ReactNode;
+  footer?: FooterButtonProps[];
   title?: string | ReactNode;
   className?: string;
-  zeroPadding?: boolean;
   loading?: boolean;
+  children?: ReactNode;
+  icon?: "delete" | "alert";
+  autoWidth?: boolean;
+  tipyTop?: boolean;
+  tabs?: string[];
+  scrollable?: boolean;
+  zeroPadding?: boolean;
 }
 
-const Modal: React.FunctionComponent<ModalProps> = ({
-  open,
-  children,
-  disableBackdropClick,
-  disableEscapeKeyDown,
-  onRequestClose,
-  footer,
-  title,
-  className,
-  zeroPadding,
-  loading,
-}) => {
+export default function Modal(props: ModalProps) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  if (props.scrollable && props.icon) {
+    throw new Error("Cannot combine scrollable and icon settings in Modal");
+  }
+
+  let grid = `
+    [row1-start] "icon header" auto [row1-end]
+    [row2-start] "icon body" 1fr [row2-end]
+    [row3-start] "icon footer" 25px [row3-end]
+    / 50px auto
+  `;
+
+  if (props.scrollable) {
+    grid = `
+      [row1-start] "header" auto [row1-end]
+      [row2-start] "body" 1fr [row2-end]
+      [row3-start] "footer" auto [row3-end]
+      / auto
+    `;
+  }
+
+  let hasTitle = Boolean(props.title);
+  if (props.title && typeof props.title === "string") {
+    hasTitle = props.title.length > 0;
+  }
+
   return (
-    // <AnimatePresence>
-    <div>
-      {open && (
-        <div className={`fixed z-50 inset-0 overflow-y-hidden h-screen`}>
-          <div className="flex items-end justify-center h-screen sm:px-4 sm:pb-20 text-center sm:block sm:p-0">
-            <motion.div
-              className="fixed inset-0"
-              variants={{
-                enter: {
-                  opacity: 1,
-                  transition: {
-                    duration: 0.1,
-                    ease: "easeIn",
-                    delay: 0,
-                  },
-                },
-                exit: {
-                  opacity: 0,
-                  transition: {
-                    duration: 0.2,
-                    ease: "easeOut",
-                    delay: 0.1,
-                  },
-                },
-              }}
-              initial={{ opacity: 0 }}
-              animate="enter"
-              // transition={{ duration: 0.1, ease: "easeInOut" }}
-              exit="exit"
+    <Dialog
+      open={true}
+      as={motion.div}
+      className={`relative ${props.tipyTop ? "z-50" : "z-20"}`}
+      onClose={() => {
+        if (!props.disableBackdropClick) {
+          props.onRequestClose();
+        }
+      }}
+    >
+      <Backdrop />
+
+      <div className="fixed z-10 inset-0 overflow-y-auto sm:overflow-y-hidden">
+        <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+          <div className="flex items-end sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
+            <Panel
+              zeroPadding={props.zeroPadding || false}
+              autoWidth={props.autoWidth}
+              grid={grid}
             >
               <div
-                onClick={() => {
-                  if (!disableBackdropClick) {
-                    if (onRequestClose) {
-                      onRequestClose();
-                    }
-                  }
-                }}
-                className="absolute inset-0 bg-gray-500 opacity-75"
-              ></div>
-            </motion.div>
-            {/* <!-- This element is to trick the browser into centering the modal contents. --> */}
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen"></span>
-            {
-              // eslint-disable-next-line
-            }
-            &#8203;
-            {loading && <Spinner className="z-50" color="white" large />}
-            {!loading && (
-              <motion.div
-                className={`inline-block w-full sm:align-middle sm:h-auto absolute top-0 max-w-full align-bottom overflow-hidden bg-white sm:rounded-lg text-left shadow-xl transform transition-all sm:my-8 md:w-auto sm:w-full z-50 md:relative ${
-                  className ? className : ""
+                className={`w-full justify-center ${
+                  props.icon && "sm:pl-4 sm:flex sm:items-start"
                 }`}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="modal-headline"
-                variants={{
-                  enter: {
-                    scale: 1,
-                    opacity: 1,
-                    transition: {
-                      duration: 0.1,
-                      ease: "easeIn",
-                      delay: 0.0,
-                    },
-                  },
-                  exit: {
-                    scale: 0.5,
-                    opacity: 0,
-                    transition: {
-                      ease: "easeOut",
-                      delay: 0,
-                      duration: 0.1,
-                    },
-                  },
-                }}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate="enter"
-                exit="exit"
               >
-                <div className="flex flex-col max-h-full h-full">
-                  {title && (
-                    <div
-                      className={`w-full text-lg ${
-                        typeof title === "string" ? "p-6" : ""
-                      } flex-0 border-b`}
-                    >
-                      {title}
-                    </div>
-                  )}
-                  <div
-                    className={`${
-                      zeroPadding ? "p-0" : "p-4 sm:p-6"
-                    } flex-0 overflow-y-auto`}
-                  >
-                    {children}
+                {props.icon && props.icon === "delete" && (
+                  <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <ExclamationIcon
+                      className="h-6 w-6 text-red-600"
+                      aria-hidden="true"
+                    />
                   </div>
-                  {footer && (
-                    <div className="w-full flex-1 self-end bg-cool-gray-50 p-4 text-left border-t space-x-2 ">
-                      {footer}
+                )}
+                {props.icon && props.icon === "alert" && (
+                  <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-300 bg-opacity-10 sm:mx-0 sm:h-10 sm:w-10">
+                    <ExclamationCircleIcon
+                      className="h-6 w-6 text-gray-500"
+                      aria-hidden="true"
+                    />
+                  </div>
+                )}
+                <div
+                  className={`sm:flex sm:flex-col mt-3 text-center sm:mt-0 ${
+                    props.icon && "sm:ml-4"
+                  } sm:text-left sm:max-h-almost-full`}
+                >
+                  {hasTitle && (
+                    <Dialog.Title
+                      as="h3"
+                      className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
+                        props.tabs !== undefined ? "pb-0" : "pb-4"
+                      } ${
+                        (props.tabs !== undefined || props.scrollable) &&
+                        "border-b"
+                      } ${props.icon && "pl-0"}`}
+                    >
+                      {props.title}
+
+                      {props.tabs && props.tabs.length > 0 && (
+                        <>
+                          <Tabs
+                            selectedIndex={selectedIndex}
+                            labels={props.tabs}
+                            setSelectedIndex={setSelectedIndex}
+                          />
+                        </>
+                      )}
+                    </Dialog.Title>
+                  )}
+
+                  <div
+                    className={`sm:flex-1 mt-0 ${
+                      props.zeroPadding ? "" : "p-6"
+                    } ${
+                      props.scrollable ? "py-4" : "py-0"
+                    } sm:overflow-y-auto ${props.icon && "pl-0"}`}
+                  >
+                    {props.children}
+                  </div>
+                  {((props.footer && props.footer.length > 0) ||
+                    !props.zeroPadding) && (
+                    <div
+                      className={`${
+                        ""
+                        // props.icon && "sm:ml-10 sm:pl-4"
+                      } sm:flex space-y-2 sm:space-y-0 sm:space-x-2 px-6 py-4 ${
+                        props.scrollable && "sm:bg-gray-100"
+                      } ${props.icon && "pl-0"}`}
+                    >
+                      {(props.footer || []).map((footerProps) => (
+                        <FooterButton
+                          key={footerProps.label!.toString()}
+                          {...footerProps}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>
-              </motion.div>
-            )}
+              </div>
+            </Panel>
           </div>
-        </div>
-      )}
-    </div>
-    // </AnimatePresence>
+        </Tab.Group>
+      </div>
+    </Dialog>
   );
-};
+}
 
-export default Modal;
+function Backdrop() {
+  return (
+    <motion.div
+      className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+      variants={{
+        enter: {
+          opacity: 1,
+          transition: {
+            duration: 0.1,
+            ease: "easeIn",
+            delay: 0,
+          },
+        },
+        // Not sure why animating removal doesn't work
+        exit: {
+          opacity: 0,
+          transition: {
+            duration: 0.2,
+            ease: "easeOut",
+            delay: 0.1,
+          },
+        },
+      }}
+      initial={{ opacity: 0 }}
+      animate="enter"
+      exit="exit"
+    ></motion.div>
+  );
+}
+
+function Panel({
+  children,
+  autoWidth,
+  grid,
+  zeroPadding,
+}: {
+  children?: ReactNode;
+  autoWidth?: boolean;
+  grid: string;
+  zeroPadding: boolean;
+}) {
+  return (
+    <Dialog.Panel
+      as={motion.div}
+      variants={{
+        enter: {
+          scale: 1,
+          opacity: 1,
+          transition: {
+            duration: 0.1,
+            ease: "easeIn",
+            delay: 0.05,
+          },
+        },
+        exit: {
+          scale: 0.5,
+          opacity: 0,
+          transition: {
+            ease: "easeOut",
+            delay: 0,
+            duration: 0.1,
+          },
+        },
+      }}
+      initial={{ scale: 0.5, opacity: 0 }}
+      animate="enter"
+      exit="exit"
+      className={`relative bg-white rounded-lg ${
+        zeroPadding ? "" : "px-4"
+      } pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-xl lg:max-w-2xl ${
+        autoWidth ? "w-auto" : "w-full"
+      } sm:p-0`}
+    >
+      {children}
+    </Dialog.Panel>
+  );
+}
+
+const deleteColors =
+  "border-transparent bg-red-600 text-white hover:bg-red-700 focus:ring-red-500";
+
+const secondaryColors =
+  "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-primary-500";
+
+const primaryColors =
+  "shadow border-transparent bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500";
+
+function FooterButton(props: FooterButtonProps) {
+  let colors = secondaryColors;
+  if (props.variant) {
+    colors =
+      props.variant === "primary"
+        ? primaryColors
+        : props.variant === "danger"
+        ? deleteColors
+        : secondaryColors;
+  }
+  const ref = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (ref.current && props.autoFocus) {
+      ref.current.focus();
+    }
+  }, []);
+  return (
+    <button
+      ref={ref}
+      autoFocus={props.autoFocus || false}
+      type="button"
+      className={`${
+        props.disabled && "pointer-events-none opacity-50"
+      } inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm ${colors}`}
+      onClick={props.onClick}
+    >
+      {props.label}
+      {props.loading && <Spinner className="ml-2" color="white" />}
+    </button>
+  );
+}
+
+export function Tabs({
+  labels,
+  selectedIndex,
+  setSelectedIndex,
+}: {
+  labels: string[];
+  selectedIndex: number;
+  setSelectedIndex: (i: number) => void;
+}) {
+  return (
+    <div>
+      <div className="sm:hidden">
+        <label htmlFor="tabs" className="sr-only">
+          Select a tab
+        </label>
+        {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
+        <select
+          id="tabs"
+          name="tabs"
+          className="mt-3 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+          value={selectedIndex.toString()}
+          onChange={(e) => setSelectedIndex(parseInt(e.target.value))}
+        >
+          {labels.map((label, i) => (
+            <option value={i.toString()} key={label}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="hidden sm:block">
+        <div className=" border-gray-200">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+            {labels.map((label) => (
+              <Tab
+                key={label}
+                className={classNames(
+                  labels.indexOf(label) === selectedIndex
+                    ? "border-primary-500 text-primary-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300",
+                  "whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                )}
+              >
+                {label}
+              </Tab>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function classNames(...classes: string[]) {
+  return classes.filter(Boolean).join(" ");
+}

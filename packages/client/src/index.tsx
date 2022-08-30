@@ -29,6 +29,7 @@ import { strategies } from "./offline/GraphqlQueryCache/strategies";
 import { GraphqlQueryCacheContext } from "./offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { OfflineStateDetector } from "./offline/OfflineStateContext";
 import { onError } from "@apollo/client/link/error";
+import { DialogProvider } from "./components/useDialog";
 
 const history = createBrowserHistory();
 
@@ -76,7 +77,9 @@ function Auth0ProviderWithRouter(props: any) {
         if (appState?.returnTo) {
           history.replace(appState.returnTo);
         } else {
-          history.replace("/");
+          if (!/projectInvite/.test(window.location.pathname)) {
+            history.replace("/");
+          }
         }
       }}
       scope={process.env.REACT_APP_AUTH0_SCOPE}
@@ -241,7 +244,9 @@ ReactDOM.render(
             cacheLocation="localstorage"
           >
             <ApolloProviderWithToken>
-              <App />
+              <DialogProvider>
+                <App />
+              </DialogProvider>
             </ApolloProviderWithToken>
           </Auth0ProviderWithRouter>
         </Router>

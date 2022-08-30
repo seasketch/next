@@ -80,8 +80,17 @@ fragment UserListDetails on User {
     name
     id
   }
+  needsAccessRequestApproval(slug: $slug)
+  approvedBy(projectId: $projectId) {
+    id
+    canonicalEmail
+  }
+  deniedBy(projectId: $projectId) {
+    id
+    canonicalEmail
+  }
+  approvedOrDeniedOn(projectId: $projectId)
   onboarded
-  participationStatus
   profile {
     userId
     email
@@ -91,7 +100,7 @@ fragment UserListDetails on User {
   }
 }
 
-query UserSettingsLists($slug: String!) {
+query UserSettingsLists($slug: String!, $projectId: Int!) {
   projectBySlug(slug: $slug) {
     id
     groups {
@@ -106,11 +115,16 @@ query UserSettingsLists($slug: String!) {
     participants {
       ...UserListDetails
     }
+    accessRequestsConnection {
+      nodes {
+        ...UserListDetails
+      }
+    }
     accessControl
   }
 }
 
-query UserInfo($userId: Int!, $slug: String!) {
+query UserInfo($userId: Int!, $slug: String!, $projectId: Int!) {
   user(id: $userId) {
     id
     isAdmin
@@ -125,15 +139,27 @@ query UserInfo($userId: Int!, $slug: String!) {
     }
     onboarded
     participationStatus
+    needsAccessRequestApproval(slug: $slug)
+    deniedBy(projectId: $projectId) {
+      id
+      canonicalEmail
+    }
+    approvedBy(projectId: $projectId) {
+      id
+      canonicalEmail
+    }
+    approvedOrDeniedOn(projectId: $projectId)
     profile {
       userId
       affiliations
-      bio
       email
       fullname
       nickname
       picture
     }
+  }
+  project(id: $projectId) {
+    id
   }
   projectBySlug(slug: $slug) {
     id
@@ -269,6 +295,7 @@ query InviteEditorModalQuery($inviteId: Int!, $slug: String!) {
     inviteEmails {
       ...InviteEmailDetails
     }
+    participationStatus
   }
 }
 
@@ -351,6 +378,42 @@ subscription ProjectInviteEmailStatusSubscription {
     invite {
       id
       status
+    }
+  }
+}
+
+mutation ApproveAccessRequest($userId: Int!, $projectId: Int!, $slug: String!) {
+  approveParticipant(input: { projectId: $projectId, userId: $userId }) {
+    user {
+      id
+      needsAccessRequestApproval(slug: $slug)
+      approvedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      deniedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      approvedOrDeniedOn(projectId: $projectId)
+    }
+  }
+}
+
+mutation DenyAccessRequest($userId: Int!, $projectId: Int!, $slug: String!) {
+  denyParticipant(input: { projectId: $projectId, userId: $userId }) {
+    user {
+      id
+      needsAccessRequestApproval(slug: $slug)
+      approvedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      deniedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      approvedOrDeniedOn(projectId: $projectId)
     }
   }
 }

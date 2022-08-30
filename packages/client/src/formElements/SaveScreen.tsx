@@ -7,7 +7,6 @@ import { GraphQLError } from "graphql";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import IndeterminantLoadingBar from "../admin/surveys/IndeterminantLoadingBar";
-import Button from "../components/Button";
 import Modal from "../components/Modal";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import SurveyButton from "../surveys/SurveyButton";
@@ -136,33 +135,28 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
         )}
         {showResetModal && (
           <Modal
-            open={true}
             onRequestClose={() => setShowResetModal(false)}
             title={t("Reset Survey")}
             className="text-black"
-            footer={
-              <div className="space-x-2 rtl:space-x-reverse text-right">
-                <Button
-                  label={t("Cancel")}
-                  onClick={() => setShowResetModal(false)}
-                />
-                <Button
-                  primary
-                  label={t("Reset Survey")}
-                  onClick={surveyContext?.resetResponse}
-                />
-              </div>
-            }
+            footer={[
+              {
+                onClick: surveyContext?.resetResponse || (() => {}),
+                label: t("Reset Survey"),
+                variant: "primary",
+              },
+              {
+                onClick: () => setShowResetModal(false),
+                label: t("Cancel"),
+              },
+            ]}
           >
-            <div className="w-full sm:w-128">
-              <p>
-                <Trans ns="surveys" i18nKey="ResetSurvey">
-                  Resetting will delete all of your previously entered data so
-                  that you may start the survey again in a blank state. This
-                  action cannot be undone.
-                </Trans>
-              </p>
-            </div>
+            <p>
+              <Trans ns="surveys" i18nKey="ResetSurvey">
+                Resetting will delete all of your previously entered data so
+                that you may start the survey again in a blank state. This
+                action cannot be undone.
+              </Trans>
+            </p>
           </Modal>
         )}
       </div>

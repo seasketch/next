@@ -1299,6 +1299,7 @@ CREATE TABLE public.surveys (
     show_progress boolean DEFAULT true NOT NULL,
     show_facilitation_option boolean DEFAULT true NOT NULL,
     supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
+    CONSTRAINT namechk CHECK (((char_length(name) <= 200) AND (char_length(name) > 0))),
     CONSTRAINT surveys_name_check CHECK ((char_length(name) <= 255))
 );
 
@@ -1868,27 +1869,96 @@ CREATE FUNCTION public.after_response_submission() RETURNS trigger
 
 
 --
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    legacy_id text,
+    sub text,
+    registered_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+    onboarded timestamp with time zone,
+    canonical_email text NOT NULL
+);
+
+
+--
+-- Name: TABLE users; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.users IS '
+@omit all
+The SeaSketch User type is quite sparse since authentication is handled by Auth0
+and we store no personal information unless the user explicitly adds it to the
+user `Profile`.
+
+During operation of the system, users identify themselves using bearer tokens. 
+These tokens contain ephemeral information like `canonical_email` which can be
+used to accept project invite tokens.
+';
+
+
+--
+-- Name: COLUMN users.legacy_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.legacy_id IS '@omit';
+
+
+--
+-- Name: COLUMN users.sub; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.sub IS '@omit';
+
+
+--
+-- Name: COLUMN users.registered_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.registered_at IS '@omit';
+
+
+--
+-- Name: COLUMN users.onboarded; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.onboarded IS '
+Indicates whether the user has seen post-registration information. Can be 
+updated with `confirmOnboarded()` mutation. 
+
+Since this field is a date, it could
+hypothetically be reset as terms of service are updated, though it may be better
+to add a new property to track that.
+';
+
+
+--
+-- Name: COLUMN users.canonical_email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.users.canonical_email IS '@omit';
+
+
+--
 -- Name: approve_participant(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.approve_participant("projectId" integer, "userId" integer) RETURNS void
+CREATE FUNCTION public.approve_participant("projectId" integer, "userId" integer) RETURNS public.users
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
+    DECLARE
+      user users;
     BEGIN
       IF session_is_admin("projectId") or session_is_superuser() THEN
-        update project_participants set approved = true where user_id = "userId" and project_id = "projectId";
+        update project_participants set approved = true, denied_by = null, approved_by = nullif(current_setting('session.user_id', TRUE), '')::integer, approved_or_denied_on = now() where user_id = "userId" and project_id = "projectId";
+        select * into user from users where users.id = "userId";
+        return user;
       ELSE
         raise exception 'You must be a project administrator';
       END IF;
     END
   $$;
-
-
---
--- Name: FUNCTION approve_participant("projectId" integer, "userId" integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) IS 'For invite_only projects. Approve access request by a user. Must be an administrator of the project.';
 
 
 --
@@ -3106,78 +3176,6 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
     AS $$
     update form_elements set background_image = null, background_color = null, layout = null, background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
   $$;
-
-
---
--- Name: users; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.users (
-    id integer NOT NULL,
-    legacy_id text,
-    sub text,
-    registered_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-    onboarded timestamp with time zone,
-    canonical_email text NOT NULL
-);
-
-
---
--- Name: TABLE users; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.users IS '
-@omit all
-The SeaSketch User type is quite sparse since authentication is handled by Auth0
-and we store no personal information unless the user explicitly adds it to the
-user `Profile`.
-
-During operation of the system, users identify themselves using bearer tokens. 
-These tokens contain ephemeral information like `canonical_email` which can be
-used to accept project invite tokens.
-';
-
-
---
--- Name: COLUMN users.legacy_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.legacy_id IS '@omit';
-
-
---
--- Name: COLUMN users.sub; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.sub IS '@omit';
-
-
---
--- Name: COLUMN users.registered_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.registered_at IS '@omit';
-
-
---
--- Name: COLUMN users.onboarded; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.onboarded IS '
-Indicates whether the user has seen post-registration information. Can be 
-updated with `confirmOnboarded()` mutation. 
-
-Since this field is a date, it could
-hypothetically be reset as terms of service are updated, though it may be better
-to add a new property to track that.
-';
-
-
---
--- Name: COLUMN users.canonical_email; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.users.canonical_email IS '@omit';
 
 
 --
@@ -4813,6 +4811,27 @@ COMMENT ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemI
 
 
 --
+-- Name: deny_participant(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.deny_participant("projectId" integer, "userId" integer) RETURNS public.users
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    DECLARE
+      user users;
+    BEGIN
+      IF session_is_admin("projectId") or session_is_superuser() THEN
+        update project_participants set approved = false, approved_by = null, denied_by = nullif(current_setting('session.user_id', TRUE), '')::integer, approved_or_denied_on = now() where user_id = "userId" and project_id = "projectId";
+        select * into user from users where users.id = "userId";
+        return user;
+      ELSE
+        raise exception 'You must be a project administrator';
+      END IF;
+    END
+  $$;
+
+
+--
 -- Name: disable_forum_posting(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5579,7 +5598,7 @@ COMMENT ON FUNCTION public.it_me("userId" integer) IS '@omit';
 CREATE FUNCTION public.join_project(project_id integer) RETURNS void
     LANGUAGE sql SECURITY DEFINER
     AS $$
-    insert into project_participants (user_id, project_id, share_profile) values (current_setting('session.user_id', true)::integer, project_id, true) on conflict on constraint project_participants_pkey do update set share_profile = true;
+    insert into project_participants (user_id, project_id, share_profile, approved) values (current_setting('session.user_id', true)::integer, project_id, true, session_is_superuser()) on conflict on constraint project_participants_pkey do update set share_profile = true;
   $$;
 
 
@@ -6077,7 +6096,6 @@ CREATE TABLE public.user_profiles (
     picture text,
     email public.email,
     affiliations text,
-    bio text,
     CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
 
@@ -6385,6 +6403,17 @@ COMMENT ON FUNCTION public.project_invites_groups(invite public.project_invites)
 
 
 --
+-- Name: project_invites_participation_status(public.project_invites); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_invites_participation_status(invite public.project_invites) RETURNS public.participation_status
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select users_participation_status(users.*, invite.project_id) from users where users.id = invite.user_id and session_is_admin(invite.project_id);
+  $$;
+
+
+--
 -- Name: project_invites_status(public.project_invites); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6477,6 +6506,43 @@ CREATE FUNCTION public.project_public_details(slug text) RETURNS public.public_p
     projects
   WHERE
     projects.slug = project_public_details.slug
+$$;
+
+
+--
+-- Name: projects_access_requests(public.projects, public.participant_sort_by, public.sort_by_direction); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_access_requests(p public.projects, order_by public.participant_sort_by DEFAULT 'NAME'::public.participant_sort_by, direction public.sort_by_direction DEFAULT 'ASC'::public.sort_by_direction) RETURNS SETOF public.users
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT
+    users.*
+  FROM
+    users
+    INNER JOIN project_participants ON (project_participants.user_id = users.id)
+    INNER JOIN user_profiles ON (user_profiles.user_id = users.id)
+  WHERE
+    session_is_admin(p.id) and
+    project_participants.project_id = p.id and
+    (project_participants.share_profile = true and project_participants.approved = false and p.access_control != 'public'::project_access_control_setting)
+  ORDER BY
+    CASE WHEN direction = 'ASC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END ASC,
+    CASE WHEN direction = 'DESC' THEN
+      CASE order_by
+      WHEN 'NAME' THEN
+        user_profiles.fullname
+      WHEN 'EMAIL' THEN
+        user_profiles.email
+      END
+    END DESC
 $$;
 
 
@@ -7450,7 +7516,13 @@ COMMENT ON FUNCTION public.projects_session_has_posts(project public.projects) I
 CREATE FUNCTION public.projects_session_has_privileged_access(p public.projects) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select projects_session_is_admin(p) or exists(select 1 from project_group_members where group_id = any (select id from project_groups where project_id = p.id) and it_me(user_id));
+    select exists (
+      select project_id from project_participants where user_id = nullif(current_setting('session.user_id', TRUE), '')::integer and project_id = p.id and is_admin = true
+    ) or (
+      select count(*) > 0 from project_group_members where user_id = nullif(current_setting('session.user_id', TRUE), '')::integer and project_group_members.group_id in (select id from project_groups where project_id = p.id)
+    ) or (
+      select count(*) > 0 from project_invites where project_id = p.id and user_id = nullif(current_setting('session.user_id', TRUE), '')::integer and make_admin = true
+    ) or session_is_superuser()
   $$;
 
 
@@ -7539,7 +7611,7 @@ to. Details on how to handle survey invites [can be found on the wiki](https://g
 --
 
 CREATE FUNCTION public.projects_session_participation_status(p public.projects) RETURNS public.participation_status
-    LANGUAGE sql STABLE
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select users_participation_status(users.*, p.id) from users where it_me(users.id);
 $$;
@@ -10027,6 +10099,65 @@ $$;
 
 
 --
+-- Name: users_access_request_denied(public.users, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_access_request_denied(u public.users, slug text) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select exists (
+      select 
+        1 
+      from 
+        project_participants 
+      where 
+        project_participants.user_id = u.id and 
+        project_participants.approved = false and 
+        project_participants.denied_by is not null and
+        project_participants.project_id = (
+          select id from projects where projects.slug = users_access_request_denied.slug and projects.access_control != 'public'
+        )
+      )
+  $$;
+
+
+--
+-- Name: users_approved_by(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_approved_by(u public.users, project_id integer) RETURNS public.users
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      * 
+    from 
+      users 
+    where 
+      session_is_admin(project_id) and 
+      id = (
+        select 
+          approved_by 
+        from 
+          project_participants 
+        where 
+          project_participants.project_id = users_approved_by.project_id and
+          project_participants.user_id = u.id
+      )
+  $$;
+
+
+--
+-- Name: users_approved_or_denied_on(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_approved_or_denied_on(u public.users, project_id integer) RETURNS timestamp without time zone
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select approved_or_denied_on from project_participants where user_id = u.id and project_participants.project_id = users_approved_or_denied_on.project_id and session_is_admin(users_approved_or_denied_on.project_id);
+  $$;
+
+
+--
 -- Name: users_banned_from_forums(public.users); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10071,6 +10202,17 @@ CREATE FUNCTION public.users_canonical_email(_user public.users) RETURNS text
 COMMENT ON FUNCTION public.users_canonical_email(_user public.users) IS '
 Only visible to admins of projects a user has joined. Can be used for identification purposes since users will not gain any access control privileges until this email has been confirmed.
 ';
+
+
+--
+-- Name: users_denied_by(public.users, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_denied_by(u public.users, project_id integer) RETURNS public.users
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from users where session_is_admin(project_id) and id = (select denied_by from project_participants where project_participants.project_id = users_denied_by.project_id and project_participants.user_id = u.id)
+  $$;
 
 
 --
@@ -10156,6 +10298,17 @@ $$;
 --
 
 COMMENT ON FUNCTION public.users_is_approved(u public.users, project integer) IS '@omit';
+
+
+--
+-- Name: users_needs_access_request_approval(public.users, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.users_needs_access_request_approval(u public.users, slug text) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select exists (select 1 from project_participants where project_participants.user_id = u.id and project_participants.approved = false and project_participants.project_id = (select id from projects where projects.slug = users_needs_access_request_approval.slug and projects.access_control != 'public'))
+  $$;
 
 
 --
@@ -10858,7 +11011,10 @@ CREATE TABLE public.project_participants (
     approved boolean DEFAULT false NOT NULL,
     requested_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
     share_profile boolean DEFAULT false NOT NULL,
-    is_banned_from_forums boolean DEFAULT false NOT NULL
+    is_banned_from_forums boolean DEFAULT false NOT NULL,
+    approved_by integer,
+    denied_by integer,
+    approved_or_denied_on timestamp with time zone
 );
 
 
@@ -12543,6 +12699,13 @@ CREATE INDEX project_invites_user_id_idx ON public.project_invites USING btree (
 
 
 --
+-- Name: project_invites_user_id_idx1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_invites_user_id_idx1 ON public.project_invites USING btree (user_id);
+
+
+--
 -- Name: project_is_deleted; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13456,7 +13619,7 @@ ALTER TABLE ONLY public.offline_tile_packages
 --
 
 ALTER TABLE ONLY public.offline_tile_settings
-    ADD CONSTRAINT offline_tile_settings_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id);
+    ADD CONSTRAINT offline_tile_settings_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id) ON DELETE CASCADE;
 
 
 --
@@ -13575,6 +13738,22 @@ ALTER TABLE ONLY public.project_invites
 --
 
 COMMENT ON CONSTRAINT project_invites_user_id_fkey ON public.project_invites IS '@omit';
+
+
+--
+-- Name: project_participants project_participants_approved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_participants
+    ADD CONSTRAINT project_participants_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_participants project_participants_denied_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_participants
+    ADD CONSTRAINT project_participants_denied_by_fkey FOREIGN KEY (denied_by) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -15922,6 +16101,20 @@ REVOKE ALL ON FUNCTION public.after_response_submission() FROM PUBLIC;
 
 
 --
+-- Name: TABLE users; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.users TO seasketch_user;
+
+
+--
+-- Name: COLUMN users.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.users TO anon;
+
+
+--
 -- Name: FUNCTION approve_participant("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16520,20 +16713,6 @@ GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) T
 
 
 --
--- Name: TABLE users; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.users TO seasketch_user;
-
-
---
--- Name: COLUMN users.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.users TO anon;
-
-
---
 -- Name: FUNCTION confirm_onboarded(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17111,6 +17290,14 @@ GRANT ALL ON FUNCTION public.delete_project(project_id integer, OUT project publ
 
 REVOKE ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION deny_participant("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.deny_participant("projectId" integer, "userId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.deny_participant("projectId" integer, "userId" integer) TO seasketch_user;
 
 
 --
@@ -19285,6 +19472,14 @@ GRANT ALL ON FUNCTION public.project_invites_groups(invite public.project_invite
 
 
 --
+-- Name: FUNCTION project_invites_participation_status(invite public.project_invites); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_invites_participation_status(invite public.project_invites) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_invites_participation_status(invite public.project_invites) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION project_invites_status(invite public.project_invites); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19298,6 +19493,14 @@ GRANT ALL ON FUNCTION public.project_invites_status(invite public.project_invite
 
 REVOKE ALL ON FUNCTION public.project_public_details(slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_public_details(slug text) TO anon;
+
+
+--
+-- Name: FUNCTION projects_access_requests(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_access_requests(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_access_requests(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) TO seasketch_user;
 
 
 --
@@ -19743,6 +19946,7 @@ GRANT ALL ON FUNCTION public.projects_session_has_posts(project public.projects)
 
 REVOKE ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO anon;
 
 
 --
@@ -19768,6 +19972,7 @@ GRANT ALL ON FUNCTION public.projects_session_outstanding_survey_invites(project
 
 REVOKE ALL ON FUNCTION public.projects_session_participation_status(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO anon;
 
 
 --
@@ -23474,6 +23679,30 @@ REVOKE ALL ON FUNCTION public.updategeometrysrid(catalogn_name character varying
 
 
 --
+-- Name: FUNCTION users_access_request_denied(u public.users, slug text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_access_request_denied(u public.users, slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_access_request_denied(u public.users, slug text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION users_approved_by(u public.users, project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_approved_by(u public.users, project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_approved_by(u public.users, project_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION users_approved_or_denied_on(u public.users, project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_approved_or_denied_on(u public.users, project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_approved_or_denied_on(u public.users, project_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION users_banned_from_forums(u public.users); Type: ACL; Schema: public; Owner: -
 --
 
@@ -23487,6 +23716,14 @@ GRANT ALL ON FUNCTION public.users_banned_from_forums(u public.users) TO anon;
 
 REVOKE ALL ON FUNCTION public.users_canonical_email(_user public.users) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.users_canonical_email(_user public.users) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION users_denied_by(u public.users, project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_denied_by(u public.users, project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_denied_by(u public.users, project_id integer) TO seasketch_user;
 
 
 --
@@ -23511,6 +23748,14 @@ GRANT ALL ON FUNCTION public.users_is_admin(u public.users) TO anon;
 
 REVOKE ALL ON FUNCTION public.users_is_approved(u public.users, project integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.users_is_approved(u public.users, project integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION users_needs_access_request_approval(u public.users, slug text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.users_needs_access_request_approval(u public.users, slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.users_needs_access_request_approval(u public.users, slug text) TO seasketch_user;
 
 
 --

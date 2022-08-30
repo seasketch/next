@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import Spinner from "../components/Spinner";
 import {
   ProjectAccessControlSetting,
   ProjectAccessStatus,
   useResendEmailVerificationMutation,
-  useUpdateProfileMutation,
   useRequestInviteOnlyProjectAccessMutation,
 } from "../generated/graphql";
 import {
@@ -16,20 +15,10 @@ import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import { useAuth0 } from "@auth0/auth0-react";
 import { AnimatePresence, motion } from "framer-motion";
-import TextInput from "../components/TextInput";
-import {
-  Formik,
-  FormikHelpers,
-  FormikProps,
-  Form,
-  Field,
-  FieldProps,
-} from "formik";
-import { Persist } from "formik-persist";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import ProfileAvatarUploader from "../components/ProfileAvatarUploader";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
-import { useParams } from "react-router-dom";
+import useDialog from "../components/useDialog";
+import UserProfileForm, { useUserProfileState } from "./UserProfileForm";
 
 interface ProfileFormValues {
   fullname: string;
@@ -52,8 +41,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
     useResendEmailVerificationMutation();
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [madeRequest, setMadeRequest] = useState(false);
+  const { alert } = useDialog();
   // const [reverseTransition, setReverseTransition] = useState(false);
-  const initialFocusRef = useRef();
   let title = <></>;
   let buttons = <></>;
   let body = <></>;
@@ -249,14 +238,14 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
             onClick={() =>
               resendVerification().then((response) => {
                 if (response.data?.resendVerificationEmail.success === true) {
-                  window.alert(t("Verification email sent. Check your inbox."));
+                  alert(t("Verification email sent. Check your inbox."));
                 } else {
                   if (response.errors) {
-                    window.alert(
+                    alert(
                       `Problem sending verification email. ${response.errors.toString()}`
                     );
                   } else if (response.data?.resendVerificationEmail.error) {
-                    window.alert(
+                    alert(
                       `Problem sending verification email. ${response.data?.resendVerificationEmail.error}`
                     );
                   }
@@ -501,13 +490,11 @@ export const ProfileForm = ({
 }) => {
   const { t } = useTranslation();
   const onError = useGlobalErrorHandler();
-  const [updateProfile, updateProfileState] = useUpdateProfileMutation({
+  const [requestAccess] = useRequestInviteOnlyProjectAccessMutation({
     onError,
   });
-  const [requestAccess, requestAccessState] =
-    useRequestInviteOnlyProjectAccessMutation({
-      onError,
-    });
+  const profile = useUserProfileState();
+  const hasPrivacyPolicy = false;
 
   return (
     <DialogContainer
@@ -516,156 +503,98 @@ export const ProfileForm = ({
       skipAnimation={skipAnimation}
       key="share"
     >
-      <Formik
-        initialValues={initialValues}
-        onSubmit={async (values, actions) => {
-          await requestAccess({
-            variables: {
-              projectId,
-            },
-          });
-          await updateProfile({
-            variables: {
-              userId,
-              ...values,
-            },
-          });
-          await refetchProjectState();
-          actions.setSubmitting(false);
-          // setReverseTransition(false);
-          onMadeRequest();
-          onRequestClose();
-        }}
-        validate={(values) => {
-          const errors: { [key: string]: string } = {};
-          if (!values.fullname) {
-            errors.fullname = t("A name is required");
-          }
-          return errors;
-        }}
-      >
-        <Form>
-          <div className="sm:flex sm:items-start pt-5 pb-4">
-            <div className="mt-3 text-left sm:mt-0 sm:ml-4">
-              <h3
-                className="text-lg leading-6 font-medium text-gray-900"
-                id="modal-title"
-              >
-                <Trans>User Profile</Trans>
-              </h3>
-              <div className="mt-4">
-                <div className="text-sm text-gray-500 mb-4">
+      <div className="sm:flex sm:items-start pt-5 pb-4">
+        <div className="mt-3 text-left sm:mt-0 sm:ml-4">
+          <h3
+            className="text-lg leading-6 font-medium text-gray-900"
+            id="modal-title"
+          >
+            <Trans>User Profile</Trans>
+          </h3>
+          <div className="mt-4">
+            <div className="text-sm text-gray-500 mb-4">
+              <Trans>
+                Information in the profile will be included with your request
+              </Trans>
+            </div>
+            <UserProfileForm
+              onChange={profile.setState}
+              showValidationErrors={profile.submissionAttempted}
+              state={profile.state}
+            />
+            <div className="relative flex items-start mt-5">
+              <div className="flex items-center h-5">
+                <input
+                  checked
+                  onClick={() => {
+                    alert(
+                      t(
+                        "Profile sharing is required to access private projects so that administrators know who is requesting access.\n\nYour profile will only be shared more broadly if you post in the forums, and you can turn off profile sharing at any time while losing access to these features."
+                      )
+                    );
+                  }}
+                  readOnly
+                  id="candidates"
+                  aria-describedby="candidates-description"
+                  name="candidates"
+                  type="checkbox"
+                  className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label
+                  htmlFor="candidates"
+                  className="font-medium text-gray-700"
+                >
+                  <Trans>Consent to share this personal information</Trans>
+                </label>
+                <p id="candidates-description" className="text-gray-500">
                   <Trans>
-                    Information in the profile will be included with your
-                    request
+                    I understand that this profile will be shared with project
+                    admins and accompany my posts to the discussion forums.
                   </Trans>
-                </div>
-                <div className="my-4">
-                  <Field
-                    component={TextInput}
-                    autoFocus
-                    required
-                    label={t("Full Name")}
-                    name="fullname"
-                  />
-                </div>
-                <div className="my-4">
-                  <Field
-                    label={t("Nickname")}
-                    name="nickname"
-                    description={t(
-                      "Appears next to forum posts in place of your name if provided"
-                    )}
-                    value={nickname}
-                    component={TextInput}
-                  />
-                </div>{" "}
-                <div className="my-4">
-                  <Field
-                    component={TextInput}
-                    label={t("Email")}
-                    name="email"
-                    value={email}
-                    description={t(
-                      "Will be shared wherever your profile is visible (optional)"
-                    )}
-                  />
-                </div>
-                <div className="-ml-2 -my-2">
-                  <ProfileAvatarUploader />
-                </div>
-                <div className="my-4">
-                  <Field
-                    component={TextInput}
-                    textarea
-                    label={t("Bio and Affiliations")}
-                    description={t(
-                      "Provide any institutional affiliations you would like to share and describe yourself (optional)"
-                    )}
-                    name="affiliations"
-                    value={affiliations}
-                  />
-                </div>
-                <div className="relative flex items-start">
-                  <div className="flex items-center h-5">
-                    <input
-                      checked
-                      onClick={() => {
-                        window.alert(
-                          t(
-                            "Profile sharing is required to access private projects so that administrators know who is requesting access.\n\nYour profile will only be shared more broadly if you post in the forums, and you can turn off profile sharing at any time while losing access to these features."
-                          )
-                        );
-                      }}
-                      readOnly
-                      id="candidates"
-                      aria-describedby="candidates-description"
-                      name="candidates"
-                      type="checkbox"
-                      className="focus:ring-primary-500 h-4 w-4 text-primary-600 border-gray-300 rounded"
-                    />
-                  </div>
-                  <div className="ml-3 text-sm">
-                    <label
-                      htmlFor="candidates"
-                      className="font-medium text-gray-700"
+                </p>
+                {hasPrivacyPolicy && (
+                  <p>
+                    <a
+                      target="_blank"
+                      className="underline text-primary-500"
+                      href="/privacy-policy"
                     >
-                      <Trans>Consent to share this personal information</Trans>
-                    </label>
-                    <p id="candidates-description" className="text-gray-500">
-                      <Trans>
-                        I understand that this profile will be shared with
-                        project admins and accompany my posts to the discussion
-                        forums.
-                      </Trans>
-                    </p>
-                    <p>
-                      <a
-                        target="_blank"
-                        className="underline text-primary-500"
-                        href="/privacy-policy"
-                      >
-                        <Trans>Privacy Policy</Trans>
-                      </a>
-                    </p>
-                  </div>
-                </div>
+                      <Trans>Privacy Policy</Trans>
+                    </a>
+                  </p>
+                )}
               </div>
             </div>
           </div>
-          <div className="mt-5 sm:mt-2 flex w-full justify-center sm:justify-end space-x-4 sm:space-x-1">
-            <Button label={t("Cancel")} onClick={onRequestClose} />
-            <Button
-              loading={updateProfileState.loading}
-              disabled={updateProfileState.loading}
-              type="submit"
-              label={t("Send Request")}
-              primary
-            />
-          </div>
-          <Persist name="project-access-gate-profile" />
-        </Form>
-      </Formik>
+        </div>
+      </div>
+      <div className="mt-5 sm:mt-2 flex w-full justify-center sm:justify-end space-x-4 sm:space-x-1">
+        <Button label={t("Cancel")} onClick={onRequestClose} />
+        <Button
+          loading={profile.mutationState.loading}
+          disabled={profile.mutationState.loading}
+          type="submit"
+          label={t("Send Request")}
+          primary
+          onClick={async () => {
+            try {
+              await profile.submit();
+              await requestAccess({
+                variables: {
+                  projectId,
+                },
+              });
+              await refetchProjectState();
+              onMadeRequest();
+              onRequestClose();
+            } catch (e) {
+              console.error(e);
+            }
+          }}
+        />
+      </div>
     </DialogContainer>
   );
 };

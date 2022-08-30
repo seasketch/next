@@ -17,6 +17,13 @@ module.exports = {
         "1/2": "50%",
         "3/4": "75%",
       },
+      maxHeight: {
+        "almost-full": "90vh",
+      },
+      minWidth: {
+        lg: "32rem",
+        xl: "36rem",
+      },
       screens: {
         tall: { raw: "(min-height: 700px)" },
       },

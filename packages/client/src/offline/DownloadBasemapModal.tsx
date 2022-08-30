@@ -1,5 +1,4 @@
-import Modal from "../components/Modal";
-import { Trans as T } from "react-i18next";
+import { Trans as T, useTranslation } from "react-i18next";
 import { Header } from "../components/CenteredCardListLayout";
 import { useMapDownloadManager } from "./MapDownloadManager";
 import {
@@ -8,11 +7,12 @@ import {
 } from "../generated/graphql";
 import bytes from "bytes";
 import { CacheProgress } from "./CacheStatus";
-import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { CheckCircleIcon, ExclamationCircleIcon } from "@heroicons/react/solid";
 import { ReactNode, useMemo } from "react";
 import Warning from "../components/Warning";
+import useDialog from "../components/useDialog";
+import Modal, { FooterButtonProps } from "../components/Modal";
 
 const Trans = (props: any) => <T {...props} ns="offline"></T>;
 
@@ -23,6 +23,7 @@ export default function DownloadBasemapModal({
   map: Pick<BasemapDetailsFragment, "id" | "url" | "name">;
   onRequestClose: () => void;
 }) {
+  const { t } = useTranslation("offline");
   const onError = useGlobalErrorHandler();
   const { data, loading } = useDownloadBasemapDetailsQuery({
     variables: {
@@ -40,59 +41,60 @@ export default function DownloadBasemapModal({
     (cacheStatus?.status?.sources || []).find((source) => source.hasUpdates)
   );
 
-  const footer = useMemo(() => {
-    return (
-      <>
-        <Button
-          label={
-            downloadState.working ? <Trans>Cancel</Trans> : <Trans>Close</Trans>
-          }
-          onClick={() => {
-            cancel();
-            onRequestClose();
-          }}
-        />
-        {(cacheStatus.status?.state === "complete" ||
-          cacheStatus.status?.state === "has-updates") && (
-          <Button
-            // backgroundColor="#cc1111"
-            disabled={downloadState.working}
-            label={
-              <span className="text-red-800">
-                <Trans>Clear Map Data</Trans>
-              </span>
-            }
-            onClick={() => {
-              if (
-                window.confirm(
-                  `Are you sure you want to delete this offline map data? You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps.`
-                )
-              ) {
-                clearCache();
+  const { confirm } = useDialog();
+
+  const footer = useMemo<FooterButtonProps[]>(() => {
+    const buttons: FooterButtonProps[] = [
+      {
+        label: downloadState.working ? t("Cancel") : t("Close"),
+        onClick: () => {
+          cancel();
+          onRequestClose();
+        },
+      },
+    ];
+    if (
+      cacheStatus.status?.state === "complete" ||
+      cacheStatus.status?.state === "has-updates"
+    ) {
+      buttons.push({
+        disabled: downloadState.working,
+        label: t("Clear Map Data"),
+        variant: "danger",
+        onClick: async () => {
+          if (
+            await confirm(
+              t(`Are you sure you want to delete this offline map data?`),
+              {
+                icon: "delete",
+                description: t(
+                  "You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps."
+                ),
               }
-            }}
-          />
-        )}
-        {cacheStatus.status?.state === "incomplete" && (
-          <Button
-            autofocus
-            primary
-            disabled={downloadState.working}
-            label={<Trans>Begin Download</Trans>}
-            onClick={() => populateCache()}
-          />
-        )}
-        {cacheStatus.status?.state === "has-updates" && (
-          <Button
-            autofocus
-            primary
-            disabled={downloadState.working}
-            label={<Trans>Update Map</Trans>}
-            onClick={() => populateCache()}
-          />
-        )}
-      </>
-    );
+            )
+          ) {
+            clearCache();
+          }
+        },
+      });
+    }
+
+    if (cacheStatus.status?.state === "incomplete") {
+      buttons.push({
+        variant: "primary",
+        label: t("Begin Download"),
+        onClick: populateCache,
+        disabled: downloadState.working,
+      });
+    } else if (cacheStatus.status?.state === "has-updates") {
+      buttons.push({
+        variant: "primary",
+        label: t("Update Map"),
+        onClick: populateCache,
+        disabled: downloadState.working,
+      });
+    }
+    return buttons;
   }, [
     cacheStatus.status?.state,
     cancel,
@@ -105,14 +107,13 @@ export default function DownloadBasemapModal({
   return (
     <Modal
       disableBackdropClick={!!downloadState.working}
-      disableEscapeKeyDown={!!downloadState.working}
       onRequestClose={onRequestClose}
-      open={true}
       loading={loading || cacheStatus.loading}
       footer={footer}
+      title={""}
     >
       {!cacheStatus.loading && cacheStatus.status && (
-        <div className="w-128 space-y-2">
+        <div className="space-y-2 mt-3">
           {cacheStatus.status.state === "complete" && (
             <>
               <Header>{map.name}</Header>

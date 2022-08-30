@@ -1,10 +1,9 @@
-import React, { useState } from "react";
-import Modal from "../../components/Modal";
-import { useTranslation, Trans } from "react-i18next";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import TextInput from "../../components/TextInput";
-import Button from "../../components/Button";
 import { useCreateGroupMutation } from "../../generated/graphql";
 import { gql } from "@apollo/client";
+import Modal from "../../components/Modal";
 
 export default function CreateGroupModal({
   projectId,
@@ -61,41 +60,38 @@ export default function CreateGroupModal({
   };
   return (
     <Modal
-      open={true}
-      title={t("Create a User Group")}
-      footer={
-        <div>
-          <Button
-            disabled={mutationState.loading}
-            label={t("Cancel")}
-            onClick={onRequestClose}
-          />
-          <Button
-            disabled={mutationState.loading}
-            className="ml-2"
-            primary
-            label={t("Submit")}
-            onClick={onSubmit}
-          />
-        </div>
-      }
+      autoWidth
+      title={t("Name this new group")}
+      onRequestClose={onRequestClose}
+      footer={[
+        {
+          label: t("Create Group"),
+          disabled: mutationState.loading,
+          onClick: onSubmit,
+          variant: "primary",
+        },
+        {
+          label: t("Cancel"),
+          onClick: onRequestClose,
+        },
+      ]}
     >
-      {/* <div className="w-96"> */}
-      <TextInput
-        name="name"
-        error={error}
-        label={t("Group Name")}
-        required
-        value={name}
-        onChange={setName}
-        autoFocus
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            onSubmit();
-          }
-        }}
-      />
-      {/* </div> */}
+      <div className="w-80">
+        <TextInput
+          name="name"
+          error={error}
+          label={t("")}
+          // required
+          value={name}
+          onChange={setName}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              onSubmit();
+            }
+          }}
+        />
+      </div>
     </Modal>
   );
 }

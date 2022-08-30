@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -16,11 +16,14 @@ import {
   InviteDetailsFragment,
   Group,
   UserListDetailsFragment,
+  useCreateGroupMutation,
 } from "../../generated/graphql";
 import UserSettingsSidebarSkeleton from "./UserSettingsSidebarSkeleton";
 import CreateGroupModal from "./CreateGroupModal";
 import InviteUsersModal from "./InviteUsersModal";
 import { sentStatus, unsentStatus, problemStatus } from "./UserSettings";
+import useDialog from "../../components/useDialog";
+import { gql } from "@apollo/client";
 
 export default function UserSettingsSidebar({
   invites,
@@ -29,10 +32,12 @@ export default function UserSettingsSidebar({
   loading,
   accessControl,
   projectId,
+  accessRequests,
 }: {
   invites: InviteDetailsFragment[];
   groups: Pick<Group, "name" | "id">[];
   users: UserListDetailsFragment[];
+  accessRequests: UserListDetailsFragment[];
   loading: boolean;
   accessControl?: ProjectAccessControlSetting;
   projectId?: number;
@@ -40,11 +45,63 @@ export default function UserSettingsSidebar({
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation(["admin"]);
   const [inviteUsersOpen, setInviteUsersOpen] = useState(false);
-  // const { data, loading, error } = useUserAdminCountsQuery({
-  //   variables: {
-  //     slug,
-  //   },
-  // });
+  const [mutate, mutationState] = useCreateGroupMutation();
+  const { prompt } = useDialog();
+  const promptToCreateGroup = useCallback(() => {
+    prompt({
+      message: "Name this new group",
+      onSubmit: async (name) => {
+        if (!projectId) {
+          throw new Error("Unknown project id");
+        }
+        try {
+          await mutate({
+            variables: {
+              projectId,
+              name,
+            },
+            update: (cache, { data }) => {
+              if (data?.createGroup?.group) {
+                const newGroupData = data.createGroup.group;
+                cache.modify({
+                  id: cache.identify({
+                    __typename: "Project",
+                    id: projectId,
+                  }),
+                  fields: {
+                    groups(existingGroupRefs = [], { readField }) {
+                      const newGroupRef = cache.writeFragment({
+                        data: newGroupData,
+                        fragment: gql`
+                          fragment NewGroup on Group {
+                            id
+                            projectId
+                            name
+                          }
+                        `,
+                      });
+
+                      return [...existingGroupRefs, newGroupRef];
+                    },
+                  },
+                });
+              }
+            },
+          });
+        } catch (e) {
+          if (/namechk/.test(e.toString() || "")) {
+            throw new Error(
+              t(
+                "Name is required and must be less than 33 characters"
+              ).toString()
+            );
+          } else {
+            throw e;
+          }
+        }
+      },
+    });
+  }, [mutate, projectId, prompt, t]);
 
   const counts = useMemo(() => {
     let results = {
@@ -52,6 +109,7 @@ export default function UserSettingsSidebar({
       pending: 0,
       problems: 0,
       admins: 0,
+      accessRequests: 0,
       groups: {} as { [groupId: number]: number },
     };
     for (const invite of invites) {
@@ -74,8 +132,9 @@ export default function UserSettingsSidebar({
         results.groups[group.id] += 1;
       }
     }
+    results.accessRequests = accessRequests.length;
     return results;
-  }, [invites, groups, users]);
+  }, [invites, groups, users, accessRequests]);
 
   const [createGroupModalOpen, setCreateGroupModalOpen] = useState(false);
   // eslint-disable-next-line i18next/no-literal-string
@@ -175,7 +234,7 @@ export default function UserSettingsSidebar({
               icon: IdentificationIcon,
               ...badge(
                 // data?.projectBySlug?.unapprovedParticipantCount,
-                0,
+                counts.accessRequests,
                 "primary"
               ),
             },
@@ -188,7 +247,8 @@ export default function UserSettingsSidebar({
           <Button
             small
             label={t("Create Group")}
-            onClick={() => setCreateGroupModalOpen(true)}
+            onClick={promptToCreateGroup}
+            // onClick={() => setCreateGroupModalOpen(true)}
           />
         ),
       },
@@ -205,6 +265,7 @@ export default function UserSettingsSidebar({
     counts.groups,
     counts.pending,
     counts.problems,
+    counts.accessRequests,
     counts.sent,
     accessControl,
     baseUrl,

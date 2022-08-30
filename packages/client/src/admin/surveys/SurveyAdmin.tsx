@@ -4,19 +4,18 @@ import Button from "../../components/Button";
 import useProjectId from "../../useProjectId";
 import SurveyList from "./SurveyList";
 import { useCreateSurveyMutation } from "../../generated/graphql";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { gql } from "@apollo/client";
 import { useParams } from "react-router";
 import SurveyDetail from "./SurveyDetail";
+import useDialog from "../../components/useDialog";
 
 export default function SurveyAdmin() {
   const projectId = useProjectId();
   const { t } = useTranslation("admin:surveys");
   const { surveyId } = useParams<{ slug: string; surveyId?: string }>();
-  const onError = useGlobalErrorHandler();
-  const [createSurvey] = useCreateSurveyMutation({
-    onError,
-  });
+  const [createSurvey] = useCreateSurveyMutation({});
+
+  const { prompt } = useDialog();
 
   if (surveyId) {
     return <SurveyDetail surveyId={parseInt(surveyId)} />;
@@ -37,51 +36,54 @@ export default function SurveyAdmin() {
                 className="relative right-0"
                 label={t("Create a New Survey")}
                 onClick={async () => {
-                  const name = window.prompt(
-                    t("Choose a name for your survey")
-                  );
-                  if (name) {
-                    await createSurvey({
-                      variables: {
-                        projectId: projectId!,
-                        name,
-                      },
-                      update: (cache, { data }) => {
-                        if (data?.makeSurvey?.survey) {
-                          const newSurveyData = data.makeSurvey.survey;
-                          cache.modify({
-                            id: cache.identify({
-                              __typename: "Project",
-                              id: newSurveyData.projectId,
-                            }),
-                            fields: {
-                              surveys(existingSurveyRefs = [], { readField }) {
-                                const newSurveyRef = cache.writeFragment({
-                                  data: newSurveyData,
-                                  fragment: gql`
-                                    fragment NewSurvey on Survey {
-                                      id
-                                      accessType
-                                      invitedGroups {
+                  prompt({
+                    message: t("Choose a name for your survey"),
+                    onSubmit: async (name) => {
+                      await createSurvey({
+                        variables: {
+                          projectId: projectId!,
+                          name,
+                        },
+                        update: (cache, { data }) => {
+                          if (data?.makeSurvey?.survey) {
+                            const newSurveyData = data.makeSurvey.survey;
+                            cache.modify({
+                              id: cache.identify({
+                                __typename: "Project",
+                                id: newSurveyData.projectId,
+                              }),
+                              fields: {
+                                surveys(
+                                  existingSurveyRefs = [],
+                                  { readField }
+                                ) {
+                                  const newSurveyRef = cache.writeFragment({
+                                    data: newSurveyData,
+                                    fragment: gql`
+                                      fragment NewSurvey on Survey {
                                         id
+                                        accessType
+                                        invitedGroups {
+                                          id
+                                          name
+                                        }
+                                        isDisabled
+                                        limitToSingleResponse
                                         name
+                                        submittedResponseCount
+                                        projectId
                                       }
-                                      isDisabled
-                                      limitToSingleResponse
-                                      name
-                                      submittedResponseCount
-                                      projectId
-                                    }
-                                  `,
-                                });
-                                return [...existingSurveyRefs, newSurveyRef];
+                                    `,
+                                  });
+                                  return [...existingSurveyRefs, newSurveyRef];
+                                },
                               },
-                            },
-                          });
-                        }
-                      },
-                    });
-                  }
+                            });
+                          }
+                        },
+                      });
+                    },
+                  });
                 }}
               />
             </div>

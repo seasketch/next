@@ -25,6 +25,7 @@ import EditableResponseCell, {
   CellEditorComponent,
 } from "../admin/surveys/EditableResponseCell";
 import { MultipleChoiceProps, MultipleChoiceValue } from "./MultipleChoice";
+import useDialog from "../components/useDialog";
 
 export type ComboBoxProps = {
   options?: FormElementOption[];
@@ -41,9 +42,8 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   const items: FormElementOption[] =
     useLocalizedComponentSetting("options", props) || [];
   const [choices, setChoices] = useState<string[]>(items.map((i) => i.label));
-  const [selectedOption, setSelectedOption] = useState<
-    FormElementOption | undefined | null
-  >();
+  const [selectedOption, setSelectedOption] =
+    useState<FormElementOption | undefined | null>();
   const context = useContext(SurveyContext);
 
   useEffect(() => {
@@ -242,6 +242,8 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
     </div>
   );
 
+  const { confirm } = useDialog();
+
   return (
     <>
       <FormElementBody
@@ -276,9 +278,9 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
 
               <Button
                 small
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
+                    await confirm(
                       t(
                         "Are you sure? You can change the element type back to ComboBox later if you like.",
                         { ns: "admin:surveys" }
@@ -355,8 +357,10 @@ export function ChoiceAdminValueInput({
       }}
     >
       {value === null && <option value="NULL"> </option>}
-      {((componentSettings[optionsProp || "options"] ||
-        []) as FormElementOption[])?.map((option) => (
+      {(
+        (componentSettings[optionsProp || "options"] ||
+          []) as FormElementOption[]
+      )?.map((option) => (
         <option key={option.label} value={option.value || option.label}>
           {option.label}
         </option>

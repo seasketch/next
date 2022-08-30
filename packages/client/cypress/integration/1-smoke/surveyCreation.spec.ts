@@ -164,7 +164,7 @@ const drawSecondPolygon = () => {
     .click(200, 200)
 };
 
-const devices: any = ["macbook-15", "ipad-2", "iphone-x"]
+const devices: any = ["macbook-15"]//, "ipad-2", "iphone-x"]
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
@@ -808,21 +808,17 @@ describe("Survey creation smoke test", () => {
           {$btn.trigger('click')}
         })
         cy.get('button').contains('Done').as('doneBtn')
-        const stub = cy.stub()  
-        cy.on ('window:alert', stub)
         cy.get('@doneBtn').then(($btn) => {
           {$btn.trigger('click')}
-          expect(stub.getCall(0)).to.be.calledWith('Please fix problems with your shape first.') 
-        })
+          cy.get('button').contains('OK').click();
+        });
       }); 
       it(`Can delete invalid shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device);
         cy.get('.flex-shrink-0 > :nth-child(1) ').as('trashBtn');
-        const stub = cy.stub();
-        cy.on ('window:confirm', stub);
         cy.get('@trashBtn').then(($btn) => {
           {$btn.trigger('click')};
-          expect(stub.getCall(0)).to.be.calledWith('Are you sure you want to delete this shape?');
+          cy.get('button').contains('OK').click()
         });
       });
       it(`Can draw second shape - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {

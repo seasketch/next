@@ -1,13 +1,18 @@
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import InputBlock from "../../components/InputBlock";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import Switch from "../../components/Switch";
+import useDialog from "../../components/useDialog";
+import Warning from "../../components/Warning";
 import {
   useToggleAdminAccessMutation,
   useUserInfoQuery,
   useToggleForumPostingBanMutation,
+  useApproveAccessRequestMutation,
+  useDenyAccessRequestMutation,
 } from "../../generated/graphql";
 import MutableGroupMembershipField from "./MutableGroupMembershipField";
 import ProfilePhoto from "./ProfilePhoto";
@@ -45,7 +50,25 @@ export default function ParticipantModal({
     variables: {
       userId,
       slug: projectSlug,
+      projectId,
     },
+  });
+  const onError = useGlobalErrorHandler();
+  const [approve, approveState] = useApproveAccessRequestMutation({
+    variables: {
+      projectId,
+      slug: projectSlug,
+      userId,
+    },
+    onError,
+  });
+  const [deny, denyState] = useDenyAccessRequestMutation({
+    variables: {
+      projectId,
+      slug: projectSlug,
+      userId,
+    },
+    onError,
   });
   const [toggleForumPostingBan] = useToggleForumPostingBanMutation({
     variables: {
@@ -88,39 +111,126 @@ export default function ParticipantModal({
     data?.user?.profile?.email ||
     data?.user?.canonicalEmail;
 
+  const { confirm } = useDialog();
+
   return (
     <Modal
-      // title={title || "Loading"}
-      open={true}
+      scrollable
       loading={loading}
       title={
         <div
           className={`flex ${
             data?.user?.bannedFromForums
               ? "bg-red-50 text-red-900"
-              : "bg-cool-gray-100"
-          } p-2 items-center`}
+              : "bg-transparent"
+          } items-center`}
         >
-          <ProfilePhoto
-            canonicalEmail={data?.user?.canonicalEmail!}
-            {...data?.user?.profile}
-            defaultImg="mm"
-          />
-          <h2 className={`ml-2 text-xl`}>{title}</h2>
+          <div className="w-8 h-8 lg:w-12 lg:h-12 lg:mr-1">
+            <ProfilePhoto
+              canonicalEmail={data?.user?.canonicalEmail!}
+              {...data?.user?.profile}
+              defaultImg="mm"
+            />
+          </div>
+          <h2 className={`ml-2 text-xl lg:text-2xl`}>{title}</h2>
         </div>
       }
       onRequestClose={onRequestClose}
-      footer={<Button label={t("Close")} onClick={onRequestClose} />}
+      footer={[{ label: t("Close"), onClick: onRequestClose }]}
     >
       {!data?.user && <Spinner />}
 
       {data?.user && data?.projectBySlug && (
-        <div className="md:max-w-lg">
+        <div className="">
+          {data?.user?.needsAccessRequestApproval && !data.user.deniedBy && (
+            <div className="mb-4">
+              <Warning level="info" className="bg-gray-50">
+                <Trans ns="admin">
+                  This user access request has yet to be approved.
+                </Trans>
+                <br />
+                <div className="mt-2 space-x-2">
+                  <Button
+                    disabled={approveState.loading || denyState.loading}
+                    loading={approveState.loading}
+                    primary
+                    small
+                    onClick={() => approve()}
+                    label={t("Approve")}
+                  />
+                  <Button
+                    disabled={approveState.loading || denyState.loading}
+                    loading={denyState.loading}
+                    small
+                    label={t("Deny")}
+                    onClick={() => deny()}
+                  />
+                </div>
+              </Warning>
+            </div>
+          )}
+          {data?.user?.approvedBy && (
+            <div className="mb-4">
+              <Warning level="info" className="bg-gray-50">
+                <Trans ns="admin">
+                  This user's access request was approved by
+                  <br />
+                  {data.user.approvedBy.canonicalEmail} on{" "}
+                  {data.user.approvedOrDeniedOn
+                    ? new Date(data.user.approvedOrDeniedOn).toLocaleString()
+                    : "unknown"}
+                </Trans>
+                <br />
+                <Button
+                  className="block mt-2"
+                  disabled={approveState.loading || denyState.loading}
+                  loading={denyState.loading}
+                  small
+                  label={t("Block user access")}
+                  onClick={async () => {
+                    if (
+                      await confirm(
+                        t(
+                          "Are you sure you want to deny this user access to the project?"
+                        )
+                      )
+                    ) {
+                      deny();
+                    }
+                  }}
+                />
+              </Warning>
+            </div>
+          )}
+          {data?.user?.deniedBy && (
+            <div className="mb-4">
+              <Warning className="bg-gray-50">
+                <Trans ns="admin">
+                  This user's access request was denied by
+                  <br />
+                  {data.user.deniedBy.canonicalEmail} on{" "}
+                  {data.user.approvedOrDeniedOn
+                    ? new Date(data.user.approvedOrDeniedOn).toLocaleString()
+                    : "unknown"}
+                </Trans>
+                <br />
+                <div className="mt-2 space-x-2">
+                  <Button
+                    disabled={approveState.loading || denyState.loading}
+                    loading={approveState.loading}
+                    small
+                    onClick={() => approve()}
+                    label={t("Approve access")}
+                  />
+                </div>
+              </Warning>
+            </div>
+          )}
           <UserProfile
             profile={data.user!.profile!}
             canonicalEmail={data.user.canonicalEmail!}
           />
-          <div className="mt-2 mb-2 rounded-md shadow-sm flex border border-gray-300">
+          <div className="mt-2 mb-2 rounded-md shadow-sm flex border border-gray-300 max-w-lg">
             <span className="bg-gray-50 rounded-l-md px-3 inline-flex items-center text-gray-500 sm:text-sm py-1">
               <Trans ns="admin">Canonical Email</Trans>
             </span>
@@ -128,7 +238,7 @@ export default function ParticipantModal({
               {data.user.canonicalEmail}
             </span>
           </div>
-          <p className="mt-1 mb-3 max-w-2xl text-sm text-gray-500">
+          <p className="mt-1 mb-3 text-sm text-gray-500">
             <Trans ns="admin">
               Unlike the email in a user's public profile, the{" "}
               <em>canonical email</em> is determined during registration and
@@ -197,7 +307,6 @@ export default function ParticipantModal({
             }
             title={t("Ban from Forums")}
           />
-          {/*  */}
         </div>
       )}
     </Modal>

@@ -96,6 +96,7 @@ code {
 .metadata .ProseMirror a {
   color: rgb(49, 115, 201);
   text-decoration: underline;
+  word-break: break-all;
 }
 
 .metadata .ProseMirror ul,
@@ -133,7 +134,8 @@ code {
   position: absolute !important;
 }
 
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
   /* Chrome, Firefox, Opera, Safari 10.1+ */
   color: rgba(0, 0, 0, 0.3);
   opacity: 1; /* Firefox */

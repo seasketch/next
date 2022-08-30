@@ -1,9 +1,10 @@
-import { CogIcon, QuestionMarkCircleIcon } from "@heroicons/react/solid";
+import { CogIcon } from "@heroicons/react/solid";
 import bytes from "bytes";
 import { useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Badge from "../components/Badge";
 import DropdownButton from "../components/DropdownButton";
+import useDialog from "../components/useDialog";
 import { CacheProgress } from "./CacheStatus";
 import { ClientCacheManagerContext } from "./ClientCacheManager";
 
@@ -37,6 +38,7 @@ export default function StaticAssetCacheStatus() {
   }, [context?.cacheSizes?.staticAssets]);
   const [showFiles, setShowFiles] = useState(false);
   const { t } = useTranslation("superuser");
+  const { alert } = useDialog();
 
   return (
     <>
@@ -47,7 +49,7 @@ export default function StaticAssetCacheStatus() {
             <span
               className="ml-2 cursor-pointer"
               onClick={() =>
-                window.alert(
+                alert(
                   t(
                     `Set caching to "Improved Performance" or greater to enable prefetching`
                   )

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { ExclamationCircleIcon } from "@heroicons/react/solid";
 import Button from "../components/Button";
 import { useDelete } from "../graphqlHookWrappers";
+import useDialog from "../components/useDialog";
 
 const Trans = (props: any) => <T ns="admin:offline" {...props} />;
 
@@ -41,6 +42,8 @@ export default function TilePackageListItem({
       query[0]();
     }
   }, []);
+
+  const { confirm } = useDialog();
 
   const onDelete = useDelete(DeleteTilePackageDocument);
 
@@ -104,9 +107,9 @@ export default function TilePackageListItem({
               <p>
                 Created {new Date(pkg.createdAt).toLocaleString()}{" "}
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (
-                      window.confirm(
+                      await confirm(
                         `Are you sure you want to delete this tile package? Regenerating it may incure Mapbox fees.`
                       )
                     ) {

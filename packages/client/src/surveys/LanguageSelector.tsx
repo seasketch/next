@@ -20,34 +20,40 @@ export default function LanguageSelector(props: {
   const matchesAnyTranslation = filteredLanguages.find(
     (l) => l.code === i18n.language
   );
+  if (options.length <= 1) {
+    return null;
+  }
+
   return (
     <>
       {props.button(() => setOpen(true))}
 
-      <Modal
-        // title={t("Select a language")}
-        onRequestClose={() => setOpen(false)}
-        className="text-black"
-        open={open}
-        zeroPadding={true}
-      >
-        <div className="md:w-80 pt-2 sm:pt-0">
-          {options.map((o) => (
-            <Option
-              key={o.code}
-              language={o}
-              selected={
-                (o.code === "EN" && !matchesAnyTranslation) ||
-                i18n.language?.toUpperCase() === o.code.toUpperCase()
-              }
-              onClick={(lang) => {
-                i18n.changeLanguage(lang.code);
-                setOpen(false);
-              }}
-            />
-          ))}
-        </div>
-      </Modal>
+      {open && (
+        <Modal
+          // title={t("Select a language")}
+          onRequestClose={() => setOpen(false)}
+          className="text-black"
+          autoWidth
+          zeroPadding
+        >
+          <div className="md:w-80 pt-2 sm:pt-0">
+            {options.map((o) => (
+              <Option
+                key={o.code}
+                language={o}
+                selected={
+                  (o.code === "EN" && !matchesAnyTranslation) ||
+                  i18n.language?.toUpperCase() === o.code.toUpperCase()
+                }
+                onClick={(lang) => {
+                  i18n.changeLanguage(lang.code);
+                  setOpen(false);
+                }}
+              />
+            ))}
+          </div>
+        </Modal>
+      )}
     </>
   );
 }

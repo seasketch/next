@@ -1,9 +1,8 @@
 import bytes from "bytes";
 import { useState, useEffect, useMemo } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../components/Button";
-import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
 import Warning from "../components/Warning";
 import {
@@ -20,6 +19,7 @@ import worker from "../TileCalculator";
 import { cleanCoords } from "../workers/utils";
 import splitGeojson from "geojson-antimeridian-cut";
 import { Feature, Polygon } from "geojson";
+import Modal from "../components/Modal";
 
 export default function DataSourceModal({
   source,
@@ -28,6 +28,7 @@ export default function DataSourceModal({
   source: Pick<OfflineSourceDetails, "dataSourceUrl" | "templateUrl" | "type">;
   onRequestClose: (update?: boolean) => void;
 }) {
+  const { t } = useTranslation("offline:surveys");
   const { data, loading, refetch } = useOfflineSurveyMapsQuery({
     variables: {
       slug: getSlug(),
@@ -126,38 +127,39 @@ export default function DataSourceModal({
   const [generate, generateState] = useGenerateOfflineTilePackageMutation();
   return (
     <Modal
+      scrollable
       loading={loading || !matchingMaps}
-      open={true}
       onRequestClose={onRequestClose}
-      footer={
-        <>
-          <Button onClick={onRequestClose} label={<Trans>Close</Trans>} />
-          <Button
-            onClick={() => {
-              generate({
-                variables: {
-                  dataSourceUrl: sourceUrl!,
-                  maxZ: calculatedTilingSettings.maxZ,
-                  maxShorelineZ: calculatedTilingSettings.maxShorelineZ,
-                  projectId: data!.projectBySlug!.id,
-                  sourceType: source.type,
-                  originalUrlTemplate: source.templateUrl,
-                },
-              }).then(() => {
-                refetch();
-                // onRequestClose(true);
-              });
-            }}
-            disabled={generateState.loading}
-            loading={generateState.loading}
-            primary
-            label={<Trans>Generate Tile Package</Trans>}
-          />
-        </>
-      }
+      title={<span className="truncate">{source.dataSourceUrl}</span>}
+      footer={[
+        {
+          label: t("Generate Tile Package"),
+          variant: "primary",
+          onClick: () => {
+            generate({
+              variables: {
+                dataSourceUrl: sourceUrl!,
+                maxZ: calculatedTilingSettings.maxZ,
+                maxShorelineZ: calculatedTilingSettings.maxShorelineZ,
+                projectId: data!.projectBySlug!.id,
+                sourceType: source.type,
+                originalUrlTemplate: source.templateUrl,
+              },
+            }).then(() => {
+              refetch();
+              // onRequestClose(true);
+            });
+          },
+          disabled: generateState.loading,
+          loading: generateState.loading,
+        },
+        {
+          label: t("Close"),
+          onClick: onRequestClose,
+        },
+      ]}
     >
-      <div className="w-144">
-        <h2 className="truncate font-mono p-1">{source.dataSourceUrl}</h2>
+      <div className="">
         {tilePackages.length === 0 && (
           <Warning>
             <Trans>

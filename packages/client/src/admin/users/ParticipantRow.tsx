@@ -1,7 +1,13 @@
 import React from "react";
 import Badge from "../../components/Badge";
 import { Trans } from "react-i18next";
-import { BanIcon, ShieldCheckIcon } from "@heroicons/react/outline";
+import {
+  BanIcon,
+  ExclamationIcon,
+  ShieldCheckIcon,
+  StopIcon,
+  UserAddIcon,
+} from "@heroicons/react/outline";
 import ProfilePhoto from "./ProfilePhoto";
 
 export default function ParticipantRow({
@@ -16,6 +22,9 @@ export default function ParticipantRow({
   checked,
   onClick,
   isBanned,
+  needsApproval,
+  denied,
+  approved,
 }: {
   picture?: string;
   fullname?: string;
@@ -28,6 +37,9 @@ export default function ParticipantRow({
   checked?: boolean;
   onClick?: () => void;
   isBanned?: boolean;
+  needsApproval?: boolean;
+  denied?: boolean;
+  approved?: boolean;
 }) {
   return (
     <button
@@ -44,19 +56,28 @@ export default function ParticipantRow({
           checked={checked}
         />
       ) : null}
-      <ProfilePhoto
-        fullname={fullname}
-        email={email}
-        canonicalEmail={canonicalEmail}
-        picture={picture}
-      />
+      <div className="w-8 h-full py-1 mr-2">
+        <ProfilePhoto
+          fullname={fullname}
+          email={email}
+          canonicalEmail={canonicalEmail}
+          picture={picture}
+        />
+      </div>
       <span
         className="truncate text-sm xl:text-base flex-grow"
         style={{ lineHeight: "1.5rem" }}
       >
         {fullname || email || canonicalEmail}
       </span>
-      <GroupList isAdmin={isAdmin} groups={groups} isBanned={isBanned} />
+      <GroupList
+        needsApproval={needsApproval}
+        isAdmin={isAdmin}
+        groups={groups}
+        isBanned={isBanned}
+        denied={denied}
+        approved={approved}
+      />
     </button>
   );
 }
@@ -65,14 +86,32 @@ export function GroupList({
   groups,
   isAdmin,
   isBanned,
+  needsApproval,
+  denied,
+  approved,
 }: {
   groups: string[];
   isAdmin?: boolean;
   isBanned?: boolean;
+  needsApproval?: boolean;
+  denied?: boolean;
+  approved?: boolean;
 }) {
   groups.sort((a, b) => a.length - b.length);
   return (
     <>
+      {needsApproval && !denied && (
+        <Badge variant="secondary" className="ml-1 whitespace-nowrap mr-1">
+          <UserAddIcon className="w-4 h-4 -ml-1 mr-0.5 inline-block text-secondary-500 opacity-80" />
+          <Trans ns="admin">Needs approval</Trans>
+        </Badge>
+      )}
+      {denied && (
+        <Badge variant="warning" className="ml-1 whitespace-nowrap mr-1">
+          <ExclamationIcon className="w-4 h-4 -ml-1 mr-0.5 inline-block text-yellow-800 opacity-80" />
+          <Trans ns="admin">Denied access</Trans>
+        </Badge>
+      )}
       {isAdmin && (
         <Badge variant="secondary" className="ml-1 whitespace-nowrap mr-1">
           <ShieldCheckIcon className="w-4 h-4 -ml-1 mr-0.5 inline-block text-secondary-500 opacity-80" />

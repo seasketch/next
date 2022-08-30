@@ -5,7 +5,7 @@ import { useTranslation, Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import Modal from "../../components/Modal";
+import ModalDeprecated from "../../components/ModalDeprecated";
 import Spinner from "../../components/Spinner";
 import TextInput from "../../components/TextInput";
 import {
@@ -285,7 +285,7 @@ export default function CreateBasemapModal({
         style={{ zIndex: 10000, height: THUMBNAIL_SIZE, width: THUMBNAIL_SIZE }}
         className="absolute left-0 top-0 bg-gray-400 hidden"
       ></canvas>
-      <Modal
+      <ModalDeprecated
         onRequestClose={onRequestClose}
         open={true}
         zeroPadding
@@ -678,7 +678,7 @@ export default function CreateBasemapModal({
             </div>
           </>
         )}
-      </Modal>
+      </ModalDeprecated>
     </>
   );
 }

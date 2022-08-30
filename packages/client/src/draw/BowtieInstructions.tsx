@@ -1,8 +1,6 @@
 import { useRef } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import Button from "../components/Button";
 import Modal from "../components/Modal";
-// const url = require("./bowtie.mp4");
 // @ts-ignore
 import url from "./bowtie.mp4";
 
@@ -17,31 +15,49 @@ export default function BowtieInstructions({
 }) {
   const { t } = useTranslation("digitizing");
   const videoRef = useRef<HTMLVideoElement>(null);
-  return (
+  return !open ? null : (
     <Modal
-      zeroPadding={true}
-      open={open}
+      zeroPadding
+      autoWidth
       title={t("Invalid Shape")}
-      onRequestClose={onRequestClose}
+      onRequestClose={onRequestClose || (() => {})}
       footer={
-        <div className="flex justify-end space-x-1 rtl:space-x-reverse">
-          {onRequestReset && onRequestClose && (
-            <Button
-              label={t("Reset Shape")}
-              onClick={() => {
-                onRequestReset();
-                onRequestClose();
-              }}
-            />
-          )}
-          <Button
-            primary
-            autofocus
-            className=""
-            label={t("Okay")}
-            onClick={onRequestClose}
-          />
-        </div>
+        [
+          {
+            variant: "primary",
+            label: t("Okay"),
+            onClick: onRequestClose,
+          },
+          ...(onRequestReset && onRequestClose
+            ? [
+                {
+                  label: t("Reset Shape"),
+                  onClick: () => {
+                    onRequestReset();
+                    onRequestClose();
+                  },
+                },
+              ]
+            : []),
+        ]
+        // <div className="flex justify-end space-x-1 rtl:space-x-reverse">
+        //   {onRequestReset && onRequestClose && (
+        //     <Button
+        //       label={t("Reset Shape")}
+        //       onClick={() => {
+        //         onRequestReset();
+        //         onRequestClose();
+        //       }}
+        //     />
+        //   )}
+        //   <Button
+        //     primary
+        //     autofocus
+        //     className=""
+        //     label={t("Okay")}
+        //     onClick={onRequestClose}
+        //   />
+        // </div>
       }
     >
       <div className="w-96 max-w-full">

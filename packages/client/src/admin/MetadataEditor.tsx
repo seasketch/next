@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
-import Modal from "../components/Modal";
+import { useEffect, useRef, useState } from "react";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import "prosemirror-menu/style/menu.css";
@@ -12,6 +11,8 @@ import EditorMenuBar from "../editor/EditorMenuBar";
 import { EditorView } from "prosemirror-view";
 import { MutationResult } from "@apollo/client";
 import { Trans, useTranslation } from "react-i18next";
+import useDialog from "../components/useDialog";
+import Modal from "../components/Modal";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
@@ -41,6 +42,7 @@ export default function MetadataEditor({
   const [originalDoc, setOriginalDoc] = useState<Node>();
   const viewRef = useRef<{ view: EditorView }>();
   const { t } = useTranslation("admin");
+  const { confirm } = useDialog();
 
   useEffect(() => {
     if (!loading) {
@@ -61,28 +63,28 @@ export default function MetadataEditor({
       // applyDevTools(view.current);
       // return () => view.current!.destroy();
     }
-  }, [loading]);
+  }, [loading, setState, startingDocument]);
 
   return (
     <Modal
-      open={true}
       onRequestClose={() => {
         if (!changes && onRequestClose) {
           onRequestClose();
         }
       }}
+      disableBackdropClick={true}
       title={
-        <div className="flex p-4 px-5 items-center">
+        <div className="w-full flex items-center">
           <div className="text-lg flex-1">
             <Trans ns="admin">Edit Metadata</Trans>
           </div>
           {changes && (
             <button
               disabled={mutationState.loading}
-              onClick={() => {
+              onClick={async () => {
                 if (
                   onRequestClose &&
-                  window.confirm("Are you sure you want to discard changes?")
+                  (await confirm("Are you sure you want to discard changes?"))
                 ) {
                   onRequestClose();
                 }
@@ -110,11 +112,10 @@ export default function MetadataEditor({
         </div>
       }
     >
-      <div className="w-full h-full sm:h-auto md:w-160 lg:pb-4 relative">
+      <div className="relative min-w-full">
         <EditorMenuBar
           view={viewRef.current?.view}
-          className="-mt-6 -ml-6 mb-2"
-          style={{ width: "calc(100% + 3rem)" }}
+          className="mb-2 border-t"
           state={state}
           schema={schema}
         />

@@ -7,7 +7,6 @@ import {
   useState,
 } from "react";
 import { Trans as T, useTranslation } from "react-i18next";
-import Modal from "../components/Modal";
 import {
   OfflineSupportInformation,
   OfflineTilePackageDetailsFragment,
@@ -33,6 +32,7 @@ import { CacheableOfflineAsset } from "../generated/queries";
 import { CacheProgress } from "./CacheStatus";
 import { MAP_STATIC_ASSETS_CACHE_NAME } from "./MapTileCache";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import Modal from "../components/Modal";
 
 const Trans = (props: any) => (
   <T ns="offline" {...props}>
@@ -356,46 +356,36 @@ function ImportMbtilesModal({
     [files, relatedMaps, importState.working, state, context]
   );
 
-  return (
+  return files.length === 0 ? null : (
     <Modal
-      zeroPadding
+      scrollable
+      onRequestClose={() => {}}
       loading={loading || state.length === 0}
-      open={Boolean(files.length)}
-      footer={
-        <>
-          <Button
-            label={
-              importState.progress === 1 ? (
-                <Trans>Close</Trans>
-              ) : (
-                <Trans>Cancel</Trans>
-              )
-            }
-            onClick={() => {
-              abortController.current?.abort();
-              onRequestClose();
-            }}
-          />
-          {importState.progress !== 1 && relatedMaps.length > 0 && (
-            <Button
-              disabled={importState.working}
-              label={<Trans>Import data</Trans>}
-              primary
-              onClick={() => {
-                abortController.current = new AbortController();
-                importTilesets(abortController.current.signal);
-              }}
-            />
-          )}
-        </>
-      }
+      title={t("Import Map Packages")}
+      footer={[
+        ...(importState.progress !== 1 && relatedMaps.length > 0
+          ? [
+              {
+                variant: "primary" as "primary",
+                label: t("Import data"),
+                disabled: importState.working,
+                onClick: () => {
+                  abortController.current = new AbortController();
+                  importTilesets(abortController.current.signal);
+                },
+              },
+            ]
+          : []),
+        {
+          label: importState.progress === 1 ? t("Close") : t("Cancel"),
+          onClick: () => {
+            abortController.current?.abort();
+            onRequestClose();
+          },
+        },
+      ]}
     >
-      <div className="w-128 overflow-y-auto p-4" style={{ maxHeight: "66vh" }}>
-        <h1 className="pb-2">
-          <Trans count={files.length} i18nKey="importMapPackages">
-            Import Map Packages
-          </Trans>
-        </h1>
+      <div className="">
         {!importState.working &&
           importState.progress !== 1 &&
           relatedMaps.length > 0 && (

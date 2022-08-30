@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import Modal from "../../components/Modal";
+import { useState } from "react";
 import {
   OptionalBasemapLayer,
   useGetBasemapQuery,
@@ -9,7 +8,7 @@ import {
 import { useTranslation, Trans } from "react-i18next";
 import { useMapboxStyle } from "../../useMapboxStyle";
 import Spinner from "../../components/Spinner";
-import Button from "../../components/Button";
+import Modal from "../../components/Modal";
 
 export default function OptionalBasemapLayerSetLayersModal({
   layer,
@@ -46,21 +45,17 @@ export default function OptionalBasemapLayerSetLayersModal({
     initialLayers = option.layers || [];
   }
   const [layers, setLayers] = useState<string[]>(initialLayers);
-  const { data, loading, error } = useGetBasemapQuery({
+  const { data, loading } = useGetBasemapQuery({
     variables: {
       id: layer.basemapId,
     },
   });
   const styleRequest = useMapboxStyle(data?.basemap?.url);
   const style = styleRequest.data;
-  const [
-    mutate,
-    mutationState,
-  ] = useUpdateOptionalBasemapLayerLayerListMutation();
-  const [
-    updateOptionsMutation,
-    updateOptionsMutationState,
-  ] = useUpdateOptionalBasemapLayerOptionsMutation();
+  const [mutate, mutationState] =
+    useUpdateOptionalBasemapLayerLayerListMutation();
+  const [updateOptionsMutation, updateOptionsMutationState] =
+    useUpdateOptionalBasemapLayerOptionsMutation();
 
   const onSave = async () => {
     if (optionName) {
@@ -100,52 +95,46 @@ export default function OptionalBasemapLayerSetLayersModal({
 
   return (
     <Modal
-      title={t("Set Layers")}
-      open={true}
-      footer={
-        <div className="text-left">
-          <Button
-            small
-            className="float-right ml-2 mt-1"
-            label={t("Select All")}
-            onClick={() => setLayers(style?.layers?.map((l) => l.id) || [])}
-          />
-          <Button
-            small
-            className="float-right mt-1"
-            label={t("Select None")}
-            onClick={() => setLayers([])}
-          />
-          <Button
-            label={t("Cancel")}
-            className="mr-2"
-            onClick={onRequestClose}
-          />
-          <Button
-            label={t("Save")}
-            primary
-            onClick={onSave}
-            disabled={
-              mutationState.loading || updateOptionsMutationState.loading
-            }
-            loading={
-              mutationState.loading || updateOptionsMutationState.loading
-            }
-          />
-        </div>
+      scrollable={true}
+      title={
+        <>
+          <h3>{t("Set Layers")}</h3>
+          <p className="text-gray-500 text-sm mt-4">
+            <Trans ns={["admin"]}>
+              Select all layers in the basemap that will be controlled by this
+              option. When added to an Optional Layer, these layers will be
+              hidden unless an associated control has been toggled.
+            </Trans>
+          </p>
+        </>
       }
+      onRequestClose={() => {}}
+      footer={[
+        {
+          label: t("Save"),
+          variant: "primary",
+          disabled: mutationState.loading || updateOptionsMutationState.loading,
+          loading: mutationState.loading || updateOptionsMutationState.loading,
+          onClick: onSave,
+        },
+        {
+          label: t("Cancel"),
+          onClick: onRequestClose,
+        },
+        {
+          label: t("Select All"),
+          onClick: () => setLayers(style?.layers?.map((l) => l.id) || []),
+        },
+        {
+          label: t("Select None"),
+          onClick: () => setLayers([]),
+        },
+      ]}
     >
-      <div className="w-128 h-96">
+      <div className="">
         {loading || (styleRequest.loading && <Spinner />)}
         {style && (
           <>
-            <p className="text-gray-500 text-sm mb-4">
-              <Trans ns={["admin"]}>
-                Select all layers in the basemap that will be controlled by this
-                option. When added to an Optional Layer, these layers will be
-                hidden unless an associated control has been toggled.
-              </Trans>
-            </p>
             <ul>
               {style.layers?.map((lyr) => {
                 const checked = layers.indexOf(lyr.id) !== -1;

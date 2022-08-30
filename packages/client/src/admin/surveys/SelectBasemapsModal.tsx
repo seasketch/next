@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
-import Button from "../../components/Button";
 import Modal from "../../components/Modal";
 import Switch from "../../components/Switch";
 import {
@@ -27,7 +26,7 @@ export default function SelectBasemapsModal(props: {
   const { slug } = useParams<{ slug: string }>();
 
   const { t } = useTranslation("admin:surveys");
-  const { data, loading, error } = useAllBasemapsQuery({
+  const { data } = useAllBasemapsQuery({
     fetchPolicy: "cache-and-network",
     variables: {
       slug,
@@ -49,18 +48,17 @@ export default function SelectBasemapsModal(props: {
   }, [data]);
   return (
     <Modal
-      open={true}
+      autoWidth
+      scrollable
       title={t("Choose basemaps")}
       onRequestClose={() => props.onRequestClose(state)}
-      footer={
-        <div className="flex justify-end">
-          <Button
-            label={t("Done")}
-            onClick={() => props.onRequestClose(state)}
-          />
-        </div>
-      }
-      className="max-h-128 overflow-y-scroll"
+      footer={[
+        {
+          label: t("Done"),
+          onClick: () => props.onRequestClose(state),
+        },
+      ]}
+      className=""
     >
       <div className="px-2 space-y-3 w-96 max-w-full">
         {basemaps.survey.length > 0 && (
@@ -70,7 +68,11 @@ export default function SelectBasemapsModal(props: {
         )}
         {basemaps.project.map((basemap) => (
           <div key={basemap.id} className="flex items-center space-x-4">
-            <img src={basemap.thumbnail} className="w-12 h-12 rounded shadow" />
+            <img
+              src={basemap.thumbnail}
+              alt={`${basemap.name} thumbnail`}
+              className="w-12 h-12 rounded shadow"
+            />
             <div className="flex-1">{basemap.name}</div>
             <Switch
               className=""
@@ -88,6 +90,7 @@ export default function SelectBasemapsModal(props: {
               <div key={basemap.id} className="flex items-center space-x-4">
                 <img
                   src={basemap.thumbnail}
+                  alt={`${basemap.name} thumbnail`}
                   className="w-12 h-12 rounded shadow"
                 />
                 <div className="flex-1 flex-col">

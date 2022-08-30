@@ -161,7 +161,7 @@ jobs:
   deploy_client:
     name: Deploy Client
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true'
     concurrency: ${{github.event.inputs.environment }}_client
     environment:

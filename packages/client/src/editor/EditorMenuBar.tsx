@@ -4,11 +4,10 @@ import { setBlockType, toggleMark } from "prosemirror-commands";
 import { MarkType, Schema } from "prosemirror-model";
 // import { schema } from "./config";
 import { EditorState } from "prosemirror-state";
-import { markActive, marks } from "./utils";
-import Modal from "../components/Modal";
-import Button from "../components/Button";
+import { markActive } from "./utils";
 import TextInput from "../components/TextInput";
 import { useTranslation } from "react-i18next";
+import Modal from "../components/Modal";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -57,10 +56,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   }, [props.state]);
 
   return (
-    <div
-      style={{ ...props.style }}
-      className={`${props.className} px-4 border-b`}
-    >
+    <div style={{ ...props.style }} className={`${props.className} border-b`}>
       <button
         disabled={menuState?.disabled?.strong}
         onClick={(e) => {
@@ -177,9 +173,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         onClick={(e) => {
           e.preventDefault();
           props.view!.focus();
-          const linkMarks = marks(props.state!, schema.marks.link);
-          // if (linkMarks.length > 1) {
-          //   window.confirm("More than one link selected. Clear these links?");
+          // const linkMarks = marks(props.state!, schema.marks.link);
           if (markActive(props.state!, schema.marks.link)) {
             toggleMark(schema.marks.link)(
               props.view!.state,
@@ -211,62 +205,64 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           />
         </svg>
       </button>
-      <Modal
-        title={t(`Edit Link`)}
-        open={!!linkModalState}
-        footer={
-          <>
-            <Button
-              label={t("Cancel")}
-              onClick={() => setLinkModalState(null)}
-            />
-            <Button
-              className="ml-2"
-              primary={true}
-              label={t("Save")}
-              onClick={() => {
+      {!!linkModalState && (
+        <Modal
+          onRequestClose={() => {
+            setLinkModalState(null);
+          }}
+          autoWidth
+          title={t(`Edit Link`)}
+          footer={[
+            {
+              variant: "primary",
+              label: t("Save"),
+              onClick: () => {
                 toggleMark(schema.marks.link, {
                   href: linkModalState!.href,
                   title: linkModalState!.title,
                 })(props.view!.state, props.view?.dispatch);
                 setLinkModalState(null);
-              }}
+              },
+            },
+            {
+              onClick: () => setLinkModalState(null),
+              label: t("Cancel"),
+            },
+          ]}
+        >
+          <div className="w-128">
+            <TextInput
+              autoFocus
+              name="href"
+              value={linkModalState?.href || ""}
+              // eslint-disable-next-line
+              label="href"
+              required={true}
+              onChange={(href) =>
+                setLinkModalState({
+                  ...linkModalState,
+                  href,
+                })
+              }
             />
-          </>
-        }
-      >
-        <div className="w-128">
-          <TextInput
-            autoFocus
-            name="href"
-            value={linkModalState?.href || ""}
-            // eslint-disable-next-line
-            label="href"
-            required={true}
-            onChange={(href) =>
-              setLinkModalState({
-                ...linkModalState,
-                href,
-              })
-            }
-          />
-        </div>
-        <div className="mt-2">
-          <TextInput
-            name="title"
-            value={linkModalState?.title || ""}
-            // eslint-disable-next-line
-            label="title"
-            required={false}
-            onChange={(title) =>
-              setLinkModalState({
-                ...linkModalState!,
-                title,
-              })
-            }
-          />
-        </div>
-      </Modal>
+          </div>
+          <div className="mt-2">
+            <TextInput
+              name="title"
+              value={linkModalState?.title || ""}
+              // eslint-disable-next-line
+              label="title"
+              required={false}
+              onChange={(title) =>
+                setLinkModalState({
+                  ...linkModalState!,
+                  title,
+                })
+              }
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

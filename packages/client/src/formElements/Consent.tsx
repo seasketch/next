@@ -11,6 +11,7 @@ import InputBlock from "../components/InputBlock";
 import Spinner from "../components/Spinner";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
+import useDialog from "../components/useDialog";
 import { useUploadConsentDocMutation } from "../generated/graphql";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import {
@@ -83,6 +84,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
       );
     }
   }, [props.componentSettings.presentation]);
+  const { alert, confirm } = useDialog();
   return (
     <>
       <div className="space-y-4">
@@ -164,15 +166,15 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
             label={disagreeText || t("Do not agree")}
             Icon={XIcon}
             selected={props.value?.consented === false}
-            onClick={() => {
+            onClick={async () => {
               if (
                 !props.value?.consented ||
-                window.confirm(
+                (await confirm(
                   t(
                     "Are you sure you no longer want to share data with this project? Your previous answers will be lost.",
                     { ns: "surveys" }
                   )
-                )
+                ))
               ) {
                 const newValue = {
                   ...props.value,
@@ -201,14 +203,12 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                 props.componentSettings.requireDocClick &&
                 !props.value?.clickedDoc
               ) {
-                window.alert(
-                  t("Please open the attached terms before agreeing")
-                );
+                alert(t("Please open the attached terms before agreeing"));
               } else if (
                 props.componentSettings.presentation === "signature" &&
                 sig.length < 1
               ) {
-                window.alert(
+                alert(
                   t("Please enter your full name in the signature field", {
                     ns: "surveys",
                   })

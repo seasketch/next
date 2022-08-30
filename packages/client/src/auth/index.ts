@@ -1,7 +1,7 @@
 import { ApolloClient, useApolloClient } from "@apollo/client";
 import { useAuth0 } from "@auth0/auth0-react";
 import jwt from "jsonwebtoken";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useHistory, useLocation } from "react-router";
 import {
   ConfirmProjectInviteDocument,
@@ -10,6 +10,7 @@ import {
   VerifyProjectInviteDocument,
   VerifyProjectInviteQueryResult,
 } from "../generated/graphql";
+import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 
 export enum IngressState {
   /** There was an error either decoding the token or verifying its signature */
@@ -93,7 +94,7 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
               state: IngressState.Error,
             }));
           } else {
-            history.replace(`/${data.confirmProjectInvite.projectSlug}`);
+            history.replace(`/${data.confirmProjectInvite.projectSlug}/join`);
             // Note that our token isn't replaced so email verification claims
             // won't be updated
           }
@@ -239,11 +240,14 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
     }
   }, [location, auth0.user, client, confirmWithCurrentAccount]);
 
+  const cache = useContext(GraphqlQueryCacheContext);
+
   const redirectAndConfirm = (
     screenHint: "signup" | "signin",
     tokenString: string,
     ignoreCurrentEmail?: boolean
   ) => {
+    cache?.logout();
     if (!state?.claims) {
       throw new Error("Decoded token not found");
     }
