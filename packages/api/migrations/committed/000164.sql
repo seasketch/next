@@ -1,5 +1,5 @@
 --! Previous: sha1:8f68a24c5c6c562a5ae02282ca2808b059930ac1
---! Hash: sha1:7411aefca6fc936722b5ce2ac10f08389f80e9ed
+--! Hash: sha1:63abb4a410f8258e1c707acce218e8c454470b84
 
 -- Enter migration here
 alter table project_participants add column if not exists approved_by int references users(id) on delete cascade;
@@ -147,13 +147,13 @@ create or replace function users_denied_by(u users, project_id int)
 
 grant execute on function users_denied_by to seasketch_user;
 
-create or replace function users_approved_or_denied_on(u users, project_id int)
-  returns timestamp
-  stable
-  language sql
-  security DEFINER
+create or replace function users_approved_or_denied_on(u users, project_id int) returns 
+  timestamp with time zone
   as $$
     select approved_or_denied_on from project_participants where user_id = u.id and project_participants.project_id = users_approved_or_denied_on.project_id and session_is_admin(users_approved_or_denied_on.project_id);
-  $$;
+  $$
+  stable
+  language sql
+  security DEFINER;
 
 grant execute on function users_approved_or_denied_on to seasketch_user;
