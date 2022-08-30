@@ -147,13 +147,13 @@ create or replace function users_denied_by(u users, project_id int)
 
 grant execute on function users_denied_by to seasketch_user;
 
-create or replace function users_approved_or_denied_on(u users, project_id int)
-  returns timestamp
-  stable
-  language sql
-  security DEFINER
+create or replace function users_approved_or_denied_on(u users, project_id int) returns 
+  timestamp with time zone
   as $$
     select approved_or_denied_on from project_participants where user_id = u.id and project_participants.project_id = users_approved_or_denied_on.project_id and session_is_admin(users_approved_or_denied_on.project_id);
-  $$;
+  $$
+  stable
+  language sql
+  security DEFINER;
 
 grant execute on function users_approved_or_denied_on to seasketch_user;
