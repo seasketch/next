@@ -656,13 +656,12 @@ describe("Survey creation smoke test", () => {
           {$save.trigger('click')}
         });
         cy.get('button').then((button) => {
-          if(button.text().includes('Save')) {
+          if (button.text().includes('Save')) {
             cy.get('button').contains('Save').then(($btn) => {
-              {$btn.trigger('click')}
-            })
+              {$btn.trigger('click', {multiple: true})}
+            });
           }
-          
-        })
+        });
         cy.get('.SAPRangeMini')
           .and('be.visible')
           .and('have.value', 15);
