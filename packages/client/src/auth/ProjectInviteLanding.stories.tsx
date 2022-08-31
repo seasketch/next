@@ -6,7 +6,10 @@ import { Router } from "react-router-dom";
 import { MockedProvider, MockedResponse } from "@apollo/client/testing";
 import {
   ConfirmProjectInviteDocument,
+  ProjectAccessControlSetting,
+  ProjectAccessStatus,
   ProjectInviteTokenClaims,
+  ProjectMetadataDocument,
   VerifyProjectInviteDocument,
 } from "../generated/graphql";
 import jwt from "jsonwebtoken";
@@ -16,6 +19,53 @@ import {
   useAuth0,
 } from "@auth0/auth0-react";
 import { InMemoryCache } from "@apollo/client";
+const projectCommonDetails = {
+  id: 123,
+  accessControl: ProjectAccessControlSetting.Public,
+  slug: "cburt",
+  name: "Chad's Project",
+  logoUrl: "",
+  supportEmail: "chad@underbluewaters.net",
+  isOfflineEnabled: false,
+};
+
+const projectPublicDetails = {
+  __typename: "PublicProjectDetail",
+  ...projectCommonDetails,
+  accessStatus: ProjectAccessStatus.Granted,
+};
+const project = {
+  ...projectCommonDetails,
+  __typename: "Project",
+  url: "https://seasketch.org/cburt",
+  logoLink: "",
+  description: "",
+  sessionIsAdmin: false,
+  isFeatured: true,
+  sessionParticipationStatus: "participant_shared_profile",
+  sessionHasPrivilegedAccess: true,
+};
+
+const mockedProjectMetadata = {
+  data: {
+    project: { ...project },
+    projectPublicDetails: { ...projectPublicDetails },
+    me: {
+      __typename: "User",
+      id: 123,
+      profile: {
+        __typename: "UserProfile",
+        userId: 123,
+        fullname: "Chad Burt",
+        nickname: "underbluewaters",
+        email: "chad@underbluewaters.net",
+        picture: "",
+        bio: "",
+        affiliations: "UCSB",
+      },
+    },
+  },
+};
 
 export default {
   title: "ProjectInviteLandingPage",
@@ -85,6 +135,17 @@ export const ExpiredInvitation = () => {
                 },
               },
             };
+          },
+        },
+        {
+          request: {
+            query: ProjectMetadataDocument,
+            variables: {
+              slug: "test",
+            },
+          },
+          result: () => {
+            return mockedProjectMetadata;
           },
         },
       ]}

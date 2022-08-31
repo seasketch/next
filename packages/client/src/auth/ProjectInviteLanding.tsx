@@ -3,6 +3,7 @@ import { useTranslation, Trans } from "react-i18next";
 import { useProjectInviteIngressFlow, IngressState } from ".";
 import Button from "../components/Button";
 import Spinner from "../components/Spinner";
+import { useProjectMetadataQuery } from "../generated/graphql";
 
 /**
  * Implements user ingress from a project invitation email as described here:
@@ -21,6 +22,11 @@ export default function ProjectInviteLanding() {
     registerAndConfirm,
     confirmWithCurrentAccount,
   } = useProjectInviteIngressFlow();
+  const { data } = useProjectMetadataQuery({
+    variables: {
+      slug: claims?.projectSlug || "",
+    },
+  });
   const auth0 = useAuth0();
   const email = auth0.user?.email || claims?.email;
   return (
@@ -55,6 +61,15 @@ export default function ProjectInviteLanding() {
                         <Trans>
                           Your invitation to this project has expired.
                         </Trans>
+                        {data?.projectPublicDetails?.supportEmail && (
+                          <Trans>
+                            {" "}
+                            Contact {
+                              data?.projectPublicDetails?.supportEmail
+                            }{" "}
+                            to request a new invitation.
+                          </Trans>
+                        )}
                       </span>
                     </>
                   );
@@ -145,14 +160,14 @@ export default function ProjectInviteLanding() {
                           primary
                           onClick={() => signInAndConfirm(true)}
                           label={
-                            <Trans>Logout and sign in as {{ email }}</Trans>
+                            <Trans>Logout and sign in as {claims?.email}</Trans>
                           }
                         />
                       </div>
                       <div className="ml-3 inline-flex">
                         <Button
                           onClick={() => confirmWithCurrentAccount()}
-                          label={<Trans>Accept as {{ email }}</Trans>}
+                          label={<Trans>Accept as {email}</Trans>}
                         />
                       </div>
                     </>
@@ -163,7 +178,7 @@ export default function ProjectInviteLanding() {
                         <Button
                           primary
                           onClick={() => confirmWithCurrentAccount()}
-                          label={<Trans>Accept as {{ email }}</Trans>}
+                          label={<Trans>Accept as {email}</Trans>}
                         />
                       </div>
                       <div className="ml-3 inline-flex">
