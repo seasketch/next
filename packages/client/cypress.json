@@ -3,5 +3,5 @@
   "testFiles": ["**/*.spec.js", "**/*.spec.ts"],
   "baseUrl": "http://localhost:3000", 
   "chromeWebSecurity": false, 
-  "defaultCommandTimeout": 8000
+  "defaultCommandTimeout": 20000
 }
