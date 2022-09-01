@@ -37,7 +37,6 @@ const MapPicker: FunctionComponent<{
           </button>
         }
       </div>
-
       <MapSettingsPopup
         anchor={anchor.current || undefined}
         open={open}
