@@ -3,12 +3,14 @@ import localForage from "localforage";
 
 export function useLocalForage<T>(key: string, initialValue: T) {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
+  const [hasRestoredState, setHasRestoredState] = useState(false);
 
   useEffect(() => {
     (async function () {
       try {
         const value: T | null = await localForage.getItem(key);
         setStoredValue(value === null ? initialValue : value);
+        setHasRestoredState(true);
       } catch (e) {
         console.error(e);
       }
@@ -29,5 +31,5 @@ export function useLocalForage<T>(key: string, initialValue: T) {
     })();
   };
 
-  return [storedValue, setValue] as const;
+  return [storedValue, setValue, hasRestoredState] as const;
 }
