@@ -267,6 +267,7 @@ function SurveyApp() {
     } else {
       setClientIsPreppedForOfflineUse(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphqlQueryCache, data?.survey?.id]);
 
   const saveResponseToOfflineStore = useCallback(async () => {
