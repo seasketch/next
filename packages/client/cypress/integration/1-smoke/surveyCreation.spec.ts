@@ -164,7 +164,7 @@ const drawSecondPolygon = () => {
     .click(200, 200)
 };
 
-const devices: any = ["macbook-15"]//,"ipad-2","iphone-x"]  
+const devices: any = ["macbook-15","ipad-2","iphone-x"] 
 
 describe("Survey creation smoke test", () => {
   describe.only('User survey flow', () => {
