@@ -655,11 +655,12 @@ describe("Survey creation smoke test", () => {
         });
         cy.get('button').then((button) => {
           if (button.text().includes('Save')) {
-            cy.wait(2000);
+            cy.wait(3000);
             cy.get('button').contains('Save')
               .should('not.exist');
           }
         });
+        cy.contains('Finish Sector')
         cy.get('.SAPRangeMini')
           .and('be.visible')
           .and('have.value', 15);
