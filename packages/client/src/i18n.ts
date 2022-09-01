@@ -40,7 +40,11 @@ i18n
       escapeValue: false,
     },
     react: {
-      useSuspense: true,
+      // Using suspense for language content leads to a lot of flashing and
+      // re-rendering in unexpected places. It can even lead to weird issues
+      // like poorly placed popups as positioning is determined in a suspended
+      // state. Just avoiding for now.
+      useSuspense: false,
     },
   });
 export default i18n;
