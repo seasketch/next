@@ -140,7 +140,7 @@ function SurveyApp() {
 
   const elements = sortFormElements(data?.survey?.form?.formElements || []);
 
-  const [responseState, setResponseState] = useLocalForage<{
+  const [responseState, setResponseState, hasRestoredState] = useLocalForage<{
     [id: number]: FormElementState;
     facilitated: boolean;
     submitted: boolean;
@@ -232,7 +232,7 @@ function SurveyApp() {
   );
 
   useEffect(() => {
-    if (surveyId && elements.length) {
+    if (surveyId && elements.length && hasRestoredState) {
       const el = elements[parseInt(position)];
       let stage = 0;
       if (components[el.typeId].getInitialStage) {
@@ -248,7 +248,8 @@ function SurveyApp() {
         setFormElement({ exiting: formElement.current, current: el });
       }
     }
-  }, [data?.survey?.form?.formElements, position, surveyId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.survey?.form?.formElements, position, surveyId, hasRestoredState]);
 
   const offlineStore = useOfflineSurveyResponses();
   const graphqlQueryCache = useContext(GraphqlQueryCacheContext);
@@ -266,6 +267,7 @@ function SurveyApp() {
     } else {
       setClientIsPreppedForOfflineUse(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphqlQueryCache, data?.survey?.id]);
 
   const saveResponseToOfflineStore = useCallback(async () => {

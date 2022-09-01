@@ -10,6 +10,7 @@ import React, {
   useContext,
   useEffect,
   useRef,
+  useMemo,
 } from "react";
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
@@ -52,12 +53,12 @@ const MapSettingsPopup: FunctionComponent<{
         setScrollState({ atBottom, nearTop });
       }
     },
-    [scrollable.current]
+    [scrollable]
   );
 
   useEffect(() => {
     handleScroll({});
-  }, [open]);
+  }, [open, handleScroll]);
 
   useEffect(() => {
     if (scrollable.current && global.ResizeObserver) {
@@ -69,41 +70,47 @@ const MapSettingsPopup: FunctionComponent<{
         observer.disconnect();
       };
     }
-  }, [handleScroll, scrollable.current]);
+  }, [handleScroll, scrollable]);
 
-  const anchorClientRect = anchor?.getBoundingClientRect() || {
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  };
-  const anchorCenter = {
-    x: anchorClientRect.x + anchorClientRect.width / 2,
-    y: anchorClientRect.y + anchorClientRect.height / 2,
-  };
-  const bodyClientRect = document.body.getBoundingClientRect();
   const { isSmall } = useContext(SurveyLayoutContext).style;
-  position = position || "top";
-  const popupWidth = 320;
-  // prefer middle, but check for intersection with right and left sides
-  // middle of anchor
-  let left: number | undefined = anchorCenter.x - popupWidth / 2;
-  let right: number | undefined = undefined;
-  if (left + popupWidth > bodyClientRect.width) {
-    // align the right side of the popup with the right side of the anchor
-    right =
-      bodyClientRect.width - (anchorClientRect.x + anchorClientRect.width);
-    left = undefined;
-  }
 
-  // prefer top, but check for intersection with top of browser window
-  let top: number | undefined = undefined;
-  let bottom: number | undefined =
-    bodyClientRect.height - (anchorClientRect.y - anchorClientRect.height + 20);
-  if (bottom > bodyClientRect.height * 0.5) {
-    top = anchorClientRect.y + anchorClientRect.height + 10;
-    bottom = undefined;
-  }
+  const [left, top, right, bottom] = useMemo(() => {
+    const anchorClientRect = anchor?.getBoundingClientRect() || {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    };
+
+    const anchorCenter = {
+      x: anchorClientRect.x + anchorClientRect.width / 2,
+      y: anchorClientRect.y + anchorClientRect.height / 2,
+    };
+    const bodyClientRect = document.body.getBoundingClientRect();
+    const popupWidth = 320;
+    // prefer middle, but check for intersection with right and left sides
+    // middle of anchor
+    let left: number | undefined = anchorCenter.x - popupWidth / 2;
+    let right: number | undefined = undefined;
+    if (left + popupWidth > bodyClientRect.width) {
+      // align the right side of the popup with the right side of the anchor
+      right =
+        bodyClientRect.width - (anchorClientRect.x + anchorClientRect.width);
+      left = undefined;
+    }
+    // prefer top, but check for intersection with top of browser window
+    let top: number | undefined = undefined;
+    let bottom: number | undefined =
+      bodyClientRect.height -
+      (anchorClientRect.y - anchorClientRect.height + 20);
+    if (bottom > bodyClientRect.height * 0.5) {
+      top = anchorClientRect.y + anchorClientRect.height + 10;
+      bottom = undefined;
+    }
+    return [left, top, right, bottom];
+  }, [anchor]);
+
+  position = position || "top";
 
   return createPortal(
     <AnimatePresence>

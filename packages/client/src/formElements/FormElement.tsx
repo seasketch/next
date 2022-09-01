@@ -18,9 +18,7 @@ import {
   FormElementDetailsFragment,
   FormElementLayout,
   Maybe,
-  Sketch,
   SketchClassDetailsFragment,
-  SurveyFormEditorDetailsDocument,
   UpdateFormElementMutation,
   useGetFormElementQuery,
   useUpdateFormElementMutation,
@@ -163,7 +161,7 @@ export function FormElementBody({
         )
       );
     }
-  }, [target, body]);
+  }, [target, body, schema]);
 
   if (editable) {
     return (
@@ -279,14 +277,13 @@ function FormElementEditorContainer({
 }) {
   const context = useContext(FormEditorPortalContext);
   const onError = useGlobalErrorHandler();
-  const [updateBaseSetting, updateComponentSetting, mutationState] =
-    useUpdateFormElement(context?.formElementSettings);
-  const [updateSurvey, updateSurveyState] =
-    useUpdateSurveyBaseSettingsMutation();
-  const [updateSketchClass, updateSketchClassState] =
-    useUpdateFormElementSketchClassMutation({
-      onError,
-    });
+  const [updateBaseSetting, updateComponentSetting] = useUpdateFormElement(
+    context?.formElementSettings
+  );
+  const [updateSurvey] = useUpdateSurveyBaseSettingsMutation();
+  const [updateSketchClass] = useUpdateFormElementSketchClassMutation({
+    onError,
+  });
   return (
     <div className="space-y-4 text-sm p-3">
       {render(
@@ -327,9 +324,10 @@ interface ChildOptionsFactoryProps extends FormElementDetailsFragment {
   child: FormElementDetailsFragment;
 }
 export function ChildOptionsFactory(props: ChildOptionsFactoryProps) {
-  const [updateBaseSetting, updateComponentSetting, updateFormElementState] =
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [updateBaseSetting, updateComponentSetting] =
     useUpdateFormElement(props);
-  const { data, loading, error } = useGetFormElementQuery({
+  const { data } = useGetFormElementQuery({
     variables: {
       id: props.id,
     },

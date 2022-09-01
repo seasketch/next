@@ -59,7 +59,7 @@ export default function BasemapMultiSelectInput({
     if (newValue.join(",") !== state.join(",")) {
       setState(newValue);
     }
-  }, [value, basemaps]);
+  }, [value, basemaps, state]);
 
   const [selectBasemapsModalOpen, setSelectBasemapsModalOpen] = useState(false);
   const { confirm } = useDialog();
@@ -172,6 +172,7 @@ export default function BasemapMultiSelectInput({
                                       className="flex items-center flex-1 overflow-hidden space-x-2"
                                     >
                                       <img
+                                        alt={"basemap preview"}
                                         src={basemap.thumbnail}
                                         className="w-8 h-8 rounded shadow select-none"
                                       />
