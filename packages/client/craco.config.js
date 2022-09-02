@@ -1,4 +1,3 @@
-const GoogleFontsPlugin = require("@beyonk/google-fonts-webpack-plugin");
 const WorkboxWebpackPlugin = require("workbox-webpack-plugin");
 
 // craco.config.js
