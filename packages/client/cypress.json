@@ -1,5 +1,8 @@
 {
   "projectId": "jo53du",
   "testFiles": ["**/*.spec.js", "**/*.spec.ts"],
-  "baseUrl": "http://localhost:3000"
+  "baseUrl": "http://localhost:3000", 
+  "chromeWebSecurity": false, 
+  "defaultCommandTimeout": 6000, 
+  "retries": 2
 }
