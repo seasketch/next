@@ -12,10 +12,6 @@ module.exports = {
   webpack: {
     plugins: {
       add: [
-        // Include in bundle for offline use
-        new GoogleFontsPlugin({
-          fonts: [{ family: "Inter", variants: ["400", "500", "600", "700"] }],
-        }),
         new WorkboxWebpackPlugin.InjectManifest({
           swSrc: path.resolve(__dirname, "src/service-worker.ts"),
           dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
@@ -58,29 +54,28 @@ module.exports = {
       const origBabelPresetCRA =
         babelLoaderOptions.presets[origBabelPresetCRAIndex];
 
-      babelLoaderOptions.presets[
-        origBabelPresetCRAIndex
-      ] = function overridenPresetCRA(api, opts, env) {
-        const babelPresetCRAResult = require(origBabelPresetCRA[0])(
-          api,
-          origBabelPresetCRA[1],
-          env
-        );
+      babelLoaderOptions.presets[origBabelPresetCRAIndex] =
+        function overridenPresetCRA(api, opts, env) {
+          const babelPresetCRAResult = require(origBabelPresetCRA[0])(
+            api,
+            origBabelPresetCRA[1],
+            env
+          );
 
-        babelPresetCRAResult.presets.forEach((preset) => {
-          // detect @babel/preset-react with {development: true, runtime: 'automatic'}
-          const isReactPreset =
-            preset &&
-            preset[1] &&
-            preset[1].runtime === "automatic" &&
-            preset[1].development === true;
-          if (isReactPreset) {
-            preset[1].importSource = "@welldone-software/why-did-you-render";
-          }
-        });
+          babelPresetCRAResult.presets.forEach((preset) => {
+            // detect @babel/preset-react with {development: true, runtime: 'automatic'}
+            const isReactPreset =
+              preset &&
+              preset[1] &&
+              preset[1].runtime === "automatic" &&
+              preset[1].development === true;
+            if (isReactPreset) {
+              preset[1].importSource = "@welldone-software/why-did-you-render";
+            }
+          });
 
-        return babelPresetCRAResult;
-      };
+          return babelPresetCRAResult;
+        };
       babelLoaderOptions.ignore = [
         "./node_modules/mapbox-gl/dist/mapbox-gl.js",
       ];
