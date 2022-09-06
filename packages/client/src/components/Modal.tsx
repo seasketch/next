@@ -38,12 +38,6 @@ interface ModalProps {
 export default function Modal(props: ModalProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  useEffect(() => {
-    if (props.onTabChange) {
-      props.onTabChange(selectedIndex);
-    }
-  }, [selectedIndex, props.onTabChange]);
-
   if (props.scrollable && props.icon) {
     throw new Error("Cannot combine scrollable and icon settings in Modal");
   }
@@ -83,7 +77,15 @@ export default function Modal(props: ModalProps) {
       <Backdrop />
 
       <div className="fixed z-10 inset-0 overflow-y-auto sm:overflow-y-hidden">
-        <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+        <Tab.Group
+          selectedIndex={selectedIndex}
+          onChange={(idx) => {
+            setSelectedIndex(idx);
+            if (props.onTabChange) {
+              props.onTabChange(idx);
+            }
+          }}
+        >
           <div className="flex items-end sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
             <Panel
               zeroPadding={props.zeroPadding || false}
