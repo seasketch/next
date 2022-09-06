@@ -32,10 +32,17 @@ interface ModalProps {
   tabs?: string[];
   scrollable?: boolean;
   zeroPadding?: boolean;
+  onTabChange?: (selectedIndex: number) => void;
 }
 
 export default function Modal(props: ModalProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  useEffect(() => {
+    if (props.onTabChange) {
+      props.onTabChange(selectedIndex);
+    }
+  }, [selectedIndex, props.onTabChange]);
 
   if (props.scrollable && props.icon) {
     throw new Error("Cannot combine scrollable and icon settings in Modal");

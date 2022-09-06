@@ -55,6 +55,8 @@ export default function InviteUsersModal({
     },
   });
 
+  console.log(state);
+
   const [createInvites, createInvitesState] = useCreateProjectInvitesMutation({
     variables: {
       projectId,
@@ -133,6 +135,12 @@ export default function InviteUsersModal({
       tabs={[t("Single Invite"), t("List Multiple")]}
       title={t("Invite Users")}
       onRequestClose={onRequestClose}
+      onTabChange={(selectedIndex) => {
+        setState((prev) => ({
+          ...prev,
+          multi: selectedIndex === 1,
+        }));
+      }}
       scrollable={true}
       footer={[
         {
