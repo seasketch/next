@@ -55,6 +55,8 @@ export default function InviteUsersModal({
     },
   });
 
+  console.log(state);
+
   const [createInvites, createInvitesState] = useCreateProjectInvitesMutation({
     variables: {
       projectId,
