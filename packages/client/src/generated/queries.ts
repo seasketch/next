@@ -10159,6 +10159,7 @@ export type Survey = Node & {
   /** Reads a single `Project` that is related to this `Survey`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  responsesSpatialExtent?: Maybe<Scalars['String']>;
   showFacilitationOption: Scalars['Boolean'];
   showProgress: Scalars['Boolean'];
   /**
@@ -15321,7 +15322,10 @@ export type SurveyResponseFragment = (
 
 export type FormElementExtendedDetailsFragment = (
   { __typename?: 'FormElement' }
-  & { surveyConsentDocumentsConnection: (
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'geometryType'>
+  )>, surveyConsentDocumentsConnection: (
     { __typename?: 'SurveyConsentDocumentsConnection' }
     & { nodes: Array<(
       { __typename?: 'SurveyConsentDocument' }
@@ -15340,7 +15344,7 @@ export type SurveyResponsesQuery = (
   { __typename?: 'Query' }
   & { survey?: Maybe<(
     { __typename?: 'Survey' }
-    & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
+    & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount' | 'responsesSpatialExtent'>
     & { form?: Maybe<(
       { __typename?: 'Form' }
       & { formElements?: Maybe<Array<(
@@ -16756,6 +16760,9 @@ export const SurveyResponseFragmentDoc = /*#__PURE__*/ gql`
 export const FormElementExtendedDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment FormElementExtendedDetails on FormElement {
   ...FormElementDetails
+  sketchClass {
+    geometryType
+  }
   surveyConsentDocumentsConnection {
     nodes {
       url
@@ -18785,6 +18792,7 @@ export const SurveyResponsesDocument = /*#__PURE__*/ gql`
         ...SurveyResponse
       }
     }
+    responsesSpatialExtent
   }
 }
     ${FormElementExtendedDetailsFragmentDoc}

@@ -1,3 +1,4 @@
+import bbox from "@turf/bbox";
 import { Feature } from "geojson";
 import { Layer, MapMouseEvent, Popup } from "mapbox-gl";
 import { useEffect, useMemo, useState } from "react";
@@ -63,6 +64,25 @@ export default function ResponsesMap({
     },
     fetchPolicy: "cache-only",
   });
+
+  useEffect(() => {
+    if (
+      responsesQuery.data?.survey?.responsesSpatialExtent &&
+      essentials.mapContext.manager?.map
+    ) {
+      const feature = JSON.parse(
+        responsesQuery.data.survey.responsesSpatialExtent
+      );
+      const extent = bbox(feature);
+      essentials.mapContext.manager.map.fitBounds(
+        extent as [number, number, number, number],
+        { duration: 250, animate: true, padding: 50 }
+      );
+    }
+  }, [
+    responsesQuery.data?.survey?.responsesSpatialExtent,
+    essentials.mapContext.manager?.map,
+  ]);
 
   useEffect(() => {
     const map = essentials.mapContext.manager?.map;
@@ -337,6 +357,27 @@ export default function ResponsesMap({
                 0.1,
               ],
               "line-color": [
+                "case",
+                ["boolean", ["feature-state", "selected"], false],
+                "blue",
+                "red",
+              ],
+            },
+            filter: getFilter(filter),
+          },
+          {
+            type: "circle",
+            "source-layer": "sketches",
+            paint: {
+              // Make circles larger as the user zooms from z12 to z22.
+              "circle-radius": {
+                base: 3,
+                stops: [
+                  [12, 3],
+                  [22, 180],
+                ],
+              },
+              "circle-color": [
                 "case",
                 ["boolean", ["feature-state", "selected"], false],
                 "blue",

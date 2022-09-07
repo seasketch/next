@@ -2,6 +2,10 @@
 import { ConsentProps, ConsentValue } from "./Consent";
 import { MatrixProps, MatrixValue } from "./Matrix";
 import { MultipleChoiceProps, MultipleChoiceValue } from "./MultipleChoice";
+import {
+  MultiSpatialInputProps,
+  MultiSpatialInputValueType,
+} from "./MultiSpatialInput";
 import { NameProps, NameType } from "./Name";
 import {
   registerComponent,
@@ -75,8 +79,16 @@ registerComponent<MatrixProps, MatrixValue>({
   },
 });
 registerComponent({ name: "ThankYou" });
-registerComponent({ name: "SingleSpatialInput" });
-registerComponent({ name: "MultiSpatialInput" });
+// registerComponent({ name: "SingleSpatialInput" });
+registerComponent<MultiSpatialInputProps, MultiSpatialInputValueType>({
+  name: "MultiSpatialInput",
+  getColumns: (componentSettings, exportId) => [`${exportId}_feature_ids`],
+  getAnswers: (settings, exportId, answer) => {
+    return {
+      [`${exportId}_feature_ids`]: answer.collection,
+    };
+  },
+});
 registerComponent<SpatialAccessPriorityProps, SAPValueType>({
   name: "SpatialAccessPriorityInput",
   fname: "SpatialAccessPriority/SpatialAccessPriority",

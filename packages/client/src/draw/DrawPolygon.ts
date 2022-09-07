@@ -16,6 +16,9 @@ const Constants = {
     DIRECT_SELECT: "direct_select",
     STATIC: "static",
   },
+  events: {
+    CREATE: "draw.create",
+  },
 };
 
 // https://github.com/mapbox/mapbox-gl-draw/blob/main/src/lib/is_event_at_coordinates.js

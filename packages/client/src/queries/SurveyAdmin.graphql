@@ -643,6 +643,9 @@ fragment SurveyResponse on SurveyResponse {
 
 fragment FormElementExtendedDetails on FormElement {
   ...FormElementDetails
+  sketchClass {
+    geometryType
+  }
   surveyConsentDocumentsConnection {
     nodes {
       url
@@ -670,6 +673,7 @@ query SurveyResponses($surveyId: Int!) {
         ...SurveyResponse
       }
     }
+    responsesSpatialExtent
   }
 }
 

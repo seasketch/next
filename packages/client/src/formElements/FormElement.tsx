@@ -19,6 +19,7 @@ import {
   FormElementLayout,
   Maybe,
   SketchClassDetailsFragment,
+  SketchGeometryType,
   UpdateFormElementMutation,
   useGetFormElementQuery,
   useUpdateFormElementMutation,
@@ -510,7 +511,12 @@ export interface FormElementComponent<T, V = {}>
   stages?: { [stage: number]: string };
   hideNav?:
     | boolean
-    | ((componentSettings: T, isMobile: boolean, stage?: number) => boolean);
+    | ((
+        componentSettings: T,
+        isMobile: boolean,
+        stage: number | undefined,
+        isRequired: boolean
+      ) => boolean);
   getLayout?: (
     stage: number,
     componentSettings: T,
@@ -541,6 +547,7 @@ export interface FormElementComponent<T, V = {}>
     editable: boolean;
     updateValue: (value: V) => Promise<any>;
     elementId: number;
+    geometryType?: SketchGeometryType;
   }>;
 }
 
@@ -548,6 +555,7 @@ export function hideNav(
   Component: FormElementComponent<any, any>,
   componentSettings: any,
   isMobile: boolean,
+  isRequired: boolean,
   stage?: number,
   layout?: FormElementLayout
 ) {
@@ -566,7 +574,7 @@ export function hideNav(
   } else if (Component.hideNav === true) {
     return true;
   } else if (typeof Component.hideNav === "function") {
-    return Component.hideNav(componentSettings, isMobile, stage);
+    return Component.hideNav(componentSettings, isMobile, stage, isRequired);
   } else {
     throw new Error("Component has invalid hideNav Class property");
   }

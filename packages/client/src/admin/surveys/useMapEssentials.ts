@@ -53,53 +53,59 @@ export default function useMapEssentials({
 
   const debouncedCamera = useDebounce(cameraOptions, 30);
   const { online } = useContext(OfflineStateContext);
-
-  useEffect(() => {
-    if (mapContext?.manager && data?.projectBySlug?.basemaps) {
-      let basemaps: BasemapDetailsFragment[] = [];
-      const allBasemaps = [
-        ...(data.projectBySlug.basemaps || []),
-        ...(data.projectBySlug.surveyBasemaps || []),
-      ];
-      if (filterBasemapIds && filterBasemapIds.length) {
-        basemaps = filterBasemapIds
-          .map((id) => allBasemaps.find((b) => b.id === id))
-          .filter((b) => b !== undefined) as BasemapDetailsFragment[];
-      } else {
-        basemaps = allBasemaps;
-      }
-      if (!basemaps.length && data.projectBySlug.basemaps.length) {
-        basemaps = [data.projectBySlug.basemaps[0]];
-      }
-      if (!online) {
-        // need to first check that basemaps are cached
-        caches.open(MAP_STATIC_ASSETS_CACHE_NAME).then(async (cache) => {
-          const offlineBasemaps: BasemapDetailsFragment[] = [];
-          for (const basemap of basemaps) {
-            const cacheKey = new URL(normalizeStyleUrl(basemap.url, ""));
-            cacheKey.searchParams.delete("access_token");
-            const match = await cache.match(cacheKey.toString());
-            if (Boolean(match)) {
-              offlineBasemaps.push(basemap);
+  const basemapsString = data?.projectBySlug?.basemaps?.join(",");
+  const surveyBasemapsString = data?.projectBySlug?.surveyBasemaps?.join(",");
+  const filterBasemapIdsString = filterBasemapIds?.join(",");
+  useEffect(
+    () => {
+      if (mapContext?.manager && data?.projectBySlug?.basemaps) {
+        let basemaps: BasemapDetailsFragment[] = [];
+        const allBasemaps = [
+          ...(data.projectBySlug.basemaps || []),
+          ...(data.projectBySlug.surveyBasemaps || []),
+        ];
+        if (filterBasemapIds && filterBasemapIds.length) {
+          basemaps = filterBasemapIds
+            .map((id) => allBasemaps.find((b) => b.id === id))
+            .filter((b) => b !== undefined) as BasemapDetailsFragment[];
+        } else {
+          basemaps = allBasemaps;
+        }
+        if (!basemaps.length && data.projectBySlug.basemaps.length) {
+          basemaps = [data.projectBySlug.basemaps[0]];
+        }
+        if (!online) {
+          // need to first check that basemaps are cached
+          caches.open(MAP_STATIC_ASSETS_CACHE_NAME).then(async (cache) => {
+            const offlineBasemaps: BasemapDetailsFragment[] = [];
+            for (const basemap of basemaps) {
+              const cacheKey = new URL(normalizeStyleUrl(basemap.url, ""));
+              cacheKey.searchParams.delete("access_token");
+              const match = await cache.match(cacheKey.toString());
+              if (Boolean(match)) {
+                offlineBasemaps.push(basemap);
+              }
             }
-          }
-          setBasemaps(offlineBasemaps.length ? offlineBasemaps : basemaps);
-          mapContext.manager?.setBasemaps(
-            offlineBasemaps.length ? offlineBasemaps : basemaps
-          );
-        });
-      } else {
-        setBasemaps(basemaps);
-        mapContext.manager?.setBasemaps(basemaps);
+            setBasemaps(offlineBasemaps.length ? offlineBasemaps : basemaps);
+            mapContext.manager?.setBasemaps(
+              offlineBasemaps.length ? offlineBasemaps : basemaps
+            );
+          });
+        } else {
+          setBasemaps(basemaps);
+          mapContext.manager?.setBasemaps(basemaps);
+        }
       }
-    }
-  }, [
-    data?.projectBySlug?.basemaps,
-    data?.projectBySlug?.surveyBasemaps,
-    mapContext.manager,
-    filterBasemapIds,
-    online,
-  ]);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      basemapsString,
+      surveyBasemapsString,
+      mapContext.manager,
+      filterBasemapIdsString,
+      online,
+    ]
+  );
 
   useEffect(() => {
     if (mapContext?.manager?.map && debouncedCamera) {

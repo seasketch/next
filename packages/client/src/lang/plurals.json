@@ -24,5 +24,7 @@
   "SubmitResponsesTitle": "Submit {{count}} Offline Survey Response",
   "SubmitResponsesTitle_plural": "Submit {{count}} Offline Survey Responses",
   "ResponsesSubmitted": "Submitted {{count}} Response",
-  "ResponsesSubmitted_plural": "Submitted {{count}} Responses"
+  "ResponsesSubmitted_plural": "Submitted {{count}} Responses",
+  "NumLocations": "{{count}} location",
+  "NumLocations_plural": "{{count}} locations"
 }

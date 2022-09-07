@@ -39,7 +39,7 @@ DirectSelect.checkForKinks = function (state: any) {
   if (state.feature && state.feature.type === "Polygon") {
     state.kinks = getKinks(state.feature.toGeoJSON());
     this.map.fire("seasketch.kinks", {
-      hasKinks: state.kinks.features.length > 0,
+      hasKinks: state.kinks?.features.length > 0,
     });
   }
 };
@@ -58,10 +58,10 @@ DirectSelect.toDisplayFeatures = function (
   push: (feature: Feature<any>) => void
 ) {
   if (geojson.properties.id === state.featureId) {
-    const hasKinks = state.kinks.features.length > 0;
+    const hasKinks = state.kinks?.features.length > 0;
     geojson.properties.kinks = hasKinks ? "true" : "false";
     if (hasKinks) {
-      for (const feature of state.kinks.features) {
+      for (const feature of state.kinks?.features) {
         feature.properties.meta = "self-intersection";
         feature.properties.parent = state.featureId;
         push(feature);
@@ -104,7 +104,7 @@ DirectSelect.fireUpdate = function () {
 };
 
 DirectSelect.clickNoTarget = function (state: any, e: any) {
-  if (state.kinks.features.length > 0) {
+  if (state.kinks?.features.length > 0) {
     // clear coordinate selection but don't allow change of mode
     state.selectedCoordPaths = [];
     this.clearSelectedCoordinates();
@@ -118,10 +118,10 @@ DirectSelect.clickNoTarget = function (state: any, e: any) {
 // inspired by mapbox-gl-draw-waypoint
 // https://github.com/zakjan/mapbox-gl-draw-waypoint/blob/master/src/modes/direct_select.js
 DirectSelect.clickInactive = function (state: any, e: any) {
-  if (state.kinks.features.length > 0) {
+  if (state.kinks?.features.length > 0) {
     // do nothing. don't allow switching away
   } else {
-    if (e.featureTarget.geometry.type !== "point") {
+    if (e.featureTarget.geometry.type !== "Point") {
       // switch to direct_select mode for polygon/line features
       this.changeMode("direct_select", {
         featureId: e.featureTarget.properties.id,
@@ -165,7 +165,7 @@ DirectSelect.onMouseMove = function (state: any, e: any) {
   else if (onVertex) this.updateUIClasses({ mouse: "move" });
   else this.updateUIClasses({ mouse: "none" });
 
-  if (state.kinks.features.length > 0) {
+  if (state.kinks?.features.length > 0) {
     if (
       e.featureTarget?.properties?.active === "false" &&
       e.featureTarget?.properties?.meta === "feature"

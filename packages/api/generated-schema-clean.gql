@@ -11228,6 +11228,7 @@ type Survey implements Node {
   """Reads a single `Project` that is related to this `Survey`."""
   project: Project
   projectId: Int!
+  responsesSpatialExtent: String
   showFacilitationOption: Boolean!
   showProgress: Boolean!
 

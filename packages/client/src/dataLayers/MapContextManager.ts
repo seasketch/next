@@ -46,6 +46,7 @@ import bbox from "@turf/bbox";
 import { useParams } from "react-router";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 import { OfflineTileSettings } from "../offline/OfflineTileSettings";
+import md5 from "md5";
 
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -294,6 +295,8 @@ class MapContextManager {
       );
     }
     const { style, sprites } = await this.getComputedStyle();
+    const styleHash = md5(JSON.stringify(style));
+    this.setState((prev) => ({ ...prev, styleHash }));
 
     let mapOptions: MapboxOptions = {
       container,
@@ -613,13 +616,16 @@ class MapContextManager {
     if (this.map && this.internalState.ready) {
       this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
+      const styleHash = md5(JSON.stringify(style));
       this.addSprites(sprites);
       if (!this.mapIsLoaded) {
         setTimeout(() => {
           this.map!.setStyle(style);
+          this.setState((prev) => ({ ...prev, styleHash }));
         }, 20);
       } else {
         this.map.setStyle(style);
+        this.setState((prev) => ({ ...prev, styleHash }));
       }
     } else {
       this.updateStyleInfinitLoopDetector++;
@@ -1483,6 +1489,7 @@ export interface MapContextInterface {
   basemapOptionalLayerStatePreferences?: { [layerName: string]: any };
   showScale?: boolean;
   offlineTileSimulatorActive?: boolean;
+  styleHash: string;
 }
 
 interface MapContextOptions {
@@ -1513,6 +1520,7 @@ export function useMapContext(options?: MapContextOptions) {
     ready: false,
     terrainEnabled: false,
     basemapOptionalLayerStates: {},
+    styleHash: "",
   };
   let initialCameraOptions: CameraOptions | undefined = camera;
   const { slug } = useParams<{ slug: string }>();
@@ -1579,6 +1587,7 @@ export function useMapContext(options?: MapContextOptions) {
 
 export const MapContext = createContext<MapContextInterface>({
   layerStates: {},
+  styleHash: "",
   manager: new MapContextManager(
     {
       layerStates: {},
@@ -1587,6 +1596,7 @@ export const MapContext = createContext<MapContextInterface>({
       ready: false,
       terrainEnabled: false,
       basemapOptionalLayerStates: {},
+      styleHash: "",
     },
     (state) => {}
   ),
