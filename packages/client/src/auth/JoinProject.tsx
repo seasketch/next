@@ -31,6 +31,7 @@ export default function JoinProject() {
     variables: {
       slug,
     },
+    fetchPolicy: "cache-and-network",
   });
   const onError = useGlobalErrorHandler();
   const [joinProject, joinProjectState] = useJoinProjectMutation({ onError });
@@ -118,7 +119,7 @@ export default function JoinProject() {
     );
   }
 
-  if (!data.project || !data.projectPublicDetails) {
+  if (!data.projectPublicDetails) {
     return <Trans>Project not found</Trans>;
   }
 
@@ -209,7 +210,7 @@ export default function JoinProject() {
               </a>
             </Trans>
           </p>
-          {data.project.sessionHasPrivilegedAccess && (
+          {data.project?.sessionHasPrivilegedAccess && (
             <Warning level="info" className="mx-auto">
               <Trans>
                 Your account has been granted access to restricted content on
