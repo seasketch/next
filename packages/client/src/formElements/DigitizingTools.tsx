@@ -72,7 +72,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   const bottomToolbar = isMobile && style.isSmall;
 
   const buttons = (
-    <div>
+    <>
       {DigitizingState.NO_SELECTION && !multiFeature && (
         <Button
           label={t("Edit")}
@@ -140,7 +140,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         state === DigitizingState.CAN_COMPLETE ||
         state === DigitizingState.STARTED) &&
         createStateButtons}
-    </div>
+    </>
   );
 
   if (bottomToolbar) {
@@ -187,7 +187,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
     );
   } else {
     return (
-      <div>
+      <>
         <BowtieInstructions
           open={showInvalidShapeModal}
           onRequestClose={() => setShowInvalidShapeModal(false)}
@@ -226,7 +226,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           {children}
         </MapSettingsPopup>
         {/* </div> */}
-      </div>
+      </>
     );
   }
 };
@@ -294,18 +294,22 @@ function PointInstructions({
       return (
         <div>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <Trans ns="digitizing" i18nKey="StartPoint">
-            Click on the map to place a point
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="StartPoint">
+              Click on the map to place a point
+            </Trans>
+          </span>
         </div>
       );
     case DigitizingState.CREATE && isMobile:
       return (
         <div>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <Trans ns="digitizing" i18nKey="StartPointTouch">
-            Tap the map to place a point
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="StartPointTouch">
+              Tap the map to place a point
+            </Trans>
+          </span>
         </div>
       );
     case DigitizingState.STARTED:
@@ -319,15 +323,19 @@ function PointInstructions({
     case DigitizingState.UNFINISHED:
     case DigitizingState.EDITING:
       return (
-        <Trans ns="digitizing" i18nKey="DragPoint">
-          Drag point to modify
-        </Trans>
+        <span>
+          <Trans ns="digitizing" i18nKey="DragPoint">
+            Drag point to modify
+          </Trans>
+        </span>
       );
     case DigitizingState.NO_SELECTION:
       return (
-        <Trans ns="digitizing" i18nKey="NoSelectionPoint">
-          Click a point to edit
-        </Trans>
+        <span>
+          <Trans ns="digitizing" i18nKey="NoSelectionPoint">
+            Click a point to edit
+          </Trans>
+        </span>
       );
     default:
       return null;
@@ -348,32 +356,44 @@ function LineInstructions({
       return (
         <div>
           <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <Trans ns="digitizing" i18nKey="StartLine">
-            Click on the map to start a line
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="StartLine">
+              Click on the map to start a line
+            </Trans>
+          </span>
         </div>
       );
     case DigitizingState.STARTED:
       return (
-        <Trans ns="digitizing" i18nKey="ContinueDrawLine">
-          Click to add more points, Double-Click to finish
-        </Trans>
+        <span>
+          <Trans ns="digitizing" i18nKey="ContinueDrawLine">
+            Click to add more points, Double-Click to finish
+          </Trans>
+        </span>
       );
     case DigitizingState.CAN_COMPLETE:
       return (
-        <Trans ns="digitizing" i18nKey="CanCompleteLine">
-          Click to add more points, Double-Click to finish
-        </Trans>
+        <span>
+          <Trans ns="digitizing" i18nKey="CanCompleteLine">
+            Click to add more points, Double-Click to finish
+          </Trans>
+        </span>
       );
     case DigitizingState.UNFINISHED:
     case DigitizingState.EDITING:
       return (
-        <Trans ns="digitizing" i18nKey="DragVertex">
-          Click and drag points to modify
-        </Trans>
+        <span>
+          <Trans ns="digitizing" i18nKey="DragVertex">
+            Click and drag points to modify
+          </Trans>
+        </span>
       );
     case DigitizingState.NO_SELECTION:
-      return <Trans ns="digitizing">Click a line to edit</Trans>;
+      return (
+        <span>
+          <Trans ns="digitizing">Click a line to edit</Trans>
+        </span>
+      );
     default:
       return null;
   }
@@ -392,7 +412,7 @@ function PolygonInstructions({
     switch (state) {
       case DigitizingState.CREATE:
         return (
-          <div>
+          <>
             <svg
               viewBox="0 0 24 24"
               height="48"
@@ -407,31 +427,37 @@ function PolygonInstructions({
               <path d="M9 9.24V5.5a2.5 2.5 0 015 0v3.74c1.21-.81 2-2.18 2-3.74C16 3.01 13.99 1 11.5 1S7 3.01 7 5.5c0 1.56.79 2.93 2 3.74z"></path>
               <path d="M14.5 11.71c-.28-.14-.58-.21-.89-.21H13v-6c0-.83-.67-1.5-1.5-1.5S10 4.67 10 5.5v10.74l-3.44-.72a1.12 1.12 0 00-1.02 1.89l4.01 4.01c.37.37.88.58 1.41.58h6.41c1 0 1.84-.73 1.98-1.72l.63-4.46c.12-.85-.32-1.69-1.09-2.07l-4.39-2.04z"></path>
             </svg>
-            <Trans ns="digitizing" i18nKey="StartPolygonTouch">
-              Tap the map to start a polygon
-            </Trans>
-          </div>
+            <span>
+              <Trans ns="digitizing" i18nKey="StartPolygonTouch">
+                Tap the map to start a polygon
+              </Trans>
+            </span>
+          </>
         );
       case DigitizingState.STARTED:
         return (
-          <Trans ns="digitizing" i18nKey="ContinuePolygonTouch">
-            Tap to add more points
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="ContinuePolygonTouch">
+              Tap to add more points
+            </Trans>
+          </span>
         );
       case DigitizingState.CAN_COMPLETE:
         return (
-          <Trans ns="digitizing" i18nKey="CanCompletePolygonTouch">
-            Tap start point or double tap to finish
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="CanCompletePolygonTouch">
+              Tap start point or double tap to finish
+            </Trans>
+          </span>
         );
-      // case DigitizingState.CREATED:
-      //   return <Trans ns="digitizing">Shape saved</Trans>;
       case DigitizingState.NO_SELECTION:
         if (multiFeature) {
           return (
-            <Trans ns="digitizing" i18nKey="EditPolygonTouch">
-              Tap a shape to edit
-            </Trans>
+            <span>
+              <Trans ns="digitizing" i18nKey="EditPolygonTouch">
+                Tap a shape to edit
+              </Trans>
+            </span>
           );
         } else {
           return null;
@@ -439,11 +465,12 @@ function PolygonInstructions({
       case DigitizingState.EDITING:
       case DigitizingState.UNFINISHED:
         return (
-          <Trans ns="digitizing" i18nKey="DragVertexPolygonTouch">
-            Drag points to modify
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="DragVertexPolygonTouch">
+              Drag points to modify
+            </Trans>
+          </span>
         );
-      // return <Trans ns="digitizing">Drag points to modify</Trans>;
       default:
         break;
     }
@@ -462,9 +489,11 @@ function PolygonInstructions({
         );
       case DigitizingState.STARTED:
         return (
-          <Trans ns="digitizing" i18nKey="ContinuePolygon">
-            Click to add more points
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="ContinuePolygon">
+              Click to add more points
+            </Trans>
+          </span>
         );
       case DigitizingState.CAN_COMPLETE:
         return (
@@ -487,14 +516,14 @@ function PolygonInstructions({
           return null;
         }
 
-      // case DigitizingState.CREATED:
-      //   return <Trans ns="digitizing">Shape saved</Trans>;
       case DigitizingState.EDITING:
       case DigitizingState.UNFINISHED:
         return (
-          <Trans ns="digitizing" i18nKey="EditPolygonDesktop">
-            Drag points to modify
-          </Trans>
+          <span>
+            <Trans ns="digitizing" i18nKey="EditPolygonDesktop">
+              Drag points to modify
+            </Trans>
+          </span>
         );
       default:
         return null;
