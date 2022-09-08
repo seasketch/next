@@ -88,6 +88,8 @@ declare global {
        */
       deleteProject(slug: string);
 
+      deleteUser(username: string);
+
       createSurvey(
         name: string, 
         projectId: number,
@@ -390,6 +392,16 @@ Cypress.Commands.add(
 
 Cypress.Commands.add("deleteProject", (slug: string) => {
   cy.exec(`cypress/support/deleteProject.js ${slug}`, {failOnNonZeroExit: false}).then((out) => {
+    console.log(out.stdout)
+    cy.log(out.stdout);
+  });
+});
+
+Cypress.Commands.add("deleteUser", (username: string) => {
+  console.log('deleting user')
+  console.log(username)
+  cy.exec(`cypress/support/deleteUser.js ${username}`).then((out) => {
+    console.log(out.stdout)
     cy.log(out.stdout);
   });
 });
