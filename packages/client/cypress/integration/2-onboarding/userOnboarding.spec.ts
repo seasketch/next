@@ -208,7 +208,8 @@ describe ("User onboarding via independent browsing", () => {
           cy.get('#username').type('authenticated@seasketch.org');
           cy.get('#password').type('password');
           cy.contains('Continue').click();
-          cy.contains('Request Awaiting Approval')
+          cy.contains('Request Awaiting Approval');
+          cy.contains('Contact test_user_1@seasketch.org');
         //} else {
         //  cy.contains('Request awaiting approval')
         //}
