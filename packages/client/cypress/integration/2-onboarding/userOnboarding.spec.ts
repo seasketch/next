@@ -129,12 +129,13 @@ describe ("User onboarding via independent browsing", () => {
     })//////
     
   })  
-  describe.only('Authenticated user (but not a participant) visiting an invite-only project', () => {
+  describe('Authenticated user (but not a participant) visiting an invite-only project', () => {
     beforeEach(() => {
       cy.intercept('/service-worker.js').as('serviceWorker'); 
+      cy.restoreLocalStorage()
       //cy.wait('@serviceWorker');
     });
-    before (() => {
+    before(() => {
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
         cy.setLocalStorage("token", access_token);
@@ -147,44 +148,30 @@ describe ("User onboarding via independent browsing", () => {
       });
       //cy.login('Authenticated User')
     });
+    afterEach(() => {
+      cy.saveLocalStorage()
+    })
     after(() => {
       cy.deleteProject('cy-invite-only')
     });
-    it ('Visits the project homepage', () => {
+    it('Visits the project homepage', () => {
       Cypress.on('uncaught:exception', (err, runnable) => {
-        // we expect a 3rd party library error with message 'list not defined'
-        // and don't want to fail the test so we return false
         if (err.message.includes('ServiceWorker')) {
           return false
         }
-        // we still want to ensure there are no other unexpected
-        // errors, so we let them fail the test
       });
       cy.visit('/');
       cy.get('a#nav-projects').click();
       cy.wait('@serviceWorker');
     });
-    it ('Can sign in', () => {
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        // we expect a 3rd party library error with message 'list not defined'
-        // and don't want to fail the test so we return false
-        if (err.message.includes('ServiceWorker')) {
-          return false
-        }
-        // we still want to ensure there are no other unexpected
-        // errors, so we let them fail the test
-      });
+    it('Can sign in', () => {
       cy.contains('Cypress').click();
       cy.get('button').contains('Sign in').click();
       cy.get('#username').type('authenticated@seasketch.org');
       cy.get('#password').type('password');
       cy.contains('Continue').click();
-      //cy.get('[title="Sign In"]').click();
-      //cy.get('#username').type('authenticated@seasketch.org');
-      //cy.get('#password').type('password');
-      //cy.contains('Continue').click();
     });
-    it ('Can share profile', () => {
+    it('Can share profile', () => {
       cy.get('button').contains('Share Profile').should('be.visible').as('shareProfile');
       cy.get('@shareProfile').then((btn) => {
         {btn.trigger('click')}
@@ -194,28 +181,59 @@ describe ("User onboarding via independent browsing", () => {
       cy.get('[name="fullname"]').should("have.value", "Authenticated Jane"); 
       cy.get('[data-cy="button-send-request"]').click();
       cy.contains('Your request').should('be.visible');
-      //cy.login('Authenticated User')
     });
-    it ('Cannot visit project if request is outstanding', () => {
+    it('Cannot visit project if request is outstanding', () => {
       cy.visit('/projects');
       cy.contains("Cypress").click();
-      //cy.contains('Request').should('not.be.visible')
-      cy.get('h3').then((btn) => {
-        console.log(btn.text())
-        cy.wait(500)
-        //if(btn.text().includes('Sign in')) {
-          cy.get('button').contains('Sign in').click();
-          cy.get('#username').type('authenticated@seasketch.org');
-          cy.get('#password').type('password');
-          cy.contains('Continue').click();
-          cy.contains('Request Awaiting Approval');
-          cy.contains('Contact test_user_1@seasketch.org');
-        //} else {
-        //  cy.contains('Request awaiting approval')
-        //}
-        //console.log(btn.text())
-      })
-      
+      cy.wait(700);
+      cy.get('button').contains('Sign in').click();
+      cy.get('#username').type('authenticated@seasketch.org');
+      cy.get('#password').type('password');
+      cy.contains('Continue').click();
+      cy.contains('Request Awaiting Approval');
+      cy.contains('Contact test_user_1@seasketch.org');
     });
   });
+  describe.only('Unauthenticated user visiting an invite-only project', () => {
+    before(() => {
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.setLocalStorage("token", access_token);
+        cy.createProject(
+          `Cypress Invite-Only Project`,
+          'cy-invite-only',
+          ProjectAccessControlSetting.InviteOnly,
+          true
+        ); 
+      });
+    });
+    after(() => {
+      cy.deleteProject('cy-invite-only')
+    });
+    it('Visits the project homepage', () => {
+      Cypress.on('uncaught:exception', (err, runnable) => {
+        if (err.message.includes('ServiceWorker')) {
+          return false
+        }
+      });
+      cy.visit('/');
+      cy.get('a#nav-projects').click();
+      //cy.wait('@serviceWorker');
+    });
+    it('Should be prompted to sign in or create an account', () => {
+      cy.contains('Cypress').click();
+      //Private project title
+      cy.get('#modal-title')
+      cy.contains('Create an account');
+      cy.get('button').contains('Sign in').click();
+      cy.get('#username').type('cypress_unverified@seasketch.org');
+      cy.get('#password').type('password');
+      cy.contains('Continue').click();
+    });
+    it('Should be prompted to request access', () => {
+      cy.contains('Request Access').click(); 
+      cy.contains('User Profile');
+    });
+  });
+  
 });
