@@ -35,6 +35,10 @@ module.exports = {
               },
             ],
           },
+          {
+            test: /\.wasm$/,
+            type: "javascript/auto",
+          },
         ],
       },
     },
