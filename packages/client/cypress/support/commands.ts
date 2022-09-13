@@ -86,7 +86,13 @@ declare global {
        * re-used. For testing purproses, these need to be permanently deleted.
        * @param slug
        */
+      getProject(projectId: number);
+      
+      joinProject(projectId: number, token: string)
+
       deleteProject(slug: string);
+
+      approveParticipant(projectId: number, userId: number, token:string)
 
       deleteUser(username: string);
 
@@ -200,8 +206,11 @@ declare global {
 
 Cypress.Commands.add("login", (userName) => {
   return cy.getToken(userName).then((body) => {
+    console.log(body)
     const token = body.id_token;
+    console.log(token)
     const claims = jwt.decode(token);
+    console.log(claims)
     const {
       nickname,
       name,
@@ -233,6 +242,8 @@ Cypress.Commands.add("login", (userName) => {
       },
       expiresAt: exp,
     };
+    let stringify = JSON.stringify(item)
+    console.log(`item = ${stringify}`)
     window.localStorage.setItem(
       // The client sets up a connection using @auth/auth0-react
       // This ID used to store the data in localstorage is determined by it
@@ -390,6 +401,88 @@ Cypress.Commands.add(
   }
 );
 
+Cypress.Commands.add("getProject", (projectId: number) => {
+  return cy
+    .query(
+      gql`
+        query CypressGetProject($projectId: Int!) {
+          query {
+            project(id: $projectId) {
+              id
+            }
+          
+          }
+        }
+      `,
+     {
+      "projectId": projectId
+      },
+      (token as any)
+    ).then((data) => {
+      Cypress.log(data)
+    });
+  });
+
+Cypress.Commands.add("joinProject", (projectId: number, token: string) => {
+  return cy
+  .mutation(
+    gql`
+      mutation CypressJoinProject($projectId: Int!) {
+        joinProject(input: { projectId: $projectId }) {
+          query {
+            project(id: $projectId) {
+              id
+              participantCount
+            }
+          }
+        }
+      }
+    `,
+  { projectId },
+  (token as any)
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  })
+})
+
+Cypress.Commands.add("approveParticipant", (projectId: number, userId: number, token: string) => {
+  console.log(userId)
+  return cy
+  .mutation(
+    gql`
+      mutation CypressApproveParticipant($projectId: Int!, $userId: Int!) {
+        approveParticipant(input: {projectId: $projectId, userId: $userId } ) {
+          user {
+            id
+            needsAccessRequestApproval
+            approvedBy {
+              canonicalEmail
+            }
+          }
+          query {
+            project (id: $projectId) {
+              slug
+              sessionHasPrivilegedAccess
+              sessionIsAdmin
+              sessionParticipationStatus
+              participants {
+                canonicalEmail
+              }
+            }
+          }
+        }
+      }
+    `,
+  { projectId, userId },
+  (token as any)
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  })
+})
+
+
 Cypress.Commands.add("deleteProject", (slug: string) => {
   cy.exec(`cypress/support/deleteProject.js ${slug}`, {failOnNonZeroExit: false}).then((out) => {
     console.log(out.stdout)
@@ -398,8 +491,6 @@ Cypress.Commands.add("deleteProject", (slug: string) => {
 });
 
 Cypress.Commands.add("deleteUser", (username: string) => {
-  console.log('deleting user')
-  console.log(username)
   cy.exec(`cypress/support/deleteUser.js ${username}`).then((out) => {
     console.log(out.stdout)
     cy.log(out.stdout);
