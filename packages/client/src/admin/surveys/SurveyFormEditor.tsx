@@ -559,6 +559,7 @@ export default function SurveyFormEditor({
                           />
                         )}
                         <FormElementFactory
+                          key={selectedFormElement.id}
                           stage={stage}
                           onRequestStageChange={(n) => {
                             setStage(n);
