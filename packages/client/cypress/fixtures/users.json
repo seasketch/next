@@ -3,8 +3,12 @@
     "email": "test_user_1@seasketch.org",
     "password": "password"
   },
-  "Unverified Email": {
-    "email": "test_unverified_email@seasketch.org",
+  "Unverified User": {
+    "email": "cypress_unverified@seasketch.org",
+    "password": "password"
+  },
+  "Verified User": {
+    "email": "cypress_verified@seasketch.org", 
     "password": "password"
   }
 }
