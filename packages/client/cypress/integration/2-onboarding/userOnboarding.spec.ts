@@ -247,13 +247,15 @@ describe ("User onboarding via independent browsing", () => {
     it('Is an approved participant', () => {
       cy.restoreLocalStorage()
       cy.getLocalStorage('projectId').then((id) => {
+        console.log(id)
         cy.getLocalStorage('token').then((token) => {
           cy.getToken('User 2').then(({access_token}) => {
             const projectId = parseInt(id)
             console.log(projectId)
-            cy.joinProject(projectId, access_token).then(() => {
+            cy.joinProject(projectId, access_token).then((resp) => {
               //second arg is user_id for test_user_2
-              cy.approveParticipant(projectId, 20, token).then((resp) => {
+              const newParticipantId = resp.joinProject.query.project.unapprovedParticipants[0].id
+              cy.approveParticipant(projectId, newParticipantId, token).then((resp) => {
                
                 console.log(resp)
               });
@@ -267,7 +269,7 @@ describe ("User onboarding via independent browsing", () => {
                 cy.log(`${participants}`)
                 expect (participants).to.include('test_user_2@seasketch.org');
               });
-            });
+            })//;
           });
         });
       }); 
@@ -306,7 +308,6 @@ describe ("User onboarding via independent browsing", () => {
         }
       });
       cy.visit('/projects');
-    })
+    });
   });
-  
 });

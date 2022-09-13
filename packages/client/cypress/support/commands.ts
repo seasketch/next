@@ -432,7 +432,10 @@ Cypress.Commands.add("joinProject", (projectId: number, token: string) => {
           query {
             project(id: $projectId) {
               id
-              participantCount
+              unapprovedParticipants {
+                id
+                canonicalEmail
+              }
             }
           }
         }
