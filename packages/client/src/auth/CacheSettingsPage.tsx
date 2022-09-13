@@ -11,7 +11,6 @@ export default function CacheSettingsPage() {
   const isSuperuser = useIsSuperuser();
   const { user, loginWithRedirect } = useAuth0();
   const online = useOnlineState();
-  console.log("online", online);
   return (
     // <CenteredCardListLayout>
     <div className="space-y-5">
