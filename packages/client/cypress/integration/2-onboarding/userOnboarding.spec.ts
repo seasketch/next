@@ -204,6 +204,7 @@ describe ("User onboarding via independent browsing", () => {
   });
   describe.only('Unauthenticated returning user visiting an invite-only project', () => {
     //Need to assert on sessionHasPrivilegedAccess
+    //Make userId dynamic
     //Need to check why approveParticipant is called twice
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -240,23 +241,21 @@ describe ("User onboarding via independent browsing", () => {
       });
       cy.visit('/');
       cy.get('a#nav-projects').click();
-      cy.contains('Cypress');
+      cy.contains('Cypress Invite-Only');
+      cy.contains('Sign in');
     });
     it('Is an approved participant', () => {
       cy.restoreLocalStorage()
       cy.getLocalStorage('projectId').then((id) => {
         cy.getLocalStorage('token').then((token) => {
-          cy.getToken('Unverified User').then(({access_token}) => {
+          cy.getToken('User 2').then(({access_token}) => {
             const projectId = parseInt(id)
             console.log(projectId)
             cy.joinProject(projectId, access_token).then(() => {
-              cy.getToken('User 1').then(({access_token}) => {
-                cy.wrap(access_token).as('token')
-                
-                cy.approveParticipant(projectId, 127, token).then((resp) => {
-                 
-                  console.log(resp)
-                });
+              //second arg is user_id for test_user_2
+              cy.approveParticipant(projectId, 20, token).then((resp) => {
+               
+                console.log(resp)
               });
               cy.wait('@approveParticipant').its('response').then((resp) => {
                 console.log(resp)
@@ -265,8 +264,8 @@ describe ("User onboarding via independent browsing", () => {
                 project.participants.forEach((t) => {
                   participants.push(t.canonicalEmail);
                 });
-                expect (participants).to.include('cypress_unverified@seasketch.org');
-                expect (project.sessionHasPrivilegedAccess).to.eq(true);
+                cy.log(`${participants}`)
+                expect (participants).to.include('test_user_2@seasketch.org');
               });
             });
           });
