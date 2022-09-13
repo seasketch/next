@@ -29,7 +29,11 @@ const Trans = (props: any) => (
   </T>
 );
 
-export default function OfflineSurveySelection() {
+export default function OfflineSurveySelection({
+  className,
+}: {
+  className?: string;
+}) {
   const slug = window.location.pathname.split("/")[1];
   const context = useContext(ClientCacheManagerContext);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +68,7 @@ export default function OfflineSurveySelection() {
   }, []);
 
   return (
-    <Card>
+    <Card className={className}>
       <Header>
         <Trans ns="offline">Offline Surveys</Trans>
       </Header>

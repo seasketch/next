@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
+import { CogIcon } from "@heroicons/react/solid";
 
 interface SidebarButtonProps {
   className?: string;
@@ -154,21 +155,24 @@ export const ForumsIcon = (
 export const ForumsButton = curry(ForumsIcon);
 
 export const AdminIcon = (
-  // <div className="bg-gray-700 rounded py-1 px-1 flex items-center">
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    className="w-6 h-6 inline-block text-gray-300"
-  >
-    <path
-      fillRule="evenodd"
-      d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z"
-      clipRule="evenodd"
-    />
-  </svg>
-  // </div>
+  <CogIcon className="w-6 h-6 inline-block text-gray-300" />
 );
+// export const AdminIcon = (
+//   // <div className="bg-gray-700 rounded py-1 px-1 flex items-center">
+//   <svg
+//     xmlns="http://www.w3.org/2000/svg"
+//     viewBox="0 0 24 24"
+//     fill="currentColor"
+//     className="w-6 h-6 inline-block text-gray-300"
+//   >
+//     <path
+//       fillRule="evenodd"
+//       d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z"
+//       clipRule="evenodd"
+//     />
+//   </svg>
+//   // </div>
+// );
 export const AdminButton = curry(
   AdminIcon
   // <svg
