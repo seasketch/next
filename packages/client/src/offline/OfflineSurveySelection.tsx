@@ -41,7 +41,7 @@ export default function OfflineSurveySelection({
     variables: { slug },
   });
   const { t } = useTranslation("offline");
-  const { surveyBasemaps } = useBasemapsBySurvey(
+  const { surveyBasemaps, loading } = useBasemapsBySurvey(
     context?.cacheSizes?.selectedSurveyIds,
     true
   );
@@ -233,6 +233,11 @@ export default function OfflineSurveySelection({
           </Trans>
         </p>
         <div>
+          {surveyBasemaps.length === 0 && loading && (
+            <div className="w-full flex items-center justify-center p-5">
+              <Spinner />
+            </div>
+          )}
           {surveyBasemaps.map(({ surveys, id, basemaps }) => (
             <div key={id}>
               <h4 className="truncate font-semibold text-sm py-4">
