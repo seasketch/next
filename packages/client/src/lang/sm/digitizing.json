@@ -1,0 +1,22 @@
+{
+  "CanCompleteLine": "Kiliki e fa'aopoopo nisi manatu, Kiliki Fa'alua e fa'auma",
+  "CanCompletePolygonTouch": "Oomi le vaega amata pe oomi faalua e faauma ai",
+  "ContinueDrawLine": "Kiliki e fa'aopoopo nisi manatu, Kiliki Fa'alua e fa'auma",
+  "ContinuePolygon": "Kiliki e fa'aopoopo nisi manatu",
+  "ContinuePolygonTouch": "Tap e fa'aopoopo nisi manatu",
+  "DragPoint": "Toso le pito e sui",
+  "DragVertex": "Kiliki ma toso togi e sui ai",
+  "DragVertexPolygonTouch": "Toso togi e sui",
+  "EditPolygonDesktop": "Toso togi e sui",
+  "EditPolygonTouch": "Tap se foliga e fa'asa'o",
+  "FinishPolygonDesktop": "Kiliki le vaega amata pe kiliki faalua le pito mulimuli e faauma ai",
+  "Invalid Shape": "Fa'ailoga le aoga",
+  "InvalidShapeInstructions": "O le a mumu lou foliga pe a le aoga. A tupu lenei mea ia mautinoa e le kolosi lou foliga, e pei ona faʻaalia e faʻailoga X. Afai e fa'aauau pea ona i ai ni fa'afitauli, mafaufau e tape lou foliga ma toe amata.",
+  "Okay": "Ua lelei",
+  "Reset Shape": "Toe Toe Fa'atusa",
+  "StartLine": "Kiliki i luga o le faafanua e amata ai se laina",
+  "StartPoint": "Kiliki i luga o le faafanua e tuu ai se manatu",
+  "StartPointTouch": "Oomi le faafanua e tuu ai se pito",
+  "StartPolygon": "<0></0>Kiliki ile fa'afanua e amata ai se polygon",
+  "StartPolygonTouch": "Oomi le faafanua e amata ai se polygon"
+}

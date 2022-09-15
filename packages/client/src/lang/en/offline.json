@@ -1,7 +1,14 @@
 {
   "": "",
+  "Are you sure you want to delete this offline map data?": "Are you sure you want to delete this offline map data?",
+  "Begin Download": "Begin Download",
+  "Cancel": "Cancel",
+  "Clear Map Data": "Clear Map Data",
   "Clear cache": "Clear cache",
+  "Close": "Close",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Failed to render offline settings. Is ServiceWorker enabled?",
+  "Import Map Packages": "Import Map Packages",
+  "Import data": "Import data",
   "Once online, you can resubmit from the this page, the begining of the survey, or from the SeaSketch homepage.": "Once online, you can resubmit from the this page, the begining of the survey, or from the SeaSketch homepage.",
   "Reload cache": "Reload cache",
   "SeaSketch logo": "SeaSketch logo",
@@ -9,5 +16,7 @@
   "These responses have been saved to your device but will need to be resubmitted to the SeaSketch server once you are back online. You can continue to collect additional responses until then.": "These responses have been saved to your device but will need to be resubmitted to the SeaSketch server once you are back online. You can continue to collect additional responses until then.",
   "This file is not the most up to date tile package. Consider downloading the newer package instead.": "This file is not the most up to date tile package. Consider downloading the newer package instead.",
   "This tile package is not related to any current maps, and will not be imported": "This tile package is not related to any current maps, and will not be imported",
-  "This tile package was generated for a different project": "This tile package was generated for a different project"
+  "This tile package was generated for a different project": "This tile package was generated for a different project",
+  "Update Map": "Update Map",
+  "You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps.": "You will not be able to use these maps until downloaded again. If map data is shared by multiple basemaps, this operation will clear data for all related basemaps."
 }

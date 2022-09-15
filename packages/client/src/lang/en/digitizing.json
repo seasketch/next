@@ -1,6 +1,8 @@
 {
   "CanCompleteLine": "Click to add more points, Double-Click to finish",
   "CanCompletePolygonTouch": "Tap start point or double tap to finish",
+  "Click a line to edit": "Click a line to edit",
+  "ClickToEditPolygonDesktop": "Click a shape to edit",
   "ContinueDrawLine": "Click to add more points, Double-Click to finish",
   "ContinuePolygon": "Click to add more points",
   "ContinuePolygonTouch": "Tap to add more points",
@@ -12,11 +14,12 @@
   "FinishPolygonDesktop": "Click the starting point or double-click the last point to finish",
   "Invalid Shape": "Invalid Shape",
   "InvalidShapeInstructions": "Your shape will turn red if invalid. When this happens make sure your shape does not cross itself, as indicated by the X symbols. If you continue to have trouble, consider deleting your shape and starting over.",
+  "NoSelectionPoint": "Click a point to edit",
   "Okay": "Okay",
   "Reset Shape": "Reset Shape",
   "StartLine": "Click on the map to start a line",
   "StartPoint": "Click on the map to place a point",
   "StartPointTouch": "Tap the map to place a point",
-  "StartPolygon": "<0></0>Click on the map to start a polygon",
+  "StartPolygon": "Click on the map to start a polygon",
   "StartPolygonTouch": "Tap the map to start a polygon"
 }
