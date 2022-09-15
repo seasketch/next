@@ -6,5 +6,9 @@
   "User 2": {
     "email": "test_user_2@seasketch.org",
     "password": "password"
+  },
+  "User 3": {
+    "email": "test_user_admin@seasketch.org",
+    "password": "password"
   }
 }

@@ -202,9 +202,7 @@ describe ("User onboarding via independent browsing", () => {
       cy.contains('User Profile');
     });
   });
-  describe.only('Unauthenticated returning user visiting an invite-only project', () => {
-    //Need to assert on sessionHasPrivilegedAccess
-    //Make userId dynamic
+  describe('Unauthenticated returning user visiting an invite-only project', () => {
     //Need to check why approveParticipant is called twice
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -247,20 +245,17 @@ describe ("User onboarding via independent browsing", () => {
     it('Is an approved participant', () => {
       cy.restoreLocalStorage()
       cy.getLocalStorage('projectId').then((id) => {
-        console.log(id)
         cy.getLocalStorage('token').then((token) => {
           cy.getToken('User 2').then(({access_token}) => {
             const projectId = parseInt(id)
-            console.log(projectId)
+            //second arg is access_token for user 2
             cy.joinProject(projectId, access_token).then((resp) => {
-              //second arg is user_id for test_user_2
+              console.log(resp)
               const newParticipantId = resp.joinProject.query.project.unapprovedParticipants[0].id
-              cy.approveParticipant(projectId, newParticipantId, token).then((resp) => {
-               
-                console.log(resp)
-              });
+              //second arg is user_id for user 2
+              //third arg is token for user 1
+              cy.approveParticipant(projectId, newParticipantId, token);
               cy.wait('@approveParticipant').its('response').then((resp) => {
-                console.log(resp)
                 const project = resp.body.data.approveParticipant.query.project
                 let participants = []
                 project.participants.forEach((t) => {
@@ -269,7 +264,7 @@ describe ("User onboarding via independent browsing", () => {
                 cy.log(`${participants}`)
                 expect (participants).to.include('test_user_2@seasketch.org');
               });
-            })//;
+            });
           });
         });
       }); 
@@ -280,11 +275,17 @@ describe ("User onboarding via independent browsing", () => {
       cy.get('button').contains('Sign in');
     });
   });
-  describe("Unauthenticated returning user visiting an admin-only project", () => {
+  describe.only("Unauthenticated returning user visiting an admin-only project", () => {
+    beforeEach(() => {
+      cy.intercept("http://localhost:3857/graphql", (req) => {
+        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
+          req.alias = "createProject"
+        };
+      });
+    });
     before(() => {
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
-        console.log(access_token)
         cy.setLocalStorage("token", access_token);
         cy.createProject(
           `Cypress Admin-Only Project`,
@@ -292,22 +293,90 @@ describe ("User onboarding via independent browsing", () => {
           ProjectAccessControlSetting.AdminsOnly,
           true
         ).then((id) => {
+          const attributes = {"isListed": true}
+          cy.updateProject(id, access_token, attributes);
           cy.setLocalStorage('projectId', id as any);
-          cy.setLocalStorage('token', access_token)
-          cy.saveLocalStorage()
+          cy.setLocalStorage('token', access_token);
+          cy.saveLocalStorage();
         })
       });
     });
     after(() => {
       cy.deleteProject('cy-admin-only');
     });
-    it('Visits the project homepage', () => {
+    it('Visits the project homepage, project is listed, and has correct access control', () => {
+      cy.restoreLocalStorage();
+      cy.getLocalStorage('projectId').then((id) => {
+        cy.getLocalStorage('token').then((token) => {
+          const projectId = parseInt(id);
+          cy.getProject(projectId, token).then((resp) => {
+            const project = resp.query.project;
+            expect (project.name).to.eq('Cypress Admin-Only Project');
+            expect (project.accessControl).to.eq('ADMINS_ONLY');
+            cy.setLocalStorage('getProjectResponse', JSON.stringify(resp));
+          });
+        });
+      });
       Cypress.on('uncaught:exception', (err, runnable) => {
         if (err.message.includes('ServiceWorker')) {
           return false
         }
       });
       cy.visit('/projects');
+      cy.contains('Cypress Admin-Only');
+      cy.saveLocalStorage();
+    });
+    it('Is a project administrator', () => {
+      cy.restoreLocalStorage();
+      cy.getLocalStorage('getProjectResponse').then((resp) => {
+        const response = JSON.parse(resp);
+        expect (response.query.project.admins[0].canonicalEmail).to.eq('test_user_1@seasketch.org');
+      });
+    });
+    it('Is prompted to sign in and can access project', () => {
+      cy.contains('Cypress Admin-Only').click();
+      cy.contains('Private Project');
+      cy.contains('project administrators');
+      cy.contains('Cypress Admin-Only')
+      cy.get('button').contains('Sign in').click();
+      cy.get('#username').type('test_user_1@seasketch.org');
+      cy.get('#password').type('password');
+      cy.contains('Continue').click();
+      cy.contains('Cypress Admin-Only');
+      cy.contains('test_user_1@seasketch.org');
+      cy.contains('Project Admin Dashboard');
     });
   });
 });
+
+
+//cy.restoreLocalStorage()
+      //cy.getLocalStorage('projectId').then((id) => {
+      //  cy.getLocalStorage('token').then((token) => {
+      //    cy.getToken('User 2').then(({access_token}) => {
+      //      const projectId = parseInt(id)
+      //      //Second arg is access_token for user 2
+      //      //User 2 cannot join project because it is adminsOnly, but I am using this mutation
+      //      //to get userId of User 2
+      //      cy.joinProject(projectId, access_token).then((resp) => {
+      //        console.log(resp)
+      //        const newAdminId = resp.joinProject.query.project.unapprovedParticipants[0].id
+      //        console.log(newAdminId)
+      //        cy.toggleAdminAccess(7, projectId, token).then((resp) => {
+      //          console.log(resp)
+      //        })
+      //        ////second arg is user_id for user 2
+      //        ////third arg is token for user 1
+      //        //cy.approveParticipant(projectId, newParticipantId, token);
+      //        //cy.wait('@approveParticipant').its('response').then((resp) => {
+      //        //  const project = resp.body.data.approveParticipant.query.project
+      //        //  let participants = []
+      //        //  project.participants.forEach((t) => {
+      //        //    participants.push(t.canonicalEmail);
+      //        //  });
+      //        //  expect (participants).to.include('test_user_2@seasketch.org');
+      //        //});
+      //      });
+      //    });
+      //  });
+      //}); 

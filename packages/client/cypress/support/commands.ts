@@ -86,13 +86,17 @@ declare global {
        * re-used. For testing purproses, these need to be permanently deleted.
        * @param slug
        */
-      getProject(projectId: number);
+      getProject(projectId: number, token:string);
       
-      joinProject(projectId: number, token: string)
+      joinProject(projectId: number, token: string);
+
+      updateProject(projectId: number, token: string, attributes: object);
 
       deleteProject(slug: string);
 
-      approveParticipant(projectId: number, userId: number, token:string)
+      approveParticipant(projectId: number, userId: number, token:string);
+
+      toggleAdminAccess(userId: number, projectId: number, token: string)
 
       deleteUser(username: string);
 
@@ -352,6 +356,7 @@ Cypress.Commands.add(
                 project {
                   id
                   accessControl
+                  isListed
                 }
               }
             }
@@ -401,7 +406,7 @@ Cypress.Commands.add(
   }
 );
 
-Cypress.Commands.add("getProject", (projectId: number) => {
+Cypress.Commands.add("getProject", (projectId: number, token: string) => {
   return cy
     .query(
       gql`
@@ -409,6 +414,12 @@ Cypress.Commands.add("getProject", (projectId: number) => {
           query {
             project(id: $projectId) {
               id
+              accessControl
+              slug
+              name
+              admins {
+                canonicalEmail
+              }
             }
           
           }
@@ -417,7 +428,7 @@ Cypress.Commands.add("getProject", (projectId: number) => {
      {
       "projectId": projectId
       },
-      (token as any)
+      (token as unknown) as string
     ).then((data) => {
       Cypress.log(data)
     });
@@ -446,8 +457,44 @@ Cypress.Commands.add("joinProject", (projectId: number, token: string) => {
   ).then((data) => {
     Cypress.log(data);
     return data
-  })
-})
+  });
+});
+
+Cypress.Commands.add("updateProject", (projectId: number, token: string, attributes: object,  ) => {
+  const patchOptions = ["name", "description", "accessControl", "isListed", "logoUrl", "logoLink", "isFeatured", "region", "dataSourcesBucketId", "inviteEmailSubject", "mapboxPublicKey"]
+  patchOptions.forEach((t) => {
+    if (attributes[t]) {
+      console.log(t)
+      return cy
+        .mutation(
+          gql`
+            mutation CypressUpdateProject(
+              $projectId: Int!
+            ) {
+              updateProject(
+                input: {
+                  id: $projectId
+                  patch: {
+                    isListed: true
+                  }
+                }
+              ) {
+                project {
+                  id
+                }
+              }
+            }
+          `,
+          {
+            projectId
+          },
+          (token as unknown) as string
+        )
+        .then((data) => {
+      })
+    }
+  });
+});
 
 Cypress.Commands.add("approveParticipant", (projectId: number, userId: number, token: string) => {
   console.log(userId)
@@ -482,9 +529,37 @@ Cypress.Commands.add("approveParticipant", (projectId: number, userId: number, t
   ).then((data) => {
     Cypress.log(data);
     return data
-  })
-})
+  });
+});
 
+Cypress.Commands.add("toggleAdminAccess", (projectId: number, userId: number, token: string) => {
+  console.log(userId)
+  return cy
+  .mutation(
+    gql`
+      mutation CypressToggleAdminAccess($projectId: Int!, $userId: Int!) {
+        toggleAdminAccess(input: {projectId: $projectId, userId: $userId } ) {
+          query {
+            project (id: $projectId) {
+              slug
+              sessionHasPrivilegedAccess
+              sessionIsAdmin
+              sessionParticipationStatus
+              participants {
+                canonicalEmail
+              }
+            }
+          }
+        }
+      }
+    `,
+  { projectId, userId },
+  (token as any)
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  });
+});
 
 Cypress.Commands.add("deleteProject", (slug: string) => {
   cy.exec(`cypress/support/deleteProject.js ${slug}`, {failOnNonZeroExit: false}).then((out) => {
