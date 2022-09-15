@@ -275,7 +275,7 @@ describe ("User onboarding via independent browsing", () => {
       cy.get('button').contains('Sign in');
     });
   });
-  describe.only("Unauthenticated returning user visiting an admin-only project", () => {
+  describe("Unauthenticated returning user visiting an admin-only project", () => {
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
         if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
@@ -346,6 +346,126 @@ describe ("User onboarding via independent browsing", () => {
       cy.contains('test_user_1@seasketch.org');
       cy.contains('Project Admin Dashboard');
     });
+  });
+  describe("Unauthenticated returning user visiting an admin-only project", () => {
+    beforeEach(() => {
+      cy.intercept("http://localhost:3857/graphql", (req) => {
+        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
+          req.alias = "createProject"
+        };
+      });
+    });
+    before(() => {
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.setLocalStorage("token", access_token);
+        cy.createProject(
+          `Cypress Admin-Only Project`,
+          'cy-admin-only',
+          ProjectAccessControlSetting.AdminsOnly,
+          true
+        ).then((id) => {
+          const attributes = {"isListed": true}
+          cy.updateProject(id, access_token, attributes);
+          cy.setLocalStorage('projectId', id as any);
+          cy.setLocalStorage('token', access_token);
+          cy.saveLocalStorage();
+        })
+      });
+    });
+    after(() => {
+      cy.deleteProject('cy-admin-only');
+    });
+    it('Visits the project homepage, project is listed, and has correct access control', () => {
+      cy.restoreLocalStorage();
+      cy.getLocalStorage('projectId').then((id) => {
+        cy.getLocalStorage('token').then((token) => {
+          const projectId = parseInt(id);
+          cy.getProject(projectId, token).then((resp) => {
+            const project = resp.query.project;
+            expect (project.name).to.eq('Cypress Admin-Only Project');
+            expect (project.accessControl).to.eq('ADMINS_ONLY');
+            cy.setLocalStorage('getProjectResponse', JSON.stringify(resp));
+          });
+        });
+      });
+      Cypress.on('uncaught:exception', (err, runnable) => {
+        if (err.message.includes('ServiceWorker')) {
+          return false
+        }
+      });
+      cy.visit('/projects');
+      cy.contains('Cypress Admin-Only');
+      cy.saveLocalStorage();
+    });
+    it('Is not a project administrator', () => {
+      cy.restoreLocalStorage();
+      cy.getLocalStorage('getProjectResponse').then((resp) => {
+        const response = JSON.parse(resp);
+        expect (response.query.project.admins[0].canonicalEmail).to.not.include('test_user_2@seasketch.org');
+      });
+    });
+    it('Is prompted to sign in and can access project', () => {
+      cy.contains('Cypress Admin-Only').click();
+      cy.contains('Private Project');
+      cy.contains('project administrators');
+      cy.contains('Cypress Admin-Only')
+      cy.get('button').contains('Sign in').click();
+      cy.get('#username').type('test_user_2@seasketch.org');
+      cy.get('#password').type('password');
+      cy.contains('Continue').click();
+      cy.contains('Admins Only');
+      cy.contains('Cypress Admin-Only');
+      cy.contains('test_user_1@seasketch.org');
+    });
+  });
+});
+
+describe("User onboarding via email invites", () => {
+  describe.only('A new SeaSketch user receiving an invitation to a project', () => {
+    beforeEach(() => {
+      cy.intercept("http://localhost:3857/graphql", (req) => {
+        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProject")) {
+          req.alias = "createProject"
+        };
+      });
+    });
+    before(() => {
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.setLocalStorage("token", access_token);
+        cy.createProject(
+          `Cypress Invite-Only Project`,
+          'cy-invite-only',
+          ProjectAccessControlSetting.InviteOnly,
+          true
+        ).then((id) => {
+          cy.setLocalStorage('projectId', id as any);
+          cy.setLocalStorage('token', access_token);
+          cy.saveLocalStorage();
+        })
+      });
+    });
+    after(() => {
+      cy.deleteProject('cy-invite-only');
+    });
+    it ('Creates project invites', () => {
+      cy.restoreLocalStorage()
+      const options = ['test_user_2@seasketch.org']
+      cy.getLocalStorage('projectId').then((id) => {
+        const projectId = parseInt(id)
+        cy.getLocalStorage('token').then((token) => {
+          cy.createProjectInvites(projectId, options, token).then((resp) => {
+            const projectInvites = resp.createProjectInvites.projectInvites
+            console.log(resp)
+            expect (projectInvites[0].email).to.eq('test_user_2@seasketch.org')
+            expect (projectInvites[0].projectId).to.eq(projectId)
+          });
+        });
+        console.log(id)
+      })
+      //cy.createProjectInvites()
+    })
   });
 });
 

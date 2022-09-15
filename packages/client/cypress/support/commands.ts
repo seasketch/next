@@ -23,7 +23,6 @@ const AUTH0_DOMAIN = Cypress.env("auth0_domain");
 
 const loginCounts = {};
 
-
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -93,6 +92,12 @@ declare global {
       updateProject(projectId: number, token: string, attributes: object);
 
       deleteProject(slug: string);
+
+      createProjectInvites(
+        projectId: number, 
+        projectInviteOptions: object, 
+        token:string
+      );
 
       approveParticipant(projectId: number, userId: number, token:string);
 
@@ -247,7 +252,6 @@ Cypress.Commands.add("login", (userName) => {
       expiresAt: exp,
     };
     let stringify = JSON.stringify(item)
-    console.log(`item = ${stringify}`)
     window.localStorage.setItem(
       // The client sets up a connection using @auth/auth0-react
       // This ID used to store the data in localstorage is determined by it
@@ -567,6 +571,44 @@ Cypress.Commands.add("deleteProject", (slug: string) => {
     cy.log(out.stdout);
   });
 });
+
+Cypress.Commands.add("createProjectInvites", (projectId: number, projectInviteOptions: object, token: string) => {
+  return cy
+  .mutation(
+    gql`
+      mutation CreateProjectInvites($input: CreateProjectInvitesInput!) {
+        createProjectInvites(input: $input) {
+          projectInvites {
+            projectId
+            email
+          }
+          query {
+            project (id: ${projectId}) {
+              admins {
+                canonicalEmail
+              }
+            }
+          }
+        }
+      }
+    `,
+  {
+    "input": {
+      "projectId": projectId,
+      "projectInviteOptions": [
+        {
+          "email": "test_user_2@seasketch.org"
+        }
+      ],
+      "makeAdmin": false
+    }
+  },
+  (token as any)
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  })
+})
 
 Cypress.Commands.add("deleteUser", (username: string) => {
   cy.exec(`cypress/support/deleteUser.js ${username}`).then((out) => {
