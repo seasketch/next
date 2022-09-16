@@ -28,6 +28,11 @@ const languages: LangDetails[] = [
     localName: "Kosraean",
     code: "kos",
   },
+  {
+    name: "Samoan",
+    localName: "Samoan",
+    code: "sm",
+  },
 ];
 
 export default languages;
