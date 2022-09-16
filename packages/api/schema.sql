@@ -14558,6 +14558,13 @@ CREATE POLICY offline_tile_packages_admin ON public.offline_tile_packages FOR SE
 
 
 --
+-- Name: offline_tile_packages offline_tile_packages_user; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY offline_tile_packages_user ON public.offline_tile_packages FOR SELECT USING (('seasketch_user'::text = current_setting('role'::text, true)));
+
+
+--
 -- Name: offline_tile_settings; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
