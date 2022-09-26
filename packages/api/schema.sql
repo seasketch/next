@@ -2243,7 +2243,7 @@ CREATE TABLE public.form_elements (
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     map_camera_options jsonb,
     map_basemaps integer[],
-    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 10000)),
+    CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 200000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
 
