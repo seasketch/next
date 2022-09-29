@@ -581,6 +581,7 @@ export default function ResponseGrid(props: Props) {
                 componentSettings={formElement.componentSettings}
                 editable={false}
                 updateValue={valueUpdater(parseInt(row.id))}
+                geometryType={formElement.sketchClass?.geometryType}
               />
             );
           } else {

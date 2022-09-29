@@ -20,10 +20,10 @@ import UserProfileModal from "./UserProfileModal";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
-const LazyAccountSettingsPage = React.lazy(
+const LazyCacheSettingsPage = React.lazy(
   () =>
     import(
-      /* webpackChunkName: "AccountSettings" */ "../auth/CacheSettingsPage"
+      /* webpackChunkName: "CacheSettingsPage" */ "../auth/CacheSettingsPage"
     )
 );
 
@@ -45,7 +45,7 @@ export default function ProjectApp() {
     overlays: t("Overlay Layers"),
     sketches: t("Sketching Tools"),
     forums: t("Discussion Forums"),
-    settings: t("Account Settings"),
+    settings: t("Cache Settings"),
   };
   const { basemaps, tableOfContentsItems } = useMapData(mapContext);
   const { online } = useContext(OfflineStateContext);
@@ -127,7 +127,7 @@ export default function ProjectApp() {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <LazyAccountSettingsPage />
+                    <LazyCacheSettingsPage />
                   </motion.div>
                 </Suspense>
               </Route>

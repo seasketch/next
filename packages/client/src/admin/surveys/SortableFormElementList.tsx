@@ -1,10 +1,5 @@
-import {
-  FormElement,
-  FormElementFullDetailsFragment,
-  FormElementType,
-  Maybe,
-} from "../../generated/graphql";
-import { collectHeaders, collectQuestion, collectText } from "./collectText";
+import { FormElementFullDetailsFragment } from "../../generated/graphql";
+import { collectHeaders, collectQuestion } from "./collectText";
 import {
   DragDropContext,
   Draggable,
@@ -15,12 +10,11 @@ import {
 import Spinner from "../../components/Spinner";
 import { CSSProperties, useState } from "react";
 import { components } from "../../formElements";
-import { defaultFormElementIcon } from "../../formElements/FormElement";
 import { sortFormElements } from "../../formElements/sortFormElements";
 import { Trans, useTranslation } from "react-i18next";
-import Button from "../../components/Button";
 import AddFormElementButton from "./AddFormElementButton";
 import { useHistory } from "react-router-dom";
+import React from "react";
 
 interface Props {
   items: FormElementFullDetailsFragment[];
@@ -41,7 +35,7 @@ interface Props {
  * @param props
  * @returns
  */
-export default function SortableFormElementList(props: Props) {
+function SortableFormElementList(props: Props) {
   const [collapseSpatialItems, setCollapseSpatialItems] = useState(false);
   const welcome = props.items.find((i) => i.typeId === "WelcomeMessage");
   const thankYou = props.items.find((i) => i.typeId === "ThankYou");
@@ -171,7 +165,6 @@ export default function SortableFormElementList(props: Props) {
       >
         <Droppable droppableId="droppable">
           {(provided, snapshot) => {
-            const isDragging = snapshot.isDraggingOver;
             return (
               <div
                 className="space-y-2"
@@ -344,7 +337,8 @@ function FormElementListItem({
       </div>
       {!collapseSpatialItems &&
         element.sketchClass &&
-        element.typeId === "SpatialAccessPriorityInput" && (
+        (element.typeId === "SpatialAccessPriorityInput" ||
+          element.typeId === "MultiSpatialInput") && (
           <>
             <div className="px-1 py-1 border-cool-gray-300 border-2 rounded m-4">
               <h4 className="uppercase text-xs text-center text-cool-gray-400 font-semibold py-1">
@@ -377,61 +371,65 @@ function FormElementListItem({
                 />
               </div>
             </div>
-            <div className="px-1 py-1 border-cool-gray-300 border-2 rounded m-4">
-              <h4 className="uppercase text-xs text-center text-cool-gray-400 font-semibold py-1">
-                <Trans ns="admin:surveys">Sector-Specific Questions</Trans>
-              </h4>
-              <SortableFormElementList
-                subordinateTo={element}
-                selection={selectedId}
-                items={subordinateFormElements}
-                dim={dim}
-                onClick={(id) => {
-                  if (onSpatialSubElementClick) {
-                    onSpatialSubElementClick(id);
-                  }
-                }}
-                onReorder={(sortedIds) => {
-                  if (!formElements) {
-                    throw new Error(
-                      "formElements prop not set for sector-specific questions"
-                    );
-                  }
-                  const parent = element;
-                  const parentIndex = formElements.indexOf(element);
-                  // For nested, subordinate elements, this sorting logic gets pretty complicated
-                  const beforeParent = formElements
-                    .slice(0, parentIndex)
-                    .map((el) => el.id);
-                  const afterParent = formElements
-                    .slice(parentIndex + 1)
-                    .map((el) => el.id);
-                  sortedIds = [
-                    ...beforeParent,
-                    parent.id,
-                    ...sortedIds,
-                    ...afterParent,
-                  ];
-                  if (onReorder) {
-                    onReorder(sortedIds);
-                  }
-                }}
-              />
-              <div className="flex justify-center pb-1 -mt-1">
-                <AddFormElementButton
-                  formIsSketchClass={false}
-                  nextPosition={
-                    (element.sketchClass?.form?.formElements?.length || 0) + 1
-                  }
-                  formId={element.formId}
-                  heading={t("Add to sector questions...")}
-                  onAdd={(formElement) => history.replace(`./${formElement}`)}
-                  existingTypes={subordinateFormElements.map((el) => el.typeId)}
-                  label={t("Add element")}
-                  subordinateTo={element.id}
+            {element.typeId === "SpatialAccessPriorityInput" && (
+              <div className="px-1 py-1 border-cool-gray-300 border-2 rounded m-4">
+                <h4 className="uppercase text-xs text-center text-cool-gray-400 font-semibold py-1">
+                  <Trans ns="admin:surveys">Sector-Specific Questions</Trans>
+                </h4>
+                <SortableFormElementList
+                  subordinateTo={element}
+                  selection={selectedId}
+                  items={subordinateFormElements}
+                  dim={dim}
+                  onClick={(id) => {
+                    if (onSpatialSubElementClick) {
+                      onSpatialSubElementClick(id);
+                    }
+                  }}
+                  onReorder={(sortedIds) => {
+                    if (!formElements) {
+                      throw new Error(
+                        "formElements prop not set for sector-specific questions"
+                      );
+                    }
+                    const parent = element;
+                    const parentIndex = formElements.indexOf(element);
+                    // For nested, subordinate elements, this sorting logic gets pretty complicated
+                    const beforeParent = formElements
+                      .slice(0, parentIndex)
+                      .map((el) => el.id);
+                    const afterParent = formElements
+                      .slice(parentIndex + 1)
+                      .map((el) => el.id);
+                    sortedIds = [
+                      ...beforeParent,
+                      parent.id,
+                      ...sortedIds,
+                      ...afterParent,
+                    ];
+                    if (onReorder) {
+                      onReorder(sortedIds);
+                    }
+                  }}
                 />
+                <div className="flex justify-center pb-1 -mt-1">
+                  <AddFormElementButton
+                    formIsSketchClass={false}
+                    nextPosition={
+                      (element.sketchClass?.form?.formElements?.length || 0) + 1
+                    }
+                    formId={element.formId}
+                    heading={t("Add to sector questions...")}
+                    onAdd={(formElement) => history.replace(`./${formElement}`)}
+                    existingTypes={subordinateFormElements.map(
+                      (el) => el.typeId
+                    )}
+                    label={t("Add element")}
+                    subordinateTo={element.id}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </>
         )}
     </div>
@@ -451,3 +449,5 @@ function reorder<T>(list: T[], startIndex: number, endIndex: number): T[] {
   result.splice(endIndex, 0, removed);
   return result;
 }
+
+export default React.memo(SortableFormElementList);

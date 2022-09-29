@@ -33,6 +33,9 @@ import { CacheProgress } from "./CacheStatus";
 import { MAP_STATIC_ASSETS_CACHE_NAME } from "./MapTileCache";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import Modal from "../components/Modal";
+// @ts-ignore
+// eslint-disable-next-line import/no-webpack-loader-syntax
+import sqlWasm from "!!file-loader?name=sql-wasm-[contenthash].wasm!sql.js/dist/sql-wasm.wasm";
 
 const Trans = (props: any) => (
   <T ns="offline" {...props}>
@@ -510,7 +513,7 @@ export async function getMetadataFromMbtiles(
       const SQL = await initSqlJs.default({
         // Required to load the wasm binary asynchronously. Of course, you can host it wherever you want
         // You can omit locateFile completely when running in node
-        locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+        locateFile: (file: string) => sqlWasm,
       });
       const details: (ValidMBtilesMetadata | InvalidMBTilesMetadata)[] = [];
       for (const file of files) {

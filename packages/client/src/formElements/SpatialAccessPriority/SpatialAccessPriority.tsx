@@ -435,13 +435,6 @@ const SpatialAccessPriority: FormElementComponent<
     }
   }, [props.value?.sectors, props.componentSettings.sectorOptions]);
 
-  async function updateMiniBasemap() {
-    if (miniMap && mapContext.manager && basemaps) {
-      const style = await mapContext.manager.getComputedStyle();
-      setMiniMapStyle(style.style);
-    }
-  }
-
   useEffect(() => {
     if (mapContext.manager && basemaps) {
       mapContext.manager
@@ -451,8 +444,13 @@ const SpatialAccessPriority: FormElementComponent<
   }, [mapContext.manager, basemaps]);
 
   useEffect(() => {
-    updateMiniBasemap();
-  }, [mapContext.selectedBasemap]);
+    if (mapContext.manager && basemaps && mapContext.styleHash.length > 0) {
+      mapContext.manager
+        .getComputedStyle()
+        .then((style) => setMiniMapStyle(style.style));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapContext.manager, mapContext.styleHash]);
 
   function onClickSave() {
     if (selfIntersects) {

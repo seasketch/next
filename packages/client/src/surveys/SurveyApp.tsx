@@ -488,6 +488,7 @@ function SurveyApp() {
                     components[formElement.current!.typeId],
                     formElement.current.componentSettings,
                     isMobile,
+                    formElement.current.isRequired,
                     stage,
                     style.layout
                   )}

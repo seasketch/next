@@ -175,7 +175,9 @@ function App() {
                   )}
                 />
                 <Route exact path="/:slug/join">
+                  {/* <ProjectAccessGate> */}
                   <LazyJoinProject />
+                  {/* </ProjectAccessGate> */}
                 </Route>
                 <Route path="/:slug">
                   <Route

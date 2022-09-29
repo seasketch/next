@@ -24,6 +24,9 @@ import {
   MAP_STATIC_ASSETS_CACHE_NAME,
 } from "./MapTileCache";
 import { removeDpiComponentFromMapboxUrl } from "./MapTileCacheHandlers";
+// @ts-ignore
+// eslint-disable-next-line import/no-webpack-loader-syntax
+import sqlWasm from "!!file-loader?name=sql-wasm-[contenthash].wasm!sql.js/dist/sql-wasm.wasm";
 
 type MapDownloadManagerPausedStatus = {
   working: false;
@@ -420,7 +423,7 @@ export async function addTilesToCache(
       const SQL = await initSqlJs.default({
         // Required to load the wasm binary asynchronously. Of course, you can host it wherever you want
         // You can omit locateFile completely when running in node
-        locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+        locateFile: (file: string) => sqlWasm,
       });
       progressCallback({ task: "Initializing database" });
       const db = new SQL.Database(mbtiles);

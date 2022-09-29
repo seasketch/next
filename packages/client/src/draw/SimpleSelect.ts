@@ -59,13 +59,13 @@ SimpleSelect.toDisplayFeatures = function (
 const _clickOnFeature = SimpleSelect.clickOnFeature;
 // Inspired by mapbox-gl-draw-waypoint
 SimpleSelect.clickOnFeature = function (state: any, e: any) {
-  if (e.featureTarget.geometry.type !== "point") {
+  if (e.featureTarget.geometry.type !== "Point") {
     // switch to direct_select mode for polygon/line features
     this.changeMode("direct_select", {
       featureId: e.featureTarget.properties.id,
     });
   } else {
-    // call parent
+    // // call parent
     _clickOnFeature.apply(this, [state, e]);
 
     // prevent multi-selection for consistency with direct_select mode

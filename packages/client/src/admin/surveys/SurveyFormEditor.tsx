@@ -6,7 +6,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/outline";
 import { EyeIcon } from "@heroicons/react/solid";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory } from "react-router-dom";
 import Button from "../../components/Button";
@@ -328,6 +328,32 @@ export default function SurveyFormEditor({
     );
   }
 
+  const onSortableFormElementClick = useCallback(
+    (formElement) => history.replace(`./${formElement}`),
+    [history]
+  );
+  const onReorderFormElements = useCallback(
+    (elementIds: number[]) => {
+      updateOrder({
+        variables: {
+          elementIds,
+        },
+        optimisticResponse: {
+          __typename: "Mutation",
+          setFormElementOrder: {
+            __typename: "SetFormElementOrderPayload",
+            formElements: elementIds.map((id, i) => ({
+              __typename: "FormElement",
+              id,
+              position: i + 1,
+            })),
+          },
+        },
+      });
+    },
+    [updateOrder]
+  );
+
   const layout =
     selectedFormElement?.layout || style.layout || FormElementLayout.Top;
 
@@ -434,25 +460,8 @@ export default function SurveyFormEditor({
                   route === "formElement" ? selectedFormElement?.id : undefined
                 }
                 items={formElements}
-                onClick={(formElement) => history.replace(`./${formElement}`)}
-                onReorder={(elementIds) => {
-                  updateOrder({
-                    variables: {
-                      elementIds,
-                    },
-                    optimisticResponse: {
-                      __typename: "Mutation",
-                      setFormElementOrder: {
-                        __typename: "SetFormElementOrderPayload",
-                        formElements: elementIds.map((id, i) => ({
-                          __typename: "FormElement",
-                          id,
-                          position: i + 1,
-                        })),
-                      },
-                    },
-                  });
-                }}
+                onClick={onSortableFormElementClick}
+                onReorder={onReorderFormElements}
               />
             </nav>
           </div>
@@ -550,8 +559,11 @@ export default function SurveyFormEditor({
                           />
                         )}
                         <FormElementFactory
+                          key={selectedFormElement.id}
                           stage={stage}
-                          onRequestStageChange={(n) => setStage(n)}
+                          onRequestStageChange={(n) => {
+                            setStage(n);
+                          }}
                           featureNumber={1}
                           {...selectedFormElement!}
                           sketchClass={

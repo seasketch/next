@@ -1,0 +1,22 @@
+{
+  "CanCompleteLine": "Klik om meer punten toe te voegen, dubbelklik om te voltooien",
+  "CanCompletePolygonTouch": "Tik op startpunt, of dubbelklik om te voltooien",
+  "ContinueDrawLine": "Klik om meer punten toe te voegen, dubbelklik om te voltooien",
+  "ContinuePolygon": "Klik om meer punten toe te voegen",
+  "ContinuePolygonTouch": "Tik om meer punten toe te voegen",
+  "DragPoint": "Sleep punt om deze aan te passen",
+  "DragVertex": "Klik en sleep punten om ze te veranderen",
+  "DragVertexPolygonTouch": "Sleep punten om ze te veranderen",
+  "EditPolygonDesktop": "Sleep punten om ze te veranderen",
+  "EditPolygonTouch": "Tik op een vorm om deze te veranderen",
+  "FinishPolygonDesktop": "Klik op het startpunt of dubbelklik het laatste punt om te voltooien",
+  "Invalid Shape": "Ongeldige vorm",
+  "InvalidShapeInstructions": "Uw vorm wordt rood als deze ongeldig is. Als dit gebeurt, controleer of de vorm zichzelf niet kruist (aangegeven met een X-symbool). Als de fout zich blijft voordoen, verwijder de vorm en begin opnieuw.",
+  "Okay": "Oké",
+  "Reset Shape": "Vorm herstellen",
+  "StartLine": "Klik op de map om een lijn te starten",
+  "StartPoint": "Klik op de map om een punt te plaatsen",
+  "StartPointTouch": "Tik op de map om een punt te plaatsen",
+  "StartPolygon": "<0></0>Klik op de map om een polygoon te starten",
+  "StartPolygonTouch": "Tik op de map om een polygoon te starten"
+}

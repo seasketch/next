@@ -32,6 +32,7 @@ interface ModalProps {
   tabs?: string[];
   scrollable?: boolean;
   zeroPadding?: boolean;
+  onTabChange?: (selectedIndex: number) => void;
 }
 
 export default function Modal(props: ModalProps) {
@@ -76,7 +77,15 @@ export default function Modal(props: ModalProps) {
       <Backdrop />
 
       <div className="fixed z-10 inset-0 overflow-y-auto sm:overflow-y-hidden">
-        <Tab.Group selectedIndex={selectedIndex} onChange={setSelectedIndex}>
+        <Tab.Group
+          selectedIndex={selectedIndex}
+          onChange={(idx) => {
+            setSelectedIndex(idx);
+            if (props.onTabChange) {
+              props.onTabChange(idx);
+            }
+          }}
+        >
           <div className="flex items-end sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
             <Panel
               zeroPadding={props.zeroPadding || false}

@@ -35,6 +35,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   const onError = useGlobalErrorHandler();
   const { data, loading, error, refetch } = useCurrentProjectMetadata({
     onError,
+    fetchPolicy: "cache-and-network",
   });
   const { t } = useTranslation();
   const [resendVerification, resendVerificationState] =

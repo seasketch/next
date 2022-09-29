@@ -11,6 +11,8 @@ import {
   VerifyProjectInviteQueryResult,
 } from "../generated/graphql";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
+import { strategies } from "../offline/GraphqlQueryCache/strategies";
+import getSlug from "../getSlug";
 
 export enum IngressState {
   /** There was an error either decoding the token or verifying its signature */
@@ -55,6 +57,7 @@ interface IngressFlowData {
  * @param tokenString project invite token, likely embedded in a query parameter
  */
 export function useProjectInviteIngressFlow(): IngressFlowData {
+  const cache = useContext(GraphqlQueryCacheContext);
   const [state, setState] = useState<{
     tokenString?: string;
     claims?: ProjectInviteTokenClaims;
@@ -77,6 +80,14 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
       const tokenString = params.get("token");
       if (!tokenString) {
         throw new Error("Token search param not found");
+      }
+      const ProjectMetadataStrategy = strategies.find(
+        (s) => s.queryName === "ProjectMetadata" && s.type === "lru"
+      );
+      if (cache && ProjectMetadataStrategy) {
+        cache?.clearResponse(ProjectMetadataStrategy, {
+          slug: getSlug(),
+        });
       }
       client
         .mutate({
@@ -239,8 +250,6 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
       }
     }
   }, [location, auth0.user, client, confirmWithCurrentAccount]);
-
-  const cache = useContext(GraphqlQueryCacheContext);
 
   const redirectAndConfirm = (
     screenHint: "signup" | "signin",

@@ -71,7 +71,7 @@ function description(id: string) {
   }
 }
 
-export function CacheSettingCards() {
+export function CacheSettingCards({ className }: { className?: string }) {
   const { t } = useTranslation("cache-settings");
   const [dlContextValue, setDlContextValue] = useState(0);
 
@@ -116,7 +116,7 @@ export function CacheSettingCards() {
 
   return (
     <>
-      <Card>
+      <Card className={className}>
         <h4 className="py-1">{t("Data Caching")}</h4>
         <div className="mx-7 mt-4">
           <input
@@ -207,7 +207,7 @@ export function CacheSettingCards() {
               bump: () => setDlContextValue((prev) => prev + 1),
             }}
           >
-            <OfflineSurveySelection />
+            <OfflineSurveySelection className={className} />
           </DownloadManagerContext.Provider>
         </ErrorBoundary>
       )}

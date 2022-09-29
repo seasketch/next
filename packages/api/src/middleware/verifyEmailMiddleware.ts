@@ -8,7 +8,7 @@ export default function verifyEmailMiddleware(
   next: Function
 ) {
   if (req.user) {
-    req.user.emailVerified = false;
+    req.user.emailVerified = req.user.emailVerified || false;
     if (req.user["https://seasketch.org/email_verified"]) {
       req.user.emailVerified = true;
       next();

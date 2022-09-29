@@ -22,7 +22,7 @@ export interface OverlayMapProps {
 
 mapboxgl.prewarm();
 
-export default function MapboxMap(props: OverlayMapProps) {
+export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
@@ -70,14 +70,7 @@ export default function MapboxMap(props: OverlayMapProps) {
         }
       };
     }
-  }, [
-    map,
-    mapContext.manager,
-    mapContext.selectedBasemap,
-    mapContainer.current,
-    mapContext.ready,
-    props.lazyLoadReady,
-  ]);
+  }, [map, mapContext.manager, mapContext.selectedBasemap, mapContainer.current, mapContext.ready, props.lazyLoadReady]);
 
   return (
     <div
@@ -157,7 +150,8 @@ export default function MapboxMap(props: OverlayMapProps) {
       </AnimatePresence>
     </div>
   );
-}
+});
+
 // TODO: Keep tooltip around and hide/show it so that framer-motion can be used
 // to animate entry *and exit* and tween between x and y position.
 function Tooltip({
