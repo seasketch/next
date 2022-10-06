@@ -31,6 +31,7 @@ export class GraphQLStack extends cdk.Stack {
       redisHost: string;
       emailSource: string;
       clientDomain: string;
+      spatialUploadsBucket: Bucket;
     }
   ) {
     super(scope, id, props);
@@ -173,5 +174,6 @@ export class GraphQLStack extends cdk.Stack {
     );
     props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
     props.tilePackagesBucket.grantReadWrite(service.taskDefinition.taskRole);
+    props.spatialUploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
   }
 }
