@@ -12,6 +12,7 @@ import { RedisStack } from "../lib/RedisStack";
 import { GraphQLStack } from "../lib/GraphQLStack";
 import { MailerLambdaStack } from "../lib/MailerLambdaStack";
 import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadStack";
+import { DataUploadsStack } from "../lib/DataUploadsStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasket.ch";
@@ -63,6 +64,11 @@ const tilePackages = new OfflineTilePackageBucketStack(
     allowedCorsDomains,
   }
 );
+
+const dataUploads = new DataUploadsStack(app, "SeaSketchDataUploadsStack", {
+  env,
+  region: "us-west-2",
+});
 
 const dataHostDbUpdater = new DataHostDbUpdaterStack(
   app,
@@ -139,6 +145,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   emailSource: SES_EMAIL_SOURCE,
   tilePackagesBucket: tilePackages.bucket,
   clientDomain: SUBDOMAIN + "." + DOMAIN_NAME,
+  spatialUploadsBucket: dataUploads.uploadsBucket,
 });
 
 new MailerLambdaStack(app, "SeaSketchMailers", {

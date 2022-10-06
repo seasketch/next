@@ -26,5 +26,6 @@ declare namespace NodeJS {
     UNSPLASH_KEY: string;
     TILE_PACKAGES_BUCKET: string;
     CLIENT_DOMAIN: string;
+    SPATIAL_UPLOADS_BUCKET: string;
   }
 }
