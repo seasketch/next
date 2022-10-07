@@ -3,6 +3,8 @@ import {writeFileSync} from "fs";
 const ses = new SES();
 const fs = require ('fs')
 
+process.env.IS_CYPRESS_TEST_ENV = "true"
+
 /**
  * Simplified wrapper for sending email via SES. Crucially, it's easier to mock
  * for testing
@@ -21,7 +23,7 @@ export default async function sendEmail(
   if (!process.env.SES_EMAIL_SOURCE) {
     throw new Error(`SES_EMAIL_SOURCE environment variable not set`);
   }
-  if (process.env.IS_CYPRESS_TEST_ENV === 'true') {
+  if (process.env.IS_CYPRESS_TEST_ENV) {
     //@ts-ignore
     fs.writeFileSync('./invite-emails-cypress/email', `Destination: ${destination}\n`, {encoding:'utf8',flag:'w'}), (err) => {
       if (err) {
@@ -29,7 +31,7 @@ export default async function sendEmail(
       }
     };
     fs.appendFileSync('./invite-emails-cypress/email', `Email text: ${textEmail}`);
-  }
+  } 
   return ses
     .sendEmail({
       Destination: {
