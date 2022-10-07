@@ -99,6 +99,10 @@ declare global {
         token:string
       );
 
+      verifyProjectInvite(
+        token: string
+      );
+
       approveParticipant(projectId: number, userId: number, token:string);
 
       toggleAdminAccess(userId: number, projectId: number, token: string)
@@ -573,10 +577,11 @@ Cypress.Commands.add("deleteProject", (slug: string) => {
 });
 
 Cypress.Commands.add("createProjectInvites", (projectId: number, projectInviteOptions: object, token: string) => {
+  console.log(projectInviteOptions)
   return cy
   .mutation(
     gql`
-      mutation CreateProjectInvites($input: CreateProjectInvitesInput!) {
+      mutation CypressCreateProjectInvites($input: CreateProjectInvitesInput!) {
         createProjectInvites(input: $input) {
           projectInvites {
             projectId
@@ -584,9 +589,13 @@ Cypress.Commands.add("createProjectInvites", (projectId: number, projectInviteOp
           }
           query {
             project (id: ${projectId}) {
-              admins {
-                canonicalEmail
-              }
+            slug
+            admins {
+              canonicalEmail
+            }
+            accessControl
+            isListed
+            id
             }
           }
         }
@@ -597,13 +606,41 @@ Cypress.Commands.add("createProjectInvites", (projectId: number, projectInviteOp
       "projectId": projectId,
       "projectInviteOptions": [
         {
-          "email": "test_user_2@seasketch.org"
+          "email": `${projectInviteOptions[0]}`
         }
       ],
-      "makeAdmin": false
+      "makeAdmin": false,
+      "sendEmailNow": true
     }
   },
   (token as any)
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  })
+})
+
+Cypress.Commands.add("verifyProjectInvite", (token: string) => {
+  return cy
+  .query(
+    gql`
+      query CypressVerifyProjectInvites($token: String!) {
+        verifyProjectInvite(token: $token) {
+          error
+          claims {
+            wasUsed
+            email
+            fullname
+            admin
+            projectName
+          }
+          existingAccount
+        }
+      }
+    `,
+  {
+    "token": token
+  },
   ).then((data) => {
     Cypress.log(data);
     return data
