@@ -78,7 +78,7 @@ const waitOnMapbox = (count) => {
 
 const generateSlug = () => { 
   const result = Math.random().toString(36).substring(2,7);
-  return result
+  return result;
 };
 
 const checkForNavAndLang = () => {
@@ -91,35 +91,37 @@ const checkForNavAndLang = () => {
 
 const drawPolygon = () => {
   cy.window().its('mapContext').then((mapContext) => {
-    let map = mapContext.map 
+    let map = mapContext.map; 
     if (!map.loaded()) {
-      cy.log('Map not loaded')
-      cy.wait(5000)
+      cy.log('Map not loaded');
+      cy.wait(8000);
+      cy.get('[role="progressbar"]')
+        .should('not.exist');
       cy.get('.mapboxgl-canvas').each((t) => {
         expect (t).to.exist
         const canvases = [];
         canvases.push(t);
-        return canvases
+        return canvases;
       }).then((ary) => {
-        const el = ary[0]
-        return el
+        const el = ary[0];
+        return el;
       }).as('el');
       cy.get('@el').click(100,500)     
         .click(100, 600)
         .click(200, 600)
         .click(200, 500)
-        .click(100, 500)
+        .click(100, 500);
     } else {
-      cy.log('Map loaded')
-      expect(map.loaded()).to.eq(true)
+      cy.log('Map loaded');
+      expect(map.loaded()).to.eq(true);
       cy.get('.mapboxgl-canvas').each((t) => {
         expect (t).to.exist
         const canvases = [];
         canvases.push(t);
-        return canvases
+        return canvases;
       }).then((ary) => {
         const el = ary[0]
-        return el
+        return el;
       }).as('el');
       cy.get('@el').click(100,500)     
         .click(100, 600)
@@ -132,41 +134,41 @@ const drawPolygon = () => {
 
 const drawInvalidPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
-    expect (t).to.exist
+    expect (t).to.exist;
     const canvases = [];
     canvases.push(t);
-    return canvases
+    return canvases;
   }).then((ary) => {
-    const el = ary[0]
-    return el
+    const el = ary[0];
+    return el;
   }).as('el');
   cy.get('@el').click(100, 200)        
     .click(100, 100)
     .click(200, 200)
     .click(50, 200)
-    .click(100, 200)
+    .click(100, 200);
 };
 
 const drawSecondPolygon = () => {
   cy.get('.mapboxgl-canvas').each((t) => {
-    expect (t).to.exist
+    expect (t).to.exist;
     const canvases = [];
     canvases.push(t);
-    return canvases
+    return canvases;
   }).then((ary) => {
-    const el = ary[0]
-    return el
+    const el = ary[0];
+    return el;
   }).as('el');
   cy.get('@el').click(200,200)     
     .click(150, 200)
     .click(150, 150)
     .click(200, 150)
-    .click(200, 200)
+    .click(200, 200);
 };
 
-const devices: any = ["macbook-15","ipad-2","iphone-x"] 
+const devices: any = ["macbook-15","ipad-2","iphone-x"];
 
-describe("Survey creation smoke test", () => {
+describe('Survey creation smoke test', () => {
   describe.only('User survey flow', () => {
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -187,7 +189,6 @@ describe("Survey creation smoke test", () => {
         }
       });
       cy.intercept(/mapbox/).as('mapboxApiCall');
-      
     });
     before(() => {
       const slug: string = generateSlug();
@@ -225,14 +226,14 @@ describe("Survey creation smoke test", () => {
                   });
                   cy.updateFormElements(elementsToUpdate,"Maldives", access_token, formId);
                   cy.createFormElements(formId, "Maldives", access_token).then((resp) => {
-                    const SAPFormId = formId + 1
+                    const SAPFormId = formId + 1;
                     cy.createSAPElements(SAPFormId, "Maldives", access_token).then((resp)=> {
                       cy.wrap(resp).as('SAPResponse');
-                      let SAPElements = resp.createFormElement.query.form.formElements
+                      let SAPElements = resp.createFormElement.query.form.formElements;
                       cy.setLocalStorage('SAPElements', JSON.stringify(SAPElements));
                     })
-                    const formElements = resp.createFormElement.query.form.formElements
-                    const jumpToIds = []
+                    const formElements = resp.createFormElement.query.form.formElements;
+                    const jumpToIds = [];
                     //atoll questions
                     const elementsToUpdate = formElements.slice(5,24);
                     //YesNo id
@@ -251,28 +252,28 @@ describe("Survey creation smoke test", () => {
                       if (
                        t.body.content[0].content[0].text === "If you are representing a guesthouse, please provide the name of your establishment:"
                       ) {
-                      updateSubToIdElements.push(t)
+                      updateSubToIdElements.push(t);
                       }
                       else if (
                         t.body.content[0].content[0].text === "Please indicate how many people are reflected in this response"
                       ) {
-                       updateSubToIdElements.push(t)
+                       updateSubToIdElements.push(t);
                       }
                       else if (
                         t.body.content[0].content[0].text === "Are you a part-time or full-time fisher?"
                       ) {
-                        updateSubToIdElements.push(t)
+                        updateSubToIdElements.push(t);
                       } else if (
                         t.body.content[0].content[0].text === "Please provide the name or the number of the vessel you fish on"
                       ) {
-                        updateSubToIdElements.push(t)
+                        updateSubToIdElements.push(t);
                       }
                     });
                     cy.get('@sapId').then((id: any) => {
                       cy.updateSubordinateToId(id, updateSubToIdElements, formId, access_token);
                     });
-                    let baseId = 0
-                    let ids = []
+                    let baseId = 0;
+                    let ids = [];
                     function getIds(baseId) {
                       if (baseId === 0) {
                         for(let i=0; i<formElements.length; i++) {
@@ -331,15 +332,15 @@ describe("Survey creation smoke test", () => {
                         });
                       });
                     };
-                    let settingsElements = []
+                    let settingsElements = [];
                     cy.get('@createFormLogicResponse').then((resp:any) => {
-                      settingsElements.push(resp.createFormLogicCondition.query.form.formElements)
+                      settingsElements.push(resp.createFormLogicCondition.query.form.formElements);
                     });
                     cy.get('@SAPResponse').then((resp: any) => {
-                      let settingsAry = settingsElements[0].concat(resp.createFormElement.query.form.formElements)
-                      updateComponentSettings(settingsAry)
+                      let settingsAry = settingsElements[0].concat(resp.createFormElement.query.form.formElements);
+                      updateComponentSettings(settingsAry);
                     });
-                    cy.saveLocalStorage()
+                    cy.saveLocalStorage();
                   })
                 })
               })
@@ -376,7 +377,7 @@ describe("Survey creation smoke test", () => {
           .should('be.visible');
       });
       it(`Can view and toggle settings - ${device}`, () => {
-        cy.viewport(device)
+        cy.viewport(device);
         cy.get('button').contains('Settings')
           .should('be.visible')
           .then(($btn) => {
@@ -388,13 +389,12 @@ describe("Survey creation smoke test", () => {
         cy.get('@switches').each(($switch) => {
           expect ($switch.attr('aria-checked')).to.equal(`false`)
           {$switch.trigger('click')}
-          //setToggle($switch)
           expect ($switch.attr('aria-checked')).to.equal(`true`)
           {$switch.trigger('click')}
         });
         cy.get('body').click('bottom');
         cy.get('[role="dialog"]')
-          .should('not.exist')
+          .should('not.exist');
         cy.get('[name="Begin Survey"]').should('be.visible').then(($btn) => {
           {$btn.trigger('click')}
         });
@@ -404,19 +404,19 @@ describe("Survey creation smoke test", () => {
         checkForNavAndLang();
         cy.contains('What is your name?')
           .get('[title = "Next Question"]')
-          .should('have.class', 'pointer-events-none')
-        cy.get('input').type("Test User 1") 
-        cy.get('button').contains('Next').click()
+          .should('have.class', 'pointer-events-none');
+        cy.get('input').type("Test User 1"); 
+        cy.get('button').contains('Next').click();
       })
       it(`Can input email address or can skip question - ${device}`, () => {
         cy.viewport(device);
         checkForNavAndLang();
-        cy.contains("What is your email address?")
-        cy.get("input").should('be.visible')
+        cy.contains("What is your email address?");
+        cy.get("input").should('be.visible');
         cy.get("input")
-          .type("test_user_1@seasketch.org")
-        cy.contains("Next").click()
-      })
+          .type("test_user_1@seasketch.org");
+        cy.contains("Next").click();
+      });
       it(`Cannot advance until atoll selection is made - ${device}`, () => {
         cy.viewport(device);
         checkForNavAndLang();
@@ -500,6 +500,7 @@ describe("Survey creation smoke test", () => {
               .and('be.visible');
             drawPolygon();
           } else {
+            //ipad-2
             cy.contains('Fisheries')
               .should('be.visible');
             cy.get('span.mapboxgl-ctrl-icon')
@@ -507,9 +508,8 @@ describe("Survey creation smoke test", () => {
             cy.get('div.MapPicker')
               .should('exist')
               .and('be.visible');
-            waitOnMapbox(7);
-            cy.get('[role="progressbar"]')
-             .should('not.exist');
+            //cy.get('[role="progressbar"]')
+            //  .should('not.exist');
             drawPolygon();
           }
         }
@@ -573,7 +573,6 @@ describe("Survey creation smoke test", () => {
         cy.window().its('mapContext.map.transform._center').as('centerCoords').then((center) => {
           cy.setLocalStorage("lat", `${center["lat"]}`)
           cy.setLocalStorage("long", `${center["lng"]}`)
-          
           cy.saveLocalStorage();
           cy.get('h4').contains('Focus on location').click();
         });
@@ -610,10 +609,6 @@ describe("Survey creation smoke test", () => {
             .should('exist')
             .and('be.visible')
             .as('doneBtn')
-            //.click()
-            //cy.get('@doneBtn').then(($btn) => {
-            //  {$btn.trigger('click')}
-            //})
           cy.get('button').then((btn) => {
             if(btn.text().includes('Done')) {
               cy.get('button').contains('Done').click()
@@ -691,72 +686,47 @@ describe("Survey creation smoke test", () => {
           .and('be.visible')
         cy.get('@nextSectorBtn').then(($btn) => {
           {$btn.trigger('click')}
-        })
-       
+        });
       });
       it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device); 
         cy.get('button').contains('Next sector')
-          .should('not.exist')
+          .should('not.exist');
         if (device === "iphone-x" || device === "iphone-5") {
           Cypress.on('uncaught:exception', (err, runnable) => {
-            // returning false here prevents Cypress from
-            // failing the test
             if (err) {
               cy.log(`${err}`)
               return false
             }
-          })
+          });
           cy.get('[data-cy="button-begin"]')
             .should('exist')
             .and('be.visible')
             .as('beginBtn').then(($btn) => {
               {$btn.trigger('click')}
-            })
+            });
           cy.get('[data-cy="button-begin"]')
-            .should('not.be.visible')
+            .should('not.be.visible');
           cy.get('p').contains('Click on the map')
             .should('exist')
             .and('be.visible');
-          
-          drawPolygon()
+          drawPolygon();
           cy.get('[data-cy="button-done"]').as('doneBtn')
             .should('exist')
             .and('be.visible')
-            .click()
+            .click();
         } else {
           cy.contains('Fisheries')
-              .should('be.visible');
-          waitOnMapbox(8)
+            .should('be.visible');
           cy.get('span.mapboxgl-ctrl-icon')
             .should('be.visible');
           cy.get('div.MapPicker')
             .and('be.visible');
-          cy.wait(5000);
-          drawPolygon()
+          drawPolygon();
         }
-      })//;
+      });
       it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device); 
-        //cy.get('button').then(($button) => {
-        //  if ($button.text().includes('Done')) {
-        //    cy.get('button').contains('Done').then(($btn) => {
-        //      {$btn.trigger('click')}
-        //    });
-        //  }
-        //});
-        //cy.get('button').contains('Done')
-        //  .should('not.exist')
-        //if (device === "iphone-5" || device ==="iphone-x") {
-        //  cy.get('.mapboxgl-ctrl-scale')
-        //  //.should('not.exist')
-        //  .should('not.be.visible')
-        //  cy.contains('Fisheries')
-        //    .should('not.exist')
-        ////cy.get('img[alt="Satellite map preview')
-        ////  .should('not.exist')
-//
-      //}
         cy.contains('Area Name')
           .should('exist')
           .and('be.visible');
@@ -1085,5 +1055,5 @@ describe("Survey creation smoke test", () => {
           }
         });
       });
-    })
+    });
   });

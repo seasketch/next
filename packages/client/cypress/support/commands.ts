@@ -469,10 +469,7 @@ Cypress.Commands.add("joinProject", (projectId: number, token: string) => {
 });
 
 Cypress.Commands.add("updateProject", (projectId: number, token: string, attributes: object,  ) => {
-  const patchOptions = ["name", "description", "accessControl", "isListed", "logoUrl", "logoLink", "isFeatured", "region", "dataSourcesBucketId", "inviteEmailSubject", "mapboxPublicKey"]
-  patchOptions.forEach((t) => {
-    if (attributes[t]) {
-      console.log(t)
+  console.log('yes')
       return cy
         .mutation(
           gql`
@@ -483,7 +480,7 @@ Cypress.Commands.add("updateProject", (projectId: number, token: string, attribu
                 input: {
                   id: $projectId
                   patch: {
-                    isListed: true
+                    ${attributes[0]}: ${attributes[1]}
                   }
                 }
               ) {
@@ -499,10 +496,10 @@ Cypress.Commands.add("updateProject", (projectId: number, token: string, attribu
           (token as unknown) as string
         )
         .then((data) => {
+          return data
       })
     }
-  });
-});
+  );
 
 Cypress.Commands.add("approveParticipant", (projectId: number, userId: number, token: string) => {
   console.log(userId)

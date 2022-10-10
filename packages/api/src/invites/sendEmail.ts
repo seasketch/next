@@ -1,7 +1,7 @@
 import SES from "aws-sdk/clients/ses";
 import {writeFileSync} from "fs";
 const ses = new SES();
-const fs = require ('fs')
+const fs = require ('fs');
 
 /**
  * Simplified wrapper for sending email via SES. Crucially, it's easier to mock
