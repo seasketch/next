@@ -486,6 +486,7 @@ Cypress.Commands.add("updateProject", (projectId: number, token: string, attribu
               ) {
                 project {
                   id
+                  isListed
                 }
               }
             }

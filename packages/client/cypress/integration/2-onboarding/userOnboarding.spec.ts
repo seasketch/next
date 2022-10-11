@@ -6,20 +6,23 @@ import {deleteUser} from "../../support/deleteUser.js"
 const fs = require('fs');
 var axios = require("axios").default;
 
-
+const projectOptions = ['public','admins-only','invite-only']; 
 
 const projectDetails = 
-  {"inviteOnly": {
+  {"invite-only": {
     "name": "Cypress Invite-Only Project",
-    "slug": "cy-invite-only"
+    "slug": "cy-invite-only", 
+    "accessControl": ProjectAccessControlSetting.InviteOnly
     },
-    "adminOnly": {
+    "admins-only": {
       "name": "Cypress Admin-Only Project",
-      "slug": "admin-only"
+      "slug": "admin-only",
+      "accessControl": ProjectAccessControlSetting.AdminsOnly
     },
     "public": {
       "name": "Cypress Public Project", 
-      "slug": "cy-public"
+      "slug": "cy-public", 
+      "accessControl": ProjectAccessControlSetting.Public
     }
   }
 
@@ -440,321 +443,262 @@ describe ("User onboarding via independent browsing", () => {
     });
   });
 });
+
+//##############################
 describe.only("User onboarding via email invites", () => {
-  describe('A new SeaSketch user receiving an invitation to a public project', () => {
-    beforeEach(() => {
-      cy.intercept("http://localhost:3857/graphql", (req) => {
-        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProjectInvites")) {
-          req.alias = "createProjectInvites"
-        };
-        if ((req.body.operationName) && (req.body.operationName === "VerifyProjectInvite")) {
-          req.alias = "verifyProjectInvite"
-        };
-        if ((req.body.operationName) && (req.body.operationName === "ConfirmProjectInvite")) {
-          req.alias = "confirmProjectInvite"
-        };
-      });
-    });
-    before(() => {
-      const userSlug = generateSlug()
-      newUser = `cypress_user_${userSlug}@seasketch.org`
-      cy.getToken("User 2").then(({ access_token }) => {
-        cy.wrap(access_token).as("token");
-        cy.setLocalStorage("token", access_token);
-        cy.createProject(
-          `${projectDetails.public.name}`,
-          `${projectDetails.public.slug}`,
-          ProjectAccessControlSetting.Public,
-          true
-        ).then((id) => {
-          cy.setLocalStorage('projectId', id as any);
-          cy.setLocalStorage('token', access_token);
-          cy.saveLocalStorage();
-        })
-      });
-    });
-    after(() => {
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        if (err.message.includes('ServiceWorker')) {
-          return false
-        }
-      });
-      cy.deleteProject(`${projectDetails.public.slug}`);
-    });
-    it('Creates a project invite with correct project name and sign-up link', () => {
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        if (err.message.includes('ServiceWorker')) {
-          return false
-        }
-      });
-      cy.restoreLocalStorage();
-      const options = [`${newUser}`];
-      cy.getLocalStorage('projectId').then((id) => {
-        const projectId = parseInt(id);
-        cy.getLocalStorage('token').then((token) => {
-          //getUsers()
-          cy.createProjectInvites(projectId, options, token).then((resp) => {
-            const respData = resp.createProjectInvites
-            //check that the project is INVITE_ONLY and public
-            expect (respData.query.project.accessControl).to.equal("PUBLIC");
-            expect (respData.query.project.isListed).to.equal(true);
-            const projectInvites = resp.createProjectInvites.projectInvites
-            expect (projectInvites.length).to.eq(options.length);
-            expect (projectInvites[0].email).to.eq(options[0]);
-            expect (projectInvites[0].projectId).to.eq(projectId);
-            cy.readFile(__dirname + "./../../../../api/invite-emails-cypress/email").then((txt) => {
-              const textAry = txt.split("\n")
-              const inviteUrl = textAry.find(element => element.includes('https'))
-              expect (txt).to.include(`Destination: ${newUser}`)
-              expect (txt).to.include(projectDetails.public.name)
-              expect (txt).to.include('token')
-              let urlAry = inviteUrl.split('/')
-              urlAry.splice(0,3, Cypress.config().baseUrl)
-              cy.visit(urlAry.join('/'))
-              cy.wait('@verifyProjectInvite').its('response').then((resp) => {
-                expect (resp.statusCode).to.eq(200)
-                expect (resp.body.data.verifyProjectInvite.error).to.eq(null);
+  projectOptions.forEach((project) => {
+    if (projectDetails[project]) {
+      console.log(projectDetails[project])
+      console.log(projectDetails[project].accessControl)
+   
+      describe(`A new SeaSketch user receiving an invitation to a(n) ${project} project`, () => {
+        beforeEach(() => {
+          cy.intercept("http://localhost:3857/graphql", (req) => {
+            if ((req.body.operationName) && (req.body.operationName === "CypressCreateProjectInvites")) {
+              req.alias = "createProjectInvites"
+            };
+            if ((req.body.operationName) && (req.body.operationName === "VerifyProjectInvite")) {
+              req.alias = "verifyProjectInvite"
+            };
+            if ((req.body.operationName) && (req.body.operationName === "ConfirmProjectInvite")) {
+              req.alias = "confirmProjectInvite"
+            };
+          });
+        });
+        before(() => {
+          const userSlug = generateSlug()
+          //const accessControl = projectDetails[project].accessControl
+          newUser = `cypress_user_${userSlug}@seasketch.org`
+          cy.getToken("User 1").then(({ access_token }) => {
+            cy.wrap(access_token).as("token");
+            cy.setLocalStorage("token", access_token);
+            
+            cy.createProject(
+              `${projectDetails[project].name}`,
+              `${projectDetails[project].slug}`,
+                projectDetails[project].accessControl,
+              true
+            ).then((id) => {
+              cy.setLocalStorage('projectId', id as any);
+              cy.setLocalStorage('token', access_token);
+              cy.saveLocalStorage();
+            })
+          });
+        });
+        after(() => {
+          Cypress.on('uncaught:exception', (err, runnable) => {
+            if (err.message.includes('ServiceWorker')) {
+              return false
+            }
+          });
+          cy.deleteProject(`${projectDetails[project].slug}`);
+        });
+        it('Creates a project invite with correct project name and sign-up link', () => {
+          Cypress.on('uncaught:exception', (err, runnable) => {
+            if (err.message.includes('ServiceWorker')) {
+              return false
+            }
+          });
+          cy.restoreLocalStorage();
+          const options = [`${newUser}`];
+          cy.getLocalStorage('projectId').then((id) => {
+            const projectId = parseInt(id);
+            cy.getLocalStorage('token').then((token) => {
+              //getUsers()
+              cy.createProjectInvites(projectId, options, token).then((resp) => {
+                const respData = resp.createProjectInvites
+                //check that the project has the correct accessControl and is public
+                expect (respData.query.project.accessControl).to.equal(`${projectDetails[project].accessControl}`);
+                if (project === "inviteOnly" || project === "public") {
+                  expect (respData.query.project.isListed).to.equal(true);
+                } else {
+                  cy.updateProject(projectId, token, ["isListed", "true"]).then((data) => {
+                    expect(data.updateProject.project.isListed).to.equal(true);
+                  });
+                }
+                const projectInvites = resp.createProjectInvites.projectInvites
+                expect (projectInvites.length).to.eq(options.length);
+                expect (projectInvites[0].email).to.eq(options[0]);
+                expect (projectInvites[0].projectId).to.eq(projectId);
+                cy.readFile(__dirname + "./../../../../api/invite-emails-cypress/email").then((txt) => {
+                  const textAry = txt.split("\n");
+                  const inviteUrl = textAry.find(element => element.includes('https'));
+                  expect (txt).to.include(`Destination: ${newUser}`);
+                  expect (txt).to.include(projectDetails[project].name);
+                  expect (txt).to.include('token');
+                  let urlAry = inviteUrl.split('/');
+                  urlAry.splice(0,3, Cypress.config().baseUrl);
+                  cy.visit(urlAry.join('/'));
+                  cy.wait('@verifyProjectInvite').its('response').then((resp) => {
+                    expect(resp.body.data.verifyProjectInvite.existingAccount).to.equal(false);
+                    expect (resp.statusCode).to.eq(200);
+                    expect (resp.body.data.verifyProjectInvite.error).to.eq(null);
+                  });
+                });
               });
             });
           });
         });
+        it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
+          cy.contains(`${projectDetails[project].name}`);
+          cy.get('[data-cy="button-sign-in"]')
+            .should('be.visible');
+          cy.get('[data-cy="button-create-an-account"]')
+            .should('be.visible');
+        });
+        it('Prompts new user to join project after creating an account', () => {
+          cy.get('[data-cy="button-create-an-account"]')
+            .should('be.visible')
+            .click();
+          cy.get('#email')
+            .should('have.value', `${newUser}`);
+          cy.get('#password').type('password');
+          cy.contains('Continue').click();
+          cy.contains('Accept').click();
+          cy.wait('@confirmProjectInvite');
+          cy.contains(`${projectDetails[project].name}`);
+          cy.contains('Join Project');
+          cy.contains('Skip for now');
+        });
       });
-    });
-    it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
-      cy.contains(`${projectDetails.public.name}`);
-      cy.get('[data-cy="button-sign-in"]')
-        .should('be.visible');
-      cy.get('[data-cy="button-create-an-account"]')
-        .should('be.visible');
-    });
-    it('Prompts new user to join project after creating an account', () => {
-      cy.get('[data-cy="button-create-an-account"]')
-        .should('be.visible')
-        .click();
-      cy.get('#email')
-        .should('have.value', `${newUser}`);
-      cy.get('#password').type('password');
-      cy.contains('Continue').click();
-      cy.contains('Accept').click();
-      cy.wait('@confirmProjectInvite');
-      cy.contains(`${projectDetails.public.name}`);
-      cy.contains('Join Project');
-      cy.contains('Skip for now');
-    });
-  });
-  describe('A new SeaSketch user receiving an invitation to a public, admin-only project', () => {
-    beforeEach(() => {
-      cy.intercept("http://localhost:3857/graphql", (req) => {
-        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProjectInvites")) {
-          req.alias = "createProjectInvites"
-        };
-        if ((req.body.operationName) && (req.body.operationName === "VerifyProjectInvite")) {
-          req.alias = "verifyProjectInvite"
-        };
-        if ((req.body.operationName) && (req.body.operationName === "ConfirmProjectInvite")) {
-          req.alias = "confirmProjectInvite"
-        };
+    }//
+  });//
+  projectOptions.forEach((project) => {
+    describe(`An unauthenticated SeaSketch user receiving an invitation to a(n) ${project} project`, () => {
+      beforeEach(() => {
+        cy.intercept("http://localhost:3857/graphql", (req) => {
+          if ((req.body.operationName) && (req.body.operationName === "CypressCreateProjectInvites")) {
+            req.alias = "createProjectInvites"
+          };
+          if ((req.body.operationName) && (req.body.operationName === "VerifyProjectInvite")) {
+            req.alias = "verifyProjectInvite"
+          };
+          if ((req.body.operationName) && (req.body.operationName === "ConfirmProjectInvite")) {
+            req.alias = "confirmProjectInvite"
+          };
+          if (((req.body.operationName) && (req.body.operationName === "ProjectRegion"))) {
+            req.alias = "getProjectRegion"
+          };
+        });
       });
-    });
-    before(() => {
-      const userSlug = generateSlug()
-      newUser = `cypress_user_${userSlug}@seasketch.org`
-      cy.getToken("User 2").then(({ access_token }) => {
-        cy.wrap(access_token).as("token");
-        cy.setLocalStorage("token", access_token);
-        cy.createProject(
-          `${projectDetails.adminOnly.name}`,
-          `${projectDetails.adminOnly.slug}`,
-          ProjectAccessControlSetting.AdminsOnly,
-          true
-        ).then((id) => {
-          cy.setLocalStorage('projectId', id as any);
-          cy.setLocalStorage('token', access_token);
-          cy.saveLocalStorage();
-        })
-      });
-    });
-    after(() => {
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        if (err.message.includes('ServiceWorker')) {
-          return false
-        }
-      });
-      cy.deleteProject(`${projectDetails.adminOnly.slug}`);
-    });
-    it('Creates a project invite with correct project name and sign-up link', () => {
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        if (err.message.includes('ServiceWorker')) {
-          return false
-        }
-      });
-      cy.restoreLocalStorage();
-      const options = [`${newUser}`];
-      cy.getLocalStorage('projectId').then((id) => {
-        const projectId = parseInt(id);
-        cy.getLocalStorage('token').then((token) => {
-          cy.updateProject(projectId, token, ["isListed", "true"]).then((data) => {
-            console.log(data)
+      before(() => {
+        const userSlug = generateSlug()
+        //const accessControl = projectDetails[project].accessControl
+        //newUser = `cypress_user_${userSlug}@seasketch.org`
+        cy.getToken("User 1").then(({ access_token }) => {
+          cy.wrap(access_token).as("token");
+          cy.setLocalStorage("token", access_token);
+
+          cy.createProject(
+            `${projectDetails[project].name}`,
+            `${projectDetails[project].slug}`,
+              projectDetails[project].accessControl,
+            true
+          ).then((id) => {
+            cy.setLocalStorage('projectId', id as any);
+            cy.setLocalStorage('token', access_token);
+            cy.saveLocalStorage();
           })
-          //getUsers()
-          cy.createProjectInvites(projectId, options, token).then((resp) => {
-            const respData = resp.createProjectInvites
-            //check that the project is ADMINS_ONLY and public
-            expect (respData.query.project.accessControl).to.equal("ADMINS_ONLY");
-            expect (respData.query.project.isListed).to.equal(true);
-            const projectInvites = resp.createProjectInvites.projectInvites
-            expect (projectInvites.length).to.eq(options.length);
-            expect (projectInvites[0].email).to.eq(options[0]);
-            expect (projectInvites[0].projectId).to.eq(projectId);
-            cy.readFile(__dirname + "./../../../../api/invite-emails-cypress/email").then((txt) => {
-              const textAry = txt.split("\n")
-              const inviteUrl = textAry.find(element => element.includes('https'))
-              expect (txt).to.include(`Destination: ${newUser}`)
-              expect (txt).to.include(projectDetails.adminOnly.name)
-              expect (txt).to.include('token')
-              let urlAry = inviteUrl.split('/')
-              urlAry.splice(0,3, Cypress.config().baseUrl)
-              cy.visit(urlAry.join('/'))
-              cy.wait('@verifyProjectInvite').its('response').then((resp) => {
-                expect (resp.statusCode).to.eq(200)
-                expect (resp.body.data.verifyProjectInvite.error).to.eq(null);
+        });
+      });
+      after(() => {
+        Cypress.on('uncaught:exception', (err, runnable) => {
+          if (err.message.includes('ServiceWorker')) {
+            return false;
+          }
+        });
+        cy.deleteProject(`${projectDetails[project].slug}`);
+      });
+      it('Creates a project invite with correct project name and sign-up link', () => {
+        Cypress.on('uncaught:exception', (err, runnable) => {
+          if (err.message.includes('ServiceWorker')) {
+            return false;
+          }
+        });
+        cy.restoreLocalStorage();
+        const options = ['test_user_2@seasketch.org'];
+        cy.getLocalStorage('projectId').then((id) => {
+          const projectId = parseInt(id);
+          cy.getLocalStorage('token').then((token) => {
+            //getUsers()
+            cy.createProjectInvites(projectId, options, token).then((resp) => {
+              const respData = resp.createProjectInvites
+              //check that the project has the correct accessControl and is public
+              expect (respData.query.project.accessControl).to.equal(`${projectDetails[project].accessControl}`);
+              if (project === "inviteOnly" || project === "public") {
+                expect (respData.query.project.isListed).to.equal(true);
+              } else {
+                cy.updateProject(projectId, token, ["isListed", "true"]).then((data) => {
+                  expect(data.updateProject.project.isListed).to.equal(true)
+                });
+              }
+              const projectInvites = resp.createProjectInvites.projectInvites;
+              console.log(projectInvites)
+              expect (projectInvites.length).to.eq(options.length);
+              expect (projectInvites[0].email).to.eq(options[0]);
+              expect (projectInvites[0].projectId).to.eq(projectId);
+              //wait for file write to finish 
+              cy.wait(1000)
+              cy.readFile(__dirname + "./../../../../api/invite-emails-cypress/email").then((txt) => {
+                console.log(txt)
+                const textAry = txt.split("\n");
+                const inviteUrl = textAry.find(element => element.includes('https'));
+                expect (txt).to.include(`Destination: test_user_2@seasketch.org`);
+                expect (txt).to.include(projectDetails[project].name);
+                expect (txt).to.include('token');
+                let urlAry = inviteUrl.split('/');
+                urlAry.splice(0,3, Cypress.config().baseUrl);
+                cy.visit(urlAry.join('/'));
+                cy.wait('@verifyProjectInvite').its('response').then((resp) => {
+                  expect(resp.body.data.verifyProjectInvite.existingAccount).to.equal(true);
+                  expect(resp.statusCode).to.eq(200);
+                  expect(resp.body.data.verifyProjectInvite.error).to.eq(null);
+                });
               });
             });
           });
         });
       });
-    });
-    it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
-      cy.contains(`${projectDetails.adminOnly.name}`);
-      cy.get('[data-cy="button-sign-in"]')
-        .should('be.visible');
-      cy.get('[data-cy="button-create-an-account"]')
-        .should('be.visible');
-    });
-    it('Prompts new user to join project after creating an account', () => {
-      cy.get('[data-cy="button-create-an-account"]')
-        .should('be.visible')
-        .click();
-      cy.get('#email')
-        .should('have.value', `${newUser}`);
-      cy.get('#password').type('password');
-      cy.contains('Continue').click();
-      cy.contains('Accept').click();
-      cy.wait('@confirmProjectInvite');
-      cy.contains(`${projectDetails.adminOnly.name}`);
-      cy.contains('Join Project');
-      cy.contains('Skip for now');
-    });
-  });
-  describe('A new SeaSketch user receiving an invitation to a public, invite-only project', () => {
-    beforeEach(() => {
-      cy.intercept("http://localhost:3857/graphql", (req) => {
-        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProjectInvites")) {
-          req.alias = "createProjectInvites"
-        };
-        if ((req.body.operationName) && (req.body.operationName === "VerifyProjectInvite")) {
-          req.alias = "verifyProjectInvite"
-        };
-        if ((req.body.operationName) && (req.body.operationName === "ConfirmProjectInvite")) {
-          req.alias = "confirmProjectInvite"
-        };
+      it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
+        cy.contains(`${projectDetails[project].name}`);
+        cy.get('[data-cy="button-sign-in"]')
+          .should('be.visible');
+        cy.get('[data-cy="button-create-an-account"]')
+          .should('be.visible');
       });
-    });
-    before(() => {
-      const userSlug = generateSlug()
-      newUser = `cypress_user_${userSlug}@seasketch.org`
-      cy.getToken("User 2").then(({ access_token }) => {
-        cy.wrap(access_token).as("token");
-        cy.setLocalStorage("token", access_token);
-        cy.createProject(
-          `${projectDetails.inviteOnly.name}`,
-          `${projectDetails.inviteOnly.slug}`,
-          ProjectAccessControlSetting.InviteOnly,
-          true
-        ).then((id) => {
-          cy.setLocalStorage('projectId', id as any);
-          cy.setLocalStorage('token', access_token);
-          cy.saveLocalStorage();
+      it('Prompts user to join project after signing in', () => {
+        cy.get('button').then((btn)=> {
+          if (btn.text().includes('Sign In')) {
+            cy.get('button')
+              .contains('Sign In')
+              .click();
+          } else {
+
+          }
+          console.log(btn.text())
         })
+        cy.get('#username')
+          .should('have.value', 'test_user_2@seasketch.org');
+        cy.get('#password').type('password');
+        cy.contains('Continue').click();
+        //cy.contains('Accept').click();
+        cy.wait('@confirmProjectInvite');
+        cy.contains(`${projectDetails[project].name}`);
+        cy.contains('Skip for now');
+        cy.get('[name="fullname"]')
+          .clear()
+          .type('Test User 2');
+        cy.contains('Join Project').click();
+        cy.wait('@getProjectRegion')
+        cy.contains(projectDetails[project].name)
       });
-    });
-    after(() => {
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        if (err.message.includes('ServiceWorker')) {
-          return false
-        }
-      });
-      cy.deleteProject(`${projectDetails.inviteOnly.slug}`);
-    });
-    it('Creates a project invite with correct project name and sign-up link', () => {
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        if (err.message.includes('ServiceWorker')) {
-          return false
-        }
-      });
-      cy.restoreLocalStorage();
-      const options = [`${newUser}`];
-      cy.getLocalStorage('projectId').then((id) => {
-        const projectId = parseInt(id);
-        cy.getLocalStorage('token').then((token) => {
-          //getUsers()
-          cy.createProjectInvites(projectId, options, token).then((resp) => {
-            const respData = resp.createProjectInvites
-            //check that the project is INVITE_ONLY and public
-            expect (respData.query.project.accessControl).to.equal("INVITE_ONLY");
-            expect (respData.query.project.isListed).to.equal(true);
-            const projectInvites = resp.createProjectInvites.projectInvites
-            expect (projectInvites.length).to.eq(options.length);
-            expect (projectInvites[0].email).to.eq(options[0]);
-            expect (projectInvites[0].projectId).to.eq(projectId);
-            cy.readFile(__dirname + "./../../../../api/invite-emails-cypress/email").then((txt) => {
-              const textAry = txt.split("\n")
-              const inviteUrl = textAry.find(element => element.includes('https'))
-              expect (txt).to.include(`Destination: ${newUser}`)
-              expect (txt).to.include(projectDetails.inviteOnly.name)
-              expect (txt).to.include('token')
-              let urlAry = inviteUrl.split('/')
-              urlAry.splice(0,3, Cypress.config().baseUrl)
-              cy.visit(urlAry.join('/'))
-              cy.wait('@verifyProjectInvite').its('response').then((resp) => {
-                expect (resp.statusCode).to.eq(200)
-                expect (resp.body.data.verifyProjectInvite.error).to.eq(null);
-              });
-            });
-          });
-        });
-      });
-    });
-    it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
-      cy.contains(`${projectDetails.inviteOnly.name}`);
-      cy.get('[data-cy="button-sign-in"]')
-        .should('be.visible');
-      cy.get('[data-cy="button-create-an-account"]')
-        .should('be.visible');
-    });
-    it('Prompts new user to join project after creating an account', () => {
-      cy.get('button').then((btn) => {
-        console.log(btn.text())
-      })
-      cy.get('[data-cy="button-create-an-account"]')
-        .should('be.visible')
-        .click();
-      cy.get('#email')
-        .should('have.value', `${newUser}`);
-      cy.get('#password').type('password');
-      cy.contains('Continue').click();
-      cy.contains('Accept').click();
-      cy.wait('@confirmProjectInvite');
-      cy.contains(`${projectDetails.inviteOnly.name}`);
-      cy.contains('Join Project');
-      cy.contains('Skip for now');
-    });
+    });   
   });
 });
-
-
-//cy.restoreLocalStorage()
-      //cy.getLocalStorage('projectId').then((id) => {
+ 
+ 
+////cy.restoreLocalStorage()
+  //    //cy.getLocalStorage('projectId').then((id) => {
       //  cy.getLocalStorage('token').then((token) => {
       //    cy.getToken('User 2').then(({access_token}) => {
       //      const projectId = parseInt(id)
