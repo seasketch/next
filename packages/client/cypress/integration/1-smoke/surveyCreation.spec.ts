@@ -166,7 +166,7 @@ const drawSecondPolygon = () => {
     .click(200, 200);
 };
 
-const devices: any = ["macbook-15","ipad-2","iphone-x"];
+const devices: any = ["iphone-x"];//"macbook-15","ipad-2",
 
 describe('Survey creation smoke test', () => {
   describe.only('User survey flow', () => {
@@ -445,11 +445,9 @@ describe('Survey creation smoke test', () => {
       it(`Cannot advance until sector selection(s) is made - ${device}`, () => {
         cy.viewport(device);
         checkForNavAndLang();
-        cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden')
-        cy.get('[title = "Fisheries - Commercial, Tuna"]').click()
-        cy.get('[title = "Fisheries - Commercial, Non-Tuna Species"]').click()
-        //cy.get('[title = "Fisheries - Recreational"]').click()
-        //cy.get('[title = "Fisheries- Artisanal/Subsistence"]').click()
+        cy.get('[type = "button"]').contains('Next').as('nextBtn').should('be.hidden');
+        cy.get('[title = "Fisheries - Commercial, Tuna"]').click();
+        cy.get('[title = "Fisheries - Commercial, Non-Tuna Species"]').click();
         cy.get('@nextBtn').scrollIntoView()
           .should('exist')
           .and('be.visible')
@@ -713,8 +711,10 @@ describe('Survey creation smoke test', () => {
           drawPolygon();
           cy.get('[data-cy="button-done"]').as('doneBtn')
             .should('exist')
-            .and('be.visible')
-            .click();
+            .and('be.visible');
+          cy.get('@doneBtn').then((btn) => {
+            {btn.trigger('click')}
+          });
         } else {
           cy.contains('Fisheries')
             .should('be.visible');
