@@ -607,8 +607,8 @@ Cypress.Commands.add("createProjectInvites", (projectId: number, projectInviteOp
           "email": `${projectInviteOptions[0]}`
         }
       ],
-      "makeAdmin": false,
-      "sendEmailNow": true
+      "sendEmailNow": projectInviteOptions[1],
+      "makeAdmin": projectInviteOptions[2]
     }
   },
   (token as any)
