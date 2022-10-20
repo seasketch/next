@@ -5,7 +5,6 @@ const client = new Client({
     process.env.CYPRESS_TEST_DB ||
     "postgres://postgres:password@localhost:54321/seasketch",
 });
-
 (async () => {
   await client.connect();
   const res = await client.query(
@@ -13,23 +12,7 @@ const client = new Client({
     [process.argv[2]]
   );
   console.log(
-    `Deleted ${res.rows.length} user${res.rows.length !== 1 ? "s" : ""}`
+    `Deleted ${res.rows.length} user${res.rows.length !== 1 ? "s" : ""} from database`
   );
   await client.end();
 })();
-
-//const deleteUser = async (userName) => {
-//  try {
-//      await client.connect();  // gets connection
-//      await client.query('DELETE FROM "users" WHERE "name" = $1', [userName]); // sends queries
-//      return true;
-//  } catch (error) {
-//      console.error(error.stack);
-//      return false;
-//  } finally {
-//      await client.end();  // closes connection
-//  }
-//};
-//
-//export default deleteUser 
-//
