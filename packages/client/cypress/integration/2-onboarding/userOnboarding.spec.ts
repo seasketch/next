@@ -931,46 +931,10 @@ describe('User onboarding via email invites', () => {
     })
     it ('Deletes users', () => {
       getAuth0ApiToken().then((resp) => {
+        expect(resp).to.haveOwnProperty('access_token')
         cy.log(JSON.stringify(resp))
         console.log(resp)
       })
-    
-      //deleteAuth0CypressUser()
-      //deleteAllAuth0CypressUsers()
-      //const results = getAuthOUserByEmail('cypress_user_n0elo@seasketch.org')
-      //console.log(results)
     })
   })
 });
- 
- 
-////cy.restoreLocalStorage()
-  //    //cy.getLocalStorage('projectId').then((id) => {
-      //  cy.getLocalStorage('token').then((token) => {
-      //    cy.getToken('User 2').then(({access_token}) => {
-      //      const projectId = parseInt(id)
-      //      //Second arg is access_token for user 2
-      //      //User 2 cannot join project because it is adminsOnly, but I am using this mutation
-      //      //to get userId of User 2
-      //      cy.joinProject(projectId, access_token).then((resp) => {
-      //        console.log(resp)
-      //        const newAdminId = resp.joinProject.query.project.unapprovedParticipants[0].id
-      //        console.log(newAdminId)
-      //        cy.toggleAdminAccess(7, projectId, token).then((resp) => {
-      //          console.log(resp)
-      //        })
-      //        ////second arg is user_id for user 2
-      //        ////third arg is token for user 1
-      //        //cy.approveParticipant(projectId, newParticipantId, token);
-      //        //cy.wait('@approveParticipant').its('response').then((resp) => {
-      //        //  const project = resp.body.data.approveParticipant.query.project
-      //        //  let participants = []
-      //        //  project.participants.forEach((t) => {
-      //        //    participants.push(t.canonicalEmail);
-      //        //  });
-      //        //  expect (participants).to.include('test_user_2@seasketch.org');
-      //        //});
-      //      });
-      //    });
-      //  });
-      //}); 
