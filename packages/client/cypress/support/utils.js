@@ -26,11 +26,12 @@ export async function getAuth0ApiToken () {
       audience: 'https://seasketch.auth0.com/api/v2/'
     })
   };
-  const results = axios.request(options).then(function (response) {
+  const results = await axios.request(options).then(function (response) {
     console.log(response.data);
     return response.data
   }).catch(function (error) {
     console.error(error);
+    return error
   });
   return results
 };

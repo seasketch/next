@@ -442,7 +442,7 @@ describe ("User onboarding via independent browsing", () => {
 describe('User onboarding via email invites', () => {
   projectOptions.forEach((projectOption) => {
     if (projectDetails[projectOption]) {
-      describe.only(`A new SeaSketch user receiving an invitation to a(n) ${projectOption} project`, () => {
+      describe(`A new SeaSketch user receiving an invitation to a(n) ${projectOption} project`, () => {
         beforeEach(() => {
           cy.intercept("http://localhost:3857/graphql", (req) => {
             if ((req.body.operationName) && (req.body.operationName === "CypressCreateProjectInvites")) {
@@ -483,6 +483,7 @@ describe('User onboarding via email invites', () => {
             }
           });
           getAuth0ApiToken().then((resp) => {
+            //cy.log(resp)
             const token = resp.access_token;
             deleteAllAuth0CypressUsers(token);
           })
@@ -924,15 +925,16 @@ describe('User onboarding via email invites', () => {
       });
     });
   }); 
-  describe('It deletes users', () => {
+  describe.only('It deletes users', () => {
     before (() => {
       cy.intercept("/oauth/token").as('getAuth0Token');
     })
     it ('Deletes users', () => {
-      getAuth0ApiToken()
-      cy.wait('@getAuth0Token').then((resp) => {
+      getAuth0ApiToken().then((resp) => {
+        cy.log(JSON.stringify(resp))
         console.log(resp)
       })
+    
       //deleteAuth0CypressUser()
       //deleteAllAuth0CypressUsers()
       //const results = getAuthOUserByEmail('cypress_user_n0elo@seasketch.org')
