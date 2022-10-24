@@ -3,8 +3,38 @@ import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
-
 let spec = baseSchema.spec;
+
+// console.log(baseSchema.spec.marks.get("link"));
+// let spec = new Schema({
+//   nodes: baseSchema.nodes,
+//   marks: baseSchema.spec.marks.update("link", {
+//     // @ts-ignore
+//     toDOM: (node: Node) => {
+//       let { href, title } = node.attrs;
+//       return ["a", { href, title }, 0];
+//     },
+//   }),
+// }).spec;
+
+baseSchema.spec.marks.update("link", {
+  ...baseSchema.spec.marks.get("link"),
+  // @ts-ignore
+  toDOM: (node: Node) => {
+    let { href, title } = node.attrs;
+    return ["a", { href, title, target: "_blank" }, 0];
+  },
+});
+
+const baseMarks = baseSchema.spec.marks.update("link", {
+  ...baseSchema.spec.marks.get("link"),
+  // @ts-ignore
+  toDOM: (node: Node) => {
+    let { href, title } = node.attrs;
+    return ["a", { href, title, target: "_blank" }, 0];
+  },
+});
+
 const questionSchema: Schema = new Schema({
   nodes: spec.nodes
     // @ts-ignore
@@ -33,17 +63,17 @@ const questionSchema: Schema = new Schema({
       content: "question block*",
     })
     .remove("heading"),
-  marks: baseSchema.spec.marks,
+  marks: baseMarks,
 });
 
 const metadataSchema = new Schema({
   nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
-  marks: baseSchema.spec.marks,
+  marks: baseMarks,
 });
 
 const contentSchema = new Schema({
   nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
-  marks: baseSchema.spec.marks,
+  marks: baseMarks,
 });
 
 export const metadata = {
