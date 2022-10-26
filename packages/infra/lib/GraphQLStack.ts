@@ -10,6 +10,8 @@ import { PolicyStatement } from "@aws-cdk/aws-iam";
 import { HostedZone } from "@aws-cdk/aws-route53";
 import { ApplicationProtocol } from "@aws-cdk/aws-elasticloadbalancingv2";
 import { AwsLogDriver } from "@aws-cdk/aws-ecs";
+import { Lambda } from "aws-sdk";
+import { DockerImageFunction } from "@aws-cdk/aws-lambda";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -34,6 +36,7 @@ export class GraphQLStack extends cdk.Stack {
       spatialUploadsBucket: Bucket;
       normalizedOutputsBucket: Bucket;
       spatialUploadsHandlerArn: string;
+      uploadHandler: DockerImageFunction;
     }
   ) {
     super(scope, id, props);
@@ -194,5 +197,6 @@ export class GraphQLStack extends cdk.Stack {
     props.normalizedOutputsBucket.grantReadWrite(
       service.taskDefinition.taskRole
     );
+    props.uploadHandler.grantInvoke(service.taskDefinition.taskRole);
   }
 }

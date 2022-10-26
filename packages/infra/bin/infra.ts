@@ -161,7 +161,10 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   spatialUploadsBucket: dataUploads.uploadsBucket,
   spatialUploadsHandlerArn: uploadHandler.fn.functionArn,
   normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
+  uploadHandler: uploadHandler.fn,
 });
+
+uploadHandler.fn.grantInvoke;
 
 new MailerLambdaStack(app, "SeaSketchMailers", {
   env,
