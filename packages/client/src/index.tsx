@@ -188,6 +188,9 @@ function ApolloProviderWithToken(props: any) {
           Profile: {
             keyFields: ["userId"],
           },
+          DataUploadTasks: {
+            keyFields: ["id"],
+          },
         },
       });
 

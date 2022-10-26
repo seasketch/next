@@ -19,7 +19,16 @@ import { Client } from "pg";
  *   * PGUSER
  *   * PGDATABASE
  *
- * @returns
+ * @returns pg.Client
+ * @example
+ *
+ * export const handler = (event) => {
+ *   const client = getClient();
+ *   const results = await client.query(
+ *     `select * from projects where id = $1`,
+ *     [event.id]
+ *   );
+ * }
  */
 export declare function getClient(): Promise<Client>;
 //# sourceMappingURL=lambda-db-client.d.ts.map

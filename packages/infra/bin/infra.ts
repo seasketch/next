@@ -13,6 +13,7 @@ import { GraphQLStack } from "../lib/GraphQLStack";
 import { MailerLambdaStack } from "../lib/MailerLambdaStack";
 import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadStack";
 import { DataUploadsStack } from "../lib/DataUploadsStack";
+import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasket.ch";
@@ -134,6 +135,18 @@ const dataHosts = hostConfigs.map((config) => {
   return host;
 });
 
+const uploadHandler = new UploadHandlerLambdaStack(
+  app,
+  "SpatialUploadHandler",
+  {
+    env,
+    vpc: db.vpc,
+    db: db.instance,
+    bucket: dataUploads.uploadsBucket,
+    normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
+  }
+);
+
 new GraphQLStack(app, "SeaSketchGraphQLServer", {
   env,
   db: db.instance,
@@ -146,7 +159,12 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   tilePackagesBucket: tilePackages.bucket,
   clientDomain: SUBDOMAIN + "." + DOMAIN_NAME,
   spatialUploadsBucket: dataUploads.uploadsBucket,
+  spatialUploadsHandlerArn: uploadHandler.fn.functionArn,
+  normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
+  uploadHandler: uploadHandler.fn,
 });
+
+uploadHandler.fn.grantInvoke;
 
 new MailerLambdaStack(app, "SeaSketchMailers", {
   env,

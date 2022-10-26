@@ -10,6 +10,8 @@ import { PolicyStatement } from "@aws-cdk/aws-iam";
 import { HostedZone } from "@aws-cdk/aws-route53";
 import { ApplicationProtocol } from "@aws-cdk/aws-elasticloadbalancingv2";
 import { AwsLogDriver } from "@aws-cdk/aws-ecs";
+import { Lambda } from "aws-sdk";
+import { DockerImageFunction } from "@aws-cdk/aws-lambda";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -32,6 +34,9 @@ export class GraphQLStack extends cdk.Stack {
       emailSource: string;
       clientDomain: string;
       spatialUploadsBucket: Bucket;
+      normalizedOutputsBucket: Bucket;
+      spatialUploadsHandlerArn: string;
+      uploadHandler: DockerImageFunction;
     }
   ) {
     super(scope, id, props);
@@ -59,6 +64,15 @@ export class GraphQLStack extends cdk.Stack {
     if (!process.env.COMMIT) {
       throw new Error(
         "You must specify a COMMIT env var so that the graphql container can be built with the appropriate version of the source code."
+      );
+    }
+    if (
+      !process.env.R2_ENDPOINT ||
+      !process.env.R2_SECRET_ACCESS_KEY ||
+      !process.env.R2_ACCESS_KEY_ID
+    ) {
+      throw new Error(
+        `R2_ENDPOINT, R2_SECRET_ACCESS_KEY, and R2_ACCESS_KEY_ID must be set in environment`
       );
     }
     // The code that defines your stack goes here
@@ -106,6 +120,11 @@ export class GraphQLStack extends cdk.Stack {
             SENTRY_DSN,
             MAPBOX_ACCESS_TOKEN,
             CLIENT_DOMAIN: props.clientDomain,
+            SPATIAL_UPLOADS_BUCKET: props.spatialUploadsBucket.bucketName,
+            SPATIAL_UPLOADS_LAMBDA_ARN: props.spatialUploadsHandlerArn,
+            R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+            R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+            R2_ENDPOINT: process.env.R2_ENDPOINT,
           },
           containerPort: 3857,
         },
@@ -175,5 +194,9 @@ export class GraphQLStack extends cdk.Stack {
     props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
     props.tilePackagesBucket.grantReadWrite(service.taskDefinition.taskRole);
     props.spatialUploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
+    props.normalizedOutputsBucket.grantReadWrite(
+      service.taskDefinition.taskRole
+    );
+    props.uploadHandler.grantInvoke(service.taskDefinition.taskRole);
   }
 }

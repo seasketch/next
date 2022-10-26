@@ -508,6 +508,29 @@ export enum CacheableOfflineAssetType {
   Sprite = 'SPRITE'
 }
 
+/** All input for the `cancelDataUpload` mutation. */
+export type CancelDataUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  uploadId?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `cancelDataUpload` mutation. */
+export type CancelDataUploadPayload = {
+  __typename?: 'CancelDataUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
@@ -809,6 +832,41 @@ export type CreateDataSourcePayload = {
 /** The output of our create `DataSource` mutation. */
 export type CreateDataSourcePayloadDataSourceEdgeArgs = {
   orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+};
+
+/** All input for the `createDataUpload` mutation. */
+export type CreateDataUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  contentType?: Maybe<Scalars['String']>;
+  filename?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createDataUpload` mutation. */
+export type CreateDataUploadPayload = {
+  __typename?: 'CreateDataUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataUploadTask?: Maybe<DataUploadTask>;
+  /** An edge for our `DataUploadTask`. May be used by Relay 1. */
+  dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
+  /** Reads a single `Project` that is related to this `DataUploadTask`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createDataUpload` mutation. */
+export type CreateDataUploadPayloadDataUploadTaskEdgeArgs = {
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
 /** All input for the create `FormElement` mutation. */
@@ -1832,6 +1890,11 @@ export type DataSource = Node & {
    * features array, over-writing any previous values.
    */
   generateId?: Maybe<Scalars['Boolean']>;
+  /**
+   * mapbox-geostats summary information for vector sources. Useful for
+   * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
+   */
+  geostats?: Maybe<Scalars['JSON']>;
   /** Should be used as sourceId in stylesheets. */
   id: Scalars['Int'];
   /**
@@ -1854,6 +1917,14 @@ export type DataSource = Node & {
   minzoom?: Maybe<Scalars['Int']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Size of the normalized file. SEASKETCH_VECTOR sources only. */
+  normalizedSourceBytes?: Maybe<Scalars['Int']>;
+  /**
+   * Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
+   * store indefinitely so they may be processed into tilesets and to support the
+   * download function. SEASKETCH_VECTOR sources only.
+   */
+  normalizedSourceObjectKey?: Maybe<Scalars['String']>;
   /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
   objectKey?: Maybe<Scalars['UUID']>;
   /**
@@ -1890,6 +1961,12 @@ export type DataSource = Node & {
   tolerance?: Maybe<Scalars['BigFloat']>;
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
+  uploadedBy?: Maybe<Scalars['String']>;
+  uploadedSourceFilename?: Maybe<Scalars['String']>;
+  /** If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only. */
+  uploadedSourceLayername?: Maybe<Scalars['String']>;
+  /** UUID of the upload processing job associated with a SEASKETCH_VECTOR source. */
+  uploadTaskId?: Maybe<Scalars['UUID']>;
   /**
    * A URL to a TileJSON resource for tiled sources. For GeoJSON or
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
@@ -1992,6 +2069,11 @@ export type DataSourceInput = {
    * features array, over-writing any previous values.
    */
   generateId?: Maybe<Scalars['Boolean']>;
+  /**
+   * mapbox-geostats summary information for vector sources. Useful for
+   * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
+   */
+  geostats?: Maybe<Scalars['JSON']>;
   /** Should be used as sourceId in stylesheets. */
   id?: Maybe<Scalars['Int']>;
   /**
@@ -2012,6 +2094,14 @@ export type DataSourceInput = {
   maxzoom?: Maybe<Scalars['Int']>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
   minzoom?: Maybe<Scalars['Int']>;
+  /** Size of the normalized file. SEASKETCH_VECTOR sources only. */
+  normalizedSourceBytes?: Maybe<Scalars['Int']>;
+  /**
+   * Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
+   * store indefinitely so they may be processed into tilesets and to support the
+   * download function. SEASKETCH_VECTOR sources only.
+   */
+  normalizedSourceObjectKey?: Maybe<Scalars['String']>;
   /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
   objectKey?: Maybe<Scalars['UUID']>;
   /**
@@ -2046,6 +2136,11 @@ export type DataSourceInput = {
   tolerance?: Maybe<Scalars['BigFloat']>;
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
+  uploadedSourceFilename?: Maybe<Scalars['String']>;
+  /** If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only. */
+  uploadedSourceLayername?: Maybe<Scalars['String']>;
+  /** UUID of the upload processing job associated with a SEASKETCH_VECTOR source. */
+  uploadTaskId?: Maybe<Scalars['UUID']>;
   /**
    * A URL to a TileJSON resource for tiled sources. For GeoJSON or
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
@@ -2165,7 +2260,9 @@ export enum DataSourceTypes {
   Raster = 'RASTER',
   /** MapBox GL Style "raster" source */
   RasterDem = 'RASTER_DEM',
-  /** Combination of geojson and possible vector sources hosted on SeaSketch CND */
+  /** SeaSketch-hosted vector tiles */
+  SeasketchMvt = 'SEASKETCH_MVT',
+  /** Combination of geojson and vector sources hosted on SeaSketch CDN */
   SeasketchVector = 'SEASKETCH_VECTOR',
   /** MapBox GL Style "vector" source */
   Vector = 'VECTOR',
@@ -2258,6 +2355,98 @@ export enum DataSourcesOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+export enum DataUploadState {
+  AwaitingUpload = 'AWAITING_UPLOAD',
+  Complete = 'COMPLETE',
+  ConvertingFormat = 'CONVERTING_FORMAT',
+  Failed = 'FAILED',
+  FailedDismissed = 'FAILED_DISMISSED',
+  Fetching = 'FETCHING',
+  Processing = 'PROCESSING',
+  RequiresUserInput = 'REQUIRES_USER_INPUT',
+  Tiling = 'TILING',
+  Uploaded = 'UPLOADED',
+  UploadingProducts = 'UPLOADING_PRODUCTS',
+  Validating = 'VALIDATING'
+}
+
+export type DataUploadTask = Node & {
+  __typename?: 'DataUploadTask';
+  /** Content-Type of the original upload. */
+  contentType: Scalars['String'];
+  createdAt: Scalars['Datetime'];
+  errorMessage?: Maybe<Scalars['String']>;
+  /** Original name of file as uploaded by the user. */
+  filename: Scalars['String'];
+  id: Scalars['UUID'];
+  /** Reads and enables pagination through a set of `DataLayer`. */
+  layers?: Maybe<Array<DataLayer>>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Use to upload source data to s3. Must be an admin. */
+  presignedUploadUrl?: Maybe<Scalars['String']>;
+  /** 0.0 to 1.0 scale, applies to tiling process. */
+  progress?: Maybe<Scalars['BigFloat']>;
+  /** Reads a single `Project` that is related to this `DataUploadTask`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  state: DataUploadState;
+};
+
+
+export type DataUploadTaskLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+/**
+ * A condition to be used against `DataUploadTask` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type DataUploadTaskCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `state` field. */
+  state?: Maybe<DataUploadState>;
+};
+
+/** A connection to a list of `DataUploadTask` values. */
+export type DataUploadTasksConnection = {
+  __typename?: 'DataUploadTasksConnection';
+  /** A list of edges which contains the `DataUploadTask` and cursor to aid in pagination. */
+  edges: Array<DataUploadTasksEdge>;
+  /** A list of `DataUploadTask` objects. */
+  nodes: Array<DataUploadTask>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `DataUploadTask` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `DataUploadTask` edge in the connection. */
+export type DataUploadTasksEdge = {
+  __typename?: 'DataUploadTasksEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `DataUploadTask` at the end of the edge. */
+  node: DataUploadTask;
+};
+
+/** Methods to use when ordering `DataUploadTask`. */
+export enum DataUploadTasksOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC',
+  StateAsc = 'STATE_ASC',
+  StateDesc = 'STATE_DESC'
 }
 
 
@@ -3523,6 +3712,39 @@ export type DisableForumPostingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `dismissFailedUpload` mutation. */
+export type DismissFailedUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `dismissFailedUpload` mutation. */
+export type DismissFailedUploadPayload = {
+  __typename?: 'DismissFailedUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataUploadTask?: Maybe<DataUploadTask>;
+  /** An edge for our `DataUploadTask`. May be used by Relay 1. */
+  dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
+  /** Reads a single `Project` that is related to this `DataUploadTask`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `dismissFailedUpload` mutation. */
+export type DismissFailedUploadPayloadDataUploadTaskEdgeArgs = {
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
+};
+
 
 /**
  * Email notification preferences can be read and set by the current user session.
@@ -3682,6 +3904,40 @@ export type EnableOfflineSupportPayload = {
 /** The output of our `enableOfflineSupport` mutation. */
 export type EnableOfflineSupportPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `failDataUpload` mutation. */
+export type FailDataUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['UUID']>;
+  msg?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `failDataUpload` mutation. */
+export type FailDataUploadPayload = {
+  __typename?: 'FailDataUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataUploadTask?: Maybe<DataUploadTask>;
+  /** An edge for our `DataUploadTask`. May be used by Relay 1. */
+  dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
+  /** Reads a single `Project` that is related to this `DataUploadTask`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `failDataUpload` mutation. */
+export type FailDataUploadPayloadDataUploadTaskEdgeArgs = {
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
 export enum FieldRuleOperator {
@@ -5329,6 +5585,7 @@ export type Mutation = {
   addValidChildSketchClass?: Maybe<AddValidChildSketchClassPayload>;
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
+  cancelDataUpload?: Maybe<CancelDataUploadPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
@@ -5375,6 +5632,7 @@ export type Mutation = {
   createDataLayer?: Maybe<CreateDataLayerPayload>;
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
+  createDataUpload?: Maybe<CreateDataUploadPayload>;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
   /** Creates a single `FormLogicCondition`. */
@@ -5561,9 +5819,11 @@ export type Mutation = {
   denyParticipant?: Maybe<DenyParticipantPayload>;
   /** Ban a user from posting in the discussion forum */
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
+  dismissFailedUpload?: Maybe<DismissFailedUploadPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
+  failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
@@ -5668,6 +5928,7 @@ export type Mutation = {
    * group memberships in the project. Available only to admins.
    */
   setUserGroups?: Maybe<SetUserGroupsPayload>;
+  submitDataUpload?: Maybe<SubmitDataUploadPayload>;
   /**
    * Toggle admin access for the given project and user. User must have already
    * joined the project and shared their user profile.
@@ -5867,6 +6128,12 @@ export type MutationArchiveResponsesArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCancelDataUploadArgs = {
+  input: CancelDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationClearFormElementStyleArgs = {
   input: ClearFormElementStyleInput;
 };
@@ -5923,6 +6190,12 @@ export type MutationCreateDataLayerArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataSourceArgs = {
   input: CreateDataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateDataUploadArgs = {
+  input: CreateDataUploadInput;
 };
 
 
@@ -6419,6 +6692,12 @@ export type MutationDisableForumPostingArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDismissFailedUploadArgs = {
+  input: DismissFailedUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableForumPostingArgs = {
   input: EnableForumPostingInput;
 };
@@ -6427,6 +6706,12 @@ export type MutationEnableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableOfflineSupportArgs = {
   input: EnableOfflineSupportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationFailDataUploadArgs = {
+  input: FailDataUploadInput;
 };
 
 
@@ -6609,6 +6894,12 @@ export type MutationSetTopicStickyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetUserGroupsArgs = {
   input: SetUserGroupsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSubmitDataUploadArgs = {
+  input: SubmitDataUploadInput;
 };
 
 
@@ -7494,6 +7785,8 @@ export type Project = Node & {
   accessControl: ProjectAccessControlSetting;
   /** Reads and enables pagination through a set of `User`. */
   accessRequestsConnection: UsersConnection;
+  /** Reads and enables pagination through a set of `DataUploadTask`. */
+  activeDataUploads?: Maybe<Array<DataUploadTask>>;
   adminCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
@@ -7522,6 +7815,8 @@ export type Project = Node & {
    * when users request layers be displayed on the map.
    */
   dataSourcesForItems?: Maybe<Array<DataSource>>;
+  /** Reads and enables pagination through a set of `DataUploadTask`. */
+  dataUploadTasksConnection: DataUploadTasksConnection;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   /**
@@ -7672,6 +7967,16 @@ export type ProjectAccessRequestsConnectionArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
+export type ProjectActiveDataUploadsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
 export type ProjectAdminsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -7722,6 +8027,21 @@ export type ProjectDataSourcesForItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectDataUploadTasksConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataUploadTaskCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
 
@@ -8390,6 +8710,11 @@ export type Query = Node & {
   dataSourcesBucketByNodeId?: Maybe<DataSourcesBucket>;
   /** Reads and enables pagination through a set of `DataSourcesBucket`. */
   dataSourcesBucketsConnection?: Maybe<DataSourcesBucketsConnection>;
+  dataUploadTask?: Maybe<DataUploadTask>;
+  /** Reads a single `DataUploadTask` using its globally unique `ID`. */
+  dataUploadTaskByNodeId?: Maybe<DataUploadTask>;
+  /** Reads and enables pagination through a set of `DataUploadTask`. */
+  dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
@@ -8669,6 +8994,30 @@ export type QueryDataSourcesBucketsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<DataSourcesBucketsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryDataUploadTaskArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryDataUploadTaskByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryDataUploadTasksConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataUploadTaskCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
 
@@ -10109,6 +10458,39 @@ export enum SpritesOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
+
+/** All input for the `submitDataUpload` mutation. */
+export type SubmitDataUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `submitDataUpload` mutation. */
+export type SubmitDataUploadPayload = {
+  __typename?: 'SubmitDataUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataUploadTask?: Maybe<DataUploadTask>;
+  /** An edge for our `DataUploadTask`. May be used by Relay 1. */
+  dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
+  /** Reads a single `Project` that is related to this `DataUploadTask`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `submitDataUpload` mutation. */
+export type SubmitDataUploadPayloadDataUploadTaskEdgeArgs = {
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
+};
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type Subscription = {
@@ -13732,6 +14114,131 @@ export type CreateProjectMutation = (
   )> }
 );
 
+export type DataUploadDetailsFragment = (
+  { __typename?: 'DataUploadTask' }
+  & Pick<DataUploadTask, 'createdAt' | 'filename' | 'id' | 'progress' | 'state' | 'errorMessage'>
+  & { layers?: Maybe<Array<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id'>
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'nodeId' | 'id'>
+    )> }
+  )>> }
+);
+
+export type CreateDataUploadMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  filename: Scalars['String'];
+  contentType: Scalars['String'];
+}>;
+
+
+export type CreateDataUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { createDataUpload?: Maybe<(
+    { __typename?: 'CreateDataUploadPayload' }
+    & { dataUploadTask?: Maybe<(
+      { __typename?: 'DataUploadTask' }
+      & Pick<DataUploadTask, 'presignedUploadUrl'>
+      & DataUploadDetailsFragment
+    )> }
+  )> }
+);
+
+export type SubmitDataUploadMutationVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type SubmitDataUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { submitDataUpload?: Maybe<(
+    { __typename?: 'SubmitDataUploadPayload' }
+    & { dataUploadTask?: Maybe<(
+      { __typename?: 'DataUploadTask' }
+      & DataUploadDetailsFragment
+    )> }
+  )> }
+);
+
+export type DataUploadTasksQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DataUploadTasksQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { activeDataUploads?: Maybe<Array<(
+      { __typename?: 'DataUploadTask' }
+      & DataUploadDetailsFragment
+    )>> }
+  )> }
+);
+
+export type DismissFailedTaskMutationVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type DismissFailedTaskMutation = (
+  { __typename?: 'Mutation' }
+  & { dismissFailedUpload?: Maybe<(
+    { __typename?: 'DismissFailedUploadPayload' }
+    & { dataUploadTask?: Maybe<(
+      { __typename?: 'DataUploadTask' }
+      & DataUploadDetailsFragment
+    )> }
+  )> }
+);
+
+export type FailUploadMutationVariables = Exact<{
+  id: Scalars['UUID'];
+  message: Scalars['String'];
+}>;
+
+
+export type FailUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { failDataUpload?: Maybe<(
+    { __typename?: 'FailDataUploadPayload' }
+    & { dataUploadTask?: Maybe<(
+      { __typename?: 'DataUploadTask' }
+      & DataUploadDetailsFragment
+    )> }
+  )> }
+);
+
+export type ProjectDataQuotaRemainingQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectDataQuotaRemainingQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
+  )> }
+);
+
+export type CancelUploadMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  uploadId: Scalars['UUID'];
+}>;
+
+
+export type CancelUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { cancelDataUpload?: Maybe<(
+    { __typename?: 'CancelDataUploadPayload' }
+    & Pick<CancelDataUploadPayload, 'clientMutationId'>
+  )> }
+);
+
 export type DownloadableOfflineTilePackagesQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -13825,7 +14332,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
@@ -13959,7 +14466,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy'>
       )> }
     )> }
   )> }
@@ -16456,6 +16963,23 @@ export const UpdateBodyFragmentDoc = /*#__PURE__*/ gql`
   body
 }
     `;
+export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment DataUploadDetails on DataUploadTask {
+  createdAt
+  filename
+  id
+  progress
+  state
+  errorMessage
+  layers {
+    id
+    tableOfContentsItem {
+      nodeId
+      id
+    }
+  }
+}
+    `;
 export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment BasemapDetails on Basemap {
   id
@@ -17552,6 +18076,71 @@ export const CreateProjectDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CreateDataUploadDocument = /*#__PURE__*/ gql`
+    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!) {
+  createDataUpload(
+    input: {filename: $filename, projectId: $projectId, contentType: $contentType}
+  ) {
+    dataUploadTask {
+      ...DataUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
+export const SubmitDataUploadDocument = /*#__PURE__*/ gql`
+    mutation submitDataUpload($id: UUID!) {
+  submitDataUpload(input: {id: $id}) {
+    dataUploadTask {
+      ...DataUploadDetails
+    }
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
+export const DataUploadTasksDocument = /*#__PURE__*/ gql`
+    query DataUploadTasks($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    activeDataUploads {
+      ...DataUploadDetails
+    }
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
+export const DismissFailedTaskDocument = /*#__PURE__*/ gql`
+    mutation DismissFailedTask($id: UUID!) {
+  dismissFailedUpload(input: {id: $id}) {
+    dataUploadTask {
+      ...DataUploadDetails
+    }
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
+export const FailUploadDocument = /*#__PURE__*/ gql`
+    mutation FailUpload($id: UUID!, $message: String!) {
+  failDataUpload(input: {id: $id, msg: $message}) {
+    dataUploadTask {
+      ...DataUploadDetails
+    }
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
+export const ProjectDataQuotaRemainingDocument = /*#__PURE__*/ gql`
+    query ProjectDataQuotaRemaining($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+  }
+}
+    `;
+export const CancelUploadDocument = /*#__PURE__*/ gql`
+    mutation CancelUpload($projectId: Int!, $uploadId: UUID!) {
+  cancelDataUpload(input: {projectId: $projectId, uploadId: $uploadId}) {
+    clientMutationId
+  }
+}
+    `;
 export const DownloadableOfflineTilePackagesDocument = /*#__PURE__*/ gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -17650,6 +18239,7 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+      uploadedSourceFilename
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -17822,6 +18412,8 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
         urls
         useDevicePixelRatio
         supportsDynamicLayers
+        uploadedSourceFilename
+        uploadedBy
       }
     }
   }
@@ -19392,6 +19984,8 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
+    DataUploadTasks: 'DataUploadTasks',
+    ProjectDataQuotaRemaining: 'ProjectDataQuotaRemaining',
     DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
     DownloadBasemapDetails: 'DownloadBasemapDetails',
     ImportBasemapDetails: 'ImportBasemapDetails',
@@ -19474,6 +20068,11 @@ export const namedOperations = {
     UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
     UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
     CreateProject: 'CreateProject',
+    createDataUpload: 'createDataUpload',
+    submitDataUpload: 'submitDataUpload',
+    DismissFailedTask: 'DismissFailedTask',
+    FailUpload: 'FailUpload',
+    CancelUpload: 'CancelUpload',
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
@@ -19568,6 +20167,7 @@ export const namedOperations = {
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
+    DataUploadDetails: 'DataUploadDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
     BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',
