@@ -139,6 +139,10 @@ async function runLambda(
       })
       .promise();
     if (!response.Payload) {
+      console.error(
+        `upload task invocation error (${event.taskId}): ${event.objectKey}`,
+        response.Payload
+      );
       throw new Error("Lambda function invocation error");
     }
     if (typeof response.Payload === "string") {
