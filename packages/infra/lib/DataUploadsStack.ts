@@ -8,7 +8,7 @@ import * as s3 from "@aws-cdk/aws-s3";
 
 export class DataUploadsStack extends cdk.Stack {
   uploadsBucket: s3.Bucket;
-  // normalizedUploadsBucket: s3.Bucket;
+  normalizedUploadsBucket: s3.Bucket;
   constructor(
     scope: cdk.Construct,
     id: string,
@@ -21,6 +21,14 @@ export class DataUploadsStack extends cdk.Stack {
       publicReadAccess: false,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
+      cors: [
+        {
+          allowedOrigins: ["*"],
+          allowedMethods: ["HEAD", "GET", "PUT"],
+          allowedHeaders: ["*"],
+          maxAge: 31536000,
+        } as s3.CorsRule,
+      ],
       //  Will lose the ability to debug upload failures after 1 week
       lifecycleRules: [
         {
@@ -35,5 +43,6 @@ export class DataUploadsStack extends cdk.Stack {
       autoDeleteObjects: false,
     });
     this.uploadsBucket = uploadsBucket;
+    this.normalizedUploadsBucket = normalizedDataBucket;
   }
 }

@@ -46,23 +46,15 @@ export default function LayerTableOfContentsItemEditor(
   });
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
   const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation();
-  const [
-    updateQueryParameters,
-    updateQueryParametersState,
-  ] = useUpdateQueryParametersMutation();
+  const [updateQueryParameters, updateQueryParametersState] =
+    useUpdateQueryParametersMutation();
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
-  const [
-    updateGLStyleMutation,
-    updateGLStyleMutationState,
-  ] = useUpdateLayerMutation();
-  const [
-    updateEnableDownload,
-    updateEnableDownloadState,
-  ] = useUpdateEnableDownloadMutation();
-  const [
-    updateEnableHighDpiRequests,
-    updateEnableHighDpiRequestsState,
-  ] = useUpdateEnableHighDpiRequestsMutation();
+  const [updateGLStyleMutation, updateGLStyleMutationState] =
+    useUpdateLayerMutation();
+  const [updateEnableDownload, updateEnableDownloadState] =
+    useUpdateEnableDownloadMutation();
+  const [updateEnableHighDpiRequests, updateEnableHighDpiRequestsState] =
+    useUpdateEnableHighDpiRequestsMutation();
 
   const item = data?.tableOfContentsItem;
   const [downloadEnabled, setDownloadEnabled] = useState<boolean>();
@@ -173,7 +165,8 @@ export default function LayerTableOfContentsItemEditor(
                 </h3>
               </div>
               <div className="mt-5 border-t border-gray-200 border-b">
-                {source?.type === DataSourceTypes.SeasketchVector && (
+                {(source?.type === DataSourceTypes.SeasketchVector ||
+                  source?.type === DataSourceTypes.SeasketchMvt) && (
                   <>
                     <dl className="sm:divide-y sm:divide-gray-200">
                       <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
@@ -181,9 +174,16 @@ export default function LayerTableOfContentsItemEditor(
                           <Trans ns={["admin"]}>Source Type</Trans>
                         </dt>
                         <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          <Trans ns={["admin"]}>
-                            GeoJSON data hosted on SeaSketch
-                          </Trans>
+                          {source?.type === DataSourceTypes.SeasketchVector && (
+                            <Trans ns={["admin"]}>
+                              GeoJSON data hosted on SeaSketch
+                            </Trans>
+                          )}
+                          {source?.type === DataSourceTypes.SeasketchMvt && (
+                            <Trans ns={["admin"]}>
+                              Vector tiles hosted on SeaSketch
+                            </Trans>
+                          )}
                         </dd>
                       </div>
                       <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
@@ -194,6 +194,19 @@ export default function LayerTableOfContentsItemEditor(
                           {bytes.format(source?.byteLength || 0)}
                         </dd>
                       </div>
+                      {source.uploadedSourceFilename && (
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                          <dt className="text-sm font-medium text-gray-500">
+                            <Trans ns={["admin"]}>Uploaded by</Trans>
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                            {source.uploadedBy || "Unknown"}
+                            {source.createdAt &&
+                              " on " +
+                                new Date(source.createdAt).toLocaleDateString()}
+                          </dd>
+                        </div>
+                      )}
                       <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>Original Source</Trans>
@@ -211,16 +224,17 @@ export default function LayerTableOfContentsItemEditor(
                             </a>
                           )}
                           {source?.importType ===
-                            DataSourceImportTypes.Upload && "User Upload"}
+                            DataSourceImportTypes.Upload &&
+                            (source.uploadedSourceFilename || "User Upload")}
                         </dd>
                       </div>
                       <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>Actions</Trans>
                         </dt>
-                        <dd className="mt-1 text-sm text-gray-400 sm:mt-0 sm:col-span-2">
+                        <dd className="mt-1 text-sm text-gray-400 sm:mt-0 sm:col-span-2 space-x-2">
                           <button
-                            className="font-semibold text-primary-600 px-2"
+                            className="font-semibold text-primary-600"
                             onClick={async () => {
                               const data = await fetch(
                                 `${source.bucketId!}/${source.objectKey}`
@@ -239,7 +253,7 @@ export default function LayerTableOfContentsItemEditor(
                           >
                             <Trans ns={["admin"]}>Download</Trans>
                           </button>
-                          |
+                          {/* |
                           <button
                             disabled
                             className="font-semibold text-gray-400 px-2"
@@ -252,7 +266,7 @@ export default function LayerTableOfContentsItemEditor(
                             className="font-semibold text-gray-400 px-2"
                           >
                             <Trans ns={["admin"]}>Update from ArcGIS</Trans>
-                          </button>
+                          </button> */}
                         </dd>
                       </div>
                     </dl>
@@ -385,38 +399,39 @@ export default function LayerTableOfContentsItemEditor(
                   {t("Using a lower level of precision reduces download size")}
                 </InputBlock>
               )}
-              {source?.type === DataSourceTypes.Geojson ||
-                (source?.type === DataSourceTypes.SeasketchVector && (
-                  <div className="mt-5">
-                    <div className="flex">
-                      <div className="flex-1 text-sm font-medium text-gray-700">
-                        <Trans ns={["admin"]}>Enable data download</Trans>
-                      </div>
-                      <div className="flex-none">
-                        <Switch
-                          isToggled={
-                            downloadEnabled === undefined
-                              ? item.enableDownload
-                              : downloadEnabled
-                          }
-                          onClick={() =>
-                            setDownloadEnabled(
-                              !(downloadEnabled === undefined
-                                ? item.enableDownload
-                                : downloadEnabled)
-                            )
-                          }
-                        />
-                      </div>
+              {(source?.type === DataSourceTypes.Geojson ||
+                source?.type === DataSourceTypes.SeasketchVector ||
+                source?.type === DataSourceTypes.SeasketchMvt) && (
+                <div className="mt-5">
+                  <div className="flex">
+                    <div className="flex-1 text-sm font-medium text-gray-700">
+                      <Trans ns={["admin"]}>Enable data download</Trans>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      <Trans ns={["admin"]}>
-                        If enabled, users will be able to download this dataset
-                        in GeoJSON vector format using the context menu.
-                      </Trans>
-                    </p>
+                    <div className="flex-none">
+                      <Switch
+                        isToggled={
+                          downloadEnabled === undefined
+                            ? item.enableDownload
+                            : downloadEnabled
+                        }
+                        onClick={() =>
+                          setDownloadEnabled(
+                            !(downloadEnabled === undefined
+                              ? item.enableDownload
+                              : downloadEnabled)
+                          )
+                        }
+                      />
+                    </div>
                   </div>
-                ))}
+                  <p className="text-sm text-gray-500 mt-1">
+                    <Trans ns={["admin"]}>
+                      If enabled, users will be able to download this dataset in
+                      GeoJSON vector format using the context menu.
+                    </Trans>
+                  </p>
+                </div>
+              )}
               {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
                 <>
                   <InputBlock
@@ -551,6 +566,7 @@ export default function LayerTableOfContentsItemEditor(
           {source &&
             (source.type === DataSourceTypes.Geojson ||
               source.type === DataSourceTypes.SeasketchVector ||
+              source.type === DataSourceTypes.SeasketchMvt ||
               source.type === DataSourceTypes.Vector) && (
               <div className="mt-5">
                 <div className="flex-1 text-sm font-medium text-gray-700">

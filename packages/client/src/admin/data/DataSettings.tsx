@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import {
   Link,
   Route,
@@ -13,6 +13,8 @@ import { useProjectRegionQuery } from "../../generated/graphql";
 import bbox from "@turf/bbox";
 import { MapContext, useMapContext } from "../../dataLayers/MapContextManager";
 import { useTranslation } from "react-i18next";
+import DataUploadDropzone from "../uploads/DataUploadDropzone";
+
 const LazyArcGISBrowser = React.lazy(
   () =>
     import(
@@ -30,12 +32,13 @@ export default function DataSettings() {
       slug,
     },
   });
+
   return (
     <>
       <MapContext.Provider value={mapContext}>
         <Switch>
           <Route exact path={`${path}`}>
-            <div className="flex flex-row h-screen">
+            <DataUploadDropzone slug={slug} className="flex flex-row h-screen">
               <div className="h-full w-128">
                 <LayerAdminSidebar />
               </div>
@@ -56,7 +59,7 @@ export default function DataSettings() {
                   />
                 )}
               </div>
-            </div>
+            </DataUploadDropzone>
           </Route>
           <Route exact path={`${path}/add-data`}>
             <div className="pt-2 pb-6 md:py-6">

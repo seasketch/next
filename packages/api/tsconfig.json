@@ -65,6 +65,11 @@
     "allowJs": true,
     "checkJs": false
   },
-  "include": ["**/*", "src/ExportUtils.js", "tasks/createTilePackage.ts"],
+  "include": [
+    "**/*",
+    "src/ExportUtils.js",
+    "tasks/createTilePackage.ts",
+    "src/crontab"
+  ],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"]
 }

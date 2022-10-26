@@ -1,0 +1,81 @@
+fragment DataUploadDetails on DataUploadTask {
+  createdAt
+  filename
+  id
+  progress
+  state
+  errorMessage
+  layers {
+    id
+    tableOfContentsItem {
+      nodeId
+      id
+    }
+  }
+}
+
+mutation createDataUpload(
+  $projectId: Int!
+  $filename: String!
+  $contentType: String!
+) {
+  createDataUpload(
+    input: {
+      filename: $filename
+      projectId: $projectId
+      contentType: $contentType
+    }
+  ) {
+    dataUploadTask {
+      ...DataUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+
+mutation submitDataUpload($id: UUID!) {
+  submitDataUpload(input: { id: $id }) {
+    dataUploadTask {
+      ...DataUploadDetails
+    }
+  }
+}
+
+query DataUploadTasks($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    activeDataUploads {
+      ...DataUploadDetails
+    }
+  }
+}
+
+mutation DismissFailedTask($id: UUID!) {
+  dismissFailedUpload(input: { id: $id }) {
+    dataUploadTask {
+      ...DataUploadDetails
+    }
+  }
+}
+
+mutation FailUpload($id: UUID!, $message: String!) {
+  failDataUpload(input: { id: $id, msg: $message }) {
+    dataUploadTask {
+      ...DataUploadDetails
+    }
+  }
+}
+
+query ProjectDataQuotaRemaining($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+  }
+}
+
+mutation CancelUpload($projectId: Int!, $uploadId: UUID!) {
+  cancelDataUpload(input: { projectId: $projectId, uploadId: $uploadId }) {
+    clientMutationId
+  }
+}

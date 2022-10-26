@@ -196,6 +196,10 @@ run({
     ? parseInt(process.env.GRAPHILE_POLL_INTERVAL)
     : 1000,
   taskDirectory: path.join(__dirname, "..", "tasks"),
+  crontab: `
+    * * * * * cleanupDataUploads
+    * * * * * cleanupDeletedOverlayRecords
+  `,
 });
 
 const tilesetPool = createPool();
