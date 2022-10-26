@@ -143,6 +143,8 @@ async function runLambda(
         `upload task invocation error (${event.taskId}): ${event.objectKey}`,
         response.Payload
       );
+      console.log(event);
+      console.log("lambda arn = ", process.env.SPATIAL_UPLOADS_LAMBDA_ARN);
       throw new Error("Lambda function invocation error");
     }
     if (typeof response.Payload === "string") {
