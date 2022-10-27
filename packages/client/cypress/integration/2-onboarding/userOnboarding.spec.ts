@@ -826,7 +826,91 @@ describe('User onboarding via email invites', () => {
       });
     };
   });
-  describe.only('A user accepting an expired invite', () => {
+  describe.only('A user with two SeaSketch accounts accepting an invite', () => {
+    const projectOption = 'public'
+    beforeEach(() => {
+      cy.intercept("http://localhost:3857/graphql", (req) => {
+        if ((req.body.operationName) && (req.body.operationName === "CypressCreateProjectInvites")) {
+          req.alias = "createProjectInvites"
+        };
+        if ((req.body.operationName) && (req.body.operationName === "VerifyProjectInvite")) {
+          req.alias = "verifyProjectInvite"
+        };
+      });
+    });
+    before(() => {
+      cy.getToken("User 1").then(({ access_token }) => {
+        cy.wrap(access_token).as("token");
+        cy.setLocalStorage("token", access_token);
+        cy.createProject(
+          `${projectDetails[projectOption].name}`,
+          `${projectDetails[projectOption].slug}`,
+          projectDetails[projectOption].accessControl,
+          true
+        ).then((id) => {
+          cy.setLocalStorage('projectId', id as any);
+          cy.setLocalStorage('token', access_token);
+          cy.saveLocalStorage();
+        })
+      });
+    });
+    after(() => {
+      Cypress.on('uncaught:exception', (err, runnable) => {
+        if (err.message.includes('ServiceWorker')) {
+          return false;
+        }
+      });
+      cy.deleteProject(`${projectDetails[projectOption].slug}`);
+    });
+    it('Creates a project invite', () => {
+      Cypress.on('uncaught:exception', (err, runnable) => {
+        if (err.message.includes('ServiceWorker')) {
+          return false;
+        }
+      });
+      cy.restoreLocalStorage();
+      let options = ['test_user_1@seasketch.org', true, false];
+      cy.getLocalStorage('projectId').then((id) => {
+        const projectId = parseInt(id);
+        cy.getLocalStorage('token').then((token) => {
+          cy.createProjectInvites(projectId, options, token).then((resp) => {
+            const respData = resp.createProjectInvites
+            //check that the project has the correct accessControl and is public
+            expect (respData.query.project.accessControl).to.equal(`${projectDetails[projectOption].accessControl}`);
+            expect (respData.query.project.isListed).to.equal(true);
+            const projectInvites = resp.createProjectInvites.projectInvites;
+            expect (projectInvites.length).to.gte(1);
+            expect (projectInvites[0].email).to.eq(options[0]);
+            expect (projectInvites[0].projectId).to.eq(projectId);
+          });
+        });
+      });
+    });
+    it('Prompts signed-in user to accept invite or logout and sign in to recipient account', () => {
+      cy.login('User 2');
+      cy.visit('/'); 
+      cy.get('#user-menu').click(); 
+      cy.contains('test_user_2@seasketch.org');
+      cy.readFile(__dirname + "./../../../../api/invite-emails-cypress/email").then((txt) => {
+        const textAry = txt.split("\n");
+        const inviteUrl = textAry.find(element => element.includes('https'));
+        expect (txt).to.include(`Destination: test_user_1@seasketch.org`);
+        expect (txt).to.include(projectDetails[projectOption].name);
+        expect (txt).to.include('token');
+        let urlAry = inviteUrl.split('/');
+        urlAry.splice(0,3, Cypress.config().baseUrl);
+        cy.visit(urlAry.join('/'));
+        cy.wait('@verifyProjectInvite').its('response').then((resp) => {
+          expect(resp.body.data.verifyProjectInvite.claims.email).to.equal('test_user_1@seasketch.org');
+          expect(resp.body.data.verifyProjectInvite.error).to.eq(null);
+          cy.contains('This invitation was originally sent to test_user_1@seasketch.org');
+          cy.contains('Logout and sign in');
+          cy.contains('Accept as test_user_2@seasketch.org');
+        });
+      });
+    });
+  }); 
+  describe('A user accepting an expired invite', () => {
     const projectOption = 'public'
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
