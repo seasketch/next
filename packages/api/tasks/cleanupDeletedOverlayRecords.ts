@@ -96,10 +96,6 @@ export default async function cleanupDeletedOverlayRecords(
       ]);
     }
 
-    // TODO: delete old deleted_data_layers and replace with table that just
-    // stores geojson objectId and bucket when no upload is associated with a
-    // deleted data_source (esri imports)
-
     const data = await client.query(
       `select deleted_geojson_objects.id, deleted_geojson_objects.object_key, data_sources_buckets.bucket as bucket from deleted_geojson_objects inner join data_sources_buckets on data_sources_buckets.url = deleted_geojson_objects.bucket`
     );
