@@ -95,7 +95,9 @@ export default function DataUploadTaskList({
                 100
             )}
             {"% "}
-            of {bytes(data.projectBySlug.dataHostingQuota)}{" "}
+            of {bytes(
+              parseInt(data.projectBySlug.dataHostingQuota.toString())
+            )}{" "}
             <button
               onClick={() =>
                 alert(

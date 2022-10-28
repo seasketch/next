@@ -8886,8 +8886,8 @@ type Project implements Node {
   communityGuidelines: CommunityGuideline
   createdAt: Datetime
   creatorId: Int!
-  dataHostingQuota: Int
-  dataHostingQuotaUsed: Int
+  dataHostingQuota: BigInt
+  dataHostingQuotaUsed: BigInt
 
   """
   Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
