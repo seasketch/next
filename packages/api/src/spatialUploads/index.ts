@@ -230,6 +230,7 @@ function getStyle(type: GeoJsonGeometryTypes, colorIndex: number) {
           },
         },
       ];
+    case "MultiPoint":
     case "Point":
       [
         {
