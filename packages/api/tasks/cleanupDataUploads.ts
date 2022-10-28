@@ -1,7 +1,6 @@
 import { Helpers } from "graphile-worker";
-import { UPLOAD_TASK_PRESIGNED_URL_TTL } from "../src/plugins/dataUploadTaskPlugin";
 
-const UPLOAD_TASK_TIMEOUT = UPLOAD_TASK_PRESIGNED_URL_TTL;
+const UPLOAD_TASK_TIMEOUT = 5 * 60;
 
 /**
  * graphile-worker task cleans up upload records in a couple different scenarios
@@ -19,10 +18,10 @@ async function cleanupDataUploads(payload: {}, helpers: Helpers) {
   await helpers.withPgClient(async (client) => {
     await client.query(`
       update data_upload_tasks set state = 'failed', error_message = '10 minute timeout' where (state != 'complete' and state != 'failed' and state != 'failed_dismissed') and (started_at < NOW() - INTERVAL '${
-        UPLOAD_TASK_TIMEOUT + 1
-      } minutes' or created_at < NOW() - INTERVAL '${
-      UPLOAD_TASK_TIMEOUT + 3
-    } minutes')
+        UPLOAD_TASK_TIMEOUT + 60
+      } seconds' or created_at < NOW() - INTERVAL '${
+      UPLOAD_TASK_TIMEOUT + 120
+    } seconds')
     `);
     await client.query(`
       delete from data_upload_tasks where state = 'awaiting_upload' and created_at < NOW() - INTERVAL '1 day' 

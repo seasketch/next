@@ -104,6 +104,9 @@ export default async function processDataUpload(
 
 const client = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
+  httpOptions: {
+    timeout: 60000 * 5.5,
+  },
 });
 
 async function runLambda(
