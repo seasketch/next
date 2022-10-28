@@ -17,7 +17,6 @@ export async function createTableOfContentsItemForLayer(
     [projectId]
   );
   let uploadCount = uploadCountResult.rows[0].count;
-  console.log("upload task ID", uploadTaskId);
   if (layer.outputs.find((output) => output.type === "FlatGeobuf")) {
     // vector
     const geojson = layer.outputs.find((output) => output.type === "GeoJSON");
@@ -119,7 +118,7 @@ export async function createTableOfContentsItemForLayer(
       [
         projectId,
         nanoId(),
-        layer.name,
+        layer.name.replace("_", " "),
         false,
         layer.bounds,
         dataLayerId,
