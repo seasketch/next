@@ -83,9 +83,9 @@ export default function TextInput(props: TextInputOptions) {
 
   const InputTag = textarea
     ? // eslint-disable-next-line i18next/no-literal-string
-      `textarea`
+      (props: any) => <textarea {...props}>{props.children}</textarea>
     : // eslint-disable-next-line i18next/no-literal-string
-      (`input` as keyof JSX.IntrinsicElements);
+      (props: any) => <input {...props}>{props.children}</input>;
 
   return (
     <div>
@@ -100,7 +100,7 @@ export default function TextInput(props: TextInputOptions) {
 
       <div className="mt-1 relative rounded-md shadow-sm">
         <InputTag
-          autoFocus={!!props.autoFocus}
+          autoFocus={Boolean(props.autoFocus)}
           // @ts-ignore
           type={props.type || "text"}
           name={name}
