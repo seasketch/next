@@ -34,25 +34,14 @@ let newUser;
 const users = require("../../fixtures/users.json");
 
 describe ("User onboarding via independent browsing", () => {
-  describe ("Unauthenticated user visiting a public project", () => {
+  describe.only ("Unauthenticated user visiting a public project", () => {
     beforeEach(() => {
-        cy.window().then((window) => {
-          window.sessionStorage.clear();
-          window.localStorage.clear();
-          console.log(window.caches)
-        });
-      cy.clearLocalStorage()
-      cy.clearCookies()
-      cy.intercept('/service-worker.js').as('serviceWorker')
-    })
-    before(() => Cypress.automation(
-      'remote:debugger:protocol', 
-      { 
-        command: 'Network.setCacheDisabled',
-        params: { cacheDisabled: true }
-      }
-    ))
+     cy.intercept('/service-worker.js').as('serviceWorker')
+    });
     before (() => {
+      cy.wrap(Cypress.automation('remote:debugger:protocol', {
+        command: 'Network.clearBrowserCache',
+      }));
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
         cy.setLocalStorage("token", access_token);
@@ -61,62 +50,60 @@ describe ("User onboarding via independent browsing", () => {
           'cy-public',
           ProjectAccessControlSetting.Public,
           true
-        )
-        .then((projectId) => { 
-          
-        }
-        )
-    })
-  })
-  after(() => {
-    cy.deleteProject('cy-public')
-    cy.deleteUser(`cypress_${slug}@seasketch.org`)
-  })
+        );
+      });
+    });
+    after(() => {
+      cy.deleteProject('cy-public')
+      getAuth0ApiToken().then((resp) => {
+        const token = resp.access_token;
+        deleteAllAuth0CypressUsers(token);
+      });
+      cy.deleteUser(newUser);
+    });
     it('Visits the project homepage', () =>{
       Cypress.on('uncaught:exception', (err, runnable) => {
-        // we expect a 3rd party library error with message 'list not defined'
-        // and don't want to fail the test so we return false
         if (err.message.includes('ServiceWorker')) {
           return false
         }
-        // we still want to ensure there are no other unexpected
-        // errors, so we let them fail the test
-      })
-      cy.visit('/')
-      //cy.contains('Maldives Testing').click()
-      cy.get('a#nav-projects').click()
-
-      cy.wait('@serviceWorker')//.its('response.statusCode').should('equal', 304)
-      //cy.contains('SeaSketch')
-      //  .should('be.visible')
-      
-    })
+      });
+      cy.visit('/');
+      cy.get('a#nav-projects').click();
+      cy.wait('@serviceWorker').its('response.statusCode').should('eq', 200);
+    });
     it ('Should be prompted to share profile information', () => {
-      cy.contains("Cypress").click()
-      ////cy.deleteUser('anon@seasketch.org')
-      cy.contains("Sign In")
-        .should('be.visible')
-        .click(); 
-      
-      
-      //cy.get('a').then((a) => {
-      //  if (a.text().includes('Sign up')) {
-          cy.contains('Sign up')
-            .click();
-          cy.get('#email')
-            .clear()
-            .type(`cypress_${slug}@seasketch.org`);
-          cy.get('#password')
-            .clear()
-            .type('password');
-          cy.contains('Continue')
-            .click();
-          cy.contains('Authorize App')
-          cy.contains('Accept')
-            .click();
-          cy.get('h1');
+      const userSlug = generateSlug();
+      newUser = `cypress_user_${userSlug}@seasketch.org`
+      cy.contains("Cypress Public Project").click();
+      cy.get('button').then((btn) => {
+        if (btn.text().includes('Sign In')) {
+          cy.contains('Sign In').click()
+        }
+      });
+      cy.get('a').then((a) => {
+        if (a.text().includes('Sign up')) {
+        cy.contains('Sign up')
+          .click();
+        cy.get('#email')
+          .clear()
+          .type(`${newUser}`);
+        cy.get('#password')
+          .clear()
+          .type('password');
+        cy.contains('Continue')
+          .click();
+        cy.contains('Authorize App')
+        cy.contains('Accept')
+          .click();
+        cy.get('h1');
+        }
+      });
+      cy.contains('Cypress Public Project');
+      cy.contains('Join this Project');
     });
   });
+
+  //####
   describe('Authenticated user (but not a participant) visiting an invite-only project', () => {
     beforeEach(() => {
       cy.intercept('/service-worker.js').as('serviceWorker'); 
@@ -826,7 +813,7 @@ describe('User onboarding via email invites', () => {
       });
     };
   });
-  describe.only('A user with two SeaSketch accounts accepting an invite', () => {
+  describe('A user with two SeaSketch accounts accepting an invite', () => {
     const projectOption = 'public'
     beforeEach(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
