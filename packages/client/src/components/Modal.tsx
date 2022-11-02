@@ -1,13 +1,13 @@
 /* eslint-disable i18next/no-literal-string */
 import { ReactNode, useEffect } from "react";
 import Spinner from "./Spinner";
-import { Fragment, useRef, useState } from "react";
-import { Dialog, Tab, Transition } from "@headlessui/react";
+import { useRef, useState } from "react";
+import { Dialog, Tab } from "@headlessui/react";
 import {
   ExclamationCircleIcon,
   ExclamationIcon,
 } from "@heroicons/react/outline";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 
 export type FooterButtonProps = {
   disabled?: boolean;
@@ -282,6 +282,7 @@ function FooterButton(props: FooterButtonProps) {
     if (ref.current && props.autoFocus) {
       ref.current.focus();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <button

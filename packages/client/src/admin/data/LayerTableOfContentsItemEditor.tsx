@@ -17,18 +17,14 @@ import MutableAutosaveInput from "../MutableAutosaveInput";
 import { MutableRadioGroup } from "../../components/RadioGroup";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
 import bytes from "bytes";
-import slugify from "slugify";
 import Switch from "../../components/Switch";
 import InteractivitySettings from "./InteractivitySettings";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
-import GLStyleEditor2 from "./GLStyleEditor/Editor";
-import {
-  DotsHorizontalIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/outline";
+import GLStyleEditor from "./GLStyleEditor/Editor";
+import { DotsHorizontalIcon } from "@heroicons/react/outline";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -39,7 +35,7 @@ export default function LayerTableOfContentsItemEditor(
   props: LayerTableOfContentsItemEditorProps
 ) {
   const { t } = useTranslation(["admin"]);
-  const { data, loading, error } = useGetLayerItemQuery({
+  const { data } = useGetLayerItemQuery({
     variables: {
       id: props.itemId,
     },
@@ -53,7 +49,7 @@ export default function LayerTableOfContentsItemEditor(
     useUpdateLayerMutation();
   const [updateEnableDownload, updateEnableDownloadState] =
     useUpdateEnableDownloadMutation();
-  const [updateEnableHighDpiRequests, updateEnableHighDpiRequestsState] =
+  const [updateEnableHighDpiRequests] =
     useUpdateEnableHighDpiRequestsMutation();
 
   const item = data?.tableOfContentsItem;
@@ -82,6 +78,7 @@ export default function LayerTableOfContentsItemEditor(
         },
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [downloadEnabled, item?.enableDownload]);
 
   useEffect(() => {
@@ -96,6 +93,7 @@ export default function LayerTableOfContentsItemEditor(
         },
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedStyle]);
 
   return (
@@ -239,6 +237,7 @@ export default function LayerTableOfContentsItemEditor(
                               target="_blank"
                               className="text-primary-600 underline"
                               href={source?.originalSourceUrl}
+                              rel="noreferrer"
                             >
                               {source?.originalSourceUrl
                                 .replace("https://", "")
@@ -337,6 +336,7 @@ export default function LayerTableOfContentsItemEditor(
                             target="_blank"
                             className="text-primary-600 underline"
                             href={source.url!}
+                            rel="noreferrer"
                           >
                             {source
                               .url!.replace("https://", "")
@@ -369,6 +369,7 @@ export default function LayerTableOfContentsItemEditor(
                             target="_blank"
                             className="text-primary-600 underline"
                             href={source.url!}
+                            rel="noreferrer"
                           >
                             {source
                               .url!.replace("https://", "")
@@ -623,6 +624,7 @@ export default function LayerTableOfContentsItemEditor(
                       className="underline text-primary-500"
                       href="https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/"
                       target="_blank"
+                      rel="noreferrer"
                     >
                       MapBox GL Style Layers
                     </a>
@@ -631,7 +633,7 @@ export default function LayerTableOfContentsItemEditor(
                     SeaSketch.
                   </Trans>
                 </p>
-                <GLStyleEditor2
+                <GLStyleEditor
                   dataLayerId={layer?.id}
                   initialStyle={
                     typeof layer!.mapboxGlStyles! === "string"

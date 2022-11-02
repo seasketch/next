@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import CodeMirror from "@uiw/react-codemirror";
 import { json, jsonParseLinter, jsonLanguage } from "@codemirror/lang-json";
 import { sublime } from "@uiw/codemirror-theme-sublime";
@@ -9,7 +8,7 @@ import {
   validateGLStyleFragment,
 } from "./extensions/glStyleValidator";
 import { glStyleAutocomplete } from "./extensions/glStyleAutocomplete";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 
 interface GLStyleEditorProps {
@@ -37,8 +36,8 @@ const extensions = [
  * @param props
  * @returns
  */
-export default function GLStyleEditor2(props: GLStyleEditorProps) {
-  const [value, setValue] = useState(props.initialStyle);
+export default function GLStyleEditor(props: GLStyleEditorProps) {
+  const [value] = useState(props.initialStyle);
   const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
 
   return (

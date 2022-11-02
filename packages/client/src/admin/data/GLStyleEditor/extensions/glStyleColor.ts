@@ -51,6 +51,7 @@ function colorDecorations(view: EditorView) {
                 value
               );
             if (!match) return;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const [_, r, g, b, a] = match;
             const hex = rgbToHex(Number(r), Number(g), Number(b));
             const widget = Decoration.widget({
@@ -358,6 +359,7 @@ export function RGBToHSL(r: number, g: number, b: number) {
     s,
     l = (max + min) / 2;
 
+  // eslint-disable-next-line eqeqeq
   if (max == min) {
     h = s = 0; // achromatic
   } else {

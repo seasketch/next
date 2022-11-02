@@ -1,10 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import {
-  InformationCircleIcon,
-  StopIcon,
-  TrashIcon,
-  XIcon,
-} from "@heroicons/react/outline";
+import { InformationCircleIcon, XIcon } from "@heroicons/react/outline";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Prompt, useParams } from "react-router-dom";

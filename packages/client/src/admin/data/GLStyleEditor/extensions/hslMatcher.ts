@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable no-useless-escape */
 // copied from https://github.com/jaywcjlove/hsl-matcher
 // license: https://github.com/jaywcjlove/hsl-matcher/blob/main/LICENSE
 

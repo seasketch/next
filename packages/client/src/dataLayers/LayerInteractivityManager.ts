@@ -194,7 +194,7 @@ export default class LayerInteractivityManager {
       }
     } else {
       if (typeof action === "function") {
-        this.previousState = action(({} as unknown) as MapContextInterface);
+        this.previousState = action({} as unknown as MapContextInterface);
       } else {
         this.previousState = action;
       }
@@ -345,7 +345,7 @@ export default class LayerInteractivityManager {
               l.sublayer?.toString() === sublayerData[0].sublayer.toString() &&
               l.dataSourceId === sublayerData[0].sourceId
           )?.interactivitySettings;
-          var popup = new Popup({ closeOnClick: true, closeButton: false })
+          new Popup({ closeOnClick: true, closeButton: false })
             .setLngLat(position)
             .setHTML(
               Mustache.render(interactivitySetting!.longTemplate || "", {
