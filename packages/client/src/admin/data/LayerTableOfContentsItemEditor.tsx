@@ -25,6 +25,10 @@ import useDebounce from "../../useDebounce";
 import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
 import GLStyleEditor2 from "./GLStyleEditor/Editor";
+import {
+  DotsHorizontalIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/outline";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -54,6 +58,8 @@ export default function LayerTableOfContentsItemEditor(
 
   const item = data?.tableOfContentsItem;
   const [downloadEnabled, setDownloadEnabled] = useState<boolean>();
+
+  const [showMoreColumns, setShowMoreColums] = useState(false);
 
   const [style, setStyle] = useState<string>();
   const debouncedStyle = useDebounce(style, 250);
@@ -182,6 +188,26 @@ export default function LayerTableOfContentsItemEditor(
                           )}
                         </dd>
                       </div>
+                      {source.geostats && source.geostats.geometry && (
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                          <dt className="text-sm font-medium text-gray-500">
+                            <Trans ns={["admin"]}>Geometry Type</Trans>
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                            {source.geostats.geometry}
+                          </dd>
+                        </div>
+                      )}
+                      {source.geostats && source.geostats.count && (
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                          <dt className="text-sm font-medium text-gray-500">
+                            <Trans ns={["admin"]}>Feature Count</Trans>
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                            {source.geostats.count}
+                          </dd>
+                        </div>
+                      )}
                       <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>File Size</Trans>
@@ -224,47 +250,68 @@ export default function LayerTableOfContentsItemEditor(
                             (source.uploadedSourceFilename || "User Upload")}
                         </dd>
                       </div>
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Actions</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-400 sm:mt-0 sm:col-span-2 space-x-2">
-                          <button
-                            className="font-semibold text-primary-600"
-                            onClick={async () => {
-                              const data = await fetch(
-                                `${source.bucketId!}/${source.objectKey}`
-                              ).then((r) => r.json());
-                              var json = JSON.stringify(data);
-                              var blob = new Blob([json], {
-                                type: "application/json",
-                              });
-                              var url = URL.createObjectURL(blob);
-                              var a = document.createElement("a");
-                              a.download = `${slugify(item.title)}.json`;
-                              a.href = url;
-                              a.textContent = `${slugify(item.title)}.json`;
-                              a.click();
-                            }}
-                          >
-                            <Trans ns={["admin"]}>Download</Trans>
-                          </button>
-                          {/* |
-                          <button
-                            disabled
-                            className="font-semibold text-gray-400 px-2"
-                          >
-                            <Trans ns={["admin"]}>Upload</Trans>
-                          </button>
-                          |
-                          <button
-                            disabled
-                            className="font-semibold text-gray-400 px-2"
-                          >
-                            <Trans ns={["admin"]}>Update from ArcGIS</Trans>
-                          </button> */}
-                        </dd>
-                      </div>
+                      {source.geostats &&
+                        source.geostats.attributes &&
+                        Array.isArray(source.geostats.attributes) && (
+                          <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                            <h4 className="text-sm font-medium text-gray-500">
+                              <Trans ns={["admin"]}>Columns</Trans>
+                            </h4>
+                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                              {(
+                                source.geostats.attributes as {
+                                  type: string;
+                                  count: number;
+                                  attribute: string;
+                                  values: any[];
+                                  max?: number;
+                                  min?: number;
+                                }[]
+                              )
+                                .slice(
+                                  0,
+                                  showMoreColumns
+                                    ? source.geostats.attributes.length
+                                    : 4
+                                )
+                                .map((attr) => {
+                                  return (
+                                    <div className="flex">
+                                      <div className="flex-1 italic">
+                                        {attr.attribute}{" "}
+                                        {attr.values.length && (
+                                          <div
+                                            className="inline-block cursor-help"
+                                            title={attr.values.join("\n")}
+                                          >
+                                            <DotsHorizontalIcon className="w-4 h-4 inline-block text-gray-500" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="font-mono px-2">
+                                        {attr.type}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              {showMoreColumns === false &&
+                                source.geostats.attributes.length > 4 && (
+                                  <button
+                                    className="underline py-1 text-primary-500"
+                                    onClick={() => setShowMoreColums(true)}
+                                  >
+                                    <Trans ns="admin:data">
+                                      Show{" "}
+                                      {(
+                                        source.geostats.attributes.length - 4
+                                      ).toString()}{" "}
+                                      more
+                                    </Trans>
+                                  </button>
+                                )}
+                            </dd>
+                          </div>
+                        )}{" "}
                     </dl>
                   </>
                 )}

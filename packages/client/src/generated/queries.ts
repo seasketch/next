@@ -7798,8 +7798,8 @@ export type Project = Node & {
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
   creatorId: Scalars['Int'];
-  dataHostingQuota?: Maybe<Scalars['Int']>;
-  dataHostingQuotaUsed?: Maybe<Scalars['Int']>;
+  dataHostingQuota?: Maybe<Scalars['BigInt']>;
+  dataHostingQuotaUsed?: Maybe<Scalars['BigInt']>;
   /**
    * Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataSourcesForItems` to progressively load layer information
@@ -14466,7 +14466,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats'>
       )> }
     )> }
   )> }
@@ -18414,6 +18414,7 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
         supportsDynamicLayers
         uploadedSourceFilename
         uploadedBy
+        geostats
       }
     }
   }
