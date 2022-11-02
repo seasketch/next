@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from "react";
-import TextInput from "../../components/TextInput";
+import { useEffect, useState } from "react";
 import {
   useGetLayerItemQuery,
   useUpdateTableOfContentsItemMutation,
   useUpdateDataSourceMutation,
   RenderUnderType,
   useUpdateLayerMutation,
-  AccessControlListType,
   DataSourceTypes,
   DataSourceImportTypes,
   useUpdateEnableDownloadMutation,
@@ -14,21 +12,19 @@ import {
   useUpdateEnableHighDpiRequestsMutation,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
-import TableOfContentsItemAutosaveInput from "./TableOfContentsItemAutosaveInput";
 import Spinner from "../../components/Spinner";
 import MutableAutosaveInput from "../MutableAutosaveInput";
-import RadioGroup, { MutableRadioGroup } from "../../components/RadioGroup";
+import { MutableRadioGroup } from "../../components/RadioGroup";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
 import bytes from "bytes";
-import Button from "../../components/Button";
 import slugify from "slugify";
 import Switch from "../../components/Switch";
 import InteractivitySettings from "./InteractivitySettings";
-import GLStyleEditor from "./GLStyleEditor";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
+import GLStyleEditor2 from "./GLStyleEditor/Editor";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -130,7 +126,7 @@ export default function LayerTableOfContentsItemEditor(
         <div className="flex-1 overflow-y-scroll px-4 pb-4">
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput
-              autofocus
+              // autofocus
               mutation={mutateItem}
               mutationStatus={mutateItemState}
               propName="title"
@@ -573,7 +569,7 @@ export default function LayerTableOfContentsItemEditor(
                   <Trans ns={["admin"]}>Vector Style</Trans>
                   <SaveStateIndicator {...updateGLStyleMutationState} />
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 mb-2">
                   <Trans ns={["admin"]}>
                     Vector layers can be styled using{" "}
                     <a
@@ -588,14 +584,13 @@ export default function LayerTableOfContentsItemEditor(
                     SeaSketch.
                   </Trans>
                 </p>
-                <GLStyleEditor
+                <GLStyleEditor2
                   dataLayerId={layer?.id}
                   initialStyle={
                     typeof layer!.mapboxGlStyles! === "string"
                       ? layer!.mapboxGlStyles
                       : JSON.stringify(layer!.mapboxGlStyles!, null, "  ")
                   }
-                  geometryType={"Polygon"}
                   onChange={(newStyle) => {
                     client.writeFragment({
                       id: `DataLayer:${layer!.id}`,
@@ -610,11 +605,6 @@ export default function LayerTableOfContentsItemEditor(
                     });
                     setStyle(newStyle);
                   }}
-                  arcgisServerSource={
-                    source?.originalSourceUrl
-                      ? source.originalSourceUrl
-                      : undefined
-                  }
                 />
               </div>
             )}
