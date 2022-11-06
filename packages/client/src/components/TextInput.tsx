@@ -1,5 +1,11 @@
 import { FieldMetaProps, FormikProps } from "formik";
-import React, { useState, useEffect, KeyboardEvent, ReactElement } from "react";
+import React, {
+  useState,
+  useEffect,
+  KeyboardEvent,
+  ReactElement,
+  useRef,
+} from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
@@ -52,6 +58,7 @@ export default function TextInput(props: TextInputOptions) {
   const [showSaved, setShowSaved] = useState(true);
   let error = props.error;
   const name = props.field?.name ? props.field.name : props.name;
+  const ref = useRef<HTMLElement>(null);
   if (
     props.field &&
     props.form &&
@@ -83,9 +90,18 @@ export default function TextInput(props: TextInputOptions) {
 
   const InputTag = textarea
     ? // eslint-disable-next-line i18next/no-literal-string
-      (props: any) => <textarea {...props}>{props.children}</textarea>
+      (`textarea` as keyof JSX.IntrinsicElements)
     : // eslint-disable-next-line i18next/no-literal-string
-      (props: any) => <input {...props}>{props.children}</input>;
+      (`input` as keyof JSX.IntrinsicElements);
+
+  useEffect(() => {
+    if (ref.current && props.autoFocus) {
+      const input = ref.current as HTMLInputElement | HTMLTextAreaElement;
+      setTimeout(() => {
+        input.focus();
+      }, 80);
+    }
+  }, [ref.current]);
 
   return (
     <div>
@@ -100,6 +116,8 @@ export default function TextInput(props: TextInputOptions) {
 
       <div className="mt-1 relative rounded-md shadow-sm">
         <InputTag
+          // @ts-ignore
+          ref={(el) => (ref.current = el)}
           autoFocus={Boolean(props.autoFocus)}
           // @ts-ignore
           type={props.type || "text"}
