@@ -33,6 +33,7 @@ interface ModalProps {
   scrollable?: boolean;
   zeroPadding?: boolean;
   onTabChange?: (selectedIndex: number) => void;
+  initialFocus?: any;
 }
 
 export default function Modal(props: ModalProps) {
@@ -73,6 +74,7 @@ export default function Modal(props: ModalProps) {
           props.onRequestClose();
         }
       }}
+      initialFocus={props.initialFocus}
     >
       <Backdrop />
 
@@ -91,6 +93,7 @@ export default function Modal(props: ModalProps) {
               zeroPadding={props.zeroPadding || false}
               autoWidth={props.autoWidth}
               grid={grid}
+              initialFocus={props.initialFocus}
             >
               <div
                 className={`w-full justify-center ${
@@ -120,6 +123,7 @@ export default function Modal(props: ModalProps) {
                 >
                   {hasTitle && (
                     <Dialog.Title
+                      tabIndex={-1}
                       as="h3"
                       className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
                         props.tabs !== undefined ? "pb-0" : "pb-4"
@@ -214,14 +218,18 @@ function Panel({
   autoWidth,
   grid,
   zeroPadding,
+  initialFocus,
 }: {
   children?: ReactNode;
   autoWidth?: boolean;
   grid: string;
   zeroPadding: boolean;
+  initialFocus?: React.RefObject<HTMLElement>;
 }) {
+  const myRef = useRef(null);
   return (
     <Dialog.Panel
+      ref={myRef}
       as={motion.div}
       variants={{
         enter: {
@@ -251,6 +259,17 @@ function Panel({
       } pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-xl lg:max-w-2xl ${
         autoWidth ? "w-auto" : "w-full"
       } sm:p-0`}
+      onAnimationComplete={() => {
+        if (initialFocus && initialFocus.current) {
+          initialFocus.current.focus();
+        } else if (myRef.current && "querySelectorAll" in myRef.current) {
+          const dom = myRef.current as HTMLElement;
+          const inputs = dom.querySelectorAll("input");
+          if (inputs && inputs.length) {
+            inputs[0].focus();
+          }
+        }
+      }}
     >
       {children}
     </Dialog.Panel>

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
@@ -104,6 +104,8 @@ export default function EditFolderModal({
   };
   const { t } = useTranslation("admin");
 
+  const nameRef = useRef(null);
+  console.log("EditFolderModal:nameref", nameRef);
   const error = mutationState.error || createFolderState.error;
   const isLoading =
     mutationState.loading ||
@@ -111,6 +113,7 @@ export default function EditFolderModal({
     postCreateActionFinishing;
   return (
     <Modal
+      loading={loading}
       className={`${className}`}
       footer={[
         {
@@ -132,14 +135,15 @@ export default function EditFolderModal({
       ]}
       onRequestClose={() => {}}
       title={createNew ? t("New Folder") : t("Edit Folder")}
+      initialFocus={nameRef}
     >
-      {loading && <Spinner />}
       {(folder || !!createNew) && (
         <div className={``}>
           <form onSubmit={onSave}>
             <div className="max-w-xs">
               <TextInput
-                autoFocus
+                autoFocus={true}
+                ref={nameRef}
                 error={error ? error.message : undefined}
                 name="folder-name"
                 label={t("Name")}

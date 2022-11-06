@@ -10,7 +10,7 @@
     "@codemirror/lint": "^6.0.0",
     "@graphql-codegen/named-operations-object": "^2.2.0",
     "@graphql-codegen/plugin-helpers": "^2.4.2",
-    "@headlessui/react": "^1.6.4",
+    "@headlessui/react": "^1.7.4",
     "@heroicons/react": "^1.0.1",
     "@lezer/common": "^1.0.1",
     "@mapbox/mapbox-gl-draw": "seasketch/mapbox-gl-draw",

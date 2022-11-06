@@ -5,6 +5,7 @@ import React, {
   KeyboardEvent,
   ReactElement,
   useRef,
+  forwardRef,
 } from "react";
 
 export interface TextInputOptions {
@@ -32,9 +33,24 @@ export interface TextInputOptions {
   form?: FormikProps<any>;
   meta?: FieldMetaProps<string>;
   autocomplete?: string;
+  ref?: any;
 }
 
-export default function TextInput(props: TextInputOptions) {
+const TextArea = forwardRef((props: any, ref: any) => (
+  <textarea ref={ref} {...props}>
+    {props.children}
+  </textarea>
+));
+const Input = forwardRef((props: any, ref: any) => (
+  <input ref={ref} {...props}>
+    {props.children}
+  </input>
+));
+
+export default forwardRef(function TextInput(
+  props: TextInputOptions,
+  ref: any
+) {
   const {
     value,
     placeholder,
@@ -58,7 +74,6 @@ export default function TextInput(props: TextInputOptions) {
   const [showSaved, setShowSaved] = useState(true);
   let error = props.error;
   const name = props.field?.name ? props.field.name : props.name;
-  const ref = useRef<HTMLElement>(null);
   if (
     props.field &&
     props.form &&
@@ -88,20 +103,7 @@ export default function TextInput(props: TextInputOptions) {
     }
   }, [showSaved, state]);
 
-  const InputTag = textarea
-    ? // eslint-disable-next-line i18next/no-literal-string
-      (`textarea` as keyof JSX.IntrinsicElements)
-    : // eslint-disable-next-line i18next/no-literal-string
-      (`input` as keyof JSX.IntrinsicElements);
-
-  useEffect(() => {
-    if (ref.current && props.autoFocus) {
-      const input = ref.current as HTMLInputElement | HTMLTextAreaElement;
-      setTimeout(() => {
-        input.focus();
-      }, 80);
-    }
-  }, [ref.current]);
+  const InputTag = textarea ? TextArea : Input;
 
   return (
     <div>
@@ -114,12 +116,10 @@ export default function TextInput(props: TextInputOptions) {
         {label}
       </label>
 
-      <div className="mt-1 relative rounded-md shadow-sm">
+      <div className="my-1 relative rounded-md shadow-sm">
         <InputTag
-          // @ts-ignore
-          ref={(el) => (ref.current = el)}
+          ref={ref}
           autoFocus={Boolean(props.autoFocus)}
-          // @ts-ignore
           type={props.type || "text"}
           name={name}
           onKeyDown={onKeyDown}
@@ -222,4 +222,4 @@ export default function TextInput(props: TextInputOptions) {
       )}
     </div>
   );
-}
+});
