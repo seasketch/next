@@ -105,7 +105,6 @@ export default function EditFolderModal({
   const { t } = useTranslation("admin");
 
   const nameRef = useRef(null);
-  console.log("EditFolderModal:nameref", nameRef);
   const error = mutationState.error || createFolderState.error;
   const isLoading =
     mutationState.loading ||
