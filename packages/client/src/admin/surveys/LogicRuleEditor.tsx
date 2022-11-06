@@ -195,14 +195,57 @@ export default function LogicRuleEditor({
 
   const deleteCondition = useDelete(DeleteLogicConditionDocument);
   const { confirmDelete } = useDialog();
-
-  if (!formElement?.type?.isInput) {
+  if (
+    formElement.type?.componentName === "WelcomeMessage" ||
+    formElement.type?.componentName === "ThankYou" ||
+    formElement.type?.componentName === "SaveScreen"
+  ) {
     return (
       <p className="p-2 text-sm text-gray-500">
         <Trans ns="admin:surveys">
-          Skip logic cannot be specified for non-input elements.
+          Skip logic cannot be specified for {formElement.type.componentName}{" "}
+          elements.
         </Trans>
       </p>
+    );
+  }
+
+  if (!formElement?.type?.isInput) {
+    return (
+      // eslint-disable-next-line i18next/no-literal-string
+      <div>
+        <p className="p-2 text-sm">
+          <Trans ns="admin:surveys">
+            Survey advances from this questions to...
+          </Trans>
+        </p>
+        <div className="p-2 w-full">
+          <FormElementSelect
+            mode={FormElementSelectMode.DefaultNext}
+            value={formElement.jumpToId!}
+            onChange={(value) => {
+              updateFormElement({
+                variables: {
+                  id: formElement.id,
+                  jumpToId: value,
+                },
+                optimisticResponse: {
+                  __typename: "Mutation",
+                  updateFormElement: {
+                    __typename: "UpdateFormElementPayload",
+                    formElement: {
+                      ...formElements.find((fe) => fe.id === formElement.id)!,
+                      jumpToId: value,
+                    },
+                  },
+                },
+              });
+            }}
+            currentFormElementId={formElementId}
+            formElements={formElements}
+          />
+        </div>
+      </div>
     );
   }
 
