@@ -1,4 +1,6 @@
 import { EditorView, KeyBinding } from "@codemirror/view";
+import prettier from "prettier/standalone";
+import babel from "prettier/parser-babel";
 
 export function formatJSONCommand(view: EditorView) {
   const selection = view.state.selection;
@@ -9,12 +11,17 @@ export function formatJSONCommand(view: EditorView) {
         changes: {
           from: 0,
           to: view.state.doc.length,
-          insert: JSON.stringify(parsed, null, "  "),
+          insert: prettier.format(JSON.stringify(parsed), {
+            parser: "json",
+            plugins: [babel],
+            printWidth: 50,
+          }),
         },
         selection,
       })
     );
   } catch (e) {
+    console.error(e);
     // do nothing. let linter handle it
   }
   return true;

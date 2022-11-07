@@ -140,6 +140,7 @@
     "pako": "^2.0.4",
     "papaparse": "^5.3.0",
     "pbf": "^3.2.1",
+    "prettier": "^2.7.1",
     "prosemirror-example-setup": "^1.1.2",
     "prosemirror-markdown": "^1.6.0",
     "prosemirror-model": "^1.13.1",
