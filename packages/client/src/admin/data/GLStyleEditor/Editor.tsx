@@ -9,7 +9,7 @@ import {
   validateGLStyleFragment,
 } from "./extensions/glStyleValidator";
 import { glStyleAutocomplete } from "./extensions/glStyleAutocomplete";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
 import {
@@ -19,6 +19,13 @@ import {
 } from "./formatCommand";
 import { Trans } from "react-i18next";
 import useDialog from "../../../components/useDialog";
+import { sprites } from "./extensions/glStyleSprites";
+import {
+  useSpritesQuery,
+  GetSpriteDocument,
+  GetSpriteQuery,
+} from "../../../generated/graphql";
+import getSlug from "../../../getSlug";
 
 interface GLStyleEditorProps {
   initialStyle?: string;
@@ -30,16 +37,6 @@ interface GLStyleEditorProps {
 const jsonCompletions = jsonLanguage.data.of({
   autocomplete: glStyleAutocomplete,
 });
-
-const extensions = [
-  json(),
-  jsonCompletions,
-  lintGutter(),
-  linter(jsonParseLinter()),
-  glStyleLinter,
-  color,
-  keymap.of([formatJSONKeyBinding, ...defaultKeymap]),
-];
 
 function Button({ className, ...props }: any) {
   return (
@@ -62,6 +59,44 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const dialog = useDialog();
+
+  const spriteQuery = useSpritesQuery({
+    variables: {
+      slug: getSlug(),
+    },
+  });
+
+  const extensions = useMemo(() => {
+    return [
+      json(),
+      jsonCompletions,
+      lintGutter(),
+      linter(jsonParseLinter()),
+      glStyleLinter,
+      color,
+      sprites(async (id) => {
+        const sprite = (spriteQuery.data?.projectBySlug?.sprites || []).find(
+          (s) => s.id === id
+        );
+        if (sprite) {
+          return sprite.spriteImages[0]!.url;
+        } else {
+        }
+        const results = await spriteQuery.client.query<GetSpriteQuery>({
+          query: GetSpriteDocument,
+          variables: {
+            id,
+          },
+        });
+        if (results.data.sprite?.spriteImages) {
+          return results.data.sprite.spriteImages[0]!.url;
+        } else {
+          throw new Error("Could not find sprite with id " + id);
+        }
+      }),
+      keymap.of([formatJSONKeyBinding, ...defaultKeymap]),
+    ];
+  }, [spriteQuery]);
 
   return (
     <div

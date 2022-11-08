@@ -14743,6 +14743,44 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type SpritesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SpritesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sprites: Array<(
+      { __typename?: 'Sprite' }
+      & Pick<Sprite, 'id' | 'type'>
+      & { spriteImages: Array<(
+        { __typename?: 'SpriteImage' }
+        & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
+      )> }
+    )> }
+  )> }
+);
+
+export type GetSpriteQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetSpriteQuery = (
+  { __typename?: 'Query' }
+  & { sprite?: Maybe<(
+    { __typename?: 'Sprite' }
+    & Pick<Sprite, 'id' | 'type'>
+    & { spriteImages: Array<(
+      { __typename?: 'SpriteImage' }
+      & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
+    )> }
+  )> }
+);
+
 export type JoinProjectMutationVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
@@ -20857,6 +20895,95 @@ export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationH
 export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
+export const SpritesDocument = gql`
+    query Sprites($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sprites {
+      id
+      type
+      spriteImages {
+        spriteId
+        height
+        width
+        pixelRatio
+        url
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useSpritesQuery__
+ *
+ * To run a query within a React component, call `useSpritesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSpritesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSpritesQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useSpritesQuery(baseOptions: Apollo.QueryHookOptions<SpritesQuery, SpritesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SpritesQuery, SpritesQueryVariables>(SpritesDocument, options);
+      }
+export function useSpritesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SpritesQuery, SpritesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SpritesQuery, SpritesQueryVariables>(SpritesDocument, options);
+        }
+export type SpritesQueryHookResult = ReturnType<typeof useSpritesQuery>;
+export type SpritesLazyQueryHookResult = ReturnType<typeof useSpritesLazyQuery>;
+export type SpritesQueryResult = Apollo.QueryResult<SpritesQuery, SpritesQueryVariables>;
+export const GetSpriteDocument = gql`
+    query GetSprite($id: Int!) {
+  sprite(id: $id) {
+    id
+    type
+    spriteImages {
+      spriteId
+      height
+      width
+      pixelRatio
+      url
+    }
+  }
+}
+    `;
+
+/**
+ * __useGetSpriteQuery__
+ *
+ * To run a query within a React component, call `useGetSpriteQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetSpriteQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetSpriteQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetSpriteQuery(baseOptions: Apollo.QueryHookOptions<GetSpriteQuery, GetSpriteQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetSpriteQuery, GetSpriteQueryVariables>(GetSpriteDocument, options);
+      }
+export function useGetSpriteLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetSpriteQuery, GetSpriteQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetSpriteQuery, GetSpriteQueryVariables>(GetSpriteDocument, options);
+        }
+export type GetSpriteQueryHookResult = ReturnType<typeof useGetSpriteQuery>;
+export type GetSpriteLazyQueryHookResult = ReturnType<typeof useGetSpriteLazyQuery>;
+export type GetSpriteQueryResult = Apollo.QueryResult<GetSpriteQuery, GetSpriteQueryVariables>;
 export const JoinProjectDocument = gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -24665,6 +24792,8 @@ export const namedOperations = {
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
+    Sprites: 'Sprites',
+    GetSprite: 'GetSprite',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',

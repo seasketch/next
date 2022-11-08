@@ -92,6 +92,8 @@ export default function LayerTableOfContentsItemEditor(
               ? JSON.parse(debouncedStyle)
               : debouncedStyle,
         },
+      }).catch((e) => {
+        console.error(e);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -658,6 +660,12 @@ export default function LayerTableOfContentsItemEditor(
                     SeaSketch.
                   </Trans>
                 </p>
+                {updateGLStyleMutationState.error && (
+                  <p className="bg-gray-700 text-red-200 p-2 text-sm">
+                    <Trans ns="admin:data">Style save error - </Trans>
+                    {updateGLStyleMutationState.error.message}
+                  </p>
+                )}
                 <GLStyleEditor
                   className="flex-1 overflow-hidden"
                   dataLayerId={layer?.id}

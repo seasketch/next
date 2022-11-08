@@ -1,3 +1,4 @@
+/* eslint-disable i18next/no-literal-string */
 import { validate } from "@mapbox/mapbox-gl-style-spec";
 import { Diagnostic, linter } from "@codemirror/lint";
 const jsonSourceMap = require("json-source-map");
@@ -19,11 +20,70 @@ export function validateGLStyleFragment(layers: any) {
     if (errors.length) {
       return errors;
     } else {
-      return [];
+      return checkSeaSketchSpecificRules(layers, "");
     }
   } else {
     return [new Error("Root element must be an array of 1 or more layers")];
   }
+}
+
+const validSpriteRe = /^seasketch:\/\/sprites\/\d+$/;
+const imageProps = [
+  "icon-image",
+  "background-pattern",
+  "line-pattern",
+  "fill-pattern",
+  "fill-extrusion-pattern",
+];
+
+const disallowedLayerProps = ["id", "source", "source-layer"];
+
+function checkSeaSketchSpecificRules(
+  fragment: any,
+  path: string,
+  errors?: Error[]
+): Error[] {
+  if (!errors) {
+    errors = [];
+    for (const layer of fragment as any[]) {
+      for (const key of disallowedLayerProps) {
+        if (key in layer) {
+          errors.push(
+            new Error(
+              `layers[${fragment.indexOf(
+                layer
+              )}].${key}: ${key} property is not allowed. It will be automatically populated by SeaSketch.`
+            )
+          );
+        }
+      }
+      checkSeaSketchSpecificRules(
+        layer,
+        `layers[${fragment.indexOf(layer)}]`,
+        errors
+      );
+    }
+  } else {
+    if (typeof fragment === "object") {
+      for (const key in fragment) {
+        if (typeof fragment[key] === "object") {
+          checkSeaSketchSpecificRules(fragment[key], path + "." + key, errors);
+        } else if (
+          typeof fragment[key] === "string" &&
+          imageProps.indexOf(key) !== -1
+        ) {
+          if (!validSpriteRe.test(fragment[key])) {
+            errors.push(
+              new Error(
+                `${path}.${key}: Sprite properties must be in the form of "seasketch://sprites/ID". ID must be numeric.`
+              )
+            );
+          }
+        }
+      }
+    }
+  }
+  return errors;
 }
 
 export const glStyleLinter = linter((view) => {
@@ -68,14 +128,16 @@ function parseErrorMessage(styleErrorMessage: string): {
   message: string;
 } {
   if (/:/.test(styleErrorMessage)) {
-    const [prefix, message] = styleErrorMessage.split(":");
+    const parts = styleErrorMessage.split(":");
+    const prefix = parts[0];
+    const message = parts.slice(1).join(":");
     const sourceMapKey = prefix
       .replace("layers", "")
       .replace(/\[(\d+)\]/g, "/$1")
       .replace(/\./g, "/");
     return {
       sourceMapKey,
-      message,
+      message: message,
     };
   } else {
     return { message: styleErrorMessage };

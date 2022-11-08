@@ -14741,6 +14741,44 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type SpritesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SpritesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sprites: Array<(
+      { __typename?: 'Sprite' }
+      & Pick<Sprite, 'id' | 'type'>
+      & { spriteImages: Array<(
+        { __typename?: 'SpriteImage' }
+        & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
+      )> }
+    )> }
+  )> }
+);
+
+export type GetSpriteQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetSpriteQuery = (
+  { __typename?: 'Query' }
+  & { sprite?: Maybe<(
+    { __typename?: 'Sprite' }
+    & Pick<Sprite, 'id' | 'type'>
+    & { spriteImages: Array<(
+      { __typename?: 'SpriteImage' }
+      & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
+    )> }
+  )> }
+);
+
 export type JoinProjectMutationVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
@@ -18646,6 +18684,39 @@ export const PublishTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SpritesDocument = /*#__PURE__*/ gql`
+    query Sprites($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sprites {
+      id
+      type
+      spriteImages {
+        spriteId
+        height
+        width
+        pixelRatio
+        url
+      }
+    }
+  }
+}
+    `;
+export const GetSpriteDocument = /*#__PURE__*/ gql`
+    query GetSprite($id: Int!) {
+  sprite(id: $id) {
+    id
+    type
+    spriteImages {
+      spriteId
+      height
+      width
+      pixelRatio
+      url
+    }
+  }
+}
+    `;
 export const JoinProjectDocument = /*#__PURE__*/ gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -19999,6 +20070,8 @@ export const namedOperations = {
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
+    Sprites: 'Sprites',
+    GetSprite: 'GetSprite',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
