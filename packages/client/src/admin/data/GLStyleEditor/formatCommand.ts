@@ -11,11 +11,7 @@ export function formatJSONCommand(view: EditorView) {
         changes: {
           from: 0,
           to: view.state.doc.length,
-          insert: prettier.format(JSON.stringify(parsed), {
-            parser: "json",
-            plugins: [babel],
-            printWidth: 50,
-          }),
+          insert: formatGLStyle(JSON.stringify(parsed)),
         },
         selection,
       })
@@ -32,3 +28,11 @@ export const formatJSONKeyBinding: KeyBinding = {
   run: formatJSONCommand,
   preventDefault: true,
 };
+
+export function formatGLStyle(style: string) {
+  return prettier.format(style, {
+    parser: "json",
+    plugins: [babel],
+    printWidth: 50,
+  });
+}

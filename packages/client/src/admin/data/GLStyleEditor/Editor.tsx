@@ -12,8 +12,11 @@ import { glStyleAutocomplete } from "./extensions/glStyleAutocomplete";
 import { useRef, useState } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
-import { formatJSONCommand, formatJSONKeyBinding } from "./formatCommand";
-import { useMapContext } from "../../../dataLayers/MapContextManager";
+import {
+  formatGLStyle,
+  formatJSONCommand,
+  formatJSONKeyBinding,
+} from "./formatCommand";
 import { Trans } from "react-i18next";
 import useDialog from "../../../components/useDialog";
 
@@ -21,6 +24,7 @@ interface GLStyleEditorProps {
   initialStyle?: string;
   onChange?: (newStyle: string) => void;
   dataLayerId?: number;
+  className?: string;
 }
 
 const jsonCompletions = jsonLanguage.data.of({
@@ -54,15 +58,18 @@ function Button({ className, ...props }: any) {
  * @returns
  */
 export default function GLStyleEditor(props: GLStyleEditorProps) {
-  const [value] = useState(props.initialStyle);
+  const [value] = useState(formatGLStyle(props.initialStyle || ""));
   const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const dialog = useDialog();
 
   return (
-    <>
+    <div
+      className="flex flex-col h-full overflow-hidden"
+      style={{ backgroundColor: "rgb(48, 56, 65)" }}
+    >
       <div
-        className="p-2 rounded-t-md border-b border-black flex space-x-2"
+        className="p-2 border-b border-black border-opacity-30 z-10 shadow flex space-x-2 flex-0"
         style={{ backgroundColor: "#303841" }}
       >
         <Button
@@ -102,7 +109,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         </Button>
       </div>
       <CodeMirror
-        className="rounded-b-md overflow-hidden"
+        className="flex-1 overflow-y-auto"
         value={value}
         ref={editorRef}
         theme={sublime}
@@ -127,6 +134,6 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }
         }}
       />
-    </>
+    </div>
   );
 }

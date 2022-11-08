@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useGetLayerItemQuery,
   useUpdateTableOfContentsItemMutation,
@@ -25,6 +25,7 @@ import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
 import GLStyleEditor from "./GLStyleEditor/Editor";
 import { DotsHorizontalIcon } from "@heroicons/react/outline";
+import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -96,12 +97,35 @@ export default function LayerTableOfContentsItemEditor(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedStyle]);
 
+  const [selectedTab, setSelectedTab] = useState("settings");
+
+  const tabs: NonLinkTabItem[] = useMemo(() => {
+    return [
+      {
+        name: "Settings",
+        id: "settings",
+        current: selectedTab === "settings",
+      },
+      {
+        name: "Interactivity",
+        id: "interactivity",
+        current: selectedTab === "interactivity",
+      },
+      {
+        name: "Style",
+        id: "style",
+        current: selectedTab === "style",
+      },
+    ];
+  }, [selectedTab]);
+
   return (
     <div
       className="bg-white z-20 absolute bottom-0 w-128 flex flex-col"
       style={{ height: "calc(100vh)" }}
     >
-      <div className="flex-0 p-4 border-b shadow-sm bg-primary-600">
+      <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+        <h4 className="font-medium text-blue-100 flex-1">{item?.title}</h4>
         <button
           className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
           onClick={props.onRequestClose}
@@ -121,12 +145,12 @@ export default function LayerTableOfContentsItemEditor(
             />
           </svg>
         </button>
-        <h4 className="font-medium text-white">
-          <Trans ns={["admin"]}>Edit Layer</Trans>
-        </h4>
+      </div>
+      <div className="flex-0 p-2 px-4 -mt-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+        <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
       </div>
       {!item && <Spinner />}
-      {item && (
+      {item && selectedTab === "settings" && (
         <div className="flex-1 overflow-y-scroll px-4 pb-4">
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput
@@ -157,19 +181,48 @@ export default function LayerTableOfContentsItemEditor(
               <AccessControlListEditor nodeId={item.acl?.nodeId} />
             )}
           </div>
-          <div className="mt-5">
-            <div>
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  <Trans ns={["admin"]}>Data Source Details</Trans>
-                </h3>
+          {(source?.type === DataSourceTypes.Geojson ||
+            source?.type === DataSourceTypes.SeasketchVector ||
+            source?.type === DataSourceTypes.SeasketchMvt) && (
+            <div className="mt-5">
+              <div className="flex">
+                <div className="flex-1 text-sm font-medium text-gray-700">
+                  <Trans ns={["admin"]}>Enable data download</Trans>
+                </div>
+                <div className="flex-none">
+                  <Switch
+                    isToggled={
+                      downloadEnabled === undefined
+                        ? item.enableDownload
+                        : downloadEnabled
+                    }
+                    onClick={() =>
+                      setDownloadEnabled(
+                        !(downloadEnabled === undefined
+                          ? item.enableDownload
+                          : downloadEnabled)
+                      )
+                    }
+                  />
+                </div>
               </div>
-              <div className="mt-5 border-t border-gray-200 border-b">
+              <p className="text-sm text-gray-500 mt-1">
+                <Trans ns={["admin"]}>
+                  If enabled, users will be able to download this dataset in
+                  GeoJSON vector format using the context menu.
+                </Trans>
+              </p>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <div className="border rounded">
+              <div className="border-gray-200 border-b">
                 {(source?.type === DataSourceTypes.SeasketchVector ||
                   source?.type === DataSourceTypes.SeasketchMvt) && (
                   <>
-                    <dl className="sm:divide-y sm:divide-gray-200">
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dl className="sm:divide-y sm:divide-gray-200 zebra-stripe-child-div">
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>Source Type</Trans>
                         </dt>
@@ -187,7 +240,7 @@ export default function LayerTableOfContentsItemEditor(
                         </dd>
                       </div>
                       {source.geostats && source.geostats.geometry && (
-                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                           <dt className="text-sm font-medium text-gray-500">
                             <Trans ns={["admin"]}>Geometry Type</Trans>
                           </dt>
@@ -197,7 +250,7 @@ export default function LayerTableOfContentsItemEditor(
                         </div>
                       )}
                       {source.geostats && source.geostats.count && (
-                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                           <dt className="text-sm font-medium text-gray-500">
                             <Trans ns={["admin"]}>Feature Count</Trans>
                           </dt>
@@ -206,7 +259,7 @@ export default function LayerTableOfContentsItemEditor(
                           </dd>
                         </div>
                       )}
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>File Size</Trans>
                         </dt>
@@ -215,7 +268,7 @@ export default function LayerTableOfContentsItemEditor(
                         </dd>
                       </div>
                       {source.uploadedSourceFilename && (
-                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                           <dt className="text-sm font-medium text-gray-500">
                             <Trans ns={["admin"]}>Uploaded by</Trans>
                           </dt>
@@ -227,7 +280,7 @@ export default function LayerTableOfContentsItemEditor(
                           </dd>
                         </div>
                       )}
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>Original Source</Trans>
                         </dt>
@@ -252,7 +305,7 @@ export default function LayerTableOfContentsItemEditor(
                       {source.geostats &&
                         source.geostats.attributes &&
                         Array.isArray(source.geostats.attributes) && (
-                          <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                          <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                             <h4 className="text-sm font-medium text-gray-500">
                               <Trans ns={["admin"]}>Columns</Trans>
                             </h4>
@@ -443,39 +496,6 @@ export default function LayerTableOfContentsItemEditor(
                   {t("Using a lower level of precision reduces download size")}
                 </InputBlock>
               )}
-              {(source?.type === DataSourceTypes.Geojson ||
-                source?.type === DataSourceTypes.SeasketchVector ||
-                source?.type === DataSourceTypes.SeasketchMvt) && (
-                <div className="mt-5">
-                  <div className="flex">
-                    <div className="flex-1 text-sm font-medium text-gray-700">
-                      <Trans ns={["admin"]}>Enable data download</Trans>
-                    </div>
-                    <div className="flex-none">
-                      <Switch
-                        isToggled={
-                          downloadEnabled === undefined
-                            ? item.enableDownload
-                            : downloadEnabled
-                        }
-                        onClick={() =>
-                          setDownloadEnabled(
-                            !(downloadEnabled === undefined
-                              ? item.enableDownload
-                              : downloadEnabled)
-                          )
-                        }
-                      />
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    <Trans ns={["admin"]}>
-                      If enabled, users will be able to download this dataset in
-                      GeoJSON vector format using the context menu.
-                    </Trans>
-                  </p>
-                </div>
-              )}
               {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
                 <>
                   <InputBlock
@@ -565,6 +585,10 @@ export default function LayerTableOfContentsItemEditor(
               )}
             </div>
           </div>
+        </div>
+      )}
+      {item && selectedTab === "interactivity" && (
+        <div className="flex-1 overflow-y-scroll px-4 pb-4">
           <div className="mt-5">
             {source && layer && (
               <InteractivitySettings
@@ -607,21 +631,22 @@ export default function LayerTableOfContentsItemEditor(
               ]}
             />
           </div>
+        </div>
+      )}
+
+      {item && selectedTab === "style" && (
+        <div className="h-full overflow-hidden">
           {source &&
             (source.type === DataSourceTypes.Geojson ||
               source.type === DataSourceTypes.SeasketchVector ||
               source.type === DataSourceTypes.SeasketchMvt ||
               source.type === DataSourceTypes.Vector) && (
-              <div className="mt-5">
-                <div className="flex-1 text-sm font-medium text-gray-700">
-                  <Trans ns={["admin"]}>Vector Style</Trans>
-                  <SaveStateIndicator {...updateGLStyleMutationState} />
-                </div>
-                <p className="text-sm text-gray-500 mb-2">
+              <div className="h-full overflow-hidden flex flex-col">
+                <p className="text-sm text-gray-100 px-2 pb-2 pt-1 bg-gray-700">
                   <Trans ns={["admin"]}>
                     Vector layers can be styled using{" "}
                     <a
-                      className="underline text-primary-500"
+                      className="underline text-primary-300"
                       href="https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/"
                       target="_blank"
                       rel="noreferrer"
@@ -634,6 +659,7 @@ export default function LayerTableOfContentsItemEditor(
                   </Trans>
                 </p>
                 <GLStyleEditor
+                  className="flex-1 overflow-hidden"
                   dataLayerId={layer?.id}
                   initialStyle={
                     typeof layer!.mapboxGlStyles! === "string"
