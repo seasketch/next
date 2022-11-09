@@ -127,7 +127,7 @@ export default function LayerTableOfContentsItemEditor(
       style={{ height: "calc(100vh)" }}
     >
       <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
-        <h4 className="font-medium text-blue-100 flex-1">{item?.title}</h4>
+        <h4 className="font-medium text-indigo-100 flex-1">{item?.title}</h4>
         <button
           className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
           onClick={props.onRequestClose}

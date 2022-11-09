@@ -218,7 +218,7 @@ export const colorView = () =>
             data.to = data.from + content.length;
           }
         };
-        picker.addEventListener("input", this.pickerListener);
+        this.dom.addEventListener("input", this.pickerListener);
       }
 
       update(update: ViewUpdate) {

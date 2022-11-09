@@ -112,47 +112,47 @@ export const spriteView = (getSpriteUrl: (id: number) => Promise<string>) =>
   ViewPlugin.fromClass(
     class ColorView {
       decorations: DecorationSet;
-      dom: HTMLElement;
+      // dom: HTMLElement;
       pickerState?: SpriteState;
       getSpriteUrl: (id: number) => Promise<string>;
-      pickerListener: (event: Event) => void;
+      // pickerListener: (event: Event) => void;
 
       constructor(view: EditorView) {
         this.getSpriteUrl = getSpriteUrl;
         this.decorations = spriteDecorations(view, getSpriteUrl);
-        const picker = view.dom.appendChild(document.createElement("input"));
-        // colorState.set(picker, this.state);
-        picker.type = "color";
-        picker.dataset["glColorPicker"] = "true";
-        this.dom = picker;
-        this.pickerListener = (event) => {
-          const target = event.target as HTMLInputElement;
-          // if (this.pickerState) {
-          //   const data = this.pickerState;
-          //   const value = target.value;
-          //   const rgb = hexToRgb(value);
-          //   let converted = target.value;
-          //   if (data.colorType === ColorType.rgb) {
-          //     converted = rgb ? `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})` : value;
-          //   } else if (data.colorType === ColorType.hsl) {
-          //     const rgb = hexToRgb(value);
-          //     if (rgb) {
-          //       const { h, s, l } = RGBToHSL(rgb?.r, rgb?.g, rgb?.b);
-          //       converted = `hsl(${h}, ${s}%, ${l}%)`;
-          //     }
-          //   }
-          //   const content = `"${converted}"`;
-          //   view.dispatch({
-          //     changes: {
-          //       from: data.from,
-          //       to: data.to,
-          //       insert: content,
-          //     },
-          //   });
-          //   data.to = data.from + content.length;
-          // }
-        };
-        picker.addEventListener("input", this.pickerListener);
+        // const picker = view.dom.appendChild(document.createElement("input"));
+        // // colorState.set(picker, this.state);
+        // picker.type = "color";
+        // picker.dataset["glColorPicker"] = "true";
+        // this.dom = picker;
+        // this.pickerListener = (event) => {
+        //   const target = event.target as HTMLInputElement;
+        //   // if (this.pickerState) {
+        //   //   const data = this.pickerState;
+        //   //   const value = target.value;
+        //   //   const rgb = hexToRgb(value);
+        //   //   let converted = target.value;
+        //   //   if (data.colorType === ColorType.rgb) {
+        //   //     converted = rgb ? `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})` : value;
+        //   //   } else if (data.colorType === ColorType.hsl) {
+        //   //     const rgb = hexToRgb(value);
+        //   //     if (rgb) {
+        //   //       const { h, s, l } = RGBToHSL(rgb?.r, rgb?.g, rgb?.b);
+        //   //       converted = `hsl(${h}, ${s}%, ${l}%)`;
+        //   //     }
+        //   //   }
+        //   //   const content = `"${converted}"`;
+        //   //   view.dispatch({
+        //   //     changes: {
+        //   //       from: data.from,
+        //   //       to: data.to,
+        //   //       insert: content,
+        //   //     },
+        //   //   });
+        //   //   data.to = data.from + content.length;
+        //   // }
+        // };
+        // picker.addEventListener("input", this.pickerListener);
       }
 
       update(update: ViewUpdate) {
@@ -167,8 +167,7 @@ export const spriteView = (getSpriteUrl: (id: number) => Promise<string>) =>
       }
 
       destroy() {
-        this.dom.removeEventListener("input", this.pickerListener);
-        this.dom.remove();
+        // this.dom.remove();
       }
 
       changePicker(view: EditorView, canBeEdited: boolean) {
@@ -185,7 +184,8 @@ export const spriteView = (getSpriteUrl: (id: number) => Promise<string>) =>
       eventHandlers: {
         click(e, view) {
           const target = e.target as HTMLSpanElement;
-          if (target.nodeName !== "SPAN" || !target.dataset.color) return false;
+          if (target.nodeName !== "SPAN" || !target.dataset.sprite)
+            return false;
           const doms =
             view.dom.querySelectorAll<HTMLInputElement>("input[type=color]");
           const data = spriteState.get(target);
@@ -205,8 +205,8 @@ export const spriteView = (getSpriteUrl: (id: number) => Promise<string>) =>
 
 export const spriteTheme = EditorView.baseTheme({
   "span[data-sprite]": {
-    width: "12px",
-    height: "12px",
+    width: "15px",
+    height: "15px",
     display: "inline-block",
     borderRadius: "2px",
     marginRight: "0.5ch",
