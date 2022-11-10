@@ -1,30 +1,26 @@
+fragment SpriteDetails on Sprite {
+  id
+  type
+  spriteImages {
+    spriteId
+    height
+    width
+    pixelRatio
+    url
+  }
+}
+
 query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     sprites {
-      id
-      type
-      spriteImages {
-        spriteId
-        height
-        width
-        pixelRatio
-        url
-      }
+      ...SpriteDetails
     }
   }
 }
 
 query GetSprite($id: Int!) {
   sprite(id: $id) {
-    id
-    type
-    spriteImages {
-      spriteId
-      height
-      width
-      pixelRatio
-      url
-    }
+    ...SpriteDetails
   }
 }

@@ -9,11 +9,32 @@ import {
 } from "@codemirror/view";
 import { Extension, Range } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
+import { SpriteDetailsFragment } from "../../../../generated/graphql";
 
 export interface SpriteState {
   from: number;
   to: number;
   url: string;
+}
+
+export function getBestSpriteImage(sprite: SpriteDetailsFragment): {
+  width: number;
+  height: number;
+  url: string;
+  pixelRatio: number;
+} {
+  const images = [...sprite.spriteImages] || [];
+  if (images.length > 0) {
+    images.sort((a, b) => b.pixelRatio - a.pixelRatio);
+    return images[0];
+  } else {
+    return {
+      pixelRatio: 1,
+      width: 15,
+      height: 15,
+      url: errorDataUri,
+    };
+  }
 }
 
 const spriteState = new WeakMap<HTMLSpanElement, SpriteState>();
@@ -96,8 +117,7 @@ class SpriteWidget extends WidgetType {
       wrapper.title = "Unknown sprite";
     }
 
-    // TODO: change once picker ready to use
-    // wrapper.style.cursor = "pointer";
+    wrapper.style.cursor = "pointer";
     wrapper.dataset.sprite = this.state.url;
     spriteState.set(wrapper, this.state);
     return wrapper;
@@ -108,18 +128,20 @@ class SpriteWidget extends WidgetType {
   }
 }
 
-export const spriteView = (getSpriteUrl: (id: number) => Promise<string>) =>
+export const spriteView = (props: SpriteExtensionProps) =>
   ViewPlugin.fromClass(
     class ColorView {
       decorations: DecorationSet;
       // dom: HTMLElement;
       pickerState?: SpriteState;
-      getSpriteUrl: (id: number) => Promise<string>;
+      getSpriteUrl: SpriteExtensionProps["getSpriteUrl"];
+      onSpriteClick: SpriteExtensionProps["onSpriteClick"];
       // pickerListener: (event: Event) => void;
 
       constructor(view: EditorView) {
-        this.getSpriteUrl = getSpriteUrl;
-        this.decorations = spriteDecorations(view, getSpriteUrl);
+        this.getSpriteUrl = props.getSpriteUrl;
+        this.onSpriteClick = props.onSpriteClick;
+        this.decorations = spriteDecorations(view, props.getSpriteUrl);
         // const picker = view.dom.appendChild(document.createElement("input"));
         // // colorState.set(picker, this.state);
         // picker.type = "color";
@@ -186,18 +208,17 @@ export const spriteView = (getSpriteUrl: (id: number) => Promise<string>) =>
           const target = e.target as HTMLSpanElement;
           if (target.nodeName !== "SPAN" || !target.dataset.sprite)
             return false;
-          const doms =
-            view.dom.querySelectorAll<HTMLInputElement>("input[type=color]");
+
           const data = spriteState.get(target);
-          this.pickerState = data;
-          doms.forEach((inp) => {
-            inp.value = target.dataset.color!;
-            inp.style.top = `${target.offsetTop}px`;
-            inp.style.left = `${target.offsetLeft}px`;
-            setTimeout(() => {
-              inp.click();
-            }, 16);
-          });
+          if (data) {
+            this.onSpriteClick({
+              from: data.from,
+              to: data.to,
+              value: data.url,
+              view,
+              target: e.target as HTMLSpanElement,
+            });
+          }
         },
       },
     }
@@ -238,9 +259,21 @@ export const spriteTheme = EditorView.baseTheme({
   },
 });
 
-export const sprites: (
-  getSpriteUrl: (id: number) => Promise<string>
-) => Extension = (getSpriteUrl) => [spriteView(getSpriteUrl), spriteTheme];
+interface SpriteExtensionProps {
+  getSpriteUrl: (id: number) => Promise<string>;
+  onSpriteClick: (event: {
+    from: number;
+    to: number;
+    value: string;
+    view: EditorView;
+    target: HTMLSpanElement;
+  }) => void;
+}
+
+export const sprites: (props: SpriteExtensionProps) => Extension = (props) => [
+  spriteView(props),
+  spriteTheme,
+];
 
 export function toFullHex(color: string): string[] {
   if (color.length === 4) {

@@ -44,8 +44,10 @@ const Trans = (props: any) => <T ns="admin:data" {...props} />;
 export const DataUploadDropzoneContext = createContext<{
   uploads: DataUploadDetailsFragment[];
   manager?: UploadManager;
+  setDisabled: (disabled: boolean) => void;
 }>({
   uploads: [],
+  setDisabled: () => {},
 });
 
 export default function DataUploadDropzone({
@@ -63,9 +65,11 @@ export default function DataUploadDropzone({
     uploads: DataUploadDetailsFragment[];
     error?: string;
     manager?: UploadManager;
+    disabled?: boolean;
   }>({
     droppedFiles: 0,
     uploads: [],
+    disabled: false,
   });
   const client = useApolloClient();
   const mapContext = useContext(MapContext);
@@ -129,15 +133,26 @@ export default function DataUploadDropzone({
     noClick: true,
   });
 
+  const setDisabled = useCallback(
+    (disabled: boolean) => {
+      setState((prev) => ({
+        ...prev,
+        disabled,
+      }));
+    },
+    [setState]
+  );
+
   return (
     <DataUploadDropzoneContext.Provider
       value={{
         uploads: state.uploads,
         manager: state.manager,
+        setDisabled,
       }}
     >
       <div
-        {...getRootProps()}
+        {...(state.disabled ? {} : getRootProps())}
         // eslint-disable-next-line jsx-a11y/aria-role
         role=""
         className={className}

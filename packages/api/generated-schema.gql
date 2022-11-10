@@ -11411,6 +11411,7 @@ sprite, the actual images are in cloud storage referenced by the URL parameter.
 
 """
 type Sprite implements Node {
+  category: String
   id: Int!
 
   """
@@ -11428,7 +11429,7 @@ type Sprite implements Node {
   project: Project
 
   """If unset, sprite will be available for use in all projects"""
-  projectId: Int!
+  projectId: Int
 
   """Reads and enables pagination through a set of `SpriteImage`."""
   spriteImages(
@@ -11457,6 +11458,9 @@ type Sprite implements Node {
 A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’
 """
 input SpriteCondition {
+  """Checks for equality with the object’s `category` field."""
+  category: String
+
   """Checks for equality with the object’s `id` field."""
   id: Int
 
@@ -11507,6 +11511,8 @@ enum SpriteImagesOrderBy {
 
 """Methods to use when ordering `Sprite`."""
 enum SpritesOrderBy {
+  CATEGORY_ASC
+  CATEGORY_DESC
   ID_ASC
   ID_DESC
   MD5_ASC

@@ -1647,9 +1647,10 @@ COMMENT ON FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) 
 
 CREATE TABLE public.sprites (
     id integer NOT NULL,
-    project_id integer NOT NULL,
+    project_id integer,
     type public.sprite_type,
-    md5 text NOT NULL
+    md5 text NOT NULL,
+    category text
 );
 
 
@@ -4337,9 +4338,9 @@ CREATE FUNCTION public.create_sprite("projectId" integer, _md5 text, _type publi
     if session_is_admin("projectId") = false then
       raise 'Not authorized';
     end if;
-    if _pixel_ratio != 1 then
-      raise 'New sprites can only be created with an image with a pixel_ratio of 1';
-    end if;
+    -- if _pixel_ratio != 1 then
+    --   raise 'New sprites can only be created with an image with a pixel_ratio of 1';
+    -- end if;
     if _url is null then
       raise 'Must be called with a url';
     end if;
@@ -13375,6 +13376,13 @@ CREATE INDEX sketches_user_id_sketch_class_id_idx ON public.sketches USING btree
 --
 
 CREATE INDEX sprite_images_sprite_id_idx ON public.sprite_images USING btree (sprite_id);
+
+
+--
+-- Name: sprites_group_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sprites_group_idx ON public.sprites USING btree (category);
 
 
 --

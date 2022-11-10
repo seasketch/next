@@ -10365,6 +10365,7 @@ export enum SortByDirection {
  */
 export type Sprite = Node & {
   __typename?: 'Sprite';
+  category?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   /**
    * Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating
@@ -10376,7 +10377,7 @@ export type Sprite = Node & {
   /** Reads a single `Project` that is related to this `Sprite`. */
   project?: Maybe<Project>;
   /** If unset, sprite will be available for use in all projects */
-  projectId: Scalars['Int'];
+  projectId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `SpriteImage`. */
   spriteImages: Array<SpriteImage>;
   /** Optional. Indicates whether the image is intended for use with particular GL Styles */
@@ -10397,6 +10398,8 @@ export type SpriteSpriteImagesArgs = {
 
 /** A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type SpriteCondition = {
+  /** Checks for equality with the object’s `category` field. */
+  category?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `md5` field. */
@@ -10448,6 +10451,8 @@ export enum SpriteType {
 
 /** Methods to use when ordering `Sprite`. */
 export enum SpritesOrderBy {
+  CategoryAsc = 'CATEGORY_ASC',
+  CategoryDesc = 'CATEGORY_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Md5Asc = 'MD5_ASC',
@@ -14741,6 +14746,15 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type SpriteDetailsFragment = (
+  { __typename?: 'Sprite' }
+  & Pick<Sprite, 'id' | 'type'>
+  & { spriteImages: Array<(
+    { __typename?: 'SpriteImage' }
+    & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
+  )> }
+);
+
 export type SpritesQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -14753,11 +14767,7 @@ export type SpritesQuery = (
     & Pick<Project, 'id'>
     & { sprites: Array<(
       { __typename?: 'Sprite' }
-      & Pick<Sprite, 'id' | 'type'>
-      & { spriteImages: Array<(
-        { __typename?: 'SpriteImage' }
-        & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
-      )> }
+      & SpriteDetailsFragment
     )> }
   )> }
 );
@@ -14771,11 +14781,7 @@ export type GetSpriteQuery = (
   { __typename?: 'Query' }
   & { sprite?: Maybe<(
     { __typename?: 'Sprite' }
-    & Pick<Sprite, 'id' | 'type'>
-    & { spriteImages: Array<(
-      { __typename?: 'SpriteImage' }
-      & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
-    )> }
+    & SpriteDetailsFragment
   )> }
 );
 
@@ -17018,6 +17024,19 @@ export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SpriteDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SpriteDetails on Sprite {
+  id
+  type
+  spriteImages {
+    spriteId
+    height
+    width
+    pixelRatio
+    url
+  }
+}
+    `;
 export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment BasemapDetails on Basemap {
   id
@@ -18689,34 +18708,18 @@ export const SpritesDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     sprites {
-      id
-      type
-      spriteImages {
-        spriteId
-        height
-        width
-        pixelRatio
-        url
-      }
+      ...SpriteDetails
     }
   }
 }
-    `;
+    ${SpriteDetailsFragmentDoc}`;
 export const GetSpriteDocument = /*#__PURE__*/ gql`
     query GetSprite($id: Int!) {
   sprite(id: $id) {
-    id
-    type
-    spriteImages {
-      spriteId
-      height
-      width
-      pixelRatio
-      url
-    }
+    ...SpriteDetails
   }
 }
-    `;
+    ${SpriteDetailsFragmentDoc}`;
 export const JoinProjectDocument = /*#__PURE__*/ gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -20242,6 +20245,7 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
     DataUploadDetails: 'DataUploadDetails',
+    SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
     BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',
