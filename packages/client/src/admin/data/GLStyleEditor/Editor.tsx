@@ -10,14 +10,7 @@ import {
   validateGLStyleFragment,
 } from "./extensions/glStyleValidator";
 import { glStyleAutocomplete } from "./extensions/glStyleAutocomplete";
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
 import {
@@ -32,14 +25,9 @@ import {
   useSpritesQuery,
   GetSpriteDocument,
   GetSpriteQuery,
-  useGetOrCreateSpriteMutation,
 } from "../../../generated/graphql";
 import getSlug from "../../../getSlug";
-import { usePopper } from "react-popper";
-import Spinner from "../../../components/Spinner";
-import { useDropzone } from "react-dropzone";
-import { DataUploadDropzoneContext } from "../../uploads/DataUploadDropzone";
-import useProjectId from "../../../useProjectId";
+import SpritePopover from "./SpritePopover";
 
 interface GLStyleEditorProps {
   initialStyle?: string;
@@ -73,8 +61,6 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const dialog = useDialog();
-  const [createSprite, mutationState] = useGetOrCreateSpriteMutation();
-  const projectId = useProjectId();
 
   const spriteQuery = useSpritesQuery({
     variables: {
@@ -82,44 +68,14 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     },
   });
 
-  const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
-      await Promise.all(
-        acceptedFiles.map(async (file) => {
-          const dims = await getImageDimensions(file);
-          await createSprite({
-            variables: {
-              height: dims.height,
-              width: dims.height,
-              pixelRatio: 2,
-              projectId: projectId!,
-              smallestImage: file,
-            },
-          });
-        })
-      );
-      spriteQuery.refetch();
-    },
-    [createSprite, spriteQuery]
-  );
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
-
-  const [spriteState, setSpriteState] =
-    useState<null | {
-      from: number;
-      to: number;
-      view: EditorView;
-      value: string;
-      target: HTMLSpanElement;
-      selectedSpriteId: number;
-    }>(null);
-  const [popperElement, setPopperElement] =
-    useState<HTMLDivElement | null>(null);
-  const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
-  const { styles, attributes } = usePopper(spriteState?.target, popperElement, {
-    modifiers: [{ name: "arrow", options: { element: arrowElement } }],
-  });
+  const [spriteState, setSpriteState] = useState<null | {
+    from: number;
+    to: number;
+    view: EditorView;
+    value: string;
+    target: HTMLSpanElement;
+    selectedSpriteId: number;
+  }>(null);
 
   const extensions = useMemo(() => {
     return [
@@ -163,37 +119,20 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     ];
   }, [spriteQuery, setSpriteState]);
 
-  const uploadContext = useContext(DataUploadDropzoneContext);
-
-  useEffect(() => {
-    const listener = (e: MouseEvent) => {
-      if (spriteState?.target) {
-        const target = e.target as HTMLElement;
-        if (
-          e.target &&
-          popperElement &&
-          (popperElement.contains(target) ||
-            (target.nodeName === "SPAN" && target.dataset.sprite))
-        ) {
-          // do nothing. clicking within popup or the decoration
-        } else {
-          setSpriteState(null);
-        }
+  const onSpriteChange = useCallback(
+    (selectedSpriteId: number | null, value?: string) => {
+      if (selectedSpriteId === null) {
+        setSpriteState(null);
+      } else {
+        setSpriteState((prev) => ({
+          ...prev!,
+          selectedSpriteId: selectedSpriteId,
+          to: prev!.from + (value ? value.length : 0),
+        }));
       }
-    };
-    document.addEventListener("click", listener);
-    return () => {
-      document.removeEventListener("click", listener);
-    };
-  });
-
-  useEffect(() => {
-    if (spriteState?.target) {
-      uploadContext.setDisabled(true);
-    } else {
-      uploadContext.setDisabled(false);
-    }
-  }, [spriteState?.target]);
+    },
+    [setSpriteState]
+  );
 
   return (
     <div
@@ -240,76 +179,9 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           <Trans ns="admin:data">key shortcuts...</Trans>
         </Button>
       </div>
-      {spriteState?.target && (
-        <div
-          ref={setPopperElement}
-          style={styles.popper}
-          {...attributes.popper}
-          className="bg-cool-gray-700 p-2 rounded shadow-lg z-10 border border-black border-opacity-30"
-        >
-          {/* <input className="hidden pointer-events-none" {...getInputProps()} /> */}
-          <select className="text-xs py-1 pl-1 bg-gray-600 w-full rounded text-white mb-2">
-            <option value="project">all sprites</option>
-          </select>
-          {spriteQuery.loading && !spriteQuery.data && <Spinner />}
-          {spriteQuery.data && (
-            <div {...getRootProps()} className="w-64 h-48 items-center">
-              {isDragActive && (
-                <div className="z-10 absolute left-0 top-0 w-full h-full flex items-center justify-center bg-indigo-600 bg-opacity-5">
-                  Drop new sprites here ...
-                </div>
-              )}
-              <h4 className="text-xs text-gray-200 py-1">project uploads</h4>
-              {(spriteQuery.data.projectBySlug?.sprites || []).map((sprite) => {
-                const image = getBestSpriteImage(sprite);
-                return (
-                  <div
-                    key={sprite.id}
-                    className={`float-left w-8 h-8 cursor-pointer flex items-center  ${
-                      sprite.id === spriteState.selectedSpriteId
-                        ? "border border-gray-600"
-                        : "hover:bg-black hover:bg-opacity-10"
-                    }`}
-                    style={{
-                      backgroundImage: `url(${image.url})`,
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                      backgroundSize: `${image.width / image.pixelRatio}px ${
-                        image.height / image.pixelRatio
-                      }px`,
-                    }}
-                    onClick={() => {
-                      if (editorRef.current?.view) {
-                        const insert = `"seasketch://sprites/${sprite.id}"`;
-                        setSpriteState((prev) => ({
-                          ...prev!,
-                          selectedSpriteId: sprite.id,
-                          to: prev!.from + insert.length,
-                        }));
-                        const view = editorRef.current.view;
-                        view.dispatch({
-                          changes: {
-                            from: spriteState.from,
-                            to: spriteState.to,
-                            insert,
-                          },
-                        });
-                      }
-                    }}
-                  >
-                    {/* <img
-                      width={image.width / image.pixelRatio}
-                      height={image.height / image.pixelRatio}
-                      src={image.url}
-                    /> */}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <div ref={setArrowElement} style={styles.arrow} className="z-10" />
-        </div>
-      )}
+
+      <SpritePopover spriteState={spriteState} onChange={onSpriteChange} />
+
       <CodeMirror
         className="flex-1 overflow-y-auto"
         value={value}
@@ -338,29 +210,4 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
       />
     </div>
   );
-}
-
-async function getImageDimensions(
-  file: File
-): Promise<{ width: number; height: number; type: string }> {
-  return new Promise((resolve, reject) => {
-    var reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = function (e: any) {
-      //Initiate the JavaScript Image object.
-      var image = new Image();
-
-      //Set the Base64 string return from FileReader as source.
-      image.src = e.target.result;
-
-      //Validate the File Height and Width.
-      image.onload = function () {
-        resolve({
-          type: file.type,
-          width: image.width,
-          height: image.height,
-        });
-      };
-    };
-  });
 }
