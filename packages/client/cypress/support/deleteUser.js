@@ -12,7 +12,7 @@ const client = new Client({
     [process.argv[2]]
   );
   console.log(
-    `Deleted ${res.rows.length} user${res.rows.length !== 1 ? "s" : ""} from database`
+    `Deleted ${process.argv[2]} from the database`
   );
   await client.end();
 })();
