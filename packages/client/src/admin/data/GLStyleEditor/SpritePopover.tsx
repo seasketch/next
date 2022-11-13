@@ -335,7 +335,7 @@ export default function SpritePopover({
                 {uploadPlaceholders &&
                   uploadPlaceholders.length > 0 &&
                   uploadPlaceholders.map(({ file }) => {
-                    return <UploadPlaceholder file={file} />;
+                    return <UploadPlaceholder key={file.name} file={file} />;
                   })}
                 {sprites.uploaded.length === 0 &&
                   (uploadPlaceholders || []).length === 0 && (
@@ -448,7 +448,7 @@ const UploadPlaceholder = memo(({ file }: { file: File }) => {
     >
       <div
         ref={ref}
-        className="absolute left-0 top-0 w-full h-full saturate-0 opacity-10"
+        className="absolute left-0 top-0 w-full h-full saturate-0 opacity-20"
         style={{
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
