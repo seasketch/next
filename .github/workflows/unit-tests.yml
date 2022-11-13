@@ -218,7 +218,7 @@ jobs:
   integration-tests:
     name: Cypress Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     # container: cypress/browsers:node16.5.0-chrome94-ff93
     services:
       postgres:
