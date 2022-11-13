@@ -7667,6 +7667,24 @@ type Mutation {
     """
     input: SetUserGroupsInput!
   ): SetUserGroupsPayload
+
+  """Superusers only. Promote a sprite to be globally available."""
+  shareSprite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ShareSpriteInput!
+  ): ShareSpritePayload
+
+  """
+  Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it.
+  """
+  softDeleteSprite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SoftDeleteSpriteInput!
+  ): SoftDeleteSpritePayload
   submitDataUpload(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9246,20 +9264,12 @@ type Project implements Node {
 
   """Reads and enables pagination through a set of `Sprite`."""
   sprites(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: SpriteCondition
-
     """Only read the first `n` values of the set."""
     first: Int
 
     """Skip the first `n` values."""
     offset: Int
-
-    """The method to use when ordering `Sprite`."""
-    orderBy: [SpritesOrderBy!]
-  ): [Sprite!]!
+  ): [Sprite!]
   supportEmail: String!
 
   """Reads and enables pagination through a set of `Basemap`."""
@@ -10332,6 +10342,18 @@ type Query implements Node {
   ): ProjectsSharedBasemapsConnection
 
   """
+  Used by project administrators to access a list of public sprites promoted by the SeaSketch development team.
+  
+  """
+  publicSprites(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Sprite!]
+
+  """
   Exposes the root query type nested one level down. This is helpful for Relay 1
   which can only query top level fields if they are in a particular form.
   """
@@ -10365,7 +10387,6 @@ type Query implements Node {
     nodeId: ID!
   ): SketchFolder
   sprite(id: Int!): Sprite
-  spriteByMd5AndProjectId(md5: String!, projectId: Int!): Sprite
 
   """Reads a single `Sprite` using its globally unique `ID`."""
   spriteByNodeId(
@@ -10945,6 +10966,33 @@ type SetUserGroupsPayload {
   query: Query
 }
 
+"""All input for the `shareSprite` mutation."""
+input ShareSpriteInput {
+  category: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  spriteId: Int
+}
+
+"""The output of our `shareSprite` mutation."""
+type ShareSpritePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sprite: Sprite
+}
+
 """
 A *Sketch* is a spatial feature that matches the schema defined by the related 
 *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
@@ -11400,6 +11448,31 @@ input SketchPatch {
   userGeom: GeoJSON
 }
 
+"""All input for the `softDeleteSprite` mutation."""
+input SoftDeleteSpriteInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int
+}
+
+"""The output of our `softDeleteSprite` mutation."""
+type SoftDeleteSpritePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sprite: Sprite
+}
+
 enum SortByDirection {
   ASC
   DESC
@@ -11412,6 +11485,7 @@ sprite, the actual images are in cloud storage referenced by the URL parameter.
 """
 type Sprite implements Node {
   category: String
+  deleted: Boolean
   id: Int!
 
   """
@@ -11424,9 +11498,6 @@ type Sprite implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-
-  """Reads a single `Project` that is related to this `Sprite`."""
-  project: Project
 
   """If unset, sprite will be available for use in all projects"""
   projectId: Int
@@ -11452,23 +11523,6 @@ type Sprite implements Node {
   Optional. Indicates whether the image is intended for use with particular GL Styles
   """
   type: SpriteType
-}
-
-"""
-A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’
-"""
-input SpriteCondition {
-  """Checks for equality with the object’s `category` field."""
-  category: String
-
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `md5` field."""
-  md5: String
-
-  """Checks for equality with the object’s `projectId` field."""
-  projectId: Int
 }
 
 type SpriteImage {
@@ -11507,21 +11561,6 @@ enum SpriteImagesOrderBy {
   NATURAL
   SPRITE_ID_ASC
   SPRITE_ID_DESC
-}
-
-"""Methods to use when ordering `Sprite`."""
-enum SpritesOrderBy {
-  CATEGORY_ASC
-  CATEGORY_DESC
-  ID_ASC
-  ID_DESC
-  MD5_ASC
-  MD5_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
 }
 
 enum SpriteType {

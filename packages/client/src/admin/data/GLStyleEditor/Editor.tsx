@@ -74,7 +74,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     view: EditorView;
     value: string;
     target: HTMLSpanElement;
-    selectedSpriteId: number;
+    selectedSpriteId: number | null;
   }>(null);
 
   const extensions = useMemo(() => {
@@ -107,12 +107,12 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }
         },
         onSpriteClick: (event) => {
-          setSpriteState({
+          setSpriteState((prev) => ({
             ...event,
-            selectedSpriteId: parseInt(
-              event.value.match(/seasketch:\/\/sprites\/(\d+)/)![1]
-            ),
-          });
+            selectedSpriteId: /seasketch:\/\/sprites\/(\d+)/.test(event.value)
+              ? parseInt(event.value.match(/seasketch:\/\/sprites\/(\d+)/)![1])
+              : null,
+          }));
         },
       }),
       keymap.of([formatJSONKeyBinding, ...defaultKeymap]),

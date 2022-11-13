@@ -5930,6 +5930,10 @@ export type Mutation = {
    * group memberships in the project. Available only to admins.
    */
   setUserGroups?: Maybe<SetUserGroupsPayload>;
+  /** Superusers only. Promote a sprite to be globally available. */
+  shareSprite?: Maybe<ShareSpritePayload>;
+  /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
+  softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
   /**
    * Toggle admin access for the given project and user. User must have already
@@ -6896,6 +6900,18 @@ export type MutationSetTopicStickyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetUserGroupsArgs = {
   input: SetUserGroupsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationShareSpriteArgs = {
+  input: ShareSpriteInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSoftDeleteSpriteArgs = {
+  input: SoftDeleteSpriteInput;
 };
 
 
@@ -7927,7 +7943,7 @@ export type Project = Node & {
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `Sprite`. */
-  sprites: Array<Sprite>;
+  sprites?: Maybe<Array<Sprite>>;
   supportEmail: Scalars['String'];
   /** Reads and enables pagination through a set of `Basemap`. */
   surveyBasemaps?: Maybe<Array<Basemap>>;
@@ -8201,10 +8217,8 @@ export type ProjectSketchClassesArgs = {
  * needed to drive the application.
  */
 export type ProjectSpritesArgs = {
-  condition?: Maybe<SpriteCondition>;
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SpritesOrderBy>>;
 };
 
 
@@ -8802,6 +8816,8 @@ export type Query = Node & {
   projectsSharedBasemapByBasemapIdAndProjectId?: Maybe<ProjectsSharedBasemap>;
   /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
   projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
+  /** Used by project administrators to access a list of public sprites promoted by the SeaSketch development team. */
+  publicSprites?: Maybe<Array<Sprite>>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
@@ -8820,7 +8836,6 @@ export type Query = Node & {
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
   sprite?: Maybe<Sprite>;
-  spriteByMd5AndProjectId?: Maybe<Sprite>;
   /** Reads a single `Sprite` using its globally unique `ID`. */
   spriteByNodeId?: Maybe<Sprite>;
   spriteImageBySpriteIdAndPixelRatio?: Maybe<SpriteImage>;
@@ -9403,6 +9418,13 @@ export type QueryProjectsSharedBasemapsConnectionArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryPublicSpritesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySessionIsBannedFromPostingArgs = {
   pid?: Maybe<Scalars['Int']>;
 };
@@ -9453,13 +9475,6 @@ export type QuerySketchFolderByNodeIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySpriteArgs = {
   id: Scalars['Int'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySpriteByMd5AndProjectIdArgs = {
-  md5: Scalars['String'];
-  projectId: Scalars['Int'];
 };
 
 
@@ -10014,6 +10029,30 @@ export type SetUserGroupsPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `shareSprite` mutation. */
+export type ShareSpriteInput = {
+  category?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  spriteId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `shareSprite` mutation. */
+export type ShareSpritePayload = {
+  __typename?: 'ShareSpritePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sprite?: Maybe<Sprite>;
+};
+
 /**
  * A *Sketch* is a spatial feature that matches the schema defined by the related
  * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
@@ -10356,6 +10395,29 @@ export type SketchPatch = {
   userGeom?: Maybe<Scalars['GeoJSON']>;
 };
 
+/** All input for the `softDeleteSprite` mutation. */
+export type SoftDeleteSpriteInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `softDeleteSprite` mutation. */
+export type SoftDeleteSpritePayload = {
+  __typename?: 'SoftDeleteSpritePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sprite?: Maybe<Sprite>;
+};
+
 export enum SortByDirection {
   Asc = 'ASC',
   Desc = 'DESC'
@@ -10368,6 +10430,7 @@ export enum SortByDirection {
 export type Sprite = Node & {
   __typename?: 'Sprite';
   category?: Maybe<Scalars['String']>;
+  deleted?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
   /**
    * Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating
@@ -10376,8 +10439,6 @@ export type Sprite = Node & {
   md5: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /** Reads a single `Project` that is related to this `Sprite`. */
-  project?: Maybe<Project>;
   /** If unset, sprite will be available for use in all projects */
   projectId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `SpriteImage`. */
@@ -10396,18 +10457,6 @@ export type SpriteSpriteImagesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SpriteImagesOrderBy>>;
-};
-
-/** A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’ */
-export type SpriteCondition = {
-  /** Checks for equality with the object’s `category` field. */
-  category?: Maybe<Scalars['String']>;
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `md5` field. */
-  md5?: Maybe<Scalars['String']>;
-  /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
 };
 
 export type SpriteImage = {
@@ -10449,21 +10498,6 @@ export enum SpriteType {
   Fill = 'FILL',
   Icon = 'ICON',
   Line = 'LINE'
-}
-
-/** Methods to use when ordering `Sprite`. */
-export enum SpritesOrderBy {
-  CategoryAsc = 'CATEGORY_ASC',
-  CategoryDesc = 'CATEGORY_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Md5Asc = 'MD5_ASC',
-  Md5Desc = 'MD5_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
 /** All input for the `submitDataUpload` mutation. */
@@ -14750,7 +14784,7 @@ export type PublishTableOfContentsMutation = (
 
 export type SpriteDetailsFragment = (
   { __typename?: 'Sprite' }
-  & Pick<Sprite, 'id' | 'type'>
+  & Pick<Sprite, 'id' | 'type' | 'category' | 'projectId'>
   & { spriteImages: Array<(
     { __typename?: 'SpriteImage' }
     & Pick<SpriteImage, 'spriteId' | 'height' | 'width' | 'pixelRatio' | 'url'>
@@ -14767,11 +14801,14 @@ export type SpritesQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { sprites: Array<(
+    & { sprites?: Maybe<Array<(
       { __typename?: 'Sprite' }
       & SpriteDetailsFragment
-    )> }
-  )> }
+    )>> }
+  )>, publicSprites?: Maybe<Array<(
+    { __typename?: 'Sprite' }
+    & SpriteDetailsFragment
+  )>> }
 );
 
 export type GetSpriteQueryVariables = Exact<{
@@ -14784,6 +14821,39 @@ export type GetSpriteQuery = (
   & { sprite?: Maybe<(
     { __typename?: 'Sprite' }
     & SpriteDetailsFragment
+  )> }
+);
+
+export type ShareSpriteMutationVariables = Exact<{
+  id: Scalars['Int'];
+  category?: Maybe<Scalars['String']>;
+}>;
+
+
+export type ShareSpriteMutation = (
+  { __typename?: 'Mutation' }
+  & { shareSprite?: Maybe<(
+    { __typename?: 'ShareSpritePayload' }
+    & { sprite?: Maybe<(
+      { __typename?: 'Sprite' }
+      & SpriteDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteSpriteMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSpriteMutation = (
+  { __typename?: 'Mutation' }
+  & { softDeleteSprite?: Maybe<(
+    { __typename?: 'SoftDeleteSpritePayload' }
+    & { sprite?: Maybe<(
+      { __typename?: 'Sprite' }
+      & SpriteDetailsFragment
+    )> }
   )> }
 );
 
@@ -17030,6 +17100,8 @@ export const SpriteDetailsFragmentDoc = gql`
     fragment SpriteDetails on Sprite {
   id
   type
+  category
+  projectId
   spriteImages {
     spriteId
     height
@@ -20922,6 +20994,9 @@ export const SpritesDocument = gql`
       ...SpriteDetails
     }
   }
+  publicSprites {
+    ...SpriteDetails
+  }
 }
     ${SpriteDetailsFragmentDoc}`;
 
@@ -20987,6 +21062,77 @@ export function useGetSpriteLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<
 export type GetSpriteQueryHookResult = ReturnType<typeof useGetSpriteQuery>;
 export type GetSpriteLazyQueryHookResult = ReturnType<typeof useGetSpriteLazyQuery>;
 export type GetSpriteQueryResult = Apollo.QueryResult<GetSpriteQuery, GetSpriteQueryVariables>;
+export const ShareSpriteDocument = gql`
+    mutation ShareSprite($id: Int!, $category: String) {
+  shareSprite(input: {spriteId: $id, category: $category}) {
+    sprite {
+      ...SpriteDetails
+    }
+  }
+}
+    ${SpriteDetailsFragmentDoc}`;
+export type ShareSpriteMutationFn = Apollo.MutationFunction<ShareSpriteMutation, ShareSpriteMutationVariables>;
+
+/**
+ * __useShareSpriteMutation__
+ *
+ * To run a mutation, you first call `useShareSpriteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useShareSpriteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [shareSpriteMutation, { data, loading, error }] = useShareSpriteMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      category: // value for 'category'
+ *   },
+ * });
+ */
+export function useShareSpriteMutation(baseOptions?: Apollo.MutationHookOptions<ShareSpriteMutation, ShareSpriteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ShareSpriteMutation, ShareSpriteMutationVariables>(ShareSpriteDocument, options);
+      }
+export type ShareSpriteMutationHookResult = ReturnType<typeof useShareSpriteMutation>;
+export type ShareSpriteMutationResult = Apollo.MutationResult<ShareSpriteMutation>;
+export type ShareSpriteMutationOptions = Apollo.BaseMutationOptions<ShareSpriteMutation, ShareSpriteMutationVariables>;
+export const DeleteSpriteDocument = gql`
+    mutation DeleteSprite($id: Int!) {
+  softDeleteSprite(input: {id: $id}) {
+    sprite {
+      ...SpriteDetails
+    }
+  }
+}
+    ${SpriteDetailsFragmentDoc}`;
+export type DeleteSpriteMutationFn = Apollo.MutationFunction<DeleteSpriteMutation, DeleteSpriteMutationVariables>;
+
+/**
+ * __useDeleteSpriteMutation__
+ *
+ * To run a mutation, you first call `useDeleteSpriteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteSpriteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteSpriteMutation, { data, loading, error }] = useDeleteSpriteMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteSpriteMutation(baseOptions?: Apollo.MutationHookOptions<DeleteSpriteMutation, DeleteSpriteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteSpriteMutation, DeleteSpriteMutationVariables>(DeleteSpriteDocument, options);
+      }
+export type DeleteSpriteMutationHookResult = ReturnType<typeof useDeleteSpriteMutation>;
+export type DeleteSpriteMutationResult = Apollo.MutationResult<DeleteSpriteMutation>;
+export type DeleteSpriteMutationOptions = Apollo.BaseMutationOptions<DeleteSpriteMutation, DeleteSpriteMutationVariables>;
 export const JoinProjectDocument = gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -24887,6 +25033,8 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    ShareSprite: 'ShareSprite',
+    DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',

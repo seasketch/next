@@ -17,6 +17,14 @@ export interface SpriteState {
   url: string;
 }
 
+const SPRITE_PROPS = [
+  "icon-image",
+  "fill-pattern",
+  "fill-extrusion-pattern",
+  "line-pattern",
+  "background-pattern",
+];
+
 export function getBestSpriteImage(sprite: SpriteDetailsFragment): {
   width: number;
   height: number;
@@ -48,25 +56,33 @@ function spriteDecorations(
     syntaxTree(view.state).iterate({
       from: range.from,
       to: range.to,
-      enter: ({ type, from, to }) => {
+      enter: ({ type, from, to, node, tree }) => {
         if (type.name === "String") {
-          // Get string value (without quotes)
-          const value: string = view.state.doc
-            .sliceString(from, to)
-            .replace(/"/g, "");
-          if (value.startsWith(`seasketch://`)) {
-            const widget = Decoration.widget({
-              widget: new SpriteWidget(
-                {
-                  from,
-                  to,
-                  url: value,
-                },
-                getSpriteUrl
-              ),
-              side: 0,
-            });
-            widgets.push(widget.range(from));
+          if (node.parent && node.parent.name === "Property") {
+            const propName = node.parent.firstChild;
+            if (propName) {
+              const prop = view.state.doc
+                .sliceString(propName.from, propName.to)
+                .replace(/"/g, "");
+              if (SPRITE_PROPS.indexOf(prop) !== -1) {
+                // Get string value (without quotes)
+                const value: string = view.state.doc
+                  .sliceString(from, to)
+                  .replace(/"/g, "");
+                const widget = Decoration.widget({
+                  widget: new SpriteWidget(
+                    {
+                      from,
+                      to,
+                      url: value,
+                    },
+                    getSpriteUrl
+                  ),
+                  side: 0,
+                });
+                widgets.push(widget.range(from));
+              }
+            }
           }
         }
       },
@@ -206,9 +222,10 @@ export const spriteView = (props: SpriteExtensionProps) =>
       eventHandlers: {
         click(e, view) {
           const target = e.target as HTMLSpanElement;
-          if (target.nodeName !== "SPAN" || !target.dataset.sprite)
+          if (target.nodeName !== "SPAN" || !("sprite" in target.dataset))
             return false;
-
+          e.preventDefault();
+          e.stopImmediatePropagation();
           const data = spriteState.get(target);
           if (data) {
             this.onSpriteClick({

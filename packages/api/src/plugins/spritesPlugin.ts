@@ -63,7 +63,7 @@ const SpritesPlugin = makeExtendSchemaPlugin((build) => {
           //   throw new Error("Must be called with an image with pixelRatio=1");
           // }
           const q = await pgClient.query(
-            `select * from sprites where md5 = $1 and project_id = $2`,
+            `select * from sprites where md5 = $1 and project_id = $2 and deleted = false`,
             [hash, args.projectId]
           );
           if (q.rows.length) {
