@@ -77,7 +77,7 @@ const SpritesPlugin = makeExtendSchemaPlugin((build) => {
                       hash
                     )} and ${tableAlias}.project_id = ${sql.value(
                       args.projectId
-                    )}`
+                    )} and ${tableAlias}.deleted = false`
                   );
                 }
               );
@@ -110,7 +110,7 @@ const SpritesPlugin = makeExtendSchemaPlugin((build) => {
                       hash
                     )} and ${tableAlias}.project_id = ${sql.value(
                       args.projectId
-                    )}`
+                    )} and ${tableAlias}.deleted = false`
                   );
                 }
               );
