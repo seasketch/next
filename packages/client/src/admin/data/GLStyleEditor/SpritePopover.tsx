@@ -31,6 +31,7 @@ import useDialog from "../../../components/useDialog";
 export default function SpritePopover({
   spriteState,
   onChange,
+  onUpload,
 }: {
   spriteState: null | {
     from: number;
@@ -40,6 +41,7 @@ export default function SpritePopover({
     target: HTMLSpanElement;
     selectedSpriteId: number | null;
   };
+  onUpload?: (sprites: SpriteDetailsFragment[]) => void;
   onChange: (selectedSpriteId: number | null, value?: string) => void;
 }) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -95,6 +97,7 @@ export default function SpritePopover({
         setSelectedCategory(null);
       }
       try {
+        const createdSprites: SpriteDetailsFragment[] = [];
         await Promise.all(
           acceptedFiles.map(async (file) => {
             const dims = await getImageDimensions(file);
@@ -115,7 +118,7 @@ export default function SpritePopover({
                   file,
                 },
               ]);
-              await createSprite({
+              const sprite = await createSprite({
                 variables: {
                   height: dims.height,
                   width: dims.height,
@@ -124,26 +127,42 @@ export default function SpritePopover({
                   smallestImage: file,
                 },
               });
+              if (sprite.data?.getOrCreateSprite) {
+                createdSprites.push(sprite.data.getOrCreateSprite);
+              }
               setUploadPlaceholders((prev) => {
                 return [...(prev || []).filter((f) => f.file !== file)];
               });
             }
           })
         );
-        spriteQuery.refetch();
+        await spriteQuery.refetch();
+        if (createdSprites.length) {
+          console.log("value", spriteState?.value);
+          if (spriteState?.value === "") {
+            const insert = `"seasketch://sprites/${createdSprites[0].id}"`;
+            onChange(createdSprites[0].id, insert);
+            spriteState.view.dispatch({
+              changes: {
+                from: spriteState.from,
+                to: spriteState.to,
+                insert,
+              },
+            });
+          }
+        }
       } catch (e) {
         setUploadPlaceholders([]);
         alert((e as Error).message);
       }
     },
-    [createSprite, projectId, spriteQuery]
+    [createSprite, projectId, spriteQuery, spriteState]
   );
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
-  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(
-    null
-  );
+  const [popperElement, setPopperElement] =
+    useState<HTMLDivElement | null>(null);
   const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
   const { styles, attributes } = usePopper(spriteState?.target, popperElement, {
     modifiers: [{ name: "arrow", options: { element: arrowElement } }],
@@ -154,9 +173,8 @@ export default function SpritePopover({
 
   const superuser = useIsSuperuser();
   const { confirm, alert } = useDialog();
-  const [selectedCategory, setSelectedCategory] = useState<
-    null | "uploads" | string
-  >(null);
+  const [selectedCategory, setSelectedCategory] =
+    useState<null | "uploads" | string>(null);
 
   useEffect(() => {
     if (spriteState?.target) {

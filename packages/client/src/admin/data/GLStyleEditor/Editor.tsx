@@ -68,14 +68,15 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     },
   });
 
-  const [spriteState, setSpriteState] = useState<null | {
-    from: number;
-    to: number;
-    view: EditorView;
-    value: string;
-    target: HTMLSpanElement;
-    selectedSpriteId: number | null;
-  }>(null);
+  const [spriteState, setSpriteState] =
+    useState<null | {
+      from: number;
+      to: number;
+      view: EditorView;
+      value: string;
+      target: HTMLSpanElement;
+      selectedSpriteId: number | null;
+    }>(null);
 
   const extensions = useMemo(() => {
     return [
