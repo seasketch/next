@@ -6,7 +6,7 @@ import { getAuth0ApiToken, getAuth0CypressUserByEmail, deleteAuth0CypressUser, d
 let newUser; 
 
 describe ("User onboarding via independent browsing", () => {
-  describe.only ("Unauthenticated user visiting a public project", () => {
+  describe.only ("New user visiting a public project", () => {
     beforeEach(() => {
       Cypress.on('uncaught:exception', (err, runnable) => {
         if (err.message.includes('ServiceWorker')) {
