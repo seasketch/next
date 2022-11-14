@@ -138,7 +138,6 @@ export default function SpritePopover({
         );
         await spriteQuery.refetch();
         if (createdSprites.length) {
-          console.log("value", spriteState?.value);
           if (spriteState?.value === "") {
             const insert = `"seasketch://sprites/${createdSprites[0].id}"`;
             onChange(createdSprites[0].id, insert);
