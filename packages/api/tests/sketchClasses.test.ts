@@ -439,7 +439,7 @@ describe("Sketch Classes tied to FormElements", () => {
   });
 });
 
-test("Don't allow geometry type to be changed", async () => {
+test("Don't allow geometry type to be changed for sketch classes that aren't a part of surveys", async () => {
   await pool.transaction(async (conn) => {
     const adminId = await createUser(conn);
     const projectId = await createProject(conn, adminId, "invite_only");

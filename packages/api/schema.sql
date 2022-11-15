@@ -3124,7 +3124,7 @@ CREATE FUNCTION public.before_update_sketch_class_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
     begin
-      if NEW.geometry_type != OLD.geometry_type then
+      if NEW.geometry_type != OLD.geometry_type and NEW.form_element_id is null then
         raise exception 'Cannot change geometry type of a sketch class';
       end if;
       return NEW;
