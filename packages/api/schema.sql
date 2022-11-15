@@ -3117,6 +3117,22 @@ $$;
 
 
 --
+-- Name: before_update_sketch_class_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_update_sketch_class_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    begin
+      if NEW.geometry_type != OLD.geometry_type then
+        raise exception 'Cannot change geometry type of a sketch class';
+      end if;
+      return NEW;
+    end;
+  $$;
+
+
+--
 -- Name: before_valid_children_insert_or_update(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13840,6 +13856,13 @@ CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline
 
 
 --
+-- Name: sketch_classes sketch_classes_before_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER sketch_classes_before_update BEFORE UPDATE ON public.sketch_classes FOR EACH ROW EXECUTE FUNCTION public.before_update_sketch_class_trigger();
+
+
+--
 -- Name: sketch_classes sketch_classes_prohibit_delete_t; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -17150,6 +17173,13 @@ REVOKE ALL ON FUNCTION public.before_survey_response_insert() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.before_survey_update() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_update_sketch_class_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_update_sketch_class_trigger() FROM PUBLIC;
 
 
 --
