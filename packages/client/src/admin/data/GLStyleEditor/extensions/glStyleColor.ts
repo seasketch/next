@@ -155,14 +155,7 @@ class ColorWidget extends WidgetType {
   }
 
   toDOM() {
-    // const picker = document.createElement("input");
-    // colorState.set(picker, this.state);
-    // picker.type = "color";
-    // picker.value = this.color;
-    // picker.dataset["color"] = this.color;
-    // picker.dataset["colorraw"] = this.colorRaw;
     const wrapper = document.createElement("span");
-    // wrapper.appendChild(picker);
     wrapper.dataset["color"] = this.color;
     wrapper.dataset["colorraw"] = this.colorRaw;
     wrapper.style.backgroundColor = this.colorRaw;
@@ -187,7 +180,6 @@ export const colorView = () =>
       constructor(view: EditorView) {
         this.decorations = colorDecorations(view);
         const picker = view.dom.appendChild(document.createElement("input"));
-        // colorState.set(picker, this.state);
         picker.type = "color";
         picker.dataset["glColorPicker"] = "true";
         this.dom = picker;
@@ -223,17 +215,13 @@ export const colorView = () =>
 
       update(update: ViewUpdate) {
         if (update.docChanged || update.viewportChanged) {
-          // if (!hasColorPickerAnnotation(update)) {
           this.decorations = colorDecorations(update.view);
-          // }
         }
         const readOnly = update.view.contentDOM.ariaReadOnly === "true";
         const editable = update.view.contentDOM.contentEditable === "true";
 
         const canBeEdited = readOnly === false && editable;
         this.changePicker(update.view, canBeEdited);
-        // if (update.docChanged)
-        //   this.dom.textContent = update.state.doc.length.toString();
       }
 
       destroy() {

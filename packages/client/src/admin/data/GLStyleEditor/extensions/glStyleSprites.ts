@@ -148,49 +148,14 @@ export const spriteView = (props: SpriteExtensionProps) =>
   ViewPlugin.fromClass(
     class ColorView {
       decorations: DecorationSet;
-      // dom: HTMLElement;
       pickerState?: SpriteState;
       getSpriteUrl: SpriteExtensionProps["getSpriteUrl"];
       onSpriteClick: SpriteExtensionProps["onSpriteClick"];
-      // pickerListener: (event: Event) => void;
 
       constructor(view: EditorView) {
         this.getSpriteUrl = props.getSpriteUrl;
         this.onSpriteClick = props.onSpriteClick;
         this.decorations = spriteDecorations(view, props.getSpriteUrl);
-        // const picker = view.dom.appendChild(document.createElement("input"));
-        // // colorState.set(picker, this.state);
-        // picker.type = "color";
-        // picker.dataset["glColorPicker"] = "true";
-        // this.dom = picker;
-        // this.pickerListener = (event) => {
-        //   const target = event.target as HTMLInputElement;
-        //   // if (this.pickerState) {
-        //   //   const data = this.pickerState;
-        //   //   const value = target.value;
-        //   //   const rgb = hexToRgb(value);
-        //   //   let converted = target.value;
-        //   //   if (data.colorType === ColorType.rgb) {
-        //   //     converted = rgb ? `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})` : value;
-        //   //   } else if (data.colorType === ColorType.hsl) {
-        //   //     const rgb = hexToRgb(value);
-        //   //     if (rgb) {
-        //   //       const { h, s, l } = RGBToHSL(rgb?.r, rgb?.g, rgb?.b);
-        //   //       converted = `hsl(${h}, ${s}%, ${l}%)`;
-        //   //     }
-        //   //   }
-        //   //   const content = `"${converted}"`;
-        //   //   view.dispatch({
-        //   //     changes: {
-        //   //       from: data.from,
-        //   //       to: data.to,
-        //   //       insert: content,
-        //   //     },
-        //   //   });
-        //   //   data.to = data.from + content.length;
-        //   // }
-        // };
-        // picker.addEventListener("input", this.pickerListener);
       }
 
       update(update: ViewUpdate) {
@@ -369,6 +334,3 @@ export function RGBToHSL(r: number, g: number, b: number) {
     l: Math.floor(l * 100),
   };
 }
-
-type GetArrayElementType<T extends readonly any[]> =
-  T extends readonly (infer U)[] ? U : never;
