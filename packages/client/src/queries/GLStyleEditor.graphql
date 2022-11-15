@@ -1,0 +1,47 @@
+fragment SpriteDetails on Sprite {
+  id
+  type
+  category
+  projectId
+  spriteImages {
+    spriteId
+    height
+    width
+    pixelRatio
+    url
+  }
+}
+
+query Sprites($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sprites {
+      ...SpriteDetails
+    }
+  }
+  publicSprites {
+    ...SpriteDetails
+  }
+}
+
+query GetSprite($id: Int!) {
+  sprite(id: $id) {
+    ...SpriteDetails
+  }
+}
+
+mutation ShareSprite($id: Int!, $category: String) {
+  shareSprite(input: { spriteId: $id, category: $category }) {
+    sprite {
+      ...SpriteDetails
+    }
+  }
+}
+
+mutation DeleteSprite($id: Int!) {
+  softDeleteSprite(input: { id: $id }) {
+    sprite {
+      ...SpriteDetails
+    }
+  }
+}

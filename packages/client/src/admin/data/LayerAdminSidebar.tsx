@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Button from "../../components/Button";
 import SegmentControl from "../../components/SegmentControl";
 import useSegmentState from "../../components/useSegmentState";
+import DataUploadTaskList from "../uploads/DataUploadTaskList";
 import BaseMapEditor from "./BasemapEditor";
 import TableOfContentsEditor from "./TableOfContentsEditor";
 
@@ -35,6 +36,7 @@ export default function LayerAdminSidebar() {
           <BaseMapEditor />
         </div>
       </div>
+      <DataUploadTaskList className="flex-none max-h-96 xl:max-h-127 overflow-y-scroll" />
     </div>
   );
 }

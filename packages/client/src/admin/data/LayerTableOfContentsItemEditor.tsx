@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from "react";
-import TextInput from "../../components/TextInput";
+import { useEffect, useMemo, useState } from "react";
 import {
   useGetLayerItemQuery,
   useUpdateTableOfContentsItemMutation,
   useUpdateDataSourceMutation,
   RenderUnderType,
   useUpdateLayerMutation,
-  AccessControlListType,
   DataSourceTypes,
   DataSourceImportTypes,
   useUpdateEnableDownloadMutation,
@@ -14,21 +12,20 @@ import {
   useUpdateEnableHighDpiRequestsMutation,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
-import TableOfContentsItemAutosaveInput from "./TableOfContentsItemAutosaveInput";
 import Spinner from "../../components/Spinner";
 import MutableAutosaveInput from "../MutableAutosaveInput";
-import RadioGroup, { MutableRadioGroup } from "../../components/RadioGroup";
+import { MutableRadioGroup } from "../../components/RadioGroup";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
 import bytes from "bytes";
-import Button from "../../components/Button";
-import slugify from "slugify";
 import Switch from "../../components/Switch";
 import InteractivitySettings from "./InteractivitySettings";
-import GLStyleEditor from "./GLStyleEditor";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
+import GLStyleEditor from "./GLStyleEditor/Editor";
+import { DotsHorizontalIcon } from "@heroicons/react/outline";
+import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -39,33 +36,27 @@ export default function LayerTableOfContentsItemEditor(
   props: LayerTableOfContentsItemEditorProps
 ) {
   const { t } = useTranslation(["admin"]);
-  const { data, loading, error } = useGetLayerItemQuery({
+  const { data } = useGetLayerItemQuery({
     variables: {
       id: props.itemId,
     },
   });
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
   const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation();
-  const [
-    updateQueryParameters,
-    updateQueryParametersState,
-  ] = useUpdateQueryParametersMutation();
+  const [updateQueryParameters, updateQueryParametersState] =
+    useUpdateQueryParametersMutation();
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
-  const [
-    updateGLStyleMutation,
-    updateGLStyleMutationState,
-  ] = useUpdateLayerMutation();
-  const [
-    updateEnableDownload,
-    updateEnableDownloadState,
-  ] = useUpdateEnableDownloadMutation();
-  const [
-    updateEnableHighDpiRequests,
-    updateEnableHighDpiRequestsState,
-  ] = useUpdateEnableHighDpiRequestsMutation();
+  const [updateGLStyleMutation, updateGLStyleMutationState] =
+    useUpdateLayerMutation();
+  const [updateEnableDownload, updateEnableDownloadState] =
+    useUpdateEnableDownloadMutation();
+  const [updateEnableHighDpiRequests] =
+    useUpdateEnableHighDpiRequestsMutation();
 
   const item = data?.tableOfContentsItem;
   const [downloadEnabled, setDownloadEnabled] = useState<boolean>();
+
+  const [showMoreColumns, setShowMoreColums] = useState(false);
 
   const [style, setStyle] = useState<string>();
   const debouncedStyle = useDebounce(style, 250);
@@ -88,6 +79,7 @@ export default function LayerTableOfContentsItemEditor(
         },
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [downloadEnabled, item?.enableDownload]);
 
   useEffect(() => {
@@ -100,16 +92,42 @@ export default function LayerTableOfContentsItemEditor(
               ? JSON.parse(debouncedStyle)
               : debouncedStyle,
         },
+      }).catch((e) => {
+        console.error(e);
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedStyle]);
+
+  const [selectedTab, setSelectedTab] = useState("settings");
+
+  const tabs: NonLinkTabItem[] = useMemo(() => {
+    return [
+      {
+        name: "Settings",
+        id: "settings",
+        current: selectedTab === "settings",
+      },
+      {
+        name: "Interactivity",
+        id: "interactivity",
+        current: selectedTab === "interactivity",
+      },
+      {
+        name: "Style",
+        id: "style",
+        current: selectedTab === "style",
+      },
+    ];
+  }, [selectedTab]);
 
   return (
     <div
       className="bg-white z-20 absolute bottom-0 w-128 flex flex-col"
       style={{ height: "calc(100vh)" }}
     >
-      <div className="flex-0 p-4 border-b shadow-sm bg-primary-600">
+      <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+        <h4 className="font-medium text-indigo-100 flex-1">{item?.title}</h4>
         <button
           className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
           onClick={props.onRequestClose}
@@ -129,16 +147,16 @@ export default function LayerTableOfContentsItemEditor(
             />
           </svg>
         </button>
-        <h4 className="font-medium text-white">
-          <Trans ns={["admin"]}>Edit Layer</Trans>
-        </h4>
+      </div>
+      <div className="flex-0 p-2 px-4 -mt-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+        <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
       </div>
       {!item && <Spinner />}
-      {item && (
+      {item && selectedTab === "settings" && (
         <div className="flex-1 overflow-y-scroll px-4 pb-4">
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput
-              autofocus
+              // autofocus
               mutation={mutateItem}
               mutationStatus={mutateItemState}
               propName="title"
@@ -165,28 +183,85 @@ export default function LayerTableOfContentsItemEditor(
               <AccessControlListEditor nodeId={item.acl?.nodeId} />
             )}
           </div>
-          <div className="mt-5">
-            <div>
-              <div>
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
-                  <Trans ns={["admin"]}>Data Source Details</Trans>
-                </h3>
+          {(source?.type === DataSourceTypes.Geojson ||
+            source?.type === DataSourceTypes.SeasketchVector ||
+            source?.type === DataSourceTypes.SeasketchMvt) && (
+            <div className="mt-5">
+              <div className="flex">
+                <div className="flex-1 text-sm font-medium text-gray-700">
+                  <Trans ns={["admin"]}>Enable data download</Trans>
+                </div>
+                <div className="flex-none">
+                  <Switch
+                    isToggled={
+                      downloadEnabled === undefined
+                        ? item.enableDownload
+                        : downloadEnabled
+                    }
+                    onClick={() =>
+                      setDownloadEnabled(
+                        !(downloadEnabled === undefined
+                          ? item.enableDownload
+                          : downloadEnabled)
+                      )
+                    }
+                  />
+                </div>
               </div>
-              <div className="mt-5 border-t border-gray-200 border-b">
-                {source?.type === DataSourceTypes.SeasketchVector && (
+              <p className="text-sm text-gray-500 mt-1">
+                <Trans ns={["admin"]}>
+                  If enabled, users will be able to download this dataset in
+                  GeoJSON vector format using the context menu.
+                </Trans>
+              </p>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <div className="border rounded">
+              <div className="border-gray-200 border-b">
+                {(source?.type === DataSourceTypes.SeasketchVector ||
+                  source?.type === DataSourceTypes.SeasketchMvt) && (
                   <>
-                    <dl className="sm:divide-y sm:divide-gray-200">
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                    <dl className="sm:divide-y sm:divide-gray-200 zebra-stripe-child-div">
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>Source Type</Trans>
                         </dt>
                         <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          <Trans ns={["admin"]}>
-                            GeoJSON data hosted on SeaSketch
-                          </Trans>
+                          {source?.type === DataSourceTypes.SeasketchVector && (
+                            <Trans ns={["admin"]}>
+                              GeoJSON data hosted on SeaSketch
+                            </Trans>
+                          )}
+                          {source?.type === DataSourceTypes.SeasketchMvt && (
+                            <Trans ns={["admin"]}>
+                              Vector tiles hosted on SeaSketch
+                            </Trans>
+                          )}
                         </dd>
                       </div>
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                      {source.geostats && source.geostats.geometry && (
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
+                          <dt className="text-sm font-medium text-gray-500">
+                            <Trans ns={["admin"]}>Geometry Type</Trans>
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                            {source.geostats.geometry}
+                          </dd>
+                        </div>
+                      )}
+                      {source.geostats && source.geostats.count && (
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
+                          <dt className="text-sm font-medium text-gray-500">
+                            <Trans ns={["admin"]}>Feature Count</Trans>
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                            {source.geostats.count}
+                          </dd>
+                        </div>
+                      )}
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>File Size</Trans>
                         </dt>
@@ -194,7 +269,20 @@ export default function LayerTableOfContentsItemEditor(
                           {bytes.format(source?.byteLength || 0)}
                         </dd>
                       </div>
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+                      {source.uploadedSourceFilename && (
+                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
+                          <dt className="text-sm font-medium text-gray-500">
+                            <Trans ns={["admin"]}>Uploaded by</Trans>
+                          </dt>
+                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                            {source.uploadedBy || "Unknown"}
+                            {source.createdAt &&
+                              " on " +
+                                new Date(source.createdAt).toLocaleDateString()}
+                          </dd>
+                        </div>
+                      )}
+                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
                         <dt className="text-sm font-medium text-gray-500">
                           <Trans ns={["admin"]}>Original Source</Trans>
                         </dt>
@@ -204,6 +292,7 @@ export default function LayerTableOfContentsItemEditor(
                               target="_blank"
                               className="text-primary-600 underline"
                               href={source?.originalSourceUrl}
+                              rel="noreferrer"
                             >
                               {source?.originalSourceUrl
                                 .replace("https://", "")
@@ -211,50 +300,72 @@ export default function LayerTableOfContentsItemEditor(
                             </a>
                           )}
                           {source?.importType ===
-                            DataSourceImportTypes.Upload && "User Upload"}
+                            DataSourceImportTypes.Upload &&
+                            (source.uploadedSourceFilename || "User Upload")}
                         </dd>
                       </div>
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Actions</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-400 sm:mt-0 sm:col-span-2">
-                          <button
-                            className="font-semibold text-primary-600 px-2"
-                            onClick={async () => {
-                              const data = await fetch(
-                                `${source.bucketId!}/${source.objectKey}`
-                              ).then((r) => r.json());
-                              var json = JSON.stringify(data);
-                              var blob = new Blob([json], {
-                                type: "application/json",
-                              });
-                              var url = URL.createObjectURL(blob);
-                              var a = document.createElement("a");
-                              a.download = `${slugify(item.title)}.json`;
-                              a.href = url;
-                              a.textContent = `${slugify(item.title)}.json`;
-                              a.click();
-                            }}
-                          >
-                            <Trans ns={["admin"]}>Download</Trans>
-                          </button>
-                          |
-                          <button
-                            disabled
-                            className="font-semibold text-gray-400 px-2"
-                          >
-                            <Trans ns={["admin"]}>Upload</Trans>
-                          </button>
-                          |
-                          <button
-                            disabled
-                            className="font-semibold text-gray-400 px-2"
-                          >
-                            <Trans ns={["admin"]}>Update from ArcGIS</Trans>
-                          </button>
-                        </dd>
-                      </div>
+                      {source.geostats &&
+                        source.geostats.attributes &&
+                        Array.isArray(source.geostats.attributes) && (
+                          <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
+                            <h4 className="text-sm font-medium text-gray-500">
+                              <Trans ns={["admin"]}>Columns</Trans>
+                            </h4>
+                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                              {(
+                                source.geostats.attributes as {
+                                  type: string;
+                                  count: number;
+                                  attribute: string;
+                                  values: any[];
+                                  max?: number;
+                                  min?: number;
+                                }[]
+                              )
+                                .slice(
+                                  0,
+                                  showMoreColumns
+                                    ? source.geostats.attributes.length
+                                    : 4
+                                )
+                                .map((attr) => {
+                                  return (
+                                    <div className="flex">
+                                      <div className="flex-1 italic">
+                                        {attr.attribute}{" "}
+                                        {attr.values.length && (
+                                          <div
+                                            className="inline-block cursor-help"
+                                            title={attr.values.join("\n")}
+                                          >
+                                            <DotsHorizontalIcon className="w-4 h-4 inline-block text-gray-500" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="font-mono px-2">
+                                        {attr.type}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              {showMoreColumns === false &&
+                                source.geostats.attributes.length > 4 && (
+                                  <button
+                                    className="underline py-1 text-primary-500"
+                                    onClick={() => setShowMoreColums(true)}
+                                  >
+                                    <Trans ns="admin:data">
+                                      Show{" "}
+                                      {(
+                                        source.geostats.attributes.length - 4
+                                      ).toString()}{" "}
+                                      more
+                                    </Trans>
+                                  </button>
+                                )}
+                            </dd>
+                          </div>
+                        )}{" "}
                     </dl>
                   </>
                 )}
@@ -280,6 +391,7 @@ export default function LayerTableOfContentsItemEditor(
                             target="_blank"
                             className="text-primary-600 underline"
                             href={source.url!}
+                            rel="noreferrer"
                           >
                             {source
                               .url!.replace("https://", "")
@@ -312,6 +424,7 @@ export default function LayerTableOfContentsItemEditor(
                             target="_blank"
                             className="text-primary-600 underline"
                             href={source.url!}
+                            rel="noreferrer"
                           >
                             {source
                               .url!.replace("https://", "")
@@ -385,38 +498,6 @@ export default function LayerTableOfContentsItemEditor(
                   {t("Using a lower level of precision reduces download size")}
                 </InputBlock>
               )}
-              {source?.type === DataSourceTypes.Geojson ||
-                (source?.type === DataSourceTypes.SeasketchVector && (
-                  <div className="mt-5">
-                    <div className="flex">
-                      <div className="flex-1 text-sm font-medium text-gray-700">
-                        <Trans ns={["admin"]}>Enable data download</Trans>
-                      </div>
-                      <div className="flex-none">
-                        <Switch
-                          isToggled={
-                            downloadEnabled === undefined
-                              ? item.enableDownload
-                              : downloadEnabled
-                          }
-                          onClick={() =>
-                            setDownloadEnabled(
-                              !(downloadEnabled === undefined
-                                ? item.enableDownload
-                                : downloadEnabled)
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      <Trans ns={["admin"]}>
-                        If enabled, users will be able to download this dataset
-                        in GeoJSON vector format using the context menu.
-                      </Trans>
-                    </p>
-                  </div>
-                ))}
               {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
                 <>
                   <InputBlock
@@ -506,6 +587,10 @@ export default function LayerTableOfContentsItemEditor(
               )}
             </div>
           </div>
+        </div>
+      )}
+      {item && selectedTab === "interactivity" && (
+        <div className="flex-1 overflow-y-scroll px-4 pb-4">
           <div className="mt-5">
             {source && layer && (
               <InteractivitySettings
@@ -548,22 +633,25 @@ export default function LayerTableOfContentsItemEditor(
               ]}
             />
           </div>
+        </div>
+      )}
+
+      {item && selectedTab === "style" && (
+        <div className="h-full overflow-hidden">
           {source &&
             (source.type === DataSourceTypes.Geojson ||
               source.type === DataSourceTypes.SeasketchVector ||
+              source.type === DataSourceTypes.SeasketchMvt ||
               source.type === DataSourceTypes.Vector) && (
-              <div className="mt-5">
-                <div className="flex-1 text-sm font-medium text-gray-700">
-                  <Trans ns={["admin"]}>Vector Style</Trans>
-                  <SaveStateIndicator {...updateGLStyleMutationState} />
-                </div>
-                <p className="text-sm text-gray-500">
+              <div className="h-full overflow-hidden flex flex-col">
+                <p className="text-sm text-gray-100 px-2 pb-2 pt-1 bg-gray-700">
                   <Trans ns={["admin"]}>
                     Vector layers can be styled using{" "}
                     <a
-                      className="underline text-primary-500"
+                      className="underline text-primary-300"
                       href="https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/"
                       target="_blank"
+                      rel="noreferrer"
                     >
                       MapBox GL Style Layers
                     </a>
@@ -572,14 +660,20 @@ export default function LayerTableOfContentsItemEditor(
                     SeaSketch.
                   </Trans>
                 </p>
+                {updateGLStyleMutationState.error && (
+                  <p className="bg-gray-700 text-red-200 p-2 text-sm">
+                    <Trans ns="admin:data">Style save error - </Trans>
+                    {updateGLStyleMutationState.error.message}
+                  </p>
+                )}
                 <GLStyleEditor
+                  className="flex-1 overflow-hidden"
                   dataLayerId={layer?.id}
                   initialStyle={
                     typeof layer!.mapboxGlStyles! === "string"
                       ? layer!.mapboxGlStyles
                       : JSON.stringify(layer!.mapboxGlStyles!, null, "  ")
                   }
-                  geometryType={"Polygon"}
                   onChange={(newStyle) => {
                     client.writeFragment({
                       id: `DataLayer:${layer!.id}`,
@@ -594,11 +688,6 @@ export default function LayerTableOfContentsItemEditor(
                     });
                     setStyle(newStyle);
                   }}
-                  arcgisServerSource={
-                    source?.originalSourceUrl
-                      ? source.originalSourceUrl
-                      : undefined
-                  }
                 />
               </div>
             )}

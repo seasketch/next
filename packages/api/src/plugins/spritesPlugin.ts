@@ -53,39 +53,34 @@ const SpritesPlugin = makeExtendSchemaPlugin((build) => {
       Mutation: {
         getOrCreateSprite: async (_query, args, context, resolveInfo) => {
           const { pgClient } = context;
-          const {
-            filename,
-            createReadStream,
-            mimetype,
-            encoding,
-          } = await args.smallestImage;
+          const { filename, createReadStream, mimetype, encoding } =
+            await args.smallestImage;
           // @ts-ignore
           const hash = (await md5(createReadStream())).toString();
           // check whether sprite with same md5 already exists
           pgClient as DBClient;
-          if (args.pixelRatio > 1) {
-            throw new Error("Must be called with an image with pixelRatio=1");
-          }
+          // if (args.pixelRatio > 1) {
+          //   throw new Error("Must be called with an image with pixelRatio=1");
+          // }
           const q = await pgClient.query(
-            `select * from sprites where md5 = $1 and project_id = $2`,
+            `select * from sprites where md5 = $1 and project_id = $2 and deleted = false`,
             [hash, args.projectId]
           );
           if (q.rows.length) {
             // if so, just return that sprite
-            const [
-              row,
-            ] = await resolveInfo.graphile.selectGraphQLResultFromTable(
-              sql.fragment`public.sprites`,
-              (tableAlias, queryBuilder) => {
-                queryBuilder.where(
-                  sql.fragment`${tableAlias}.md5 = ${sql.value(
-                    hash
-                  )} and ${tableAlias}.project_id = ${sql.value(
-                    args.projectId
-                  )}`
-                );
-              }
-            );
+            const [row] =
+              await resolveInfo.graphile.selectGraphQLResultFromTable(
+                sql.fragment`public.sprites`,
+                (tableAlias, queryBuilder) => {
+                  queryBuilder.where(
+                    sql.fragment`${tableAlias}.md5 = ${sql.value(
+                      hash
+                    )} and ${tableAlias}.project_id = ${sql.value(
+                      args.projectId
+                    )} and ${tableAlias}.deleted = false`
+                  );
+                }
+              );
             return row;
           } else {
             // create a new one
@@ -106,31 +101,26 @@ const SpritesPlugin = makeExtendSchemaPlugin((build) => {
                 url,
               ]
             );
-            const [
-              row,
-            ] = await resolveInfo.graphile.selectGraphQLResultFromTable(
-              sql.fragment`public.sprites`,
-              (tableAlias, queryBuilder) => {
-                queryBuilder.where(
-                  sql.fragment`${tableAlias}.md5 = ${sql.value(
-                    hash
-                  )} and ${tableAlias}.project_id = ${sql.value(
-                    args.projectId
-                  )}`
-                );
-              }
-            );
+            const [row] =
+              await resolveInfo.graphile.selectGraphQLResultFromTable(
+                sql.fragment`public.sprites`,
+                (tableAlias, queryBuilder) => {
+                  queryBuilder.where(
+                    sql.fragment`${tableAlias}.md5 = ${sql.value(
+                      hash
+                    )} and ${tableAlias}.project_id = ${sql.value(
+                      args.projectId
+                    )} and ${tableAlias}.deleted = false`
+                  );
+                }
+              );
             return row;
           }
         },
         addImageToSprite: async (_query, args, context, resolveInfo) => {
           const { pgClient } = context;
-          const {
-            filename,
-            createReadStream,
-            mimetype,
-            encoding,
-          } = await args.image;
+          const { filename, createReadStream, mimetype, encoding } =
+            await args.image;
           // @ts-ignore
           const hash = (await md5(createReadStream())).toString();
           pgClient as DBClient;

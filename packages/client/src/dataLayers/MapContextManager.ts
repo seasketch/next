@@ -798,10 +798,6 @@ class MapContextManager {
         });
       }
     }
-    // } else if (!this.internalState.terrainEnabled) {
-    //   console.log("delete terrain");
-    //   delete baseStyle.terrain;
-    // }
 
     let labelsLayerIndex = baseStyle.layers?.findIndex(
       (layer) => layer.id === labelsID
@@ -833,8 +829,16 @@ class MapContextManager {
                   case DataSourceTypes.Vector:
                     baseStyle.sources[source.id.toString()] = {
                       type: "vector",
-                      // attribution: source.attribution || "",
+                      attribution: source.attribution || "",
                       tiles: source.tiles as string[],
+                    };
+                    sourceWasAdded = true;
+                    break;
+                  case DataSourceTypes.SeasketchMvt:
+                    baseStyle.sources[source.id.toString()] = {
+                      type: "vector",
+                      url: source.url! + ".json",
+                      attribution: source.attribution || "",
                     };
                     sourceWasAdded = true;
                     break;
@@ -887,15 +891,29 @@ class MapContextManager {
                   (source.type === DataSourceTypes.SeasketchVector ||
                     source.type === DataSourceTypes.Geojson ||
                     source.type === DataSourceTypes.Vector ||
-                    source.type === DataSourceTypes.ArcgisVector) &&
+                    source.type === DataSourceTypes.ArcgisVector ||
+                    source.type === DataSourceTypes.SeasketchMvt) &&
                   layer.mapboxGlStyles?.length
                 ) {
                   for (let i = 0; i < layer.mapboxGlStyles.length; i++) {
-                    (isUnderLabels ? underLabels : overLabels).push({
-                      ...layer.mapboxGlStyles[i],
-                      source: source.id.toString(),
-                      id: idForLayer(layer, i),
-                    });
+                    const layers = isUnderLabels ? underLabels : overLabels;
+                    if (
+                      source.type === DataSourceTypes.SeasketchMvt ||
+                      source.type === DataSourceTypes.Vector
+                    ) {
+                      layers.push({
+                        ...layer.mapboxGlStyles[i],
+                        source: source.id.toString(),
+                        id: idForLayer(layer, i),
+                        "source-layer": layer.sourceLayer,
+                      });
+                    } else {
+                      layers.push({
+                        ...layer.mapboxGlStyles[i],
+                        source: source.id.toString(),
+                        id: idForLayer(layer, i),
+                      });
+                    }
                   }
                 }
               }

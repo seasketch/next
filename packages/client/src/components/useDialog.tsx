@@ -26,7 +26,7 @@ export default function useDialog() {
       });
     },
     alert: (
-      message: string,
+      message: string | ReactNode,
       options?: {
         description?: string;
       }
@@ -87,7 +87,7 @@ export default function useDialog() {
 type DialogContextState = {
   type: "prompt" | "alert" | "confirm";
   open: boolean;
-  message: string;
+  message: string | ReactNode;
   description?: string;
   defaultValue?: string;
   submitting: boolean;
