@@ -11,6 +11,7 @@ import {
   useRouteMatch,
 } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import Skeleton from "../components/Skeleton";
 
 export interface NavSidebarItem {
   label: string;
@@ -22,6 +23,8 @@ export interface NavSidebarItem {
   badgeVariant?: "secondary" | "primary" | "warning" | "error";
   button?: ReactNode;
   animate?: boolean;
+  compact?: boolean;
+  className?: string;
 }
 
 export interface NavSidebarProps {
@@ -31,6 +34,9 @@ export interface NavSidebarProps {
   footer?: ReactNode;
   header?: string;
   animate?: boolean;
+  loading?: boolean;
+  loadingSkeletonItemCount?: number;
+  headerButton?: ReactNode;
 }
 
 function classNames(...classes: string[]) {
@@ -38,6 +44,14 @@ function classNames(...classes: string[]) {
 }
 
 export default function NavSidebar(props: NavSidebarProps) {
+  if (props.loading && props.loadingSkeletonItemCount !== undefined) {
+    return (
+      <NavSkeleton
+        header={props.header}
+        numItems={props.loadingSkeletonItemCount}
+      />
+    );
+  }
   return (
     <nav
       aria-label={props.ariaLabel}
@@ -48,6 +62,7 @@ export default function NavSidebar(props: NavSidebarProps) {
           <div className="text-md font-medium text-blue-gray-900 flex w-full">
             {props.header}
           </div>
+          {props.headerButton}
         </div>
       )}
       {props.items.map((item) => (
@@ -75,7 +90,8 @@ function NavSidebarItem({
       <div
         key={item.label}
         className={
-          "text-sm flex p-6 py-2 bg-cool-gray-50 border-b border-blue-gray-200 justify-center"
+          "text-sm flex p-6 py-2 bg-cool-gray-50 border-b border-blue-gray-200 justify-center" +
+          (item.className || "")
         }
       >
         <span className="flex-1 self-center">{item.label}</span>
@@ -93,7 +109,9 @@ function NavSidebarItem({
         activeClassName="bg-blue-100 bg-opacity-50"
         className={classNames(
           "hover:bg-blue-50 hover:bg-opacity-50",
-          "flex p-6 border-b border-blue-gray-200"
+          "flex border-b border-blue-gray-200",
+          item.compact ? "px-3 py-4" : "p-6",
+          item.className || ""
         )}
         // aria-current={item.current ? "page" : undefined}
       >
@@ -104,8 +122,8 @@ function NavSidebarItem({
           />
         )}
         <div className="ml-3 text-sm flex-1">
-          <p className="font-medium text-blue-gray-900">{item.label}</p>
-          <p className="mt-1 text-blue-gray-500">{item.description}</p>
+          <p className="font-medium ">{item.label}</p>
+          <p className="mt-1 ">{item.description}</p>
         </div>
         {item.badge !== undefined && (
           <div className="flex flex-col justify-center ml-1">
@@ -125,4 +143,45 @@ function NavSidebarItem({
       </NavLink>
     );
   }
+}
+
+function NavSkeleton({
+  numItems,
+  compact,
+  header,
+}: {
+  numItems: number;
+  compact?: boolean;
+  header?: string | ReactNode;
+}) {
+  return (
+    <div className="bg-white h-full max-h-full overflow-y-scroll min-h-screen">
+      <div className="flex-shrink-0 w-96 max-w-full min-h-full bg-white border-r border-blue-gray-200 flex flex-col">
+        {header && (
+          <div className="hidden md:flex flex-shrink-0 h-16 px-6 border-b border-blue-gray-200 items-center">
+            <div className="text-md font-medium text-blue-gray-900 flex w-full">
+              {header}
+            </div>
+          </div>
+        )}
+        {[...new Array(numItems)].map((_, i) => (
+          <NavItemSkeleton compact key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NavItemSkeleton({ compact }: { compact?: boolean }) {
+  return (
+    <div
+      className={classNames(
+        "hover:bg-blue-50 hover:bg-opacity-50",
+        "flex border-b border-blue-gray-200",
+        compact ? "px-3 py-4" : "p-6"
+      )}
+    >
+      <Skeleton className="rounded mt-1 mb-1 w-52" />
+    </div>
+  );
 }

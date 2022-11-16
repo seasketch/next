@@ -1352,6 +1352,42 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+/** All input for the `createSketchClassFromTemplate` mutation. */
+export type CreateSketchClassFromTemplateInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  templateSketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createSketchClassFromTemplate` mutation. */
+export type CreateSketchClassFromTemplatePayload = {
+  __typename?: 'CreateSketchClassFromTemplatePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `Project` that is related to this `SketchClass`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchClass?: Maybe<SketchClass>;
+  /** An edge for our `SketchClass`. May be used by Relay 1. */
+  sketchClassEdge?: Maybe<SketchClassesEdge>;
+};
+
+
+/** The output of our `createSketchClassFromTemplate` mutation. */
+export type CreateSketchClassFromTemplatePayloadSketchClassEdgeArgs = {
+  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
 /** All input for the create `SketchFolder` mutation. */
 export type CreateSketchFolderInput = {
   /**
@@ -5680,6 +5716,7 @@ export type Mutation = {
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   /** Creates a single `Sketch`. */
   createSketch?: Maybe<CreateSketchPayload>;
+  createSketchClassFromTemplate?: Maybe<CreateSketchClassFromTemplatePayload>;
   /** Creates a single `SketchFolder`. */
   createSketchFolder?: Maybe<CreateSketchFolderPayload>;
   /** Creates a single `SurveyInvitedGroup`. */
@@ -6296,6 +6333,12 @@ export type MutationCreateProjectsSharedBasemapArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchArgs = {
   input: CreateSketchInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateSketchClassFromTemplateArgs = {
+  input: CreateSketchClassFromTemplateInput;
 };
 
 
@@ -8863,6 +8906,8 @@ export type Query = Node & {
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
   /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
+  /** List of template sketch classes such as "Marine Protected Area", "MPA Network", etc. */
+  templateSketchClasses?: Maybe<Array<SketchClass>>;
   tilebbox?: Maybe<GeometryInterface>;
   topic?: Maybe<Topic>;
   /** Reads a single `Topic` using its globally unique `ID`. */
@@ -9614,6 +9659,13 @@ export type QueryTemplateFormsArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryTemplateSketchClassesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryTilebboxArgs = {
   srid?: Maybe<Scalars['Int']>;
   x?: Maybe<Scalars['Int']>;
@@ -10159,6 +10211,7 @@ export type SketchClass = Node & {
    * class in order to render existing sketches of this type.
    */
   isArchived: Scalars['Boolean'];
+  isTemplate: Scalars['Boolean'];
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
@@ -10175,6 +10228,7 @@ export type SketchClass = Node & {
   projectId: Scalars['Int'];
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
+  templateDescription?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
 };
@@ -10239,6 +10293,7 @@ export type SketchClassPatch = {
   mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
+  templateDescription?: Maybe<Scalars['String']>;
 };
 
 /** A `SketchClass` edge in the connection. */
@@ -15364,6 +15419,109 @@ export type SimpleProjectListQuery = (
   )> }
 );
 
+export type SketchingDetailsFragment = (
+  { __typename?: 'SketchClass' }
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )>, validChildren?: Maybe<Array<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'name'>
+  )>>, form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+  )> }
+);
+
+export type CreateSketchClassMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  templateId: Scalars['Int'];
+}>;
+
+
+export type CreateSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { createSketchClassFromTemplate?: Maybe<(
+    { __typename?: 'CreateSketchClassFromTemplatePayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type TemplateSketchClassFragment = (
+  { __typename?: 'SketchClass' }
+  & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'templateDescription'>
+);
+
+export type TemplateSketchClassesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type TemplateSketchClassesQuery = (
+  { __typename?: 'Query' }
+  & { templateSketchClasses?: Maybe<Array<(
+    { __typename?: 'SketchClass' }
+    & TemplateSketchClassFragment
+  )>> }
+);
+
+export type SketchClassesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SketchClassesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateSketchClassMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name?: Maybe<Scalars['String']>;
+  isArchived?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClass?: Maybe<(
+    { __typename?: 'UpdateSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteSketchClassMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketchClass?: Maybe<(
+    { __typename?: 'DeleteSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -17280,6 +17438,48 @@ export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchingDetails on SketchClass {
+  id
+  name
+  acl {
+    nodeId
+    type
+    id
+    sketchClassId
+    groups {
+      id
+      name
+    }
+  }
+  isArchived
+  isTemplate
+  mapboxGlStyle
+  projectId
+  sketchCount
+  validChildren {
+    id
+    name
+  }
+  allowMulti
+  form {
+    id
+  }
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  formElementId
+}
+    `;
+export const TemplateSketchClassFragmentDoc = /*#__PURE__*/ gql`
+    fragment TemplateSketchClass on SketchClass {
+  id
+  name
+  geometryType
+  templateDescription
+}
+    `;
 export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
@@ -19133,6 +19333,54 @@ export const SimpleProjectListDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CreateSketchClassDocument = /*#__PURE__*/ gql`
+    mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
+  createSketchClassFromTemplate(
+    input: {projectId: $projectId, templateSketchClassId: $templateId}
+  ) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+export const TemplateSketchClassesDocument = /*#__PURE__*/ gql`
+    query TemplateSketchClasses {
+  templateSketchClasses {
+    ...TemplateSketchClass
+  }
+}
+    ${TemplateSketchClassFragmentDoc}`;
+export const SketchClassesDocument = /*#__PURE__*/ gql`
+    query SketchClasses($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchClasses {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+export const UpdateSketchClassDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
+  updateSketchClass(
+    input: {id: $id, patch: {name: $name, isArchived: $isArchived}}
+  ) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+export const DeleteSketchClassDocument = /*#__PURE__*/ gql`
+    mutation DeleteSketchClass($id: Int!) {
+  deleteSketchClass(input: {id: $id}) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
 export const SurveysDocument = /*#__PURE__*/ gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -20182,6 +20430,8 @@ export const namedOperations = {
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
     SimpleProjectList: 'SimpleProjectList',
+    TemplateSketchClasses: 'TemplateSketchClasses',
+    SketchClasses: 'SketchClasses',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
@@ -20266,6 +20516,9 @@ export const namedOperations = {
     deleteTilePackage: 'deleteTilePackage',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     UpdateProjectRegion: 'UpdateProjectRegion',
+    CreateSketchClass: 'CreateSketchClass',
+    UpdateSketchClass: 'UpdateSketchClass',
+    DeleteSketchClass: 'DeleteSketchClass',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
@@ -20350,6 +20603,8 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    SketchingDetails: 'SketchingDetails',
+    TemplateSketchClass: 'TemplateSketchClass',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',
