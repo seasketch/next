@@ -1354,6 +1354,42 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+/** All input for the `createSketchClassFromTemplate` mutation. */
+export type CreateSketchClassFromTemplateInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  templateSketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createSketchClassFromTemplate` mutation. */
+export type CreateSketchClassFromTemplatePayload = {
+  __typename?: 'CreateSketchClassFromTemplatePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `Project` that is related to this `SketchClass`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchClass?: Maybe<SketchClass>;
+  /** An edge for our `SketchClass`. May be used by Relay 1. */
+  sketchClassEdge?: Maybe<SketchClassesEdge>;
+};
+
+
+/** The output of our `createSketchClassFromTemplate` mutation. */
+export type CreateSketchClassFromTemplatePayloadSketchClassEdgeArgs = {
+  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
 /** All input for the create `SketchFolder` mutation. */
 export type CreateSketchFolderInput = {
   /**
@@ -5682,6 +5718,7 @@ export type Mutation = {
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   /** Creates a single `Sketch`. */
   createSketch?: Maybe<CreateSketchPayload>;
+  createSketchClassFromTemplate?: Maybe<CreateSketchClassFromTemplatePayload>;
   /** Creates a single `SketchFolder`. */
   createSketchFolder?: Maybe<CreateSketchFolderPayload>;
   /** Creates a single `SurveyInvitedGroup`. */
@@ -6298,6 +6335,12 @@ export type MutationCreateProjectsSharedBasemapArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchArgs = {
   input: CreateSketchInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateSketchClassFromTemplateArgs = {
+  input: CreateSketchClassFromTemplateInput;
 };
 
 
@@ -8865,6 +8908,8 @@ export type Query = Node & {
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
   /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
+  /** List of template sketch classes such as "Marine Protected Area", "MPA Network", etc. */
+  templateSketchClasses?: Maybe<Array<SketchClass>>;
   tilebbox?: Maybe<GeometryInterface>;
   topic?: Maybe<Topic>;
   /** Reads a single `Topic` using its globally unique `ID`. */
@@ -9616,6 +9661,13 @@ export type QueryTemplateFormsArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryTemplateSketchClassesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryTilebboxArgs = {
   srid?: Maybe<Scalars['Int']>;
   x?: Maybe<Scalars['Int']>;
@@ -10161,6 +10213,7 @@ export type SketchClass = Node & {
    * class in order to render existing sketches of this type.
    */
   isArchived: Scalars['Boolean'];
+  isTemplate: Scalars['Boolean'];
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
    * render features. Sketches can be styled based on attribute data by using
@@ -10177,6 +10230,7 @@ export type SketchClass = Node & {
   projectId: Scalars['Int'];
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
+  templateDescription?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
 };
@@ -10241,6 +10295,7 @@ export type SketchClassPatch = {
   mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
+  templateDescription?: Maybe<Scalars['String']>;
 };
 
 /** A `SketchClass` edge in the connection. */
@@ -15366,6 +15421,109 @@ export type SimpleProjectListQuery = (
   )> }
 );
 
+export type SketchingDetailsFragment = (
+  { __typename?: 'SketchClass' }
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )>, validChildren?: Maybe<Array<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'name'>
+  )>>, form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+  )> }
+);
+
+export type CreateSketchClassMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  templateId: Scalars['Int'];
+}>;
+
+
+export type CreateSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { createSketchClassFromTemplate?: Maybe<(
+    { __typename?: 'CreateSketchClassFromTemplatePayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type TemplateSketchClassFragment = (
+  { __typename?: 'SketchClass' }
+  & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'templateDescription'>
+);
+
+export type TemplateSketchClassesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type TemplateSketchClassesQuery = (
+  { __typename?: 'Query' }
+  & { templateSketchClasses?: Maybe<Array<(
+    { __typename?: 'SketchClass' }
+    & TemplateSketchClassFragment
+  )>> }
+);
+
+export type SketchClassesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SketchClassesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateSketchClassMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name?: Maybe<Scalars['String']>;
+  isArchived?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClass?: Maybe<(
+    { __typename?: 'UpdateSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteSketchClassMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketchClass?: Maybe<(
+    { __typename?: 'DeleteSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -17280,6 +17438,48 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
     picture
     affiliations
   }
+}
+    `;
+export const SketchingDetailsFragmentDoc = gql`
+    fragment SketchingDetails on SketchClass {
+  id
+  name
+  acl {
+    nodeId
+    type
+    id
+    sketchClassId
+    groups {
+      id
+      name
+    }
+  }
+  isArchived
+  isTemplate
+  mapboxGlStyle
+  projectId
+  sketchCount
+  validChildren {
+    id
+    name
+  }
+  allowMulti
+  form {
+    id
+  }
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  formElementId
+}
+    `;
+export const TemplateSketchClassFragmentDoc = gql`
+    fragment TemplateSketchClass on SketchClass {
+  id
+  name
+  geometryType
+  templateDescription
 }
     `;
 export const SurveyListDetailsFragmentDoc = gql`
@@ -22014,6 +22214,190 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export const CreateSketchClassDocument = gql`
+    mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
+  createSketchClassFromTemplate(
+    input: {projectId: $projectId, templateSketchClassId: $templateId}
+  ) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+export type CreateSketchClassMutationFn = Apollo.MutationFunction<CreateSketchClassMutation, CreateSketchClassMutationVariables>;
+
+/**
+ * __useCreateSketchClassMutation__
+ *
+ * To run a mutation, you first call `useCreateSketchClassMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateSketchClassMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createSketchClassMutation, { data, loading, error }] = useCreateSketchClassMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      templateId: // value for 'templateId'
+ *   },
+ * });
+ */
+export function useCreateSketchClassMutation(baseOptions?: Apollo.MutationHookOptions<CreateSketchClassMutation, CreateSketchClassMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateSketchClassMutation, CreateSketchClassMutationVariables>(CreateSketchClassDocument, options);
+      }
+export type CreateSketchClassMutationHookResult = ReturnType<typeof useCreateSketchClassMutation>;
+export type CreateSketchClassMutationResult = Apollo.MutationResult<CreateSketchClassMutation>;
+export type CreateSketchClassMutationOptions = Apollo.BaseMutationOptions<CreateSketchClassMutation, CreateSketchClassMutationVariables>;
+export const TemplateSketchClassesDocument = gql`
+    query TemplateSketchClasses {
+  templateSketchClasses {
+    ...TemplateSketchClass
+  }
+}
+    ${TemplateSketchClassFragmentDoc}`;
+
+/**
+ * __useTemplateSketchClassesQuery__
+ *
+ * To run a query within a React component, call `useTemplateSketchClassesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useTemplateSketchClassesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTemplateSketchClassesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useTemplateSketchClassesQuery(baseOptions?: Apollo.QueryHookOptions<TemplateSketchClassesQuery, TemplateSketchClassesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<TemplateSketchClassesQuery, TemplateSketchClassesQueryVariables>(TemplateSketchClassesDocument, options);
+      }
+export function useTemplateSketchClassesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<TemplateSketchClassesQuery, TemplateSketchClassesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<TemplateSketchClassesQuery, TemplateSketchClassesQueryVariables>(TemplateSketchClassesDocument, options);
+        }
+export type TemplateSketchClassesQueryHookResult = ReturnType<typeof useTemplateSketchClassesQuery>;
+export type TemplateSketchClassesLazyQueryHookResult = ReturnType<typeof useTemplateSketchClassesLazyQuery>;
+export type TemplateSketchClassesQueryResult = Apollo.QueryResult<TemplateSketchClassesQuery, TemplateSketchClassesQueryVariables>;
+export const SketchClassesDocument = gql`
+    query SketchClasses($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchClasses {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+
+/**
+ * __useSketchClassesQuery__
+ *
+ * To run a query within a React component, call `useSketchClassesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchClassesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchClassesQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useSketchClassesQuery(baseOptions: Apollo.QueryHookOptions<SketchClassesQuery, SketchClassesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchClassesQuery, SketchClassesQueryVariables>(SketchClassesDocument, options);
+      }
+export function useSketchClassesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchClassesQuery, SketchClassesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchClassesQuery, SketchClassesQueryVariables>(SketchClassesDocument, options);
+        }
+export type SketchClassesQueryHookResult = ReturnType<typeof useSketchClassesQuery>;
+export type SketchClassesLazyQueryHookResult = ReturnType<typeof useSketchClassesLazyQuery>;
+export type SketchClassesQueryResult = Apollo.QueryResult<SketchClassesQuery, SketchClassesQueryVariables>;
+export const UpdateSketchClassDocument = gql`
+    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
+  updateSketchClass(
+    input: {id: $id, patch: {name: $name, isArchived: $isArchived}}
+  ) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+export type UpdateSketchClassMutationFn = Apollo.MutationFunction<UpdateSketchClassMutation, UpdateSketchClassMutationVariables>;
+
+/**
+ * __useUpdateSketchClassMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchClassMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchClassMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchClassMutation, { data, loading, error }] = useUpdateSketchClassMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *      isArchived: // value for 'isArchived'
+ *   },
+ * });
+ */
+export function useUpdateSketchClassMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchClassMutation, UpdateSketchClassMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchClassMutation, UpdateSketchClassMutationVariables>(UpdateSketchClassDocument, options);
+      }
+export type UpdateSketchClassMutationHookResult = ReturnType<typeof useUpdateSketchClassMutation>;
+export type UpdateSketchClassMutationResult = Apollo.MutationResult<UpdateSketchClassMutation>;
+export type UpdateSketchClassMutationOptions = Apollo.BaseMutationOptions<UpdateSketchClassMutation, UpdateSketchClassMutationVariables>;
+export const DeleteSketchClassDocument = gql`
+    mutation DeleteSketchClass($id: Int!) {
+  deleteSketchClass(input: {id: $id}) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+export type DeleteSketchClassMutationFn = Apollo.MutationFunction<DeleteSketchClassMutation, DeleteSketchClassMutationVariables>;
+
+/**
+ * __useDeleteSketchClassMutation__
+ *
+ * To run a mutation, you first call `useDeleteSketchClassMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteSketchClassMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteSketchClassMutation, { data, loading, error }] = useDeleteSketchClassMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteSketchClassMutation(baseOptions?: Apollo.MutationHookOptions<DeleteSketchClassMutation, DeleteSketchClassMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteSketchClassMutation, DeleteSketchClassMutationVariables>(DeleteSketchClassDocument, options);
+      }
+export type DeleteSketchClassMutationHookResult = ReturnType<typeof useDeleteSketchClassMutation>;
+export type DeleteSketchClassMutationResult = Apollo.MutationResult<DeleteSketchClassMutation>;
+export type DeleteSketchClassMutationOptions = Apollo.BaseMutationOptions<DeleteSketchClassMutation, DeleteSketchClassMutationVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -24957,6 +25341,8 @@ export const namedOperations = {
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
     SimpleProjectList: 'SimpleProjectList',
+    TemplateSketchClasses: 'TemplateSketchClasses',
+    SketchClasses: 'SketchClasses',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
@@ -25041,6 +25427,9 @@ export const namedOperations = {
     deleteTilePackage: 'deleteTilePackage',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     UpdateProjectRegion: 'UpdateProjectRegion',
+    CreateSketchClass: 'CreateSketchClass',
+    UpdateSketchClass: 'UpdateSketchClass',
+    DeleteSketchClass: 'DeleteSketchClass',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
@@ -25125,6 +25514,8 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    SketchingDetails: 'SketchingDetails',
+    TemplateSketchClass: 'TemplateSketchClass',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

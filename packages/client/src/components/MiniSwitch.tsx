@@ -30,7 +30,7 @@ export default function MiniSwitch(props: MiniSwitchProps) {
       <span
         aria-hidden="true"
         className={`${
-          props.isToggled ? "translate-x-0" : "translate-x-5"
+          props.isToggled ? "translate-x-5" : "translate-x-0"
         }  absolute left-0 inline-block h-5 w-5 border border-gray-200 rounded-full bg-white shadow transform ring-0 transition-transform ease-in-out duration-200`}
       ></span>
     </button>

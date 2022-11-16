@@ -60,6 +60,13 @@ const LazyBasemapTilingSettingsPage = React.lazy(
     )
 );
 
+const LazySketchingAdmin = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminSketching" */ "./sketchClasses/SketchClassAdmin"
+    )
+);
+
 interface Section {
   breadcrumb: string;
   icon: React.ReactNode;
@@ -382,7 +389,11 @@ export default function AdminApp() {
             </PhoneAccessGate>
             {/* </div> */}
           </Route>
-          <Route exact path={`${path}/sketching`}></Route>
+          <Route path={`${path}/sketching`}>
+            <React.Suspense fallback={<Spinner />}>
+              <LazySketchingAdmin />
+            </React.Suspense>
+          </Route>
           <Route exact path={`${path}/forums`}></Route>
           <Route path={`${path}/surveys/:surveyId?`}>
             <React.Suspense fallback={<Spinner />}>

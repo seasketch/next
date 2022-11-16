@@ -1522,6 +1522,44 @@ type CreateProjectsSharedBasemapPayload {
   query: Query
 }
 
+"""All input for the `createSketchClassFromTemplate` mutation."""
+input CreateSketchClassFromTemplateInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  templateSketchClassId: Int
+}
+
+"""The output of our `createSketchClassFromTemplate` mutation."""
+type CreateSketchClassFromTemplatePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
+}
+
 """All input for the create `SketchFolder` mutation."""
 input CreateSketchFolderInput {
   """
@@ -6813,6 +6851,12 @@ type Mutation {
     """
     input: CreateSketchInput!
   ): CreateSketchPayload
+  createSketchClassFromTemplate(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSketchClassFromTemplateInput!
+  ): CreateSketchClassFromTemplatePayload
 
   """Creates a single `SketchFolder`."""
   createSketchFolder(
@@ -10509,6 +10553,18 @@ type Query implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Form!]
+
+  """
+  List of template sketch classes such as "Marine Protected Area", "MPA Network", etc.
+  
+  """
+  templateSketchClasses(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SketchClass!]
   tilebbox(srid: Int, x: Int, y: Int, z: Int): GeometryInterface
   topic(id: Int!): Topic
 
@@ -11148,6 +11204,7 @@ type SketchClass implements Node {
   
   """
   isArchived: Boolean!
+  isTemplate: Boolean!
 
   """
   [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
@@ -11173,6 +11230,7 @@ type SketchClass implements Node {
 
   """Number of sketches created with this sketch class"""
   sketchCount: BigInt
+  templateDescription: String
 
   """Reads and enables pagination through a set of `SketchClass`."""
   validChildren(
@@ -11283,6 +11341,7 @@ input SketchClassPatch {
 
   """Label chosen by project admins that is shown to users."""
   name: String
+  templateDescription: String
 }
 
 """

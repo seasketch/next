@@ -1153,6 +1153,8 @@ CREATE TABLE public.sketch_classes (
     geoprocessing_client_name text,
     mapbox_gl_style jsonb,
     form_element_id integer,
+    is_template boolean DEFAULT false NOT NULL,
+    template_description text,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
@@ -4340,6 +4342,43 @@ begin
       return new;
 end;
 $$;
+
+
+--
+-- Name: create_sketch_class_from_template(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare 
+      base sketch_classes;
+      created sketch_classes;
+      num_similarly_named int;
+      new_name text;
+    begin
+      if session_is_admin("projectId") then
+        select * into base from sketch_classes where id = template_sketch_class_id;
+        if base is null then
+          raise exception 'Sketch Class with id=% does not exist', template_sketch_class_id;
+        end if;
+        if base.is_template = false then
+          raise exception 'Sketch Class with id=% is not a template', template_sketch_class_id;
+        end if;
+        -- TODO: add suffix to name if there are duplicates
+        select count(*) into num_similarly_named from sketch_classes where project_id = "projectId" and form_element_id is null and name ~ (base.name || '( \(\d+\))?');
+        new_name = base.name;
+        if num_similarly_named > 0 then
+          new_name = new_name || ' (' || num_similarly_named::text || ')';
+        end if;
+        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style) returning * into created;
+        perform initialize_sketch_class_form_from_template(created.id, (select id from forms where sketch_class_id = base.id));
+        return created;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -10011,6 +10050,27 @@ CREATE FUNCTION public.template_forms() RETURNS SETOF public.forms
 --
 
 COMMENT ON FUNCTION public.template_forms() IS '@simpleCollections only';
+
+
+--
+-- Name: template_sketch_classes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.template_sketch_classes() RETURNS SETOF public.sketch_classes
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from sketch_classes where is_template = true;
+  $$;
+
+
+--
+-- Name: FUNCTION template_sketch_classes(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.template_sketch_classes() IS '
+@simpleCollections only
+List of template sketch classes such as "Marine Protected Area", "MPA Network", etc.
+';
 
 
 --
@@ -16169,6 +16229,13 @@ GRANT UPDATE(mapbox_gl_style) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
+-- Name: COLUMN sketch_classes.template_description; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17911,6 +17978,14 @@ GRANT ALL ON FUNCTION public.create_project_invites("projectId" integer, "sendEm
 --
 
 REVOKE ALL ON FUNCTION public.create_sketch_class_acl() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) TO seasketch_user;
 
 
 --
@@ -24337,6 +24412,14 @@ GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surv
 
 REVOKE ALL ON FUNCTION public.template_forms() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.template_forms() TO anon;
+
+
+--
+-- Name: FUNCTION template_sketch_classes(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.template_sketch_classes() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.template_sketch_classes() TO seasketch_user;
 
 
 --

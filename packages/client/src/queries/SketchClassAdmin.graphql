@@ -1,0 +1,82 @@
+fragment SketchingDetails on SketchClass {
+  id
+  name
+  acl {
+    nodeId
+    type
+    id
+    sketchClassId
+    groups {
+      id
+      name
+    }
+  }
+  isArchived
+  isTemplate
+  mapboxGlStyle
+  projectId
+  sketchCount
+  validChildren {
+    id
+    name
+  }
+  allowMulti
+  form {
+    id
+  }
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  formElementId
+}
+
+mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
+  createSketchClassFromTemplate(
+    input: { projectId: $projectId, templateSketchClassId: $templateId }
+  ) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+
+fragment TemplateSketchClass on SketchClass {
+  id
+  name
+  geometryType
+  templateDescription
+}
+
+query TemplateSketchClasses {
+  templateSketchClasses {
+    ...TemplateSketchClass
+  }
+}
+
+query SketchClasses($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchClasses {
+      ...SketchingDetails
+    }
+  }
+}
+
+mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
+  updateSketchClass(
+    input: { id: $id, patch: { name: $name, isArchived: $isArchived } }
+  ) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
+
+mutation DeleteSketchClass($id: Int!) {
+  deleteSketchClass(input: { id: $id }) {
+    sketchClass {
+      ...SketchingDetails
+    }
+  }
+}
