@@ -35,6 +35,7 @@ module.exports = {
           "console.error",
           "Error",
           "fetch",
+          "useRouteMatch",
         ],
         onlyAttribute: ["label", "title", "description", "footer"],
         ignoreProperty: ["href", "className"],

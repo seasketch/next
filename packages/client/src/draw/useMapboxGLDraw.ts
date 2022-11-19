@@ -405,14 +405,16 @@ export default function useMapboxGLDraw(
    * be active. Set property validation state using actions.setPropsValid
    * @param requireProps
    */
-  function create(unfinished: boolean) {
+  function create(unfinished: boolean, isSketchWorkflow?: boolean) {
     if (handlerState.current.draw) {
       setState(DigitizingState.CREATE);
       handlerState.current.draw.changeMode(
         // @ts-ignore
         drawMode,
         {
-          getNextMode: unfinished
+          getNextMode: isSketchWorkflow
+            ? (featureId: string) => ["simple_select"] // TODO: add preprocessing mode
+            : unfinished
             ? geometryType === SketchGeometryType.Polygon
               ? (featureId: string) => [
                   "unfinished_feature_select",

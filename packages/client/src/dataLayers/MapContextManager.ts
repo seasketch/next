@@ -1508,6 +1508,7 @@ export interface MapContextInterface {
   showScale?: boolean;
   offlineTileSimulatorActive?: boolean;
   styleHash: string;
+  containerPortal: HTMLDivElement | null;
 }
 
 interface MapContextOptions {
@@ -1519,6 +1520,7 @@ interface MapContextOptions {
   bounds?: BBox;
   /** Starting camera of map. Will override bounds if both are provided */
   camera?: CameraOptions;
+  containerPortal?: HTMLDivElement | null;
 }
 
 /**
@@ -1530,7 +1532,8 @@ interface MapContextOptions {
  * @param ignoreLayerVisibilityState Don't store layer visibility state in localStorage
  */
 export function useMapContext(options?: MapContextOptions) {
-  const { preferencesKey, cacheSize, bounds, camera } = options || {};
+  const { preferencesKey, cacheSize, bounds, camera, containerPortal } =
+    options || {};
   let initialState: MapContextInterface = {
     layerStates: {},
     bannerMessages: [],
@@ -1539,6 +1542,7 @@ export function useMapContext(options?: MapContextOptions) {
     terrainEnabled: false,
     basemapOptionalLayerStates: {},
     styleHash: "",
+    containerPortal: containerPortal || null,
   };
   let initialCameraOptions: CameraOptions | undefined = camera;
   const { slug } = useParams<{ slug: string }>();
@@ -1615,6 +1619,7 @@ export const MapContext = createContext<MapContextInterface>({
       terrainEnabled: false,
       basemapOptionalLayerStates: {},
       styleHash: "",
+      containerPortal: null,
     },
     (state) => {}
   ),
@@ -1623,6 +1628,7 @@ export const MapContext = createContext<MapContextInterface>({
   ready: false,
   terrainEnabled: false,
   basemapOptionalLayerStates: {},
+  containerPortal: null,
 });
 
 async function createImage(

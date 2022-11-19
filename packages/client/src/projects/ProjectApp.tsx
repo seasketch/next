@@ -1,5 +1,11 @@
 import bytes from "bytes";
-import React, { Suspense, useContext, useEffect, useState } from "react";
+import React, {
+  Suspense,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+} from "react";
 import { Route, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import MapboxMap from "../components/MapboxMap";
 import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
@@ -20,6 +26,9 @@ import UserProfileModal from "./UserProfileModal";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
+const LazySketchingTools = React.lazy(
+  () => import(/* webpackChunkName: "Sketching" */ "./Sketches/SketchingTools")
+);
 const LazyCacheSettingsPage = React.lazy(
   () =>
     import(
@@ -28,10 +37,21 @@ const LazyCacheSettingsPage = React.lazy(
 );
 
 export default function ProjectApp() {
+  const [mapContainerPortal, setMapContainerPortal] =
+    useState<null | HTMLDivElement>(null);
   const mapContext = useMapContext({
     preferencesKey: "homepage",
     cacheSize: bytes("200mb"),
+    containerPortal: mapContainerPortal,
   });
+
+  const contextValue = useMemo(() => {
+    return {
+      ...mapContext,
+      containerPortal: mapContainerPortal,
+    };
+  }, [mapContext, mapContainerPortal]);
+
   const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
   const showSidebar = useRouteMatch<{ sidebar: string }>(
@@ -56,10 +76,14 @@ export default function ProjectApp() {
       style={{ width: "calc(100vw - 3.5rem)" }}
     >
       {/* <ProjectAppHeader /> */}
-      <MapContext.Provider value={mapContext}>
+      <MapContext.Provider value={contextValue}>
         {/* <ProjectAppHeader /> */}
         <div className="flex flex-grow w-full">
           <MapboxMap className="ml-2" />
+          <div
+            className="absolute flex items-center justify-center w-screen h-full pointer-events-none"
+            ref={setMapContainerPortal}
+          ></div>
         </div>
         <MiniSidebar
           dark={dark}
@@ -74,65 +98,49 @@ export default function ProjectApp() {
           />
         </Route>
         <AnimatePresence initial={false}>
-          {showSidebar && (
-            <ProjectAppSidebar
-              title={sidebarTitles[showSidebar.params["sidebar"]]}
-              onClose={() => history.replace(`/${slug}/app`)}
-              dark={dark}
+          <ProjectAppSidebar
+            title={sidebarTitles[showSidebar?.params["sidebar"] || ""]}
+            onClose={() => history.replace(`/${slug}/app`)}
+            dark={dark}
+            hidden={Boolean(!showSidebar)}
+          >
+            <Suspense
+              fallback={
+                <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                  Loading <Spinner />
+                </div>
+              }
             >
-              <Route path={`/${slug}/app/maps`}>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Route path={`/${slug}/app/maps`}>
                   <BasemapControl basemaps={basemaps} />
-                </motion.div>
-              </Route>
-              <Route path={`/${slug}/app/overlays`}>
-                <Suspense
-                  fallback={
-                    <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
-                      Loading <Spinner />
-                    </div>
-                  }
-                >
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <LazyOverlays
-                      items={tableOfContentsItems as TableOfContentsItem[]}
-                    />
-                  </motion.div>
-                </Suspense>
-              </Route>
-              <Route path={`/${slug}/app/forums`}>
-                <JoinProjectPrompt variant="forums" />
-              </Route>
-              <Route path={`/${slug}/app/settings`}>
-                <Suspense
-                  fallback={
-                    <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
-                      Loading <Spinner />
-                    </div>
-                  }
-                >
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <LazyCacheSettingsPage />
-                  </motion.div>
-                </Suspense>
-              </Route>
-            </ProjectAppSidebar>
-          )}
+                </Route>
+                <Route path={`/${slug}/app/overlays`}>
+                  <LazyOverlays
+                    items={tableOfContentsItems as TableOfContentsItem[]}
+                  />
+                </Route>
+                <Route path={`/${slug}/app/forums`}>
+                  <JoinProjectPrompt variant="forums" />
+                </Route>
+                <Route
+                  children={(match) => (
+                    <LazySketchingTools hidden={!Boolean(match.match)} />
+                  )}
+                  path={`/${slug}/app/sketches`}
+                  // component={SketchingTools}
+                />
+                <Route path={`/${slug}/app/settings`}>
+                  <LazyCacheSettingsPage />
+                </Route>
+              </motion.div>
+            </Suspense>
+          </ProjectAppSidebar>
         </AnimatePresence>
         <FullSidebar
           dark={dark}

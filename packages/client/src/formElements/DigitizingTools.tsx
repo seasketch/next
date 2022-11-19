@@ -41,6 +41,8 @@ interface DigitizingInstructionsProps {
   /** Displayed if DigitizingState is CREATE, CAN_COMPLETE, or STARTED */
   createStateButtons?: ReactNode;
   selfIntersects?: boolean;
+  /** Sketching as opposed to survey response */
+  isSketchingWorkflow?: boolean;
 }
 
 const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
@@ -57,6 +59,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   selfIntersects,
   noSelectionStateButtons,
   createStateButtons,
+  isSketchingWorkflow,
 }) => {
   const { t } = useTranslation("surveys");
   const style = useContext(SurveyLayoutContext).style;
@@ -73,20 +76,22 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
 
   const buttons = (
     <>
-      {DigitizingState.NO_SELECTION && !multiFeature && (
-        <Button
-          label={t("Edit")}
-          onClick={onRequestEdit}
-          className={`pointer-events-auto ${
-            bottomToolbar && "content-center flex-1"
-          }`}
-          buttonClassName={
-            bottomToolbar
-              ? "py-3 text-base flex-1 text-center items-center justify-center"
-              : ""
-          }
-        />
-      )}
+      {DigitizingState.NO_SELECTION &&
+        !multiFeature &&
+        !isSketchingWorkflow && (
+          <Button
+            label={t("Edit")}
+            onClick={onRequestEdit}
+            className={`pointer-events-auto ${
+              bottomToolbar && "content-center flex-1"
+            }`}
+            buttonClassName={
+              bottomToolbar
+                ? "py-3 text-base flex-1 text-center items-center justify-center"
+                : ""
+            }
+          />
+        )}
       {(state === DigitizingState.EDITING || selfIntersects) && (
         <Button
           label={<TrashIcon className="w-5 h-5" />}
@@ -118,22 +123,23 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {selfIntersects && state === DigitizingState.UNFINISHED && (
-        <Button
-          onClick={() => {
-            setShowInvalidShapeModal(true);
-          }}
-          label={t("Invalid Shape")}
-          className={`pointer-events-auto whitespace-nowrap ${
-            bottomToolbar && "flex-2 content-center max-w-1/2"
-          }`}
-          buttonClassName={
-            bottomToolbar
-              ? "py-3 text-base flex-1 text-center items-center justify-center border-red-800 bg-red-50 text-red-900 hover:text-red-700"
-              : "border-red-800 bg-red-50 text-red-900 hover:text-red-700"
-          }
-        />
-      )}
+      {selfIntersects &&
+        (state === DigitizingState.UNFINISHED || isSketchingWorkflow) && (
+          <Button
+            onClick={() => {
+              setShowInvalidShapeModal(true);
+            }}
+            label={t("Invalid Shape")}
+            className={`pointer-events-auto whitespace-nowrap ${
+              bottomToolbar && "flex-2 content-center max-w-1/2"
+            }`}
+            buttonClassName={
+              bottomToolbar
+                ? "py-3 text-base flex-1 text-center items-center justify-center border-red-800 bg-red-50 text-red-900 hover:text-red-700"
+                : "border-red-800 bg-red-50 text-red-900 hover:text-red-700"
+            }
+          />
+        )}
       {state === DigitizingState.UNFINISHED && unfinishedStateButtons}
       {state === DigitizingState.NO_SELECTION && noSelectionStateButtons}
       {(state === DigitizingState.CREATE ||
@@ -163,14 +169,17 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         </MapSettingsPopup>
         <AnimatePresence>
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{
+              duration: 0.1,
+            }}
             style={{ maxWidth: "90%" }}
             exit={{ scale: 0.7, opacity: 0 }}
             className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none`}
           >
             <p className="text-sm select-none">
-              <Instructions
+              <DigitizingInstructions
                 state={state}
                 geometryType={geometryType}
                 isMobile={isMobile}
@@ -199,20 +208,27 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         />
 
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
           style={{ maxWidth: "90%" }}
+          transition={{
+            duration: 0.1,
+          }}
           // exit={{ scale: 0 }}
           className={`rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`}
         >
           <p className="text-sm select-none">
-            <Instructions
-              state={state}
-              geometryType={geometryType}
-              isMobile={isMobile}
-              multiFeature={multiFeature || false}
-              selfIntersects={selfIntersects || false}
-            />
+            {isSketchingWorkflow && state === DigitizingState.NO_SELECTION ? (
+              <Trans>Click your sketch to edit</Trans>
+            ) : (
+              <DigitizingInstructions
+                state={state}
+                geometryType={geometryType}
+                isMobile={isMobile}
+                multiFeature={multiFeature || false}
+                selfIntersects={selfIntersects || false}
+              />
+            )}
           </p>
           <div className="flex-shrink-0 space-x-2 items-center flex">
             {buttons}
@@ -233,7 +249,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
 
 export default DigitizingTools;
 
-function Instructions({
+export function DigitizingInstructions({
   state,
   isMobile,
   multiFeature,

@@ -4382,6 +4382,66 @@ CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, te
 
 
 --
+-- Name: sketch_folders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_folders (
+    id integer NOT NULL,
+    name text NOT NULL,
+    user_id integer NOT NULL,
+    project_id integer NOT NULL,
+    folder_id integer,
+    collection_id integer,
+    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
+);
+
+
+--
+-- Name: TABLE sketch_folders; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketch_folders IS '
+@omit all
+SketchFolders can be used by users to organize their sketches. Collection-type
+sketches can be used to organize sketches as well, but they are limited in that 
+they cannot be nested, and also represent specific management semantics. Folders
+can be used by users to arbitrarily organize their Sketches.
+';
+
+
+--
+-- Name: COLUMN sketch_folders.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.project_id IS '@omit many';
+
+
+--
+-- Name: COLUMN sketch_folders.folder_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.folder_id IS 'The parent folder, if any.';
+
+
+--
+-- Name: COLUMN sketch_folders.collection_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.collection_id IS 'The parent sketch collection, if any. Folders can only have a single parent entity.';
+
+
+--
+-- Name: create_sketch_folder(text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer) RETURNS public.sketch_folders
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    insert into sketch_folders (user_id, project_id, folder_id, collection_id, name) values (nullif(current_setting('session.user_id', TRUE), '')::int, ((select id from projects where slug = create_sketch_folder.slug)), "folderId", "collectionId", name) returning *;
+  $$;
+
+
+--
 -- Name: create_sprite(integer, text, public.sprite_type, integer, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6444,55 +6504,6 @@ CREATE FUNCTION public.modify_survey_answers(response_ids integer[], answers jso
     where survey_responses.id = any(response_ids)
     returning survey_responses.*;
   $$;
-
-
---
--- Name: sketch_folders; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.sketch_folders (
-    id integer NOT NULL,
-    name text NOT NULL,
-    user_id integer NOT NULL,
-    project_id integer NOT NULL,
-    folder_id integer,
-    collection_id integer,
-    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
-);
-
-
---
--- Name: TABLE sketch_folders; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.sketch_folders IS '
-@omit all
-SketchFolders can be used by users to organize their sketches. Collection-type
-sketches can be used to organize sketches as well, but they are limited in that 
-they cannot be nested, and also represent specific management semantics. Folders
-can be used by users to arbitrarily organize their Sketches.
-';
-
-
---
--- Name: COLUMN sketch_folders.project_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.project_id IS '@omit many';
-
-
---
--- Name: COLUMN sketch_folders.folder_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.folder_id IS 'The parent folder, if any.';
-
-
---
--- Name: COLUMN sketch_folders.collection_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.collection_id IS 'The parent sketch collection, if any. Folders can only have a single parent entity.';
 
 
 --
@@ -17989,6 +18000,21 @@ GRANT ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integ
 
 
 --
+-- Name: TABLE sketch_folders; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.sketch_folders TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19890,13 +19916,6 @@ GRANT ALL ON FUNCTION public.me() TO anon;
 
 REVOKE ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answers jsonb) TO seasketch_user;
-
-
---
--- Name: TABLE sketch_folders; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.sketch_folders TO seasketch_user;
 
 
 --

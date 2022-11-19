@@ -10,7 +10,7 @@ function classNames(...classes: (string | undefined)[]) {
 
 export interface DropdownOption {
   onClick: () => void;
-  label: string;
+  label: string | ReactNode;
   disabled?: boolean;
 }
 
@@ -21,6 +21,7 @@ interface DropdownButtonProps {
   className?: string;
   small?: boolean;
   buttonClassName?: string;
+  alignment?: "right" | "left";
 }
 
 export default function DropdownButton({
@@ -30,6 +31,7 @@ export default function DropdownButton({
   className,
   buttonClassName,
   small,
+  alignment,
 }: DropdownButtonProps) {
   return (
     <Menu
@@ -65,10 +67,16 @@ export default function DropdownButton({
         leaveFrom="transform opacity-100 scale-100"
         leaveTo="transform opacity-0 scale-95"
       >
-        <Menu.Items className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+        <Menu.Items
+          className={`${
+            alignment && alignment === "left"
+              ? "origin-top-left left-0"
+              : "origin-top-right right-0"
+          } absolute mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50`}
+        >
           <div className="py-1">
             {options.map(({ label, onClick, disabled }) => (
-              <Menu.Item key={label} disabled={disabled}>
+              <Menu.Item key={label?.toString()} disabled={disabled}>
                 {({ active }) => (
                   <button
                     onClick={onClick}

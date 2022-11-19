@@ -1560,19 +1560,20 @@ type CreateSketchClassFromTemplatePayload {
   ): SketchClassesEdge
 }
 
-"""All input for the create `SketchFolder` mutation."""
+"""All input for the `createSketchFolder` mutation."""
 input CreateSketchFolderInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-
-  """The `SketchFolder` to be created by this mutation."""
-  sketchFolder: SketchFolderInput!
+  collectionId: Int
+  folderId: Int
+  name: String
+  slug: String
 }
 
-"""The output of our create `SketchFolder` mutation."""
+"""The output of our `createSketchFolder` mutation."""
 type CreateSketchFolderPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
@@ -1584,8 +1585,6 @@ type CreateSketchFolderPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-
-  """The `SketchFolder` that was created by this mutation."""
   sketchFolder: SketchFolder
 
   """An edge for our `SketchFolder`. May be used by Relay 1."""
@@ -6857,8 +6856,6 @@ type Mutation {
     """
     input: CreateSketchClassFromTemplateInput!
   ): CreateSketchClassFromTemplatePayload
-
-  """Creates a single `SketchFolder`."""
   createSketchFolder(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -11366,21 +11363,6 @@ type SketchFolder implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-  projectId: Int!
-  userId: Int!
-}
-
-"""An input for mutations affecting `SketchFolder`"""
-input SketchFolderInput {
-  """
-  The parent sketch collection, if any. Folders can only have a single parent entity.
-  """
-  collectionId: Int
-
-  """The parent folder, if any."""
-  folderId: Int
-  id: Int
-  name: String!
   projectId: Int!
   userId: Int!
 }

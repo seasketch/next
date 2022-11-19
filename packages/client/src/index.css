@@ -244,3 +244,7 @@ label.required:after {
 .zebra-stripe-child-div > div:nth-child(even) {
   background-color: rgba(249, 250, 251);
 }
+
+.mapbox-gl-draw_ctrl-draw-btn {
+  display: none !important;
+}

@@ -1,0 +1,69 @@
+fragment SketchTocDetails on Sketch {
+  id
+  bbox
+  name
+  numVertices
+  sketchClassId
+  collectionId
+  folderId
+}
+
+fragment SketchFolderDetails on SketchFolder {
+  collectionId
+  folderId
+  id
+  name
+}
+
+query Sketching($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchClasses {
+      ...SketchingDetails
+    }
+    mySketches {
+      ...SketchTocDetails
+    }
+    myFolders {
+      ...SketchFolderDetails
+    }
+  }
+}
+
+mutation CreateSketchFolder(
+  $slug: String!
+  $name: String!
+  $folderId: Int
+  $collectionId: Int
+) {
+  createSketchFolder(
+    input: {
+      slug: $slug
+      name: $name
+      folderId: $folderId
+      collectionId: $collectionId
+    }
+  ) {
+    sketchFolder {
+      ...SketchFolderDetails
+    }
+  }
+}
+
+mutation CreateSketch(
+  $name: String!
+  $sketchClassId: Int!
+  $userGeom: GeoJSON!
+  $collectionId: Int
+  $folderId: Int
+) {
+  createSketch(
+    name: $name
+    sketchClassId: $sketchClassId
+    userGeom: $userGeom
+    folderId: $folderId
+    collectionId: $collectionId
+  ) {
+    ...SketchTocDetails
+  }
+}
