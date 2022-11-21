@@ -17,6 +17,6 @@
 import { DocumentNode } from "graphql";
 import "./commands";
 import { ProjectAccessControlSetting } from "../../src/generated/graphql";
-
+import "@percy/cypress"
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
