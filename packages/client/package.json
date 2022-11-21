@@ -15,6 +15,8 @@
     "@mapbox/mapbox-gl-style-spec": "^13.17.0",
     "@mapbox/polyline": "^1.1.1",
     "@mapbox/tilebelt": "^1.0.2",
+    "@percy/cli": "^1.14.0",
+    "@percy/cypress": "^3.1.2",
     "@seasketch/map-tile-cache-calculator": "^1.0.0",
     "@seasketch/vector-data-source": "^1.0.0",
     "@sentry/react": "^6.17.1",
