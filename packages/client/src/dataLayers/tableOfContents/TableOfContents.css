@@ -40,6 +40,21 @@
   opacity: 0.5;
 }
 
-.react-contexify__item:not(.react-contexify__item--disabled):hover > .react-contexify__item__content {
+.react-contexify__item:not(.react-contexify__item--disabled):hover
+  > .react-contexify__item__content {
   background-color: rgb(46, 115, 182) !important;
+}
+
+.rstcustom__rowCancelPad::before {
+  display: none !important;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  opacity: 0;
+  height: 0px;
+  background-color: green !important;
+}
+
+.rstcustom__rowCancelPad {
+  height: 0px !important;
 }

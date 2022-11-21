@@ -6,6 +6,9 @@ fragment SketchTocDetails on Sketch {
   sketchClassId
   collectionId
   folderId
+  sketchClass {
+    geometryType
+  }
 }
 
 fragment SketchFolderDetails on SketchFolder {

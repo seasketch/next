@@ -15456,6 +15456,10 @@ export type DeleteSketchClassMutation = (
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId'>
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'geometryType'>
+  )> }
 );
 
 export type SketchFolderDetailsFragment = (
@@ -17489,6 +17493,9 @@ export const SketchTocDetailsFragmentDoc = gql`
   sketchClassId
   collectionId
   folderId
+  sketchClass {
+    geometryType
+  }
 }
     `;
 export const SketchFolderDetailsFragmentDoc = gql`
