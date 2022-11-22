@@ -435,7 +435,7 @@ jobs:
           working-directory: ./packages/client
           wait-on-timeout: 240
           config: baseUrl=http://localhost:3000
-        run: npx percy exec -- cypress run --config video=false,screenshotOnRunFailure=false
+        command: npx percy exec -- cypress run --config video=false,screenshotOnRunFailure=false
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORDING_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
