@@ -427,7 +427,6 @@ jobs:
           REACT_APP_BUILD: e2e-tests-${{ steps.short_sha.outputs.sha }}
       - name: Percy/Cypress Run
         uses: percy/exec-action@v0.1.2
-        working-directory: ./packages/client
         with:
           command: "npx cypress run"
         env:
