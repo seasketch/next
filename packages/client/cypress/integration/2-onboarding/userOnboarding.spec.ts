@@ -76,7 +76,7 @@ describe("User onboarding via independent browsing", () => {
     it('Should be prompted to share profile and request access', () => {
       cy.contains('Accept').click()
       cy.contains('Share Profile', {timeout:10000});
-      //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+      cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
     });
   });
   describe('Unauthenticated returning participant visiting an invite-only project', () => {
@@ -115,7 +115,7 @@ describe("User onboarding via independent browsing", () => {
       cy.visit('/');
       cy.get('a#nav-projects').click();
       cy.contains('Cypress Invite-Only');
-      //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+      cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
       cy.contains('Sign in');
     });
     it('Is an approved participant', () => {
@@ -190,7 +190,7 @@ describe("User onboarding via independent browsing", () => {
       cy.visit(`/${projectDetails.adminsOnly.slug}/app`);
       cy.contains('Private Project')
         .should('be.visible')
-      //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+      cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
       cy.contains('Cypress Admin-Only Project');
     });
     it('Is a project administrator', () => {
@@ -262,7 +262,7 @@ describe("User onboarding via independent browsing", () => {
       cy.visit(`/${projectDetails.adminsOnly.slug}/app`);
       cy.contains('Private Project')
         .should('be.visible')
-      //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+      cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
       cy.contains('Cypress Admin-Only Project');
     });
     it('Is not a project administrator', () => {
@@ -293,7 +293,7 @@ describe("User onboarding via independent browsing", () => {
       cy.wait('@userIsSuperuser')
       cy.contains('Admins Only')
         .should('be.visible', {timeout:10000});
-      //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+      cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
       cy.contains('Cypress Admin-Only');
       cy.contains('test_user_1@seasketch.org');
     });
@@ -395,7 +395,7 @@ describe('User onboarding via email invites', () => {
         it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
           cy.contains(`${projectDetails[projectOption].name}`)
             .should('be.visible');
-          //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.get('[data-cy="button-sign-in"]')
             .should('be.visible');
           cy.get('[data-cy="button-create-an-account"]')
@@ -414,7 +414,7 @@ describe('User onboarding via email invites', () => {
           cy.contains(`${projectDetails[projectOption].name}`);
           cy.contains('Join Project')
             .should('be.visible');
-          //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.contains('Skip for now');
         });
       });
@@ -515,7 +515,7 @@ describe('User onboarding via email invites', () => {
         it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
           cy.contains(`${projectDetails[projectOption].name}`)
             .should('be.visible')
-          //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.get('[data-cy="button-create-an-account"]')
             .should('be.visible');
           cy.get('[data-cy="button-sign-in"]')
@@ -531,7 +531,7 @@ describe('User onboarding via email invites', () => {
           cy.contains(`${projectDetails[projectOption].name}`);
           cy.contains('Skip for now')
             .should('be.visible');
-          //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.get('[name="fullname"]')
             .clear()
             .type('Test User 2');
@@ -649,7 +649,7 @@ describe('User onboarding via email invites', () => {
         });
         it('Leads to invite landing page, prompting the user to sign in or create an account', () => {
           cy.contains(`${projectDetails[projectOption].name}`);
-          //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.get('[data-cy="button-create-an-account"]')
             .should('be.visible');
           cy.get('[data-cy="button-sign-in"]')
@@ -673,7 +673,7 @@ describe('User onboarding via email invites', () => {
               return false;
             }
           });
-          //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.contains('Join Project').click();
           cy.wait('@joinProject').its('response.statusCode').should('eq', 200);
           cy.contains("My Profile").should('be.visible', {timeout: 10000})
@@ -762,7 +762,7 @@ describe('User onboarding via email invites', () => {
           expect(resp.body.data.verifyProjectInvite.error).to.eq(null);
           cy.contains('This invitation was originally sent to test_user_1@seasketch.org')
             .should('be.visible');
-          //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.contains('Logout and sign in');
           cy.contains('Accept as test_user_2@seasketch.org');
         });
@@ -840,7 +840,7 @@ describe('User onboarding via email invites', () => {
               cy.visit(urlAry.join('/'));
               cy.wait('@verifyProjectInvite').its('response').then((resp) => {
                 expect(resp.body.data.verifyProjectInvite).to.haveOwnProperty('error', 'jwt expired');
-                //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+                cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
                 cy.contains('Your invitation to this project has expired')
               });
             });
