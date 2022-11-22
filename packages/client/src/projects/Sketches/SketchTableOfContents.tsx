@@ -20,65 +20,201 @@ import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheck
 import "../../dataLayers/tableOfContents/TableOfContents.css";
 import { useTranslation, Trans as I18n } from "react-i18next";
 import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
-import { useMemo } from "react";
-
+import { useEffect, useMemo, useState } from "react";
+import TreeView, {
+  INode,
+  flattenTree,
+  CLICK_ACTIONS,
+} from "react-accessible-treeview";
+import ArrowIcon from "./ArrowIcon";
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default function SketchTableOfContents({
   sketches,
   folders,
+  ignoreClicksOnRefs,
 }: {
   sketches: SketchTocDetailsFragment[];
   folders: SketchFolderDetailsFragment[];
+  ignoreClicksOnRefs?: HTMLElement[];
 }) {
   const { t } = useTranslation();
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [expandedIds, setExpandedIds] = useState<number[]>([]);
+  const [containerRef, setContainerRef] = useState<HTMLDivElement | null>(null);
 
-  const nodes = useMemo(() => {
-    const treeItems: TreeItem[] = [];
-    const children: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[] =
-      [];
-    const roots: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[] =
-      [];
-    for (const item of [...sketches, ...folders]) {
-      if (!item.folderId && !item.collectionId) {
-        roots.push(item);
-      } else {
-        children.push(item);
+  const treeData = useMemo(() => {
+    const items: (SketchFolderDetailsFragment | SketchTocDetailsFragment)[] = [
+      {
+        name: "ROOT -- should not be displayed",
+        id: 0,
+      },
+      ...[...sketches, ...folders].sort((a, b) => a.name.localeCompare(b.name)),
+    ];
+    const idx: { [id: number]: number } = {};
+    items.forEach(({ id }, index) => {
+      idx[id] = index;
+    });
+
+    let nodes: INode[] = [
+      {
+        id: 0,
+        name: "ROOT -- should not be displayed",
+        children: [],
+        parent: null,
+      },
+    ];
+
+    const children: { [id: number]: number[] } = {};
+    const orphans: number[] = [];
+
+    items.forEach((item, id) => {
+      if (id !== 0) {
+        const parentId = item.collectionId || item.folderId;
+        nodes.push({
+          id,
+          name: item.name || "",
+          parent: parentId ? idx[parentId] : 0,
+          children: [],
+        });
+        if (parentId) {
+          if (!(parentId in children)) {
+            children[parentId] = [];
+          }
+          children[parentId].push(id);
+        } else {
+          orphans.push(id);
+        }
       }
+    });
+    for (const node of nodes) {
+      node.children = children[node.id] || [];
     }
-    function addChildren(root: TreeItem) {}
-    for (const root of roots) {
-      const treeItem: TreeItem = {
-        title: root.name,
-        expanded: true,
-        ...root,
-      };
-      addChildren(treeItem);
-      treeItems.push(treeItem);
-    }
-    console.log("treeItems", treeItems);
-    return treeItems.sort((a, b) =>
-      a.title!.toString().localeCompare(b.title!.toString())
-    );
+    nodes[0].children = orphans;
+    return {
+      items,
+      nodes,
+    };
   }, [sketches, folders]);
 
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        containerRef &&
+        (containerRef === target || containerRef.contains(target))
+      ) {
+        return;
+      } else if (ignoreClicksOnRefs) {
+        for (const el of ignoreClicksOnRefs) {
+          if (el === target || el.contains(target)) {
+            return;
+          }
+        }
+      }
+      setSelectedIds([]);
+    };
+    document.body.addEventListener("click", handler);
+    return () => {
+      document.body.removeEventListener("click", handler);
+    };
+  }, [containerRef, ignoreClicksOnRefs]);
+
   return (
-    <div className="pt-2 -ml-4">
-      {/* <ul className="px-2 py-1">
-        {folders.map((f) => (
-          <li key={f.id}>
-            <input type="checkbox" className="mr-2 rounded" />
-            <span className="text-sm">{f.name}</span>
-          </li>
-        ))}
-        {sketches.map((s) => (
-          <li key={s.id}>
-            <input type="checkbox" className="mr-2 rounded" />
-            <span className="text-sm">{s.name}</span>
-          </li>
-        ))}
-      </ul> */}
-      <SortableTree
+    <div className="pt-2 pl-5" ref={(ref) => setContainerRef(ref)}>
+      <TreeView
+        data={treeData.nodes}
+        selectedIds={selectedIds}
+        // multiSelect
+        togglableSelect={true}
+        expandedIds={expandedIds}
+        onExpand={(props) => {}}
+        onSelect={(props) => {
+          const { element, isSelected } = props;
+          setSelectedIds((prev) => {
+            return [
+              ...prev.filter((id) => id !== element.id),
+              ...(isSelected ? [element.id] : []),
+            ];
+          });
+        }}
+        aria-label={t("Your sketches")}
+        nodeRenderer={({
+          element,
+          isBranch,
+          isExpanded,
+          isDisabled,
+          getNodeProps,
+          level,
+          handleExpand,
+          dispatch,
+          isSelected,
+          handleSelect,
+        }) => {
+          const data = treeData.items[element.id];
+          const isExpandable = data.__typename === "SketchFolder";
+          const nodeProps = getNodeProps();
+          return (
+            <div
+              {...nodeProps}
+              style={{
+                marginLeft: 40 * (level - 1) - (isExpandable ? 18 : 3),
+                opacity: isDisabled ? 0.5 : 1,
+                paddingLeft: isExpandable ? 0 : 3,
+              }}
+              className={`py-0.5 ${isSelected ? "bg-gray-200" : ""}`}
+              onKeyDown={(event) => {
+                if (event.key === " ") {
+                  event.stopPropagation();
+                  // toggle visibility
+                }
+              }}
+            >
+              <span className="flex items-center text-sm space-x-0.5">
+                {isExpandable && (
+                  <button
+                    title={element.children.length === 0 ? "Empty" : ""}
+                    className={
+                      isExpandable && element.children.length < 1
+                        ? "opacity-25 cursor-not-allowed"
+                        : ""
+                    }
+                    onClick={(e) => {
+                      handleExpand(e);
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <ArrowIcon isOpen={isExpanded} />
+                  </button>
+                )}
+                {data && (
+                  <VisibilityCheckbox
+                    disabled={
+                      isDisabled ||
+                      (isExpandable && element.children.length === 0)
+                    }
+                    id={data.id}
+                    visibility={false}
+                  />
+                )}{" "}
+                {data &&
+                  data.__typename === "SketchFolder" &&
+                  (isExpanded ? (
+                    <FolderOpenIcon className="w-6 h-6 text-primary-500" />
+                  ) : (
+                    <FolderIcon className="w-6 h-6 text-primary-500" />
+                  ))}
+                <span className="px-1 cursor-pointer select-none">
+                  {element.name}
+                </span>
+              </span>
+            </div>
+          );
+        }}
+      />
+
+      {/* <SortableTree
         theme={FileExplorerTheme}
         isVirtualized={false}
         treeData={nodes}
@@ -117,7 +253,7 @@ export default function SketchTableOfContents({
             ],
           };
         }}
-      />
+      /> */}
     </div>
   );
 }

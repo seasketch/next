@@ -149,6 +149,14 @@ export default function SketchEditorModal({
     }
   }, [feature, draw.selfIntersects, geometryErrors]);
 
+  useEffect(() => {
+    if (createSketchState.loading) {
+      draw.disable();
+    } else {
+      draw.enable();
+    }
+  }, [draw.disable, draw.enable, createSketchState.loading, draw]);
+
   return (
     <>
       {createPortal(
@@ -190,12 +198,10 @@ export default function SketchEditorModal({
                 <ArrowRightIcon className="w-6 h-6" />
               </button>
             )}
-            <button onClick={onCancel}>
-              <XIcon className="w-6 h-6" />
-            </button>
           </h1>
           <div className="p-4 pt-0 flex-1 overflow-y-auto">
             <TextInput
+              disabled={createSketchState.loading}
               error={nameErrors || undefined}
               autoFocus
               required={true}
@@ -213,7 +219,13 @@ export default function SketchEditorModal({
           </div>
           <div className="space-x-2 bg-gray-100 p-4 border-t">
             <Button onClick={onCancel} label={<Trans>Cancel</Trans>} />
-            <Button onClick={onSubmit} label={<Trans>Submit</Trans>} primary />
+            <Button
+              loading={createSketchState.loading}
+              disabled={createSketchState.loading}
+              onClick={onSubmit}
+              label={<Trans>Submit</Trans>}
+              primary
+            />
           </div>
         </motion.div>,
         document.body

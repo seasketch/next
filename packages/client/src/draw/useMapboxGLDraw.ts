@@ -5,7 +5,7 @@ import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature, FeatureCollection } from "geojson";
+import { Feature, FeatureCollection, Point } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
 import DrawPoint from "./DrawPoint";
 import DirectSelect from "./DirectSelect";
@@ -132,14 +132,22 @@ export default function useMapboxGLDraw(
       if (initialValue) {
         draw.set(initialValue);
         if (initialValue.features.length) {
-          map.fitBounds(
-            bbox(initialValue) as [number, number, number, number],
-            {
-              padding: isSmall ? 100 : 200,
-              animate: true,
-              duration: 500,
-            }
-          );
+          // TODO: only pan or fit if object is out of bounds or on mobile
+          if (initialValue.features[0].geometry.type === "Point") {
+            map.panTo(
+              (initialValue.features[0] as Feature<Point>).geometry
+                .coordinates as [number, number]
+            );
+          } else {
+            map.fitBounds(
+              bbox(initialValue) as [number, number, number, number],
+              {
+                padding: isSmall ? 100 : 200,
+                animate: true,
+                duration: 500,
+              }
+            );
+          }
         }
       } else {
         // draw.changeMode(drawMode);

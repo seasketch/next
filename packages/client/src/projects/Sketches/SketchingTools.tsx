@@ -46,6 +46,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       false
     );
 
+  const [toolbarRef, setToolbarRef] = useState<HTMLDivElement | null>(null);
+
   const history = useHistory();
   const sketchClassOptions = useMemo(() => {
     const sketchClasses = [...(data?.projectBySlug?.sketchClasses || [])];
@@ -114,7 +116,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   return (
     <div style={{ display: hidden ? "none" : "block" }}>
       {!hidden && (
-        <ProjectAppSidebarToolbar>
+        <ProjectAppSidebarToolbar ref={(el) => setToolbarRef(el)}>
           <DropdownButton
             small
             alignment="left"
@@ -144,6 +146,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       <SketchTableOfContents
         folders={data?.projectBySlug?.myFolders || []}
         sketches={data?.projectBySlug?.mySketches || []}
+        ignoreClicksOnRefs={toolbarRef ? [toolbarRef] : []}
       />
       {editor && (
         <SketchEditorModal
@@ -153,7 +156,10 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             history.replace(`/${getSlug()}/app/sketches`);
             setEditor(false);
           }}
-          onCancel={() => setEditor(false)}
+          onCancel={() => {
+            history.replace(`/${getSlug()}/app/sketches`);
+            setEditor(false);
+          }}
         />
       )}
     </div>

@@ -87,11 +87,13 @@ const ProjectAppSidebar: React.FunctionComponent<{
   );
 };
 
-export function ProjectAppSidebarToolbar({
-  children,
-}: {
-  children?: ReactNode;
-}) {
+export const ProjectAppSidebarToolbar = React.forwardRef<
+  any,
+  {
+    ref?: (el: HTMLDivElement | null) => void;
+    children?: ReactNode;
+  }
+>((props, ref) => {
   const context = useContext(ProjectAppSidebarContext);
 
   const target = useMemo(() => {
@@ -104,14 +106,17 @@ export function ProjectAppSidebarToolbar({
 
   if (target) {
     return createPortal(
-      <div className="bg-gray-100 p-2 px-4 flex items-center space-x-2 border-b shadow-sm">
-        {children}
+      <div
+        className="bg-gray-100 p-2 px-4 flex items-center space-x-2 border-b shadow-sm"
+        // @ts-ignore
+        ref={ref}
+      >
+        {props.children}
       </div>,
       target
     );
   } else {
     return null;
   }
-}
-
+});
 export default ProjectAppSidebar;
