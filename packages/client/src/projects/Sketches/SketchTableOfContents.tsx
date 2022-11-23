@@ -3,14 +3,24 @@ import {
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
-import { useTranslation, Trans as I18n } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import TreeView, { INode } from "react-accessible-treeview";
 import ArrowIcon from "./ArrowIcon";
 import Skeleton from "../../components/Skeleton";
-import { propagateSelectChange } from "react-accessible-treeview/dist/TreeView/utils";
-const Trans = (props: any) => <I18n ns="sketching" {...props} />;
+import { SketchAction } from "./useSketchActions";
+import ContextMenuDropdown, {
+  DropdownDivider,
+} from "../../components/ContextMenuDropdown";
+import { DropdownOption } from "../../components/DropdownButton";
 
 export default forwardRef<
   HTMLDivElement,
@@ -29,6 +39,8 @@ export default forwardRef<
       keycode: string,
       focus?: null | { type: "folder" | "sketch"; id: number }
     ) => void;
+    actions?: { create: SketchAction[]; edit: SketchAction[] };
+    onActionSelected?: (action: SketchAction) => void;
   }
 >(
   (
@@ -41,6 +53,8 @@ export default forwardRef<
       loading,
       reservedKeyCodes,
       onReservedKeyDown,
+      actions,
+      onActionSelected,
     },
     ref
   ) => {
@@ -49,6 +63,16 @@ export default forwardRef<
     const treeView = useRef<HTMLUListElement>(null);
     const [focused, setFocused] =
       useState<null | { type: "sketch" | "folder"; id: number }>(null);
+    const [contextMenuTarget, setContextMenuTarget] =
+      useState<{ target: HTMLDivElement; offsetX?: number } | null>(null);
+
+    useEffect(() => {
+      const handler = () => setContextMenuTarget(null);
+      if (contextMenuTarget) {
+        document.addEventListener("click", handler);
+        return () => document.removeEventListener("click", handler);
+      }
+    }, [contextMenuTarget]);
 
     const treeData = useMemo(() => {
       const items: (SketchFolderDetailsFragment | SketchTocDetailsFragment)[] =
@@ -125,6 +149,40 @@ export default forwardRef<
       return selectedNodeIds;
     }, [selectedSketchIds, selectedFolderIds, treeData.items]);
 
+    const contextMenuOptions = useMemo(() => {
+      const options: (DropdownOption | ReactNode)[] = [];
+      if (actions && onActionSelected) {
+        for (const action of actions.edit) {
+          const { label, disabled, disabledForContextAction, keycode } = action;
+          if (!disabledForContextAction) {
+            options.push({
+              label,
+              disabled,
+              onClick: () => onActionSelected(action),
+            });
+          }
+        }
+        const createActions = actions.create.filter(
+          (a) => !a.disabledForContextAction
+        );
+        if (createActions.length) {
+          options.push(<DropdownDivider label={t("add new")} />);
+          for (const action of createActions) {
+            const { label, disabled, disabledForContextAction, keycode } =
+              action;
+            if (!disabledForContextAction) {
+              options.push({
+                label,
+                disabled,
+                onClick: () => onActionSelected(action),
+              });
+            }
+          }
+        }
+      }
+      return options;
+    }, [actions]);
+
     useEffect(() => {
       if (treeView.current) {
         treeView.current.onkeydown = (event) => {
@@ -170,6 +228,16 @@ export default forwardRef<
 
     return (
       <div className="pt-2 pl-5" ref={ref}>
+        {contextMenuTarget &&
+          onActionSelected &&
+          actions &&
+          actions.edit.length > 0 && (
+            <ContextMenuDropdown
+              options={contextMenuOptions}
+              target={contextMenuTarget.target}
+              offsetX={contextMenuTarget.offsetX}
+            />
+          )}
         <TreeView
           ref={treeView}
           data={treeData.nodes}
@@ -199,9 +267,7 @@ export default forwardRef<
           }) => {
             const data = treeData.items[element.id];
             const isExpandable = data.__typename === "SketchFolder";
-            const nodeProps = getNodeProps({
-              // handleKeyDown: (e) => {},
-            });
+            const nodeProps = getNodeProps();
             return (
               <div
                 onFocus={(e) => {
@@ -226,6 +292,21 @@ export default forwardRef<
                   paddingLeft: isExpandable ? 0 : 3,
                 }}
                 className={`py-0.5 ${isSelected ? "bg-blue-200" : ""}`}
+                onContextMenu={(e) => {
+                  var rect = e.currentTarget.getBoundingClientRect();
+                  var x = e.clientX - rect.left; //x position within the element.
+                  if (!isSelected) {
+                    handleSelect(e);
+                  }
+
+                  const target = e.currentTarget;
+                  setContextMenuTarget({
+                    target: target as HTMLDivElement,
+                    offsetX: x,
+                  });
+                  e.preventDefault();
+                  // setContextMenuTarget()
+                }}
               >
                 <span className="flex items-center text-sm space-x-0.5">
                   {isExpandable && (

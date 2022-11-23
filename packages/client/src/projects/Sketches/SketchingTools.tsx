@@ -310,6 +310,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             ]);
           }
         }}
+        actions={actions}
+        onActionSelected={callAction}
       />
       {editor !== false && (
         <SketchEditorModal
