@@ -5,10 +5,11 @@ import {
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import { useTranslation, Trans as I18n } from "react-i18next";
 import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
-import { forwardRef, useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import TreeView, { INode } from "react-accessible-treeview";
 import ArrowIcon from "./ArrowIcon";
 import Skeleton from "../../components/Skeleton";
+import { propagateSelectChange } from "react-accessible-treeview/dist/TreeView/utils";
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default forwardRef<
@@ -23,6 +24,11 @@ export default forwardRef<
       item: SketchFolderDetailsFragment | SketchTocDetailsFragment,
       isSelected: boolean
     ) => void;
+    reservedKeyCodes?: string[];
+    onReservedKeyDown?: (
+      keycode: string,
+      focus?: null | { type: "folder" | "sketch"; id: number }
+    ) => void;
   }
 >(
   (
@@ -33,11 +39,16 @@ export default forwardRef<
       selectedFolderIds,
       onSelectionChange,
       loading,
+      reservedKeyCodes,
+      onReservedKeyDown,
     },
     ref
   ) => {
     const { t } = useTranslation();
     const [expandedIds, setExpandedIds] = useState<number[]>([]);
+    const treeView = useRef<HTMLUListElement>(null);
+    const [focused, setFocused] =
+      useState<null | { type: "sketch" | "folder"; id: number }>(null);
 
     const treeData = useMemo(() => {
       const items: (SketchFolderDetailsFragment | SketchTocDetailsFragment)[] =
@@ -114,6 +125,34 @@ export default forwardRef<
       return selectedNodeIds;
     }, [selectedSketchIds, selectedFolderIds, treeData.items]);
 
+    useEffect(() => {
+      if (treeView.current) {
+        treeView.current.onkeydown = (event) => {
+          if (event.key === " ") {
+            event.stopPropagation();
+            // TODO: toggle visibility
+            return;
+          }
+          if (
+            reservedKeyCodes &&
+            onReservedKeyDown &&
+            reservedKeyCodes.indexOf(event.key) !== -1
+          ) {
+            event.stopPropagation();
+            const view = treeView.current;
+            setTimeout(() => {
+              view?.blur();
+            }, 100);
+            onReservedKeyDown(event.key, focused);
+            return;
+          }
+          if (!event.metaKey && /^\w$/.test(event.key)) {
+            event.stopPropagation();
+          }
+        };
+      }
+    }, [treeView, reservedKeyCodes, onReservedKeyDown, focused]);
+
     if (loading) {
       return (
         <div className="pt-2 space-y-2" ref={ref}>
@@ -132,6 +171,7 @@ export default forwardRef<
     return (
       <div className="pt-2 pl-5" ref={ref}>
         <TreeView
+          ref={treeView}
           data={treeData.nodes}
           selectedIds={selectedIds}
           // multiSelect
@@ -159,9 +199,19 @@ export default forwardRef<
           }) => {
             const data = treeData.items[element.id];
             const isExpandable = data.__typename === "SketchFolder";
-            const nodeProps = getNodeProps();
+            const nodeProps = getNodeProps({
+              // handleKeyDown: (e) => {},
+            });
             return (
               <div
+                onFocus={(e) => {
+                  setFocused({
+                    type:
+                      data.__typename === "SketchFolder" ? "folder" : "sketch",
+                    id: data.id,
+                  });
+                }}
+                onBlur={() => setFocused(null)}
                 {...nodeProps}
                 onClick={(e) => {
                   if (!isExpandable) {
@@ -176,12 +226,6 @@ export default forwardRef<
                   paddingLeft: isExpandable ? 0 : 3,
                 }}
                 className={`py-0.5 ${isSelected ? "bg-blue-200" : ""}`}
-                onKeyDown={(event) => {
-                  if (event.key === " ") {
-                    event.stopPropagation();
-                    // toggle visibility
-                  }
-                }}
               >
                 <span className="flex items-center text-sm space-x-0.5">
                   {isExpandable && (

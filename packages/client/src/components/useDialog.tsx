@@ -239,6 +239,11 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     onSubmit();
                     e.preventDefault();
                     e.stopPropagation();
+                  } else if (e.key === "Escape" && state.type === "prompt") {
+                    if (state.onCancel) {
+                      state.onCancel();
+                    }
+                    reset();
                   }
                 }}
               />

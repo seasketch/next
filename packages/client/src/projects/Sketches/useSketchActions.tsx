@@ -35,6 +35,7 @@ export interface SketchAction {
     focus: (type: "sketch" | "folder", id: number) => void;
     clearSelection: () => void;
   }) => Promise<void>;
+  keycode?: string;
 }
 
 export default function useSketchActions({
@@ -229,15 +230,18 @@ export default function useSketchActions({
                 ? ([
                     {
                       label: t("Edit"),
+                      keycode: "e",
                       action: ({ selectedSketches, setEditor }) => {
-                        history.replace(`/${getSlug()}/app`);
-                        setEditor({
-                          id: selectedSketches[0].id,
-                          loadingTitle: selectedSketches[0].name,
-                          sketchClass: sketchClasses?.find(
-                            (sc) => sc.id === selectedSketchClasses[0]
-                          )!,
-                        });
+                        setTimeout(() => {
+                          history.replace(`/${getSlug()}/app`);
+                          setEditor({
+                            id: selectedSketches[0].id,
+                            loadingTitle: selectedSketches[0].name,
+                            sketchClass: sketchClasses?.find(
+                              (sc) => sc.id === selectedSketchClasses[0]
+                            )!,
+                          });
+                        }, 10);
                       },
                     },
                   ] as SketchAction[])
@@ -246,6 +250,7 @@ export default function useSketchActions({
                 ? ([
                     {
                       label: t("Rename Folder"),
+                      keycode: "e",
                       action: async ({ selectedFolders }) => {
                         const folder = selectedFolders[0]!;
                         await prompt({
@@ -270,6 +275,7 @@ export default function useSketchActions({
               {
                 label: t("Delete"),
                 disabled: multiple,
+                keycode: "Backspace",
                 action: ({
                   selectedSketches,
                   selectedFolders,

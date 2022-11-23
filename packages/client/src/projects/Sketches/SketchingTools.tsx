@@ -20,7 +20,7 @@ import SketchTableOfContents from "./SketchTableOfContents";
 import SketchEditorModal from "./SketchEditorModal";
 import { useHistory } from "react-router-dom";
 import { memo } from "react";
-import useSketchActions from "./useSketchActions";
+import useSketchActions, { SketchAction } from "./useSketchActions";
 import { useApolloClient } from "@apollo/client";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
@@ -58,6 +58,9 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
+      if (target.tagName === "BUTTON") {
+        return;
+      }
       if (
         toolbarRef &&
         (toolbarRef === target || toolbarRef.contains(target))
@@ -70,14 +73,19 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       ) {
         return;
       }
-      setSelectedFolderIds([]);
-      setSelectedSketchIds([]);
+      if (selectedFolderIds.length) {
+        setSelectedFolderIds([]);
+      }
+      if (selectedSketchIds.length) {
+        setSelectedSketchIds([]);
+      }
+      return true;
     };
     document.body.addEventListener("click", handler);
     return () => {
       document.body.removeEventListener("click", handler);
     };
-  }, [tocContainer, toolbarRef, setSelectedFolderIds, setSelectedSketchIds]);
+  }, [tocContainer, toolbarRef, setSelectedFolderIds, setSelectedSketchIds, selectedFolderIds.length, selectedSketchIds.length]);
 
   const history = useHistory();
 
@@ -121,128 +129,126 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     [setSelectedFolderIds, setSelectedSketchIds]
   );
 
+  const callAction = useCallback(
+    (action: SketchAction) => {
+      action.action({
+        selectedSketches: selectedSketchIds.map(
+          (id) =>
+            (data?.projectBySlug?.mySketches || []).find((s) => s.id === id)!
+        ),
+        selectedFolders: selectedFolderIds.map(
+          (id) =>
+            (data?.projectBySlug?.myFolders || []).find((f) => f.id === id)!
+        ),
+        setEditor: async (options: any) => {
+          setEditor({
+            ...options,
+            loading: options.id ? true : false,
+          });
+          if (options.id) {
+            // load the sketch
+            try {
+              const response = await client.query<GetSketchForEditingQuery>({
+                query: GetSketchForEditingDocument,
+                variables: {
+                  id: options.id,
+                },
+              });
+              // then set editor state again with sketch, loading=false
+              if (response.data.sketch) {
+                setEditor((prev) => {
+                  if (prev) {
+                    return {
+                      ...prev,
+                      sketch: response.data.sketch!,
+                      loading: false,
+                      loadingTitle: undefined,
+                    };
+                  } else {
+                    return false;
+                  }
+                });
+              } else {
+                if (response.error) {
+                  throw new Error(response.error.message);
+                } else {
+                  throw new Error(
+                    "Unknown query error when retrieving sketch data"
+                  );
+                }
+              }
+            } catch (e) {
+              onError(e);
+              setEditor(false);
+            }
+          }
+        },
+        focus: focusOnTableOfContentsItem,
+        clearSelection: () => {
+          setSelectedFolderIds([]);
+          setSelectedSketchIds([]);
+        },
+      });
+    },
+    [
+      client,
+      data?.projectBySlug?.myFolders,
+      data?.projectBySlug?.mySketches,
+      focusOnTableOfContentsItem,
+      onError,
+      selectedFolderIds,
+      selectedSketchIds,
+    ]
+  );
+
   const createDropdownOptions = useMemo(() => {
     return actions.create.map(
-      ({ action, label, disabled }) =>
+      (action) =>
         ({
-          label,
+          label: action.label,
           onClick: () => {
-            action({
-              selectedSketches: selectedSketchIds.map(
-                (id) =>
-                  (data?.projectBySlug?.mySketches || []).find(
-                    (s) => s.id === id
-                  )!
-              ),
-              selectedFolders: selectedFolderIds.map(
-                (id) =>
-                  (data?.projectBySlug?.myFolders || []).find(
-                    (f) => f.id === id
-                  )!
-              ),
-              setEditor,
-              focus: focusOnTableOfContentsItem,
-              clearSelection: () => {
-                setSelectedFolderIds([]);
-                setSelectedSketchIds([]);
-              },
-            });
+            callAction(action);
           },
-          disabled,
+          disabled: action.disabled,
         } as DropdownOption)
     );
-  }, [
-    actions.create,
-    data?.projectBySlug?.myFolders,
-    data?.projectBySlug?.mySketches,
-    focusOnTableOfContentsItem,
-    selectedFolderIds,
-    selectedSketchIds,
-  ]);
+  }, [actions.create, callAction]);
 
   const editDropdownOptions = useMemo(() => {
     return actions.edit.map(
-      ({ action, label, disabled }) =>
+      (action) =>
         ({
-          label,
+          label: (
+            <div className="flex">
+              <span className="flex-1">{action.label}</span>
+              {action.keycode && (
+                <span
+                  style={{ fontSize: 10 }}
+                  className="font-mono bg-gray-50 text-gray-500 py-0 rounded border border-gray-300 shadow-sm text-xs px-1 opacity-0 group-hover:opacity-100"
+                >
+                  {action.keycode}
+                </span>
+              )}
+            </div>
+          ),
           onClick: () => {
-            action({
-              selectedSketches: selectedSketchIds.map(
-                (id) =>
-                  (data?.projectBySlug?.mySketches || []).find(
-                    (s) => s.id === id
-                  )!
-              ),
-              selectedFolders: selectedFolderIds.map(
-                (id) =>
-                  (data?.projectBySlug?.myFolders || []).find(
-                    (f) => f.id === id
-                  )!
-              ),
-              setEditor: async (options: any) => {
-                setEditor({
-                  ...options,
-                  loading: options.id ? true : false,
-                });
-                if (options.id) {
-                  // load the sketch
-                  try {
-                    const response =
-                      await client.query<GetSketchForEditingQuery>({
-                        query: GetSketchForEditingDocument,
-                        variables: {
-                          id: options.id,
-                        },
-                      });
-                    // then set editor state again with sketch, loading=false
-                    if (response.data.sketch) {
-                      setEditor((prev) => {
-                        if (prev) {
-                          return {
-                            ...prev,
-                            sketch: response.data.sketch!,
-                            loading: false,
-                            loadingTitle: undefined,
-                          };
-                        } else {
-                          return false;
-                        }
-                      });
-                    } else {
-                      if (response.error) {
-                        throw new Error(response.error.message);
-                      } else {
-                        throw new Error(
-                          "Unknown query error when retrieving sketch data"
-                        );
-                      }
-                    }
-                  } catch (e) {
-                    onError(e);
-                    setEditor(false);
-                  }
-                }
-              },
-              focus: focusOnTableOfContentsItem,
-              clearSelection: () => {
-                setSelectedFolderIds([]);
-                setSelectedSketchIds([]);
-              },
-            });
+            callAction(action);
           },
-          disabled,
+          disabled: action.disabled,
         } as DropdownOption)
     );
-  }, [
-    actions.edit,
-    client,
-    data?.projectBySlug?.myFolders,
-    data?.projectBySlug?.mySketches,
-    focusOnTableOfContentsItem,
-    onError,
-    selectedFolderIds,
-    selectedSketchIds,
-  ]);
+  }, [actions.edit, callAction]);
+
+  const reservedKeyCodes = useMemo(
+    () =>
+      actions.edit
+        .filter((a) => a.keycode && !a.disabled)
+        .reduce((obj, action) => {
+          obj[action.keycode!] = action;
+          return obj;
+        }, {} as { [keycode: string]: SketchAction }),
+    [actions.edit]
+  );
 
   return (
     <div style={{ display: hidden ? "none" : "block" }}>
@@ -278,6 +284,13 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
         </ProjectAppSidebarToolbar>
       )}
       <SketchTableOfContents
+        reservedKeyCodes={Object.keys(reservedKeyCodes)}
+        onReservedKeyDown={(key, focus) => {
+          const action = reservedKeyCodes[key];
+          if (action && !action.disabled) {
+            callAction(action);
+          }
+        }}
         ref={(tocContainer) => setTocContainer(tocContainer)}
         folders={data?.projectBySlug?.myFolders || []}
         sketches={data?.projectBySlug?.mySketches || []}

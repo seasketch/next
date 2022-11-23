@@ -80,12 +80,16 @@ export default function DropdownButton({
           } absolute mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50`}
         >
           <div className="py-1">
-            {options.map(({ label, onClick, disabled }) => (
-              <Menu.Item key={label?.toString()} disabled={disabled}>
+            {options.map(({ label, onClick, disabled }, i) => (
+              <Menu.Item
+                key={typeof label === "string" ? label : i}
+                disabled={disabled}
+              >
                 {({ active }) => (
                   <button
                     onClick={onClick}
                     className={classNames(
+                      "group",
                       active ? "bg-gray-100 text-gray-900" : "text-gray-700",
                       "block px-4 py-2 text-sm w-full text-left",
                       disabled ? "pointer-events-none opacity-50" : ""
