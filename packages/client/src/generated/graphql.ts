@@ -10372,6 +10372,7 @@ export type SketchPatch = {
   geom?: Maybe<Scalars['GeoJSON']>;
   /** User provided name for the sketch. */
   name?: Maybe<Scalars['String']>;
+  properties?: Maybe<Scalars['JSON']>;
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
@@ -15526,6 +15527,153 @@ export type CreateSketchMutation = (
   )> }
 );
 
+export type UpdateSketchMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+  userGeom: Scalars['GeoJSON'];
+  properties?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateSketchMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketch?: Maybe<(
+    { __typename?: 'UpdateSketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'name' | 'properties'>
+      & { userGeom?: Maybe<(
+        { __typename?: 'GeometryGeometryCollection' }
+        & Pick<GeometryGeometryCollection, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryLineString' }
+        & Pick<GeometryLineString, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryMultiLineString' }
+        & Pick<GeometryMultiLineString, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryMultiPoint' }
+        & Pick<GeometryMultiPoint, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryMultiPolygon' }
+        & Pick<GeometryMultiPolygon, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryPoint' }
+        & Pick<GeometryPoint, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryPolygon' }
+        & Pick<GeometryPolygon, 'geojson'>
+      )> }
+      & SketchTocDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteSketchMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketch?: Maybe<(
+    { __typename?: 'DeleteSketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id'>
+    )> }
+  )> }
+);
+
+export type DeleteSketchFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketchFolder?: Maybe<(
+    { __typename?: 'DeleteSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id'>
+    )> }
+  )> }
+);
+
+export type RenameFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+}>;
+
+
+export type RenameFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchFolder?: Maybe<(
+    { __typename?: 'UpdateSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id' | 'name'>
+    )> }
+  )> }
+);
+
+export type SketchEditorModalDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'properties'>
+  & { userGeom?: Maybe<(
+    { __typename?: 'GeometryGeometryCollection' }
+    & Pick<GeometryGeometryCollection, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryLineString' }
+    & Pick<GeometryLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiLineString' }
+    & Pick<GeometryMultiLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPoint' }
+    & Pick<GeometryMultiPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPolygon' }
+    & Pick<GeometryMultiPolygon, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPoint' }
+    & Pick<GeometryPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'id'>
+        & { type?: Maybe<(
+          { __typename?: 'FormElementType' }
+          & Pick<FormElementType, 'componentName'>
+        )> }
+      )>> }
+    )> }
+    & SketchingDetailsFragment
+  )> }
+  & SketchTocDetailsFragment
+);
+
+export type GetSketchForEditingQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetSketchForEditingQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & SketchEditorModalDetailsFragment
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -17442,6 +17590,37 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
   }
 }
     `;
+export const TemplateSketchClassFragmentDoc = gql`
+    fragment TemplateSketchClass on SketchClass {
+  id
+  name
+  geometryType
+  templateDescription
+}
+    `;
+export const SketchFolderDetailsFragmentDoc = gql`
+    fragment SketchFolderDetails on SketchFolder {
+  collectionId
+  folderId
+  id
+  name
+}
+    `;
+export const SketchTocDetailsFragmentDoc = gql`
+    fragment SketchTocDetails on Sketch {
+  id
+  bbox
+  name
+  numVertices
+  sketchClassId
+  collectionId
+  bbox
+  folderId
+  sketchClass {
+    geometryType
+  }
+}
+    `;
 export const SketchingDetailsFragmentDoc = gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -17476,36 +17655,28 @@ export const SketchingDetailsFragmentDoc = gql`
   formElementId
 }
     `;
-export const TemplateSketchClassFragmentDoc = gql`
-    fragment TemplateSketchClass on SketchClass {
-  id
-  name
-  geometryType
-  templateDescription
-}
-    `;
-export const SketchTocDetailsFragmentDoc = gql`
-    fragment SketchTocDetails on Sketch {
-  id
-  bbox
-  name
-  numVertices
-  sketchClassId
-  collectionId
-  folderId
+export const SketchEditorModalDetailsFragmentDoc = gql`
+    fragment SketchEditorModalDetails on Sketch {
+  ...SketchTocDetails
+  userGeom {
+    geojson
+  }
+  properties
   sketchClass {
-    geometryType
+    ...SketchingDetails
+    form {
+      id
+      formElements {
+        id
+        type {
+          componentName
+        }
+      }
+    }
   }
 }
-    `;
-export const SketchFolderDetailsFragmentDoc = gql`
-    fragment SketchFolderDetails on SketchFolder {
-  collectionId
-  folderId
-  id
-  name
-}
-    `;
+    ${SketchTocDetailsFragmentDoc}
+${SketchingDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -22551,6 +22722,194 @@ export function useCreateSketchMutation(baseOptions?: Apollo.MutationHookOptions
 export type CreateSketchMutationHookResult = ReturnType<typeof useCreateSketchMutation>;
 export type CreateSketchMutationResult = Apollo.MutationResult<CreateSketchMutation>;
 export type CreateSketchMutationOptions = Apollo.BaseMutationOptions<CreateSketchMutation, CreateSketchMutationVariables>;
+export const UpdateSketchDocument = gql`
+    mutation UpdateSketch($id: Int!, $name: String!, $userGeom: GeoJSON!, $properties: JSON) {
+  updateSketch(
+    input: {id: $id, patch: {name: $name, userGeom: $userGeom, properties: $properties}}
+  ) {
+    sketch {
+      ...SketchTocDetails
+      id
+      name
+      userGeom {
+        geojson
+      }
+      properties
+    }
+  }
+}
+    ${SketchTocDetailsFragmentDoc}`;
+export type UpdateSketchMutationFn = Apollo.MutationFunction<UpdateSketchMutation, UpdateSketchMutationVariables>;
+
+/**
+ * __useUpdateSketchMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchMutation, { data, loading, error }] = useUpdateSketchMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *      userGeom: // value for 'userGeom'
+ *      properties: // value for 'properties'
+ *   },
+ * });
+ */
+export function useUpdateSketchMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchMutation, UpdateSketchMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchMutation, UpdateSketchMutationVariables>(UpdateSketchDocument, options);
+      }
+export type UpdateSketchMutationHookResult = ReturnType<typeof useUpdateSketchMutation>;
+export type UpdateSketchMutationResult = Apollo.MutationResult<UpdateSketchMutation>;
+export type UpdateSketchMutationOptions = Apollo.BaseMutationOptions<UpdateSketchMutation, UpdateSketchMutationVariables>;
+export const DeleteSketchDocument = gql`
+    mutation DeleteSketch($id: Int!) {
+  deleteSketch(input: {id: $id}) {
+    sketch {
+      id
+    }
+  }
+}
+    `;
+export type DeleteSketchMutationFn = Apollo.MutationFunction<DeleteSketchMutation, DeleteSketchMutationVariables>;
+
+/**
+ * __useDeleteSketchMutation__
+ *
+ * To run a mutation, you first call `useDeleteSketchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteSketchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteSketchMutation, { data, loading, error }] = useDeleteSketchMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteSketchMutation(baseOptions?: Apollo.MutationHookOptions<DeleteSketchMutation, DeleteSketchMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteSketchMutation, DeleteSketchMutationVariables>(DeleteSketchDocument, options);
+      }
+export type DeleteSketchMutationHookResult = ReturnType<typeof useDeleteSketchMutation>;
+export type DeleteSketchMutationResult = Apollo.MutationResult<DeleteSketchMutation>;
+export type DeleteSketchMutationOptions = Apollo.BaseMutationOptions<DeleteSketchMutation, DeleteSketchMutationVariables>;
+export const DeleteSketchFolderDocument = gql`
+    mutation DeleteSketchFolder($id: Int!) {
+  deleteSketchFolder(input: {id: $id}) {
+    sketchFolder {
+      id
+    }
+  }
+}
+    `;
+export type DeleteSketchFolderMutationFn = Apollo.MutationFunction<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>;
+
+/**
+ * __useDeleteSketchFolderMutation__
+ *
+ * To run a mutation, you first call `useDeleteSketchFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteSketchFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteSketchFolderMutation, { data, loading, error }] = useDeleteSketchFolderMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteSketchFolderMutation(baseOptions?: Apollo.MutationHookOptions<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>(DeleteSketchFolderDocument, options);
+      }
+export type DeleteSketchFolderMutationHookResult = ReturnType<typeof useDeleteSketchFolderMutation>;
+export type DeleteSketchFolderMutationResult = Apollo.MutationResult<DeleteSketchFolderMutation>;
+export type DeleteSketchFolderMutationOptions = Apollo.BaseMutationOptions<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>;
+export const RenameFolderDocument = gql`
+    mutation RenameFolder($id: Int!, $name: String!) {
+  updateSketchFolder(input: {id: $id, patch: {name: $name}}) {
+    sketchFolder {
+      id
+      name
+    }
+  }
+}
+    `;
+export type RenameFolderMutationFn = Apollo.MutationFunction<RenameFolderMutation, RenameFolderMutationVariables>;
+
+/**
+ * __useRenameFolderMutation__
+ *
+ * To run a mutation, you first call `useRenameFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRenameFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [renameFolderMutation, { data, loading, error }] = useRenameFolderMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useRenameFolderMutation(baseOptions?: Apollo.MutationHookOptions<RenameFolderMutation, RenameFolderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RenameFolderMutation, RenameFolderMutationVariables>(RenameFolderDocument, options);
+      }
+export type RenameFolderMutationHookResult = ReturnType<typeof useRenameFolderMutation>;
+export type RenameFolderMutationResult = Apollo.MutationResult<RenameFolderMutation>;
+export type RenameFolderMutationOptions = Apollo.BaseMutationOptions<RenameFolderMutation, RenameFolderMutationVariables>;
+export const GetSketchForEditingDocument = gql`
+    query GetSketchForEditing($id: Int!) {
+  sketch(id: $id) {
+    ...SketchEditorModalDetails
+  }
+}
+    ${SketchEditorModalDetailsFragmentDoc}`;
+
+/**
+ * __useGetSketchForEditingQuery__
+ *
+ * To run a query within a React component, call `useGetSketchForEditingQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetSketchForEditingQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetSketchForEditingQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetSketchForEditingQuery(baseOptions: Apollo.QueryHookOptions<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>(GetSketchForEditingDocument, options);
+      }
+export function useGetSketchForEditingLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>(GetSketchForEditingDocument, options);
+        }
+export type GetSketchForEditingQueryHookResult = ReturnType<typeof useGetSketchForEditingQuery>;
+export type GetSketchForEditingLazyQueryHookResult = ReturnType<typeof useGetSketchForEditingLazyQuery>;
+export type GetSketchForEditingQueryResult = Apollo.QueryResult<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -25497,6 +25856,7 @@ export const namedOperations = {
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
     Sketching: 'Sketching',
+    GetSketchForEditing: 'GetSketchForEditing',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
@@ -25586,6 +25946,10 @@ export const namedOperations = {
     DeleteSketchClass: 'DeleteSketchClass',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
+    UpdateSketch: 'UpdateSketch',
+    DeleteSketch: 'DeleteSketch',
+    DeleteSketchFolder: 'DeleteSketchFolder',
+    RenameFolder: 'RenameFolder',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
@@ -25674,6 +26038,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
+    SketchEditorModalDetails: 'SketchEditorModalDetails',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

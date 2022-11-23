@@ -1155,6 +1155,8 @@ CREATE TABLE public.sketch_classes (
     form_element_id integer,
     is_template boolean DEFAULT false NOT NULL,
     template_description text,
+    preprocessing_endpoint text,
+    preprocessing_project_url text,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
@@ -6555,7 +6557,7 @@ CREATE TABLE public.sketches (
 --
 
 COMMENT ON TABLE public.sketches IS '
-@omit all,many
+@omit all,many,create
 A *Sketch* is a spatial feature that matches the schema defined by the related 
 *SketchClass*. User *Sketches* appears in the user''s "My Plans" tab and can be
 shared in the discussion forum. They are also the gateway to analytical reports.
@@ -6636,7 +6638,7 @@ CREATE FUNCTION public.my_sketches("projectId" integer) RETURNS SETOF public.ske
       sketches
     where
       it_me(user_id) and sketch_class_id in (
-        select id from sketch_classes where project_id = "projectId");
+        select id from sketch_classes where project_id = "projectId") and response_id is null;
   $$;
 
 
@@ -19975,6 +19977,13 @@ GRANT UPDATE(user_geom) ON TABLE public.sketches TO seasketch_user;
 --
 
 GRANT UPDATE(geom) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.properties; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(properties) ON TABLE public.sketches TO seasketch_user;
 
 
 --

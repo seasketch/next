@@ -5,6 +5,7 @@ fragment SketchTocDetails on Sketch {
   numVertices
   sketchClassId
   collectionId
+  bbox
   folderId
   sketchClass {
     geometryType
@@ -68,5 +69,80 @@ mutation CreateSketch(
     collectionId: $collectionId
   ) {
     ...SketchTocDetails
+  }
+}
+
+mutation UpdateSketch(
+  $id: Int!
+  $name: String!
+  $userGeom: GeoJSON!
+  $properties: JSON
+) {
+  updateSketch(
+    input: {
+      id: $id
+      patch: { name: $name, userGeom: $userGeom, properties: $properties }
+    }
+  ) {
+    sketch {
+      ...SketchTocDetails
+      id
+      name
+      userGeom {
+        geojson
+      }
+      properties
+    }
+  }
+}
+
+mutation DeleteSketch($id: Int!) {
+  deleteSketch(input: { id: $id }) {
+    sketch {
+      id
+    }
+  }
+}
+
+mutation DeleteSketchFolder($id: Int!) {
+  deleteSketchFolder(input: { id: $id }) {
+    sketchFolder {
+      id
+    }
+  }
+}
+
+mutation RenameFolder($id: Int!, $name: String!) {
+  updateSketchFolder(input: { id: $id, patch: { name: $name } }) {
+    sketchFolder {
+      id
+      name
+    }
+  }
+}
+
+fragment SketchEditorModalDetails on Sketch {
+  ...SketchTocDetails
+  userGeom {
+    geojson
+  }
+  properties
+  sketchClass {
+    ...SketchingDetails
+    form {
+      id
+      formElements {
+        id
+        type {
+          componentName
+        }
+      }
+    }
+  }
+}
+
+query GetSketchForEditing($id: Int!) {
+  sketch(id: $id) {
+    ...SketchEditorModalDetails
   }
 }

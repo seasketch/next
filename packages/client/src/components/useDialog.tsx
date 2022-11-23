@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createContext, ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "./Modal";
@@ -6,82 +6,85 @@ import TextInput from "./TextInput";
 
 export default function useDialog() {
   const context = useContext(UseDialogContext);
-  return {
-    prompt: (options: {
-      message: string;
-      defaultValue?: string;
-      onSubmit: (value: string) => void | Promise<string | void>;
-      onCancel?: () => void;
-      icon?: "alert" | "delete";
-    }) => {
-      context.setState({
-        type: "prompt",
-        open: true,
-        message: options.message,
-        defaultValue: options.defaultValue,
-        onSubmit: options.onSubmit,
-        onCancel: options.onCancel,
-        submitting: false,
-        disableBackdropClick: true,
-      });
-    },
-    alert: (
-      message: string | ReactNode,
-      options?: {
-        description?: string;
-      }
-    ) => {
-      return new Promise((resolve, reject) => {
+  return useMemo(
+    () => ({
+      prompt: (options: {
+        message: string;
+        defaultValue?: string;
+        onSubmit: (value: string) => void | Promise<string | void>;
+        onCancel?: () => void;
+        icon?: "alert" | "delete";
+      }) => {
         context.setState({
-          type: "alert",
+          type: "prompt",
           open: true,
-          message: message,
-          description: options?.description,
-          onSubmit: resolve,
+          message: options.message,
+          defaultValue: options.defaultValue,
+          onSubmit: options.onSubmit,
+          onCancel: options.onCancel,
           submitting: false,
           disableBackdropClick: true,
         });
-      });
-    },
-    confirm: (
-      message: string,
-      options?: {
+      },
+      alert: (
+        message: string | ReactNode,
+        options?: {
+          description?: string;
+        }
+      ) => {
+        return new Promise((resolve, reject) => {
+          context.setState({
+            type: "alert",
+            open: true,
+            message: message,
+            description: options?.description,
+            onSubmit: resolve,
+            submitting: false,
+            disableBackdropClick: true,
+          });
+        });
+      },
+      confirm: (
+        message: string,
+        options?: {
+          description?: string;
+          icon?: "alert" | "delete";
+        }
+      ) => {
+        return new Promise((resolve, reject) => {
+          context.setState({
+            type: "confirm",
+            open: true,
+            description: options?.description,
+            message: message,
+            onSubmit: () => resolve(true),
+            onCancel: () => resolve(false),
+            submitting: false,
+          });
+        });
+      },
+      confirmDelete: (options: {
+        message: string;
         description?: string;
-        icon?: "alert" | "delete";
-      }
-    ) => {
-      return new Promise((resolve, reject) => {
+        onDelete: (value: string) => void | Promise<string | void>;
+        onCancel?: () => void;
+      }) => {
         context.setState({
           type: "confirm",
           open: true,
-          description: options?.description,
-          message: message,
-          onSubmit: () => resolve(true),
-          onCancel: () => resolve(false),
+          description: options.description,
+          message: options.message,
+          onSubmit: options.onDelete,
+          onCancel: options.onCancel,
           submitting: false,
+          icon: "delete",
+          primaryButtonText: "Delete",
+          primaryButtonVariant: "danger",
         });
-      });
-    },
-    confirmDelete: (options: {
-      message: string;
-      description?: string;
-      onDelete: (value: string) => void | Promise<string | void>;
-      onCancel?: () => void;
-    }) => {
-      context.setState({
-        type: "confirm",
-        open: true,
-        description: options.description,
-        message: options.message,
-        onSubmit: options.onDelete,
-        onCancel: options.onCancel,
-        submitting: false,
-        icon: "delete",
-        primaryButtonText: "Delete",
-        primaryButtonVariant: "danger",
-      });
-    },
-  };
+      },
+    }),
+    [context]
+  );
 }
 
 type DialogContextState = {

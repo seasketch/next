@@ -10370,6 +10370,7 @@ export type SketchPatch = {
   geom?: Maybe<Scalars['GeoJSON']>;
   /** User provided name for the sketch. */
   name?: Maybe<Scalars['String']>;
+  properties?: Maybe<Scalars['JSON']>;
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
@@ -15524,6 +15525,153 @@ export type CreateSketchMutation = (
   )> }
 );
 
+export type UpdateSketchMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+  userGeom: Scalars['GeoJSON'];
+  properties?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateSketchMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketch?: Maybe<(
+    { __typename?: 'UpdateSketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'name' | 'properties'>
+      & { userGeom?: Maybe<(
+        { __typename?: 'GeometryGeometryCollection' }
+        & Pick<GeometryGeometryCollection, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryLineString' }
+        & Pick<GeometryLineString, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryMultiLineString' }
+        & Pick<GeometryMultiLineString, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryMultiPoint' }
+        & Pick<GeometryMultiPoint, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryMultiPolygon' }
+        & Pick<GeometryMultiPolygon, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryPoint' }
+        & Pick<GeometryPoint, 'geojson'>
+      ) | (
+        { __typename?: 'GeometryPolygon' }
+        & Pick<GeometryPolygon, 'geojson'>
+      )> }
+      & SketchTocDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteSketchMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketch?: Maybe<(
+    { __typename?: 'DeleteSketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id'>
+    )> }
+  )> }
+);
+
+export type DeleteSketchFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketchFolder?: Maybe<(
+    { __typename?: 'DeleteSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id'>
+    )> }
+  )> }
+);
+
+export type RenameFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+}>;
+
+
+export type RenameFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchFolder?: Maybe<(
+    { __typename?: 'UpdateSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id' | 'name'>
+    )> }
+  )> }
+);
+
+export type SketchEditorModalDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'properties'>
+  & { userGeom?: Maybe<(
+    { __typename?: 'GeometryGeometryCollection' }
+    & Pick<GeometryGeometryCollection, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryLineString' }
+    & Pick<GeometryLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiLineString' }
+    & Pick<GeometryMultiLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPoint' }
+    & Pick<GeometryMultiPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPolygon' }
+    & Pick<GeometryMultiPolygon, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPoint' }
+    & Pick<GeometryPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'id'>
+        & { type?: Maybe<(
+          { __typename?: 'FormElementType' }
+          & Pick<FormElementType, 'componentName'>
+        )> }
+      )>> }
+    )> }
+    & SketchingDetailsFragment
+  )> }
+  & SketchTocDetailsFragment
+);
+
+export type GetSketchForEditingQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetSketchForEditingQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & SketchEditorModalDetailsFragment
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -17440,6 +17588,37 @@ export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const TemplateSketchClassFragmentDoc = /*#__PURE__*/ gql`
+    fragment TemplateSketchClass on SketchClass {
+  id
+  name
+  geometryType
+  templateDescription
+}
+    `;
+export const SketchFolderDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchFolderDetails on SketchFolder {
+  collectionId
+  folderId
+  id
+  name
+}
+    `;
+export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchTocDetails on Sketch {
+  id
+  bbox
+  name
+  numVertices
+  sketchClassId
+  collectionId
+  bbox
+  folderId
+  sketchClass {
+    geometryType
+  }
+}
+    `;
 export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -17474,36 +17653,28 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   formElementId
 }
     `;
-export const TemplateSketchClassFragmentDoc = /*#__PURE__*/ gql`
-    fragment TemplateSketchClass on SketchClass {
-  id
-  name
-  geometryType
-  templateDescription
-}
-    `;
-export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment SketchTocDetails on Sketch {
-  id
-  bbox
-  name
-  numVertices
-  sketchClassId
-  collectionId
-  folderId
+export const SketchEditorModalDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchEditorModalDetails on Sketch {
+  ...SketchTocDetails
+  userGeom {
+    geojson
+  }
+  properties
   sketchClass {
-    geometryType
+    ...SketchingDetails
+    form {
+      id
+      formElements {
+        id
+        type {
+          componentName
+        }
+      }
+    }
   }
 }
-    `;
-export const SketchFolderDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment SketchFolderDetails on SketchFolder {
-  collectionId
-  folderId
-  id
-  name
-}
-    `;
+    ${SketchTocDetailsFragmentDoc}
+${SketchingDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
@@ -19447,6 +19618,58 @@ export const CreateSketchDocument = /*#__PURE__*/ gql`
   }
 }
     ${SketchTocDetailsFragmentDoc}`;
+export const UpdateSketchDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketch($id: Int!, $name: String!, $userGeom: GeoJSON!, $properties: JSON) {
+  updateSketch(
+    input: {id: $id, patch: {name: $name, userGeom: $userGeom, properties: $properties}}
+  ) {
+    sketch {
+      ...SketchTocDetails
+      id
+      name
+      userGeom {
+        geojson
+      }
+      properties
+    }
+  }
+}
+    ${SketchTocDetailsFragmentDoc}`;
+export const DeleteSketchDocument = /*#__PURE__*/ gql`
+    mutation DeleteSketch($id: Int!) {
+  deleteSketch(input: {id: $id}) {
+    sketch {
+      id
+    }
+  }
+}
+    `;
+export const DeleteSketchFolderDocument = /*#__PURE__*/ gql`
+    mutation DeleteSketchFolder($id: Int!) {
+  deleteSketchFolder(input: {id: $id}) {
+    sketchFolder {
+      id
+    }
+  }
+}
+    `;
+export const RenameFolderDocument = /*#__PURE__*/ gql`
+    mutation RenameFolder($id: Int!, $name: String!) {
+  updateSketchFolder(input: {id: $id, patch: {name: $name}}) {
+    sketchFolder {
+      id
+      name
+    }
+  }
+}
+    `;
+export const GetSketchForEditingDocument = /*#__PURE__*/ gql`
+    query GetSketchForEditing($id: Int!) {
+  sketch(id: $id) {
+    ...SketchEditorModalDetails
+  }
+}
+    ${SketchEditorModalDetailsFragmentDoc}`;
 export const SurveysDocument = /*#__PURE__*/ gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -20499,6 +20722,7 @@ export const namedOperations = {
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
     Sketching: 'Sketching',
+    GetSketchForEditing: 'GetSketchForEditing',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
@@ -20588,6 +20812,10 @@ export const namedOperations = {
     DeleteSketchClass: 'DeleteSketchClass',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
+    UpdateSketch: 'UpdateSketch',
+    DeleteSketch: 'DeleteSketch',
+    DeleteSketchFolder: 'DeleteSketchFolder',
+    RenameFolder: 'RenameFolder',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
@@ -20676,6 +20904,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
+    SketchEditorModalDetails: 'SketchEditorModalDetails',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

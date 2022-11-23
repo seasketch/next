@@ -11405,6 +11405,7 @@ input SketchPatch {
 
   """User provided name for the sketch."""
   name: String
+  properties: JSON
 
   """
   Spatial feature the user directly digitized, without preprocessing. This is

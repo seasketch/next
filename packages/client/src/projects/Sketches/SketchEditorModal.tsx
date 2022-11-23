@@ -4,6 +4,8 @@ import {
   SketchingQuery,
   SketchTocDetailsFragment,
   useCreateSketchMutation,
+  SketchEditorModalDetailsFragment,
+  useUpdateSketchMutation,
 } from "../../generated/graphql";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
@@ -26,26 +28,33 @@ import { toFeatureCollection } from "../../formElements/FormElement";
 import useDialog from "../../components/useDialog";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
+import Skeleton from "../../components/Skeleton";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default function SketchEditorModal({
-  id,
+  sketch,
   sketchClass,
   onCancel,
   onComplete,
+  folderId,
+  loading,
+  loadingTitle,
 }: {
-  id?: number;
+  loading?: boolean;
+  loadingTitle?: string;
+  sketch?: SketchEditorModalDetailsFragment;
   sketchClass: SketchingDetailsFragment;
   onCancel: () => void;
   onComplete: (sketch: SketchTocDetailsFragment) => void;
+  folderId?: number;
 }) {
   const { t } = useTranslation("sketching");
   const [left, setLeft] = useState(true);
   const baseRoute = useRouteMatch(`/${getSlug()}/app`);
   const mapContext = useContext(MapContext);
   const [feature, setFeature] = useState<Feature | null>(null);
-  const [name, _setName] = useState("");
+  const [name, _setName] = useState(sketch?.name || "");
   const [nameErrors, setNameErrors] = useState<string | null>(null);
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
   const setName = useCallback(
@@ -91,6 +100,10 @@ export default function SketchEditorModal({
     },
   });
 
+  const [updateSketch, updateSketchState] = useUpdateSketchMutation({
+    onError,
+  });
+
   const draw = useMapboxGLDraw(
     mapContext.manager?.map,
     sketchClass.geometryType,
@@ -99,6 +112,20 @@ export default function SketchEditorModal({
       setFeature(feature);
     }
   );
+
+  useEffect(() => {
+    if (sketch) {
+      _setName(sketch.name);
+      if (sketch.userGeom?.geojson) {
+        setFeature({
+          id: sketch.id.toString(),
+          type: "Feature",
+          properties: {},
+          geometry: sketch.userGeom.geojson,
+        });
+      }
+    }
+  }, [sketch, setFeature]);
 
   useEffect(() => {
     draw.create(false, true);
@@ -131,17 +158,43 @@ export default function SketchEditorModal({
       return;
     }
 
-    const response = await createSketch({
-      variables: {
-        name,
-        sketchClassId: sketchClass.id,
-        userGeom: feature,
-      },
-    });
-    if (response.data?.createSketch) {
-      onComplete(response.data.createSketch);
+    if (sketch) {
+      const response = await updateSketch({
+        variables: {
+          name,
+          userGeom: feature.geometry,
+          properties: {},
+          id: sketch.id,
+        },
+      });
+      if (response.data?.updateSketch?.sketch) {
+        onComplete(response.data.updateSketch.sketch);
+      }
+    } else {
+      const response = await createSketch({
+        variables: {
+          name,
+          sketchClassId: sketchClass.id,
+          userGeom: feature,
+          folderId,
+        },
+      });
+      if (response.data?.createSketch) {
+        onComplete(response.data.createSketch);
+      }
     }
-  }, [onComplete, feature, name, sketchClass]);
+  }, [
+    name,
+    draw.selfIntersects,
+    feature,
+    sketch,
+    t,
+    updateSketch,
+    onComplete,
+    createSketch,
+    sketchClass.id,
+    folderId,
+  ]);
 
   useEffect(() => {
     if (feature && !draw.selfIntersects && geometryErrors) {
@@ -150,12 +203,12 @@ export default function SketchEditorModal({
   }, [feature, draw.selfIntersects, geometryErrors]);
 
   useEffect(() => {
-    if (createSketchState.loading) {
+    if (createSketchState.loading || loading) {
       draw.disable();
     } else {
       draw.enable();
     }
-  }, [draw.disable, draw.enable, createSketchState.loading, draw]);
+  }, [draw.disable, draw.enable, createSketchState.loading, draw, loading]);
 
   return (
     <>
@@ -182,51 +235,77 @@ export default function SketchEditorModal({
           className={`w-128 bg-white rounder absolute top-2 z-10 rounded-lg shadow-xl flex-col overflow-hidden`}
           style={{ maxHeight: "calc(100vh - 200px)" }}
         >
-          <h1 className="flex items-center p-4">
-            <span className="flex-1">
-              <span className="font-bold">
-                {!id && <Trans>New</Trans>} {sketchClass.name}
-              </span>
-            </span>
-            {!left && (
-              <button onClick={() => setLeft(true)}>
-                <ArrowLeftIcon className="w-6 h-6" />
-              </button>
-            )}
-            {left && (
-              <button onClick={() => setLeft(false)}>
-                <ArrowRightIcon className="w-6 h-6" />
-              </button>
-            )}
-          </h1>
-          <div className="p-4 pt-0 flex-1 overflow-y-auto">
-            <TextInput
-              disabled={createSketchState.loading}
-              error={nameErrors || undefined}
-              autoFocus
-              required={true}
-              label={<Trans>Name</Trans>}
-              value={name}
-              onChange={(value) => setName(value)}
-              name="name"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  onSubmit();
-                }
-              }}
-            />
-            {geometryErrors && <Warning>{geometryErrors}</Warning>}
-          </div>
-          <div className="space-x-2 bg-gray-100 p-4 border-t">
-            <Button onClick={onCancel} label={<Trans>Cancel</Trans>} />
-            <Button
-              loading={createSketchState.loading}
-              disabled={createSketchState.loading}
-              onClick={onSubmit}
-              label={<Trans>Submit</Trans>}
-              primary
-            />
-          </div>
+          {" "}
+          {loading ? (
+            <div>
+              <h1 className="flex items-center p-4">
+                {loadingTitle || <Skeleton className="w-3/4" />}
+              </h1>
+              <div className="p-4 pt-0 flex-1 overflow-y-auto space-y-1">
+                <Skeleton className="w-40 rounded" />
+                <Skeleton className="w-full rounded h-8" />
+                <div className="pt-3 space-y-1">
+                  <Skeleton className="w-52 rounded" />
+                  <Skeleton className="w-full rounded h-32" />
+                </div>
+              </div>
+              <div className="pt-3 space-y-1 bg-gray-50 border-t flex items-center space-x-2 p-4">
+                <Button label={t("Cancel")} onClick={onCancel} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="flex items-center p-4">
+                <span className="flex-1">
+                  <span className="font-bold">
+                    {!sketch && <Trans>New</Trans>} {sketchClass.name}
+                  </span>
+                </span>
+                {!left && (
+                  <button onClick={() => setLeft(true)}>
+                    <ArrowLeftIcon className="w-6 h-6" />
+                  </button>
+                )}
+                {left && (
+                  <button onClick={() => setLeft(false)}>
+                    <ArrowRightIcon className="w-6 h-6" />
+                  </button>
+                )}
+              </h1>
+              <div className="p-4 pt-0 flex-1 overflow-y-auto">
+                <TextInput
+                  disabled={createSketchState.loading}
+                  error={nameErrors || undefined}
+                  autoFocus
+                  required={true}
+                  label={<Trans>Name</Trans>}
+                  value={name}
+                  onChange={(value) => setName(value)}
+                  name="name"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      onSubmit();
+                    }
+                  }}
+                />
+                {geometryErrors && <Warning>{geometryErrors}</Warning>}
+              </div>
+              <div className="space-x-2 bg-gray-100 p-4 border-t">
+                <Button onClick={onCancel} label={<Trans>Cancel</Trans>} />
+                <Button
+                  loading={
+                    createSketchState.loading || updateSketchState.loading
+                  }
+                  disabled={
+                    createSketchState.loading || updateSketchState.loading
+                  }
+                  onClick={onSubmit}
+                  label={<Trans>Submit</Trans>}
+                  primary
+                />
+              </div>
+            </>
+          )}
         </motion.div>,
         document.body
       )}
@@ -254,6 +333,7 @@ export default function SketchEditorModal({
                   onDelete: async (value) => {
                     draw.setCollection(EMPTY_FEATURE_COLLECTION);
                     draw.create(false, true);
+                    setFeature(null);
                   },
                 });
               }}

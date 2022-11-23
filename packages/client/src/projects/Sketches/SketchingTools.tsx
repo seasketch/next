@@ -9,109 +9,240 @@ import {
 import { Trans as I18n, useTranslation } from "react-i18next";
 import getSlug from "../../getSlug";
 import {
+  GetSketchForEditingDocument,
+  GetSketchForEditingQuery,
+  SketchEditorModalDetailsFragment,
   SketchingDetailsFragment,
-  SketchingDocument,
-  SketchingQuery,
-  useCreateSketchFolderMutation,
   useSketchingQuery,
 } from "../../generated/graphql";
-import { useContext, useMemo, useState, useEffect } from "react";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import useDialog from "../../components/useDialog";
+import { useContext, useMemo, useState, useEffect, useCallback } from "react";
 import SketchTableOfContents from "./SketchTableOfContents";
 import SketchEditorModal from "./SketchEditorModal";
 import { useHistory } from "react-router-dom";
 import { memo } from "react";
+import useSketchActions from "./useSketchActions";
+import { useApolloClient } from "@apollo/client";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const { t } = useTranslation("sketching");
-  const { data } = useSketchingQuery({
+  const { data, loading } = useSketchingQuery({
     variables: {
       slug: getSlug(),
     },
   });
-  const onError = useGlobalErrorHandler();
-  const [createFolder] = useCreateSketchFolderMutation({
-    onError,
-  });
 
   const { isSmall } = useContext(ProjectAppSidebarContext);
 
-  const { prompt } = useDialog();
-
   const [editor, setEditor] =
-    useState<false | { id?: number; sketchClass: SketchingDetailsFragment }>(
-      false
-    );
+    useState<
+      | false
+      | {
+          sketch?: SketchEditorModalDetailsFragment;
+          sketchClass: SketchingDetailsFragment;
+          folderId?: number;
+          loading?: boolean;
+          loadingTitle?: string;
+        }
+    >(false);
 
+  const [selectedSketchIds, setSelectedSketchIds] = useState<number[]>([]);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<number[]>([]);
   const [toolbarRef, setToolbarRef] = useState<HTMLDivElement | null>(null);
+  const [tocContainer, setTocContainer] = useState<HTMLDivElement | null>(null);
+  const onError = useGlobalErrorHandler();
+  const client = useApolloClient();
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        toolbarRef &&
+        (toolbarRef === target || toolbarRef.contains(target))
+      ) {
+        return;
+      } else if (
+        tocContainer &&
+        tocContainer.contains(target) &&
+        tocContainer !== target
+      ) {
+        return;
+      }
+      setSelectedFolderIds([]);
+      setSelectedSketchIds([]);
+    };
+    document.body.addEventListener("click", handler);
+    return () => {
+      document.body.removeEventListener("click", handler);
+    };
+  }, [tocContainer, toolbarRef, setSelectedFolderIds, setSelectedSketchIds]);
 
   const history = useHistory();
-  const sketchClassOptions = useMemo(() => {
-    const sketchClasses = [...(data?.projectBySlug?.sketchClasses || [])];
-    return [
-      ...sketchClasses
-        .filter((sc) => !sc.formElementId)
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map(
-          (sc) =>
-            ({
-              label: sc.name,
-              onClick: () => {
-                history.replace(`/${getSlug()}/app`);
-                setEditor({
-                  sketchClass: sc,
-                });
+
+  const selectedSketchClasses = useMemo(() => {
+    const selectedSketchClasses: number[] = [];
+    if (data?.projectBySlug?.mySketches?.length) {
+      const sketches = data.projectBySlug.mySketches;
+      if (selectedSketchIds) {
+        for (const id of selectedSketchIds) {
+          const sketch = sketches.find((s) => s.id === id);
+          if (
+            sketch &&
+            selectedSketchClasses.indexOf(sketch.sketchClassId) === -1
+          ) {
+            selectedSketchClasses.push(sketch.sketchClassId);
+          }
+        }
+      }
+    }
+    return selectedSketchClasses;
+  }, [data?.projectBySlug?.mySketches, selectedSketchIds]);
+
+  const actions = useSketchActions({
+    folderSelected: selectedFolderIds.length > 0,
+    selectedSketchClasses,
+    multiple: selectedFolderIds.length > 1 || selectedSketchIds.length > 1,
+    sketchClasses: data?.projectBySlug?.sketchClasses,
+  });
+
+  const focusOnTableOfContentsItem = useCallback(
+    // TODO: expand parents if necessary
+    (type: "sketch" | "folder", id: number) => {
+      if (type === "folder") {
+        setSelectedFolderIds([id]);
+        setSelectedSketchIds([]);
+      } else {
+        setSelectedFolderIds([]);
+        setSelectedSketchIds([id]);
+      }
+    },
+    [setSelectedFolderIds, setSelectedSketchIds]
+  );
+
+  const createDropdownOptions = useMemo(() => {
+    return actions.create.map(
+      ({ action, label, disabled }) =>
+        ({
+          label,
+          onClick: () => {
+            action({
+              selectedSketches: selectedSketchIds.map(
+                (id) =>
+                  (data?.projectBySlug?.mySketches || []).find(
+                    (s) => s.id === id
+                  )!
+              ),
+              selectedFolders: selectedFolderIds.map(
+                (id) =>
+                  (data?.projectBySlug?.myFolders || []).find(
+                    (f) => f.id === id
+                  )!
+              ),
+              setEditor,
+              focus: focusOnTableOfContentsItem,
+              clearSelection: () => {
+                setSelectedFolderIds([]);
+                setSelectedSketchIds([]);
               },
-            } as DropdownOption)
-        ),
-      {
-        label: <Trans>Folder</Trans>,
-        onClick: () => {
-          prompt({
-            message: t(`What would you like to name your folder?`),
-            onSubmit: async (name) => {
-              await createFolder({
-                variables: {
-                  name,
-                  slug: getSlug(),
-                },
-                update: (cache, { data }) => {
-                  if (data?.createSketchFolder?.sketchFolder) {
-                    const folder = data.createSketchFolder.sketchFolder;
-                    const results = cache.readQuery<SketchingQuery>({
-                      query: SketchingDocument,
-                      variables: {
-                        slug: getSlug(),
-                      },
-                    });
-                    if (results?.projectBySlug?.myFolders) {
-                      cache.writeQuery({
-                        query: SketchingDocument,
-                        variables: { slug: getSlug() },
-                        data: {
-                          ...results,
-                          projectBySlug: {
-                            ...results.projectBySlug,
-                            myFolders: [
-                              ...results.projectBySlug.myFolders,
-                              folder,
-                            ],
-                          },
+            });
+          },
+          disabled,
+        } as DropdownOption)
+    );
+  }, [
+    actions.create,
+    data?.projectBySlug?.myFolders,
+    data?.projectBySlug?.mySketches,
+    focusOnTableOfContentsItem,
+    selectedFolderIds,
+    selectedSketchIds,
+  ]);
+
+  const editDropdownOptions = useMemo(() => {
+    return actions.edit.map(
+      ({ action, label, disabled }) =>
+        ({
+          label,
+          onClick: () => {
+            action({
+              selectedSketches: selectedSketchIds.map(
+                (id) =>
+                  (data?.projectBySlug?.mySketches || []).find(
+                    (s) => s.id === id
+                  )!
+              ),
+              selectedFolders: selectedFolderIds.map(
+                (id) =>
+                  (data?.projectBySlug?.myFolders || []).find(
+                    (f) => f.id === id
+                  )!
+              ),
+              setEditor: async (options: any) => {
+                setEditor({
+                  ...options,
+                  loading: options.id ? true : false,
+                });
+                if (options.id) {
+                  // load the sketch
+                  try {
+                    const response =
+                      await client.query<GetSketchForEditingQuery>({
+                        query: GetSketchForEditingDocument,
+                        variables: {
+                          id: options.id,
                         },
                       });
+                    // then set editor state again with sketch, loading=false
+                    if (response.data.sketch) {
+                      setEditor((prev) => {
+                        if (prev) {
+                          return {
+                            ...prev,
+                            sketch: response.data.sketch!,
+                            loading: false,
+                            loadingTitle: undefined,
+                          };
+                        } else {
+                          return false;
+                        }
+                      });
+                    } else {
+                      if (response.error) {
+                        throw new Error(response.error.message);
+                      } else {
+                        throw new Error(
+                          "Unknown query error when retrieving sketch data"
+                        );
+                      }
                     }
+                  } catch (e) {
+                    onError(e);
+                    setEditor(false);
                   }
-                },
-              });
-            },
-          });
-        },
-      } as DropdownOption,
-    ];
-  }, [data?.projectBySlug?.sketchClasses, createFolder, prompt, t]);
+                }
+              },
+              focus: focusOnTableOfContentsItem,
+              clearSelection: () => {
+                setSelectedFolderIds([]);
+                setSelectedSketchIds([]);
+              },
+            });
+          },
+          disabled,
+        } as DropdownOption)
+    );
+  }, [
+    actions.edit,
+    client,
+    data?.projectBySlug?.myFolders,
+    data?.projectBySlug?.mySketches,
+    focusOnTableOfContentsItem,
+    onError,
+    selectedFolderIds,
+    selectedSketchIds,
+  ]);
 
   return (
     <div style={{ display: hidden ? "none" : "block" }}>
@@ -123,19 +254,22 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             label={
               isSmall ? <Trans>Create</Trans> : <Trans>Create New...</Trans>
             }
-            options={sketchClassOptions}
+            options={createDropdownOptions}
             disabled={editor !== false}
           />
-          <Button disabled small label={<Trans>Edit</Trans>} />
-          {/* eslint-disable-next-line i18next/no-literal-string */}
-          <Button disabled small label={<Trans>Delete</Trans>} />
-          {/* eslint-disable-next-line i18next/no-literal-string */}
+          <DropdownButton
+            small
+            disabled={editDropdownOptions.length === 0}
+            alignment="left"
+            label={<Trans>Edit</Trans>}
+            options={editDropdownOptions}
+          />
           <Button
             disabled
             small
             label={
               isSmall ? (
-                <Trans>Attributes</Trans>
+                <Trans>View Attributes</Trans>
               ) : (
                 <Trans>View Attributes and Reports</Trans>
               )
@@ -144,17 +278,37 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
         </ProjectAppSidebarToolbar>
       )}
       <SketchTableOfContents
+        ref={(tocContainer) => setTocContainer(tocContainer)}
         folders={data?.projectBySlug?.myFolders || []}
         sketches={data?.projectBySlug?.mySketches || []}
-        ignoreClicksOnRefs={toolbarRef ? [toolbarRef] : []}
+        loading={loading}
+        selectedFolderIds={selectedFolderIds}
+        selectedSketchIds={selectedSketchIds}
+        onSelectionChange={(item, isSelected) => {
+          if (item.__typename === "SketchFolder") {
+            setSelectedFolderIds((prev) => [
+              ...prev.filter((f) => f !== item.id),
+              ...(isSelected ? [item.id] : []),
+            ]);
+          } else {
+            setSelectedSketchIds((prev) => [
+              ...prev.filter((f) => f !== item.id),
+              ...(isSelected ? [item.id] : []),
+            ]);
+          }
+        }}
       />
-      {editor && (
+      {editor !== false && (
         <SketchEditorModal
-          sketchClass={editor.sketchClass}
-          id={editor.id}
-          onComplete={() => {
+          sketchClass={editor?.sketchClass}
+          sketch={editor?.sketch}
+          loading={editor?.loading}
+          loadingTitle={editor?.loading ? editor.loadingTitle : undefined}
+          folderId={editor?.folderId}
+          onComplete={(item) => {
             history.replace(`/${getSlug()}/app/sketches`);
             setEditor(false);
+            focusOnTableOfContentsItem("sketch", item.id);
           }}
           onCancel={() => {
             history.replace(`/${getSlug()}/app/sketches`);

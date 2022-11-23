@@ -36,7 +36,10 @@ export default function DropdownButton({
   return (
     <Menu
       as="div"
-      className={classNames("relative inline-block text-left", className)}
+      className={classNames(
+        "relative inline-block text-left select-none",
+        className
+      )}
     >
       <div>
         <Menu.Button
@@ -44,7 +47,9 @@ export default function DropdownButton({
           className={classNames(
             small ? "px-2 py-0.5" : "px-4 py-2",
             "inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm bg-white text-sm font-medium text-gray-700  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-500",
-            disabled ? "opacity-50 cursor-default" : "hover:bg-gray-50",
+            disabled
+              ? "opacity-75 cursor-default bg-gray-100"
+              : "hover:bg-gray-50",
             buttonClassName
           )}
         >
