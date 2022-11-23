@@ -102,5 +102,8 @@ jobs:
           UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer

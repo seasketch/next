@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import useDebounce from "../useDebounce";
 import TextInput from "../components/TextInput";
 import { MutationResult } from "@apollo/client";
@@ -6,7 +6,7 @@ import { MutationResult } from "@apollo/client";
 export default function MutableAutosaveInput(props: {
   propName: string;
   value: string;
-  label: string;
+  label: string | ReactNode;
   description?: string;
   placeholder?: string;
   mutation: (options: any) => Promise<any>;

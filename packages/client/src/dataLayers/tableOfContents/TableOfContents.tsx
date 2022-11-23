@@ -25,6 +25,7 @@ import { Menu, useContextMenu } from "react-contexify";
 import "react-contexify/dist/ReactContexify.css";
 import Button from "../../components/Button";
 import { useTranslation } from "react-i18next";
+import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
 
 export type ClientTableOfContentsItem = Pick<
   GeneratedTableOfContentsItem,
@@ -316,6 +317,15 @@ export default function TableOfContents(props: TableOfContentsProps) {
               />,
               ...(props.extraButtons
                 ? props.extraButtons(data.node as ClientTableOfContentsItem)
+                : []),
+              ...(data.node.isFolder
+                ? [
+                    data.node.expanded ? (
+                      <FolderOpenIcon className="w-6 h-6 text-primary-500 mr-1" />
+                    ) : (
+                      <FolderIcon className="w-6 h-6 text-primary-500 mr-1" />
+                    ),
+                  ]
                 : []),
             ],
             buttons: [

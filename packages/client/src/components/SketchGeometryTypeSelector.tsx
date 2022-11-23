@@ -1,6 +1,5 @@
 import { PlusIcon } from "@heroicons/react/outline";
-import { PlusCircleIcon, LocationMarkerIcon } from "@heroicons/react/solid";
-import { ComponentType, FunctionComponent, ReactNode } from "react";
+import { LocationMarkerIcon } from "@heroicons/react/solid";
 import { SketchGeometryType } from "../generated/graphql";
 
 export default function SketchGeometryTypeSelector({
@@ -50,7 +49,7 @@ export default function SketchGeometryTypeSelector({
             }}
           >
             <input
-              className="block text-primary-500 hidden"
+              className="block text-primary-500"
               onChange={() => {
                 if (onChange) {
                   onChange(option);

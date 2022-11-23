@@ -439,4 +439,21 @@ describe("Sketch Classes tied to FormElements", () => {
   });
 });
 
-test.todo("Don't allow geometry type to be changed if sketches already exist");
+test("Don't allow geometry type to be changed for sketch classes that aren't a part of surveys", async () => {
+  await pool.transaction(async (conn) => {
+    const adminId = await createUser(conn);
+    const projectId = await createProject(conn, adminId, "invite_only");
+    const projectBId = await createProject(conn, adminId, "public");
+    await createSession(conn, adminId, true, false, projectId);
+    const sketchClass = await conn.one(
+      sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning *`
+    );
+    expect(sketchClass.name).toBe("MPA");
+    expect(
+      conn.any(
+        sql`update sketch_classes set geometry_type = 'POINT' where id = ${sketchClass.id}`
+      )
+    ).rejects.toThrow();
+    await conn.any(sql`ROLLBACK`);
+  });
+});

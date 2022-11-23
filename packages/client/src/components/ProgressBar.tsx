@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 interface ProgressBarProps {
   /** 0.0 - 1.0 */
   progress: number;
+  indeterminate?: boolean;
 }
 
 // background: linear-gradient(-100deg, #f0f0f0 0%, #fafafa 50%, #f0f0f0 100%);
@@ -25,8 +26,9 @@ export default function ProgressBar(props: ProgressBarProps) {
     <div className="mb-2">
       <motion.div
         style={{
-          background:
-            "linear-gradient(-100deg, #d2d6dc 0%, #aeb1b4 50%, #d2d6dc 100%)",
+          background: props.indeterminate
+            ? "linear-gradient(-100deg, rgb(46, 115, 182) 0%, #aeb1ff 50%, rgb(46, 115, 182) 100%)"
+            : "linear-gradient(-100deg, #d2d6dc 0%, #aeb1b4 50%, #d2d6dc 100%)",
           backgroundSize: "400% 400%",
         }}
         className="bg-gray-300 w-full my-4 h-3 mb-1"
@@ -35,7 +37,7 @@ export default function ProgressBar(props: ProgressBarProps) {
           // scale: [1.5, 1],
         }}
         transition={{
-          duration: 4,
+          duration: 3.5,
           ease: "easeInOut",
           // times: [0, 1, 0],
           loop: Infinity,
@@ -45,7 +47,7 @@ export default function ProgressBar(props: ProgressBarProps) {
         <div
           className="bg-primary-300 float-left h-3"
           style={{
-            width: `${props.progress * 100}%`,
+            width: `${props.indeterminate ? 0 : props.progress * 100}%`,
             transition: "width 500ms",
           }}
         >

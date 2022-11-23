@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useHistory } from "react-router";
 import InputBlock from "../../components/InputBlock";
@@ -126,8 +126,11 @@ export default function InviteUsersModal({
     }
   }, [createInvitesState.error]);
 
+  const emailInput = useRef(null);
+
   return (
     <Modal
+      initialFocus={emailInput}
       disableBackdropClick={true}
       loading={loading || createInvitesState.loading}
       tabs={[t("Single Invite"), t("List Multiple")]}
@@ -167,6 +170,7 @@ export default function InviteUsersModal({
           <Tab.Panel>
             <div className="mb-4">
               <TextInput
+                ref={emailInput}
                 name="recipient"
                 type="email"
                 label={t("Email")}

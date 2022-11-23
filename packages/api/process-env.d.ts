@@ -27,5 +27,11 @@ declare namespace NodeJS {
     TILE_PACKAGES_BUCKET: string;
     CLIENT_DOMAIN: string;
     SPATIAL_UPLOADS_BUCKET: string;
+    NORMALIZED_SPATIAL_UPLOADS_BUCKET: string;
+    SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER?: string;
+    SPATIAL_UPLOADS_LAMBDA_ARN?: string;
+    R2_ACCESS_KEY_ID: string;
+    R2_SECRET_ACCESS_KEY: string;
+    R2_ENDPOINT: string;
   }
 }

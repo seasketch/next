@@ -587,6 +587,31 @@ enum CacheableOfflineAssetType {
   SPRITE
 }
 
+"""All input for the `cancelDataUpload` mutation."""
+input CancelDataUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  uploadId: UUID
+}
+
+"""The output of our `cancelDataUpload` mutation."""
+type CancelDataUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `clearFormElementStyle` mutation."""
 input ClearFormElementStyleInput {
   """
@@ -921,6 +946,42 @@ type CreateDataSourcePayload {
     """The method to use when ordering `DataSource`."""
     orderBy: [DataSourcesOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataSourcesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createDataUpload` mutation."""
+input CreateDataUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  contentType: String
+  filename: String
+  projectId: Int
+}
+
+"""The output of our `createDataUpload` mutation."""
+type CreateDataUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  dataUploadTask: DataUploadTask
+
+  """An edge for our `DataUploadTask`. May be used by Relay 1."""
+  dataUploadTaskEdge(
+    """The method to use when ordering `DataUploadTask`."""
+    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataUploadTasksEdge
+
+  """Reads a single `Project` that is related to this `DataUploadTask`."""
+  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -1459,6 +1520,44 @@ type CreateProjectsSharedBasemapPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `createSketchClassFromTemplate` mutation."""
+input CreateSketchClassFromTemplateInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  templateSketchClassId: Int
+}
+
+"""The output of our `createSketchClassFromTemplate` mutation."""
+type CreateSketchClassFromTemplatePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
 }
 
 """All input for the create `SketchFolder` mutation."""
@@ -2116,6 +2215,12 @@ type DataSource implements Node {
   """
   generateId: Boolean
 
+  """
+  mapbox-geostats summary information for vector sources. Useful for
+  cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
+  """
+  geostats: JSON
+
   """Should be used as sourceId in stylesheets."""
   id: Int!
 
@@ -2147,6 +2252,16 @@ type DataSource implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """Size of the normalized file. SEASKETCH_VECTOR sources only."""
+  normalizedSourceBytes: Int
+
+  """
+  Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
+  store indefinitely so they may be processed into tilesets and to support the
+  download function. SEASKETCH_VECTOR sources only.
+  """
+  normalizedSourceObjectKey: String
 
   """SEASKETCH_VECTOR sources only. S3 object key where data are stored"""
   objectKey: UUID
@@ -2202,6 +2317,18 @@ type DataSource implements Node {
 
   """MapBox GL source type or custom seasketch type."""
   type: DataSourceTypes!
+  uploadedBy: String
+  uploadedSourceFilename: String
+
+  """
+  If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only.
+  """
+  uploadedSourceLayername: String
+
+  """
+  UUID of the upload processing job associated with a SEASKETCH_VECTOR source.
+  """
+  uploadTaskId: UUID
 
   """
   A URL to a TileJSON resource for tiled sources. For GeoJSON or
@@ -2320,6 +2447,12 @@ input DataSourceInput {
   """
   generateId: Boolean
 
+  """
+  mapbox-geostats summary information for vector sources. Useful for
+  cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
+  """
+  geostats: JSON
+
   """Should be used as sourceId in stylesheets."""
   id: Int
 
@@ -2346,6 +2479,16 @@ input DataSourceInput {
   For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec.
   """
   minzoom: Int
+
+  """Size of the normalized file. SEASKETCH_VECTOR sources only."""
+  normalizedSourceBytes: Int
+
+  """
+  Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
+  store indefinitely so they may be processed into tilesets and to support the
+  download function. SEASKETCH_VECTOR sources only.
+  """
+  normalizedSourceObjectKey: String
 
   """SEASKETCH_VECTOR sources only. S3 object key where data are stored"""
   objectKey: UUID
@@ -2398,6 +2541,17 @@ input DataSourceInput {
 
   """MapBox GL source type or custom seasketch type."""
   type: DataSourceTypes!
+  uploadedSourceFilename: String
+
+  """
+  If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only.
+  """
+  uploadedSourceLayername: String
+
+  """
+  UUID of the upload processing job associated with a SEASKETCH_VECTOR source.
+  """
+  uploadTaskId: UUID
 
   """
   A URL to a TileJSON resource for tiled sources. For GeoJSON or
@@ -2689,9 +2843,10 @@ enum DataSourceTypes {
   """MapBox GL Style "raster" source"""
   RASTER_DEM
 
-  """
-  Combination of geojson and possible vector sources hosted on SeaSketch CND
-  """
+  """SeaSketch-hosted vector tiles"""
+  SEASKETCH_MVT
+
+  """Combination of geojson and vector sources hosted on SeaSketch CDN"""
   SEASKETCH_VECTOR
 
   """MapBox GL Style "vector" source"""
@@ -2699,6 +2854,111 @@ enum DataSourceTypes {
 
   """MapBox GL Style "video" source"""
   VIDEO
+}
+
+enum DataUploadState {
+  AWAITING_UPLOAD
+  COMPLETE
+  CONVERTING_FORMAT
+  FAILED
+  FAILED_DISMISSED
+  FETCHING
+  PROCESSING
+  REQUIRES_USER_INPUT
+  TILING
+  UPLOADED
+  UPLOADING_PRODUCTS
+  VALIDATING
+}
+
+type DataUploadTask implements Node {
+  """Content-Type of the original upload."""
+  contentType: String!
+  createdAt: Datetime!
+  errorMessage: String
+
+  """Original name of file as uploaded by the user."""
+  filename: String!
+  id: UUID!
+
+  """Reads and enables pagination through a set of `DataLayer`."""
+  layers(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [DataLayer!]
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Use to upload source data to s3. Must be an admin."""
+  presignedUploadUrl: String
+
+  """0.0 to 1.0 scale, applies to tiling process."""
+  progress: BigFloat
+
+  """Reads a single `Project` that is related to this `DataUploadTask`."""
+  project: Project
+  projectId: Int!
+  state: DataUploadState!
+}
+
+"""
+A condition to be used against `DataUploadTask` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input DataUploadTaskCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+
+  """Checks for equality with the object’s `state` field."""
+  state: DataUploadState
+}
+
+"""A connection to a list of `DataUploadTask` values."""
+type DataUploadTasksConnection {
+  """
+  A list of edges which contains the `DataUploadTask` and cursor to aid in pagination.
+  """
+  edges: [DataUploadTasksEdge!]!
+
+  """A list of `DataUploadTask` objects."""
+  nodes: [DataUploadTask!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `DataUploadTask` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `DataUploadTask` edge in the connection."""
+type DataUploadTasksEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `DataUploadTask` at the end of the edge."""
+  node: DataUploadTask!
+}
+
+"""Methods to use when ordering `DataUploadTask`."""
+enum DataUploadTasksOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+  STATE_ASC
+  STATE_DESC
 }
 
 """The day, does not include a time."""
@@ -4137,6 +4397,40 @@ type DisableForumPostingPayload {
   query: Query
 }
 
+"""All input for the `dismissFailedUpload` mutation."""
+input DismissFailedUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID
+}
+
+"""The output of our `dismissFailedUpload` mutation."""
+type DismissFailedUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  dataUploadTask: DataUploadTask
+
+  """An edge for our `DataUploadTask`. May be used by Relay 1."""
+  dataUploadTaskEdge(
+    """The method to use when ordering `DataUploadTask`."""
+    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataUploadTasksEdge
+
+  """Reads a single `Project` that is related to this `DataUploadTask`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 scalar Email
 
 """
@@ -4321,6 +4615,41 @@ type EnableOfflineSupportPayload {
     """The method to use when ordering `Project`."""
     orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
   ): ProjectsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `failDataUpload` mutation."""
+input FailDataUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID
+  msg: String
+}
+
+"""The output of our `failDataUpload` mutation."""
+type FailDataUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  dataUploadTask: DataUploadTask
+
+  """An edge for our `DataUploadTask`. May be used by Relay 1."""
+  dataUploadTaskEdge(
+    """The method to use when ordering `DataUploadTask`."""
+    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataUploadTasksEdge
+
+  """Reads a single `Project` that is related to this `DataUploadTask`."""
+  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -6259,6 +6588,12 @@ type Mutation {
     """
     input: ArchiveResponsesInput!
   ): ArchiveResponsesPayload
+  cancelDataUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CancelDataUploadInput!
+  ): CancelDataUploadPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -6367,6 +6702,12 @@ type Mutation {
     """
     input: CreateDataSourceInput!
   ): CreateDataSourcePayload
+  createDataUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateDataUploadInput!
+  ): CreateDataUploadPayload
 
   """Creates a single `FormElement`."""
   createFormElement(
@@ -6510,6 +6851,12 @@ type Mutation {
     """
     input: CreateSketchInput!
   ): CreateSketchPayload
+  createSketchClassFromTemplate(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSketchClassFromTemplateInput!
+  ): CreateSketchClassFromTemplatePayload
 
   """Creates a single `SketchFolder`."""
   createSketchFolder(
@@ -7045,6 +7392,12 @@ type Mutation {
     """
     input: DisableForumPostingInput!
   ): DisableForumPostingPayload
+  dismissFailedUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DismissFailedUploadInput!
+  ): DismissFailedUploadPayload
 
   """
   Re-enable discussion forum posting for a user that was previously banned.
@@ -7061,6 +7414,12 @@ type Mutation {
     """
     input: EnableOfflineSupportInput!
   ): EnableOfflineSupportPayload
+  failDataUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: FailDataUploadInput!
+  ): FailDataUploadPayload
   generateOfflineTilePackage(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -7352,6 +7711,30 @@ type Mutation {
     """
     input: SetUserGroupsInput!
   ): SetUserGroupsPayload
+
+  """Superusers only. Promote a sprite to be globally available."""
+  shareSprite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ShareSpriteInput!
+  ): ShareSpritePayload
+
+  """
+  Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it.
+  """
+  softDeleteSprite(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SoftDeleteSpriteInput!
+  ): SoftDeleteSpritePayload
+  submitDataUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SubmitDataUploadInput!
+  ): SubmitDataUploadPayload
 
   """
   Toggle admin access for the given project and user. User must have already
@@ -8503,6 +8886,15 @@ type Project implements Node {
     offset: Int
     orderBy: ParticipantSortBy
   ): UsersConnection!
+
+  """Reads and enables pagination through a set of `DataUploadTask`."""
+  activeDataUploads(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [DataUploadTask!]
   adminCount: Int
 
   """Reads and enables pagination through a set of `User`."""
@@ -8556,8 +8948,8 @@ type Project implements Node {
   communityGuidelines: CommunityGuideline
   createdAt: Datetime
   creatorId: Int!
-  dataHostingQuota: Int
-  dataHostingQuotaUsed: Int
+  dataHostingQuota: BigInt
+  dataHostingQuotaUsed: BigInt
 
   """
   Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
@@ -8592,6 +8984,35 @@ type Project implements Node {
     offset: Int
     tableOfContentsItemIds: [Int]
   ): [DataSource!]
+
+  """Reads and enables pagination through a set of `DataUploadTask`."""
+  dataUploadTasksConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: DataUploadTaskCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `DataUploadTask`."""
+    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataUploadTasksConnection!
 
   """Should be a short length in order to fit in the project header."""
   description: String
@@ -8887,20 +9308,12 @@ type Project implements Node {
 
   """Reads and enables pagination through a set of `Sprite`."""
   sprites(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: SpriteCondition
-
     """Only read the first `n` values of the set."""
     first: Int
 
     """Skip the first `n` values."""
     offset: Int
-
-    """The method to use when ordering `Sprite`."""
-    orderBy: [SpritesOrderBy!]
-  ): [Sprite!]!
+  ): [Sprite!]
   supportEmail: String!
 
   """Reads and enables pagination through a set of `Basemap`."""
@@ -9556,6 +9969,44 @@ type Query implements Node {
     """The method to use when ordering `DataSourcesBucket`."""
     orderBy: [DataSourcesBucketsOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataSourcesBucketsConnection
+  dataUploadTask(id: UUID!): DataUploadTask
+
+  """Reads a single `DataUploadTask` using its globally unique `ID`."""
+  dataUploadTaskByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `DataUploadTask`.
+    """
+    nodeId: ID!
+  ): DataUploadTask
+
+  """Reads and enables pagination through a set of `DataUploadTask`."""
+  dataUploadTasksConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: DataUploadTaskCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `DataUploadTask`."""
+    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataUploadTasksConnection
   emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
   """
@@ -9935,6 +10386,18 @@ type Query implements Node {
   ): ProjectsSharedBasemapsConnection
 
   """
+  Used by project administrators to access a list of public sprites promoted by the SeaSketch development team.
+  
+  """
+  publicSprites(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Sprite!]
+
+  """
   Exposes the root query type nested one level down. This is helpful for Relay 1
   which can only query top level fields if they are in a particular form.
   """
@@ -9968,7 +10431,6 @@ type Query implements Node {
     nodeId: ID!
   ): SketchFolder
   sprite(id: Int!): Sprite
-  spriteByMd5AndProjectId(md5: String!, projectId: Int!): Sprite
 
   """Reads a single `Sprite` using its globally unique `ID`."""
   spriteByNodeId(
@@ -10091,6 +10553,18 @@ type Query implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Form!]
+
+  """
+  List of template sketch classes such as "Marine Protected Area", "MPA Network", etc.
+  
+  """
+  templateSketchClasses(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SketchClass!]
   tilebbox(srid: Int, x: Int, y: Int, z: Int): GeometryInterface
   topic(id: Int!): Topic
 
@@ -10548,6 +11022,33 @@ type SetUserGroupsPayload {
   query: Query
 }
 
+"""All input for the `shareSprite` mutation."""
+input ShareSpriteInput {
+  category: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  spriteId: Int
+}
+
+"""The output of our `shareSprite` mutation."""
+type ShareSpritePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sprite: Sprite
+}
+
 """
 A *Sketch* is a spatial feature that matches the schema defined by the related 
 *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
@@ -10703,6 +11204,7 @@ type SketchClass implements Node {
   
   """
   isArchived: Boolean!
+  isTemplate: Boolean!
 
   """
   [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
@@ -10728,6 +11230,7 @@ type SketchClass implements Node {
 
   """Number of sketches created with this sketch class"""
   sketchCount: BigInt
+  templateDescription: String
 
   """Reads and enables pagination through a set of `SketchClass`."""
   validChildren(
@@ -10838,6 +11341,7 @@ input SketchClassPatch {
 
   """Label chosen by project admins that is shown to users."""
   name: String
+  templateDescription: String
 }
 
 """
@@ -11003,6 +11507,31 @@ input SketchPatch {
   userGeom: GeoJSON
 }
 
+"""All input for the `softDeleteSprite` mutation."""
+input SoftDeleteSpriteInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int
+}
+
+"""The output of our `softDeleteSprite` mutation."""
+type SoftDeleteSpritePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sprite: Sprite
+}
+
 enum SortByDirection {
   ASC
   DESC
@@ -11014,6 +11543,8 @@ sprite, the actual images are in cloud storage referenced by the URL parameter.
 
 """
 type Sprite implements Node {
+  category: String
+  deleted: Boolean
   id: Int!
 
   """
@@ -11027,11 +11558,8 @@ type Sprite implements Node {
   """
   nodeId: ID!
 
-  """Reads a single `Project` that is related to this `Sprite`."""
-  project: Project
-
   """If unset, sprite will be available for use in all projects"""
-  projectId: Int!
+  projectId: Int
 
   """Reads and enables pagination through a set of `SpriteImage`."""
   spriteImages(
@@ -11054,20 +11582,6 @@ type Sprite implements Node {
   Optional. Indicates whether the image is intended for use with particular GL Styles
   """
   type: SpriteType
-}
-
-"""
-A condition to be used against `Sprite` object types. All fields are tested for equality and combined with a logical ‘and.’
-"""
-input SpriteCondition {
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `md5` field."""
-  md5: String
-
-  """Checks for equality with the object’s `projectId` field."""
-  projectId: Int
 }
 
 type SpriteImage {
@@ -11108,23 +11622,44 @@ enum SpriteImagesOrderBy {
   SPRITE_ID_DESC
 }
 
-"""Methods to use when ordering `Sprite`."""
-enum SpritesOrderBy {
-  ID_ASC
-  ID_DESC
-  MD5_ASC
-  MD5_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
-}
-
 enum SpriteType {
   FILL
   ICON
   LINE
+}
+
+"""All input for the `submitDataUpload` mutation."""
+input SubmitDataUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID
+}
+
+"""The output of our `submitDataUpload` mutation."""
+type SubmitDataUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  dataUploadTask: DataUploadTask
+
+  """An edge for our `DataUploadTask`. May be used by Relay 1."""
+  dataUploadTaskEdge(
+    """The method to use when ordering `DataUploadTask`."""
+    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataUploadTasksEdge
+
+  """Reads a single `Project` that is related to this `DataUploadTask`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """

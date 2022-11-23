@@ -59,6 +59,7 @@ query layersAndSourcesForItems(
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+      uploadedSourceFilename
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -262,6 +263,9 @@ query GetLayerItem($id: Int!) {
         urls
         useDevicePixelRatio
         supportsDynamicLayers
+        uploadedSourceFilename
+        uploadedBy
+        geostats
       }
     }
   }

@@ -155,6 +155,36 @@ CREATE TYPE public.cursor_type AS ENUM (
 
 
 --
+-- Name: data_upload_state; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.data_upload_state AS ENUM (
+    'awaiting_upload',
+    'uploaded',
+    'processing',
+    'fetching',
+    'validating',
+    'requires_user_input',
+    'converting_format',
+    'tiling',
+    'uploading_products',
+    'complete',
+    'failed',
+    'failed_dismissed'
+);
+
+
+--
+-- Name: data_upload_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.data_upload_type AS ENUM (
+    'vector',
+    'raster'
+);
+
+
+--
 -- Name: email; Type: DOMAIN; Schema: public; Owner: -
 --
 
@@ -583,7 +613,7 @@ SET default_table_access_method = heap;
 
 CREATE TABLE graphile_worker.jobs (
     id bigint NOT NULL,
-    queue_name text DEFAULT (public.gen_random_uuid())::text,
+    queue_name text,
     task_identifier text NOT NULL,
     payload json DEFAULT '{}'::json NOT NULL,
     priority integer DEFAULT 0 NOT NULL,
@@ -830,17 +860,16 @@ $$;
 
 
 --
--- Name: get_job(text, text[], interval, text[]); Type: FUNCTION; Schema: graphile_worker; Owner: -
+-- Name: get_job(text, text[], interval, text[], timestamp with time zone); Type: FUNCTION; Schema: graphile_worker; Owner: -
 --
 
-CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[]) RETURNS graphile_worker.jobs
+CREATE FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[] DEFAULT NULL::text[], job_expiry interval DEFAULT '04:00:00'::interval, forbidden_flags text[] DEFAULT NULL::text[], now timestamp with time zone DEFAULT now()) RETURNS graphile_worker.jobs
     LANGUAGE plpgsql
     AS $$
 declare
   v_job_id bigint;
   v_queue_name text;
   v_row "graphile_worker".jobs;
-  v_now timestamptz = now();
 begin
   if worker_id is null or length(worker_id) < 10 then
     raise exception 'invalid worker id';
@@ -848,7 +877,7 @@ begin
 
   select jobs.queue_name, jobs.id into v_queue_name, v_job_id
     from "graphile_worker".jobs
-    where (jobs.locked_at is null or jobs.locked_at < (v_now - job_expiry))
+    where (jobs.locked_at is null or jobs.locked_at < (now - job_expiry))
     and (
       jobs.queue_name is null
     or
@@ -856,12 +885,12 @@ begin
         select 1
         from "graphile_worker".job_queues
         where job_queues.queue_name = jobs.queue_name
-        and (job_queues.locked_at is null or job_queues.locked_at < (v_now - job_expiry))
+        and (job_queues.locked_at is null or job_queues.locked_at < (now - job_expiry))
         for update
         skip locked
       )
     )
-    and run_at <= v_now
+    and run_at <= now
     and attempts < max_attempts
     and (task_identifiers is null or task_identifier = any(task_identifiers))
     and (forbidden_flags is null or (flags ?| forbidden_flags) is not true)
@@ -878,7 +907,7 @@ begin
     update "graphile_worker".job_queues
       set
         locked_by = worker_id,
-        locked_at = v_now
+        locked_at = now
       where job_queues.queue_name = v_queue_name;
   end if;
 
@@ -886,7 +915,7 @@ begin
     set
       attempts = attempts + 1,
       locked_by = worker_id,
-      locked_at = v_now
+      locked_at = now
     where id = v_job_id
     returning * into v_row;
 
@@ -1124,6 +1153,8 @@ CREATE TABLE public.sketch_classes (
     geoprocessing_client_name text,
     mapbox_gl_style jsonb,
     form_element_id integer,
+    is_template boolean DEFAULT false NOT NULL,
+    template_description text,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
@@ -1618,9 +1649,11 @@ COMMENT ON FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) 
 
 CREATE TABLE public.sprites (
     id integer NOT NULL,
-    project_id integer NOT NULL,
+    project_id integer,
     type public.sprite_type,
-    md5 text NOT NULL
+    md5 text NOT NULL,
+    category text,
+    deleted boolean DEFAULT false
 );
 
 
@@ -1775,6 +1808,22 @@ CREATE FUNCTION public.add_valid_child_sketch_class(parent integer, child intege
 COMMENT ON FUNCTION public.add_valid_child_sketch_class(parent integer, child integer) IS '
 Add a SketchClass to the list of valid children for a Collection-type SketchClass.
 ';
+
+
+--
+-- Name: after_deleted__data_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_deleted__data_sources() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  BEGIN
+    if OLD.bucket_id is not null and OLD.object_key is not null and OLD.upload_task_id is null then
+      insert into deleted_geojson_objects (object_key, bucket) values (OLD.object_key, OLD.bucket_id);
+    end if;
+    return OLD;
+  END;
+$$;
 
 
 --
@@ -2472,6 +2521,39 @@ CREATE FUNCTION public.before_delete_sketch_class_check_form_element_id() RETURN
 
 
 --
+-- Name: before_deleted__data_layers(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_deleted__data_layers() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  BEGIN
+    insert into deleted_data_layers (
+      data_source_id,
+      data_layer_id,
+      project_id,
+      data_upload_task_id,
+      bucket_id,
+      object_key,
+      outputs
+    ) select 
+        OLD.data_source_id,
+        data_layers.id, 
+        data_layers.project_id, 
+        data_sources.upload_task_id, 
+        data_sources.bucket_id, 
+        data_sources.object_key, 
+        data_upload_tasks.outputs
+      from data_layers 
+      inner join data_sources on data_sources.id = OLD.data_source_id 
+      inner join data_upload_tasks on data_upload_tasks.id = data_sources.upload_task_id 
+      where data_layers.id = OLD.id;
+      return OLD;
+    END;
+  $$;
+
+
+--
 -- Name: before_insert_form_elements_func(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2507,12 +2589,12 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
       if new.source_layer is null then
         raise 'Layers with "vector" data sources must specify a source_layer';
       end if;
-    else
+    elsif source_type != 'seasketch-mvt' then
       if new.source_layer is not null then
-        raise 'Only Layers with data_sources of type "vector" should specify a source_layer';
+        raise 'Only Layers with data_sources of type "vector" or "seasketch-mvt should specify a source_layer';
       end if;
     end if;
-    if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector') then
+    if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector' or source_type = 'seasketch-mvt') then
       if new.mapbox_gl_styles is null then
         raise 'Vector layers must specify mapbox_gl_styles';
       end if;
@@ -2544,7 +2626,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
   declare
     bucket_id text;
   begin
-    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' ) then
+    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' ) then
       raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
     end if;
     if new.coordinates is null and (new.type = 'video' or new.type = 'image') then
@@ -2556,10 +2638,10 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.maxzoom is not null and (new.type = 'image' or new.type = 'video') then
       raise 'maxzoom cannot be set for image and video sources';
     end if;
-    if new.url is null and (new.type = 'geojson' or new.type = 'image' or new.type = 'arcgis-dynamic-mapserver' or new.type = 'arcgis-vector') then
+    if new.url is null and (new.type = 'geojson' or new.type = 'image' or new.type = 'arcgis-dynamic-mapserver' or new.type = 'arcgis-vector' or new.type = 'seasketch-mvt') then
       raise 'url must be set for "%" sources', (new.type);
     end if;
-    if new.scheme is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector') then
+    if new.scheme is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt') then
       raise 'scheme property is not allowed for "%" sources', (new.type);
     end if;
     if new.tiles is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-vector') then
@@ -2568,17 +2650,17 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.encoding is not null and new.type != 'raster-dem' then
       raise 'encoding property only allowed on raster-dem sources';
     end if;
-    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector') then
+    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt') then
       raise 'tile_size property is not allowed for "%" sources', (new.type);
     end if;
     if (new.type != 'geojson' and new.type != 'seasketch-vector') and (new.buffer is not null or new.cluster is not null or new.cluster_max_zoom is not null or new.cluster_properties is not null or new.cluster_radius is not null or new.generate_id is not null or new.line_metrics is not null or new.promote_id is not null or new.tolerance is not null) then
       raise 'geojson props such as buffer, cluster, generate_id, etc not allowed on % sources', (new.type);
     end if;
-    if (new.byte_length is not null and new.type != 'seasketch-vector') then
+    if (new.byte_length is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt') then
       raise 'byte_length can only be set on seasketch-vector sources';
     end if;
-    if (new.type = 'seasketch-vector' and new.byte_length is null) then
-      raise 'seasketch-vector sources must have byte_length set to an approximate value';
+    if (new.type = 'seasketch-vector' and new.type != 'seasketch-mvt' and new.byte_length is null) then
+      raise 'seasketch-vector and mvt sources must have byte_length set to an approximate value';
     end if;
     if new.urls is not null and new.type != 'video' then
       raise 'urls property not allowed on % sources', (new.type);
@@ -2589,10 +2671,10 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.use_device_pixel_ratio is not null and new.type != 'arcgis-dynamic-mapserver' then
       raise 'use_device_pixel_ratio property not allowed on % sources', (new.type);
     end if;
-    if new.import_type is not null and new.type != 'seasketch-vector' then
+    if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' then
       raise 'import_type property is only allowed for seasketch-vector sources';
     end if;
-    if new.import_type is null and new.type = 'seasketch-vector' then
+    if new.import_type is null and (new.type = 'seasketch-vector' or new.type = 'seasketch-mvt') then
       raise 'import_type property is required for seasketch-vector sources';
     end if;
     if new.original_source_url is not null and new.type != 'seasketch-vector' then
@@ -3037,6 +3119,22 @@ $$;
 
 
 --
+-- Name: before_update_sketch_class_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_update_sketch_class_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    begin
+      if NEW.geometry_type != OLD.geometry_type and NEW.form_element_id is null then
+        raise exception 'Cannot change geometry type of a sketch class';
+      end if;
+      return NEW;
+    end;
+  $$;
+
+
+--
 -- Name: before_valid_children_insert_or_update(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3095,6 +3193,23 @@ CREATE FUNCTION public.can_digitize(scid integer) RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.can_digitize(scid integer) IS '@omit';
+
+
+--
+-- Name: cancel_data_upload(integer, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.cancel_data_upload(project_id integer, upload_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if session_is_admin(project_id) then
+        delete from data_upload_tasks where id = upload_id and state = 'awaiting_upload';
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -3454,6 +3569,74 @@ CREATE FUNCTION public.create_consent_document(fid integer, version integer, url
 --
 
 COMMENT ON FUNCTION public.create_consent_document(fid integer, version integer, url text) IS '@omit';
+
+
+--
+-- Name: data_upload_tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_upload_tasks (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    project_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    started_at timestamp with time zone,
+    state public.data_upload_state DEFAULT 'awaiting_upload'::public.data_upload_state NOT NULL,
+    progress numeric,
+    filename text NOT NULL,
+    content_type text NOT NULL,
+    error_message text,
+    outputs jsonb,
+    user_id integer NOT NULL,
+    CONSTRAINT data_upload_tasks_progress_check CHECK (((progress <= 1.0) AND (progress >= 0.0)))
+);
+
+
+--
+-- Name: COLUMN data_upload_tasks.progress; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_upload_tasks.progress IS '0.0 to 1.0 scale, applies to tiling process.';
+
+
+--
+-- Name: COLUMN data_upload_tasks.filename; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_upload_tasks.filename IS 'Original name of file as uploaded by the user.';
+
+
+--
+-- Name: COLUMN data_upload_tasks.content_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_upload_tasks.content_type IS 'Content-Type of the original upload.';
+
+
+--
+-- Name: create_data_upload(text, integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_data_upload(filename text, project_id integer, content_type text) RETURNS public.data_upload_tasks
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      upload data_upload_tasks;
+      used bigint;
+      quota bigint;
+    begin
+      if session_is_admin(project_id) then
+        select projects_data_hosting_quota_used(projects.*), projects_data_hosting_quota(projects.*) into used, quota from projects where id = project_id;
+        if quota - used > 0 then
+          insert into data_upload_tasks(project_id, filename, content_type, user_id) values (create_data_upload.project_id, create_data_upload.filename, create_data_upload.content_type, nullif(current_setting('session.user_id', TRUE), '')::integer) returning * into upload;
+          return upload;
+        else
+          raise exception 'data hosting quota exceeded';
+        end if;
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -3844,6 +4027,7 @@ CREATE TABLE public.projects (
     mapbox_secret_key text,
     mapbox_public_key text,
     is_offline_enabled boolean DEFAULT false,
+    data_hosting_quota bigint DEFAULT 524288000 NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -3939,6 +4123,13 @@ COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
 COMMENT ON COLUMN public.projects.mapbox_secret_key IS '
 @omit
 ';
+
+
+--
+-- Name: COLUMN projects.data_hosting_quota; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.data_hosting_quota IS '@omit';
 
 
 --
@@ -4154,6 +4345,43 @@ $$;
 
 
 --
+-- Name: create_sketch_class_from_template(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare 
+      base sketch_classes;
+      created sketch_classes;
+      num_similarly_named int;
+      new_name text;
+    begin
+      if session_is_admin("projectId") then
+        select * into base from sketch_classes where id = template_sketch_class_id;
+        if base is null then
+          raise exception 'Sketch Class with id=% does not exist', template_sketch_class_id;
+        end if;
+        if base.is_template = false then
+          raise exception 'Sketch Class with id=% is not a template', template_sketch_class_id;
+        end if;
+        -- TODO: add suffix to name if there are duplicates
+        select count(*) into num_similarly_named from sketch_classes where project_id = "projectId" and form_element_id is null and name ~ (base.name || '( \(\d+\))?');
+        new_name = base.name;
+        if num_similarly_named > 0 then
+          new_name = new_name || ' (' || num_similarly_named::text || ')';
+        end if;
+        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style) returning * into created;
+        perform initialize_sketch_class_form_from_template(created.id, (select id from forms where sketch_class_id = base.id));
+        return created;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: create_sprite(integer, text, public.sprite_type, integer, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4166,16 +4394,16 @@ CREATE FUNCTION public.create_sprite("projectId" integer, _md5 text, _type publi
     if session_is_admin("projectId") = false then
       raise 'Not authorized';
     end if;
-    if _pixel_ratio != 1 then
-      raise 'New sprites can only be created with an image with a pixel_ratio of 1';
-    end if;
+    -- if _pixel_ratio != 1 then
+    --   raise 'New sprites can only be created with an image with a pixel_ratio of 1';
+    -- end if;
     if _url is null then
       raise 'Must be called with a url';
     end if;
     if _md5 is null then
       raise 'Must be called with an md5 hash';
     end if;
-    select * into sprite from sprites where sprites.md5 = _md5 limit 1;
+    select * into sprite from sprites where project_id = "projectId" and sprites.md5 = _md5 and deleted = false limit 1;
     if sprite is null then
       insert into sprites (project_id, type, md5) values ("projectId", _type, _md5) returning * into sprite;
     end if;
@@ -4465,6 +4693,20 @@ Must have write permission for the specified forum. Create a new discussion topi
 
 
 --
+-- Name: create_upload_task_job(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_upload_task_job() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    perform graphile_worker.add_job('processDataUpload', json_build_object('uploadId', NEW.id), max_attempts := 1);
+    RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: current_project(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4695,6 +4937,377 @@ COMMENT ON FUNCTION public.data_layers_sprites(l public.data_layers) IS '@simple
 
 
 --
+-- Name: data_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_sources (
+    id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    project_id integer NOT NULL,
+    type text NOT NULL,
+    attribution text,
+    bounds numeric[],
+    maxzoom integer,
+    minzoom integer,
+    url text,
+    scheme public.tile_scheme,
+    tiles text[],
+    tile_size integer,
+    encoding public.raster_dem_encoding,
+    buffer integer,
+    cluster boolean,
+    cluster_max_zoom integer,
+    cluster_properties jsonb,
+    cluster_radius integer,
+    generate_id boolean,
+    line_metrics boolean,
+    promote_id boolean,
+    tolerance numeric,
+    coordinates numeric[],
+    urls text[],
+    query_parameters jsonb,
+    use_device_pixel_ratio boolean,
+    import_type text,
+    original_source_url text,
+    enhanced_security boolean,
+    bucket_id text,
+    object_key uuid,
+    byte_length integer,
+    supports_dynamic_layers boolean DEFAULT true NOT NULL,
+    uploaded_source_filename text,
+    uploaded_source_layername text,
+    normalized_source_object_key text,
+    normalized_source_bytes integer,
+    geostats jsonb,
+    upload_task_id uuid,
+    CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
+    CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
+);
+
+
+--
+-- Name: TABLE data_sources; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_sources IS '
+@omit all
+SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+to include new types to support services such as ArcGIS MapServers and content
+hosted on the SeaSketch CDN.
+
+When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+';
+
+
+--
+-- Name: COLUMN data_sources.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.id IS 'Should be used as sourceId in stylesheets.';
+
+
+--
+-- Name: COLUMN data_sources.type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.type IS 'MapBox GL source type or custom seasketch type.';
+
+
+--
+-- Name: COLUMN data_sources.attribution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.attribution IS 'Contains an attribution to be displayed when the map is shown to a user.';
+
+
+--
+-- Name: COLUMN data_sources.bounds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.bounds IS 'An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources.';
+
+
+--
+-- Name: COLUMN data_sources.maxzoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.maxzoom IS 'For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.';
+
+
+--
+-- Name: COLUMN data_sources.minzoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.minzoom IS 'For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec.';
+
+
+--
+-- Name: COLUMN data_sources.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.url IS 'A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR';
+
+
+--
+-- Name: COLUMN data_sources.scheme; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.scheme IS 'For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.';
+
+
+--
+-- Name: COLUMN data_sources.tiles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tiles IS 'For tiled sources, a list of endpoints that can be used to retrieve tiles.';
+
+
+--
+-- Name: COLUMN data_sources.tile_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tile_size IS 'The minimum visual size to display tiles for this layer. Only configurable for raster layers.';
+
+
+--
+-- Name: COLUMN data_sources.encoding; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.encoding IS 'Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default';
+
+
+--
+-- Name: COLUMN data_sources.buffer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.buffer IS 'GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.';
+
+
+--
+-- Name: COLUMN data_sources.cluster; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster IS '
+GeoJSON only.
+
+If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
+
+  * cluster Is true if the point is a cluster
+  * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+  * point_count Number of original points grouped into this cluster
+  * point_count_abbreviated An abbreviated point count
+';
+
+
+--
+-- Name: COLUMN data_sources.cluster_max_zoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_max_zoom IS 'GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).';
+
+
+--
+-- Name: COLUMN data_sources.cluster_properties; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_properties IS 'See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties).';
+
+
+--
+-- Name: COLUMN data_sources.cluster_radius; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_radius IS 'GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.';
+
+
+--
+-- Name: COLUMN data_sources.generate_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.generate_id IS 'GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.';
+
+
+--
+-- Name: COLUMN data_sources.line_metrics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.line_metrics IS 'GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.';
+
+
+--
+-- Name: COLUMN data_sources.promote_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.promote_id IS 'GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`';
+
+
+--
+-- Name: COLUMN data_sources.tolerance; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tolerance IS 'GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).';
+
+
+--
+-- Name: COLUMN data_sources.coordinates; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.coordinates IS 'Image sources only. Corners of image specified in longitude, latitude pairs.';
+
+
+--
+-- Name: COLUMN data_sources.urls; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.urls IS 'Video sources only. URLs to video content in order of preferred format.';
+
+
+--
+-- Name: COLUMN data_sources.query_parameters; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.query_parameters IS 'ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.';
+
+
+--
+-- Name: COLUMN data_sources.use_device_pixel_ratio; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.use_device_pixel_ratio IS 'ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.';
+
+
+--
+-- Name: COLUMN data_sources.import_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.import_type IS 'For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server';
+
+
+--
+-- Name: COLUMN data_sources.original_source_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.original_source_url IS 'For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary.';
+
+
+--
+-- Name: COLUMN data_sources.enhanced_security; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.enhanced_security IS 'SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.';
+
+
+--
+-- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
+
+
+--
+-- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
+
+
+--
+-- Name: COLUMN data_sources.byte_length; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.byte_length IS 'SEASKETCH_VECTOR sources only. Approximate size of the geojson source';
+
+
+--
+-- Name: COLUMN data_sources.supports_dynamic_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.supports_dynamic_layers IS 'ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings.';
+
+
+--
+-- Name: COLUMN data_sources.uploaded_source_layername; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.uploaded_source_layername IS 'If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.normalized_source_object_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.normalized_source_object_key IS 'Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and store indefinitely so they may be processed into tilesets and to support the download function. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.normalized_source_bytes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.normalized_source_bytes IS 'Size of the normalized file. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.geostats; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.geostats IS 'mapbox-geostats summary information for vector sources. Useful for cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.upload_task_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.upload_task_id IS 'UUID of the upload processing job associated with a SEASKETCH_VECTOR source.';
+
+
+--
+-- Name: data_sources_uploaded_by(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_uploaded_by(data_source public.data_sources) RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    uid int;
+    author text;
+  begin
+    if session_is_admin(data_source.project_id) then
+      select user_id into uid from data_upload_tasks where id = data_source.upload_task_id;
+      if uid is null then
+        return null;
+      else
+        select coalesce(fullname, nickname, email) into author from user_profiles where user_id = uid;
+        if author is null then
+          select canonical_email into author from users where id = uid;
+        end if;
+        return author;
+      end if;
+    else
+      raise exception 'Permission denied';
+    end if;
+  end
+  $$;
+
+
+--
+-- Name: data_upload_tasks_layers(public.data_upload_tasks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) RETURNS SETOF public.data_layers
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from data_layers where data_source_id in ((select id from data_sources where upload_task_id = upload.id));
+  $$;
+
+
+--
+-- Name: FUNCTION data_upload_tasks_layers(upload public.data_upload_tasks); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) IS '@simpleCollections only';
+
+
+--
 -- Name: offline_tile_packages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -4857,6 +5470,26 @@ COMMENT ON FUNCTION public.disable_forum_posting("userId" integer, "projectId" i
 
 
 --
+-- Name: dismiss_failed_upload(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.dismiss_failed_upload(id uuid) RETURNS public.data_upload_tasks
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      upload data_upload_tasks;
+    begin
+      if session_is_admin((select project_id from data_upload_tasks where data_upload_tasks.id = dismiss_failed_upload.id)) then
+        update data_upload_tasks set state = 'failed_dismissed' where data_upload_tasks.id = dismiss_failed_upload.id returning * into upload;
+        return upload;
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: email_unsubscribed(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4969,6 +5602,17 @@ CREATE FUNCTION public.export_spatial_responses(fid integer) RETURNS json
 --
 
 COMMENT ON FUNCTION public.export_spatial_responses(fid integer) IS '@omit';
+
+
+--
+-- Name: fail_data_upload(uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fail_data_upload(id uuid, msg text) RETURNS public.data_upload_tasks
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update data_upload_tasks set state = 'failed', error_message = msg where id = fail_data_upload.id and session_is_admin(project_id) returning *;
+  $$;
 
 
 --
@@ -6547,6 +7191,37 @@ $$;
 
 
 --
+-- Name: projects_active_data_uploads(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_active_data_uploads(p public.projects) RETURNS SETOF public.data_upload_tasks
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      * 
+    from 
+      data_upload_tasks 
+    where 
+      session_is_admin(p.id) and
+      project_id = p.id and
+      (
+        (state = 'complete' and created_at > now() - interval '1 hour')
+        or
+        (state = 'failed' and created_at > now() - interval '3 days')
+        or
+        (state != 'failed' and state != 'complete' and state != 'failed_dismissed' and (state != 'awaiting_upload' or user_id = nullif(current_setting('session.user_id', TRUE), '')::integer))
+      )
+  $$;
+
+
+--
+-- Name: FUNCTION projects_active_data_uploads(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_active_data_uploads(p public.projects) IS '@simpleCollections only';
+
+
+--
 -- Name: projects_admin_count(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6641,14 +7316,14 @@ COMMENT ON FUNCTION public.projects_basemaps(project public.projects) IS '
 -- Name: projects_data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.projects_data_hosting_quota(p public.projects) RETURNS integer
+CREATE FUNCTION public.projects_data_hosting_quota(p public.projects) RETURNS bigint
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     begin
     if session_is_admin(p.id) != true then
       raise 'Permission denied';
     end if;
-    return (select 524288000);
+    return (select data_hosting_quota from projects where id = p.id);
     end;
   $$;
 
@@ -6657,12 +7332,12 @@ CREATE FUNCTION public.projects_data_hosting_quota(p public.projects) RETURNS in
 -- Name: projects_data_hosting_quota_used(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETURNS integer
+CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETURNS bigint
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     declare
       sum_bytes bigint;
-      quota int;
+      quota bigint;
     begin
     if session_is_admin(p.id) != true then
       raise 'Permission denied';
@@ -6718,289 +7393,6 @@ Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
 in conjuction with `dataSourcesForItems` to progressively load layer information
 when users request layers be displayed on the map.
 ';
-
-
---
--- Name: data_sources; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.data_sources (
-    id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    project_id integer NOT NULL,
-    type text NOT NULL,
-    attribution text,
-    bounds numeric[],
-    maxzoom integer,
-    minzoom integer,
-    url text,
-    scheme public.tile_scheme,
-    tiles text[],
-    tile_size integer,
-    encoding public.raster_dem_encoding,
-    buffer integer,
-    cluster boolean,
-    cluster_max_zoom integer,
-    cluster_properties jsonb,
-    cluster_radius integer,
-    generate_id boolean,
-    line_metrics boolean,
-    promote_id boolean,
-    tolerance numeric,
-    coordinates numeric[],
-    urls text[],
-    query_parameters jsonb,
-    use_device_pixel_ratio boolean,
-    import_type text,
-    original_source_url text,
-    enhanced_security boolean,
-    bucket_id text,
-    object_key uuid,
-    byte_length integer,
-    supports_dynamic_layers boolean DEFAULT true NOT NULL,
-    CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
-    CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
-);
-
-
---
--- Name: TABLE data_sources; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.data_sources IS '
-@omit all
-SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
-to include new types to support services such as ArcGIS MapServers and content
-hosted on the SeaSketch CDN.
-
-When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
-';
-
-
---
--- Name: COLUMN data_sources.id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.id IS 'Should be used as sourceId in stylesheets.';
-
-
---
--- Name: COLUMN data_sources.type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.type IS 'MapBox GL source type or custom seasketch type.';
-
-
---
--- Name: COLUMN data_sources.attribution; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.attribution IS 'Contains an attribution to be displayed when the map is shown to a user.';
-
-
---
--- Name: COLUMN data_sources.bounds; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.bounds IS 'An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources.';
-
-
---
--- Name: COLUMN data_sources.maxzoom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.maxzoom IS 'For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.';
-
-
---
--- Name: COLUMN data_sources.minzoom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.minzoom IS 'For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec.';
-
-
---
--- Name: COLUMN data_sources.url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.url IS 'A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR';
-
-
---
--- Name: COLUMN data_sources.scheme; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.scheme IS 'For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.';
-
-
---
--- Name: COLUMN data_sources.tiles; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.tiles IS 'For tiled sources, a list of endpoints that can be used to retrieve tiles.';
-
-
---
--- Name: COLUMN data_sources.tile_size; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.tile_size IS 'The minimum visual size to display tiles for this layer. Only configurable for raster layers.';
-
-
---
--- Name: COLUMN data_sources.encoding; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.encoding IS 'Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default';
-
-
---
--- Name: COLUMN data_sources.buffer; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.buffer IS 'GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.';
-
-
---
--- Name: COLUMN data_sources.cluster; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster IS '
-GeoJSON only.
-
-If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
-
-  * cluster Is true if the point is a cluster
-  * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
-  * point_count Number of original points grouped into this cluster
-  * point_count_abbreviated An abbreviated point count
-';
-
-
---
--- Name: COLUMN data_sources.cluster_max_zoom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster_max_zoom IS 'GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).';
-
-
---
--- Name: COLUMN data_sources.cluster_properties; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster_properties IS 'See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties).';
-
-
---
--- Name: COLUMN data_sources.cluster_radius; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster_radius IS 'GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.';
-
-
---
--- Name: COLUMN data_sources.generate_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.generate_id IS 'GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.';
-
-
---
--- Name: COLUMN data_sources.line_metrics; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.line_metrics IS 'GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.';
-
-
---
--- Name: COLUMN data_sources.promote_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.promote_id IS 'GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`';
-
-
---
--- Name: COLUMN data_sources.tolerance; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.tolerance IS 'GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).';
-
-
---
--- Name: COLUMN data_sources.coordinates; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.coordinates IS 'Image sources only. Corners of image specified in longitude, latitude pairs.';
-
-
---
--- Name: COLUMN data_sources.urls; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.urls IS 'Video sources only. URLs to video content in order of preferred format.';
-
-
---
--- Name: COLUMN data_sources.query_parameters; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.query_parameters IS 'ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.';
-
-
---
--- Name: COLUMN data_sources.use_device_pixel_ratio; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.use_device_pixel_ratio IS 'ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.';
-
-
---
--- Name: COLUMN data_sources.import_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.import_type IS 'For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server';
-
-
---
--- Name: COLUMN data_sources.original_source_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.original_source_url IS 'For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary.';
-
-
---
--- Name: COLUMN data_sources.enhanced_security; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.enhanced_security IS 'SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.';
-
-
---
--- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
-
-
---
--- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
-
-
---
--- Name: COLUMN data_sources.byte_length; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.byte_length IS 'SEASKETCH_VECTOR sources only. Approximate size of the geojson source';
-
-
---
--- Name: COLUMN data_sources.supports_dynamic_layers; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.supports_dynamic_layers IS 'ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings.';
 
 
 --
@@ -7618,6 +8010,32 @@ $$;
 
 
 --
+-- Name: projects_sprites(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_sprites(p public.projects) RETURNS SETOF public.sprites
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      sprites sprites;
+    begin
+      if session_is_admin(p.id) then
+        return query select * from sprites where project_id = p.id and deleted = false;
+      else 
+        raise exception 'Permission denied.';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION projects_sprites(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_sprites(p public.projects) IS '@simpleCollections only';
+
+
+--
 -- Name: projects_survey_basemaps(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7791,6 +8209,27 @@ $$;
 COMMENT ON FUNCTION public.projects_users_banned_from_forums(project public.projects) IS '
 @simpleCollections only
 List of all banned users. Listing only accessible to admins.
+';
+
+
+--
+-- Name: public_sprites(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.public_sprites() RETURNS SETOF public.sprites
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from sprites where project_id is null and deleted = false;
+  $$;
+
+
+--
+-- Name: FUNCTION public_sprites(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.public_sprites() IS '
+@simpleCollections only
+Used by project administrators to access a list of public sprites promoted by the SeaSketch development team.
 ';
 
 
@@ -8027,7 +8466,14 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           enhanced_security,
           bucket_id,
           object_key,
-          byte_length
+          byte_length,
+          supports_dynamic_layers,
+          uploaded_source_filename,
+          uploaded_source_layername,
+          normalized_source_object_key,
+          normalized_source_bytes,
+          geostats,
+          upload_task_id
         )
           select 
             "projectId", 
@@ -8059,7 +8505,14 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           enhanced_security,
           bucket_id,
           object_key,
-          byte_length
+          byte_length,
+          supports_dynamic_layers,
+          uploaded_source_filename,
+          uploaded_source_layername,
+          normalized_source_object_key,
+          normalized_source_bytes,
+          geostats,
+          upload_task_id
           from 
             data_sources 
           where
@@ -9025,6 +9478,24 @@ Sets the list of groups that the given user belongs to. Will clear all other gro
 
 
 --
+-- Name: share_sprite(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.share_sprite(sprite_id integer, category text) RETURNS public.sprites
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update sprites set project_id = null, category = share_sprite.category where id = sprite_id and session_is_superuser() returning *;
+  $$;
+
+
+--
+-- Name: FUNCTION share_sprite(sprite_id integer, category text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.share_sprite(sprite_id integer, category text) IS 'Superusers only. Promote a sprite to be globally available.';
+
+
+--
 -- Name: shared_basemaps(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9170,6 +9641,44 @@ CREATE FUNCTION public.slugify(value text, allow_unicode boolean) RETURNS text
   ) FROM "normalized";
 
 $$;
+
+
+--
+-- Name: soft_delete_sprite(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.soft_delete_sprite(id integer) RETURNS public.sprites
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update sprites set deleted = true where sprites.id = soft_delete_sprite.id and session_is_superuser() returning *;
+  $$;
+
+
+--
+-- Name: FUNCTION soft_delete_sprite(id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.soft_delete_sprite(id integer) IS 'Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it.';
+
+
+--
+-- Name: submit_data_upload(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.submit_data_upload(id uuid) RETURNS public.data_upload_tasks
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      upload data_upload_tasks;
+    begin
+      if session_is_admin((select project_id from data_upload_tasks where data_upload_tasks.id = submit_data_upload.id)) then
+        update data_upload_tasks set state = 'uploaded' where data_upload_tasks.id = submit_data_upload.id returning * into upload;
+        return upload;
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -9541,6 +10050,27 @@ CREATE FUNCTION public.template_forms() RETURNS SETOF public.forms
 --
 
 COMMENT ON FUNCTION public.template_forms() IS '@simpleCollections only';
+
+
+--
+-- Name: template_sketch_classes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.template_sketch_classes() RETURNS SETOF public.sketch_classes
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from sketch_classes where is_template = true;
+  $$;
+
+
+--
+-- Name: FUNCTION template_sketch_classes(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.template_sketch_classes() IS '
+@simpleCollections only
+List of template sketch classes such as "Marine Protected Area", "MPA Network", etc.
+';
 
 
 --
@@ -10609,6 +11139,31 @@ ALTER TABLE public.data_sources ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDEN
 
 
 --
+-- Name: deleted_geojson_objects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.deleted_geojson_objects (
+    id integer NOT NULL,
+    object_key text NOT NULL,
+    bucket text NOT NULL
+);
+
+
+--
+-- Name: deleted_geojson_objects_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.deleted_geojson_objects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.deleted_geojson_objects_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: email_notification_preferences; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -11221,6 +11776,60 @@ ALTER TABLE public.sprites ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY 
 
 
 --
+-- Name: style_template_groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.style_template_groups (
+    id integer NOT NULL,
+    name text NOT NULL,
+    CONSTRAINT style_template_groups_name_check CHECK (((char_length(name) <= 32) AND (char_length(name) >= 0)))
+);
+
+
+--
+-- Name: style_template_groups_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.style_template_groups ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.style_template_groups_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: style_templates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.style_templates (
+    id integer NOT NULL,
+    project_id integer,
+    group_id integer,
+    mapbox_gl_styles jsonb NOT NULL,
+    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_styles)::text)) STORED,
+    render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
+    keywords text DEFAULT ''::text NOT NULL
+);
+
+
+--
+-- Name: style_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.style_templates ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.style_templates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: survey_consent_documents; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -11553,6 +12162,22 @@ ALTER TABLE ONLY public.data_sources
 
 
 --
+-- Name: data_upload_tasks data_upload_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_tasks
+    ADD CONSTRAINT data_upload_tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: deleted_geojson_objects deleted_geojson_objects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.deleted_geojson_objects
+    ADD CONSTRAINT deleted_geojson_objects_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: email_notification_preferences email_notification_preferences_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -11872,19 +12497,27 @@ ALTER TABLE ONLY public.sprite_images
 
 
 --
--- Name: sprites sprites_md5_project_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.sprites
-    ADD CONSTRAINT sprites_md5_project_id_key UNIQUE (md5, project_id);
-
-
---
 -- Name: sprites sprites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.sprites
     ADD CONSTRAINT sprites_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: style_template_groups style_template_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.style_template_groups
+    ADD CONSTRAINT style_template_groups_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: style_templates style_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.style_templates
+    ADD CONSTRAINT style_templates_pkey PRIMARY KEY (id);
 
 
 --
@@ -12128,6 +12761,20 @@ CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (pro
 
 
 --
+-- Name: data_upload_tasks_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_upload_tasks_project_id_idx ON public.data_upload_tasks USING btree (project_id);
+
+
+--
+-- Name: data_upload_tasks_state_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_upload_tasks_state_project_id_idx ON public.data_upload_tasks USING btree (state, project_id);
+
+
+--
 -- Name: email_notification_preferences_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -12167,6 +12814,13 @@ CREATE INDEX forms_sketch_class_id_idx ON public.forms USING btree (sketch_class
 --
 
 CREATE INDEX forums_project_id_idx ON public.forums USING btree (project_id);
+
+
+--
+-- Name: idx_sprites_deleted; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sprites_deleted ON public.sprites USING btree (deleted);
 
 
 --
@@ -12884,6 +13538,13 @@ CREATE INDEX sprite_images_sprite_id_idx ON public.sprite_images USING btree (sp
 
 
 --
+-- Name: sprites_group_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sprites_group_idx ON public.sprites USING btree (category);
+
+
+--
 -- Name: sprites_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -13042,6 +13703,13 @@ CREATE TRIGGER _001_unnest_survey_response_sketches_trigger BEFORE INSERT OR UPD
 --
 
 CREATE TRIGGER _002_set_survey_response_last_updated_by BEFORE UPDATE ON public.survey_responses FOR EACH ROW EXECUTE FUNCTION public.set_survey_response_last_updated_by();
+
+
+--
+-- Name: data_sources _500_gql_after_deleted__data_sources; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER _500_gql_after_deleted__data_sources AFTER DELETE ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.after_deleted__data_sources();
 
 
 --
@@ -13248,6 +13916,13 @@ CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline
 
 
 --
+-- Name: sketch_classes sketch_classes_before_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER sketch_classes_before_update BEFORE UPDATE ON public.sketch_classes FOR EACH ROW EXECUTE FUNCTION public.before_update_sketch_class_trigger();
+
+
+--
 -- Name: sketch_classes sketch_classes_prohibit_delete_t; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -13308,6 +13983,13 @@ CREATE TRIGGER trig_create_sketch_class_acl AFTER INSERT ON public.sketch_classe
 --
 
 CREATE TRIGGER trig_create_table_of_contents_item_acl AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.create_table_of_contents_item_acl();
+
+
+--
+-- Name: data_upload_tasks trigger_data_upload_ready; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_data_upload_ready AFTER UPDATE ON public.data_upload_tasks FOR EACH ROW WHEN (((old.state = 'awaiting_upload'::public.data_upload_state) AND (new.state = 'uploaded'::public.data_upload_state))) EXECUTE FUNCTION public.create_upload_task_job();
 
 
 --
@@ -13476,6 +14158,30 @@ COMMENT ON CONSTRAINT data_sources_project_id_fkey ON public.data_sources IS '@o
 
 ALTER TABLE ONLY public.data_sources
     ADD CONSTRAINT data_sources_type_fkey FOREIGN KEY (type) REFERENCES public.data_source_types(type) ON DELETE CASCADE;
+
+
+--
+-- Name: data_sources data_sources_upload_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_upload_task_id_fkey FOREIGN KEY (upload_task_id) REFERENCES public.data_upload_tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: data_upload_tasks data_upload_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_tasks
+    ADD CONSTRAINT data_upload_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: data_upload_tasks data_upload_tasks_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_tasks
+    ADD CONSTRAINT data_upload_tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
 --
@@ -14027,6 +14733,29 @@ ALTER TABLE ONLY public.sprites
 
 
 --
+-- Name: CONSTRAINT sprites_project_id_fkey ON sprites; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT sprites_project_id_fkey ON public.sprites IS '@omit';
+
+
+--
+-- Name: style_templates style_templates_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.style_templates
+    ADD CONSTRAINT style_templates_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.style_template_groups(id) ON DELETE SET NULL;
+
+
+--
+-- Name: style_templates style_templates_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.style_templates
+    ADD CONSTRAINT style_templates_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
 -- Name: survey_consent_documents survey_consent_documents_form_element_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14373,6 +15102,19 @@ CREATE POLICY data_sources_update ON public.data_sources FOR UPDATE USING ((publ
           WHERE ((table_of_contents_items.data_layer_id = ( SELECT data_layers.id
                    FROM public.data_layers
                   WHERE (data_layers.data_source_id = data_sources.id))) AND (table_of_contents_items.is_draft = false))) IS NULL)))) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: data_upload_tasks; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.data_upload_tasks ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: data_upload_tasks data_upload_tasks_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_upload_tasks_select ON public.data_upload_tasks USING (public.session_is_admin(project_id));
 
 
 --
@@ -15346,10 +16088,10 @@ REVOKE ALL ON FUNCTION graphile_worker.fail_job(worker_id text, job_id bigint, e
 
 
 --
--- Name: FUNCTION get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]); Type: ACL; Schema: graphile_worker; Owner: -
+-- Name: FUNCTION get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[], now timestamp with time zone); Type: ACL; Schema: graphile_worker; Owner: -
 --
 
-REVOKE ALL ON FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[]) FROM PUBLIC;
+REVOKE ALL ON FUNCTION graphile_worker.get_job(worker_id text, task_identifiers text[], job_expiry interval, forbidden_flags text[], now timestamp with time zone) FROM PUBLIC;
 
 
 --
@@ -15484,6 +16226,13 @@ GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seaske
 --
 
 GRANT UPDATE(mapbox_gl_style) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.template_description; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
@@ -16118,6 +16867,13 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, 
 
 
 --
+-- Name: FUNCTION after_deleted__data_sources(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_deleted__data_sources() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION after_insert_or_update_or_delete_project_invite_email(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16368,6 +17124,13 @@ REVOKE ALL ON FUNCTION public.before_delete_sketch_class_check_form_element_id()
 
 
 --
+-- Name: FUNCTION before_deleted__data_layers(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_deleted__data_layers() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION before_insert_form_elements_func(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16480,6 +17243,13 @@ REVOKE ALL ON FUNCTION public.before_survey_update() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION before_update_sketch_class_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_update_sketch_class_trigger() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION before_valid_children_insert_or_update(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16557,6 +17327,14 @@ REVOKE ALL ON FUNCTION public.bytea(public.geometry) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.can_digitize(scid integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.can_digitize(scid integer) TO anon;
+
+
+--
+-- Name: FUNCTION cancel_data_upload(project_id integer, upload_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.cancel_data_upload(project_id integer, upload_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.cancel_data_upload(project_id integer, upload_id uuid) TO seasketch_user;
 
 
 --
@@ -16832,6 +17610,78 @@ GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry) TO anon;
 
 REVOKE ALL ON FUNCTION public.create_consent_document(fid integer, version integer, url text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_consent_document(fid integer, version integer, url text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION uuid_generate_v4(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.uuid_generate_v4() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
+
+
+--
+-- Name: COLUMN data_upload_tasks.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_upload_tasks.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(project_id) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_upload_tasks.created_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(created_at) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_upload_tasks.state; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(state) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_upload_tasks.progress; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(progress) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_upload_tasks.filename; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(filename) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_upload_tasks.content_type; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(content_type) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_upload_tasks.error_message; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(error_message) ON TABLE public.data_upload_tasks TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_data_upload(filename text, project_id integer, content_type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text) TO seasketch_user;
 
 
 --
@@ -17131,6 +17981,14 @@ REVOKE ALL ON FUNCTION public.create_sketch_class_acl() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17229,6 +18087,13 @@ GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message
 
 
 --
+-- Name: FUNCTION create_upload_task_job(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_upload_task_job() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION current_project(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17292,11 +18157,189 @@ GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
 
 
 --
--- Name: FUNCTION uuid_generate_v4(); Type: ACL; Schema: public; Owner: -
+-- Name: TABLE data_sources; Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.uuid_generate_v4() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
+GRANT SELECT ON TABLE public.data_sources TO anon;
+GRANT SELECT,INSERT,DELETE ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.attribution; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.maxzoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.minzoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.scheme; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tiles; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tile_size; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.encoding; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.buffer; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_max_zoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_properties; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_radius; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.generate_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.line_metrics; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.promote_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tolerance; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.coordinates; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.urls; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.query_parameters; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.use_device_pixel_ratio; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.supports_dynamic_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(supports_dynamic_layers) ON TABLE public.data_sources TO anon;
+GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.uploaded_source_filename; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(uploaded_source_filename) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_sources_uploaded_by(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_sources) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_upload_tasks_layers(upload public.data_upload_tasks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) TO seasketch_user;
 
 
 --
@@ -17351,6 +18394,14 @@ GRANT ALL ON FUNCTION public.disable_forum_posting("userId" integer, "projectId"
 --
 
 REVOKE ALL ON FUNCTION public.disablelongtransactions() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION dismiss_failed_upload(id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.dismiss_failed_upload(id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.dismiss_failed_upload(id uuid) TO seasketch_user;
 
 
 --
@@ -17439,6 +18490,14 @@ REVOKE ALL ON FUNCTION public.equals(geom1 public.geometry, geom2 public.geometr
 
 REVOKE ALL ON FUNCTION public.export_spatial_responses(fid integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.export_spatial_responses(fid integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION fail_data_upload(id uuid, msg text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.fail_data_upload(id uuid, msg text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.fail_data_upload(id uuid, msg text) TO seasketch_user;
 
 
 --
@@ -19542,6 +20601,14 @@ GRANT ALL ON FUNCTION public.projects_access_requests(p public.projects, order_b
 
 
 --
+-- Name: FUNCTION projects_active_data_uploads(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_active_data_uploads(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_active_data_uploads(p public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_admin_count(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19587,169 +20654,6 @@ GRANT ALL ON FUNCTION public.projects_data_hosting_quota_used(p public.projects)
 
 REVOKE ALL ON FUNCTION public.projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_data_layers_for_items(p public.projects, table_of_contents_item_ids integer[]) TO anon;
-
-
---
--- Name: TABLE data_sources; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.data_sources TO anon;
-GRANT SELECT,INSERT,DELETE ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.attribution; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.maxzoom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.minzoom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.scheme; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.tiles; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.tile_size; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.encoding; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.buffer; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster_max_zoom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster_properties; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster_radius; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.generate_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.line_metrics; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.promote_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.tolerance; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.coordinates; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.urls; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.query_parameters; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.use_device_pixel_ratio; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.supports_dynamic_layers; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(supports_dynamic_layers) ON TABLE public.data_sources TO anon;
-GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -20014,6 +20918,14 @@ GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.proj
 
 
 --
+-- Name: FUNCTION projects_sprites(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_sprites(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_sprites(p public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_survey_basemaps(project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20060,6 +20972,14 @@ GRANT ALL ON FUNCTION public.projects_url(p public.projects) TO anon;
 
 REVOKE ALL ON FUNCTION public.projects_users_banned_from_forums(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_users_banned_from_forums(project public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION public_sprites(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.public_sprites() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.public_sprites() TO seasketch_user;
 
 
 --
@@ -20445,6 +21365,14 @@ GRANT ALL ON FUNCTION public.set_user_groups("userId" integer, "projectId" integ
 
 
 --
+-- Name: FUNCTION share_sprite(sprite_id integer, category text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.share_sprite(sprite_id integer, category text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.share_sprite(sprite_id integer, category text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION shared_basemaps(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20495,6 +21423,14 @@ REVOKE ALL ON FUNCTION public.slugify(text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.slugify(value text, allow_unicode boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION soft_delete_sprite(id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.soft_delete_sprite(id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.soft_delete_sprite(id integer) TO seasketch_user;
 
 
 --
@@ -23315,6 +24251,14 @@ REVOKE ALL ON FUNCTION public.subltree(public.ltree, integer, integer) FROM PUBL
 
 
 --
+-- Name: FUNCTION submit_data_upload(id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.submit_data_upload(id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.submit_data_upload(id uuid) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION subpath(public.ltree, integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -23468,6 +24412,14 @@ GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surv
 
 REVOKE ALL ON FUNCTION public.template_forms() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.template_forms() TO anon;
+
+
+--
+-- Name: FUNCTION template_sketch_classes(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.template_sketch_classes() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.template_sketch_classes() TO seasketch_user;
 
 
 --

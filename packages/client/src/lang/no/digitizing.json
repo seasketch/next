@@ -17,6 +17,6 @@
   "StartLine": "Klikk på kartet for å starte en linje",
   "StartPoint": "Klikk på kartet for å plassere et punkt",
   "StartPointTouch": "Klikk på kartet for å plassere et punkt",
-  "StartPolygon": "<0></0>Klikk på kartet for å starte å tegne en figur",
+  "StartPolygon": "<0></0>Klikk på kartet for å starte med å tegne et område",
   "StartPolygonTouch": "Klikk på kartet for å starte et polygon"
 }

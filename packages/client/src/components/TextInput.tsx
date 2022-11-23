@@ -1,5 +1,12 @@
 import { FieldMetaProps, FormikProps } from "formik";
-import React, { useState, useEffect, KeyboardEvent, ReactElement } from "react";
+import React, {
+  useState,
+  useEffect,
+  KeyboardEvent,
+  ReactElement,
+  useRef,
+  forwardRef,
+} from "react";
 
 export interface TextInputOptions {
   /** Required id of input. Also referenced by labels. */
@@ -26,9 +33,24 @@ export interface TextInputOptions {
   form?: FormikProps<any>;
   meta?: FieldMetaProps<string>;
   autocomplete?: string;
+  ref?: any;
 }
 
-export default function TextInput(props: TextInputOptions) {
+const TextArea = forwardRef((props: any, ref: any) => (
+  <textarea ref={ref} {...props}>
+    {props.children}
+  </textarea>
+));
+const Input = forwardRef((props: any, ref: any) => (
+  <input ref={ref} {...props}>
+    {props.children}
+  </input>
+));
+
+export default forwardRef(function TextInput(
+  props: TextInputOptions,
+  ref: any
+) {
   const {
     value,
     placeholder,
@@ -81,11 +103,7 @@ export default function TextInput(props: TextInputOptions) {
     }
   }, [showSaved, state]);
 
-  const InputTag = textarea
-    ? // eslint-disable-next-line i18next/no-literal-string
-      `textarea`
-    : // eslint-disable-next-line i18next/no-literal-string
-      (`input` as keyof JSX.IntrinsicElements);
+  const InputTag = textarea ? TextArea : Input;
 
   return (
     <div>
@@ -98,10 +116,10 @@ export default function TextInput(props: TextInputOptions) {
         {label}
       </label>
 
-      <div className="mt-1 relative rounded-md shadow-sm">
+      <div className="my-1 relative rounded-md shadow-sm">
         <InputTag
-          autoFocus={!!props.autoFocus}
-          // @ts-ignore
+          ref={ref}
+          autoFocus={Boolean(props.autoFocus)}
           type={props.type || "text"}
           name={name}
           onKeyDown={onKeyDown}
@@ -204,4 +222,4 @@ export default function TextInput(props: TextInputOptions) {
       )}
     </div>
   );
-}
+});

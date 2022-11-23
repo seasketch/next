@@ -240,3 +240,7 @@ label.required:after {
     /* display: none; */
   }
 }
+
+.zebra-stripe-child-div > div:nth-child(even) {
+  background-color: rgba(249, 250, 251);
+}

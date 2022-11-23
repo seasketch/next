@@ -59,60 +59,105 @@ var pg_1 = require("pg");
  *   * PGUSER
  *   * PGDATABASE
  *
- * @returns
+ * @returns pg.Client
+ * @example
+ *
+ * export const handler = (event) => {
+ *   const client = getClient();
+ *   const results = await client.query(
+ *     `select * from projects where id = $1`,
+ *     [event.id]
+ *   );
+ * }
  */
 function getClient() {
     return __awaiter(this, void 0, void 0, function () {
+        var _this = this;
         return __generator(this, function (_a) {
             if (!dbClient) {
-                dbClient = new Promise(function (resolve, reject) {
-                    signer.getAuthToken({
-                        // uses the IAM role access keys to create an authentication token
-                        region: db.region,
-                        hostname: db.host,
-                        port: parseInt(db.port.toString()),
-                        username: db.user,
-                    }, function (err, token) {
-                        return __awaiter(this, void 0, void 0, function () {
-                            var client, e_1;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0:
-                                        if (!err) return [3 /*break*/, 1];
-                                        reject(new Error("could not get auth token: " + err));
-                                        return [3 /*break*/, 5];
-                                    case 1:
-                                        client = new pg_1.Client({
-                                            database: db.database,
-                                            host: db.host,
-                                            port: parseInt(db.port.toString()),
-                                            password: token,
-                                            user: db.user,
-                                            ssl: {
-                                                ca: pem,
-                                            },
-                                        });
-                                        _a.label = 2;
-                                    case 2:
-                                        _a.trys.push([2, 4, , 5]);
-                                        return [4 /*yield*/, client.connect()];
-                                    case 3:
-                                        _a.sent();
-                                        client.on("error", function () {
-                                            dbClient = null;
-                                        });
-                                        resolve(client);
-                                        return [3 /*break*/, 5];
-                                    case 4:
-                                        e_1 = _a.sent();
-                                        reject(e_1);
-                                        return [3 /*break*/, 5];
-                                    case 5: return [2 /*return*/];
-                                }
+                if (db.host && (/localhost/.test(db.host) || /127.0.0.1/.test(db.host))) {
+                    dbClient = new Promise(function (resolve, reject) { return __awaiter(_this, void 0, void 0, function () {
+                        var client, e_1;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    client = new pg_1.Client({
+                                        database: db.database,
+                                        host: db.host,
+                                        port: parseInt(db.port.toString()),
+                                        user: db.user,
+                                        password: process.env.PGPASSWORD,
+                                    });
+                                    _a.label = 1;
+                                case 1:
+                                    _a.trys.push([1, 3, , 4]);
+                                    return [4 /*yield*/, client.connect()];
+                                case 2:
+                                    _a.sent();
+                                    client.on("error", function () {
+                                        dbClient = null;
+                                    });
+                                    resolve(client);
+                                    return [3 /*break*/, 4];
+                                case 3:
+                                    e_1 = _a.sent();
+                                    reject(e_1);
+                                    return [3 /*break*/, 4];
+                                case 4: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                }
+                else {
+                    dbClient = new Promise(function (resolve, reject) {
+                        signer.getAuthToken({
+                            // uses the IAM role access keys to create an authentication token
+                            region: db.region,
+                            hostname: db.host,
+                            port: parseInt(db.port.toString()),
+                            username: db.user,
+                        }, function (err, token) {
+                            return __awaiter(this, void 0, void 0, function () {
+                                var client, e_2;
+                                return __generator(this, function (_a) {
+                                    switch (_a.label) {
+                                        case 0:
+                                            if (!err) return [3 /*break*/, 1];
+                                            reject(new Error("could not get auth token: " + err));
+                                            return [3 /*break*/, 5];
+                                        case 1:
+                                            client = new pg_1.Client({
+                                                database: db.database,
+                                                host: db.host,
+                                                port: parseInt(db.port.toString()),
+                                                password: token,
+                                                user: db.user,
+                                                ssl: {
+                                                    ca: pem,
+                                                },
+                                            });
+                                            _a.label = 2;
+                                        case 2:
+                                            _a.trys.push([2, 4, , 5]);
+                                            return [4 /*yield*/, client.connect()];
+                                        case 3:
+                                            _a.sent();
+                                            client.on("error", function () {
+                                                dbClient = null;
+                                            });
+                                            resolve(client);
+                                            return [3 /*break*/, 5];
+                                        case 4:
+                                            e_2 = _a.sent();
+                                            reject(e_2);
+                                            return [3 /*break*/, 5];
+                                        case 5: return [2 /*return*/];
+                                    }
+                                });
                             });
                         });
                     });
-                });
+                }
             }
             return [2 /*return*/, dbClient];
         });

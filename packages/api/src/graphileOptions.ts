@@ -1,8 +1,5 @@
 import { makePluginHook } from "postgraphile";
 import PgSimplifyInflectorPlugin from "@graphile-contrib/pg-simplify-inflector";
-import graphqlSchemaModifiers from "./graphqlSchemaModifiers";
-import reorderSchemaFields from "./plugins/reorderSchemaFieldsPlugin";
-import extraDocumentationPlugin from "./plugins/extraDocumentationPlugin";
 import ProjectInvitesPlugin from "./plugins/projectInvitesPlugin";
 import SurveyInvitesPlugin from "./plugins/surveyInvitesPlugin";
 import postgisPlugin from "@graphile/postgis";
@@ -22,15 +19,12 @@ import ExportIdPlugin from "./plugins/exportIdPlugin";
 import UnsplashPlugin from "./plugins/unsplashPlugin";
 import { PostGraphileOptions } from "postgraphile";
 import ConsentDocumentPlugin from "./plugins/consentDocumentPlugin";
-import { Request } from "express";
-import { PostGraphilePlugin } from "postgraphile";
-import * as Sentry from "@sentry/node";
-import { print as printGraphql } from "graphql";
 import SentryPlugin from "./plugins/sentryPlugin";
 import UploadStylePlugin from "./plugins/uploadStylePlugin";
 import IsSuperuserPlugin from "./plugins/IsSuperuserPlugin";
 import OfflineTilePackagePlugin from "./plugins/offlineTilePackagePlugin";
 import BasemapOfflineDetailsPlugin from "./plugins/BasemapOfflineDetailsPlugin";
+import DataUploadTaskPlugin from "./plugins/dataUploadTaskPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -67,6 +61,7 @@ export default function graphileOptions(): PostGraphileOptions {
       IsSuperuserPlugin,
       OfflineTilePackagePlugin,
       BasemapOfflineDetailsPlugin,
+      DataUploadTaskPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

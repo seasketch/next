@@ -26,5 +26,7 @@
   "ResponsesSubmitted": "Submitted {{count}} Response",
   "ResponsesSubmitted_plural": "Submitted {{count}} Responses",
   "NumLocations": "{{count}} location",
-  "NumLocations_plural": "{{count}} locations"
+  "NumLocations_plural": "{{count}} locations",
+  "NumGeostatsValues": "{{count}} value",
+  "NumGeostatsValues_plural": "{{count}} values"
 }

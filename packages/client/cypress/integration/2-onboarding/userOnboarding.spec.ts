@@ -31,7 +31,7 @@ const projectDetails =
 let newUser; 
 
 describe("User onboarding via independent browsing", () => {
-  describe('Unauthenticated new user visiting an invite-only project', () => {
+  describe.only('Unauthenticated new user visiting an invite-only project', () => {
     before(() => {
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
