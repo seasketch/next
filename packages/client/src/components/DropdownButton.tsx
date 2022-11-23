@@ -12,6 +12,7 @@ export interface DropdownOption {
   onClick: () => void;
   label: string | ReactNode;
   disabled?: boolean;
+  id?: string;
 }
 
 interface DropdownButtonProps {
@@ -80,9 +81,9 @@ export default function DropdownButton({
           } absolute mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50`}
         >
           <div className="py-1">
-            {options.map(({ label, onClick, disabled }, i) => (
+            {options.map(({ label, onClick, disabled, id }, i) => (
               <Menu.Item
-                key={typeof label === "string" ? label : i}
+                key={typeof label === "string" ? id || label : i}
                 disabled={disabled}
               >
                 {({ active }) => (

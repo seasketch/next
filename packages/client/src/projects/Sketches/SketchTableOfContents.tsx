@@ -19,6 +19,7 @@ import Skeleton from "../../components/Skeleton";
 import { SketchAction } from "./useSketchActions";
 import ContextMenuDropdown, {
   DropdownDivider,
+  DropdownDividerProps,
 } from "../../components/ContextMenuDropdown";
 import { DropdownOption } from "../../components/DropdownButton";
 
@@ -184,7 +185,7 @@ export default forwardRef<
     }, [expandedFolderIds, treeData.items, expandedSketchIds]);
 
     const contextMenuOptions = useMemo(() => {
-      const options: (DropdownOption | ReactNode)[] = [];
+      const options: (DropdownOption | DropdownDividerProps)[] = [];
       if (actions && onActionSelected) {
         for (const action of actions.edit) {
           const { label, disabled, disabledForContextAction, keycode } = action;
@@ -200,12 +201,14 @@ export default forwardRef<
           (a) => !a.disabledForContextAction
         );
         if (createActions.length) {
-          options.push(<DropdownDivider label={t("add new")} />);
+          // @ts-ignore
+          options.push({ label: t("add new"), id: "add-new-divider" });
           for (const action of createActions) {
-            const { label, disabled, disabledForContextAction, keycode } =
+            const { id, label, disabled, disabledForContextAction, keycode } =
               action;
             if (!disabledForContextAction) {
               options.push({
+                id,
                 label,
                 disabled,
                 onClick: () => onActionSelected(action),

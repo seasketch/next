@@ -12,7 +12,9 @@ import {
   GetSketchForEditingDocument,
   GetSketchForEditingQuery,
   SketchEditorModalDetailsFragment,
+  SketchFolderDetailsFragment,
   SketchingDetailsFragment,
+  SketchTocDetailsFragment,
   useSketchingQuery,
 } from "../../generated/graphql";
 import { useContext, useMemo, useState, useEffect, useCallback } from "react";
@@ -124,17 +126,29 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   });
 
   const focusOnTableOfContentsItem = useCallback(
-    // TODO: expand parents if necessary
-    (type: "sketch" | "folder", id: number) => {
-      if (type === "folder") {
-        setSelectedFolderIds([id]);
-        setSelectedSketchIds([]);
-      } else {
-        setSelectedFolderIds([]);
-        setSelectedSketchIds([id]);
+    (
+      type: "sketch" | "folder",
+      id: number,
+      folderId?: number | null,
+      collectionId?: number | null
+    ) => {
+      if (folderId) {
+        setExpandedFolderIds((prev) => [
+          ...prev.filter((f) => f !== folderId),
+          folderId,
+        ]);
       }
+      if (collectionId) {
+        setExpandedSketchIds((prev) => [
+          ...prev.filter((s) => s !== collectionId),
+          collectionId,
+        ]);
+      }
+
+      setSelectedFolderIds(type === "folder" ? [id] : []);
+      setSelectedSketchIds(type === "sketch" ? [id] : []);
     },
-    [setSelectedFolderIds, setSelectedSketchIds]
+    [setExpandedFolderIds, setExpandedSketchIds]
   );
 
   const callAction = useCallback(
@@ -213,6 +227,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     return actions.create.map(
       (action) =>
         ({
+          id: action.id,
           label: action.label,
           onClick: () => {
             callAction(action);
@@ -226,6 +241,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     return actions.edit.map(
       (action) =>
         ({
+          id: action.id,
           label: (
             <div className="flex">
               <span className="flex-1">{action.label}</span>
@@ -346,7 +362,12 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
           onComplete={(item) => {
             history.replace(`/${getSlug()}/app/sketches`);
             setEditor(false);
-            focusOnTableOfContentsItem("sketch", item.id);
+            focusOnTableOfContentsItem(
+              "sketch",
+              item.id,
+              item.folderId || undefined,
+              item.collectionId || undefined
+            );
           }}
           onCancel={() => {
             history.replace(`/${getSlug()}/app/sketches`);
@@ -357,3 +378,59 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     </div>
   );
 });
+
+function childAndAncestors(
+  type: "sketch" | "folder",
+  id: number,
+  folders: SketchFolderDetailsFragment[],
+  sketches: SketchTocDetailsFragment[],
+  sketchIds?: number[],
+  folderIds?: number[]
+): { sketchIds: number[]; folderIds: number[] } {
+  if (!sketchIds || !folderIds) {
+    sketchIds = type === "sketch" ? [id] : [];
+    folderIds = type === "folder" ? [id] : [];
+  }
+  if (type === "sketch") {
+    const item = sketches.find((s) => s.id === id);
+    if (item?.folderId) {
+      folderIds.push(item.folderId);
+      return childAndAncestors(
+        "folder",
+        item.folderId,
+        folders,
+        sketches,
+        sketchIds,
+        folderIds
+      );
+    } else if (item?.collectionId) {
+      sketchIds.push(item.collectionId);
+      return childAndAncestors(
+        "sketch",
+        item.collectionId,
+        folders,
+        sketches,
+        sketchIds,
+        folderIds
+      );
+    } else {
+      return { sketchIds, folderIds };
+    }
+  } else {
+    const item = folders.find((f) => f.id === id);
+
+    if (item?.folderId) {
+      folderIds.push(item.folderId);
+      return childAndAncestors(
+        "folder",
+        item.folderId,
+        folders,
+        sketches,
+        sketchIds,
+        folderIds
+      );
+    } else {
+      return { sketchIds, folderIds };
+    }
+  }
+}

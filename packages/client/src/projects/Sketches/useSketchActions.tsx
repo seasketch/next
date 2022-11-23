@@ -19,6 +19,7 @@ import getSlug from "../../getSlug";
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export interface SketchAction {
+  id: string;
   label: ReactNode;
   disabled?: boolean;
   disabledForContextAction?: boolean;
@@ -32,7 +33,12 @@ export interface SketchAction {
       collectionId?: number;
       loadingTitle?: string;
     }) => void;
-    focus: (type: "sketch" | "folder", id: number) => void;
+    focus: (
+      type: "sketch" | "folder",
+      id: number,
+      folderId?: number | null,
+      collectionId?: number | null
+    ) => void;
     clearSelection: () => void;
   }) => Promise<void>;
   keycode?: string;
@@ -149,6 +155,8 @@ export default function useSketchActions({
           .map(
             (sc) =>
               ({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `create-${sc.id}`,
                 label: sc.name,
                 disabledForContextAction:
                   multiple ||
@@ -171,6 +179,8 @@ export default function useSketchActions({
               } as SketchAction)
           ),
         {
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `create-folder`,
           label: t("Folder"),
           disabledForContextAction:
             multiple || selectedSketchClasses.length > 0,
@@ -213,7 +223,7 @@ export default function useSketchActions({
                             },
                           },
                         });
-                        focus("folder", folder.id);
+                        focus("folder", folder.id, folder.folderId);
                       }
                     }
                   },
@@ -229,6 +239,7 @@ export default function useSketchActions({
               ...(!multiple && selectedSketchClasses.length
                 ? ([
                     {
+                      id: "edit-sketch",
                       label: t("Edit"),
                       keycode: "e",
                       action: ({ selectedSketches, setEditor }) => {
@@ -249,6 +260,7 @@ export default function useSketchActions({
               ...(folderSelected && !multiple
                 ? ([
                     {
+                      id: "rename-folder",
                       label: t("Rename Folder"),
                       keycode: "e",
                       action: async ({ selectedFolders }) => {
@@ -273,6 +285,7 @@ export default function useSketchActions({
                 : []),
 
               {
+                id: "delete",
                 label: t("Delete"),
                 disabled: multiple,
                 keycode: "Backspace",

@@ -13,7 +13,7 @@ export default function ContextMenuDropdown({
   target,
   offsetX,
 }: {
-  options: (DropdownOption | ReactNode)[];
+  options: (DropdownOption | { id: string; label?: string | ReactNode })[];
   target: HTMLElement;
   offsetX?: number;
 }) {
@@ -47,7 +47,7 @@ export default function ContextMenuDropdown({
       <div className="py-1">
         {options.map((props, i) => {
           if (!isDropdownOption(props)) {
-            return props;
+            return <DropdownDivider key={props.id} label={props.label} />;
           }
           const { label, disabled, onClick } = props;
           return (
@@ -89,9 +89,13 @@ export function DropdownDivider({ label }: { label?: string | ReactNode }) {
   );
 }
 
+export interface DropdownDividerProps {
+  id: string;
+  label?: string | ReactNode;
+}
+
 function isDropdownOption(
-  props: ReactNode | DropdownOption
+  props: DropdownDividerProps | DropdownOption
 ): props is DropdownOption {
-  // @ts-ignore
-  return props !== null && typeof props === "object" && props["onClick"];
+  return "onClick" in props;
 }
