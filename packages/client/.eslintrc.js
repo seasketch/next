@@ -36,6 +36,8 @@ module.exports = {
           "Error",
           "fetch",
           "useRouteMatch",
+          "useLocalForage",
+          "useLocalStorage",
         ],
         onlyAttribute: ["label", "title", "description", "footer"],
         ignoreProperty: ["href", "className"],

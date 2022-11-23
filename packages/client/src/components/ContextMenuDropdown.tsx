@@ -38,7 +38,7 @@ export default function ContextMenuDropdown({
   return createPortal(
     <div
       ref={setPopperElement}
-      className={`z-50 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none`}
+      className={`z-50 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none`}
       style={{
         ...styles.popper,
       }}

@@ -30,9 +30,15 @@ export default forwardRef<
     folders: SketchFolderDetailsFragment[];
     selectedSketchIds: number[];
     selectedFolderIds: number[];
+    expandedFolderIds: number[];
+    expandedSketchIds: number[];
     onSelectionChange: (
       item: SketchFolderDetailsFragment | SketchTocDetailsFragment,
       isSelected: boolean
+    ) => void;
+    onExpandedChange: (
+      item: SketchFolderDetailsFragment | SketchTocDetailsFragment,
+      isExpanded: boolean
     ) => void;
     reservedKeyCodes?: string[];
     onReservedKeyDown?: (
@@ -55,11 +61,14 @@ export default forwardRef<
       onReservedKeyDown,
       actions,
       onActionSelected,
+      onExpandedChange,
+      expandedFolderIds,
+      expandedSketchIds,
     },
     ref
   ) => {
     const { t } = useTranslation();
-    const [expandedIds, setExpandedIds] = useState<number[]>([]);
+    // const [expandedIds, setExpandedIds] = useState<number[]>([]);
     const treeView = useRef<HTMLUListElement>(null);
     const [focused, setFocused] =
       useState<null | { type: "sketch" | "folder"; id: number }>(null);
@@ -135,19 +144,44 @@ export default forwardRef<
     const selectedIds: number[] = useMemo(() => {
       const selectedNodeIds: number[] = [];
       for (const id of selectedFolderIds) {
-        const idx = treeData.items.findIndex((f) => f.id === id);
+        const idx = treeData.items.findIndex(
+          (f) => f.id === id && f.__typename === "SketchFolder"
+        );
         if (idx > 0) {
           selectedNodeIds.push(idx);
         }
       }
       for (const id of selectedSketchIds) {
-        const idx = treeData.items.findIndex((f) => f.id === id);
+        const idx = treeData.items.findIndex(
+          (f) => f.id === id && f.__typename !== "SketchFolder"
+        );
         if (idx > 0) {
           selectedNodeIds.push(idx);
         }
       }
       return selectedNodeIds;
     }, [selectedSketchIds, selectedFolderIds, treeData.items]);
+
+    const expandedIds: number[] = useMemo(() => {
+      const expandedNodeIds: number[] = [];
+      for (const id of expandedFolderIds) {
+        const idx = treeData.items.findIndex(
+          (f) => f.id === id && f.__typename === "SketchFolder"
+        );
+        if (idx > 0) {
+          expandedNodeIds.push(idx);
+        }
+      }
+      for (const id of expandedSketchIds) {
+        const idx = treeData.items.findIndex(
+          (f) => f.id === id && f.__typename !== "SketchFolder"
+        );
+        if (idx > 0) {
+          expandedNodeIds.push(idx);
+        }
+      }
+      return expandedNodeIds;
+    }, [expandedFolderIds, treeData.items, expandedSketchIds]);
 
     const contextMenuOptions = useMemo(() => {
       const options: (DropdownOption | ReactNode)[] = [];
@@ -245,7 +279,11 @@ export default forwardRef<
           // multiSelect
           togglableSelect={true}
           expandedIds={expandedIds}
-          onExpand={(props) => {}}
+          onExpand={(props) => {
+            const { element, isExpanded } = props;
+            const data = treeData.items[element.id];
+            onExpandedChange(data, isExpanded);
+          }}
           onSelect={(props) => {
             const { element, isSelected } = props;
             const data = treeData.items[element.id];

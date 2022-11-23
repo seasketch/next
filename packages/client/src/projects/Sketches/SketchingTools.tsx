@@ -6,7 +6,7 @@ import {
   ProjectAppSidebarContext,
   ProjectAppSidebarToolbar,
 } from "../ProjectAppSidebar";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans as I18n } from "react-i18next";
 import getSlug from "../../getSlug";
 import {
   GetSketchForEditingDocument,
@@ -23,11 +23,11 @@ import { memo } from "react";
 import useSketchActions, { SketchAction } from "./useSketchActions";
 import { useApolloClient } from "@apollo/client";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import useLocalStorage from "../../useLocalStorage";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
-  const { t } = useTranslation("sketching");
   const { data, loading } = useSketchingQuery({
     variables: {
       slug: getSlug(),
@@ -50,6 +50,14 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
 
   const [selectedSketchIds, setSelectedSketchIds] = useState<number[]>([]);
   const [selectedFolderIds, setSelectedFolderIds] = useState<number[]>([]);
+  const [expandedSketchIds, setExpandedSketchIds] = useLocalStorage<number[]>(
+    `expanded-sketch-ids-${getSlug}`,
+    []
+  );
+  const [expandedFolderIds, setExpandedFolderIds] = useLocalStorage<number[]>(
+    `expanded-sketch-ids-${getSlug}`,
+    []
+  );
   const [toolbarRef, setToolbarRef] = useState<HTMLDivElement | null>(null);
   const [tocContainer, setTocContainer] = useState<HTMLDivElement | null>(null);
   const onError = useGlobalErrorHandler();
@@ -297,6 +305,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
         loading={loading}
         selectedFolderIds={selectedFolderIds}
         selectedSketchIds={selectedSketchIds}
+        expandedFolderIds={expandedFolderIds}
+        expandedSketchIds={expandedSketchIds}
         onSelectionChange={(item, isSelected) => {
           if (item.__typename === "SketchFolder") {
             setSelectedFolderIds((prev) => [
@@ -307,6 +317,19 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             setSelectedSketchIds((prev) => [
               ...prev.filter((f) => f !== item.id),
               ...(isSelected ? [item.id] : []),
+            ]);
+          }
+        }}
+        onExpandedChange={(item, isExpanded) => {
+          if (item.__typename === "SketchFolder") {
+            setExpandedFolderIds((prev) => [
+              ...prev.filter((f) => f !== item.id),
+              ...(isExpanded ? [item.id] : []),
+            ]);
+          } else {
+            setExpandedSketchIds((prev) => [
+              ...prev.filter((f) => f !== item.id),
+              ...(isExpanded ? [item.id] : []),
             ]);
           }
         }}
