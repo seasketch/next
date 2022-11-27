@@ -146,3 +146,12 @@ query GetSketchForEditing($id: Int!) {
     ...SketchEditorModalDetails
   }
 }
+
+mutation UpdateSketchFolderParent($id: Int!, $parentId: Int) {
+  updateSketchFolder(input: { id: $id, patch: { folderId: $parentId } }) {
+    sketchFolder {
+      id
+      folderId
+    }
+  }
+}

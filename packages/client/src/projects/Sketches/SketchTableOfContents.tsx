@@ -1,27 +1,22 @@
 import {
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
+  useUpdateSketchFolderParentMutation,
 } from "../../generated/graphql";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import { useTranslation } from "react-i18next";
-import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
-import {
-  forwardRef,
-  ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import TreeView, { INode } from "react-accessible-treeview";
 import ArrowIcon from "./ArrowIcon";
 import Skeleton from "../../components/Skeleton";
 import { SketchAction } from "./useSketchActions";
 import ContextMenuDropdown, {
-  DropdownDivider,
   DropdownDividerProps,
 } from "../../components/ContextMenuDropdown";
 import { DropdownOption } from "../../components/DropdownButton";
+import FolderItem from "./FolderItem";
+import { DropTargetMonitor, useDrop } from "react-dnd";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default forwardRef<
   HTMLDivElement,
@@ -71,10 +66,31 @@ export default forwardRef<
     const { t } = useTranslation();
     // const [expandedIds, setExpandedIds] = useState<number[]>([]);
     const treeView = useRef<HTMLUListElement>(null);
-    const [focused, setFocused] =
-      useState<null | { type: "sketch" | "folder"; id: number }>(null);
-    const [contextMenuTarget, setContextMenuTarget] =
-      useState<{ target: HTMLDivElement; offsetX?: number } | null>(null);
+    const onError = useGlobalErrorHandler();
+    const [mutateFolder] = useUpdateSketchFolderParentMutation({
+      onError,
+      optimisticResponse: (data) => {
+        return {
+          __typename: "Mutation",
+          updateSketchFolder: {
+            __typename: "UpdateSketchFolderPayload",
+            sketchFolder: {
+              __typename: "SketchFolder",
+              id: data.id,
+              folderId: data.parentId,
+            },
+          },
+        };
+      },
+    });
+    const [focused, setFocused] = useState<null | {
+      type: "sketch" | "folder";
+      id: number;
+    }>(null);
+    const [contextMenuTarget, setContextMenuTarget] = useState<{
+      target: HTMLDivElement;
+      offsetX?: number;
+    } | null>(null);
 
     useEffect(() => {
       const handler = () => setContextMenuTarget(null);
@@ -188,7 +204,7 @@ export default forwardRef<
       const options: (DropdownOption | DropdownDividerProps)[] = [];
       if (actions && onActionSelected) {
         for (const action of actions.edit) {
-          const { label, disabled, disabledForContextAction, keycode } = action;
+          const { label, disabled, disabledForContextAction } = action;
           if (!disabledForContextAction) {
             options.push({
               label,
@@ -204,8 +220,7 @@ export default forwardRef<
           // @ts-ignore
           options.push({ label: t("add new"), id: "add-new-divider" });
           for (const action of createActions) {
-            const { id, label, disabled, disabledForContextAction, keycode } =
-              action;
+            const { id, label, disabled, disabledForContextAction } = action;
             if (!disabledForContextAction) {
               options.push({
                 id,
@@ -218,7 +233,32 @@ export default forwardRef<
         }
       }
       return options;
-    }, [actions]);
+    }, [actions, onActionSelected, t]);
+
+    const [{ canDrop, isOver }, drop] = useDrop(() => ({
+      // The type (or types) to accept - strings or symbols
+      accept: ["SketchFolder", "Sketch"],
+      // Props to collect
+      collect: (monitor) => ({
+        isOver: monitor.isOver({ shallow: true }),
+        canDrop: monitor.canDrop(),
+      }),
+      drop: (
+        item: { id: number; typeName: string },
+        monitor: DropTargetMonitor<{ id: number; typeName: string }>
+      ) => {
+        if (!monitor.didDrop()) {
+          if (item.typeName === "SketchFolder") {
+            mutateFolder({
+              variables: {
+                id: item.id,
+                parentId: null,
+              },
+            });
+          }
+        }
+      },
+    }));
 
     useEffect(() => {
       if (treeView.current) {
@@ -264,7 +304,15 @@ export default forwardRef<
     }
 
     return (
-      <div className="pt-2 pl-5" ref={ref}>
+      <div
+        // className="pt-2 pl-5"
+        ref={drop}
+        className={
+          isOver && canDrop
+            ? "border-blue-200 rounded-md border pt-2 pl-5 bg-blue-50"
+            : "pt-2 pl-5 border border-transparent"
+        }
+      >
         {contextMenuTarget &&
           onActionSelected &&
           actions &&
@@ -275,123 +323,150 @@ export default forwardRef<
               offsetX={contextMenuTarget.offsetX}
             />
           )}
-        <TreeView
-          ref={treeView}
-          data={treeData.nodes}
-          selectedIds={selectedIds}
-          // multiSelect
-          togglableSelect={true}
-          expandedIds={expandedIds}
-          onExpand={(props) => {
-            const { element, isExpanded } = props;
-            const data = treeData.items[element.id];
-            onExpandedChange(data, isExpanded);
-          }}
-          onSelect={(props) => {
-            const { element, isSelected } = props;
-            const data = treeData.items[element.id];
-            onSelectionChange(data, isSelected);
-          }}
-          clickAction="EXCLUSIVE_SELECT"
-          aria-label={t("Your sketches")}
-          nodeRenderer={({
-            element,
-            isBranch,
-            isExpanded,
-            isDisabled,
-            getNodeProps,
-            level,
-            handleExpand,
-            dispatch,
-            isSelected,
-            handleSelect,
-          }) => {
-            const data = treeData.items[element.id];
-            const isExpandable = data.__typename === "SketchFolder";
-            const nodeProps = getNodeProps();
-            return (
-              <div
-                onFocus={(e) => {
-                  setFocused({
-                    type:
-                      data.__typename === "SketchFolder" ? "folder" : "sketch",
-                    id: data.id,
-                  });
-                }}
-                onBlur={() => setFocused(null)}
-                {...nodeProps}
-                onClick={(e) => {
-                  if (!isExpandable) {
-                    nodeProps.onClick(e);
-                  } else {
-                    handleSelect(e);
-                  }
-                }}
-                style={{
-                  marginLeft: 40 * (level - 1) - (isExpandable ? 18 : 3),
-                  opacity: isDisabled ? 0.5 : 1,
-                  paddingLeft: isExpandable ? 0 : 3,
-                }}
-                className={`py-0.5 ${isSelected ? "bg-blue-200" : ""}`}
-                onContextMenu={(e) => {
-                  var rect = e.currentTarget.getBoundingClientRect();
-                  var x = e.clientX - rect.left; //x position within the element.
-                  if (!isSelected) {
-                    handleSelect(e);
-                  }
+        <div>
+          <TreeView
+            ref={treeView}
+            data={treeData.nodes}
+            selectedIds={selectedIds}
+            // multiSelect
+            togglableSelect={true}
+            expandedIds={expandedIds}
+            onExpand={(props) => {
+              const { element, isExpanded } = props;
+              const data = treeData.items[element.id];
+              onExpandedChange(data, isExpanded);
+            }}
+            onSelect={(props) => {
+              const { element, isSelected } = props;
+              const data = treeData.items[element.id];
+              onSelectionChange(data, isSelected);
+            }}
+            clickAction="EXCLUSIVE_SELECT"
+            aria-label={t("Your sketches")}
+            nodeRenderer={({
+              element,
+              isExpanded,
+              isDisabled,
+              getNodeProps,
+              level,
+              handleExpand,
+              isSelected,
+              handleSelect,
+            }) => {
+              const data = treeData.items[element.id];
+              const isExpandable = data.__typename === "SketchFolder";
+              const nodeProps = getNodeProps();
 
-                  const target = e.currentTarget;
-                  setContextMenuTarget({
-                    target: target as HTMLDivElement,
-                    offsetX: x,
-                  });
-                  e.preventDefault();
-                  // setContextMenuTarget()
-                }}
-              >
-                <span className="flex items-center text-sm space-x-0.5">
-                  {isExpandable && (
-                    <button
-                      title={element.children.length === 0 ? "Empty" : ""}
-                      className={
-                        isExpandable && element.children.length < 1
-                          ? "opacity-25 cursor-not-allowed"
-                          : ""
+              if (data.__typename === "SketchFolder") {
+                return (
+                  <FolderItem
+                    id={data.id}
+                    name={data.name}
+                    parentId={data.folderId}
+                    handleExpand={handleExpand}
+                    handleSelect={handleSelect}
+                    level={level}
+                    nodeProps={nodeProps}
+                    numChildren={element.children.length || 0}
+                    onContextMenu={(e) => {
+                      var rect = e.currentTarget.getBoundingClientRect();
+                      var x = e.clientX - rect.left; //x position within the element.
+                      if (!isSelected) {
+                        handleSelect(e);
                       }
-                      onClick={(e) => {
-                        handleExpand(e);
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                    >
-                      <ArrowIcon isOpen={isExpanded} />
-                    </button>
-                  )}
-                  {data && (
-                    <VisibilityCheckbox
-                      disabled={
-                        isDisabled ||
-                        (isExpandable && element.children.length === 0)
-                      }
-                      id={data.id}
-                      visibility={false}
-                    />
-                  )}{" "}
-                  {data &&
-                    data.__typename === "SketchFolder" &&
-                    (isExpanded ? (
-                      <FolderOpenIcon className="w-6 h-6 text-primary-500" />
-                    ) : (
-                      <FolderIcon className="w-6 h-6 text-primary-500" />
-                    ))}
-                  <span className="px-1 cursor-default select-none">
-                    {element.name}
+
+                      const target = e.currentTarget;
+                      setContextMenuTarget({
+                        target: target as HTMLDivElement,
+                        offsetX: x,
+                      });
+                      e.preventDefault();
+                    }}
+                    isDisabled={isDisabled}
+                    isExpanded={isExpanded}
+                    isSelected={isSelected}
+                  />
+                );
+              }
+
+              return (
+                <div
+                  onFocus={(e) => {
+                    setFocused({
+                      type:
+                        data.__typename === "SketchFolder"
+                          ? "folder"
+                          : "sketch",
+                      id: data.id,
+                    });
+                  }}
+                  onBlur={() => setFocused(null)}
+                  {...nodeProps}
+                  onClick={(e) => {
+                    if (!isExpandable) {
+                      nodeProps.onClick(e);
+                    } else {
+                      handleSelect(e);
+                    }
+                  }}
+                  style={{
+                    marginLeft: 40 * (level - 1) - (isExpandable ? 18 : 3),
+                    opacity: isDisabled ? 0.5 : 1,
+                    paddingLeft: isExpandable ? 0 : 3,
+                  }}
+                  className={`py-0.5 ${isSelected ? "bg-blue-200" : ""}`}
+                  onContextMenu={(e) => {
+                    var rect = e.currentTarget.getBoundingClientRect();
+                    var x = e.clientX - rect.left; //x position within the element.
+                    if (!isSelected) {
+                      handleSelect(e);
+                    }
+
+                    const target = e.currentTarget;
+                    setContextMenuTarget({
+                      target: target as HTMLDivElement,
+                      offsetX: x,
+                    });
+                    e.preventDefault();
+                  }}
+                >
+                  <span className="flex items-center text-sm space-x-0.5">
+                    {isExpandable && (
+                      <button
+                        title={element.children.length === 0 ? "Empty" : ""}
+                        className={
+                          isExpandable && element.children.length < 1
+                            ? "opacity-25 cursor-not-allowed"
+                            : ""
+                        }
+                        onClick={(e) => {
+                          handleExpand(e);
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <ArrowIcon isOpen={isExpanded} />
+                      </button>
+                    )}
+                    {data && (
+                      <VisibilityCheckbox
+                        disabled={
+                          isDisabled ||
+                          (isExpandable && element.children.length === 0)
+                        }
+                        id={data.id}
+                        visibility={false}
+                      />
+                    )}{" "}
+                    <span className="px-1 cursor-default select-none">
+                      {element.name}
+                    </span>
                   </span>
-                </span>
-              </div>
-            );
-          }}
-        />
+                </div>
+              );
+            }}
+          />
+        </div>
       </div>
     );
   }

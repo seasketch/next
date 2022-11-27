@@ -15672,6 +15672,23 @@ export type GetSketchForEditingQuery = (
   )> }
 );
 
+export type UpdateSketchFolderParentMutationVariables = Exact<{
+  id: Scalars['Int'];
+  parentId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateSketchFolderParentMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchFolder?: Maybe<(
+    { __typename?: 'UpdateSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id' | 'folderId'>
+    )> }
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -19670,6 +19687,16 @@ export const GetSketchForEditingDocument = /*#__PURE__*/ gql`
   }
 }
     ${SketchEditorModalDetailsFragmentDoc}`;
+export const UpdateSketchFolderParentDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketchFolderParent($id: Int!, $parentId: Int) {
+  updateSketchFolder(input: {id: $id, patch: {folderId: $parentId}}) {
+    sketchFolder {
+      id
+      folderId
+    }
+  }
+}
+    `;
 export const SurveysDocument = /*#__PURE__*/ gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -20816,6 +20843,7 @@ export const namedOperations = {
     DeleteSketch: 'DeleteSketch',
     DeleteSketchFolder: 'DeleteSketchFolder',
     RenameFolder: 'RenameFolder',
+    UpdateSketchFolderParent: 'UpdateSketchFolderParent',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',

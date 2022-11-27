@@ -15674,6 +15674,23 @@ export type GetSketchForEditingQuery = (
   )> }
 );
 
+export type UpdateSketchFolderParentMutationVariables = Exact<{
+  id: Scalars['Int'];
+  parentId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateSketchFolderParentMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchFolder?: Maybe<(
+    { __typename?: 'UpdateSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id' | 'folderId'>
+    )> }
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -22910,6 +22927,43 @@ export function useGetSketchForEditingLazyQuery(baseOptions?: Apollo.LazyQueryHo
 export type GetSketchForEditingQueryHookResult = ReturnType<typeof useGetSketchForEditingQuery>;
 export type GetSketchForEditingLazyQueryHookResult = ReturnType<typeof useGetSketchForEditingLazyQuery>;
 export type GetSketchForEditingQueryResult = Apollo.QueryResult<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>;
+export const UpdateSketchFolderParentDocument = gql`
+    mutation UpdateSketchFolderParent($id: Int!, $parentId: Int) {
+  updateSketchFolder(input: {id: $id, patch: {folderId: $parentId}}) {
+    sketchFolder {
+      id
+      folderId
+    }
+  }
+}
+    `;
+export type UpdateSketchFolderParentMutationFn = Apollo.MutationFunction<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
+
+/**
+ * __useUpdateSketchFolderParentMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchFolderParentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchFolderParentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchFolderParentMutation, { data, loading, error }] = useUpdateSketchFolderParentMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      parentId: // value for 'parentId'
+ *   },
+ * });
+ */
+export function useUpdateSketchFolderParentMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>(UpdateSketchFolderParentDocument, options);
+      }
+export type UpdateSketchFolderParentMutationHookResult = ReturnType<typeof useUpdateSketchFolderParentMutation>;
+export type UpdateSketchFolderParentMutationResult = Apollo.MutationResult<UpdateSketchFolderParentMutation>;
+export type UpdateSketchFolderParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -25950,6 +26004,7 @@ export const namedOperations = {
     DeleteSketch: 'DeleteSketch',
     DeleteSketchFolder: 'DeleteSketchFolder',
     RenameFolder: 'RenameFolder',
+    UpdateSketchFolderParent: 'UpdateSketchFolderParent',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',

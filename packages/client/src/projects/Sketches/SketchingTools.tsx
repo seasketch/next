@@ -26,6 +26,8 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useLocalStorage from "../../useLocalStorage";
 import { useAuth0 } from "@auth0/auth0-react";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../../auth/JoinProject";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -362,51 +364,53 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
           />
         </ProjectAppSidebarToolbar>
       )}
-      <SketchTableOfContents
-        reservedKeyCodes={Object.keys(reservedKeyCodes)}
-        onReservedKeyDown={(key, focus) => {
-          const action = reservedKeyCodes[key];
-          if (action && !action.disabled) {
-            callAction(action);
-          }
-        }}
-        ref={(tocContainer) => setTocContainer(tocContainer)}
-        folders={data?.projectBySlug?.myFolders || []}
-        sketches={data?.projectBySlug?.mySketches || []}
-        loading={loading}
-        selectedFolderIds={selectedFolderIds}
-        selectedSketchIds={selectedSketchIds}
-        expandedFolderIds={expandedFolderIds}
-        expandedSketchIds={expandedSketchIds}
-        onSelectionChange={(item, isSelected) => {
-          if (item.__typename === "SketchFolder") {
-            setSelectedFolderIds((prev) => [
-              ...prev.filter((f) => f !== item.id),
-              ...(isSelected ? [item.id] : []),
-            ]);
-          } else {
-            setSelectedSketchIds((prev) => [
-              ...prev.filter((f) => f !== item.id),
-              ...(isSelected ? [item.id] : []),
-            ]);
-          }
-        }}
-        onExpandedChange={(item, isExpanded) => {
-          if (item.__typename === "SketchFolder") {
-            setExpandedFolderIds((prev) => [
-              ...prev.filter((f) => f !== item.id),
-              ...(isExpanded ? [item.id] : []),
-            ]);
-          } else {
-            setExpandedSketchIds((prev) => [
-              ...prev.filter((f) => f !== item.id),
-              ...(isExpanded ? [item.id] : []),
-            ]);
-          }
-        }}
-        actions={actions}
-        onActionSelected={callAction}
-      />
+      <DndProvider backend={HTML5Backend}>
+        <SketchTableOfContents
+          reservedKeyCodes={Object.keys(reservedKeyCodes)}
+          onReservedKeyDown={(key, focus) => {
+            const action = reservedKeyCodes[key];
+            if (action && !action.disabled) {
+              callAction(action);
+            }
+          }}
+          ref={(tocContainer) => setTocContainer(tocContainer)}
+          folders={data?.projectBySlug?.myFolders || []}
+          sketches={data?.projectBySlug?.mySketches || []}
+          loading={loading}
+          selectedFolderIds={selectedFolderIds}
+          selectedSketchIds={selectedSketchIds}
+          expandedFolderIds={expandedFolderIds}
+          expandedSketchIds={expandedSketchIds}
+          onSelectionChange={(item, isSelected) => {
+            if (item.__typename === "SketchFolder") {
+              setSelectedFolderIds((prev) => [
+                ...prev.filter((f) => f !== item.id),
+                ...(isSelected ? [item.id] : []),
+              ]);
+            } else {
+              setSelectedSketchIds((prev) => [
+                ...prev.filter((f) => f !== item.id),
+                ...(isSelected ? [item.id] : []),
+              ]);
+            }
+          }}
+          onExpandedChange={(item, isExpanded) => {
+            if (item.__typename === "SketchFolder") {
+              setExpandedFolderIds((prev) => [
+                ...prev.filter((f) => f !== item.id),
+                ...(isExpanded ? [item.id] : []),
+              ]);
+            } else {
+              setExpandedSketchIds((prev) => [
+                ...prev.filter((f) => f !== item.id),
+                ...(isExpanded ? [item.id] : []),
+              ]);
+            }
+          }}
+          actions={actions}
+          onActionSelected={callAction}
+        />
+      </DndProvider>
       {editor !== false && (
         <SketchEditorModal
           sketchClass={editor?.sketchClass}

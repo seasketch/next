@@ -157,6 +157,8 @@
     "react-beautiful-dnd": "^13.1.0",
     "react-codemirror2": "^7.2.1",
     "react-contexify": "^5.0.0",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^17.0.1",
     "react-dropzone": "^11.1.0",
     "react-error-overlay": "6.0.9",
