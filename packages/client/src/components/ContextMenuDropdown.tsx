@@ -1,8 +1,7 @@
-import { Menu } from "@headlessui/react";
 import { createPortal } from "react-dom";
 import { DropdownOption } from "./DropdownButton";
 import { usePopper } from "react-popper";
-import { ReactElement, ReactNode, useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 
 function classNames(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -17,8 +16,9 @@ export default function ContextMenuDropdown({
   target: HTMLElement;
   offsetX?: number;
 }) {
-  const [popperElement, setPopperElement] =
-    useState<HTMLDivElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(
+    null
+  );
 
   const customModifier = useMemo(
     () => ({
