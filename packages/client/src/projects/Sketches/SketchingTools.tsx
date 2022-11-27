@@ -12,9 +12,7 @@ import {
   GetSketchForEditingDocument,
   GetSketchForEditingQuery,
   SketchEditorModalDetailsFragment,
-  SketchFolderDetailsFragment,
   SketchingDetailsFragment,
-  SketchTocDetailsFragment,
   useSketchingQuery,
 } from "../../generated/graphql";
 import { useContext, useMemo, useState, useEffect, useCallback } from "react";
@@ -26,6 +24,8 @@ import useSketchActions, { SketchAction } from "./useSketchActions";
 import { useApolloClient } from "@apollo/client";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useLocalStorage from "../../useLocalStorage";
+import { useAuth0 } from "@auth0/auth0-react";
+import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../../auth/JoinProject";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -37,18 +37,18 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   });
 
   const { isSmall } = useContext(ProjectAppSidebarContext);
+  const { user, loginWithRedirect } = useAuth0();
 
-  const [editor, setEditor] =
-    useState<
-      | false
-      | {
-          sketch?: SketchEditorModalDetailsFragment;
-          sketchClass: SketchingDetailsFragment;
-          folderId?: number;
-          loading?: boolean;
-          loadingTitle?: string;
-        }
-    >(false);
+  const [editor, setEditor] = useState<
+    | false
+    | {
+        sketch?: SketchEditorModalDetailsFragment;
+        sketchClass: SketchingDetailsFragment;
+        folderId?: number;
+        loading?: boolean;
+        loadingTitle?: string;
+      }
+  >(false);
 
   const [selectedSketchIds, setSelectedSketchIds] = useState<number[]>([]);
   const [selectedFolderIds, setSelectedFolderIds] = useState<number[]>([]);
@@ -274,6 +274,61 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     [actions.edit]
   );
 
+  if (!user) {
+    return (
+      <div style={{ display: hidden ? "none" : "block" }}>
+        <h2 className="p-4">
+          <Trans>
+            Please{" "}
+            <button
+              className="underline text-primary-500"
+              onClick={() => {
+                const hasSkippedJoinPrompt = localStorage.getItem(
+                  HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY
+                );
+                loginWithRedirect({
+                  appState: {
+                    returnTo:
+                      hasSkippedJoinPrompt === "true"
+                        ? window.location.pathname
+                        : window.location.pathname + "?pj",
+                    promptToJoin: true,
+                  },
+                  redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                });
+              }}
+            >
+              sign in
+            </button>{" "}
+            or{" "}
+            <button
+              className="underline text-primary-500"
+              onClick={() => {
+                const hasSkippedJoinPrompt = localStorage.getItem(
+                  HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY
+                );
+                loginWithRedirect({
+                  screen_hint: "signup",
+                  appState: {
+                    returnTo:
+                      hasSkippedJoinPrompt === "true"
+                        ? window.location.pathname
+                        : window.location.pathname + "?pj",
+                    promptToJoin: true,
+                  },
+                  redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                });
+              }}
+            >
+              create an account
+            </button>{" "}
+            to start creating sketches.
+          </Trans>
+        </h2>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: hidden ? "none" : "block" }}>
       {!hidden && (
@@ -378,59 +433,3 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     </div>
   );
 });
-
-function childAndAncestors(
-  type: "sketch" | "folder",
-  id: number,
-  folders: SketchFolderDetailsFragment[],
-  sketches: SketchTocDetailsFragment[],
-  sketchIds?: number[],
-  folderIds?: number[]
-): { sketchIds: number[]; folderIds: number[] } {
-  if (!sketchIds || !folderIds) {
-    sketchIds = type === "sketch" ? [id] : [];
-    folderIds = type === "folder" ? [id] : [];
-  }
-  if (type === "sketch") {
-    const item = sketches.find((s) => s.id === id);
-    if (item?.folderId) {
-      folderIds.push(item.folderId);
-      return childAndAncestors(
-        "folder",
-        item.folderId,
-        folders,
-        sketches,
-        sketchIds,
-        folderIds
-      );
-    } else if (item?.collectionId) {
-      sketchIds.push(item.collectionId);
-      return childAndAncestors(
-        "sketch",
-        item.collectionId,
-        folders,
-        sketches,
-        sketchIds,
-        folderIds
-      );
-    } else {
-      return { sketchIds, folderIds };
-    }
-  } else {
-    const item = folders.find((f) => f.id === id);
-
-    if (item?.folderId) {
-      folderIds.push(item.folderId);
-      return childAndAncestors(
-        "folder",
-        item.folderId,
-        folders,
-        sketches,
-        sketchIds,
-        folderIds
-      );
-    } else {
-      return { sketchIds, folderIds };
-    }
-  }
-}
