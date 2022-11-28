@@ -1,5 +1,6 @@
 import {
   SketchFolderDetailsFragment,
+  SketchGeometryType,
   SketchTocDetailsFragment,
   useUpdateSketchFolderParentMutation,
 } from "../../generated/graphql";
@@ -17,6 +18,7 @@ import { DropdownOption } from "../../components/DropdownButton";
 import FolderItem from "./FolderItem";
 import { DropTargetMonitor, useDrop } from "react-dnd";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import SketchItem from "./SketchItem";
 
 export default forwardRef<
   HTMLDivElement,
@@ -368,6 +370,9 @@ export default forwardRef<
                     level={level}
                     nodeProps={nodeProps}
                     numChildren={element.children.length || 0}
+                    isDisabled={isDisabled}
+                    isExpanded={isExpanded}
+                    isSelected={isSelected}
                     onContextMenu={(e) => {
                       var rect = e.currentTarget.getBoundingClientRect();
                       var x = e.clientX - rect.left; //x position within the element.
@@ -382,9 +387,37 @@ export default forwardRef<
                       });
                       e.preventDefault();
                     }}
+                  />
+                );
+              } else if (
+                data.__typename === "Sketch" &&
+                data.sketchClass?.geometryType !== SketchGeometryType.Collection
+              ) {
+                return (
+                  <SketchItem
+                    id={data.id}
+                    name={data.name}
+                    parentCollectionId={data.collectionId}
+                    parentFolderId={data.folderId}
+                    handleSelect={handleSelect}
+                    level={level}
+                    nodeProps={nodeProps}
                     isDisabled={isDisabled}
-                    isExpanded={isExpanded}
                     isSelected={isSelected}
+                    onContextMenu={(e) => {
+                      var rect = e.currentTarget.getBoundingClientRect();
+                      var x = e.clientX - rect.left; //x position within the element.
+                      if (!isSelected) {
+                        handleSelect(e);
+                      }
+
+                      const target = e.currentTarget;
+                      setContextMenuTarget({
+                        target: target as HTMLDivElement,
+                        offsetX: x,
+                      });
+                      e.preventDefault();
+                    }}
                   />
                 );
               }
