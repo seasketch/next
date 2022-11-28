@@ -1,3 +1,4 @@
+/* eslint-disable cypress/no-unnecessary-waiting */
 const axios = require("axios").default;
 /// <reference types="cypress" />
 
@@ -8,6 +9,97 @@ const axios = require("axios").default;
 export const generateSlug = () => { 
   const result = Math.random().toString(36).substring(2,7);
   return result
+};
+
+//SURVEY ACTIONS
+
+export const waitOnMapbox = (count) => {
+  for (; count; count--) {
+    cy.wait('@mapboxApiCall').then((intercepts) => {
+      expect (intercepts.response.statusCode).to.be.oneOf([200, 204]);
+    });
+  };
+};
+
+export const checkForNavAndLang = () => {
+  //navigation and language buttons
+  cy.get('[title="Previous Question"]').should('be.visible').and('exist');
+  cy.get('[title="Next Question"]').should('be.visible').and('exist');
+  cy.get('button.px-3')
+    .should('be.visible');
+};
+
+export const drawPolygon = () => {
+  cy.window().its('mapContext').then((mapContext) => {
+    let map = mapContext.map; 
+    if (!map.loaded()) {
+      cy.log('Map not loaded');
+      cy.wait(8000);
+      cy.get('[role="progressbar"]')
+        .should('not.exist');
+      cy.get('.mapboxgl-canvas').each((t) => {
+        const canvases = [];
+        canvases.push(t);
+        return canvases;
+      }).then((ary) => {
+        const el = ary[0];
+        return el;
+      }).as('el');
+      cy.get('@el').click(100,500)     
+        .click(100, 600)
+        .click(200, 600)
+        .click(200, 500)
+        .click(100, 500);
+    } else {
+      cy.log('Map loaded');
+      expect(map.loaded()).to.eq(true);
+      cy.get('.mapboxgl-canvas').each((t) => {
+        const canvases = [];
+        canvases.push(t);
+        return canvases;
+      }).then((ary) => {
+        const el = ary[0]
+        return el;
+      }).as('el');
+      cy.get('@el').click(100,500)     
+        .click(100, 600)
+        .click(200, 600)
+        .click(200, 500)
+        .click(100, 500)
+    }
+  });
+};
+
+export const drawInvalidPolygon = () => {
+  cy.get('.mapboxgl-canvas').each((t) => {
+    const canvases = [];
+    canvases.push(t);
+    return canvases;
+  }).then((ary) => {
+    const el = ary[0];
+    return el;
+  }).as('el');
+  cy.get('@el').click(100, 200)        
+    .click(100, 100)
+    .click(200, 200)
+    .click(50, 200)
+    .click(100, 200);
+};
+
+export const drawSecondPolygon = () => {
+  cy.get('.mapboxgl-canvas').each((t) => {
+    const canvases = [];
+    canvases.push(t);
+    return canvases;
+  }).then((ary) => {
+    const el = ary[0];
+    return el;
+  }).as('el');
+  cy.get('@el').click(200,200)     
+    .click(150, 200)
+    .click(150, 150)
+    .click(200, 150)
+    .click(200, 200);
 };
 
 //USER ACTIONS

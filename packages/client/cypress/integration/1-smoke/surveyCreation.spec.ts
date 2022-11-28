@@ -2,6 +2,8 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
+import { waitOnMapbox, checkForNavAndLang, drawPolygon, drawInvalidPolygon, drawSecondPolygon, generateSlug } from '../../support/utils.js'
+
 
 let surveyId: any;
 
@@ -68,105 +70,7 @@ const createBasemaps = (id, token, name) => {
   return fetchResponse
 };
 
-const waitOnMapbox = (count) => {
-  for (; count; count--) {
-    cy.wait('@mapboxApiCall').then((intercepts) => {
-      expect (intercepts.response.statusCode).to.be.oneOf([200, 204]);
-    });
-  };
-};
-
-const generateSlug = () => { 
-  const result = Math.random().toString(36).substring(2,7);
-  return result;
-};
-
-const checkForNavAndLang = () => {
-  //navigation and language buttons
-  cy.get('[title="Previous Question"]').should('be.visible').and('exist');
-  cy.get('[title="Next Question"]').should('be.visible').and('exist');
-  cy.get('button.px-3')
-    .should('be.visible');
-};
-
-const drawPolygon = () => {
-  cy.window().its('mapContext').then((mapContext) => {
-    let map = mapContext.map; 
-    if (!map.loaded()) {
-      cy.log('Map not loaded');
-      cy.wait(8000);
-      cy.get('[role="progressbar"]')
-        .should('not.exist');
-      cy.get('.mapboxgl-canvas').each((t) => {
-        expect (t).to.exist
-        const canvases = [];
-        canvases.push(t);
-        return canvases;
-      }).then((ary) => {
-        const el = ary[0];
-        return el;
-      }).as('el');
-      cy.get('@el').click(100,500)     
-        .click(100, 600)
-        .click(200, 600)
-        .click(200, 500)
-        .click(100, 500);
-    } else {
-      cy.log('Map loaded');
-      expect(map.loaded()).to.eq(true);
-      cy.get('.mapboxgl-canvas').each((t) => {
-        expect (t).to.exist
-        const canvases = [];
-        canvases.push(t);
-        return canvases;
-      }).then((ary) => {
-        const el = ary[0]
-        return el;
-      }).as('el');
-      cy.get('@el').click(100,500)     
-        .click(100, 600)
-        .click(200, 600)
-        .click(200, 500)
-        .click(100, 500)
-    }
-  });
-};
-
-const drawInvalidPolygon = () => {
-  cy.get('.mapboxgl-canvas').each((t) => {
-    expect (t).to.exist;
-    const canvases = [];
-    canvases.push(t);
-    return canvases;
-  }).then((ary) => {
-    const el = ary[0];
-    return el;
-  }).as('el');
-  cy.get('@el').click(100, 200)        
-    .click(100, 100)
-    .click(200, 200)
-    .click(50, 200)
-    .click(100, 200);
-};
-
-const drawSecondPolygon = () => {
-  cy.get('.mapboxgl-canvas').each((t) => {
-    expect (t).to.exist;
-    const canvases = [];
-    canvases.push(t);
-    return canvases;
-  }).then((ary) => {
-    const el = ary[0];
-    return el;
-  }).as('el');
-  cy.get('@el').click(200,200)     
-    .click(150, 200)
-    .click(150, 150)
-    .click(200, 150)
-    .click(200, 200);
-};
-
-const devices: any = ["macbook-15", "ipad-2", "iphone-x"]//"macbook-15","ipad-2","iphone-x"];
+const devices: any = ["macbook-15", "ipad-2", "iphone-x"]//, 
 
 describe('Survey creation smoke test', () => {
   describe.only('User survey flow', () => {
