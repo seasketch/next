@@ -67,6 +67,44 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const onError = useGlobalErrorHandler();
   const client = useApolloClient();
 
+  /**
+   * expandedFolderIds and expandedSketchIds can expand indefinitely as expanded items
+   * are deleted. This could become a problem as this state is stored in localstorage.
+   * Periodically this state should be cleaned up to make sure there aren't any ids
+   * referencing non-existent items. This should be run
+   *
+   *   1. After loading the sketching data on application bootup, but not immediately
+   *      so that we're not blocking the UI. There's a lot going on to render this
+   *      list already.
+   */
+  const cleanupExpandedState = useCallback(() => {
+    if (
+      data &&
+      data.projectBySlug?.myFolders &&
+      data.projectBySlug.mySketches
+    ) {
+      const folderIds = data.projectBySlug.myFolders.map((f) => f.id);
+      const sketchIds = data.projectBySlug.mySketches.map((s) => s.id);
+      setExpandedFolderIds((prev) => [
+        ...prev.filter((id) => folderIds.indexOf(id) !== -1),
+      ]);
+      setExpandedSketchIds((prev) => [
+        ...prev.filter((id) => sketchIds.indexOf(id) !== -1),
+      ]);
+    }
+  }, [setExpandedFolderIds, setExpandedSketchIds, data]);
+
+  // Track whether the expanded state cleanup function was run
+  const [cleanupWasRun, setCleanupWasRun] = useState(false);
+  useEffect(() => {
+    if (!cleanupWasRun && data?.projectBySlug?.id) {
+      setCleanupWasRun(true);
+      setTimeout(() => {
+        cleanupExpandedState();
+      }, 3000);
+    }
+  }, [cleanupExpandedState, data?.projectBySlug?.id, cleanupWasRun]);
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
