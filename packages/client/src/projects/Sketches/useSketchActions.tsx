@@ -40,6 +40,7 @@ export interface SketchAction {
       collectionId?: number | null
     ) => void;
     clearSelection: () => void;
+    collapseFolder: (id: number) => void;
   }) => Promise<void>;
   keycode?: string;
 }
@@ -293,6 +294,7 @@ export default function useSketchActions({
                   selectedSketches,
                   selectedFolders,
                   clearSelection,
+                  collapseFolder,
                 }) => {
                   // TODO: implement multiple-delete
                   // TODO: warn of child deletes
@@ -305,6 +307,10 @@ export default function useSketchActions({
                       `Are you sure you want to delete "${item.name}"?`
                     ),
                     onDelete: async () => {
+                      clearSelection();
+                      if (selectedFolders.length > 0) {
+                        collapseFolder(item.id);
+                      }
                       await (selectedSketches.length > 0
                         ? deleteSketch
                         : deleteSketchFolder)({
@@ -312,7 +318,6 @@ export default function useSketchActions({
                           id: item.id,
                         },
                       });
-                      clearSelection();
                     },
                   });
                 },

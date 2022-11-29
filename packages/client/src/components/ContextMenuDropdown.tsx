@@ -51,12 +51,12 @@ export default function ContextMenuDropdown({
           }
           const { label, disabled, onClick } = props;
           return (
-            <button
+            <span
               key={typeof label === "string" ? label : i}
-              disabled={disabled}
               className="block group w-full"
             >
-              <span
+              <button
+                disabled={disabled}
                 onClick={onClick}
                 className={classNames(
                   "group",
@@ -66,8 +66,8 @@ export default function ContextMenuDropdown({
                 )}
               >
                 {label}
-              </span>
-            </button>
+              </button>
+            </span>
           );
         })}
       </div>

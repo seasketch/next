@@ -2,13 +2,17 @@ import {
   SketchFolderDetailsFragment,
   SketchGeometryType,
   SketchTocDetailsFragment,
-  useUpdateSketchFolderParentMutation,
 } from "../../generated/graphql";
-import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import { useTranslation } from "react-i18next";
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import TreeView, { INode } from "react-accessible-treeview";
-import ArrowIcon from "./ArrowIcon";
 import Skeleton from "../../components/Skeleton";
 import { SketchAction } from "./useSketchActions";
 import ContextMenuDropdown, {
@@ -17,8 +21,8 @@ import ContextMenuDropdown, {
 import { DropdownOption } from "../../components/DropdownButton";
 import FolderItem from "./FolderItem";
 import { DropTargetMonitor, useDrop } from "react-dnd";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import SketchItem from "./SketchItem";
+import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 
 export default forwardRef<
   HTMLDivElement,
@@ -39,10 +43,7 @@ export default forwardRef<
       isExpanded: boolean
     ) => void;
     reservedKeyCodes?: string[];
-    onReservedKeyDown?: (
-      keycode: string,
-      focus?: null | { type: "folder" | "sketch"; id: number }
-    ) => void;
+    onReservedKeyDown?: (keycode: string) => void;
     actions?: { create: SketchAction[]; edit: SketchAction[] };
     onActionSelected?: (action: SketchAction) => void;
   }
@@ -68,27 +69,8 @@ export default forwardRef<
     const { t } = useTranslation();
     // const [expandedIds, setExpandedIds] = useState<number[]>([]);
     const treeView = useRef<HTMLUListElement>(null);
-    const onError = useGlobalErrorHandler();
-    const [mutateFolder] = useUpdateSketchFolderParentMutation({
-      onError,
-      optimisticResponse: (data) => {
-        return {
-          __typename: "Mutation",
-          updateSketchFolder: {
-            __typename: "UpdateSketchFolderPayload",
-            sketchFolder: {
-              __typename: "SketchFolder",
-              id: data.id,
-              folderId: data.parentId,
-            },
-          },
-        };
-      },
-    });
-    const [focused, setFocused] = useState<null | {
-      type: "sketch" | "folder";
-      id: number;
-    }>(null);
+    const { dropFolder, dropSketch } =
+      useUpdateSketchTableOfContentsDraggable();
     const [contextMenuTarget, setContextMenuTarget] = useState<{
       target: HTMLDivElement;
       offsetX?: number;
@@ -113,9 +95,9 @@ export default forwardRef<
             a.name.localeCompare(b.name)
           ),
         ];
-      const idx: { [id: number]: number } = {};
-      items.forEach(({ id }, index) => {
-        idx[id] = index;
+      const idx: { [id: string]: number } = {};
+      items.forEach(({ id, __typename }, index) => {
+        idx[`${__typename}:${id}`] = index;
       });
 
       let nodes: INode[] = [
@@ -132,12 +114,20 @@ export default forwardRef<
 
       items.forEach((item, id) => {
         if (id !== 0) {
-          const parentId = item.collectionId || item.folderId;
+          let parentId: null | string = null;
+          if (item.collectionId) {
+            // eslint-disable-next-line i18next/no-literal-string
+            parentId = `Sketch:${item.collectionId}`;
+          } else if (item.folderId) {
+            // eslint-disable-next-line i18next/no-literal-string
+            parentId = `SketchFolder:${item.folderId}`;
+          }
           nodes.push({
             id,
             name: item.name || "",
             parent: parentId ? idx[parentId] : 0,
             children: [],
+            isBranch: item.__typename === "SketchFolder",
           });
           if (parentId) {
             const parentIndex = idx[parentId];
@@ -240,24 +230,34 @@ export default forwardRef<
     const [{ canDrop, isOver }, drop] = useDrop(() => ({
       // The type (or types) to accept - strings or symbols
       accept: ["SketchFolder", "Sketch"],
+      canDrop: (item, monitor) => {
+        return (
+          monitor.isOver({ shallow: true }) === true &&
+          (Boolean(item.collectionId) || Boolean(item.folderId))
+        );
+      },
       // Props to collect
       collect: (monitor) => ({
         isOver: monitor.isOver({ shallow: true }),
         canDrop: monitor.canDrop(),
       }),
       drop: (
-        item: { id: number; typeName: string },
+        item: {
+          id: number;
+          typeName: string;
+          folderId?: number | null;
+          collectionId?: number | null;
+        },
         monitor: DropTargetMonitor<{ id: number; typeName: string }>
       ) => {
         if (!monitor.didDrop()) {
-          if (item.typeName === "SketchFolder") {
-            mutateFolder({
-              variables: {
-                id: item.id,
-                parentId: null,
-              },
-            });
-          }
+          (item.typeName === "SketchFolder" ? dropFolder : dropSketch)(
+            item.id,
+            {
+              folderId: null,
+              collectionId: null,
+            }
+          );
         }
       },
     }));
@@ -276,11 +276,12 @@ export default forwardRef<
             reservedKeyCodes.indexOf(event.key) !== -1
           ) {
             event.stopPropagation();
+            event.preventDefault();
             const view = treeView.current;
             setTimeout(() => {
               view?.blur();
             }, 100);
-            onReservedKeyDown(event.key, focused);
+            onReservedKeyDown(event.key);
             return;
           }
           if (!event.metaKey && /^\w$/.test(event.key)) {
@@ -288,7 +289,44 @@ export default forwardRef<
           }
         };
       }
-    }, [treeView, reservedKeyCodes, onReservedKeyDown, focused]);
+    }, [treeView, reservedKeyCodes, onReservedKeyDown]);
+
+    const onDragEnd = useCallback(
+      (items: { type: "sketch" | "folder"; id: number }[]) => {
+        for (const item of items) {
+          if (item.type === "sketch") {
+            const sketch = sketches.find((s) => s.id === item.id);
+            if (sketch) {
+              onSelectionChange(sketch, true);
+            } else {
+              console.warn("didn't find sketch", item);
+            }
+          } else {
+            const folder = folders.find((f) => f.id === item.id);
+            if (folder) {
+              onSelectionChange(folder, true);
+            } else {
+              console.warn("didn't find folder", item);
+            }
+          }
+        }
+      },
+      [folders, onSelectionChange, sketches]
+    );
+
+    const onDropEnd = useCallback(
+      (items: { type: "sketch" | "folder"; id: number }[]) => {
+        for (const item of items) {
+          if (item.type === "folder") {
+            const folder = folders.find((f) => f.id === item.id);
+            if (folder) {
+              onExpandedChange(folder, true);
+            }
+          }
+        }
+      },
+      [onExpandedChange, folders]
+    );
 
     if (loading) {
       return (
@@ -307,7 +345,6 @@ export default forwardRef<
 
     return (
       <div
-        // className="pt-2 pl-5"
         ref={drop}
         className={
           isOver && canDrop
@@ -354,22 +391,22 @@ export default forwardRef<
               handleExpand,
               isSelected,
               handleSelect,
+              treeState,
             }) => {
               const data = treeData.items[element.id];
-              const isExpandable = data.__typename === "SketchFolder";
               const nodeProps = getNodeProps();
-
               if (data.__typename === "SketchFolder") {
                 return (
                   <FolderItem
                     id={data.id}
                     name={data.name}
-                    parentId={data.folderId}
+                    parentFolderId={data.folderId}
+                    parentCollectionId={data.collectionId}
                     handleExpand={handleExpand}
                     handleSelect={handleSelect}
                     level={level}
                     nodeProps={nodeProps}
-                    numChildren={element.children.length || 0}
+                    numChildren={element?.children?.length || 0}
                     isDisabled={isDisabled}
                     isExpanded={isExpanded}
                     isSelected={isSelected}
@@ -387,6 +424,8 @@ export default forwardRef<
                       });
                       e.preventDefault();
                     }}
+                    onDragEnd={onDragEnd}
+                    onDropEnd={onDropEnd}
                   />
                 );
               } else if (
@@ -418,85 +457,10 @@ export default forwardRef<
                       });
                       e.preventDefault();
                     }}
+                    onDragEnd={onDragEnd}
                   />
                 );
               }
-
-              return (
-                <div
-                  onFocus={(e) => {
-                    setFocused({
-                      type:
-                        data.__typename === "SketchFolder"
-                          ? "folder"
-                          : "sketch",
-                      id: data.id,
-                    });
-                  }}
-                  onBlur={() => setFocused(null)}
-                  {...nodeProps}
-                  onClick={(e) => {
-                    if (!isExpandable) {
-                      nodeProps.onClick(e);
-                    } else {
-                      handleSelect(e);
-                    }
-                  }}
-                  style={{
-                    marginLeft: 40 * (level - 1) - (isExpandable ? 18 : 3),
-                    opacity: isDisabled ? 0.5 : 1,
-                    paddingLeft: isExpandable ? 0 : 3,
-                  }}
-                  className={`py-0.5 ${isSelected ? "bg-blue-200" : ""}`}
-                  onContextMenu={(e) => {
-                    var rect = e.currentTarget.getBoundingClientRect();
-                    var x = e.clientX - rect.left; //x position within the element.
-                    if (!isSelected) {
-                      handleSelect(e);
-                    }
-
-                    const target = e.currentTarget;
-                    setContextMenuTarget({
-                      target: target as HTMLDivElement,
-                      offsetX: x,
-                    });
-                    e.preventDefault();
-                  }}
-                >
-                  <span className="flex items-center text-sm space-x-0.5">
-                    {isExpandable && (
-                      <button
-                        title={element.children.length === 0 ? "Empty" : ""}
-                        className={
-                          isExpandable && element.children.length < 1
-                            ? "opacity-25 cursor-not-allowed"
-                            : ""
-                        }
-                        onClick={(e) => {
-                          handleExpand(e);
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                      >
-                        <ArrowIcon isOpen={isExpanded} />
-                      </button>
-                    )}
-                    {data && (
-                      <VisibilityCheckbox
-                        disabled={
-                          isDisabled ||
-                          (isExpandable && element.children.length === 0)
-                        }
-                        id={data.id}
-                        visibility={false}
-                      />
-                    )}{" "}
-                    <span className="px-1 cursor-default select-none">
-                      {element.name}
-                    </span>
-                  </span>
-                </div>
-              );
             }}
           />
         </div>

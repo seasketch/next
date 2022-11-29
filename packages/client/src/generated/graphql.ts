@@ -10363,6 +10363,8 @@ export enum SketchGeometryType {
 export type SketchPatch = {
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
   collectionId?: Maybe<Scalars['Int']>;
+  /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
+  folderId?: Maybe<Scalars['Int']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
@@ -15482,10 +15484,10 @@ export type SketchingQuery = (
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
     )>, mySketches?: Maybe<Array<(
-      { __typename?: 'Sketch' }
+      { __typename: 'Sketch' }
       & SketchTocDetailsFragment
     )>>, myFolders?: Maybe<Array<(
-      { __typename?: 'SketchFolder' }
+      { __typename: 'SketchFolder' }
       & SketchFolderDetailsFragment
     )>> }
   )> }
@@ -15676,7 +15678,8 @@ export type GetSketchForEditingQuery = (
 
 export type UpdateSketchFolderParentMutationVariables = Exact<{
   id: Scalars['Int'];
-  parentId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -15686,7 +15689,25 @@ export type UpdateSketchFolderParentMutation = (
     { __typename?: 'UpdateSketchFolderPayload' }
     & { sketchFolder?: Maybe<(
       { __typename?: 'SketchFolder' }
-      & Pick<SketchFolder, 'id' | 'folderId'>
+      & Pick<SketchFolder, 'id' | 'folderId' | 'collectionId'>
+    )> }
+  )> }
+);
+
+export type UpdateSketchParentMutationVariables = Exact<{
+  id: Scalars['Int'];
+  folderId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateSketchParentMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketch?: Maybe<(
+    { __typename?: 'UpdateSketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
     )> }
   )> }
 );
@@ -22618,9 +22639,11 @@ export const SketchingDocument = gql`
       ...SketchingDetails
     }
     mySketches {
+      __typename
       ...SketchTocDetails
     }
     myFolders {
+      __typename
       ...SketchFolderDetails
     }
   }
@@ -22928,11 +22951,14 @@ export type GetSketchForEditingQueryHookResult = ReturnType<typeof useGetSketchF
 export type GetSketchForEditingLazyQueryHookResult = ReturnType<typeof useGetSketchForEditingLazyQuery>;
 export type GetSketchForEditingQueryResult = Apollo.QueryResult<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>;
 export const UpdateSketchFolderParentDocument = gql`
-    mutation UpdateSketchFolderParent($id: Int!, $parentId: Int) {
-  updateSketchFolder(input: {id: $id, patch: {folderId: $parentId}}) {
+    mutation UpdateSketchFolderParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketchFolder(
+    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+  ) {
     sketchFolder {
       id
       folderId
+      collectionId
     }
   }
 }
@@ -22953,7 +22979,8 @@ export type UpdateSketchFolderParentMutationFn = Apollo.MutationFunction<UpdateS
  * const [updateSketchFolderParentMutation, { data, loading, error }] = useUpdateSketchFolderParentMutation({
  *   variables: {
  *      id: // value for 'id'
- *      parentId: // value for 'parentId'
+ *      folderId: // value for 'folderId'
+ *      collectionId: // value for 'collectionId'
  *   },
  * });
  */
@@ -22964,6 +22991,47 @@ export function useUpdateSketchFolderParentMutation(baseOptions?: Apollo.Mutatio
 export type UpdateSketchFolderParentMutationHookResult = ReturnType<typeof useUpdateSketchFolderParentMutation>;
 export type UpdateSketchFolderParentMutationResult = Apollo.MutationResult<UpdateSketchFolderParentMutation>;
 export type UpdateSketchFolderParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
+export const UpdateSketchParentDocument = gql`
+    mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketch(
+    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+  ) {
+    sketch {
+      id
+      folderId
+      collectionId
+    }
+  }
+}
+    `;
+export type UpdateSketchParentMutationFn = Apollo.MutationFunction<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
+
+/**
+ * __useUpdateSketchParentMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchParentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchParentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchParentMutation, { data, loading, error }] = useUpdateSketchParentMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      folderId: // value for 'folderId'
+ *      collectionId: // value for 'collectionId'
+ *   },
+ * });
+ */
+export function useUpdateSketchParentMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>(UpdateSketchParentDocument, options);
+      }
+export type UpdateSketchParentMutationHookResult = ReturnType<typeof useUpdateSketchParentMutation>;
+export type UpdateSketchParentMutationResult = Apollo.MutationResult<UpdateSketchParentMutation>;
+export type UpdateSketchParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -26005,6 +26073,7 @@ export const namedOperations = {
     DeleteSketchFolder: 'DeleteSketchFolder',
     RenameFolder: 'RenameFolder',
     UpdateSketchFolderParent: 'UpdateSketchFolderParent',
+    UpdateSketchParent: 'UpdateSketchParent',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',

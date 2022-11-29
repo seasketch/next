@@ -2929,6 +2929,9 @@ CREATE FUNCTION public.before_sketch_folders_insert_or_update() RETURNS trigger
     declare
       parent_project_id int;
     begin
+      if NEW.folder_id = NEW.id then
+        raise exception 'Cannot make a folder a child of itself';
+      end if;
       if NEW.folder_id is null and NEW.collection_id is null then
         return NEW;
       else
@@ -19977,6 +19980,13 @@ GRANT UPDATE(user_geom) ON TABLE public.sketches TO seasketch_user;
 --
 
 GRANT UPDATE(geom) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.folder_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(folder_id) ON TABLE public.sketches TO seasketch_user;
 
 
 --

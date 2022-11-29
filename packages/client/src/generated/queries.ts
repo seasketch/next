@@ -10361,6 +10361,8 @@ export enum SketchGeometryType {
 export type SketchPatch = {
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
   collectionId?: Maybe<Scalars['Int']>;
+  /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
+  folderId?: Maybe<Scalars['Int']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
@@ -15480,10 +15482,10 @@ export type SketchingQuery = (
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
     )>, mySketches?: Maybe<Array<(
-      { __typename?: 'Sketch' }
+      { __typename: 'Sketch' }
       & SketchTocDetailsFragment
     )>>, myFolders?: Maybe<Array<(
-      { __typename?: 'SketchFolder' }
+      { __typename: 'SketchFolder' }
       & SketchFolderDetailsFragment
     )>> }
   )> }
@@ -15674,7 +15676,8 @@ export type GetSketchForEditingQuery = (
 
 export type UpdateSketchFolderParentMutationVariables = Exact<{
   id: Scalars['Int'];
-  parentId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -15684,7 +15687,25 @@ export type UpdateSketchFolderParentMutation = (
     { __typename?: 'UpdateSketchFolderPayload' }
     & { sketchFolder?: Maybe<(
       { __typename?: 'SketchFolder' }
-      & Pick<SketchFolder, 'id' | 'folderId'>
+      & Pick<SketchFolder, 'id' | 'folderId' | 'collectionId'>
+    )> }
+  )> }
+);
+
+export type UpdateSketchParentMutationVariables = Exact<{
+  id: Scalars['Int'];
+  folderId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateSketchParentMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketch?: Maybe<(
+    { __typename?: 'UpdateSketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
     )> }
   )> }
 );
@@ -19601,9 +19622,11 @@ export const SketchingDocument = /*#__PURE__*/ gql`
       ...SketchingDetails
     }
     mySketches {
+      __typename
       ...SketchTocDetails
     }
     myFolders {
+      __typename
       ...SketchFolderDetails
     }
   }
@@ -19688,11 +19711,27 @@ export const GetSketchForEditingDocument = /*#__PURE__*/ gql`
 }
     ${SketchEditorModalDetailsFragmentDoc}`;
 export const UpdateSketchFolderParentDocument = /*#__PURE__*/ gql`
-    mutation UpdateSketchFolderParent($id: Int!, $parentId: Int) {
-  updateSketchFolder(input: {id: $id, patch: {folderId: $parentId}}) {
+    mutation UpdateSketchFolderParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketchFolder(
+    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+  ) {
     sketchFolder {
       id
       folderId
+      collectionId
+    }
+  }
+}
+    `;
+export const UpdateSketchParentDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketch(
+    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+  ) {
+    sketch {
+      id
+      folderId
+      collectionId
     }
   }
 }
@@ -20844,6 +20883,7 @@ export const namedOperations = {
     DeleteSketchFolder: 'DeleteSketchFolder',
     RenameFolder: 'RenameFolder',
     UpdateSketchFolderParent: 'UpdateSketchFolderParent',
+    UpdateSketchParent: 'UpdateSketchParent',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',

@@ -11396,6 +11396,11 @@ input SketchPatch {
   collectionId: Int
 
   """
+  Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
+  """
+  folderId: Int
+
+  """
   The geometry of the Sketch **after** it has been preprocessed. This is the
   geometry that is used for reporting. Preprocessed geometries may be extremely
   large and complex, so it may be necessary to access them through a vector tile

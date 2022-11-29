@@ -211,6 +211,10 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
         clearSelection: () => {
           setSelectedFolderIds([]);
           setSelectedSketchIds([]);
+          document.body.focus();
+        },
+        collapseFolder: (id: number) => {
+          setExpandedFolderIds((prev) => [...prev.filter((i) => i !== id)]);
         },
       });
     },
@@ -222,6 +226,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       onError,
       selectedFolderIds,
       selectedSketchIds,
+      setExpandedFolderIds,
     ]
   );
 
@@ -367,7 +372,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       <DndProvider backend={HTML5Backend}>
         <SketchTableOfContents
           reservedKeyCodes={Object.keys(reservedKeyCodes)}
-          onReservedKeyDown={(key, focus) => {
+          onReservedKeyDown={(key) => {
             const action = reservedKeyCodes[key];
             if (action && !action.disabled) {
               callAction(action);

@@ -1,10 +1,10 @@
 import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
-import { MouseEvent, useCallback, useEffect } from "react";
+import { MouseEvent, useCallback } from "react";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import ArrowIcon from "./ArrowIcon";
 import { useDrag, useDrop } from "react-dnd";
-import { useUpdateSketchFolderParentMutation } from "../../generated/graphql";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
+import { SketchTocItemProps } from "./SketchItem";
 
 export default function FolderItem({
   nodeProps,
@@ -18,40 +18,17 @@ export default function FolderItem({
   numChildren,
   id,
   name,
-  parentId,
-}: {
-  id: number;
-  name: string;
-  nodeProps: any;
-  handleSelect: (e: MouseEvent) => void;
-  level: number;
-  isDisabled?: boolean;
-  isSelected?: boolean;
-  onContextMenu: (e: MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => void;
+  parentFolderId,
+  parentCollectionId,
+  onDragEnd,
+  onDropEnd,
+}: SketchTocItemProps & {
   isExpanded?: boolean;
   handleExpand: (e: MouseEvent<any, globalThis.MouseEvent>) => void;
   numChildren: number;
-  parentId?: number | null;
 }) {
-  const onError = useGlobalErrorHandler();
-  const [mutate, mutationState] = useUpdateSketchFolderParentMutation({
-    onError,
-    optimisticResponse: (data) => {
-      return {
-        __typename: "Mutation",
-        updateSketchFolder: {
-          __typename: "UpdateSketchFolderPayload",
-          sketchFolder: {
-            __typename: "SketchFolder",
-            id: data.id,
-            folderId: data.parentId,
-          },
-        },
-      };
-    },
-  });
-
-  const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
+  const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
+  const [{ isDragging }, drag] = useDrag(() => ({
     // "type" is required. It is used by the "accept" specification of drop targets.
     type: "SketchFolder",
     // The collect function utilizes a "monitor" instance (see the Overview for what this is)
@@ -63,7 +40,13 @@ export default function FolderItem({
       id,
       name,
       typeName: "SketchFolder",
-      folderId: parentId,
+      folderId: parentFolderId,
+    },
+    end(draggedItem, monitor) {
+      if (onDragEnd) {
+        // TODO: add mult-select support
+        onDragEnd([{ type: "folder", id: draggedItem.id }]);
+      }
     },
   }));
 
@@ -74,8 +57,9 @@ export default function FolderItem({
       id: number;
       folderId?: number;
       collectionId?: number;
+      typeName: string;
     }) => {
-      if (item.id === id || parentId === item.id) {
+      if (item.id === id || parentFolderId === item.id) {
         return false;
       }
       return true;
@@ -86,12 +70,13 @@ export default function FolderItem({
       canDrop: monitor.canDrop(),
     }),
     drop: (item) => {
-      mutate({
-        variables: {
-          id: item.id,
-          parentId: id,
-        },
+      (item.typeName === "SketchFolder" ? dropFolder : dropSketch)(item.id, {
+        collectionId: null,
+        folderId: id,
       });
+      if (onDropEnd) {
+        onDropEnd([{ type: "folder", id }]);
+      }
     },
   }));
 
@@ -103,7 +88,7 @@ export default function FolderItem({
         nodeProps.ref(el);
       }
     },
-    [drag, drop]
+    [drag, drop, nodeProps]
   );
 
   let className = "border border-transparent";
@@ -119,14 +104,6 @@ export default function FolderItem({
 
   return (
     <div
-      // onFocus={(e) => {
-      //   setFocused({
-      //     type:
-      //       data.__typename === "SketchFolder" ? "folder" : "sketch",
-      //     id: data.id,
-      //   });
-      // }}
-      // onBlur={() => setFocused(null)}
       {...nodeProps}
       ref={attachRef}
       onClick={handleSelect}

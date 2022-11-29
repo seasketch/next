@@ -26,9 +26,11 @@ query Sketching($slug: String!) {
       ...SketchingDetails
     }
     mySketches {
+      __typename
       ...SketchTocDetails
     }
     myFolders {
+      __typename
       ...SketchFolderDetails
     }
   }
@@ -147,11 +149,36 @@ query GetSketchForEditing($id: Int!) {
   }
 }
 
-mutation UpdateSketchFolderParent($id: Int!, $parentId: Int) {
-  updateSketchFolder(input: { id: $id, patch: { folderId: $parentId } }) {
+mutation UpdateSketchFolderParent(
+  $id: Int!
+  $folderId: Int
+  $collectionId: Int
+) {
+  updateSketchFolder(
+    input: {
+      id: $id
+      patch: { folderId: $folderId, collectionId: $collectionId }
+    }
+  ) {
     sketchFolder {
       id
       folderId
+      collectionId
+    }
+  }
+}
+
+mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketch(
+    input: {
+      id: $id
+      patch: { folderId: $folderId, collectionId: $collectionId }
+    }
+  ) {
+    sketch {
+      id
+      folderId
+      collectionId
     }
   }
 }

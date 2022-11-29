@@ -81,7 +81,8 @@ export default function ProjectApp() {
         <div className="flex flex-grow w-full">
           <MapboxMap className="ml-2" />
           <div
-            className="absolute flex items-center justify-center w-screen h-full pointer-events-none"
+            className="absolute flex items-center justify-center h-full pointer-events-none"
+            style={{ width: "calc(100vw - 3.5rem)" }}
             ref={setMapContainerPortal}
           ></div>
         </div>

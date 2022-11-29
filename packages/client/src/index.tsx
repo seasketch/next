@@ -191,6 +191,20 @@ function ApolloProviderWithToken(props: any) {
           DataUploadTasks: {
             keyFields: ["id"],
           },
+          Project: {
+            fields: {
+              myFolders: {
+                merge(existing = [], incoming: any[]) {
+                  return incoming;
+                },
+              },
+              mySketches: {
+                merge(existing = [], incoming: any[]) {
+                  return incoming;
+                },
+              },
+            },
+          },
         },
       });
 

@@ -1,18 +1,8 @@
-import { MouseEvent, useCallback, useEffect } from "react";
+import { MouseEvent, useCallback } from "react";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
+import { useDrag } from "react-dnd";
 
-export default function SketchItem({
-  nodeProps,
-  handleSelect,
-  level,
-  isDisabled,
-  isSelected,
-  onContextMenu,
-  id,
-  name,
-  parentFolderId,
-  parentCollectionId,
-}: {
+export interface SketchTocItemProps {
   id: number;
   name: string;
   nodeProps: any;
@@ -23,7 +13,55 @@ export default function SketchItem({
   onContextMenu: (e: MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => void;
   parentFolderId?: number | null;
   parentCollectionId?: number | null;
-}) {
+  onDragEnd?: (items: { type: "sketch" | "folder"; id: number }[]) => void;
+  onDropEnd?: (items: { type: "sketch" | "folder"; id: number }[]) => void;
+}
+
+export default function SketchItem({
+  nodeProps,
+  level,
+  isDisabled,
+  isSelected,
+  onContextMenu,
+  id,
+  name,
+  parentFolderId,
+  parentCollectionId,
+  onDragEnd,
+}: SketchTocItemProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
+    type: "Sketch",
+    // The collect function utilizes a "monitor" instance (see the Overview for what this is)
+    // to pull important pieces of state from the DnD system.
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    item: {
+      id,
+      name,
+      typeName: "Sketch",
+      folderId: parentFolderId,
+      collectionId: parentCollectionId,
+    },
+    end(draggedItem, monitor) {
+      if (onDragEnd) {
+        // TODO: add mult-select support
+        onDragEnd([{ type: "sketch", id: draggedItem.id }]);
+      }
+    },
+  }));
+
+  const attachRef = useCallback(
+    (el: any) => {
+      drag(el);
+      if (nodeProps.ref) {
+        nodeProps.ref(el);
+      }
+    },
+    [drag, nodeProps]
+  );
+
   return (
     <div
       // onFocus={(e) => {
@@ -42,6 +80,7 @@ export default function SketchItem({
       }}
       className={`py-0.5 ${isSelected ? "bg-blue-200" : ""}`}
       onContextMenu={onContextMenu}
+      ref={attachRef}
     >
       <span className="flex items-center text-sm space-x-0.5">
         <VisibilityCheckbox
