@@ -1,10 +1,8 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 const axios = require("axios").default;
-/// <reference types="cypress" />
-
+///<reference types="cypress" />
 
 //SLUG ACTIONS
-
 
 export const generateSlug = () => { 
   const result = Math.random().toString(36).substring(2,7);
@@ -183,3 +181,13 @@ export async function deleteAuth0CypressUser (userId, token) {
     console.error(error);
   });
 }; 
+
+//ERROR ACTIONS
+
+export const bypassUncaughtException = (keyword) => {
+  Cypress.on('uncaught:exception', (err, runnable) => {
+    if (err.message.includes(`${keyword}`)) {
+      return false
+    }
+  });
+}

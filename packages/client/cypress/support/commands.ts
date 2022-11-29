@@ -362,6 +362,9 @@ Cypress.Commands.add(
                   id
                   accessControl
                   isListed
+                  admins {
+                    canonicalEmail
+                  }
                 }
               }
             }
@@ -391,6 +394,10 @@ Cypress.Commands.add(
                     ) {
                       project {
                         id
+                        accessControl
+                        admins {
+                          canonicalEmail
+                        }
                       }
                     }
                   }
