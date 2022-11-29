@@ -190,4 +190,4 @@ export const bypassUncaughtException = (keyword) => {
       return false
     }
   });
-}
+};
