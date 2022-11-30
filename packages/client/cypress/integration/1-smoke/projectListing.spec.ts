@@ -8,6 +8,7 @@ let newUser
 describe("Project listing smoke test", () => {
   describe("Public projects are visible to anonymous users", () => {
     before(() => {
+      bypassUncaughtException('ServiceWorker');
       cy.getToken("User 1").then(({ access_token }) => {
         cy.wrap(access_token).as("token");
         cy.createProject(
@@ -55,7 +56,7 @@ describe("Project listing smoke test", () => {
       cy.deleteProject("cy-admin");
     }); 
     it("Creates project with correct access control and the project isn't listed on projects page", () => {
-      bypassUncaughtException('ServiceWorker')
+      bypassUncaughtException('ServiceWorker');
       cy.wait('@createProject').its('response').then((resp) => {
         expect(resp.body.data.createProject.project.accessControl).to.eq('ADMINS_ONLY')
       });
@@ -243,7 +244,7 @@ describe("Project listing smoke test", () => {
       cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
     });
   });
-  describe("An authenticated user can view their own projects", () => {
+  describe.only("An authenticated user can view their own projects", () => {
     beforeEach(() => {
       bypassUncaughtException('ServiceWorker');
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -272,6 +273,7 @@ describe("Project listing smoke test", () => {
           false
         )
         .then((projectId) => {
+          expect (projectId).to.not.eq(null)
           cy.wrap(projectId).as("projectId");
         });
         cy.createProject(
@@ -297,7 +299,18 @@ describe("Project listing smoke test", () => {
       cy.contains('Invite-Only Project').should('not.exist')
       cy.login('User 1');
       cy.reload();
-      cy.wait('@projectList').its('response.statusCode').should('equal', 200)
+      cy.wait('@projectList').then((resp) => {
+        console.log(resp)
+      })
+      cy.wait('@projectList').its('response').then((resp) => {
+        const projects = resp.body.data.projectsConnection.nodes
+        const projectNames = ["Admin-Only Project", "Invite-Only Project", "Maldives Testing"]
+        projects.forEach(p => {
+          expect (projectNames).to.include(p.name)
+        })
+      })
+      
+      //.its('response.statusCode').should('equal', 200)
       cy.get('#user-menu').should('be.visible');
       cy.contains('Admin-Only Project');
       cy.contains('Invite-Only Project');
