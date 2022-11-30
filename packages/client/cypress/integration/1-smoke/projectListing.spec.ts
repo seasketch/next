@@ -119,7 +119,6 @@ describe("Project listing smoke test", () => {
       cy.get('#create-project-btn').click();
       cy.url().should('eq', Cypress.config().baseUrl + `/${projectSlug}/admin`);
       cy.contains('Cypress Test Project')
-      
     });
     after(() => {
       cy.deleteProject('cyproject');
@@ -260,8 +259,8 @@ describe("Project listing smoke test", () => {
       });
     })
     after(() => {
-      cy.deleteProject("cy-admin");
-      cy.deleteProject("cy-invite");
+      //cy.deleteProject("cy-admin");
+      //cy.deleteProject("cy-invite");
     }); 
     it("Allows a user to create an admin-only and invite-only project", () => {
       cy.getToken("User 1").then(({ access_token }) => {
@@ -309,7 +308,7 @@ describe("Project listing smoke test", () => {
           expect (projectNames).to.include(p.name)
         })
       })
-      
+      cy.wait(10000)
       //.its('response.statusCode').should('equal', 200)
       cy.get('#user-menu').should('be.visible');
       cy.contains('Admin-Only Project');
