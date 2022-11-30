@@ -1,65 +1,66 @@
 import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
-import { MouseEvent, useCallback } from "react";
+import { useCallback, useState } from "react";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import ArrowIcon from "./ArrowIcon";
 import { useDrag, useDrop } from "react-dnd";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
-import { SketchTocItemProps } from "./SketchItem";
+import { TreeItemI, TreeNodeProps } from "../../components/TreeView";
 
-export default function FolderItem({
-  nodeProps,
-  handleSelect,
+export interface FolderNodeDataProps {
+  name: string;
+  id: number;
+  folderId?: number | null;
+  collectionId?: number | null;
+  type: "SketchFolder";
+}
+
+export function isFolderNode(
+  node: TreeItemI<any>
+): node is TreeItemI<FolderNodeDataProps> {
+  return node.data.type === "SketchFolder";
+}
+
+function FolderItem({
+  onSelect,
   level,
-  isDisabled,
   isSelected,
   onContextMenu,
   isExpanded,
-  handleExpand,
+  onExpand,
   numChildren,
-  id,
-  name,
-  parentFolderId,
-  parentCollectionId,
-  onDragEnd,
-  onDropEnd,
-}: SketchTocItemProps & {
-  isExpanded?: boolean;
-  handleExpand: (e: MouseEvent<any, globalThis.MouseEvent>) => void;
-  numChildren: number;
-}) {
+  node,
+  ChildGroup,
+  children,
+  isContextMenuTarget,
+  updateContextMenuTargetRef,
+}: TreeNodeProps<FolderNodeDataProps>) {
+  const data = node.data;
+  const isDisabled = false;
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
+
   const [{ isDragging }, drag] = useDrag(() => ({
-    // "type" is required. It is used by the "accept" specification of drop targets.
     type: "SketchFolder",
-    // The collect function utilizes a "monitor" instance (see the Overview for what this is)
-    // to pull important pieces of state from the DnD system.
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
     item: {
-      id,
-      name,
-      typeName: "SketchFolder",
-      folderId: parentFolderId,
+      id: data.id,
+      name: data.name,
+      type: "SketchFolder",
+      folderId: data.folderId,
+      collectionId: data.collectionId,
     },
     end(draggedItem, monitor) {
-      if (onDragEnd) {
-        // TODO: add mult-select support
-        onDragEnd([{ type: "folder", id: draggedItem.id }]);
-      }
+      // if (onDragEnd) {
+      //   onDragEnd([{ type: "folder", id: draggedItem.originalId }]);
+      // }
     },
   }));
 
   const [{ canDrop, isOver }, drop] = useDrop(() => ({
-    // The type (or types) to accept - strings or symbols
     accept: ["SketchFolder", "Sketch"],
-    canDrop: (item: {
-      id: number;
-      folderId?: number;
-      collectionId?: number;
-      typeName: string;
-    }) => {
-      if (item.id === id || parentFolderId === item.id) {
+    canDrop: (item: FolderNodeDataProps) => {
+      if (item.id === data.id || data.folderId === item.folderId) {
         return false;
       }
       return true;
@@ -70,13 +71,13 @@ export default function FolderItem({
       canDrop: monitor.canDrop(),
     }),
     drop: (item) => {
-      (item.typeName === "SketchFolder" ? dropFolder : dropSketch)(item.id, {
+      (item.type === "SketchFolder" ? dropFolder : dropSketch)(item.id, {
         collectionId: null,
-        folderId: id,
+        folderId: data.id,
       });
-      if (onDropEnd) {
-        onDropEnd([{ type: "folder", id }]);
-      }
+      // if (onDropEnd) {
+      //   onDropEnd([{ type: "folder", id: data.originalId }]);
+      // }
     },
   }));
 
@@ -84,11 +85,11 @@ export default function FolderItem({
     (el: any) => {
       drag(el);
       drop(el);
-      if (nodeProps.ref) {
-        nodeProps.ref(el);
-      }
+      // if (updateContextMenuTargetRef && isContextMenuTarget) {
+      //   updateContextMenuTargetRef(el);
+      // }
     },
-    [drag, drop, nodeProps]
+    [drag, drop, isContextMenuTarget, updateContextMenuTargetRef]
   );
 
   let className = "border border-transparent";
@@ -104,26 +105,44 @@ export default function FolderItem({
 
   return (
     <div
-      {...nodeProps}
       ref={attachRef}
-      onClick={handleSelect}
       style={{
-        marginLeft: 40 * (level - 1) - 18,
+        marginLeft: 35 * (level - 1) - 18,
         opacity: isDisabled ? 0.5 : 1,
         paddingLeft: 0,
       }}
-      className={`py-0.5 ${className}`}
-      onContextMenu={onContextMenu}
+      className={`my-0.5 rounded ${
+        isSelected
+          ? "bg-blue-50 border-blue-200 border"
+          : "border border-transparent"
+      } ${isContextMenuTarget ? "italic" : ""}`}
     >
-      <span className="flex items-center text-sm space-x-0.5">
+      <span
+        ref={isContextMenuTarget ? updateContextMenuTargetRef : undefined}
+        className={`flex items-center text-sm space-x-0.5 ${className}`}
+        onContextMenu={(e) => {
+          if (onContextMenu) {
+            if (onSelect) {
+              onSelect(e.metaKey, node, !isSelected);
+            }
+            var rect = e.currentTarget.getBoundingClientRect();
+            var offsetX = e.clientX - rect.left; //x position within the element.
+            onContextMenu(node, e.currentTarget, offsetX);
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+      >
         {
           <button
-            title={numChildren === 0 ? "Empty" : ""}
-            className={numChildren < 1 ? "opacity-25 cursor-not-allowed" : ""}
+            title={numChildren === 0 ? "Empty" : "Expand"}
+            className={!numChildren || numChildren < 1 ? "opacity-50" : ""}
             onClick={(e) => {
-              handleExpand(e);
-              e.preventDefault();
-              e.stopPropagation();
+              if (onExpand) {
+                onExpand(node, !isExpanded);
+                e.preventDefault();
+                e.stopPropagation();
+              }
             }}
           >
             <ArrowIcon isOpen={isExpanded || false} />
@@ -132,7 +151,7 @@ export default function FolderItem({
         {
           <VisibilityCheckbox
             disabled={isDisabled || numChildren === 0}
-            id={id}
+            id={data.id}
             visibility={false}
           />
         }{" "}
@@ -141,8 +160,24 @@ export default function FolderItem({
         ) : (
           <FolderIcon className="w-6 h-6 text-primary-500" />
         )}
-        <span className="px-1 cursor-default select-none">{name}</span>
+        <span
+          className="px-1 cursor-pointer select-none"
+          onClick={(e) => {
+            if (onSelect) {
+              onSelect(e.metaKey, node, !isSelected);
+            }
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          {data.name}
+        </span>
       </span>
+      {children && children.length > 0 && isExpanded && (
+        <ChildGroup items={children} />
+      )}
     </div>
   );
 }
+
+export default FolderItem;

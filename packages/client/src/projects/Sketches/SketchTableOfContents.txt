@@ -4,25 +4,18 @@ import {
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import TreeView, { INode } from "react-accessible-treeview";
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import Skeleton from "../../components/Skeleton";
 import { SketchAction } from "./useSketchActions";
 import ContextMenuDropdown, {
   DropdownDividerProps,
 } from "../../components/ContextMenuDropdown";
 import { DropdownOption } from "../../components/DropdownButton";
-import FolderItem from "./FolderItem";
+import FolderItem, { FolderNodeDataProps, isFolderNode } from "./FolderItem";
 import { DropTargetMonitor, useDrop } from "react-dnd";
-import SketchItem from "./SketchItem";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
+import TreeV, { TreeItemI } from "../../components/TreeView";
+import SketchItem, { isSketchNode, SketchNodeData } from "./SketchItem";
 
 export default forwardRef<
   HTMLDivElement,
@@ -30,18 +23,25 @@ export default forwardRef<
     loading?: boolean;
     sketches: SketchTocDetailsFragment[];
     folders: SketchFolderDetailsFragment[];
-    selectedSketchIds: number[];
-    selectedFolderIds: number[];
-    expandedFolderIds: number[];
-    expandedSketchIds: number[];
-    onSelectionChange: (
-      item: SketchFolderDetailsFragment | SketchTocDetailsFragment,
+    selectedIds: string[];
+    expandedIds: string[];
+    contextMenu?: {
+      id: string;
+      options: (DropdownOption | DropdownDividerProps)[];
+      target: HTMLElement;
+      offsetX: number;
+    };
+    onContextMenu: (
+      node: TreeItemI<any>,
+      target: HTMLElement,
+      offsetX: number
+    ) => void;
+    onSelect: (
+      metaKey: boolean,
+      item: { id: string },
       isSelected: boolean
     ) => void;
-    onExpandedChange: (
-      item: SketchFolderDetailsFragment | SketchTocDetailsFragment,
-      isExpanded: boolean
-    ) => void;
+    onExpand: (item: { id: string }, isExpanded: boolean) => void;
     reservedKeyCodes?: string[];
     onReservedKeyDown?: (keycode: string) => void;
     actions?: { create: SketchAction[]; edit: SketchAction[] };
@@ -52,145 +52,36 @@ export default forwardRef<
     {
       sketches,
       folders,
-      selectedSketchIds,
-      selectedFolderIds,
-      onSelectionChange,
+      expandedIds,
+      onSelect,
       loading,
       reservedKeyCodes,
       onReservedKeyDown,
       actions,
       onActionSelected,
-      onExpandedChange,
-      expandedFolderIds,
-      expandedSketchIds,
+      onExpand,
+      selectedIds,
+      onContextMenu,
+      contextMenu,
     },
     ref
   ) => {
     const { t } = useTranslation();
-    // const [expandedIds, setExpandedIds] = useState<number[]>([]);
-    const treeView = useRef<HTMLUListElement>(null);
     const { dropFolder, dropSketch } =
       useUpdateSketchTableOfContentsDraggable();
-    const [contextMenuTarget, setContextMenuTarget] = useState<{
-      target: HTMLDivElement;
-      offsetX?: number;
-    } | null>(null);
 
-    useEffect(() => {
-      const handler = () => setContextMenuTarget(null);
-      if (contextMenuTarget) {
-        document.addEventListener("click", handler);
-        return () => document.removeEventListener("click", handler);
-      }
-    }, [contextMenuTarget]);
-
-    const treeData = useMemo(() => {
-      const items: (SketchFolderDetailsFragment | SketchTocDetailsFragment)[] =
-        [
-          {
-            name: "ROOT -- should not be displayed",
-            id: 0,
-          },
-          ...[...sketches, ...folders].sort((a, b) =>
-            a.name.localeCompare(b.name)
-          ),
-        ];
-      const idx: { [id: string]: number } = {};
-      items.forEach(({ id, __typename }, index) => {
-        idx[`${__typename}:${id}`] = index;
-      });
-
-      let nodes: INode[] = [
-        {
-          id: 0,
-          name: "ROOT -- should not be displayed",
-          children: [],
-          parent: null,
-        },
-      ];
-
-      const children: { [id: number]: number[] } = {};
-      const orphans: number[] = [];
-
-      items.forEach((item, id) => {
-        if (id !== 0) {
-          let parentId: null | string = null;
-          if (item.collectionId) {
-            // eslint-disable-next-line i18next/no-literal-string
-            parentId = `Sketch:${item.collectionId}`;
-          } else if (item.folderId) {
-            // eslint-disable-next-line i18next/no-literal-string
-            parentId = `SketchFolder:${item.folderId}`;
-          }
-          nodes.push({
-            id,
-            name: item.name || "",
-            parent: parentId ? idx[parentId] : 0,
-            children: [],
-            isBranch: item.__typename === "SketchFolder",
-          });
-          if (parentId) {
-            const parentIndex = idx[parentId];
-            if (!(parentIndex in children)) {
-              children[parentIndex] = [];
-            }
-            children[parentIndex].push(id);
-          } else {
-            orphans.push(id);
-          }
-        }
-      });
-      for (const node of nodes) {
-        node.children = children[node.id] || [];
-      }
-      nodes[0].children = orphans;
-      return {
-        items,
-        nodes,
-      };
-    }, [sketches, folders]);
-
-    const selectedIds: number[] = useMemo(() => {
-      const selectedNodeIds: number[] = [];
-      for (const id of selectedFolderIds) {
-        const idx = treeData.items.findIndex(
-          (f) => f.id === id && f.__typename === "SketchFolder"
-        );
-        if (idx > 0) {
-          selectedNodeIds.push(idx);
-        }
-      }
-      for (const id of selectedSketchIds) {
-        const idx = treeData.items.findIndex(
-          (f) => f.id === id && f.__typename !== "SketchFolder"
-        );
-        if (idx > 0) {
-          selectedNodeIds.push(idx);
-        }
-      }
-      return selectedNodeIds;
-    }, [selectedSketchIds, selectedFolderIds, treeData.items]);
-
-    const expandedIds: number[] = useMemo(() => {
-      const expandedNodeIds: number[] = [];
-      for (const id of expandedFolderIds) {
-        const idx = treeData.items.findIndex(
-          (f) => f.id === id && f.__typename === "SketchFolder"
-        );
-        if (idx > 0) {
-          expandedNodeIds.push(idx);
-        }
-      }
-      for (const id of expandedSketchIds) {
-        const idx = treeData.items.findIndex(
-          (f) => f.id === id && f.__typename !== "SketchFolder"
-        );
-        if (idx > 0) {
-          expandedNodeIds.push(idx);
-        }
-      }
-      return expandedNodeIds;
-    }, [expandedFolderIds, treeData.items, expandedSketchIds]);
+    // useEffect(() => {
+    //   const handler = () => setContextMenuTarget(null);
+    //   if (contextMenuTarget) {
+    //     const target = contextMenuTarget.target;
+    //     target.addEventListener("blur", handler);
+    //     document.addEventListener("click", handler);
+    //     return () => {
+    //       target.removeEventListener("blur", handler);
+    //       document.removeEventListener("click", handler);
+    //     };
+    //   }
+    // }, [contextMenuTarget]);
 
     const contextMenuOptions = useMemo(() => {
       const options: (DropdownOption | DropdownDividerProps)[] = [];
@@ -209,7 +100,6 @@ export default forwardRef<
           (a) => !a.disabledForContextAction
         );
         if (createActions.length) {
-          // @ts-ignore
           options.push({ label: t("add new"), id: "add-new-divider" });
           for (const action of createActions) {
             const { id, label, disabled, disabledForContextAction } = action;
@@ -262,34 +152,34 @@ export default forwardRef<
       },
     }));
 
-    useEffect(() => {
-      if (treeView.current) {
-        treeView.current.onkeydown = (event) => {
-          if (event.key === " ") {
-            event.stopPropagation();
-            // TODO: toggle visibility
-            return;
-          }
-          if (
-            reservedKeyCodes &&
-            onReservedKeyDown &&
-            reservedKeyCodes.indexOf(event.key) !== -1
-          ) {
-            event.stopPropagation();
-            event.preventDefault();
-            const view = treeView.current;
-            setTimeout(() => {
-              view?.blur();
-            }, 100);
-            onReservedKeyDown(event.key);
-            return;
-          }
-          if (!event.metaKey && /^\w$/.test(event.key)) {
-            event.stopPropagation();
-          }
-        };
-      }
-    }, [treeView, reservedKeyCodes, onReservedKeyDown]);
+    // useEffect(() => {
+    //   if (treeView.current) {
+    //     treeView.current.onkeydown = (event) => {
+    //       if (event.key === " ") {
+    //         event.stopPropagation();
+    //         // TODO: toggle visibility
+    //         return;
+    //       }
+    //       if (
+    //         reservedKeyCodes &&
+    //         onReservedKeyDown &&
+    //         reservedKeyCodes.indexOf(event.key) !== -1
+    //       ) {
+    //         event.stopPropagation();
+    //         event.preventDefault();
+    //         const view = treeView.current;
+    //         setTimeout(() => {
+    //           view?.blur();
+    //         }, 100);
+    //         onReservedKeyDown(event.key);
+    //         return;
+    //       }
+    //       if (!event.metaKey && /^\w$/.test(event.key)) {
+    //         event.stopPropagation();
+    //       }
+    //     };
+    //   }
+    // }, [treeView, reservedKeyCodes, onReservedKeyDown]);
 
     const onDragEnd = useCallback(
       (items: { type: "sketch" | "folder"; id: number }[]) => {
@@ -297,21 +187,23 @@ export default forwardRef<
           if (item.type === "sketch") {
             const sketch = sketches.find((s) => s.id === item.id);
             if (sketch) {
-              onSelectionChange(sketch, true);
+              // eslint-disable-next-line i18next/no-literal-string
+              onSelect(false, { id: `Sketch:${sketch.id}` }, true);
             } else {
               console.warn("didn't find sketch", item);
             }
           } else {
             const folder = folders.find((f) => f.id === item.id);
             if (folder) {
-              onSelectionChange(folder, true);
+              // eslint-disable-next-line i18next/no-literal-string
+              onSelect(false, { id: `SketchFolder:${folder.id}` }, true);
             } else {
               console.warn("didn't find folder", item);
             }
           }
         }
       },
-      [folders, onSelectionChange, sketches]
+      [folders, onSelect, sketches]
     );
 
     const onDropEnd = useCallback(
@@ -320,12 +212,13 @@ export default forwardRef<
           if (item.type === "folder") {
             const folder = folders.find((f) => f.id === item.id);
             if (folder) {
-              onExpandedChange(folder, true);
+              // eslint-disable-next-line i18next/no-literal-string
+              onExpand({ id: `SketchFolder:${folder.id}` }, true);
             }
           }
         }
       },
-      [onExpandedChange, folders]
+      [onExpand, folders]
     );
 
     if (loading) {
@@ -343,6 +236,8 @@ export default forwardRef<
       );
     }
 
+    // console.log({ expandedIds });
+
     return (
       <div
         ref={drop}
@@ -352,18 +247,61 @@ export default forwardRef<
             : "pt-2 pl-5 border border-transparent"
         }
       >
-        {contextMenuTarget &&
+        {/* {contextMenuTarget &&
           onActionSelected &&
           actions &&
           actions.edit.length > 0 && (
             <ContextMenuDropdown
               options={contextMenuOptions}
-              target={contextMenuTarget.target}
-              offsetX={contextMenuTarget.offsetX}
+              // target={contextMenu.target}
+              // offsetX={contextMenuTarget.offsetX}
             />
-          )}
+          )} */}
         <div>
-          <TreeView
+          <TreeV
+            onExpand={onExpand}
+            expanded={expandedIds}
+            onSelect={onSelect}
+            selection={selectedIds}
+            onContextMenu={onContextMenu}
+            contextMenu={contextMenu}
+            items={treeNodes}
+            render={({ node, ...props }) => {
+              if (isFolderNode(node) && props.children) {
+                return (
+                  <FolderItem
+                    {...props}
+                    node={node}
+                    ChildGroup={props.ChildGroup}
+                  />
+                );
+              } else if (isSketchNode(node)) {
+                return <SketchItem {...props} node={node} />;
+              } else {
+                return <div>Unimplemented</div>;
+              }
+            }}
+            ariaLabel="My Sketches"
+            // contextMenuTargetRef={setContextMenuTarget}
+            // onContextMenu={(e, data, isSelected) => {
+            //   console.log({ x: e.clientX, y: e.clientY });
+            //   var rect = e.currentTarget.getBoundingClientRect();
+            //   var x = e.clientX - rect.left; //x position within the element.
+            //   var y = e.clientY - rect.top; //y position within the element.
+            //   if (!isSelected) {
+            //     onSelect(e.metaKey, data, !isSelected);
+            //   }
+
+            //   const target = e.currentTarget;
+            //   console.log("target", target, x, y);
+            //   setContextMenuTarget({
+            //     target: target as HTMLDivElement,
+            //     offsetX: x,
+            //   });
+            //   e.preventDefault();
+            // }}
+          />
+          {/* <TreeView
             ref={treeView}
             data={treeData.nodes}
             selectedIds={selectedIds}
@@ -462,7 +400,7 @@ export default forwardRef<
                 );
               }
             }}
-          />
+          /> */}
         </div>
       </div>
     );

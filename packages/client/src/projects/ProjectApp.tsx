@@ -27,7 +27,10 @@ const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
 const LazySketchingTools = React.lazy(
-  () => import(/* webpackChunkName: "Sketching" */ "./Sketches/SketchingTools")
+  () =>
+    import(
+      /* webpackChunkName: "Sketching" */ "./Sketches/SketchingDragDropContextContainer"
+    )
 );
 const LazyCacheSettingsPage = React.lazy(
   () =>
