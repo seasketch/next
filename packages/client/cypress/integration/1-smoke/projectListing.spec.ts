@@ -256,11 +256,26 @@ describe("Project listing smoke test", () => {
         if ((req.body.operationName) && (req.body.operationName === "CypressSetAccessControl")) {
           req.alias = "setAccessControl"
         };
+        if ((req.body.operationName) && (req.body.operationName === "UserIsSuperuser")) {
+          req.alias = "userIsSuperuser"
+        };
+        if ((req.body.operationName) && (req.body.operationName === "ProjectMetadata")) {
+          req.alias = "projectMetadata"
+        };
       });
     })
     after(() => {
-      //cy.deleteProject("cy-admin");
-      //cy.deleteProject("cy-invite");
+      cy.deleteProject("cy-admin");
+      cy.deleteProject("cy-invite");
+      cy.get('button').then((btn) => {
+        if(btn.text().includes('Sign Out')) {
+          //Sign out button
+          cy.get(':nth-child(1) > .mt-5 > .bg-gray-800 > .group.text-gray-300').click()
+        } else {
+          cy.get('#user-menu').click();
+          cy.contains('Sign out').click();
+        }
+      });
     }); 
     it("Allows a user to create an admin-only and invite-only project", () => {
       cy.getToken("User 1").then(({ access_token }) => {
@@ -295,9 +310,13 @@ describe("Project listing smoke test", () => {
     it("Shows the project(s) when user is logged in", () => {
       cy.visit('/projects');
       cy.contains('Admin-Only Project').should('not.exist');
-      cy.contains('Invite-Only Project').should('not.exist')
-      cy.login('User 1');
-      cy.reload();
+      cy.contains('Invite-Only Project').should('not.exist');
+      //Sign-in
+      cy.get(':nth-child(1) > div > .px-3').click();
+      cy.get('#username').type('test_user_1@seasketch.org');
+      cy.get('#password').type('password');
+      cy.contains('Continue').click()
+      cy.get("#user-menu").should("be.visible");
       cy.wait('@projectList').then((resp) => {
         console.log(resp)
       })
@@ -308,9 +327,23 @@ describe("Project listing smoke test", () => {
           expect (projectNames).to.include(p.name)
         })
       })
-      cy.wait(10000)
-      //.its('response.statusCode').should('equal', 200)
-      cy.get('#user-menu').should('be.visible');
+      cy.contains('loading').should('not.exist')      //cy.login('User 1');
+      //cy.visit('/');
+      //cy.get('#nav-projects').click()
+      //cy.wait('@projectList').then((resp) => {
+      //  console.log(resp)
+      //})
+      //cy.wait('@projectList').its('response').then((resp) => {
+      //  const projects = resp.body.data.projectsConnection.nodes
+      //  const projectNames = ["Admin-Only Project", "Invite-Only Project", "Maldives Testing"]
+      //  projects.forEach(p => {
+      //    expect (projectNames).to.include(p.name)
+      //  })
+      //})
+      //cy.wait(10000)
+      ////.its('response.statusCode').should('equal', 200)
+      //cy.get('#user-menu').should('be.visible');
+      //cy.reload()
       cy.contains('Admin-Only Project');
       cy.contains('Invite-Only Project');
     });
