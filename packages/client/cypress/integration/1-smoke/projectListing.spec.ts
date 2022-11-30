@@ -243,7 +243,7 @@ describe("Project listing smoke test", () => {
       cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
     });
   });
-  describe.only("An authenticated user can view their own projects", () => {
+  describe("An authenticated user can view their own projects", () => {
     beforeEach(() => {
       bypassUncaughtException('ServiceWorker');
       cy.intercept("http://localhost:3857/graphql", (req) => {
@@ -317,33 +317,17 @@ describe("Project listing smoke test", () => {
       cy.get('#password').type('password');
       cy.contains('Continue').click()
       cy.get("#user-menu").should("be.visible");
-      cy.wait('@projectList').then((resp) => {
-        console.log(resp)
-      })
+      //First call
+      cy.wait('@projectList');
+      //Second call
       cy.wait('@projectList').its('response').then((resp) => {
         const projects = resp.body.data.projectsConnection.nodes
         const projectNames = ["Admin-Only Project", "Invite-Only Project", "Maldives Testing"]
         projects.forEach(p => {
           expect (projectNames).to.include(p.name)
         })
-      })
-      cy.contains('loading').should('not.exist')      //cy.login('User 1');
-      //cy.visit('/');
-      //cy.get('#nav-projects').click()
-      //cy.wait('@projectList').then((resp) => {
-      //  console.log(resp)
-      //})
-      //cy.wait('@projectList').its('response').then((resp) => {
-      //  const projects = resp.body.data.projectsConnection.nodes
-      //  const projectNames = ["Admin-Only Project", "Invite-Only Project", "Maldives Testing"]
-      //  projects.forEach(p => {
-      //    expect (projectNames).to.include(p.name)
-      //  })
-      //})
-      //cy.wait(10000)
-      ////.its('response.statusCode').should('equal', 200)
-      //cy.get('#user-menu').should('be.visible');
-      //cy.reload()
+      });
+      cy.contains('loading').should('not.exist');
       cy.contains('Admin-Only Project');
       cy.contains('Invite-Only Project');
     });
