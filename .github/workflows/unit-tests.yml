@@ -428,7 +428,7 @@ jobs:
       - name: Percy/Cypress Run
         uses: percy/exec-action@v0.1.2
         with:
-          command: "npx cypress run"
+          command: "cypress run"
         env:
           PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
