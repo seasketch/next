@@ -431,5 +431,5 @@ percy-visual-tests:
         command: "npx cypress run"
       env:
         PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
-        ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        #ACTIONS_ALLOW_UNSECURE_COMMANDS: true
        
