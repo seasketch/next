@@ -3,6 +3,7 @@ import { useMemo, FC, useCallback, SetStateAction } from "react";
 export interface TreeItemI<T> {
   id: string;
   parentId?: string | null;
+  parents: string[];
   data: T;
 }
 
@@ -102,7 +103,7 @@ export default function TreeView<T>({
         isSelected: props.selection
           ? props.selection.indexOf(item.id) !== -1
           : false,
-        node: item,
+        node: { ...item, parents: [] },
         level: 1,
         children: [],
         isContextMenuTarget: contextMenuItemId === item.id,
@@ -125,6 +126,18 @@ export default function TreeView<T>({
           }
         }
       }
+    }
+
+    // recursively set node.parents
+    function addParents(node: TreeNode<any>, parents: string[]) {
+      node.node.parents.push(...parents);
+      for (const child of node.children) {
+        addParents(child, [...node.node.parents, node.node.id]);
+      }
+    }
+
+    for (const node of nodes) {
+      addParents(node, []);
     }
     return nodes;
   }, [props.items, props.selection, props.expanded, contextMenuItemId]);

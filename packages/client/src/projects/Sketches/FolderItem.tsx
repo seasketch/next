@@ -20,6 +20,11 @@ export function isFolderNode(
   return node.data.type === "SketchFolder";
 }
 
+export type DragItemProps<T> = {
+  nodeId: string;
+  parents: string[];
+} & T;
+
 function FolderItem({
   onSelect,
   isSelected,
@@ -37,6 +42,7 @@ function FolderItem({
 }: TreeNodeProps<FolderNodeDataProps>) {
   const data = node.data;
   const isDisabled = false;
+
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
 
   const [{ isDragging }, drag] = useDrag(() => ({
@@ -45,27 +51,25 @@ function FolderItem({
       isDragging: monitor.isDragging(),
     }),
     item: {
+      nodeId: node.id,
       id: data.id,
       name: data.name,
       type: "SketchFolder",
       folderId: data.folderId,
       collectionId: data.collectionId,
-    } as FolderNodeDataProps,
+      parents: node.parents,
+    } as DragItemProps<FolderNodeDataProps>,
     end(draggedItem, monitor) {
       if (onDragEnd) {
-        onDragEnd([draggedItem]);
+        onDragEnd([draggedItem as DragItemProps<FolderNodeDataProps>]);
       }
     },
   }));
 
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
-    canDrop: (item: FolderNodeDataProps, monitor) => {
-      if (
-        item.id === data.id ||
-        data.folderId === item.id ||
-        data.collectionId === item.id
-      ) {
+    canDrop: (item: DragItemProps<FolderNodeDataProps>, monitor) => {
+      if (item.id === data.id || node.parents.indexOf(item.nodeId) !== -1) {
         return false;
       }
       return true;
