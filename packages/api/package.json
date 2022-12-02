@@ -47,7 +47,6 @@
     "@aws-sdk/client-lambda": "^3.192.0",
     "@graphile/pg-pubsub": "^4.11.0",
     "@mapbox/tilebelt": "^1.0.2",
-    "@percy/cypress": "^3.1.2",
     "@seasketch/map-tile-cache-calculator": "^1.0.0",
     "@sentry/node": "^6.17.9",
     "@sentry/tracing": "^6.17.9",
