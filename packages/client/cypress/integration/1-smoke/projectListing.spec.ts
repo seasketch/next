@@ -1,7 +1,7 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { DeleteProjectInviteDocument, ProjectAccessControlSetting } from "../../../src/generated/graphql";
 import { deleteUser } from "../../support/deleteUser.js"
-import { getAuth0ApiToken, getAuth0CypressUserByEmail, deleteAuth0CypressUser, deleteAllAuth0CypressUsers, generateSlug, bypassUncaughtException } from '../../support/utils.js'
+import { getAuth0ApiToken, getAuth0UserByEmail, deleteAuth0CypressUser, deleteAllAuth0CypressUsers, generateSlug, bypassUncaughtException } from '../../support/utils.js'
 
 let newUser
 

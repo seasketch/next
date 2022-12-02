@@ -2,7 +2,7 @@
 import { ParticipantSortBy, ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
 import { deleteUser } from "../../support/deleteUser.js"
-import { getAuth0ApiToken, getAuth0CypressUserByEmail, deleteAuth0CypressUser, deleteAllAuth0CypressUsers, generateSlug, bypassUncaughtException } from '../../support/utils.js'
+import { getAuth0ApiToken, getAuth0UserByEmail, deleteAuth0CypressUser, deleteAllAuth0CypressUsers, generateSlug, bypassUncaughtException } from '../../support/utils.js'
 import { mkdirSync } from "fs";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const fs = require('fs');

@@ -103,8 +103,6 @@ export const drawSecondPolygon = () => {
 //AUTH0 MANAGEMENT API ACTIONS
 
 export async function getAuth0ApiToken () {
-  console.log(Cypress.env('auth0_management_api_client_id'))
-  console.log(Cypress.env('auth0_management_api_client_secret'))
   var options = {
     method: 'POST',
     url: 'https://seasketch.auth0.com/oauth/token',
@@ -126,7 +124,7 @@ export async function getAuth0ApiToken () {
   return results
 };
 
-export function getAuth0CypressUserByEmail (email, token) {
+export function getAuth0UserByEmail (email, token) {
   const getUserByEmailOptions = {
     method: 'GET',
     url: `https://seasketch.auth0.com/api/v2/users-by-email?email=${email}`,
