@@ -100,11 +100,11 @@ export const drawSecondPolygon = () => {
     .click(200, 200);
 };
 
-//USER ACTIONS
+//AUTH0 MANAGEMENT API ACTIONS
 
 export async function getAuth0ApiToken () {
-  console.log('Get Auth0 management API token')
   console.log(Cypress.env('auth0_management_api_client_id'))
+  console.log(Cypress.env('auth0_management_api_client_secret'))
   var options = {
     method: 'POST',
     url: 'https://seasketch.auth0.com/oauth/token',
