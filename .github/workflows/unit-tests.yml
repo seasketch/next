@@ -425,13 +425,13 @@ jobs:
           REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
           REACT_APP_PUBLIC_URL: http://localhost:3000
           REACT_APP_BUILD: e2e-tests-${{ steps.short_sha.outputs.sha }}
-      - name: Percy/Cypress Run
-        run: 
-        lerna add --scope=client @percy/cypress
-        lerna add --scope=client @percy/cli
-        lerna bootstrap
-        npx percy exec -- cypress run
-        env:
-          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+     - name: Percy/Cypress Run
+       run: 
+       #lerna add --scope=client @percy/cypress
+       #lerna add --scope=client @percy/cli
+       #lerna bootstrap
+       npx percy exec -- cypress run
+       env:
+         PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
