@@ -1,4 +1,12 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   SketchingDetailsFragment,
   SketchingDocument,
@@ -9,14 +17,18 @@ import {
   useDeleteSketchMutation,
   useRenameFolderMutation,
   SketchFolderDetailsFragment,
+  SketchEditorModalDetailsFragment,
+  GetSketchForEditingDocument,
+  GetSketchForEditingQuery,
 } from "../../generated/graphql";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import useDialog from "../../components/useDialog";
 import { useHistory } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import getSlug from "../../getSlug";
-
-const Trans = (props: any) => <I18n ns="sketching" {...props} />;
+import { useApolloClient } from "@apollo/client";
+import { DropdownOption } from "../../components/DropdownButton";
+import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 
 export interface SketchAction {
   id: string;
@@ -34,7 +46,7 @@ export interface SketchAction {
       loadingTitle?: string;
     }) => void;
     focus: (
-      type: "sketch" | "folder",
+      type: "Sketch" | "SketchFolder",
       id: number,
       folderId?: number | null,
       collectionId?: number | null
@@ -50,30 +62,72 @@ export default function useSketchActions({
   selectedSketchClasses,
   multiple,
   sketchClasses,
+  clearSelection,
+  selectedIds,
+  setContextMenu,
+  setExpandedIds,
+  focusOnTableOfContentsItem,
+  setEditor,
+  sketches,
+  folders,
 }: {
   folderSelected: boolean;
   selectedSketchClasses: number[];
   multiple?: boolean;
   sketchClasses?: SketchingDetailsFragment[];
+  clearSelection: () => void;
+  selectedIds: string[];
+  setContextMenu: Dispatch<
+    SetStateAction<
+      | {
+          id: string;
+          target: HTMLElement;
+          offsetX: number;
+        }
+      | undefined
+    >
+  >;
+  setExpandedIds: (value: SetStateAction<string[]>) => void;
+  focusOnTableOfContentsItem: (
+    type: "Sketch" | "SketchFolder",
+    id: number,
+    folderId?: number | null,
+    collectionId?: number | null
+  ) => void;
+  setEditor: Dispatch<
+    SetStateAction<
+      | false
+      | {
+          sketch?: SketchEditorModalDetailsFragment | undefined;
+          sketchClass: SketchingDetailsFragment;
+          folderId?: number | undefined;
+          loading?: boolean | undefined;
+          loadingTitle?: string | undefined;
+        }
+    >
+  >;
+  sketches?: SketchTocDetailsFragment[] | null;
+  folders?: SketchFolderDetailsFragment[] | null;
 }) {
   const { t } = useTranslation("sketching");
-  const [state, setState] = useState<{
+  const client = useApolloClient();
+  const onError = useGlobalErrorHandler();
+  const [{ create, edit }, setState] = useState<{
     create: SketchAction[];
     edit: SketchAction[];
   }>({
     create: [],
     edit: [],
   });
-  const { prompt, confirm, confirmDelete } = useDialog();
+  const { prompt, confirmDelete } = useDialog();
   const history = useHistory();
-  const onError = useGlobalErrorHandler();
   const [createFolder] = useCreateSketchFolderMutation({
     onError,
   });
   const [renameFolder] = useRenameFolderMutation({
     onError,
   });
-  const [deleteSketch, deleteSketchState] = useDeleteSketchMutation({
+  const [deleteSketch] = useDeleteSketchMutation({
     onError,
     update: async (cache, { data }) => {
       if (data?.deleteSketch?.sketch?.id) {
@@ -104,38 +158,37 @@ export default function useSketchActions({
       }
     },
   });
-  const [deleteSketchFolder, deleteSketchFolderState] =
-    useDeleteSketchFolderMutation({
-      onError,
-      update: async (cache, { data }) => {
-        if (data?.deleteSketchFolder?.sketchFolder) {
-          const folder = data.deleteSketchFolder.sketchFolder;
-          const results = cache.readQuery<SketchingQuery>({
+  const [deleteSketchFolder] = useDeleteSketchFolderMutation({
+    onError,
+    update: async (cache, { data }) => {
+      if (data?.deleteSketchFolder?.sketchFolder) {
+        const folder = data.deleteSketchFolder.sketchFolder;
+        const results = cache.readQuery<SketchingQuery>({
+          query: SketchingDocument,
+          variables: {
+            slug: getSlug(),
+          },
+        });
+        if (results?.projectBySlug?.myFolders) {
+          await cache.writeQuery({
             query: SketchingDocument,
-            variables: {
-              slug: getSlug(),
+            variables: { slug: getSlug() },
+            data: {
+              ...results,
+              projectBySlug: {
+                ...results.projectBySlug,
+                myFolders: [
+                  ...results.projectBySlug.myFolders.filter(
+                    (f) => f.id !== folder.id
+                  ),
+                ],
+              },
             },
           });
-          if (results?.projectBySlug?.myFolders) {
-            await cache.writeQuery({
-              query: SketchingDocument,
-              variables: { slug: getSlug() },
-              data: {
-                ...results,
-                projectBySlug: {
-                  ...results.projectBySlug,
-                  myFolders: [
-                    ...results.projectBySlug.myFolders.filter(
-                      (f) => f.id !== folder.id
-                    ),
-                  ],
-                },
-              },
-            });
-          }
         }
-      },
-    });
+      }
+    },
+  });
 
   useEffect(() => {
     function isValidChild(parentId: number, child: SketchingDetailsFragment) {
@@ -224,7 +277,7 @@ export default function useSketchActions({
                             },
                           },
                         });
-                        focus("folder", folder.id, folder.folderId);
+                        focus("SketchFolder", folder.id, folder.folderId);
                       }
                     }
                   },
@@ -340,5 +393,171 @@ export default function useSketchActions({
     renameFolder,
   ]);
 
-  return state;
+  /**
+   * Actions require quite a few parameters when called that depend on the state
+   * of the app and current data. Much of this is bundled into parameters so
+   * that these are recalculated when the action is actually called vs
+   * recalculating them on ever render of the actions list. Might be a good idea
+   * to extract this to useSketchActions to organize things better.
+   */
+  const callAction = useCallback(
+    (action: SketchAction) => {
+      setContextMenu(undefined);
+      action.action({
+        selectedSketches: selectedIds
+          .filter((id) => /Sketch:/.test(id))
+          .map((id) => parseInt(id.split(":")[1]))
+          .map((id) => (sketches || []).find((s) => s.id === id)!),
+        selectedFolders: selectedIds
+          .filter((id) => /SketchFolder:/.test(id))
+          .map((id) => parseInt(id.split(":")[1]))
+          .map(
+            (folderId) => (folders || []).find(({ id }) => id === folderId)!
+          ),
+        setEditor: async (options: any) => {
+          setEditor({
+            ...options,
+            loading: options.id ? true : false,
+          });
+          if (options.id) {
+            // load the sketch
+            try {
+              const response = await client.query<GetSketchForEditingQuery>({
+                query: GetSketchForEditingDocument,
+                variables: {
+                  id: options.id,
+                },
+              });
+              // then set editor state again with sketch, loading=false
+              if (response.data.sketch) {
+                setEditor((prev) => {
+                  if (prev) {
+                    return {
+                      ...prev,
+                      sketch: response.data.sketch!,
+                      loading: false,
+                      loadingTitle: undefined,
+                    };
+                  } else {
+                    return false;
+                  }
+                });
+              } else {
+                if (response.error) {
+                  throw new Error(response.error.message);
+                } else {
+                  throw new Error(
+                    "Unknown query error when retrieving sketch data"
+                  );
+                }
+              }
+            } catch (e) {
+              onError(e);
+              setEditor(false);
+            }
+          }
+        },
+        focus: focusOnTableOfContentsItem,
+        clearSelection,
+        collapseFolder: (id: number) => {
+          setExpandedIds((prev) => [
+            ...prev.filter((i) => i !== `SketchFolder:${id}`),
+          ]);
+        },
+      });
+    },
+    [
+      client,
+      onError,
+      clearSelection,
+      selectedIds,
+      setExpandedIds,
+      setContextMenu,
+      focusOnTableOfContentsItem,
+      folders,
+      sketches,
+      setEditor,
+    ]
+  );
+
+  const menuOptions = useMemo(() => {
+    const contextMenu: (DropdownOption | DropdownDividerProps)[] = [];
+    if ((create || edit) && callAction) {
+      for (const action of edit) {
+        const { label, disabled, disabledForContextAction } = action;
+        if (!disabledForContextAction) {
+          contextMenu.push({
+            label,
+            disabled,
+            onClick: () => callAction(action),
+          });
+        }
+      }
+      const createActions = create.filter((a) => !a.disabledForContextAction);
+      if (createActions.length) {
+        contextMenu.push({ label: t("add new"), id: "add-new-divider" });
+        for (const action of createActions) {
+          const { id, label, disabled, disabledForContextAction } = action;
+          if (!disabledForContextAction) {
+            contextMenu.push({
+              id,
+              label,
+              disabled,
+              onClick: () => callAction(action),
+            });
+          }
+        }
+      }
+    }
+    return {
+      contextMenu,
+      create: create.map(
+        (action) =>
+          ({
+            id: action.id,
+            label: action.label,
+            onClick: () => {
+              callAction(action);
+            },
+            disabled: action.disabled,
+          } as DropdownOption)
+      ),
+      edit: edit.map(
+        (action) =>
+          ({
+            id: action.id,
+            label: (
+              <div className="flex">
+                <span className="flex-1">{action.label}</span>
+                {action.keycode && (
+                  <span
+                    style={{ fontSize: 10 }}
+                    className="font-mono bg-gray-50 text-gray-500 py-0 rounded border border-gray-300 shadow-sm text-xs px-1 opacity-0 group-hover:opacity-100"
+                  >
+                    {action.keycode}
+                  </span>
+                )}
+              </div>
+            ),
+            onClick: () => {
+              callAction(action);
+            },
+            disabled: action.disabled,
+          } as DropdownOption)
+      ),
+    };
+  }, [create, edit, callAction, t]);
+
+  const keyboardShortcuts = useMemo(() => {
+    return edit.filter(
+      (action) => action.keycode && !action.disabledForContextAction
+    );
+  }, [edit]);
+
+  return {
+    callAction,
+    edit,
+    menuOptions,
+    keyboardShortcuts,
+  };
 }

@@ -1,11 +1,5 @@
 import bytes from "bytes";
-import React, {
-  Suspense,
-  useContext,
-  useEffect,
-  useState,
-  useMemo,
-} from "react";
+import React, { Suspense, useState, useMemo } from "react";
 import { Route, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import MapboxMap from "../components/MapboxMap";
 import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
@@ -18,7 +12,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import BasemapControl from "../dataLayers/BasemapControl";
 import useMapData from "../dataLayers/useMapData";
 import Spinner from "../components/Spinner";
-import { OfflineStateContext } from "../offline/OfflineStateContext";
 import OfflineToastNotification from "../offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 import JoinProjectPrompt from "../auth/JoinProjectPrompt";
@@ -71,7 +64,6 @@ export default function ProjectApp() {
     settings: t("Cache Settings"),
   };
   const { basemaps, tableOfContentsItems } = useMapData(mapContext);
-  const { online } = useContext(OfflineStateContext);
   const dark = true;
   return (
     <div
@@ -107,6 +99,7 @@ export default function ProjectApp() {
             onClose={() => history.replace(`/${slug}/app`)}
             dark={dark}
             hidden={Boolean(!showSidebar)}
+            noPadding={/sketches/.test(history.location.pathname)}
           >
             <Suspense
               fallback={

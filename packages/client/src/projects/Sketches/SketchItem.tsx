@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback } from "react";
+import { MouseEventHandler, useCallback } from "react";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import { useDrag } from "react-dnd";
 import { TreeItemI, TreeNodeProps } from "../../components/TreeView";
@@ -18,30 +18,15 @@ export function isSketchNode(
   return node.data.type === "Sketch";
 }
 
-// export interface SketchTocItemProps {
-//   id: number;
-//   name: string;
-//   nodeProps: any;
-//   handleSelect: (e: MouseEvent) => void;
-//   level: number;
-//   isDisabled?: boolean;
-//   isSelected?: boolean;
-//   onContextMenu: (e: MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => void;
-//   parentFolderId?: number | null;
-//   parentCollectionId?: number | null;
-//   onDragEnd?: (items: { type: "sketch" | "folder"; id: number }[]) => void;
-//   onDropEnd?: (items: { type: "sketch" | "folder"; id: number }[]) => void;
-//   isExpanded?: boolean;
-//   handleExpand?: (e: MouseEvent<any, globalThis.MouseEvent>) => void;
-//   numChildren?: number;
-// }
-
 export default function SketchItem({
-  onSelect,
   level,
   isSelected,
+  onSelect,
   onContextMenu,
   node,
+  isContextMenuTarget,
+  updateContextMenuTargetRef,
+  onDragEnd,
 }: TreeNodeProps<SketchNodeDataProps>) {
   const isDisabled = false;
   const data = node.data;
@@ -57,12 +42,11 @@ export default function SketchItem({
       type: data.type,
       folderId: data.folderId,
       collectionId: data.collectionId,
-    },
+    } as SketchNodeDataProps,
     end(draggedItem, monitor) {
-      // if (onDragEnd) {
-      //   // TODO: add mult-select support
-      //   onDragEnd([{ type: "sketch", id: draggedItem.id }]);
-      // }
+      if (onDragEnd) {
+        onDragEnd([draggedItem]);
+      }
     },
   }));
 
@@ -73,48 +57,70 @@ export default function SketchItem({
     [drag]
   );
 
+  const updateSelectionOnClick: MouseEventHandler<any> = useCallback(
+    (e) => {
+      if (onSelect) {
+        onSelect(e.metaKey, node, !isSelected);
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    [onSelect, node, isSelected]
+  );
+
+  const contextMenuHandler: MouseEventHandler<any> = useCallback(
+    (e) => {
+      if (onContextMenu) {
+        if (onSelect && !isSelected) {
+          onSelect(e.metaKey, node, !isSelected);
+        }
+        var rect = e.currentTarget.getBoundingClientRect();
+        var offsetX = e.clientX - rect.left; //x position within the element.
+        onContextMenu(node, e.currentTarget, offsetX);
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    },
+    [isSelected, node, onContextMenu, onSelect]
+  );
+
   return (
     <div
-      // onFocus={(e) => {
-      //   setFocused({
-      //     type: data.__typename === "SketchFolder" ? "folder" : "sketch",
-      //     id: data.id,
-      //   });
-      // }}
-      // onBlur={() => setFocused(null)}
+      data-node-id={node.id}
+      ref={attachRef}
       onClick={(e) => {
-        if (onSelect) {
-          onSelect(e.metaKey, node, !isSelected);
+        if (isSelected && onSelect) {
+          onSelect(e.metaKey, node, false);
           e.preventDefault();
           e.stopPropagation();
         }
       }}
       style={{
-        marginLeft: 35 * (level - 1) - 1,
+        // marginLeft: 35 * (level - 1) - 1,
         opacity: isDisabled ? 0.5 : 1,
         paddingLeft: 3,
       }}
-      className={`my-0.5 border rounded border-transparent ${
+      className={`border rounded border-transparent ${
         isSelected ? "bg-blue-200" : ""
       }`}
-      // TODO: add back in
-      // onContextMenu={(e) => {
-      //   if (onContextMenu) {
-      //     onContextMenu(e, node, isSelected);
-      //   }
-      // }}
-      ref={attachRef}
     >
       <span
         className="flex items-center text-sm space-x-0.5"
-        style={{ paddingTop: 3, paddingBottom: 3 }}
+        style={{ paddingTop: 2, paddingBottom: 2 }}
       >
         <VisibilityCheckbox
           disabled={Boolean(isDisabled)}
           id={data.id}
           visibility={false}
         />
-        <span className="px-1 cursor-default select-none">{data.name}</span>
+        <span
+          ref={isContextMenuTarget ? updateContextMenuTargetRef : undefined}
+          className="px-1 py-0.5 cursor-pointer select-none"
+          onClick={updateSelectionOnClick}
+          onContextMenu={contextMenuHandler}
+        >
+          {data.name}
+        </span>
       </span>
     </div>
   );

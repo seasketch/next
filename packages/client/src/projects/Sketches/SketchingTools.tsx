@@ -1,39 +1,25 @@
 import Button from "../../components/Button";
-import DropdownButton, {
-  DropdownOption,
-} from "../../components/DropdownButton";
+import DropdownButton from "../../components/DropdownButton";
 import {
   ProjectAppSidebarContext,
   ProjectAppSidebarToolbar,
 } from "../ProjectAppSidebar";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans as I18n } from "react-i18next";
 import getSlug from "../../getSlug";
 import {
-  GetSketchForEditingDocument,
-  GetSketchForEditingQuery,
   SketchEditorModalDetailsFragment,
   SketchingDetailsFragment,
   useSketchingQuery,
 } from "../../generated/graphql";
-import {
-  useContext,
-  useMemo,
-  useState,
-  useEffect,
-  useCallback,
-  FC,
-} from "react";
+import { useContext, useMemo, useState, useEffect, useCallback } from "react";
 import SketchEditorModal from "./SketchEditorModal";
 import { useHistory } from "react-router-dom";
 import { memo } from "react";
-import useSketchActions, { SketchAction } from "./useSketchActions";
-import { useApolloClient } from "@apollo/client";
+import useSketchActions from "./useSketchActions";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useAuth0 } from "@auth0/auth0-react";
 import { DropTargetMonitor, useDrop } from "react-dnd";
-import ContextMenuDropdown, {
-  DropdownDividerProps,
-} from "../../components/ContextMenuDropdown";
+import ContextMenuDropdown from "../../components/ContextMenuDropdown";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 import TreeView, { TreeNodeProps } from "../../components/TreeView";
 import FolderItem, { FolderNodeDataProps, isFolderNode } from "./FolderItem";
@@ -42,19 +28,45 @@ import { myPlansFragmentsToTreeItems, treeItemId } from ".";
 import Skeleton from "../../components/Skeleton";
 import useExpandedIds from "./useExpandedIds";
 import LoginPrompt from "./LoginPrompt";
+import useSketchingSelectionState from "./useSketchingSelectionState";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
+type ItemType = FolderNodeDataProps | SketchNodeDataProps;
+
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
-  const { t } = useTranslation("sketching");
+  const { isSmall } = useContext(ProjectAppSidebarContext);
+  const { user } = useAuth0();
+  const [toolbarRef, setToolbarRef] = useState<HTMLElement | null>(null);
+  const onError = useGlobalErrorHandler();
+  const history = useHistory();
+
   const { data, loading } = useSketchingQuery({
     variables: {
       slug: getSlug(),
     },
+    onError,
   });
 
-  const { isSmall } = useContext(ProjectAppSidebarContext);
-  const { user } = useAuth0();
+  const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
+
+  const { expandedIds, setExpandedIds, onExpand } = useExpandedIds(
+    getSlug(),
+    data?.projectBySlug?.myFolders,
+    data?.projectBySlug?.mySketches
+  );
+
+  const {
+    selectedIds,
+    clearSelection,
+    selectedSketchClasses,
+    onSelect,
+    focusOnTableOfContentsItem,
+  } = useSketchingSelectionState({
+    mySketches: data?.projectBySlug?.mySketches,
+    toolbarRef,
+    setExpandedIds,
+  });
 
   const [editor, setEditor] = useState<
     | false
@@ -67,12 +79,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       }
   >(false);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [expandedIds, setExpandedIds] = useExpandedIds(
-    getSlug(),
-    data?.projectBySlug?.myFolders,
-    data?.projectBySlug?.mySketches
-  );
   const [contextMenu, setContextMenu] = useState<
     | {
         id: string;
@@ -83,6 +89,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     | undefined
   >();
 
+  // Clear the context menu if selection changes
   useEffect(() => {
     setContextMenu((prev) => {
       if (prev && selectedIds.indexOf(prev.id) !== -1) {
@@ -92,101 +99,52 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       }
     });
   }, [selectedIds]);
-  const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
 
-  const [toolbarRef, setToolbarRef] = useState<HTMLElement | null>(null);
-  const [tocContainer, setTocContainer] = useState<HTMLElement | null>(null);
-  const onError = useGlobalErrorHandler();
-  const client = useApolloClient();
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === "BUTTON") {
-        return;
-      }
-      if (
-        toolbarRef &&
-        (toolbarRef === target || toolbarRef.contains(target))
-      ) {
-        return;
-      } else if (
-        tocContainer &&
-        tocContainer.contains(target) &&
-        tocContainer !== target
-      ) {
-        return;
-      }
-      if (selectedIds.length) {
-        setSelectedIds([]);
-      }
-      return true;
-    };
-    document.body.addEventListener("click", handler);
-    return () => {
-      document.body.removeEventListener("click", handler);
-    };
-  }, [tocContainer, toolbarRef, selectedIds.length, setSelectedIds]);
-
-  const history = useHistory();
-
-  const selectedSketchClasses = useMemo(() => {
-    const selectedSketchClasses: number[] = [];
-    if (data?.projectBySlug?.mySketches?.length) {
-      const sketches = data.projectBySlug.mySketches;
-      if (selectedIds) {
-        for (const id of selectedIds) {
-          if (/Sketch:/.test(id)) {
-            const n = parseInt(id.split(":")[1]);
-            const sketch = sketches.find((s) => s.id === n);
-            if (
-              sketch &&
-              selectedSketchClasses.indexOf(sketch.sketchClassId) === -1
-            ) {
-              selectedSketchClasses.push(sketch.sketchClassId);
-            }
-          }
-        }
-      }
-    }
-    return selectedSketchClasses;
-  }, [data?.projectBySlug?.mySketches, selectedIds]);
-
-  const actions = useSketchActions({
+  /**
+   * List of "actions" like edit, delete, zoom to, that are relevent to the
+   * current selection. These are used directly by the toolbar, and also bundled
+   * up into DropdownOptions for the context menu.
+   *
+   * There's a lot of context passed to this hook! It would probably make equal
+   * sense to have this functionality just embedded in the component but moving
+   * it to a hook organizes functionality a bit more.
+   */
+  const { menuOptions, keyboardShortcuts, callAction } = useSketchActions({
     folderSelected: Boolean(selectedIds.find((id) => /SketchFolder:/.test(id))),
     selectedSketchClasses,
     multiple: selectedIds.length > 1,
     sketchClasses: data?.projectBySlug?.sketchClasses,
+    clearSelection,
+    focusOnTableOfContentsItem,
+    selectedIds,
+    setContextMenu,
+    setEditor,
+    setExpandedIds,
+    folders: data?.projectBySlug?.myFolders,
+    sketches: data?.projectBySlug?.mySketches,
   });
 
-  const focusOnTableOfContentsItem = useCallback(
-    (
-      type: "sketch" | "folder",
-      id: number,
-      folderId?: number | null,
-      collectionId?: number | null
-    ) => {
-      let normalizedIds: string[] = [];
-      if (folderId) {
-        normalizedIds.push(treeItemId(folderId, "SketchFolder"));
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (keyboardShortcuts.length) {
+        const shortcut = keyboardShortcuts.find(
+          (action) => action.keycode === e.key
+        );
+        if (shortcut) {
+          callAction(shortcut);
+        }
       }
-      if (collectionId) {
-        normalizedIds.push(treeItemId(collectionId, "Sketch"));
-      }
-      if (normalizedIds.length) {
-        setExpandedIds((prev) => [
-          ...prev.filter((id) => normalizedIds.indexOf(id) === -1),
-          ...normalizedIds,
-        ]);
-      }
-      setSelectedIds([
-        // eslint-disable-next-line i18next/no-literal-string
-        treeItemId(id, type === "folder" ? `SketchFolder` : `Sketch`),
-      ]);
-    },
-    [setExpandedIds, setSelectedIds]
-  );
+    };
+    document.body.addEventListener("keydown", handler);
+    return () => {
+      document.body.removeEventListener("keydown", handler);
+    };
+  }, [keyboardShortcuts, callAction]);
 
+  /**
+   * Convert GraphQL fragment data into a flat list of TreeItemI elements for
+   * feeding into TreeView
+   */
   const treeItems = useMemo(() => {
     const sketches = data?.projectBySlug?.mySketches || [];
     const folders = data?.projectBySlug?.myFolders || [];
@@ -194,175 +152,23 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     return items.sort((a, b) => a.data.name.localeCompare(b.data.name));
   }, [data?.projectBySlug?.mySketches, data?.projectBySlug?.myFolders]);
 
-  const callAction = useCallback(
-    (action: SketchAction) => {
-      action.action({
-        selectedSketches: selectedIds
-          .filter((id) => /Sketch:/.test(id))
-          .map((id) => parseInt(id.split(":")[1]))
-          .map(
-            (id) =>
-              (data?.projectBySlug?.mySketches || []).find((s) => s.id === id)!
-          ),
-        selectedFolders: selectedIds
-          .filter((id) => /SketchFolder:/.test(id))
-          .map((id) => parseInt(id.split(":")[1]))
-          .map(
-            (folderId) =>
-              (data?.projectBySlug?.myFolders || []).find(
-                ({ id }) => id === folderId
-              )!
-          ),
-        setEditor: async (options: any) => {
-          setEditor({
-            ...options,
-            loading: options.id ? true : false,
-          });
-          if (options.id) {
-            // load the sketch
-            try {
-              const response = await client.query<GetSketchForEditingQuery>({
-                query: GetSketchForEditingDocument,
-                variables: {
-                  id: options.id,
-                },
-              });
-              // then set editor state again with sketch, loading=false
-              if (response.data.sketch) {
-                setEditor((prev) => {
-                  if (prev) {
-                    return {
-                      ...prev,
-                      sketch: response.data.sketch!,
-                      loading: false,
-                      loadingTitle: undefined,
-                    };
-                  } else {
-                    return false;
-                  }
-                });
-              } else {
-                if (response.error) {
-                  throw new Error(response.error.message);
-                } else {
-                  throw new Error(
-                    "Unknown query error when retrieving sketch data"
-                  );
-                }
-              }
-            } catch (e) {
-              onError(e);
-              setEditor(false);
-            }
-          }
-        },
-        focus: focusOnTableOfContentsItem,
-        clearSelection: () => {
-          setSelectedIds([]);
-          document.body.focus();
-        },
-        collapseFolder: (id: number) => {
-          setExpandedIds((prev) => [
-            ...prev.filter((i) => i !== `SketchFolder:${id}`),
-          ]);
-        },
-      });
+  const onDragEnd = useCallback(
+    (items: ItemType[]) => {
+      for (const item of items) {
+        focusOnTableOfContentsItem(item.type, item.id);
+      }
     },
-    [
-      client,
-      data?.projectBySlug?.myFolders,
-      data?.projectBySlug?.mySketches,
-      focusOnTableOfContentsItem,
-      onError,
-      selectedIds,
-      setExpandedIds,
-      setSelectedIds,
-    ]
+    [focusOnTableOfContentsItem]
   );
 
-  const createDropdownOptions = useMemo(() => {
-    return actions.create.map(
-      (action) =>
-        ({
-          id: action.id,
-          label: action.label,
-          onClick: () => {
-            callAction(action);
-          },
-          disabled: action.disabled,
-        } as DropdownOption)
-    );
-  }, [actions.create, callAction]);
-
-  const editDropdownOptions = useMemo(() => {
-    return actions.edit.map(
-      (action) =>
-        ({
-          id: action.id,
-          label: (
-            <div className="flex">
-              <span className="flex-1">{action.label}</span>
-              {action.keycode && (
-                <span
-                  style={{ fontSize: 10 }}
-                  className="font-mono bg-gray-50 text-gray-500 py-0 rounded border border-gray-300 shadow-sm text-xs px-1 opacity-0 group-hover:opacity-100"
-                >
-                  {action.keycode}
-                </span>
-              )}
-            </div>
-          ),
-          onClick: () => {
-            callAction(action);
-          },
-          disabled: action.disabled,
-        } as DropdownOption)
-    );
-  }, [actions.edit, callAction]);
-
-  const contextMenuOptions = useMemo(() => {
-    const options: (DropdownOption | DropdownDividerProps)[] = [];
-    if (actions && callAction) {
-      for (const action of actions.edit) {
-        const { label, disabled, disabledForContextAction } = action;
-        if (!disabledForContextAction) {
-          options.push({
-            label,
-            disabled,
-            onClick: () => callAction(action),
-          });
-        }
-      }
-      const createActions = actions.create.filter(
-        (a) => !a.disabledForContextAction
-      );
-      if (createActions.length) {
-        options.push({ label: t("add new"), id: "add-new-divider" });
-        for (const action of createActions) {
-          const { id, label, disabled, disabledForContextAction } = action;
-          if (!disabledForContextAction) {
-            options.push({
-              id,
-              label,
-              disabled,
-              onClick: () => callAction(action),
-            });
-          }
-        }
-      }
-    }
-    return options;
-  }, [actions, callAction, t]);
-
-  const reservedKeyCodes = useMemo(
-    () =>
-      actions.edit
-        .filter((a) => a.keycode && !a.disabled)
-        .reduce((obj, action) => {
-          obj[action.keycode!] = action;
-          return obj;
-        }, {} as { [keycode: string]: SketchAction }),
-    [actions.edit]
+  const onDropEnd = useCallback(
+    (item: ItemType) => {
+      const id = treeItemId(item.id, item.type);
+      setExpandedIds((prev) => {
+        return [...prev.filter((eid) => eid !== id), id];
+      });
+    },
+    [setExpandedIds]
   );
 
   const [{ canDrop, isOver }, drop] = useDrop(() => ({
@@ -370,8 +176,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     accept: ["SketchFolder", "Sketch"],
     canDrop: (item, monitor) => {
       return (
-        monitor.isOver({ shallow: true }) === true &&
-        (Boolean(item.collectionId) || Boolean(item.folderId))
+        monitor.isOver({ shallow: true }) === true // &&
+        // (Boolean(item.collectionId) || Boolean(item.folderId))
       );
     },
     // Props to collect
@@ -397,40 +203,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     },
   }));
 
-  const setRef = useCallback(
-    (el: HTMLElement | null) => {
-      drop(el);
-      setTocContainer(el);
-    },
-    [drop, setTocContainer]
-  );
-
-  const onSelect = useCallback(
-    (metaKey, item, isSelected) => {
-      if (isSelected) {
-        setSelectedIds([item.id]);
-      } else {
-        setSelectedIds([]);
-      }
-    },
-    [setSelectedIds]
-  );
-
-  const onExpand = useCallback(
-    (item, isExpanded) => {
-      setExpandedIds((prev) => [
-        ...prev.filter((id) => id !== item.id),
-        ...(isExpanded ? [item.id] : []),
-      ]);
-    },
-    [setExpandedIds]
-  );
-
   const treeRenderFn = useCallback(
-    ({
-      node,
-      ...props
-    }: TreeNodeProps<FolderNodeDataProps | SketchNodeDataProps>) => {
+    ({ node, ...props }: TreeNodeProps<ItemType>) => {
       if (isFolderNode(node) && props.children) {
         return <FolderItem {...props} node={node} />;
       } else if (isSketchNode(node)) {
@@ -457,15 +231,15 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             label={
               isSmall ? <Trans>Create</Trans> : <Trans>Create New...</Trans>
             }
-            options={createDropdownOptions}
+            options={menuOptions.create}
             disabled={editor !== false}
           />
           <DropdownButton
             small
-            disabled={editDropdownOptions.length === 0}
+            disabled={menuOptions.edit.length === 0}
             alignment="left"
             label={<Trans>Edit</Trans>}
-            options={editDropdownOptions}
+            options={menuOptions.edit}
           />
           <Button
             disabled
@@ -481,23 +255,18 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
         </ProjectAppSidebarToolbar>
       )}
       <div
-        ref={setRef}
-        className={
-          isOver && canDrop
-            ? "border-blue-200 rounded-md border pt-2 pl-5 bg-blue-50"
-            : "pt-2 pl-5 border border-transparent"
-        }
+        ref={drop}
+        className={`pl-6 pt-4 pr-4 pb-8 border-l-8 border-transparent ${
+          isOver && canDrop ? " bg-blue-100 border-blue-500" : ""
+        }`}
       >
-        {contextMenu?.target &&
-          // onActionSelected &&
-          actions &&
-          actions.edit.length > 0 && (
-            <ContextMenuDropdown
-              options={contextMenuOptions}
-              target={contextMenu.target}
-              offsetX={contextMenu.offsetX}
-            />
-          )}
+        {contextMenu?.target && (
+          <ContextMenuDropdown
+            options={menuOptions.contextMenu}
+            target={contextMenu.target}
+            offsetX={contextMenu.offsetX}
+          />
+        )}
         <div>
           {!data && loading && (
             <div className="pt-2 space-y-2">
@@ -522,6 +291,9 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               items={treeItems}
               render={treeRenderFn}
               ariaLabel="My Sketches"
+              clearSelection={clearSelection}
+              onDragEnd={onDragEnd}
+              onDropEnd={onDropEnd}
             />
           )}
         </div>
@@ -537,7 +309,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             history.replace(`/${getSlug()}/app/sketches`);
             setEditor(false);
             focusOnTableOfContentsItem(
-              "sketch",
+              "Sketch",
               item.id,
               item.folderId || undefined,
               item.collectionId || undefined

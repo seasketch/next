@@ -1,5 +1,5 @@
 import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
-import { useCallback, useState } from "react";
+import { MouseEventHandler, useCallback } from "react";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import ArrowIcon from "./ArrowIcon";
 import { useDrag, useDrop } from "react-dnd";
@@ -33,6 +33,8 @@ function FolderItem({
   children,
   isContextMenuTarget,
   updateContextMenuTargetRef,
+  onDragEnd,
+  onDropEnd,
 }: TreeNodeProps<FolderNodeDataProps>) {
   const data = node.data;
   const isDisabled = false;
@@ -49,35 +51,38 @@ function FolderItem({
       type: "SketchFolder",
       folderId: data.folderId,
       collectionId: data.collectionId,
-    },
+    } as FolderNodeDataProps,
     end(draggedItem, monitor) {
-      // if (onDragEnd) {
-      //   onDragEnd([{ type: "folder", id: draggedItem.originalId }]);
-      // }
+      if (onDragEnd) {
+        onDragEnd([draggedItem]);
+      }
     },
   }));
 
-  const [{ canDrop, isOver }, drop] = useDrop(() => ({
+  const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
-    canDrop: (item: FolderNodeDataProps) => {
-      if (item.id === data.id || data.folderId === item.folderId) {
+    canDrop: (item: FolderNodeDataProps, monitor) => {
+      if (item.id === data.id) {
         return false;
       }
       return true;
     },
     // Props to collect
     collect: (monitor) => ({
-      isOver: monitor.isOver(),
+      isOverCurrent: monitor.isOver({ shallow: true }),
       canDrop: monitor.canDrop(),
     }),
-    drop: (item) => {
+    drop: (item, monitor) => {
+      if (monitor.didDrop()) {
+        return;
+      }
       (item.type === "SketchFolder" ? dropFolder : dropSketch)(item.id, {
         collectionId: null,
         folderId: data.id,
       });
-      // if (onDropEnd) {
-      //   onDropEnd([{ type: "folder", id: data.originalId }]);
-      // }
+      if (onDropEnd) {
+        onDropEnd(data);
+      }
     },
   }));
 
@@ -85,54 +90,73 @@ function FolderItem({
     (el: any) => {
       drag(el);
       drop(el);
-      // if (updateContextMenuTargetRef && isContextMenuTarget) {
-      //   updateContextMenuTargetRef(el);
-      // }
     },
-    [drag, drop, isContextMenuTarget, updateContextMenuTargetRef]
+    [drag, drop]
   );
 
-  let className = "border border-transparent";
+  let className = "";
   if (isSelected) {
-    className = "bg-blue-200 border border-transparent";
+    className = "bg-blue-200";
   }
   if (isDragging) {
-    className = "bg-gray-200 border border-transparent";
+    className = "bg-gray-200";
   }
-  if (isOver && canDrop) {
-    className = "border-blue-200 rounded-md border bg-blue-100";
+  if (isOverCurrent && canDrop) {
+    className = "bg-blue-300";
   }
+
+  const updateSelectionOnClick: MouseEventHandler<any> = useCallback(
+    (e) => {
+      if (onSelect) {
+        onSelect(e.metaKey, node, !isSelected);
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    [onSelect, node, isSelected]
+  );
+
+  const contextMenuHandler: MouseEventHandler<any> = useCallback(
+    (e) => {
+      if (onContextMenu) {
+        if (onSelect && !isSelected) {
+          onSelect(e.metaKey, node, !isSelected);
+        }
+        var rect = e.currentTarget.getBoundingClientRect();
+        var offsetX = e.clientX - rect.left; //x position within the element.
+        onContextMenu(node, e.currentTarget, offsetX);
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    },
+    [isSelected, node, onContextMenu, onSelect]
+  );
 
   return (
     <div
+      data-node-id={node.id}
       ref={attachRef}
       style={{
-        marginLeft: 35 * (level - 1) - 18,
+        marginLeft: -15,
         opacity: isDisabled ? 0.5 : 1,
         paddingLeft: 0,
       }}
-      className={`my-0.5 rounded ${
-        isSelected
+      className={`rounded ${
+        isOverCurrent && !isDragging
+          ? "bg-blue-100 border-blue-400 border"
+          : isSelected && !isDragging
           ? "bg-blue-50 border-blue-200 border"
           : "border border-transparent"
-      } ${isContextMenuTarget ? "italic" : ""}`}
+      }`}
+      onClick={(e) => {
+        if (isSelected && onSelect) {
+          onSelect(e.metaKey, node, false);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
     >
-      <span
-        ref={isContextMenuTarget ? updateContextMenuTargetRef : undefined}
-        className={`flex items-center text-sm space-x-0.5 ${className}`}
-        onContextMenu={(e) => {
-          if (onContextMenu) {
-            if (onSelect) {
-              onSelect(e.metaKey, node, !isSelected);
-            }
-            var rect = e.currentTarget.getBoundingClientRect();
-            var offsetX = e.clientX - rect.left; //x position within the element.
-            onContextMenu(node, e.currentTarget, offsetX);
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
-      >
+      <span className={`flex items-center text-sm space-x-0.5 ${className}`}>
         {
           <button
             title={numChildren === 0 ? "Empty" : "Expand"}
@@ -156,19 +180,23 @@ function FolderItem({
           />
         }{" "}
         {isExpanded ? (
-          <FolderOpenIcon className="w-6 h-6 text-primary-500" />
+          <FolderOpenIcon
+            onContextMenu={contextMenuHandler}
+            onClick={updateSelectionOnClick}
+            className="w-6 h-6 text-primary-500"
+          />
         ) : (
-          <FolderIcon className="w-6 h-6 text-primary-500" />
+          <FolderIcon
+            onContextMenu={contextMenuHandler}
+            onClick={updateSelectionOnClick}
+            className="w-6 h-6 text-primary-500"
+          />
         )}
         <span
-          className="px-1 cursor-pointer select-none"
-          onClick={(e) => {
-            if (onSelect) {
-              onSelect(e.metaKey, node, !isSelected);
-            }
-            e.preventDefault();
-            e.stopPropagation();
-          }}
+          ref={isContextMenuTarget ? updateContextMenuTargetRef : undefined}
+          className="py-1 px-1 cursor-pointer select-none truncate flex-1"
+          onClick={updateSelectionOnClick}
+          onContextMenu={contextMenuHandler}
         >
           {data.name}
         </span>

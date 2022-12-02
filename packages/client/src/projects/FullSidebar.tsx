@@ -1,9 +1,8 @@
-import React, { ReactNode, useContext, useEffect } from "react";
+import { ReactNode, useContext, useEffect } from "react";
 import { Link, useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import {
-  AdminIcon,
   ForumsIcon,
   LayerIcon,
   MapIcon,
@@ -11,13 +10,11 @@ import {
 } from "./MiniSidebarButtons";
 import logo from "../header/seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
-import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
-import { StatusOfflineIcon } from "@heroicons/react/outline";
 import SignedInAs from "../components/SignedInAs";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
-import { ParticipationStatus, ProjectAccessStatus } from "../generated/graphql";
+import { ParticipationStatus } from "../generated/graphql";
 import { CogIcon } from "@heroicons/react/solid";
 
 export default function FullSidebar({
@@ -33,7 +30,7 @@ export default function FullSidebar({
   const { t } = useTranslation("sidebar");
   const { slug } = useParams<{ slug: string }>();
   const { loginWithRedirect } = useAuth0();
-  const { data, loading, error, refetch } = useCurrentProjectMetadata();
+  const { data } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
   const cache = useContext(GraphqlQueryCacheContext);
 
@@ -51,7 +48,7 @@ export default function FullSidebar({
         history.push(window.location.pathname);
       }
     }
-  }, [window.location.search]);
+  }, [data?.project?.sessionParticipationStatus, history, slug]);
 
   const chooseSidebar = (sidebar: string) => () => {
     history.replace(`/${slug}/app/${sidebar}`);

@@ -26,6 +26,7 @@ const ProjectAppSidebar: React.FunctionComponent<{
   dark: boolean;
   toolbar?: HTMLDivElement | null;
   hidden?: boolean;
+  noPadding?: boolean;
 }> = (props) => {
   const [toolbarDiv, setToolbarDiv] = useState<HTMLDivElement | null>(null);
   const isSmall = useMediaQuery("(max-width: 1535px)");
@@ -79,7 +80,11 @@ const ProjectAppSidebar: React.FunctionComponent<{
       </div>
       <div ref={setToolbarDiv}></div>
       <ProjectAppSidebarContext.Provider value={{ toolbarDiv, isSmall }}>
-        <div className="childin p-4 pt-2 flex-1 overflow-y-auto">
+        <div
+          className={`childin ${
+            props.noPadding ? "" : "p-4 pt-2"
+          } flex-1 overflow-y-auto`}
+        >
           {props.children}
         </div>
       </ProjectAppSidebarContext.Provider>
@@ -107,7 +112,7 @@ export const ProjectAppSidebarToolbar = React.forwardRef<
   if (target) {
     return createPortal(
       <div
-        className="bg-gray-100 p-2 px-4 flex items-center space-x-2 border-b shadow-sm"
+        className="bg-gray-100 p-2 px-4 flex items-center space-x-2 border-b shadow-sm toolbarParentContainer"
         // @ts-ignore
         ref={ref}
       >

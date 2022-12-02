@@ -1,6 +1,4 @@
 import { useMemo, FC, useCallback, SetStateAction } from "react";
-import { DropdownDividerProps } from "../ContextMenuDropdown";
-import { DropdownOption } from "../DropdownButton";
 
 export interface TreeItemI<T> {
   id: string;
@@ -38,6 +36,11 @@ interface TreeViewProps<T> {
     >
   ) => void;
   render: FC<TreeNodeProps<T>>;
+  clearSelection?: () => void;
+  onDragEnd?: (items: T[]) => void;
+  onDropEnd?: (item: T) => void;
+  /** Amount of padding to give child lists. Defaults to 35px */
+  childGroupPadding?: number;
 }
 
 type ChildGroupRenderer<T> = FC<{
@@ -65,6 +68,8 @@ export interface TreeNodeProps<T> {
     offsetX: number
   ) => void;
   updateContextMenuTargetRef: (el: HTMLElement) => void;
+  onDragEnd?: (items: T[]) => void;
+  onDropEnd?: (item: T) => void;
 }
 
 interface TreeNode<T> {
@@ -81,6 +86,10 @@ export default function TreeView<T>({
   onExpand,
   setContextMenu,
   contextMenuItemId,
+  clearSelection,
+  onDragEnd,
+  onDropEnd,
+  childGroupPadding,
   ...props
 }: TreeViewProps<T>) {
   const Render = props.render;
@@ -154,7 +163,17 @@ export default function TreeView<T>({
   const ChildGroup: ChildGroupRenderer<any> = useCallback(
     (props: { items: TreeNode<any>[] }) => {
       return (
-        <ul role="group">
+        <ul
+          role="group"
+          onClick={(e) => {
+            if (clearSelection) {
+              clearSelection();
+            }
+          }}
+          style={{
+            paddingLeft: childGroupPadding || 35,
+          }}
+        >
           {props.items.map((item) => (
             <Render
               key={item.node.id}
@@ -168,12 +187,24 @@ export default function TreeView<T>({
               children={item.children}
               isContextMenuTarget={item.isContextMenuTarget}
               updateContextMenuTargetRef={updateContextMenuTargetRef}
+              onDragEnd={onDragEnd}
+              onDropEnd={onDropEnd}
             />
           ))}
         </ul>
       );
     },
-    [Render, onExpand, onSelect, onContextMenu, updateContextMenuTargetRef]
+    [
+      childGroupPadding,
+      clearSelection,
+      Render,
+      onExpand,
+      onSelect,
+      onContextMenu,
+      updateContextMenuTargetRef,
+      onDragEnd,
+      onDropEnd,
+    ]
   );
 
   return (
@@ -195,6 +226,8 @@ export default function TreeView<T>({
           ChildGroup={ChildGroup}
           isContextMenuTarget={item.isContextMenuTarget}
           updateContextMenuTargetRef={updateContextMenuTargetRef}
+          onDragEnd={onDragEnd}
+          onDropEnd={onDropEnd}
         />
       ))}
     </ul>

@@ -52,8 +52,15 @@ export default function useExpandedIds(
     }
   }, [cleanupExpandedState, slug, cleanupWasRun, sketches, folders]);
 
-  return [expandedIds, setExpandedIds] as [
-    string[],
-    (val: string[] | ((prev: string[]) => string[])) => void
-  ];
+  const onExpand = useCallback(
+    (item: any, isExpanded: boolean) => {
+      setExpandedIds((prev) => [
+        ...prev.filter((id) => id !== item.id),
+        ...(isExpanded ? [item.id] : []),
+      ]);
+    },
+    [setExpandedIds]
+  );
+
+  return { expandedIds, setExpandedIds, onExpand };
 }

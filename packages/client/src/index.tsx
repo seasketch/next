@@ -1,5 +1,5 @@
 import "./wdyr";
-import React, { Suspense, useContext, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import App from "./App";
