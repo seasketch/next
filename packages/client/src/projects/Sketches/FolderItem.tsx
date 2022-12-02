@@ -22,7 +22,6 @@ export function isFolderNode(
 
 function FolderItem({
   onSelect,
-  level,
   isSelected,
   onContextMenu,
   isExpanded,
@@ -62,7 +61,11 @@ function FolderItem({
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
     canDrop: (item: FolderNodeDataProps, monitor) => {
-      if (item.id === data.id) {
+      if (
+        item.id === data.id ||
+        data.folderId === item.id ||
+        data.collectionId === item.id
+      ) {
         return false;
       }
       return true;
@@ -142,7 +145,7 @@ function FolderItem({
         paddingLeft: 0,
       }}
       className={`rounded ${
-        isOverCurrent && !isDragging
+        isOverCurrent && !isDragging && canDrop
           ? "bg-blue-100 border-blue-400 border"
           : isSelected && !isDragging
           ? "bg-blue-50 border-blue-200 border"

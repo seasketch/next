@@ -29,7 +29,6 @@ import Skeleton from "../../components/Skeleton";
 import useExpandedIds from "./useExpandedIds";
 import LoginPrompt from "./LoginPrompt";
 import useSketchingSelectionState from "./useSketchingSelectionState";
-import { ETIME } from "constants";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
