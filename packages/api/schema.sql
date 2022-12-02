@@ -4405,13 +4405,7 @@ CREATE TABLE public.sketch_folders (
 -- Name: TABLE sketch_folders; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.sketch_folders IS '
-@omit all
-SketchFolders can be used by users to organize their sketches. Collection-type
-sketches can be used to organize sketches as well, but they are limited in that 
-they cannot be nested, and also represent specific management semantics. Folders
-can be used by users to arbitrarily organize their Sketches.
-';
+COMMENT ON TABLE public.sketch_folders IS '@omit create';
 
 
 --
@@ -18008,7 +18002,7 @@ GRANT ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integ
 -- Name: TABLE sketch_folders; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT,REFERENCES,DELETE,TRIGGER,TRUNCATE,UPDATE ON TABLE public.sketch_folders TO seasketch_user;
+GRANT ALL ON TABLE public.sketch_folders TO seasketch_user;
 
 
 --

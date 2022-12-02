@@ -29,6 +29,7 @@ import Skeleton from "../../components/Skeleton";
 import useExpandedIds from "./useExpandedIds";
 import LoginPrompt from "./LoginPrompt";
 import useSketchingSelectionState from "./useSketchingSelectionState";
+import { ETIME } from "constants";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -126,6 +127,11 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // @ts-ignore
+      const tagName = e.target?.tagName || "";
+      if (["INPUT", "BUTTON", "TEXTAREA"].indexOf(tagName) !== -1) {
+        return;
+      }
       if (keyboardShortcuts.length) {
         const shortcut = keyboardShortcuts.find(
           (action) => action.keycode === e.key

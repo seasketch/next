@@ -8853,6 +8853,8 @@ export type Query = Node & {
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
+  /** Reads and enables pagination through a set of `SketchFolder`. */
+  sketchFoldersConnection?: Maybe<SketchFoldersConnection>;
   sprite?: Maybe<Sprite>;
   /** Reads a single `Sprite` using its globally unique `ID`. */
   spriteByNodeId?: Maybe<Sprite>;
@@ -9489,6 +9491,18 @@ export type QuerySketchFolderArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchFoldersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SketchFolderCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
 };
 
 
@@ -10297,12 +10311,6 @@ export enum SketchClassesOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
-/**
- * SketchFolders can be used by users to organize their sketches. Collection-type
- * sketches can be used to organize sketches as well, but they are limited in that
- * they cannot be nested, and also represent specific management semantics. Folders
- * can be used by users to arbitrarily organize their Sketches.
- */
 export type SketchFolder = Node & {
   __typename?: 'SketchFolder';
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
@@ -10317,6 +10325,17 @@ export type SketchFolder = Node & {
   userId: Scalars['Int'];
 };
 
+/**
+ * A condition to be used against `SketchFolder` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type SketchFolderCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `userId` field. */
+  userId?: Maybe<Scalars['Int']>;
+};
+
 /** Represents an update to a `SketchFolder`. Fields that are set will be updated. */
 export type SketchFolderPatch = {
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
@@ -10327,6 +10346,19 @@ export type SketchFolderPatch = {
   name?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
   userId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `SketchFolder` values. */
+export type SketchFoldersConnection = {
+  __typename?: 'SketchFoldersConnection';
+  /** A list of edges which contains the `SketchFolder` and cursor to aid in pagination. */
+  edges: Array<SketchFoldersEdge>;
+  /** A list of `SketchFolder` objects. */
+  nodes: Array<SketchFolder>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `SketchFolder` you could get from the connection. */
+  totalCount: Scalars['Int'];
 };
 
 /** A `SketchFolder` edge in the connection. */

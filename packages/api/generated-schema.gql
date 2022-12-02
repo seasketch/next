@@ -10399,6 +10399,35 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SketchFolder
+
+  """Reads and enables pagination through a set of `SketchFolder`."""
+  sketchFoldersConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SketchFolderCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SketchFolder`."""
+    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchFoldersConnection
   sprite(id: Int!): Sprite
 
   """Reads a single `Sprite` using its globally unique `ID`."""
@@ -11315,13 +11344,6 @@ input SketchClassPatch {
   templateDescription: String
 }
 
-"""
-SketchFolders can be used by users to organize their sketches. Collection-type
-sketches can be used to organize sketches as well, but they are limited in that 
-they cannot be nested, and also represent specific management semantics. Folders
-can be used by users to arbitrarily organize their Sketches.
-
-"""
 type SketchFolder implements Node {
   """
   The parent sketch collection, if any. Folders can only have a single parent entity.
@@ -11342,6 +11364,18 @@ type SketchFolder implements Node {
 }
 
 """
+A condition to be used against `SketchFolder` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input SketchFolderCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `userId` field."""
+  userId: Int
+}
+
+"""
 Represents an update to a `SketchFolder`. Fields that are set will be updated.
 """
 input SketchFolderPatch {
@@ -11356,6 +11390,23 @@ input SketchFolderPatch {
   name: String
   projectId: Int
   userId: Int
+}
+
+"""A connection to a list of `SketchFolder` values."""
+type SketchFoldersConnection {
+  """
+  A list of edges which contains the `SketchFolder` and cursor to aid in pagination.
+  """
+  edges: [SketchFoldersEdge!]!
+
+  """A list of `SketchFolder` objects."""
+  nodes: [SketchFolder!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `SketchFolder` you could get from the connection."""
+  totalCount: Int!
 }
 
 """A `SketchFolder` edge in the connection."""
