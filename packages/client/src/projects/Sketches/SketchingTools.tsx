@@ -29,6 +29,7 @@ import Skeleton from "../../components/Skeleton";
 import useExpandedIds from "./useExpandedIds";
 import LoginPrompt from "./LoginPrompt";
 import useSketchingSelectionState from "./useSketchingSelectionState";
+import useSketchVisibilityState from "./useSketchVisibilityState";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -49,6 +50,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   });
 
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
+  const { visibleSketches, setVisibleSketches, onChecked } =
+    useSketchVisibilityState();
 
   const { expandedIds, setExpandedIds, onExpand } = useExpandedIds(
     getSlug(),
@@ -299,6 +302,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               clearSelection={clearSelection}
               onDragEnd={onDragEnd}
               onDropEnd={onDropEnd}
+              checkedItems={visibleSketches}
+              onChecked={onChecked}
             />
           )}
         </div>

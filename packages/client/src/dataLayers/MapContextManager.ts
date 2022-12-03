@@ -12,6 +12,7 @@ import mapboxgl, {
   AnySourceData,
   AnyLayer,
   VectorSource,
+  GeoJSONSource,
 } from "mapbox-gl";
 import {
   createContext,
@@ -22,7 +23,6 @@ import {
 } from "react";
 import { BBox, Feature, Polygon } from "geojson";
 import {
-  Basemap,
   BasemapDetailsFragment,
   DataLayer,
   DataSource as GeneratedDataSource,
@@ -47,6 +47,11 @@ import { useParams } from "react-router";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 import md5 from "md5";
+import useAccessToken from "../useAccessToken";
+
+const graphqlURL = new URL(process.env.REACT_APP_GRAPHQL_ENDPOINT);
+
+const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
 
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -56,11 +61,6 @@ interface LayerState {
   loading: boolean;
   error?: Error;
 }
-
-// export type SourceInstance =
-//   | MapBoxSource
-//   | ArcGISVectorSource
-//   | WMSSource;
 
 export type ClientDataSource = Pick<
   GeneratedDataSource,
@@ -123,43 +123,6 @@ export type ClientDataLayer = Pick<
 };
 
 export type ClientBasemap = BasemapDetailsFragment;
-// Pick<
-//   Basemap,
-//   | "id"
-//   | "attribution"
-//   | "type"
-//   | "description"
-//   | "name"
-//   | "projectId"
-//   | "labelsLayerId"
-//   | "terrainExaggeration"
-//   | "terrainMaxZoom"
-//   | "terrainOptional"
-//   | "terrainTileSize"
-//   | "terrainUrl"
-//   | "terrainVisibilityDefault"
-//   | "thumbnail"
-//   | "tileSize"
-//   | "url"
-// > & {
-//   optionalBasemapLayers: Pick<
-//     OptionalBasemapLayer,
-//     | "basemapId"
-//     | "id"
-//     | "options"
-//     | "name"
-//     | "groupType"
-//     | "defaultVisibility"
-//     | "description"
-//     | "layers"
-//     | "metadata"
-//   >[];
-// } & {
-//   interactivitySettings?: Pick<
-//     InteractivitySetting,
-//     "id" | "cursor" | "layers" | "longTemplate" | "shortTemplate" | "type"
-//   >;
-// };
 
 class MapContextManager {
   map?: Map;
@@ -181,6 +144,7 @@ class MapContextManager {
   private mapContainer?: HTMLDivElement;
   private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
   private basemapsWereSet = false;
+  private userAccessToken?: string | null;
 
   constructor(
     initialState: MapContextInterface,
@@ -251,6 +215,10 @@ class MapContextManager {
     }));
   };
 
+  setToken(token: string | null | undefined) {
+    this.userAccessToken = token;
+  }
+
   /**
    * Call whenever the context will be replaced or no longer used
    */
@@ -316,6 +284,13 @@ class MapContextManager {
           url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
         } else {
           const Url = new URL(url);
+          if (
+            this.userAccessToken &&
+            Url.host === graphqlURL.host &&
+            /\/sketches\/\d+\.geojson.json/.test(url)
+          ) {
+            Url.searchParams.set("token", this.userAccessToken);
+          }
           Url.searchParams.set("ssn-tr", "true");
           url = Url.toString();
         }
@@ -679,6 +654,29 @@ class MapContextManager {
     }
   }
 
+  setVisibleSketches(sketchIds: number[]) {
+    // remove missing ids from internal state
+    for (const id in this.internalState.sketchLayerStates) {
+      if (sketchIds.indexOf(parseInt(id)) === -1) {
+        delete this.internalState.sketchLayerStates[parseInt(id)];
+      }
+    }
+    // add new sketches to internal state
+    for (const id of sketchIds) {
+      this.internalState.sketchLayerStates[id] = {
+        loading: true,
+        visible: true,
+      };
+    }
+    // update public state
+    this.setState((prev) => ({
+      ...prev,
+      sketchLayerStates: this.internalState.sketchLayerStates,
+    }));
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
   async getComputedStyle(): Promise<{ style: Style; sprites: ClientSprite[] }> {
     this.resetLayersByZIndex();
     let sprites: ClientSprite[] = [];
@@ -1040,6 +1038,32 @@ class MapContextManager {
       }
     });
 
+    // Add sketches
+    for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
+      const id = parseInt(stringId);
+      baseStyle.sources[`sketch-${id}`] = {
+        type: "geojson",
+        data: `${
+          BASE_SERVER_ENDPOINT +
+          // eslint-disable-next-line i18next/no-literal-string
+          `/sketches/${id}.geojson.json`
+        }`,
+      };
+      baseStyle.layers.push({
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-fill`,
+        type: "fill",
+        // eslint-disable-next-line i18next/no-literal-string
+        source: `sketch-${id}`,
+        paint: {
+          "fill-color": "orange",
+          "fill-outline-color": "red",
+          "fill-opacity": 0.5,
+        },
+        layout: {},
+      });
+    }
+
     if (this.internalState.offlineTileSimulatorActive) {
       // find and update composite source
       const composite = baseStyle.sources["composite"] as VectorSource;
@@ -1166,32 +1190,7 @@ class MapContextManager {
     }
   }
 
-  // private isSourceLoading(id: string) {
-  //   // let loaded = this.map.isSourceLoaded(id);
-  //   let loading = false;
-  //   const instance = this.sourceCache[id];
-  //   // if (instance) {
-  //   //   return this.arcgisVectorSourceCache.isSourceLoading(id);
-  //   // } else {
-  //     loading = !this.map!.isSourceLoaded(id);
-  //   }
-  //   return loading;
-  // }
-
   highlightLayer(layerId: string) {}
-
-  // private resetPromise: Promise<any> | undefined;
-  // // prevent reset from being called multiple times before completion
-  // async reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
-  //   if (this.resetPromise) {
-  //     return this.resetPromise;
-  //     // this._reset(sources, layers);
-  //   } else {
-  //     this.resetPromise = this._reset(sources, layers);
-  //     await this.resetPromise;
-  //     delete this.resetPromise;
-  //   }
-  // }
 
   reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
     this.clientDataSources = {};
@@ -1492,6 +1491,7 @@ export interface Tooltip {
 
 export interface MapContextInterface {
   layerStates: { [id: string]: LayerState };
+  sketchLayerStates: { [id: number]: LayerState };
   manager?: MapContextManager;
   bannerMessages: string[];
   tooltip?: Tooltip;
@@ -1535,6 +1535,7 @@ export function useMapContext(options?: MapContextOptions) {
   const { preferencesKey, cacheSize, bounds, camera, containerPortal } =
     options || {};
   let initialState: MapContextInterface = {
+    sketchLayerStates: {},
     layerStates: {},
     bannerMessages: [],
     fixedBlocks: [],
@@ -1544,6 +1545,7 @@ export function useMapContext(options?: MapContextOptions) {
     styleHash: "",
     containerPortal: containerPortal || null,
   };
+  const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
   const { slug } = useParams<{ slug: string }>();
   if (preferencesKey) {
@@ -1575,7 +1577,7 @@ export function useMapContext(options?: MapContextOptions) {
     }
   }
   const [state, setState] = useState<MapContextInterface>(initialState);
-  const { data, loading, error } = useProjectRegionQuery({
+  const { data, error } = useProjectRegionQuery({
     variables: {
       slug,
     },
@@ -1594,7 +1596,12 @@ export function useMapContext(options?: MapContextOptions) {
       manager,
     };
     setState(newState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    state.manager?.setToken(token);
+  }, [token, state.manager]);
 
   useEffect(() => {
     if (error) {
@@ -1603,16 +1610,18 @@ export function useMapContext(options?: MapContextOptions) {
     if (data?.projectBySlug?.region.geojson && state.manager) {
       state.manager.setProjectBounds(data.projectBySlug.region.geojson);
     }
-  }, [data?.projectBySlug, state.manager]);
+  }, [data?.projectBySlug, error, state.manager]);
   return state;
 }
 
 export const MapContext = createContext<MapContextInterface>({
   layerStates: {},
+  sketchLayerStates: {},
   styleHash: "",
   manager: new MapContextManager(
     {
       layerStates: {},
+      sketchLayerStates: {},
       bannerMessages: [],
       fixedBlocks: [],
       ready: false,

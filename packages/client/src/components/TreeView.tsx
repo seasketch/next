@@ -17,6 +17,8 @@ interface TreeViewProps<T> {
   selection?: string[];
   /** Array of string IDs to expand (if children are present). Acts as a controlled component */
   expanded?: string[];
+  /** Items that should be checked. Mostly for map viewers */
+  checkedItems?: string[];
   /* Should update selection prop */
   onSelect?: (
     metaKey: boolean,
@@ -25,6 +27,7 @@ interface TreeViewProps<T> {
   ) => void;
   /* Should update expanded prop */
   onExpand?: (node: TreeItemI<T>, isExpanded: boolean) => void;
+  onChecked?: (ids: string[], isChecked: boolean) => void;
   contextMenuItemId?: string;
   setContextMenu?: (
     value: SetStateAction<
@@ -71,6 +74,13 @@ export interface TreeNodeProps<T> {
   updateContextMenuTargetRef: (el: HTMLElement) => void;
   onDragEnd?: (items: T[]) => void;
   onDropEnd?: (item: T) => void;
+  onChecked?: (
+    node: TreeItemI<T>,
+    isChecked: boolean,
+    children?: TreeNode<T>[]
+  ) => void;
+  isChecked: boolean;
+  hasCheckedChildren: boolean;
 }
 
 interface TreeNode<T> {
@@ -80,6 +90,8 @@ interface TreeNode<T> {
   level: number;
   children: TreeNode<T>[];
   isContextMenuTarget: boolean;
+  isChecked: boolean;
+  hasCheckedChildren: boolean;
 }
 
 export default function TreeView<T>({
@@ -91,6 +103,8 @@ export default function TreeView<T>({
   onDragEnd,
   onDropEnd,
   childGroupPadding,
+  checkedItems,
+  onChecked,
   ...props
 }: TreeViewProps<T>) {
   const Render = props.render;
@@ -107,6 +121,10 @@ export default function TreeView<T>({
         level: 1,
         children: [],
         isContextMenuTarget: contextMenuItemId === item.id,
+        isChecked: Boolean(
+          checkedItems && checkedItems?.indexOf(item.id) !== -1
+        ),
+        hasCheckedChildren: false,
       };
       map.set(item.id, node);
       return map;
@@ -128,19 +146,61 @@ export default function TreeView<T>({
       }
     }
 
-    // recursively set node.parents
-    function addParents(node: TreeNode<any>, parents: string[]) {
+    // recursively set node.parents and hasCheckedChildren
+    function addParentsAndGetVisibility(
+      node: TreeNode<any>,
+      parents: string[]
+    ) {
       node.node.parents.push(...parents);
+      let anyVisibleChildren = false;
       for (const child of node.children) {
-        addParents(child, [...node.node.parents, node.node.id]);
+        child.hasCheckedChildren = addParentsAndGetVisibility(child, [
+          ...node.node.parents,
+          node.node.id,
+        ]);
+        if (child.hasCheckedChildren || child.isChecked) {
+          anyVisibleChildren = true;
+        }
       }
+      node.hasCheckedChildren = anyVisibleChildren;
+      return anyVisibleChildren;
     }
 
     for (const node of nodes) {
-      addParents(node, []);
+      node.hasCheckedChildren = addParentsAndGetVisibility(node, []);
     }
     return nodes;
-  }, [props.items, props.selection, props.expanded, contextMenuItemId]);
+  }, [
+    props.items,
+    props.expanded,
+    props.selection,
+    contextMenuItemId,
+    checkedItems,
+  ]);
+
+  const handleChecked = useCallback(
+    (item: TreeItemI<T>, isChecked: boolean, children?: TreeNode<T>[]) => {
+      if (onChecked) {
+        function getIds(item: TreeNode<T>, ids: string[]) {
+          ids.push(item.node.id);
+          if (item.children) {
+            for (const child of item.children) {
+              getIds(child, ids);
+            }
+          }
+          return ids;
+        }
+        const ids = [item.id];
+        if (children) {
+          for (const child of children) {
+            getIds(child, ids);
+          }
+        }
+        onChecked(ids, isChecked);
+      }
+    },
+    [onChecked]
+  );
 
   const updateContextMenuTargetRef = useCallback(
     (el: HTMLElement) => {
@@ -202,6 +262,7 @@ export default function TreeView<T>({
               updateContextMenuTargetRef={updateContextMenuTargetRef}
               onDragEnd={onDragEnd}
               onDropEnd={onDropEnd}
+              onChecked={handleChecked}
             />
           ))}
         </ul>
@@ -217,6 +278,7 @@ export default function TreeView<T>({
       updateContextMenuTargetRef,
       onDragEnd,
       onDropEnd,
+      handleChecked,
     ]
   );
 
@@ -241,6 +303,7 @@ export default function TreeView<T>({
           updateContextMenuTargetRef={updateContextMenuTargetRef}
           onDragEnd={onDragEnd}
           onDropEnd={onDropEnd}
+          onChecked={handleChecked}
         />
       ))}
     </ul>

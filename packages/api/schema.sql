@@ -9526,6 +9526,40 @@ COMMENT ON FUNCTION public.shared_basemaps() IS '
 
 
 --
+-- Name: sketch_as_geojson(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketch_as_geojson(id integer) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    output jsonb;
+  begin
+    SELECT json_build_object(
+      'type', 'Feature',
+      'type',       'Feature',
+      'id',         sketches.id,
+      'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
+      'bbox', sketches.bbox,
+      'properties', 
+        sketches.properties::jsonb || 
+        to_jsonb(
+          json_build_object(
+            'user_id', sketches.user_id, 
+            'collection_id', sketches.collection_id, 
+            'name', sketches.name
+          )
+        )
+    ) 
+    FROM sketches
+    where sketches.id = sketch_as_geojson.id 
+    into output;
+    return output;
+  end;
+$$;
+
+
+--
 -- Name: sketch_classes_can_digitize(public.sketch_classes); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16257,6 +16291,7 @@ REVOKE ALL ON FUNCTION public._create_sketch_class(name text, project_id integer
 --
 
 REVOKE ALL ON FUNCTION public.geography(public.geography, integer, boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography(public.geography, integer, boolean) TO anon;
 
 
 --
@@ -18615,6 +18650,7 @@ REVOKE ALL ON FUNCTION public.geog_brin_inclusion_add_value(internal, internal, 
 --
 
 REVOKE ALL ON FUNCTION public.geography(bytea) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography(bytea) TO anon;
 
 
 --
@@ -18622,6 +18658,7 @@ REVOKE ALL ON FUNCTION public.geography(bytea) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geography(public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 
 
 --
@@ -21413,6 +21450,14 @@ GRANT ALL ON FUNCTION public.shared_basemaps() TO anon;
 
 
 --
+-- Name: FUNCTION sketch_as_geojson(id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketch_as_geojson(id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketch_as_geojson(id integer) TO anon;
+
+
+--
 -- Name: FUNCTION sketch_classes_can_digitize(sketch_class public.sketch_classes); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21610,6 +21655,7 @@ REVOKE ALL ON FUNCTION public.st_angle(pt1 public.geometry, pt2 public.geometry,
 --
 
 REVOKE ALL ON FUNCTION public.st_area(text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_area(text) TO anon;
 
 
 --
@@ -21617,6 +21663,7 @@ REVOKE ALL ON FUNCTION public.st_area(text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_area(public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_area(public.geometry) TO anon;
 
 
 --
@@ -21624,6 +21671,7 @@ REVOKE ALL ON FUNCTION public.st_area(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_area(geog public.geography, use_spheroid boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_area(geog public.geography, use_spheroid boolean) TO anon;
 
 
 --

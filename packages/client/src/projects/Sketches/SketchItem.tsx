@@ -27,6 +27,11 @@ export default function SketchItem({
   isContextMenuTarget,
   updateContextMenuTargetRef,
   onDragEnd,
+  isChecked,
+  onChecked,
+  hasCheckedChildren,
+  children,
+  numChildren,
 }: TreeNodeProps<SketchNodeDataProps>) {
   const isDisabled = false;
   const data = node.data;
@@ -96,7 +101,6 @@ export default function SketchItem({
         }
       }}
       style={{
-        // marginLeft: 35 * (level - 1) - 1,
         opacity: isDisabled ? 0.5 : 1,
         paddingLeft: 3,
       }}
@@ -109,9 +113,14 @@ export default function SketchItem({
         style={{ paddingTop: 2, paddingBottom: 2 }}
       >
         <VisibilityCheckbox
-          disabled={Boolean(isDisabled)}
+          onClick={() => {
+            if (onChecked) {
+              onChecked(node, !isChecked && !hasCheckedChildren, children);
+            }
+          }}
+          disabled={false}
           id={data.id}
-          visibility={false}
+          visibility={isChecked ? true : hasCheckedChildren ? "mixed" : false}
         />
         <span
           ref={isContextMenuTarget ? updateContextMenuTargetRef : undefined}

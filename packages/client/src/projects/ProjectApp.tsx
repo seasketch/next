@@ -16,6 +16,7 @@ import OfflineToastNotification from "../offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 import JoinProjectPrompt from "../auth/JoinProjectPrompt";
 import UserProfileModal from "./UserProfileModal";
+import useAccessToken from "../useAccessToken";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
@@ -35,6 +36,7 @@ const LazyCacheSettingsPage = React.lazy(
 export default function ProjectApp() {
   const [mapContainerPortal, setMapContainerPortal] =
     useState<null | HTMLDivElement>(null);
+  const token = useAccessToken();
   const mapContext = useMapContext({
     preferencesKey: "homepage",
     cacheSize: bytes("200mb"),

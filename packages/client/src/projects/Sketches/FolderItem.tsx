@@ -39,6 +39,9 @@ function FolderItem({
   updateContextMenuTargetRef,
   onDragEnd,
   onDropEnd,
+  isChecked,
+  hasCheckedChildren,
+  onChecked,
 }: TreeNodeProps<FolderNodeDataProps>) {
   const data = node.data;
   const isDisabled = false;
@@ -181,9 +184,14 @@ function FolderItem({
         }
         {
           <VisibilityCheckbox
+            onClick={() => {
+              if (onChecked) {
+                onChecked(node, !isChecked && !hasCheckedChildren, children);
+              }
+            }}
             disabled={isDisabled || numChildren === 0}
             id={data.id}
-            visibility={false}
+            visibility={isChecked ? true : hasCheckedChildren ? "mixed" : false}
           />
         }{" "}
         {isExpanded ? (
