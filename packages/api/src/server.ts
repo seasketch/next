@@ -225,7 +225,7 @@ app.use(
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/x-protobuf");
-      res.setHeader("Cache-Control", "public, max-age=300");
+      res.setHeader("Cache-Control", "public, max-age=10");
       if (tile === null || tile.length === 0) {
         res.status(204);
       }

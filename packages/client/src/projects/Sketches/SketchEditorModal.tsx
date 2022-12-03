@@ -162,13 +162,13 @@ export default function SketchEditorModal({
       const response = await updateSketch({
         variables: {
           name,
-          userGeom: feature.geometry,
+          userGeom: feature,
           properties: {},
           id: sketch.id,
         },
       });
-      if (response.data?.updateSketch?.sketch) {
-        onComplete(response.data.updateSketch.sketch);
+      if (response.data?.updateSketch) {
+        onComplete(response.data.updateSketch);
       }
     } else {
       const response = await createSketch({
@@ -177,6 +177,7 @@ export default function SketchEditorModal({
           sketchClassId: sketchClass.id,
           userGeom: feature,
           folderId,
+          properties: feature.properties,
         },
       });
       if (response.data?.createSketch) {

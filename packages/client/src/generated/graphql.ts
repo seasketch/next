@@ -5688,8 +5688,6 @@ export type Mutation = {
    * function again on userGeom. This ensures the value conforms to the
    * project's rules, and also benefits the user in that they need not submit
    * a huge geometry to the server.
-   *
-   * FormElement data should be stored in the GeoJSON properties
    */
   createSketch?: Maybe<Sketch>;
   createSketchClassFromTemplate?: Maybe<CreateSketchClassFromTemplatePayload>;
@@ -5942,6 +5940,7 @@ export type Mutation = {
   setUserGroups?: Maybe<SetUserGroupsPayload>;
   /** Superusers only. Promote a sprite to be globally available. */
   shareSprite?: Maybe<ShareSpritePayload>;
+  sketchAsGeojson?: Maybe<SketchAsGeojsonPayload>;
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
@@ -6044,10 +6043,14 @@ export type Mutation = {
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
   /** Updates a single `ProjectsSharedBasemap` using a unique key and a patch. */
   updateProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<UpdateProjectsSharedBasemapPayload>;
-  /** Updates a single `Sketch` using a unique key and a patch. */
-  updateSketch?: Maybe<UpdateSketchPayload>;
-  /** Updates a single `Sketch` using its globally unique id and a patch. */
-  updateSketchByNodeId?: Maybe<UpdateSketchPayload>;
+  /**
+   * If preprocessing is enabled,
+   * the sketch's final geometry will be set by running the proprocessing
+   * function again on userGeom. This ensures the value conforms to the
+   * project's rules, and also benefits the user in that they need not submit
+   * a huge geometry to the server.
+   */
+  updateSketch?: Maybe<Sketch>;
   /** Updates a single `SketchClass` using a unique key and a patch. */
   updateSketchClass?: Maybe<UpdateSketchClassPayload>;
   /** Updates a single `SketchClass` using a unique key and a patch. */
@@ -6058,6 +6061,7 @@ export type Mutation = {
   updateSketchFolder?: Maybe<UpdateSketchFolderPayload>;
   /** Updates a single `SketchFolder` using its globally unique id and a patch. */
   updateSketchFolderByNodeId?: Maybe<UpdateSketchFolderPayload>;
+  updateSketchParent?: Maybe<UpdateSketchParentPayload>;
   /** Updates a single `Survey` using a unique key and a patch. */
   updateSurvey?: Maybe<UpdateSurveyPayload>;
   /** Updates a single `Survey` using its globally unique id and a patch. */
@@ -6310,6 +6314,7 @@ export type MutationCreateSketchArgs = {
   collectionId?: Maybe<Scalars['Int']>;
   folderId?: Maybe<Scalars['Int']>;
   name: Scalars['String'];
+  properties: Scalars['JSON'];
   sketchClassId: Scalars['Int'];
   userGeom: Scalars['GeoJSON'];
 };
@@ -6930,6 +6935,12 @@ export type MutationShareSpriteArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSketchAsGeojsonArgs = {
+  input: SketchAsGeojsonInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSoftDeleteSpriteArgs = {
   input: SoftDeleteSpriteInput;
 };
@@ -7243,13 +7254,10 @@ export type MutationUpdateProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchArgs = {
-  input: UpdateSketchInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSketchByNodeIdArgs = {
-  input: UpdateSketchByNodeIdInput;
+  id: Scalars['Int'];
+  name: Scalars['String'];
+  properties: Scalars['JSON'];
+  userGeom?: Maybe<Scalars['GeoJSON']>;
 };
 
 
@@ -7280,6 +7288,12 @@ export type MutationUpdateSketchFolderArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchFolderByNodeIdArgs = {
   input: UpdateSketchFolderByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchParentArgs = {
+  input: UpdateSketchParentInput;
 };
 
 
@@ -10156,6 +10170,29 @@ export type Sketch = Node & {
   userId?: Maybe<Scalars['Int']>;
 };
 
+/** All input for the `sketchAsGeojson` mutation. */
+export type SketchAsGeojsonInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `sketchAsGeojson` mutation. */
+export type SketchAsGeojsonPayload = {
+  __typename?: 'SketchAsGeojsonPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  json?: Maybe<Scalars['JSON']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** Sketch Classes act as a schema for sketches drawn by users. */
 export type SketchClass = Node & {
   __typename?: 'SketchClass';
@@ -10390,29 +10427,6 @@ export enum SketchGeometryType {
   Point = 'POINT',
   Polygon = 'POLYGON'
 }
-
-/** Represents an update to a `Sketch`. Fields that are set will be updated. */
-export type SketchPatch = {
-  /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
-  /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
-  folderId?: Maybe<Scalars['Int']>;
-  /**
-   * The geometry of the Sketch **after** it has been preprocessed. This is the
-   * geometry that is used for reporting. Preprocessed geometries may be extremely
-   * large and complex, so it may be necessary to access them through a vector tile
-   * service or some other optimization.
-   */
-  geom?: Maybe<Scalars['GeoJSON']>;
-  /** User provided name for the sketch. */
-  name?: Maybe<Scalars['String']>;
-  properties?: Maybe<Scalars['JSON']>;
-  /**
-   * Spatial feature the user directly digitized, without preprocessing. This is
-   * the feature that should be used if the Sketch is later edited.
-   */
-  userGeom?: Maybe<Scalars['GeoJSON']>;
-};
 
 /** All input for the `softDeleteSprite` mutation. */
 export type SoftDeleteSpriteInput = {
@@ -12518,19 +12532,6 @@ export type UpdateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
-/** All input for the `updateSketchByNodeId` mutation. */
-export type UpdateSketchByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `Sketch` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `Sketch` being updated. */
-  patch: SketchPatch;
-};
-
 /** All input for the `updateSketchClassByFormElementId` mutation. */
 export type UpdateSketchClassByFormElementIdInput = {
   /**
@@ -12642,21 +12643,21 @@ export type UpdateSketchFolderPayloadSketchFolderEdgeArgs = {
   orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
 };
 
-/** All input for the `updateSketch` mutation. */
-export type UpdateSketchInput = {
+/** All input for the `updateSketchParent` mutation. */
+export type UpdateSketchParentInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `Sketch` being updated. */
-  patch: SketchPatch;
+  collectionId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
 };
 
-/** The output of our update `Sketch` mutation. */
-export type UpdateSketchPayload = {
-  __typename?: 'UpdateSketchPayload';
+/** The output of our `updateSketchParent` mutation. */
+export type UpdateSketchParentPayload = {
+  __typename?: 'UpdateSketchParentPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -12670,7 +12671,6 @@ export type UpdateSketchPayload = {
   formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  /** The `Sketch` that was updated by this mutation. */
   sketch?: Maybe<Sketch>;
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
@@ -15550,6 +15550,7 @@ export type CreateSketchMutationVariables = Exact<{
   userGeom: Scalars['GeoJSON'];
   collectionId?: Maybe<Scalars['Int']>;
   folderId?: Maybe<Scalars['Int']>;
+  properties: Scalars['JSON'];
 }>;
 
 
@@ -15564,42 +15565,39 @@ export type CreateSketchMutation = (
 export type UpdateSketchMutationVariables = Exact<{
   id: Scalars['Int'];
   name: Scalars['String'];
-  userGeom: Scalars['GeoJSON'];
-  properties?: Maybe<Scalars['JSON']>;
+  userGeom?: Maybe<Scalars['GeoJSON']>;
+  properties: Scalars['JSON'];
 }>;
 
 
 export type UpdateSketchMutation = (
   { __typename?: 'Mutation' }
   & { updateSketch?: Maybe<(
-    { __typename?: 'UpdateSketchPayload' }
-    & { sketch?: Maybe<(
-      { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id' | 'name' | 'properties'>
-      & { userGeom?: Maybe<(
-        { __typename?: 'GeometryGeometryCollection' }
-        & Pick<GeometryGeometryCollection, 'geojson'>
-      ) | (
-        { __typename?: 'GeometryLineString' }
-        & Pick<GeometryLineString, 'geojson'>
-      ) | (
-        { __typename?: 'GeometryMultiLineString' }
-        & Pick<GeometryMultiLineString, 'geojson'>
-      ) | (
-        { __typename?: 'GeometryMultiPoint' }
-        & Pick<GeometryMultiPoint, 'geojson'>
-      ) | (
-        { __typename?: 'GeometryMultiPolygon' }
-        & Pick<GeometryMultiPolygon, 'geojson'>
-      ) | (
-        { __typename?: 'GeometryPoint' }
-        & Pick<GeometryPoint, 'geojson'>
-      ) | (
-        { __typename?: 'GeometryPolygon' }
-        & Pick<GeometryPolygon, 'geojson'>
-      )> }
-      & SketchTocDetailsFragment
+    { __typename?: 'Sketch' }
+    & Pick<Sketch, 'id' | 'name' | 'properties'>
+    & { userGeom?: Maybe<(
+      { __typename?: 'GeometryGeometryCollection' }
+      & Pick<GeometryGeometryCollection, 'geojson'>
+    ) | (
+      { __typename?: 'GeometryLineString' }
+      & Pick<GeometryLineString, 'geojson'>
+    ) | (
+      { __typename?: 'GeometryMultiLineString' }
+      & Pick<GeometryMultiLineString, 'geojson'>
+    ) | (
+      { __typename?: 'GeometryMultiPoint' }
+      & Pick<GeometryMultiPoint, 'geojson'>
+    ) | (
+      { __typename?: 'GeometryMultiPolygon' }
+      & Pick<GeometryMultiPolygon, 'geojson'>
+    ) | (
+      { __typename?: 'GeometryPoint' }
+      & Pick<GeometryPoint, 'geojson'>
+    ) | (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
     )> }
+    & SketchTocDetailsFragment
   )> }
 );
 
@@ -15735,8 +15733,8 @@ export type UpdateSketchParentMutationVariables = Exact<{
 
 export type UpdateSketchParentMutation = (
   { __typename?: 'Mutation' }
-  & { updateSketch?: Maybe<(
-    { __typename?: 'UpdateSketchPayload' }
+  & { updateSketchParent?: Maybe<(
+    { __typename?: 'UpdateSketchParentPayload' }
     & { sketch?: Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
@@ -22752,13 +22750,14 @@ export type CreateSketchFolderMutationHookResult = ReturnType<typeof useCreateSk
 export type CreateSketchFolderMutationResult = Apollo.MutationResult<CreateSketchFolderMutation>;
 export type CreateSketchFolderMutationOptions = Apollo.BaseMutationOptions<CreateSketchFolderMutation, CreateSketchFolderMutationVariables>;
 export const CreateSketchDocument = gql`
-    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON!, $collectionId: Int, $folderId: Int) {
+    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON!, $collectionId: Int, $folderId: Int, $properties: JSON!) {
   createSketch(
     name: $name
     sketchClassId: $sketchClassId
     userGeom: $userGeom
     folderId: $folderId
     collectionId: $collectionId
+    properties: $properties
   ) {
     ...SketchTocDetails
   }
@@ -22784,6 +22783,7 @@ export type CreateSketchMutationFn = Apollo.MutationFunction<CreateSketchMutatio
  *      userGeom: // value for 'userGeom'
  *      collectionId: // value for 'collectionId'
  *      folderId: // value for 'folderId'
+ *      properties: // value for 'properties'
  *   },
  * });
  */
@@ -22795,19 +22795,15 @@ export type CreateSketchMutationHookResult = ReturnType<typeof useCreateSketchMu
 export type CreateSketchMutationResult = Apollo.MutationResult<CreateSketchMutation>;
 export type CreateSketchMutationOptions = Apollo.BaseMutationOptions<CreateSketchMutation, CreateSketchMutationVariables>;
 export const UpdateSketchDocument = gql`
-    mutation UpdateSketch($id: Int!, $name: String!, $userGeom: GeoJSON!, $properties: JSON) {
-  updateSketch(
-    input: {id: $id, patch: {name: $name, userGeom: $userGeom, properties: $properties}}
-  ) {
-    sketch {
-      ...SketchTocDetails
-      id
-      name
-      userGeom {
-        geojson
-      }
-      properties
+    mutation UpdateSketch($id: Int!, $name: String!, $userGeom: GeoJSON, $properties: JSON!) {
+  updateSketch(id: $id, name: $name, userGeom: $userGeom, properties: $properties) {
+    ...SketchTocDetails
+    id
+    name
+    userGeom {
+      geojson
     }
+    properties
   }
 }
     ${SketchTocDetailsFragmentDoc}`;
@@ -23025,8 +23021,8 @@ export type UpdateSketchFolderParentMutationResult = Apollo.MutationResult<Updat
 export type UpdateSketchFolderParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
 export const UpdateSketchParentDocument = gql`
     mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
-  updateSketch(
-    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+  updateSketchParent(
+    input: {id: $id, folderId: $folderId, collectionId: $collectionId}
   ) {
     sketch {
       id

@@ -62,6 +62,7 @@ mutation CreateSketch(
   $userGeom: GeoJSON!
   $collectionId: Int
   $folderId: Int
+  $properties: JSON!
 ) {
   createSketch(
     name: $name
@@ -69,6 +70,7 @@ mutation CreateSketch(
     userGeom: $userGeom
     folderId: $folderId
     collectionId: $collectionId
+    properties: $properties
   ) {
     ...SketchTocDetails
   }
@@ -77,24 +79,22 @@ mutation CreateSketch(
 mutation UpdateSketch(
   $id: Int!
   $name: String!
-  $userGeom: GeoJSON!
-  $properties: JSON
+  $userGeom: GeoJSON
+  $properties: JSON!
 ) {
   updateSketch(
-    input: {
-      id: $id
-      patch: { name: $name, userGeom: $userGeom, properties: $properties }
-    }
+    id: $id
+    name: $name
+    userGeom: $userGeom
+    properties: $properties
   ) {
-    sketch {
-      ...SketchTocDetails
-      id
-      name
-      userGeom {
-        geojson
-      }
-      properties
+    ...SketchTocDetails
+    id
+    name
+    userGeom {
+      geojson
     }
+    properties
   }
 }
 
@@ -169,11 +169,8 @@ mutation UpdateSketchFolderParent(
 }
 
 mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
-  updateSketch(
-    input: {
-      id: $id
-      patch: { folderId: $folderId, collectionId: $collectionId }
-    }
+  updateSketchParent(
+    input: { id: $id, folderId: $folderId, collectionId: $collectionId }
   ) {
     sketch {
       id
