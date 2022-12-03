@@ -114,6 +114,18 @@ export default function SketchEditorModal({
   );
 
   useEffect(() => {
+    if (mapContext.manager && sketch) {
+      const manager = mapContext.manager;
+      manager.markSketchAsEditable(sketch.id);
+      return () => {
+        manager.unmarkSketchAsEditable();
+      };
+    } else if (mapContext.manager) {
+      mapContext.manager.unmarkSketchAsEditable();
+    }
+  }, [mapContext.manager, sketch]);
+
+  useEffect(() => {
     if (sketch) {
       _setName(sketch.name);
       if (sketch.userGeom?.geojson) {
@@ -142,6 +154,7 @@ export default function SketchEditorModal({
   const [geometryErrors, setGeometryErrors] = useState<string | null>(null);
 
   const onSubmit = useCallback(async () => {
+    draw.disable();
     setSubmissionAttempted(true);
     if (!name || name.length < 1) {
       setNameErrors(t("You must name your sketch"));
@@ -158,14 +171,28 @@ export default function SketchEditorModal({
       return;
     }
 
+    // See if geometry has been changed.
+    let geometryChanged = false;
+    if (sketch?.userGeom?.geojson) {
+      const originalGeom = JSON.stringify(sketch.userGeom.geojson);
+      const newGeom = JSON.stringify(feature.geometry);
+      geometryChanged = originalGeom !== newGeom;
+    }
+
     if (sketch) {
       const response = await updateSketch({
-        variables: {
-          name,
-          userGeom: feature,
-          properties: {},
-          id: sketch.id,
-        },
+        variables: geometryChanged
+          ? {
+              name,
+              userGeom: feature,
+              properties: {},
+              id: sketch.id,
+            }
+          : {
+              name,
+              properties: {},
+              id: sketch.id,
+            },
       });
       if (response.data?.updateSketch) {
         onComplete(response.data.updateSketch);

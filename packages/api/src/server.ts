@@ -261,7 +261,7 @@ app.use(
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");
-      res.setHeader("Cache-Control", "public, max-age=300");
+      // res.setHeader("Cache-Control", "public, max-age=300");
       if (geojson === null) {
         res.status(404);
       }

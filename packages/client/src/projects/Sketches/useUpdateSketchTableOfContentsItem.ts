@@ -29,8 +29,8 @@ export default function useUpdateSketchTableOfContentsDraggable() {
     optimisticResponse: (data) => {
       return {
         __typename: "Mutation",
-        updateSketch: {
-          __typename: "UpdateSketchPayload",
+        updateSketchParent: {
+          __typename: "UpdateSketchParentPayload",
           sketch: {
             __typename: "Sketch",
             id: data.id,

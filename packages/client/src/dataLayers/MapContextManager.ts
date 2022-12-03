@@ -145,6 +145,7 @@ class MapContextManager {
   private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
   private basemapsWereSet = false;
   private userAccessToken?: string | null;
+  private editableSketchId?: number;
 
   constructor(
     initialState: MapContextInterface,
@@ -677,6 +678,18 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
+  markSketchAsEditable(sketchId: number) {
+    this.editableSketchId = sketchId;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  unmarkSketchAsEditable() {
+    delete this.editableSketchId;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
   async getComputedStyle(): Promise<{ style: Style; sprites: ClientSprite[] }> {
     this.resetLayersByZIndex();
     let sprites: ClientSprite[] = [];
@@ -1041,27 +1054,29 @@ class MapContextManager {
     // Add sketches
     for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
       const id = parseInt(stringId);
-      baseStyle.sources[`sketch-${id}`] = {
-        type: "geojson",
-        data: `${
-          BASE_SERVER_ENDPOINT +
+      if (id !== this.editableSketchId) {
+        baseStyle.sources[`sketch-${id}`] = {
+          type: "geojson",
+          data: `${
+            BASE_SERVER_ENDPOINT +
+            // eslint-disable-next-line i18next/no-literal-string
+            `/sketches/${id}.geojson.json`
+          }`,
+        };
+        baseStyle.layers.push({
           // eslint-disable-next-line i18next/no-literal-string
-          `/sketches/${id}.geojson.json`
-        }`,
-      };
-      baseStyle.layers.push({
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `sketch-${id}-fill`,
-        type: "fill",
-        // eslint-disable-next-line i18next/no-literal-string
-        source: `sketch-${id}`,
-        paint: {
-          "fill-color": "orange",
-          "fill-outline-color": "red",
-          "fill-opacity": 0.5,
-        },
-        layout: {},
-      });
+          id: `sketch-${id}-fill`,
+          type: "fill",
+          // eslint-disable-next-line i18next/no-literal-string
+          source: `sketch-${id}`,
+          paint: {
+            "fill-color": "orange",
+            "fill-outline-color": "red",
+            "fill-opacity": 0.5,
+          },
+          layout: {},
+        });
+      }
     }
 
     if (this.internalState.offlineTileSimulatorActive) {
