@@ -133,7 +133,7 @@ describe("Project listing smoke test", () => {
       });
     });
   });
-  describe("An unverified user cannot create a project", () => {
+  describe.only("An unverified user cannot create a project", () => {
     before(() => {
       cy.visit('/projects')
     });
@@ -171,12 +171,18 @@ describe("Project listing smoke test", () => {
           req.alias = "createProject"
         };
       });
+      Cypress.on('uncaught:exception', (err, runnable) => {
+        cy.log(err.message)
+      
       getAuth0ApiToken().then((resp) => {
+        
         const token = resp.access_token;
-        //getAuth0CypressUserByEmail(newUser, token).then((resp) => {
-        //  expect(resp[0].email_verified).to.equal(false);
-        //});
+
+        getAuth0UserByEmail(newUser, token).then((resp) => {
+          expect(resp[0].email_verified).to.equal(false);
+        });
       });
+    });
       cy.get('[data-cy="button-create-a-project"]').click();
       cy.get('#name').type('Cypress Test Project');
       cy.get('#slug').type('cyproject');
