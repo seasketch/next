@@ -102,7 +102,7 @@ export const drawSecondPolygon = () => {
 
 //AUTH0 MANAGEMENT API ACTIONS
 
-export async function getAuth0ApiToken () {
+export function getAuth0ApiToken () {
   var options = {
     method: 'POST',
     url: 'https://seasketch.auth0.com/oauth/token',
@@ -114,7 +114,7 @@ export async function getAuth0ApiToken () {
       audience: 'https://seasketch.auth0.com/api/v2/'
     })
   };
-  const results = await axios.request(options).then(function (response) {
+  const results = axios.request(options).then(function (response) {
     console.log(response.data);
     return response.data
   }).catch(function (error) {
@@ -164,7 +164,7 @@ export function deleteAllAuth0CypressUsers (token) {
   });
 };
 
-export async function deleteAuth0CypressUser (userId, token) {
+export function deleteAuth0CypressUser (userId, token) {
   console.log("Deleting user from Auth0")
   const deleteCypressUserOptions = {
     method: 'DELETE',

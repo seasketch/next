@@ -45,20 +45,15 @@ describe("User onboarding via independent browsing", () => {
       });
     });
     after(() => {
-      //getAuth0ApiToken().then((resp) => {
-      //  //cy.log(resp)
-      //  const token = resp.access_token;
-      //  //deleteAllAuth0CypressUsers(token);
-      //});
+      getAuth0ApiToken().then((resp) => {
+        //cy.log(resp)
+        const token = resp.access_token;
+        deleteAllAuth0CypressUsers(token);
+      });
       cy.deleteProject(`${projectDetails.inviteOnly.slug}`)
     });
     it('Visits the project homepage', () => {
       bypassUncaughtException('ServiceWorker');
-      //Cypress.on('uncaught:exception', (err, runnable) => {
-      //  if (err.message.includes('ServiceWorker')) {
-      //    return false
-      //  }
-      //});
       cy.visit('/');
       cy.get('a#nav-projects').click();
     });
@@ -108,11 +103,6 @@ describe("User onboarding via independent browsing", () => {
       cy.deleteProject(`${projectDetails.inviteOnly.slug}`)
     });
     it('Visits the project homepage and project exists', () => {
-      //Cypress.on('uncaught:exception', (err, runnable) => {
-      //  if (err.message.includes('ServiceWorker')) {
-      //    return false
-      //  }
-      //});
       bypassUncaughtException('ServiceWorker');
       cy.visit('/');
       cy.get('a#nav-projects').click();
@@ -255,11 +245,6 @@ describe("User onboarding via independent browsing", () => {
       cy.deleteProject(`${projectDetails.adminsOnly.slug}`);
     });
     it('Visits the project app page and is not granted access', () => {
-      //Cypress.on('uncaught:exception', (err, runnable) => {
-      //  if (err.message.includes('ServiceWorker')) {
-      //    return false
-      //  }
-      //});
       bypassUncaughtException('ServiceWorker');
       cy.restoreLocalStorage();
       cy.visit(`/${projectDetails.adminsOnly.slug}/app`);
@@ -340,23 +325,9 @@ describe('User onboarding via email invites', () => {
         });
         after(() => {
           bypassUncaughtException('ServiceWorker');
-          //Cypress.on('uncaught:exception', (err, runnable) => {
-          //  if (err.message.includes('ServiceWorker')) {
-          //    return false
-          //  }
-          //});
-          //getAuth0ApiToken().then((resp) => {
-          //  const token = resp.access_token;
-          //  deleteAllAuth0CypressUsers(token);
-          //});
           cy.deleteProject(`${projectDetails[projectOption].slug}`);
         });
         it('Creates a project invite with correct project name and sign-up link', () => {
-          //Cypress.on('uncaught:exception', (err, runnable) => {
-          //  if (err.message.includes('ServiceWorker')) {
-          //    return false
-          //  }
-          //});
           bypassUncaughtException('ServiceWorker');
           cy.restoreLocalStorage();
           let options
@@ -461,20 +432,10 @@ describe('User onboarding via email invites', () => {
           });
         });
         after(() => {
-          //Cypress.on('uncaught:exception', (err, runnable) => {
-          //  if (err.message.includes('ServiceWorker')) {
-          //    return false;
-          //  }
-          //});
           bypassUncaughtException('ServiceWorker');
           cy.deleteProject(`${projectDetails[projectOption].slug}`);
         });
         it('Creates a project invite with correct project name and sign-up link', () => {
-          //Cypress.on('uncaught:exception', (err, runnable) => {
-          //  if (err.message.includes('ServiceWorker')) {
-          //    return false;
-          //  }
-          //});
           bypassUncaughtException('ServiceWorker');
           cy.restoreLocalStorage();
           //recipient email, sendEmailNow, makeAdmin
@@ -593,20 +554,10 @@ describe('User onboarding via email invites', () => {
           });
         });
         after(() => {
-          //Cypress.on('uncaught:exception', (err, runnable) => {
-          //  if (err.message.includes('ServiceWorker')) {
-          //    return false;
-          //  }
-          //});
           bypassUncaughtException('ServiceWorker');
           cy.deleteProject(`${projectDetails[projectOption].slug}`);
         });
         it('Creates a project invite with correct project name and sign-up link', () => {
-          //Cypress.on('uncaught:exception', (err, runnable) => {
-          //  if (err.message.includes('ServiceWorker')) {
-          //    return false;
-          //  }
-          //});
           bypassUncaughtException('ServiceWorker');
           cy.restoreLocalStorage();
           let options
@@ -677,11 +628,6 @@ describe('User onboarding via email invites', () => {
           cy.get('[name="fullname"]')
             .clear()
             .type('Test User 2');
-          //Cypress.on('uncaught:exception', (err, runnable) => {
-          //  if (err.message.includes('User')) {
-          //    return false;
-          //  }
-          //});
           bypassUncaughtException('ServiceWorker');
           cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.contains('Join Project').click();
@@ -722,20 +668,10 @@ describe('User onboarding via email invites', () => {
       });
     });
     after(() => {
-      //Cypress.on('uncaught:exception', (err, runnable) => {
-      //  if (err.message.includes('ServiceWorker')) {
-      //    return false;
-      //  }
-      //});
       bypassUncaughtException('ServiceWorker');
       cy.deleteProject(`${projectDetails[projectOption].slug}`);
     });
     it('Creates a project invite', () => {
-      //Cypress.on('uncaught:exception', (err, runnable) => {
-      //  if (err.message.includes('ServiceWorker')) {
-      //    return false;
-      //  }
-      //});
       bypassUncaughtException('ServiceWorker');
       cy.restoreLocalStorage();
       let options = ['test_user_1@seasketch.org', true, false];
@@ -810,20 +746,10 @@ describe('User onboarding via email invites', () => {
       });
     });
     after(() => {
-      //Cypress.on('uncaught:exception', (err, runnable) => {
-      //  if (err.message.includes('ServiceWorker')) {
-      //    return false;
-      //  }
-      //});
       bypassUncaughtException('ServiceWorker');
       cy.deleteProject(`${projectDetails[projectOption].slug}`);
     });
     it('Creates a project invite with expired token', () => {
-      //Cypress.on('uncaught:exception', (err, runnable) => {
-      //  if (err.message.includes('ServiceWorker')) {
-      //    return false;
-      //  }
-      //});
       bypassUncaughtException('ServiceWorker');
       cy.restoreLocalStorage();
       //By using test_user_3@seasketch.org, along with the IS_CYPRESS_TESTING_ENV variable, api knows to pass an 
