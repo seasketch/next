@@ -429,5 +429,14 @@ jobs:
         working-directory: ./packages/client
         run: npx @percy/cli exec -- cypress run
         env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORDING_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_AUTH0_CLIENT_SECRET: ${{ secrets.CYPRESS_AUTH0_CLIENT_SECRET }}
+          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+          REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
+          REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
+          REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
+          CYPRESS_TEST_DB: postgres://postgres:password@localhost:5432/seasketch
           PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
