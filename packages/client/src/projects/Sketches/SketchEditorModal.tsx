@@ -17,7 +17,6 @@ import { ArrowLeftIcon, ArrowRightIcon, XIcon } from "@heroicons/react/outline";
 import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import useMapboxGLDraw, {
-  DigitizingState,
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
 import { MapContext } from "../../dataLayers/MapContextManager";
@@ -68,7 +67,7 @@ export default function SketchEditorModal({
       }
       _setName(value);
     },
-    [nameErrors, _setName]
+    [nameErrors?.length, submissionAttempted, t, _setName]
   );
 
   const onError = useGlobalErrorHandler();
@@ -212,8 +211,8 @@ export default function SketchEditorModal({
       }
     }
   }, [
+    draw,
     name,
-    draw.selfIntersects,
     feature,
     sketch,
     t,

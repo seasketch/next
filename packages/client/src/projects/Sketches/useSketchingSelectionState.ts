@@ -1,23 +1,34 @@
+import { Feature } from "geojson";
+import { MapMouseEvent, Popup } from "mapbox-gl";
 import {
   SetStateAction,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { treeItemId } from ".";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import { SketchTocDetailsFragment } from "../../generated/graphql";
 
 export default function useSketchingSelectionState({
   mySketches,
   toolbarRef,
   setExpandedIds,
+  setVisibleSketches,
+  editSketch,
 }: {
   mySketches?: SketchTocDetailsFragment[] | null;
   toolbarRef: HTMLElement | null;
   setExpandedIds: (value: SetStateAction<string[]>) => void;
+  setVisibleSketches: (val: string[] | ((prev: string[]) => string[])) => void;
+  editSketch: (id: number) => void;
 }) {
+  const mapContext = useContext(MapContext);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { t } = useTranslation("sketching");
 
   const clearSelection = useCallback(() => {
     setSelectedIds([]);
@@ -99,7 +110,8 @@ export default function useSketchingSelectionState({
       type: "Sketch" | "SketchFolder",
       id: number,
       folderId?: number | null,
-      collectionId?: number | null
+      collectionId?: number | null,
+      setVisible?: boolean
     ) => {
       let normalizedIds: string[] = [];
       if (folderId) {
@@ -123,9 +135,82 @@ export default function useSketchingSelectionState({
           block: "nearest",
         });
       }
+      if (type === "Sketch" && setVisible) {
+        setVisibleSketches((prev) => [
+          ...prev.filter((sk) => sk !== treeItemId(id, "Sketch")),
+          treeItemId(id, "Sketch"),
+        ]);
+      }
     },
-    [setExpandedIds, setSelectedIds]
+    [setExpandedIds, setVisibleSketches]
   );
+
+  useEffect(() => {
+    const interactivityManager = mapContext.manager?.interactivityManager;
+    const map = mapContext.manager?.map;
+    if (interactivityManager && map) {
+      const handler = (feature: Feature<any>, e: MapMouseEvent) => {
+        if (feature.id) {
+          const id = parseInt(feature.id.toString());
+          setTimeout(() => {
+            focusOnTableOfContentsItem("Sketch", id);
+            const name = feature.properties?.name;
+            const popup = new Popup({
+              closeOnClick: true,
+              closeButton: true,
+              className: "SketchPopup",
+              maxWidth: "18rem",
+            })
+              .setLngLat([e.lngLat.lng, e.lngLat.lat])
+              .setHTML(
+                `
+                <div class="w-72">
+              <h2 class="truncate text-sm font-semibold">${name}</h2>
+              <p class=""><span>${
+                feature.properties!.user_slug || feature.properties!.user_id
+              }</span> ${t("created this sketch on ")}${new Date(
+                  feature.properties!.created_at
+                ).toLocaleDateString()}</p>
+                <button id="popup-edit-sketch" class="underline">edit</button>
+                </div>
+              `
+              )
+              .addTo(map);
+            const el = popup.getElement();
+            const button = el.querySelector("button[id=popup-edit-sketch]");
+            if (button) {
+              button.addEventListener("click", () => {
+                popup.remove();
+                editSketch(id);
+              });
+            }
+            // setSelectedIds([treeItemId(id, "Sketch")]);
+          }, 1);
+        }
+      };
+      interactivityManager.on("click:sketch", handler);
+      return () => {
+        interactivityManager.off("click:sketch", handler);
+      };
+    }
+  }, [
+    editSketch,
+    focusOnTableOfContentsItem,
+    mapContext.manager?.interactivityManager,
+    mapContext.manager?.map,
+    setSelectedIds,
+    t,
+  ]);
+
+  useEffect(() => {
+    if (mapContext?.manager) {
+      mapContext.manager.setSelectedSketches(
+        selectedIds
+          .filter((s) => /Sketch:/.test(s))
+          .map((s) => parseInt(s.split(":")[1]))
+      );
+    }
+  }, [selectedIds, mapContext.manager]);
 
   return {
     selectedIds,

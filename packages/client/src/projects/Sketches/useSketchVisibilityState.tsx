@@ -1,9 +1,14 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect } from "react";
 import { MapContext } from "../../dataLayers/MapContextManager";
+import getSlug from "../../getSlug";
+import useLocalStorage from "../../useLocalStorage";
 
 export default function useSketchVisibilityState() {
   const mapContext = useContext(MapContext);
-  const [visibleSketches, setVisibleSketches] = useState<string[]>([]);
+  const [visibleSketches, setVisibleSketches] = useLocalStorage<string[]>(
+    `myplans-sketch-visibility-${getSlug()}`,
+    []
+  );
 
   const onChecked = useCallback(
     (items: string[], isChecked: boolean) => {

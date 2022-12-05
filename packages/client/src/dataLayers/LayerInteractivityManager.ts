@@ -22,6 +22,7 @@ import {
   getDynamicArcGISStyle,
   identifyLayers,
 } from "../admin/data/arcgis/arcgis";
+import { EventEmitter } from "eventemitter3";
 
 /**
  * LayerInteractivityManager works in tandem with the MapContextManager to react
@@ -30,7 +31,7 @@ import {
  * image layers for which it is necessary to call an external service to retrieve
  * attribute information.
  */
-export default class LayerInteractivityManager {
+export default class LayerInteractivityManager extends EventEmitter {
   private map: Map;
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
   private previousState?: MapContextInterface;
@@ -48,6 +49,7 @@ export default class LayerInteractivityManager {
   private interactiveVectorLayerIds: string[] = [];
   private interactiveImageLayerIds: string[] = [];
   private basemap: ClientBasemap | undefined;
+  private sketchLayerIds: string[] = [];
 
   /**
    *
@@ -59,6 +61,7 @@ export default class LayerInteractivityManager {
     map: Map,
     setState: Dispatch<SetStateAction<MapContextInterface>>
   ) {
+    super();
     this.map = map;
     this.registerEventListeners(map);
     this._setState = setState;
@@ -74,6 +77,10 @@ export default class LayerInteractivityManager {
     }
     this.map = map;
     this.registerEventListeners(map);
+  }
+
+  setSketchLayerIds(ids: string[]) {
+    this.sketchLayerIds = ids;
   }
 
   /**
@@ -149,7 +156,10 @@ export default class LayerInteractivityManager {
     this.layers = newActiveLayers;
     this.imageSources = newActiveImageSources;
     this.map.off("mousemove", this.debouncedMouseMoveListener);
-    if (this.interactiveVectorLayerIds.length > 0) {
+    if (
+      this.interactiveVectorLayerIds.length > 0 ||
+      this.sketchLayerIds.length > 0
+    ) {
       this.map.on("mousemove", this.debouncedMouseMoveListener);
     }
   }
@@ -244,6 +254,14 @@ export default class LayerInteractivityManager {
     if (this.popupAbortController) {
       this.popupAbortController.abort();
       delete this.popupAbortController;
+    }
+    const sketchFeatures = this.map!.queryRenderedFeatures(e.point, {
+      layers: this.sketchLayerIds || [],
+    });
+    if (sketchFeatures.length) {
+      this.emit("click:sketch", sketchFeatures[0], e);
+      e.preventDefault();
+      return;
     }
     const features = this.map!.queryRenderedFeatures(e.point, {
       layers: this.interactiveVectorLayerIds,
@@ -381,8 +399,6 @@ export default class LayerInteractivityManager {
     if (this.moving) {
       return;
     }
-    const layerIds = this.interactiveVectorLayerIds;
-    const features = this.map!.queryRenderedFeatures(e.point);
     const clear = () => {
       this.map!.getCanvas().style.cursor = "";
       this.setState((prev) => ({
@@ -393,6 +409,19 @@ export default class LayerInteractivityManager {
       }));
       delete this.previousInteractionTarget;
     };
+    // First, check sketch layers
+    const sketchFeatures = this.map!.queryRenderedFeatures(e.point, {
+      layers: this.sketchLayerIds,
+    });
+    if (sketchFeatures.length) {
+      clear();
+      this.map!.getCanvas().style.cursor = "pointer";
+      return;
+    }
+    const layerIds = this.interactiveVectorLayerIds;
+    const features = this.map!.queryRenderedFeatures(e.point, {
+      layers: layerIds,
+    });
     if (features.length && layerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
       const interactivitySetting = this.getInteractivitySettingForFeature(top);

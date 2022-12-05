@@ -13,6 +13,7 @@ import mapboxgl, {
   AnyLayer,
   VectorSource,
   GeoJSONSource,
+  LineLayer,
 } from "mapbox-gl";
 import {
   createContext,
@@ -126,7 +127,7 @@ export type ClientBasemap = BasemapDetailsFragment;
 
 class MapContextManager {
   map?: Map;
-  private interactivityManager?: LayerInteractivityManager;
+  interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
   private clientDataSources: { [dataSourceId: string]: ClientDataSource } = {};
   private layersByZIndex: string[] = [];
@@ -146,6 +147,7 @@ class MapContextManager {
   private basemapsWereSet = false;
   private userAccessToken?: string | null;
   private editableSketchId?: number;
+  private selectedSketches?: number[];
 
   constructor(
     initialState: MapContextInterface,
@@ -678,6 +680,12 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
+  setSelectedSketches(sketchIds: number[]) {
+    this.selectedSketches = sketchIds;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
   markSketchAsEditable(sketchId: number) {
     this.editableSketchId = sketchId;
     // request a redraw
@@ -1052,6 +1060,7 @@ class MapContextManager {
     });
 
     // Add sketches
+    const sketchLayerIds: string[] = [];
     for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
       const id = parseInt(stringId);
       if (id !== this.editableSketchId) {
@@ -1063,20 +1072,13 @@ class MapContextManager {
             `/sketches/${id}.geojson.json`
           }`,
         };
-        baseStyle.layers.push({
-          // eslint-disable-next-line i18next/no-literal-string
-          id: `sketch-${id}-fill`,
-          type: "fill",
-          // eslint-disable-next-line i18next/no-literal-string
-          source: `sketch-${id}`,
-          paint: {
-            "fill-color": "orange",
-            "fill-outline-color": "red",
-            "fill-opacity": 0.5,
-          },
-          layout: {},
-        });
+        const layers = this.getLayersForSketch(id);
+        baseStyle.layers.push(...layers);
+        sketchLayerIds.push(...layers.map((l) => l.id));
       }
+    }
+    if (this.interactivityManager) {
+      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     }
 
     if (this.internalState.offlineTileSimulatorActive) {
@@ -1089,6 +1091,61 @@ class MapContextManager {
     }
 
     return { style: baseStyle, sprites };
+  }
+
+  getLayersForSketch(id: number): AnyLayer[] {
+    const layers = [
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-fill`,
+        type: "fill",
+        // eslint-disable-next-line i18next/no-literal-string
+        source: `sketch-${id}`,
+        paint: {
+          "fill-color": "orange",
+          "fill-outline-color": "red",
+          "fill-opacity": 0.5,
+        },
+        layout: {},
+      },
+    ] as AnyLayer[];
+    if (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) {
+      layers.push(
+        ...([
+          {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `sketch-${id}-selection-second-outline`,
+            type: "line",
+            // eslint-disable-next-line i18next/no-literal-string
+            source: `sketch-${id}`,
+            paint: {
+              "line-color": "white",
+              "line-opacity": 0.25,
+              "line-width": 6,
+              "line-blur": 0,
+              "line-offset": -3,
+            },
+            // layout: { "line-join": "miter" },
+          },
+          {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `sketch-${id}-selection-outline`,
+            type: "line",
+            // eslint-disable-next-line i18next/no-literal-string
+            source: `sketch-${id}`,
+            paint: {
+              "line-color": "rgb(46, 115, 182)",
+              "line-opacity": 1,
+              "line-width": 2,
+              "line-blur": 0,
+              "line-offset": -1,
+            },
+            // layout: { "line-join": "miter" },
+          },
+        ] as AnyLayer[])
+      );
+    }
+    return layers;
   }
 
   getSelectedBasemap() {

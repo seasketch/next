@@ -11094,6 +11094,7 @@ type Sketch implements Node {
   SeaSketch may have a means of visualizing how plans are iterated on over time.
   """
   copyOf: Int
+  createdAt: Datetime!
 
   """
   Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
@@ -11130,6 +11131,7 @@ type Sketch implements Node {
 
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
+  updatedAt: Datetime!
 
   """Reads a single `User` that is related to this `Sketch`."""
   user: User

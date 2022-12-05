@@ -7,6 +7,8 @@ import {
 import { Trans as I18n } from "react-i18next";
 import getSlug from "../../getSlug";
 import {
+  GetSketchForEditingDocument,
+  GetSketchForEditingQuery,
   SketchEditorModalDetailsFragment,
   SketchingDetailsFragment,
   useSketchingQuery,
@@ -30,6 +32,7 @@ import useExpandedIds from "./useExpandedIds";
 import LoginPrompt from "./LoginPrompt";
 import useSketchingSelectionState from "./useSketchingSelectionState";
 import useSketchVisibilityState from "./useSketchVisibilityState";
+import { useApolloClient } from "@apollo/client";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -41,6 +44,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const [toolbarRef, setToolbarRef] = useState<HTMLElement | null>(null);
   const onError = useGlobalErrorHandler();
   const history = useHistory();
+  const client = useApolloClient();
 
   const { data, loading } = useSketchingQuery({
     variables: {
@@ -59,18 +63,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     data?.projectBySlug?.mySketches
   );
 
-  const {
-    selectedIds,
-    clearSelection,
-    selectedSketchClasses,
-    onSelect,
-    focusOnTableOfContentsItem,
-  } = useSketchingSelectionState({
-    mySketches: data?.projectBySlug?.mySketches,
-    toolbarRef,
-    setExpandedIds,
-  });
-
   const [editor, setEditor] = useState<
     | false
     | {
@@ -81,6 +73,80 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
         loadingTitle?: string;
       }
   >(false);
+
+  const editSketch = useCallback(
+    async (id: number) => {
+      const sketch = (data?.projectBySlug?.mySketches || []).find(
+        (s) => s.id === id
+      );
+      if (sketch) {
+        history.replace(`/${getSlug()}/app`);
+        setEditor({
+          loadingTitle: sketch.name,
+          loading: true,
+          sketchClass: (data?.projectBySlug?.sketchClasses || []).find(
+            (sc) => sc.id === sketch.sketchClassId
+          )!,
+        });
+        // load the sketch
+        try {
+          const response = await client.query<GetSketchForEditingQuery>({
+            query: GetSketchForEditingDocument,
+            variables: {
+              id,
+            },
+          });
+          // then set editor state again with sketch, loading=false
+          if (response.data.sketch) {
+            setEditor((prev) => {
+              if (prev) {
+                return {
+                  ...prev,
+                  sketch: response.data.sketch!,
+                  loading: false,
+                  loadingTitle: undefined,
+                };
+              } else {
+                return false;
+              }
+            });
+          } else {
+            if (response.error) {
+              throw new Error(response.error.message);
+            } else {
+              throw new Error(
+                "Unknown query error when retrieving sketch data"
+              );
+            }
+          }
+        } catch (e) {
+          onError(e);
+          setEditor(false);
+        }
+      }
+    },
+    [
+      client,
+      data?.projectBySlug?.mySketches,
+      data?.projectBySlug?.sketchClasses,
+      history,
+      onError,
+    ]
+  );
+
+  const {
+    selectedIds,
+    clearSelection,
+    selectedSketchClasses,
+    onSelect,
+    focusOnTableOfContentsItem,
+  } = useSketchingSelectionState({
+    mySketches: data?.projectBySlug?.mySketches,
+    toolbarRef,
+    setExpandedIds,
+    setVisibleSketches,
+    editSketch,
+  });
 
   const [contextMenu, setContextMenu] = useState<
     | {
@@ -322,7 +388,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               "Sketch",
               item.id,
               item.folderId || undefined,
-              item.collectionId || undefined
+              item.collectionId || undefined,
+              true
             );
           }}
           onCancel={() => {
