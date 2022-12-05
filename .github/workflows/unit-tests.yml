@@ -330,6 +330,8 @@ jobs:
           REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
           REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
           CYPRESS_TEST_DB: postgres://postgres:password@localhost:5432/seasketch
+          AUTH0_MANAGEMENT_API_CLIENT_ID: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_ID }}
+          AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_SECRET }}
   percy-visual-tests:
     name: Percy Visual Testing
     runs-on: ubuntu-latest
@@ -440,3 +442,5 @@ jobs:
           CYPRESS_TEST_DB: postgres://postgres:password@localhost:5432/seasketch
           PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+          AUTH0_MANAGEMENT_API_CLIENT_ID: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_ID }}
+          AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_SECRET }}
