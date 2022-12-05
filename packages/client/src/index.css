@@ -235,11 +235,11 @@ label.required:after {
   position: absolute !important;
 }
 
-@media (max-width: 420px) {
+/* @media (max-width: 420px) {
   .survey .absolute.mapboxgl-map .mapboxgl-ctrl-logo {
-    /* display: none; */
+    display: none;
   }
-}
+} */
 
 .zebra-stripe-child-div > div:nth-child(even) {
   background-color: rgba(249, 250, 251);
