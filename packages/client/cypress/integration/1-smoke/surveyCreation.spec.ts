@@ -95,6 +95,7 @@ describe('Survey creation smoke test', () => {
       cy.intercept(/mapbox/).as('mapboxApiCall');
     });
     before(() => {
+      bypassUncaughtException('ServiceWorker')
       const slug: string = generateSlug();
       cy.setLocalStorage("slug", slug);
       cy.getToken("User 1").then(({ access_token }) => {
@@ -276,7 +277,7 @@ describe('Survey creation smoke test', () => {
     });
     devices.forEach((device) => {
       it(`Can visit the survey - ${device}`, () => {
-        bypassUncaughtException('ServiceWorker')
+        bypassUncaughtException('ServiceWorker');
         cy.viewport(device);
         cy.contains("Welcome")
           .should('be.visible');
