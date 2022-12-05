@@ -232,20 +232,19 @@ describe ('Survey creation Cypress commands', () => {
       .its('response.body.data.createProject.project')
       .should('have.property', 'id')
   })
-  it ("Creates the survey", () => {
+  it("Creates the survey", () => {
     cy.wait("@createSurveyRequest").its('response').then((resp) => {
       const formElements = resp.body.data.makeSurvey.survey.form.formElements
       expect (formElements.length).to.eq(5)
-    }) 
-  })
-  it.only("Can add basemaps", () => {
+    }); 
+  });
+  it("Can add basemaps", () => {
     cy.get('@token').then((token: any) => {
       cy.get('@projectId').then((id) => {
         basemapNames.forEach((t) => {
           createBasemaps(id, token, t)
-        })
+        });
         cy.wait('@createBasemapRequest').then((req) => {
-          console.log(req)
           if (req.response.body.errors) {
             Cypress.log({
               name: `message: ${req.response.body.errors[0].message}`,
@@ -253,14 +252,10 @@ describe ('Survey creation Cypress commands', () => {
             })
           } 
           expect (req.response.body.data.createBasemap.basemap.projectId).to.equal(id)
-        })
-      })
-      
-      
-      //})
-    })
-  })
-
+        });
+      });
+    });
+  });
   it ("Updates the survey's isDisabled field", () => {
     cy.get("@surveyId").then((id) => {
       surveyId = id
@@ -273,7 +268,7 @@ describe ('Survey creation Cypress commands', () => {
       })
     })
   })
-  it ("Can delete the survey", () => {
+  it("Can delete the survey", () => {
     cy.get("@surveyId").then((id) => {
       surveyId = id
       cy.get('@token').then((token) => {
@@ -295,7 +290,7 @@ describe ('Survey creation Cypress commands', () => {
       })
     })
   })
-  it ("Can update default form elements required by survey", () => {
+  it("Can update default form elements required by survey", () => {
     cy.get('@formId').then((id) => {
       formId = id
        cy.get('@token').then((token) => {
@@ -521,20 +516,3 @@ describe ('Survey creation Cypress commands', () => {
     });
   });
 });
-
-
-//this was in surveyCreationTests. It wasn't working because to delete a survey, 
-//the associated sketches and responses had to be deleted first. Will wait until deleteSurvey ticket is resolved
-//to implement
-//after(() => {
-//  cy.restoreLocalStorage()
-//  cy.getLocalStorage("surveyId").then((id) => {
-//    surveyId = parseInt(id)
-    //cy.getLocalStorage("responseId").then((responseId) => {
-//    //  cy.deleteResponse
-//    //})
-//    //cy.getLocalStorage("token").then((token) => {
-//    //  cy.deleteSurvey(surveyId, token)
-//    //})
-//  })
-//  cy.deleteProject(`${slug}`) 

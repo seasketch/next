@@ -50,6 +50,7 @@ describe("User onboarding via independent browsing", () => {
         const token = resp.access_token;
         deleteAllAuth0CypressUsers(token);
       });
+      deleteUser(newUser)
       cy.deleteProject(`${projectDetails.inviteOnly.slug}`)
     });
     it('Visits the project homepage', () => {

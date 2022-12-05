@@ -115,7 +115,6 @@ export function getAuth0ApiToken () {
     })
   };
   const results = axios.request(options).then(function (response) {
-    console.log(response.data);
     return response.data
   }).catch(function (error) {
     console.error(error);
@@ -132,6 +131,19 @@ export function getAuth0UserByEmail (email, token) {
     }
   };
   const results = axios.request(getUserByEmailOptions).then(resp => {
+    return resp.data
+  });
+  return results
+}
+
+export async function updateAuth0User (id, token) {//https://seasketch.auth0.com/api/v2/users/auth0%7C638e2ca091ac5f1a5d437289
+  const updateUserOptions = {
+    method: 'PATCH',
+    url: `https://seasketch.auth0.com/api/v2/users/${id}`,
+    headers: {authorization: `Bearer ${token}`},
+    data: { "email_verified": true } 
+  };
+  const results = await axios.request(updateUserOptions).then(resp => {
     return resp.data
   });
   return results
@@ -165,7 +177,7 @@ export function deleteAllAuth0CypressUsers (token) {
 };
 
 export function deleteAuth0CypressUser (userId, token) {
-  console.log("Deleting user from Auth0")
+  console.log("Deleting user from Auth0");
   const deleteCypressUserOptions = {
     method: 'DELETE',
     url: `https://seasketch.auth0.com/api/v2/users/${userId}`,
@@ -173,7 +185,6 @@ export function deleteAuth0CypressUser (userId, token) {
     }
   };
   axios.request(deleteCypressUserOptions).then(function (response) {
-    console.log(response.data);
     return response.data
   }).catch(function (error) {
     console.error(error);

@@ -330,10 +330,10 @@ describe('Survey creation smoke test', () => {
       it(`Cannot advance until atoll selection is made - ${device}`, () => {
         cy.viewport(device);
         checkForNavAndLang();
+        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.contains("Which Atoll do you reside on?")
           .get('[title = "Next Question"]')
           .should('have.class', "pointer-events-none");
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.contains('N').click()
       });
       it(`Cannot advance until island selection is made - ${device}`, () => {
@@ -348,10 +348,10 @@ describe('Survey creation smoke test', () => {
         cy.contains("Which Atoll do you reside on?")
           .should('not.exist');
         cy.contains('Which island of N atoll do you reside on?');
+        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.contains('Lhohi');
         cy.get('[title = "Next Question"]')
           .should('have.class', "pointer-events-none");
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.contains('Kudafari').click()
       })
       it(`Cannot advance until sector selection(s) is made - ${device}`, () => {
@@ -370,7 +370,7 @@ describe('Survey creation smoke test', () => {
       });
       it(`Can draw a polygon - Fisheries - Commercial, Tuna - ${device}`, () => {
         cy.viewport(device);
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
+        //cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.get('[title = "Fisheries - Commercial, Tuna"]')
           .should('not.exist');
         cy.get('button').contains('Next')
@@ -429,7 +429,6 @@ describe('Survey creation smoke test', () => {
       it(`Can view basemap selector - ${device}`, () => {
         cy.viewport(device);
         cy.get('img').click();
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         let values = ['Reset view', 'Focus on location', 'Show scale bar', 'Basemap', 'Maldives Light', 'Satellite']
         values.forEach((val) => {
           cy.get('.fixed > .overflow-y-auto').children().contains(val);
@@ -449,7 +448,6 @@ describe('Survey creation smoke test', () => {
         cy.get('@scaleSwitch').then(($switch) => {
           expect ($switch.attr('aria-checked')).to.equal(`true`);
         });
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         if (device !== "iphone-x") {
           cy.get('.mapboxgl-ctrl-scale')
             .should('be.visible');
@@ -490,7 +488,6 @@ describe('Survey creation smoke test', () => {
           cy.setLocalStorage("lat", `${center["lat"]}`)
           cy.setLocalStorage("long", `${center["lng"]}`)
           cy.saveLocalStorage();
-          cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
           cy.get('h4').contains('Focus on location').click();
         });
       });
@@ -505,7 +502,6 @@ describe('Survey creation smoke test', () => {
             });
           });
         });
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.getLocalStorage("surveyId").then((id) => {
           cy.setLocalStorage("surveyId", id)
         });
@@ -522,7 +518,6 @@ describe('Survey creation smoke test', () => {
         cy.get('img').then((imgs) => {
           imgs[0].click()
         });
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         if (device === "iphone-5" || device === "iphone-x") {
           cy.get('[data-cy="button-done"]')
             .should('exist')
@@ -600,7 +595,6 @@ describe('Survey creation smoke test', () => {
         cy.get('.space-y-2')
           .should('exist')
           .and('be.visible');
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.get('button').contains('Next sector').as('nextSectorBtn')
           .should('exist')
           .and('be.visible')
@@ -610,7 +604,7 @@ describe('Survey creation smoke test', () => {
       });
       it(`Can draw a polygon - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device);
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`); 
+        //cy.percySnapshot(`${Cypress.currentTest.titlePath}`); 
         cy.get('button').contains('Next sector')
           .should('not.exist');
         if (device === "iphone-x" || device === "iphone-5") {
@@ -650,7 +644,6 @@ describe('Survey creation smoke test', () => {
       });
       it(`Renders sector specific attributes - Fisheries - Commercial, Non-Tuna Species - ${device}`, () => {
         cy.viewport(device); 
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.contains('Area Name')
           .should('exist');
         cy.contains('How important');
@@ -687,7 +680,6 @@ describe('Survey creation smoke test', () => {
         cy.get('[role="progressbar"]')
           .should('not.exist')
         drawInvalidPolygon()
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.get('button').contains('Invalid Shape').as('invalidShapeBtn')
         cy.get('@invalidShapeBtn').then(($btn) => {
           {$btn.trigger('click')}
@@ -736,7 +728,6 @@ describe('Survey creation smoke test', () => {
             .and('be.visible');
         }
         drawSecondPolygon();
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         if (device === "iphone-x" || device === "iphone-5") {
           cy.get('[data-cy="button-done"]').as('doneBtn')
             .should('exist')
@@ -860,7 +851,6 @@ describe('Survey creation smoke test', () => {
       });
       it(`Can input name or number of vessel - ${device}`, () => {
         cy.viewport(device);
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`); 
         checkForNavAndLang();
         cy.contains('vessel')
           .should('exist')
@@ -891,7 +881,6 @@ describe('Survey creation smoke test', () => {
       it(`Can answer additional questions - ${device}`, () => {
         cy.viewport(device);
         checkForNavAndLang();
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         cy.contains('additional')
           .should('exist')
           .and('be.visible');
@@ -923,7 +912,6 @@ describe('Survey creation smoke test', () => {
       })
       it(`Can select gender - ${device}`, () => {
         cy.viewport(device); 
-        cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
         checkForNavAndLang();
         cy.contains("Gender")
         cy.contains("Female").click()

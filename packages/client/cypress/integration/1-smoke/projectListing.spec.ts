@@ -1,7 +1,7 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { DeleteProjectInviteDocument, ProjectAccessControlSetting } from "../../../src/generated/graphql";
 import { deleteUser } from "../../support/deleteUser.js"
-import { getAuth0ApiToken, getAuth0UserByEmail, deleteAuth0CypressUser, deleteAllAuth0CypressUsers, generateSlug, bypassUncaughtException } from '../../support/utils.js'
+import { getAuth0ApiToken, getAuth0UserByEmail, updateAuth0User, deleteAuth0CypressUser, deleteAllAuth0CypressUsers, generateSlug, bypassUncaughtException } from '../../support/utils.js'
 
 let newUser
 
@@ -133,8 +133,9 @@ describe("Project listing smoke test", () => {
       });
     });
   });
-  describe.only("An unverified user cannot create a project", () => {
+  describe("An unverified user cannot create a project", () => {
     before(() => {
+      bypassUncaughtException('ServiceWorker')
       cy.visit('/projects')
     });
     after(() => {
@@ -147,11 +148,11 @@ describe("Project listing smoke test", () => {
           cy.contains('Sign out').click();
         }
       });
-      //getAuth0ApiToken().then((resp) => {
-      //  const token = resp.access_token;
-      //  deleteAllAuth0CypressUsers(token);
-      //});
-      //cy.deleteUser(newUser);
+      getAuth0ApiToken().then((resp) => {
+        const token = resp.access_token;
+        deleteAllAuth0CypressUsers(token);
+      });
+      cy.deleteUser(newUser);
     });
     it("A new user can create an account and is logged in", () => {
       bypassUncaughtException('ServiceWorker');
@@ -171,18 +172,12 @@ describe("Project listing smoke test", () => {
           req.alias = "createProject"
         };
       });
-      Cypress.on('uncaught:exception', (err, runnable) => {
-        cy.log(err.message)
-      
       getAuth0ApiToken().then((resp) => {
-        
         const token = resp.access_token;
-
         getAuth0UserByEmail(newUser, token).then((resp) => {
           expect(resp[0].email_verified).to.equal(false);
         });
       });
-    });
       cy.get('[data-cy="button-create-a-project"]').click();
       cy.get('#name').type('Cypress Test Project');
       cy.get('#slug').type('cyproject');
@@ -192,11 +187,11 @@ describe("Project listing smoke test", () => {
       cy.wait('@createProject').then((req) => {
         expect(req.response.body.errors[0].message).to.equal('Email must be verified to create a project');
       });
-      cy.contains('Error: Email must be verified to create a project').
-        should('be.visible');
+      cy.contains('Error: Email must be verified to create a project')
+        .should('be.visible');
       cy.percySnapshot(`${Cypress.currentTest.titlePath}`);
     });
-  });  
+  });
   describe("A user cannot create a project with existing slug", () => {
     before(() => {
       cy.intercept("http://localhost:3857/graphql", (req) => {
