@@ -2,7 +2,7 @@
 /* eslint-disable cypress/no-unnecessary-waiting */
 import { ProjectAccessControlSetting} from "../../../src/generated/graphql";
 import "cypress-localstorage-commands";
-import { waitOnMapbox, checkForNavAndLang, drawPolygon, drawInvalidPolygon, drawSecondPolygon, generateSlug } from '../../support/utils.js'
+import { waitOnMapbox, checkForNavAndLang, drawPolygon, drawInvalidPolygon, drawSecondPolygon, bypassUncaughtException, generateSlug } from '../../support/utils.js'
 
 
 let surveyId: any;
@@ -276,6 +276,7 @@ describe('Survey creation smoke test', () => {
     });
     devices.forEach((device) => {
       it(`Can visit the survey - ${device}`, () => {
+        bypassUncaughtException('ServiceWorker')
         cy.viewport(device);
         cy.contains("Welcome")
           .should('be.visible');
