@@ -412,24 +412,6 @@ const styles = [
       "fill-opacity": ["*", 0.1, ["get", "animationFraction"]],
     },
   },
-  {
-    id: "gl-draw-polygon-preprocessing-symbol",
-    type: "symbol",
-    filter: [
-      "all",
-      ["==", "preprocessing", "true"],
-      ["==", "$type", "Polygon"],
-    ],
-    paint: {
-      // "fill-color": "orange",
-      // "fill-opacity": 0.1,
-    },
-    layout: {
-      "text-anchor": "center",
-      "text-color": "white",
-      "text-field": "Processing...",
-    },
-  },
 ];
 
 export default styles;
