@@ -46,6 +46,7 @@ SimpleSelect.toDisplayFeatures = function (
   geojson: any,
   push: (feature: Feature<any>) => void
 ) {
+  console.log("toDisplayFeatures", geojson);
   if (geojson.geometry?.type === "Polygon") {
     const kinks = getKinks(geojson);
     if (kinks.features.length > 0) {

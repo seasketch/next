@@ -14,6 +14,7 @@ import getKinks from "@turf/kinks";
 import styles from "./styles";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 import UnfinishedSimpleSelect from "./UnfinishedSimpleSelect";
+import Preprocessing from "./Preprocessing";
 
 function hasKinks(feature?: Feature<any>) {
   if (feature && feature.geometry.type === "Polygon") {
@@ -75,15 +76,17 @@ export default function useMapboxGLDraw(
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
   onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
-  onCancelNewShape?: () => void
+  onCancelNewShape?: () => void,
+  preprocessingEndpoint?: string
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
   const [state, _setState] = useState(DigitizingState.NO_SELECTION);
   const [disabled, setDisabled] = useState(false);
-  const [dragTarget, setDragTarget] =
-    useState<DigitizingDragTarget | null>(null);
+  const [dragTarget, setDragTarget] = useState<DigitizingDragTarget | null>(
+    null
+  );
   const [selection, setSelection] = useState<null | Feature<any>>(null);
   const handlerState = useRef<{
     draw?: MapboxDraw;
@@ -102,6 +105,27 @@ export default function useMapboxGLDraw(
 
   useEffect(() => {
     if (map && geometryType && !disabled && !handlerState.current.draw) {
+      console.log("create draw", {
+        keybindings: true,
+        clickBuffer: 4,
+        displayControlsDefault: true,
+        controls: {},
+        defaultMode: "simple_select",
+        boxSelect: false,
+        modes: {
+          ...MapboxDraw.modes,
+          draw_line_string: DrawLineString,
+          draw_polygon: DrawPolygon,
+          draw_point: DrawPoint,
+          direct_select: DirectSelect,
+          simple_select: SimpleSelect,
+          unfinished_feature_select: UnfinishedFeatureSelect,
+          unfinished_simple_select: UnfinishedSimpleSelect,
+          preprocessing: Preprocessing,
+        },
+        styles,
+        userProperties: true,
+      });
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -118,20 +142,26 @@ export default function useMapboxGLDraw(
           simple_select: SimpleSelect,
           unfinished_feature_select: UnfinishedFeatureSelect,
           unfinished_simple_select: UnfinishedSimpleSelect,
+          preprocessing: Preprocessing,
         },
         styles,
         userProperties: true,
       });
-      // @ts-ignore
-      window.draw = draw;
       handlerState.current.draw = draw;
       setDraw(draw);
 
-      map.addControl(draw);
+      try {
+        console.log("map add control");
+        map.addControl(draw);
+      } catch (e) {
+        console.log(e);
+      }
 
       if (initialValue) {
+        console.log("set initial value", initialValue);
         draw.set(initialValue);
         if (initialValue.features.length) {
+          console.log("zoom to");
           // TODO: only pan or fit if object is out of bounds or on mobile
           if (initialValue.features[0].geometry.type === "Point") {
             map.panTo(
@@ -157,6 +187,7 @@ export default function useMapboxGLDraw(
 
       const handlers = {
         create: function (e: any) {
+          console.log("create", e);
           const kinks = hasKinks(e.features[0]);
           if (kinks) {
             setSelfIntersects(true);
@@ -274,6 +305,7 @@ export default function useMapboxGLDraw(
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
       return () => {
+        console.log("teardown");
         if (map && draw) {
           try {
             map.removeControl(draw);
@@ -414,6 +446,7 @@ export default function useMapboxGLDraw(
    * @param requireProps
    */
   function create(unfinished: boolean, isSketchWorkflow?: boolean) {
+    console.log("create create", unfinished, isSketchWorkflow);
     if (handlerState.current.draw) {
       setState(DigitizingState.CREATE);
       handlerState.current.draw.changeMode(
@@ -421,7 +454,10 @@ export default function useMapboxGLDraw(
         drawMode,
         {
           getNextMode: isSketchWorkflow
-            ? (featureId: string) => ["simple_select"] // TODO: add preprocessing mode
+            ? (featureId: string) =>
+                preprocessingEndpoint
+                  ? ["preprocessing", { preprocessingEndpoint, featureId }]
+                  : ["simple_select"] // TODO: add preprocessing mode
             : unfinished
             ? geometryType === SketchGeometryType.Polygon
               ? (featureId: string) => [

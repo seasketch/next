@@ -148,16 +148,6 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           }
         ></Tooltip>
       </AnimatePresence>
-      <div className="absolute bg-white shadow rounded w-48 z-50 top-2 right-2 text-base p-4">
-        <h1>
-          <Trans>Visible Sketches</Trans>
-        </h1>
-        <ul>
-          {Object.keys(mapContext.sketchLayerStates).map((id) => (
-            <li key={id}>{id}</li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 });

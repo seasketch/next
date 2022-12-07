@@ -160,7 +160,7 @@ export default class LayerInteractivityManager extends EventEmitter {
       this.interactiveVectorLayerIds.length > 0 ||
       this.sketchLayerIds.length > 0
     ) {
-      this.map.on("mousemove", this.debouncedMouseMoveListener);
+      // this.map.on("mousemove", this.debouncedMouseMoveListener);
     }
   }
 
@@ -180,10 +180,10 @@ export default class LayerInteractivityManager extends EventEmitter {
   }
 
   private registerEventListeners(map: Map) {
-    map.on("mouseout", this.onMouseOut);
+    // map.on("mouseout", this.onMouseOut);
     map.on("click", this.onMouseClick);
-    map.on("movestart", this.onMoveStart);
-    map.on("moveend", this.onMoveEnd);
+    // map.on("movestart", this.onMoveStart);
+    // map.on("moveend", this.onMoveEnd);
   }
 
   private moving = false;
@@ -396,6 +396,7 @@ export default class LayerInteractivityManager extends EventEmitter {
   };
 
   private mouseMoveListener = (e: MapMouseEvent) => {
+    console.log("mouse move listener");
     if (this.moving) {
       return;
     }

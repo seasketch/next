@@ -10134,6 +10134,7 @@ export type Sketch = Node & {
    * SeaSketch may have a means of visualizing how plans are iterated on over time.
    */
   copyOf?: Maybe<Scalars['Int']>;
+  createdAt: Scalars['Datetime'];
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
@@ -10159,6 +10160,7 @@ export type Sketch = Node & {
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
+  updatedAt: Scalars['Datetime'];
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
   /**
@@ -10325,6 +10327,8 @@ export type SketchClassPatch = {
   mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
+  preprocessingEndpoint?: Maybe<Scalars['String']>;
+  preprocessingProjectUrl?: Maybe<Scalars['String']>;
   templateDescription?: Maybe<Scalars['String']>;
 };
 
@@ -15387,7 +15391,7 @@ export type SimpleProjectListQuery = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
@@ -15484,6 +15488,27 @@ export type DeleteSketchClassMutation = (
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateGeoprocessingServicesMutationVariables = Exact<{
+  id: Scalars['Int'];
+  preprocessingEndpoint?: Maybe<Scalars['String']>;
+  preprocessingProjectUrl?: Maybe<Scalars['String']>;
+  geoprocessingClientName?: Maybe<Scalars['String']>;
+  geoprocessingClientUrl?: Maybe<Scalars['String']>;
+  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateGeoprocessingServicesMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClass?: Maybe<(
+    { __typename?: 'UpdateSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
     )> }
   )> }
 );
@@ -17721,6 +17746,8 @@ export const SketchingDetailsFragmentDoc = gql`
   geoprocessingClientUrl
   geoprocessingProjectUrl
   formElementId
+  preprocessingEndpoint
+  preprocessingProjectUrl
 }
     `;
 export const SketchEditorModalDetailsFragmentDoc = gql`
@@ -22661,6 +22688,53 @@ export function useDeleteSketchClassMutation(baseOptions?: Apollo.MutationHookOp
 export type DeleteSketchClassMutationHookResult = ReturnType<typeof useDeleteSketchClassMutation>;
 export type DeleteSketchClassMutationResult = Apollo.MutationResult<DeleteSketchClassMutation>;
 export type DeleteSketchClassMutationOptions = Apollo.BaseMutationOptions<DeleteSketchClassMutation, DeleteSketchClassMutationVariables>;
+export const UpdateGeoprocessingServicesDocument = gql`
+    mutation UpdateGeoprocessingServices($id: Int!, $preprocessingEndpoint: String, $preprocessingProjectUrl: String, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
+  updateSketchClass(
+    input: {id: $id, patch: {preprocessingEndpoint: $preprocessingEndpoint, preprocessingProjectUrl: $preprocessingProjectUrl, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
+  ) {
+    sketchClass {
+      id
+      preprocessingEndpoint
+      preprocessingProjectUrl
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+    }
+  }
+}
+    `;
+export type UpdateGeoprocessingServicesMutationFn = Apollo.MutationFunction<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>;
+
+/**
+ * __useUpdateGeoprocessingServicesMutation__
+ *
+ * To run a mutation, you first call `useUpdateGeoprocessingServicesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateGeoprocessingServicesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateGeoprocessingServicesMutation, { data, loading, error }] = useUpdateGeoprocessingServicesMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      preprocessingEndpoint: // value for 'preprocessingEndpoint'
+ *      preprocessingProjectUrl: // value for 'preprocessingProjectUrl'
+ *      geoprocessingClientName: // value for 'geoprocessingClientName'
+ *      geoprocessingClientUrl: // value for 'geoprocessingClientUrl'
+ *      geoprocessingProjectUrl: // value for 'geoprocessingProjectUrl'
+ *   },
+ * });
+ */
+export function useUpdateGeoprocessingServicesMutation(baseOptions?: Apollo.MutationHookOptions<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>(UpdateGeoprocessingServicesDocument, options);
+      }
+export type UpdateGeoprocessingServicesMutationHookResult = ReturnType<typeof useUpdateGeoprocessingServicesMutation>;
+export type UpdateGeoprocessingServicesMutationResult = Apollo.MutationResult<UpdateGeoprocessingServicesMutation>;
+export type UpdateGeoprocessingServicesMutationOptions = Apollo.BaseMutationOptions<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -26094,6 +26168,7 @@ export const namedOperations = {
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',
     DeleteSketchClass: 'DeleteSketchClass',
+    UpdateGeoprocessingServices: 'UpdateGeoprocessingServices',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',

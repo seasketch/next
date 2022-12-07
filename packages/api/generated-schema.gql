@@ -11385,6 +11385,8 @@ input SketchClassPatch {
 
   """Label chosen by project admins that is shown to users."""
   name: String
+  preprocessingEndpoint: String
+  preprocessingProjectUrl: String
   templateDescription: String
 }
 

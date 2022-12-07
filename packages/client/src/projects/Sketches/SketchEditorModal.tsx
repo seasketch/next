@@ -109,7 +109,9 @@ export default function SketchEditorModal({
     feature ? toFeatureCollection([feature]) : EMPTY_FEATURE_COLLECTION,
     (feature) => {
       setFeature(feature);
-    }
+    },
+    undefined,
+    sketchClass.preprocessingEndpoint || undefined
   );
 
   useEffect(() => {

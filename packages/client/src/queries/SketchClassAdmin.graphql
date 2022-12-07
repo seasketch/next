@@ -29,6 +29,8 @@ fragment SketchingDetails on SketchClass {
   geoprocessingClientUrl
   geoprocessingProjectUrl
   formElementId
+  preprocessingEndpoint
+  preprocessingProjectUrl
 }
 
 mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
@@ -77,6 +79,37 @@ mutation DeleteSketchClass($id: Int!) {
   deleteSketchClass(input: { id: $id }) {
     sketchClass {
       ...SketchingDetails
+    }
+  }
+}
+
+mutation UpdateGeoprocessingServices(
+  $id: Int!
+  $preprocessingEndpoint: String
+  $preprocessingProjectUrl: String
+  $geoprocessingClientName: String
+  $geoprocessingClientUrl: String
+  $geoprocessingProjectUrl: String
+) {
+  updateSketchClass(
+    input: {
+      id: $id
+      patch: {
+        preprocessingEndpoint: $preprocessingEndpoint
+        preprocessingProjectUrl: $preprocessingProjectUrl
+        geoprocessingClientName: $geoprocessingClientName
+        geoprocessingClientUrl: $geoprocessingClientUrl
+        geoprocessingProjectUrl: $geoprocessingProjectUrl
+      }
+    }
+  ) {
+    sketchClass {
+      id
+      preprocessingEndpoint
+      preprocessingProjectUrl
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
     }
   }
 }
