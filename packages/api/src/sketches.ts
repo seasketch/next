@@ -53,16 +53,3 @@ export async function getFeatureCollection(
     return normalizeSpatialProperties(surveyId, collection, formElements);
   }
 }
-
-export async function getSketchGeoJSON(
-  id: number,
-  client: DBClient
-) {
-  const { rows } = await client.query(
-    `
-      SELECT survey_response_mvt($1, $2, $3, $4)
-      `,
-    [elementId, x, y, z]
-  );
-  return rows[0].survey_response_mvt;
-}

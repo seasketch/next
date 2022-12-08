@@ -9,14 +9,6 @@ const _stopDragging = DirectSelect.stopDragging;
 const _onSetup = DirectSelect.onSetup;
 const _clickNoTarget = DirectSelect.clickNoTarget;
 
-DirectSelect.onSetup = function (opts: any) {
-  const state = _onSetup.apply(this, [opts]);
-  state.preprocessingEndpoint = opts.preprocessingEndpoint;
-  state.preprocessingResults = opts.preprocessingResults;
-  this.checkForKinks(state);
-  return state;
-};
-
 DirectSelect.stopDragging = function (state: any, e: any) {
   this.map.fire("seasketch.drag_target", {} as DragTargetEvent);
   return _stopDragging.apply(this, [state, e]);
@@ -120,10 +112,7 @@ DirectSelect.clickInactive = function (state: any, e: any) {
     // do nothing. don't allow switching away
   } else {
     if (state.preprocessingEndpoint) {
-      this.changeMode("preprocessing", {
-        preprocessingEndpoint: state.preprocessingEndpoint,
-        preprocessingResults: state.preprocessingResults,
-      });
+      this.changeMode("preprocessing");
     } else {
       if (e.featureTarget.geometry.type !== "Point") {
         // switch to direct_select mode for polygon/line features
@@ -147,8 +136,6 @@ DirectSelect.clickNoTarget = function (state: any, e: any) {
     this.clearSelectedCoordinates();
     state.feature.changed();
     this.changeMode("preprocessing", {
-      preprocessingEndpoint: state.preprocessingEndpoint,
-      preprocessingResults: state.preprocessingResults,
       featureId: state.feature.id,
     });
   } else {
@@ -201,4 +188,18 @@ DirectSelect.dragFeature = function (state: any, e: any, delta: any) {
   // noop
 };
 
-export default DirectSelect;
+export default function DirectSelectFactory(
+  preprocessingEndpoint?: string,
+  preprocessingResults?: { [id: string]: Feature<any> }
+) {
+  return {
+    ...DirectSelect,
+    onSetup: function (opts: any) {
+      const state = _onSetup.apply(this, [opts]);
+      state.preprocessingEndpoint = preprocessingEndpoint;
+      state.preprocessingResults = preprocessingResults;
+      this.checkForKinks(state);
+      return state;
+    },
+  };
+}

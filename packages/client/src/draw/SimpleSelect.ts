@@ -53,7 +53,6 @@ SimpleSelect.toDisplayFeatures = function (
       geojson.properties.kinks = "true";
     }
   }
-  console.log("state", state, geojson);
   if (
     state.preprocessingEndpoint &&
     state.preprocessingResults &&
@@ -72,8 +71,6 @@ SimpleSelect.clickOnFeature = function (state: any, e: any) {
     // switch to direct_select mode for polygon/line features
     this.changeMode("direct_select", {
       featureId: e.featureTarget.properties.id,
-      preprocessingEndpoint: state.preprocessingEndpoint,
-      preprocessingResults: state.preprocessingResults,
     });
   } else {
     // // call parent

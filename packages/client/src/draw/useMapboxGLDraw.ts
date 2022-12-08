@@ -109,7 +109,6 @@ export default function useMapboxGLDraw(
 
   useEffect(() => {
     if (map && geometryType && !disabled && !handlerState.current.draw) {
-      console.log("recreate draw");
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -122,14 +121,20 @@ export default function useMapboxGLDraw(
           draw_line_string: DrawLineString,
           draw_polygon: DrawPolygon,
           draw_point: DrawPoint,
-          direct_select: DirectSelect,
+          direct_select: DirectSelect(
+            preprocessingEndpoint,
+            preprocessingResults
+          ),
           simple_select: SimpleSelect(
             preprocessingEndpoint,
             preprocessingResults
           ),
           unfinished_feature_select: UnfinishedFeatureSelect,
           unfinished_simple_select: UnfinishedSimpleSelect,
-          preprocessing: Preprocessing,
+          preprocessing: Preprocessing(
+            preprocessingEndpoint,
+            preprocessingResults
+          ),
         },
         styles,
         userProperties: true,
@@ -394,7 +399,6 @@ export default function useMapboxGLDraw(
             ...commonModeOpts,
           });
         } else {
-          console.log("EDIT!");
           // @ts-ignore
           draw.changeMode("direct_select", {
             featureId: feature.id,
@@ -548,8 +552,6 @@ export default function useMapboxGLDraw(
       ...commonModeOpts,
     });
   }
-
-  console.log({ preprocessingEndpoint });
 
   return {
     digitizingState: state,

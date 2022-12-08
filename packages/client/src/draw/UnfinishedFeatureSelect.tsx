@@ -1,5 +1,5 @@
-import DirectSelect from "./DirectSelect";
-
+import DS from "./DirectSelect";
+const DirectSelect = DS();
 const _onSetup = DirectSelect.onSetup;
 
 const UnfinishedFeatureSelect = {

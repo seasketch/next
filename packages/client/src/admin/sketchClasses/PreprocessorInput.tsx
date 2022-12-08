@@ -50,6 +50,9 @@ export default function PreprocessorInput({
 
   const search = useCallback(
     async (value?: string) => {
+      if (typeof value !== "string") {
+        value = undefined;
+      }
       setLoading(true);
       const urlString = value || url;
       if (urlString.length === 0) {
