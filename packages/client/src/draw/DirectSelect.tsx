@@ -11,6 +11,8 @@ const _clickNoTarget = DirectSelect.clickNoTarget;
 
 DirectSelect.onSetup = function (opts: any) {
   const state = _onSetup.apply(this, [opts]);
+  state.preprocessingEndpoint = opts.preprocessingEndpoint;
+  state.preprocessingResults = opts.preprocessingResults;
   this.checkForKinks(state);
   return state;
 };
@@ -97,10 +99,6 @@ DirectSelect.fireUpdate = function () {
   } else {
     _fireUpdate.apply(this, []);
   }
-  // this.map.fire(Constants.events.UPDATE, {
-  //   action: Constants.updateActions.CHANGE_COORDINATES,
-  //   features: this.getSelected().map((f) => f.toGeoJSON()),
-  // });
 };
 
 DirectSelect.clickNoTarget = function (state: any, e: any) {
@@ -121,17 +119,40 @@ DirectSelect.clickInactive = function (state: any, e: any) {
   if (state.kinks?.features.length > 0) {
     // do nothing. don't allow switching away
   } else {
-    if (e.featureTarget.geometry.type !== "Point") {
-      // switch to direct_select mode for polygon/line features
-      this.changeMode("direct_select", {
-        featureId: e.featureTarget.properties.id,
+    if (state.preprocessingEndpoint) {
+      this.changeMode("preprocessing", {
+        preprocessingEndpoint: state.preprocessingEndpoint,
+        preprocessingResults: state.preprocessingResults,
       });
     } else {
-      // switch to simple_select mode for point features
-      this.changeMode("simple_select", {
-        featureIds: [e.featureTarget.properties.id],
-      });
+      if (e.featureTarget.geometry.type !== "Point") {
+        // switch to direct_select mode for polygon/line features
+        this.changeMode("direct_select", {
+          featureId: e.featureTarget.properties.id,
+        });
+      } else {
+        // switch to simple_select mode for point features
+        this.changeMode("simple_select", {
+          featureIds: [e.featureTarget.properties.id],
+        });
+      }
     }
+  }
+};
+
+DirectSelect.clickNoTarget = function (state: any, e: any) {
+  if (state.preprocessingEndpoint) {
+    // clear coordinate selection but don't allow change of mode
+    state.selectedCoordPaths = [];
+    this.clearSelectedCoordinates();
+    state.feature.changed();
+    this.changeMode("preprocessing", {
+      preprocessingEndpoint: state.preprocessingEndpoint,
+      preprocessingResults: state.preprocessingResults,
+      featureId: state.feature.id,
+    });
+  } else {
+    _clickNoTarget.apply(this, [state, e]);
   }
 };
 

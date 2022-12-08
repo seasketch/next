@@ -1,28 +1,4 @@
 const styles = [
-  // {
-  //   id: "gl-draw-polygon-kinks-label",
-  //   type: "symbol",
-  //   filter: [
-  //     "all",
-  //     // ["==", "active", "false"],
-  //     // ["==", "kinks", true],
-  //     ["==", "$type", "Polygon"],
-  //     // ["!=", "mode", "static"],
-  //   ],
-  //   layout: {
-  //     // text: "foo",
-  //     "text-field": ["get", "user_error_message"],
-  //     // "text-variable-anchor": ["top", "bottom", "left", "right"],
-  //     "text-radial-offset": 0.5,
-  //     "text-justify": "auto",
-
-  //     // "icon-image": ["get", "icon"],
-  //   },
-  //   paint: {
-  //     "text-halo-color": "white",
-  //     "text-halo-width": 2,
-  //   },
-  // },
   {
     id: "gl-draw-polygon-fill-inactive-no-kinks",
     type: "fill",
@@ -357,30 +333,31 @@ const styles = [
       "circle-color": "#404040",
     },
   },
-  {
-    id: "gl-draw-polygon-self-intersection",
-    type: "symbol",
-    filter: [
-      "all",
-      ["==", "$type", "Point"],
-      ["==", "meta", "self-intersection"],
-    ],
-    layout: {
-      // "text-field": "↚",
-      // "text-size": 32,
-      "text-field": "✕",
-      "text-size": 14,
-      "text-offset": [0, 0],
-      "text-allow-overlap": true,
-    },
-    paint: {
-      "text-opacity": 0.8,
-      "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
-      // "text-color": "#fe6400",
-      "text-halo-width": 1,
-      "text-halo-blur": 0,
-    },
-  },
+  // Booting up gl-draw when sketching from my plans with this on always causes
+  // an exception. Further, it can block cursor changes when hovering over a
+  // vertex to finish a shape. Note sure why so I'm going to have to disable
+  // this. -cburt TODO: fix...
+  // {
+  //   id: "gl-draw-polygon-self-intersection",
+  //   type: "symbol",
+  //   filter: [
+  //     "all",
+  //     ["has", "meta"],
+  //     ["==", ["get", "meta"], "self-intersection"],
+  //   ],
+  //   layout: {
+  //     "text-field": "✕",
+  //     "text-size": 14,
+  //     "text-offset": [0, 0],
+  //     "text-allow-overlap": true,
+  //   },
+  //   paint: {
+  //     "text-opacity": 0.8,
+  //     "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
+  //     "text-halo-width": 1,
+  //     "text-halo-blur": 0,
+  //   },
+  // },
   {
     id: "gl-draw-polygon-preprocessing-outline",
     type: "line",
@@ -388,13 +365,11 @@ const styles = [
       "all",
       ["==", "preprocessing", "true"],
       ["==", "$type", "Polygon"],
+      ["has", "animationFraction"],
     ],
     paint: {
       "line-color": "white",
-      // "line-opacity": ["-", 1, ["get", "animationFraction"]],
-      "line-offset": ["+", -3, ["*", ["get", "animationFraction"], 0.8]],
       "line-width": ["-", 3, ["*", ["get", "animationFraction"], 0.8]],
-      // "line-width": 2,
       "line-dasharray": [1, 2, 1],
     },
   },
@@ -405,10 +380,10 @@ const styles = [
       "all",
       ["==", "preprocessing", "true"],
       ["==", "$type", "Polygon"],
+      ["has", "animationFraction"],
     ],
     paint: {
       "fill-color": "white",
-      // "fill-opacity": 0.1,
       "fill-opacity": ["*", 0.1, ["get", "animationFraction"]],
     },
   },

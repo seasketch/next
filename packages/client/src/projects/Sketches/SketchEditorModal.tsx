@@ -141,8 +141,12 @@ export default function SketchEditorModal({
   }, [sketch, setFeature]);
 
   useEffect(() => {
-    draw.create(false, true);
-  }, []);
+    if (sketch) {
+      draw.actions.clearSelection();
+    } else {
+      draw.create(false, true);
+    }
+  }, [sketch]);
 
   useEffect(() => {
     if (!baseRoute?.isExact) {
