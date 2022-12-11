@@ -1,11 +1,11 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { LngLatLike, Map } from "mapbox-gl";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature, FeatureCollection, Point } from "geojson";
+import { Feature, FeatureCollection, Geometry, Point } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
 import DrawPoint from "./DrawPoint";
 import DirectSelect from "./DirectSelect";
@@ -50,6 +50,17 @@ export enum DigitizingState {
    * the current mode must be direct-select.
    */
   UNFINISHED,
+  /**
+   * If preprocessingEndpoint is set, this state will appear when shapes are
+   * being analyzed.
+   */
+  PREPROCESSING,
+  /**
+   * Preprocessing failed, either due to a network or configuration problem, or
+   * a shape validation error. In either case should be shown to the user.
+   * Preprocessing error can be accessed from returned `preprocessingError`
+   */
+  PREPROCESSING_ERROR,
 }
 
 export type DigitizingDragTarget = {
@@ -77,7 +88,8 @@ export default function useMapboxGLDraw(
   initialValue: FeatureCollection<any> | null,
   onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
   onCancelNewShape?: () => void,
-  preprocessingEndpoint?: string
+  preprocessingEndpoint?: string,
+  onPreprocessedGeometry?: (geom: Geometry) => void
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
@@ -88,11 +100,15 @@ export default function useMapboxGLDraw(
     null
   );
   const [selection, setSelection] = useState<null | Feature<any>>(null);
+  const [preprocessingError, setPreprocessingError] = useState<string | null>(
+    null
+  );
   const handlerState = useRef<{
     draw?: MapboxDraw;
     onChange: (value: Feature<any> | null, hasKinks: boolean) => void;
     state: DigitizingState;
-  }>({ onChange, state });
+    preprocessingError: string | null;
+  }>({ onChange, state, preprocessingError });
 
   function setState(state: DigitizingState) {
     _setState(state);
@@ -100,10 +116,11 @@ export default function useMapboxGLDraw(
   }
 
   handlerState.current.onChange = onChange;
+  handlerState.current.preprocessingError = preprocessingError;
 
   const [selfIntersects, setSelfIntersects] = useState<boolean>(false);
 
-  const [preprocessingResults, setPreprocessingResults] = useState<{
+  const [preprocessingResults] = useState<{
     [id: string]: Feature<any>;
   }>({});
 
@@ -132,8 +149,10 @@ export default function useMapboxGLDraw(
           unfinished_feature_select: UnfinishedFeatureSelect,
           unfinished_simple_select: UnfinishedSimpleSelect,
           preprocessing: Preprocessing(
+            setPreprocessingError,
             preprocessingEndpoint,
-            preprocessingResults
+            preprocessingResults,
+            onPreprocessedGeometry
           ),
         },
         styles,
@@ -186,7 +205,11 @@ export default function useMapboxGLDraw(
           ) {
             setState(DigitizingState.UNFINISHED);
           } else {
-            setState(DigitizingState.EDITING);
+            if (handlerState.current.preprocessingError) {
+              // do nothing, already in correct state
+            } else {
+              setState(DigitizingState.EDITING);
+            }
           }
           handlerState.current.onChange(e.features[0], selfIntersects);
         },
@@ -229,12 +252,19 @@ export default function useMapboxGLDraw(
                 (selected.features[0].geometry.type === "Polygon" ||
                   selected.features[0].geometry.type === "LineString")
               ) {
-                newState = DigitizingState.EDITING;
+                if (handlerState.current.preprocessingError) {
+                  newState = DigitizingState.PREPROCESSING_ERROR;
+                } else {
+                  newState = DigitizingState.EDITING;
+                }
               }
               break;
             case "unfinished_feature_select":
             case "unfinished_simple_select":
               newState = DigitizingState.UNFINISHED;
+              break;
+            case "preprocessing":
+              newState = DigitizingState.PREPROCESSING;
               break;
             // Should not need to account for draw_polygon, draw_point, etc
             // These modes are entered into via direct API calls, and thus don't
@@ -343,13 +373,14 @@ export default function useMapboxGLDraw(
             featureId: selection.id,
             ...commonModeOpts,
           });
+          setState(DigitizingState.PREPROCESSING);
         } else {
           draw.changeMode("simple_select", {
             featureIds: [],
             ...commonModeOpts,
           });
+          setState(DigitizingState.NO_SELECTION);
         }
-        setState(DigitizingState.NO_SELECTION);
         // TODO: do we need this?
         // // This will not trigger a selection change when geometryType is point,
         // // probably because we're not change modes, so we need to set selection
@@ -465,11 +496,18 @@ export default function useMapboxGLDraw(
   function create(unfinished: boolean, isSketchWorkflow?: boolean) {
     if (handlerState.current.draw) {
       setState(DigitizingState.CREATE);
-      let getNextMode: (featureId: string) => [string] | [string, any];
+      let getNextMode: (
+        featureId: string,
+        hasKinks?: boolean
+      ) => [string] | [string, any];
       if (isSketchWorkflow) {
         if (preprocessingEndpoint) {
-          getNextMode = (featureId) => {
-            return ["preprocessing", { featureId, ...commonModeOpts }];
+          getNextMode = (featureId, hasKinks) => {
+            if (hasKinks) {
+              return ["direct_select", { featureId, ...commonModeOpts }];
+            } else {
+              return ["preprocessing", { featureId, ...commonModeOpts }];
+            }
           };
         } else {
           getNextMode = (featureId) => {
@@ -512,14 +550,34 @@ export default function useMapboxGLDraw(
     }
   }
 
-  function setCollection(collection: FeatureCollection<any>) {
+  function setCollection(
+    collection: FeatureCollection<any>,
+    directSelectFirstFeature?: boolean
+  ) {
     handlerState.current.draw?.set(collection);
     setState(DigitizingState.NO_SELECTION);
     setSelfIntersects(false);
-    // @ts-ignore
-    handlerState.current.draw?.changeMode("simple_select", {
-      ...commonModeOpts,
-    });
+    if (directSelectFirstFeature && handlerState.current.draw) {
+      const draw = handlerState.current.draw;
+      const features = draw.getAll().features;
+      if (features.length < 0) {
+        throw new Error("No features to edit");
+      } else if (features.length > 1) {
+        throw new Error("More than one feature. Is this a sketching workflow?");
+      } else {
+        const featureId = features[0].id;
+        // @ts-ignore
+        draw.changeMode("direct_select", {
+          featureId,
+          ...commonModeOpts,
+        });
+      }
+    } else {
+      // @ts-ignore
+      handlerState.current.draw?.changeMode("simple_select", {
+        ...commonModeOpts,
+      });
+    }
   }
 
   function resetFeature(feature: Feature<any>) {
@@ -553,6 +611,14 @@ export default function useMapboxGLDraw(
     });
   }
 
+  const enable = useCallback(() => {
+    setDisabled(false);
+  }, [setDisabled]);
+
+  const disable = useCallback(() => {
+    setDisabled(true);
+  }, [setDisabled]);
+
   return {
     digitizingState: state,
     selection,
@@ -560,12 +626,13 @@ export default function useMapboxGLDraw(
     setCollection,
     create,
     /** Temporarily disable drawing */
-    disable: () => setDisabled(true),
+    disable,
     /** Re-enable drawing */
-    enable: () => setDisabled(false),
+    enable,
     dragTarget,
     selfIntersects,
     resetFeature,
+    preprocessingError,
   };
 }
 

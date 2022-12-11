@@ -70,6 +70,7 @@ export default function useSketchActions({
   setEditor,
   sketches,
   folders,
+  zoomTo,
 }: {
   folderSelected: boolean;
   selectedSketchClasses: number[];
@@ -108,6 +109,7 @@ export default function useSketchActions({
   >;
   sketches?: SketchTocDetailsFragment[] | null;
   folders?: SketchFolderDetailsFragment[] | null;
+  zoomTo: (bbox: number[]) => void;
 }) {
   const { t } = useTranslation("sketching");
   const client = useApolloClient();
@@ -139,6 +141,14 @@ export default function useSketchActions({
           },
         });
         if (results?.projectBySlug?.mySketches) {
+          // Will need to find all child items, including both folder and sketches,
+          // and remove them from the list
+          const deletedIds = getChildrenOfSketchOrSketchFolder(
+            sketch,
+            results.projectBySlug.myFolders || [],
+            results.projectBySlug.mySketches || []
+          );
+
           await cache.writeQuery({
             query: SketchingDocument,
             variables: { slug: getSlug() },
@@ -146,9 +156,14 @@ export default function useSketchActions({
               ...results,
               projectBySlug: {
                 ...results.projectBySlug,
+                myFolders: [
+                  ...(results.projectBySlug.myFolders || []).filter(
+                    (f) => deletedIds.folders.indexOf(f.id) === -1
+                  ),
+                ],
                 mySketches: [
-                  ...results.projectBySlug.mySketches.filter(
-                    (s) => s.id !== sketch.id
+                  ...(results.projectBySlug.mySketches || []).filter(
+                    (s) => deletedIds.sketches.indexOf(s.id) === -1
                   ),
                 ],
               },
@@ -170,6 +185,14 @@ export default function useSketchActions({
           },
         });
         if (results?.projectBySlug?.myFolders) {
+          // Will need to find all child items, including both folder and sketches,
+          // and remove them from the list
+          const deletedIds = getChildrenOfSketchOrSketchFolder(
+            folder,
+            results.projectBySlug.myFolders || [],
+            results.projectBySlug.mySketches || []
+          );
+
           await cache.writeQuery({
             query: SketchingDocument,
             variables: { slug: getSlug() },
@@ -179,7 +202,12 @@ export default function useSketchActions({
                 ...results.projectBySlug,
                 myFolders: [
                   ...results.projectBySlug.myFolders.filter(
-                    (f) => f.id !== folder.id
+                    (f) => deletedIds.folders.indexOf(f.id) === -1
+                  ),
+                ],
+                mySketches: [
+                  ...(results.projectBySlug.mySketches || []).filter(
+                    (s) => deletedIds.sketches.indexOf(s.id) === -1
                   ),
                 ],
               },
@@ -375,6 +403,22 @@ export default function useSketchActions({
                   });
                 },
               },
+              ...(selectedSketchClasses && !folderSelected
+                ? ([
+                    {
+                      id: "zoom-to",
+                      label: t("Zoom to"),
+                      disabled: multiple,
+                      action: ({ selectedSketches }) => {
+                        // TODO: support multiple
+                        let bbox = selectedSketches[0].bbox;
+                        if (bbox) {
+                          zoomTo(bbox as number[]);
+                        }
+                      },
+                    },
+                  ] as SketchAction[])
+                : []),
             ] as SketchAction[])
           : [],
     });
@@ -391,6 +435,7 @@ export default function useSketchActions({
     deleteSketch,
     deleteSketchFolder,
     renameFolder,
+    zoomTo,
   ]);
 
   /**
@@ -560,4 +605,52 @@ export default function useSketchActions({
     menuOptions,
     keyboardShortcuts,
   };
+}
+
+function getChildrenOfSketchOrSketchFolder(
+  parent: { __typename?: "Sketch" | "SketchFolder"; id: number },
+  folders: {
+    __typename?: "Sketch" | "SketchFolder";
+    id: number;
+    collectionId?: number | null;
+    folderId?: number | null;
+  }[],
+  sketches: {
+    __typename?: "Sketch" | "SketchFolder";
+    id: number;
+    collectionId?: number | null;
+    folderId?: number | null;
+  }[],
+  deletedIds = { sketches: [] as number[], folders: [] as number[] }
+) {
+  let isSketch = false;
+  if (parent.__typename === "Sketch") {
+    isSketch = true;
+    deletedIds.sketches.push(parent.id);
+  } else {
+    deletedIds.folders.push(parent.id);
+  }
+  let found = false;
+  for (const folder of folders) {
+    if ((isSketch ? folder.collectionId : folder.folderId) === parent.id) {
+      found = true;
+      getChildrenOfSketchOrSketchFolder(folder, folders, sketches, deletedIds);
+      break;
+    }
+  }
+  if (!found) {
+    for (const sketch of sketches) {
+      if ((isSketch ? sketch.collectionId : sketch.folderId) === parent.id) {
+        found = true;
+        getChildrenOfSketchOrSketchFolder(
+          sketch,
+          folders,
+          sketches,
+          deletedIds
+        );
+        break;
+      }
+    }
+  }
+  return deletedIds;
 }

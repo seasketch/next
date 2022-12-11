@@ -1,11 +1,11 @@
-import { DrawFeature } from "@mapbox/mapbox-gl-draw";
-import { Feature } from "geojson";
+import { Feature, Geometry } from "geojson";
 
 export async function preprocess(
   endpoint: string,
   drawFeature: any,
   changeMode: (mode: string, args?: any) => void,
-  preprocessingResults?: { [id: string]: Feature<any> }
+  preprocessingResults?: { [id: string]: Feature<any> },
+  onPreprocessedGeometry?: (geometry: Geometry) => void
 ) {
   return fetch(endpoint, {
     method: "POST",
@@ -24,6 +24,9 @@ export async function preprocess(
         preprocessingResults = {};
       }
       preprocessingResults[drawFeature.id] = data.data;
+      if (onPreprocessedGeometry) {
+        onPreprocessedGeometry(data.data.geometry);
+      }
       changeMode("simple_select", {
         preprocessingEndpoint: endpoint,
         preprocessingResults,

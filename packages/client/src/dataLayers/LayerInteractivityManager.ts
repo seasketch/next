@@ -50,6 +50,7 @@ export default class LayerInteractivityManager extends EventEmitter {
   private interactiveImageLayerIds: string[] = [];
   private basemap: ClientBasemap | undefined;
   private sketchLayerIds: string[] = [];
+  private focusedSketchId?: number;
 
   /**
    *
@@ -81,6 +82,10 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   setSketchLayerIds(ids: string[]) {
     this.sketchLayerIds = ids;
+  }
+
+  setFocusedSketchId(id: number | null) {
+    this.focusedSketchId = id || undefined;
   }
 
   /**
@@ -160,7 +165,7 @@ export default class LayerInteractivityManager extends EventEmitter {
       this.interactiveVectorLayerIds.length > 0 ||
       this.sketchLayerIds.length > 0
     ) {
-      // this.map.on("mousemove", this.debouncedMouseMoveListener);
+      this.map.on("mousemove", this.debouncedMouseMoveListener);
     }
   }
 
@@ -180,10 +185,10 @@ export default class LayerInteractivityManager extends EventEmitter {
   }
 
   private registerEventListeners(map: Map) {
-    // map.on("mouseout", this.onMouseOut);
+    map.on("mouseout", this.onMouseOut);
     map.on("click", this.onMouseClick);
-    // map.on("movestart", this.onMoveStart);
-    // map.on("moveend", this.onMoveEnd);
+    map.on("movestart", this.onMoveStart);
+    map.on("moveend", this.onMoveEnd);
   }
 
   private moving = false;
@@ -259,9 +264,23 @@ export default class LayerInteractivityManager extends EventEmitter {
       layers: this.sketchLayerIds || [],
     });
     if (sketchFeatures.length) {
-      this.emit("click:sketch", sketchFeatures[0], e);
-      e.preventDefault();
-      return;
+      const feature = sketchFeatures[0];
+      if (this.focusedSketchId) {
+        const id = feature.id?.toString();
+        if (id) {
+          if (this.focusedSketchId === parseInt(id)) {
+            this.emit("click:focused-sketch", feature, e);
+          }
+          e.preventDefault();
+          return;
+        } else {
+          throw new Error("Sketch display GeoJSON does not have ID assigned.");
+        }
+      } else {
+        this.emit("click:sketch", feature, e);
+        e.preventDefault();
+        return;
+      }
     }
     const features = this.map!.queryRenderedFeatures(e.point, {
       layers: this.interactiveVectorLayerIds,
@@ -396,7 +415,6 @@ export default class LayerInteractivityManager extends EventEmitter {
   };
 
   private mouseMoveListener = (e: MapMouseEvent) => {
-    console.log("mouse move listener");
     if (this.moving) {
       return;
     }
@@ -416,7 +434,12 @@ export default class LayerInteractivityManager extends EventEmitter {
     });
     if (sketchFeatures.length) {
       clear();
-      this.map!.getCanvas().style.cursor = "pointer";
+      if (
+        !this.focusedSketchId ||
+        sketchFeatures[0].id === this.focusedSketchId
+      ) {
+        this.map!.getCanvas().style.cursor = "pointer";
+      }
       return;
     }
     const layerIds = this.interactiveVectorLayerIds;

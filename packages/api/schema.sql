@@ -9543,17 +9543,7 @@ CREATE FUNCTION public.sketch_as_geojson(id integer) RETURNS jsonb
       'id',         sketches.id,
       'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
       'bbox', sketches.bbox,
-      'properties', 
-        sketches.properties::jsonb || 
-        to_jsonb(
-          json_build_object(
-            'user_id', sketches.user_id, 
-            'created_at', sketches.created_at,
-            'user_slug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
-            'collection_id', sketches.collection_id, 
-            'name', sketches.name
-          )
-        )
+      'properties', sketches_geojson_properties(sketches.*)
     ) 
     FROM sketches
     inner join user_profiles
@@ -9651,6 +9641,48 @@ CREATE FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_
 COMMENT ON FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_classes) IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: sketches_geojson_feature(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_geojson_feature(sketch public.sketches) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+    select sketch_as_geojson(sketch.id);
+  $$;
+
+
+--
+-- Name: FUNCTION sketches_geojson_feature(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) IS 'Use this to get a copy of the sketch with properties populated exactly as they would in the geojson or mvt endpoint. Useful for seeding a client-side cache.';
+
+
+--
+-- Name: sketches_geojson_properties(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+    select sketches.properties::jsonb || 
+        to_jsonb(
+          json_build_object(
+            'user_id', sketches.user_id, 
+            'created_at', sketches.created_at,
+            'user_slug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
+            'collection_id', sketches.collection_id, 
+            'name', sketches.name
+          )
+        )
+    from sketches
+    inner join user_profiles
+    on user_profiles.user_id = sketches.user_id
+    where sketches.id = sketch.id;
+  $$;
 
 
 --
@@ -16318,6 +16350,20 @@ GRANT UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_u
 
 
 --
+-- Name: COLUMN sketch_classes.preprocessing_endpoint; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(preprocessing_endpoint) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.preprocessing_project_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21524,6 +21570,22 @@ GRANT ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.ske
 
 REVOKE ALL ON FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_classes) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_classes) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_geojson_feature(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_geojson_properties(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) TO anon;
 
 
 --

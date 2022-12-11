@@ -18,6 +18,8 @@ import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
 import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import Spinner from "../components/Spinner";
+import { XCircleIcon } from "@heroicons/react/solid";
 
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
@@ -43,6 +45,7 @@ interface DigitizingInstructionsProps {
   selfIntersects?: boolean;
   /** Sketching as opposed to survey response */
   isSketchingWorkflow?: boolean;
+  preprocessingError?: string;
 }
 
 const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
@@ -60,6 +63,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   noSelectionStateButtons,
   createStateButtons,
   isSketchingWorkflow,
+  preprocessingError,
 }) => {
   const { t } = useTranslation("surveys");
   const style = useContext(SurveyLayoutContext).style;
@@ -92,7 +96,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             }
           />
         )}
-      {(state === DigitizingState.EDITING || selfIntersects) && (
+      {(state === DigitizingState.EDITING ||
+        selfIntersects ||
+        preprocessingError) && (
         <Button
           label={<TrashIcon className="w-5 h-5" />}
           onClick={onRequestDelete}
@@ -120,6 +126,23 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             bottomToolbar
               ? "py-3 text-base flex-1 text-center items-center justify-center"
               : ""
+          }
+        />
+      )}
+      {state === DigitizingState.PREPROCESSING_ERROR && (
+        <Button
+          onClick={() => {
+            onRequestFinishEditing(false);
+          }}
+          label={t("Resubmit")}
+          className={`pointer-events-auto whitespace-nowrap ${
+            bottomToolbar && "flex-2 content-center max-w-1/2"
+          }`}
+          primary
+          buttonClassName={
+            bottomToolbar
+              ? "py-3 text-base flex-1 text-center items-center justify-center"
+              : "bg-red-500"
           }
         />
       )}
@@ -185,6 +208,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 isMobile={isMobile}
                 multiFeature={multiFeature || false}
                 selfIntersects={selfIntersects || false}
+                preprocessingError={preprocessingError}
               />
             </p>
           </motion.div>
@@ -219,7 +243,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         >
           <p className="text-sm select-none">
             {isSketchingWorkflow && state === DigitizingState.NO_SELECTION ? (
-              <Trans>Click your sketch to edit</Trans>
+              <Trans>Click your sketch to edit geometry</Trans>
             ) : (
               <DigitizingInstructions
                 state={state}
@@ -227,6 +251,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 isMobile={isMobile}
                 multiFeature={multiFeature || false}
                 selfIntersects={selfIntersects || false}
+                preprocessingError={preprocessingError}
               />
             )}
           </p>
@@ -255,15 +280,54 @@ export function DigitizingInstructions({
   multiFeature,
   geometryType,
   selfIntersects,
+  preprocessingError,
 }: {
   state: DigitizingState;
   isMobile: boolean;
   multiFeature: boolean;
   geometryType: SketchGeometryType;
   selfIntersects: boolean;
+  preprocessingError?: string;
 }) {
   if (selfIntersects) {
     return <Trans ns="surveys">Invalid shape</Trans>;
+  }
+
+  if (state === DigitizingState.PREPROCESSING) {
+    return (
+      <span className="flex items-center">
+        <span>
+          <Trans ns="sketching">
+            Processing your sketch. This should only take a moment.
+          </Trans>
+        </span>
+        <Spinner className="ml-2" />
+      </span>
+    );
+  }
+  if (state === DigitizingState.PREPROCESSING_ERROR) {
+    return (
+      <>
+        <span className="flex items-center">
+          <XCircleIcon className="w-6 h-6 text-red-600 mr-2" />
+          <span className="block">
+            {preprocessingError
+              ? preprocessingError.replace(/\.$/, "")
+              : "Error: Unknown"}
+          </span>
+        </span>
+        {/* <span>
+          <span className="flex items-center">
+            <span className="block">
+              <Trans ns="sketching">
+                There was a problem processing you sketch. You may need to edit
+                and resubmit your shape to resolve it.
+              </Trans>
+            </span>
+          </span>
+        </span> */}
+      </>
+    );
   }
 
   switch (geometryType) {

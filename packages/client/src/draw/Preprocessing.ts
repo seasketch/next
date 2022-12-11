@@ -1,4 +1,5 @@
-import { Feature } from "geojson";
+import { Feature, Geometry } from "geojson";
+import { Dispatch, SetStateAction } from "react";
 import DS from "./DirectSelect";
 import { preprocess } from "./preprocess";
 
@@ -90,8 +91,10 @@ Preprocessing.animate = function (time: number) {
 };
 
 export default function PreproccessingFactory(
+  setPreprocessingError: Dispatch<SetStateAction<string | null>>,
   preprocessingEndpoint?: string,
-  preprocessingResults?: { [id: string]: Feature<any> }
+  preprocessingResults?: { [id: string]: Feature<any> },
+  onPreprocessedGeometry?: (geometry: Geometry) => void
 ) {
   return {
     ...Preprocessing,
@@ -99,23 +102,31 @@ export default function PreproccessingFactory(
       const state = _onSetup.apply(this, [opts]);
       state.preprocessingEndpoint = preprocessingEndpoint;
       state.preprocessingResults = preprocessingResults;
-      const { featureId } = opts;
-      this.featureId = featureId;
-
-      const feature = this.getFeature(featureId);
+      state.onPreprocessedGeometry = onPreprocessedGeometry;
+      state.setPreprocessingError = setPreprocessingError;
       if (!state.preprocessingEndpoint) {
         throw new Error("Preprocessing endpoint not specified");
       }
+      if (!state.setPreprocessingError) {
+        throw new Error("setPreprocessingError parameter is required");
+      }
+      const { featureId } = opts;
+      this.featureId = featureId;
+      const feature = this.getFeature(featureId);
       if (!feature) {
         throw new Error("No feature for preprocessing!?");
       }
-
+      setPreprocessingError(null);
       preprocess(
         state.preprocessingEndpoint,
         feature,
         this.changeMode.bind(this),
-        state.preprocessingResults
-      );
+        state.preprocessingResults,
+        state.onPreprocessedGeometry
+      ).catch((e: Error) => {
+        setPreprocessingError(e.message);
+        this.changeMode("direct_select", { ...opts, preprocessingError: true });
+      });
 
       return state;
     },

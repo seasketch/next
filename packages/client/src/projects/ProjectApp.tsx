@@ -1,5 +1,5 @@
 import bytes from "bytes";
-import React, { Suspense, useState, useMemo } from "react";
+import React, { Suspense, useState, useMemo, useCallback } from "react";
 import { Route, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import MapboxMap from "../components/MapboxMap";
 import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
@@ -16,7 +16,6 @@ import OfflineToastNotification from "../offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 import JoinProjectPrompt from "../auth/JoinProjectPrompt";
 import UserProfileModal from "./UserProfileModal";
-import useAccessToken from "../useAccessToken";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
@@ -36,7 +35,6 @@ const LazyCacheSettingsPage = React.lazy(
 export default function ProjectApp() {
   const [mapContainerPortal, setMapContainerPortal] =
     useState<null | HTMLDivElement>(null);
-  const token = useAccessToken();
   const mapContext = useMapContext({
     preferencesKey: "homepage",
     cacheSize: bytes("200mb"),
@@ -57,6 +55,9 @@ export default function ProjectApp() {
     `/${slug}/app/:sidebar`
   );
   const [expandSidebar, setExpandSidebar] = useState(!showSidebar);
+  const hideFullSidebar = useCallback(() => {
+    setExpandSidebar(false);
+  }, [setExpandSidebar]);
   const { t } = useTranslation("sidebar");
   const sidebarTitles: { [key: string]: string } = {
     maps: t("Maps"),
@@ -129,7 +130,10 @@ export default function ProjectApp() {
                 </Route>
                 <Route
                   children={(match) => (
-                    <LazySketchingTools hidden={!Boolean(match.match)} />
+                    <LazySketchingTools
+                      hidden={!Boolean(match.match)}
+                      hideFullSidebar={hideFullSidebar}
+                    />
                   )}
                   path={`/${slug}/app/sketches`}
                   // component={SketchingTools}

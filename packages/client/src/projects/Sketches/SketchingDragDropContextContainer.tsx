@@ -4,12 +4,14 @@ import SketchingTools from "./SketchingTools";
 
 export default function SketchingDragDropContextContainer({
   hidden,
+  hideFullSidebar,
 }: {
   hidden?: boolean;
+  hideFullSidebar?: () => void;
 }) {
   return (
     <DndProvider backend={HTML5Backend}>
-      <SketchingTools hidden={hidden} />
+      <SketchingTools hidden={hidden} hideFullSidebar={hideFullSidebar} />
     </DndProvider>
   );
 }

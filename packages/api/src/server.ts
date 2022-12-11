@@ -66,6 +66,7 @@ app.use(compression());
 app.use(
   cors({
     origin: true,
+    credentials: true,
     allowedHeaders: [
       "authorization",
       "content-type",
@@ -261,7 +262,9 @@ app.use(
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");
-      // res.setHeader("Cache-Control", "public, max-age=300");
+      if (req.query && req.query.timestamp) {
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+      }
       if (geojson === null) {
         res.status(404);
       }

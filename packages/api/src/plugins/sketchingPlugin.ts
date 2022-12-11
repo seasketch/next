@@ -6,6 +6,14 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
     typeDefs: gql`
+      extend type Sketch {
+        """
+        Greater of updatedAt, createdAt, as stringified epoch timestamp.
+        Useful for requesting the latest geometry
+        """
+        timestamp: String! @requires(columns: ["created_at", "updated_at"])
+      }
+
       extend type Mutation {
         """
         Create a new sketch in the user's account. If preprocessing is enabled,
@@ -63,6 +71,15 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
       }
     `,
     resolvers: {
+      Sketch: {
+        timestamp: async (sketch, args, context, info) => {
+          let date = new Date(sketch.createdAt);
+          if (sketch.updatedAt) {
+            date = new Date(sketch.updatedAt);
+          }
+          return date.getTime().toString();
+        },
+      },
       Mutation: {
         createSketch: async (
           _query,
@@ -87,8 +104,12 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           // Check to see if preprocessing is required. If so, do it
           let geometry: Feature;
           if (sketchClass.preprocessing_endpoint) {
-            // TODO: submit for geoprocessing
-            geometry = userGeom;
+            // submit for geoprocessing
+            const response = await preprocess(
+              sketchClass.preprocessing_endpoint,
+              userGeom
+            );
+            geometry = response;
           } else {
             geometry = userGeom;
           }
@@ -168,12 +189,15 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             throw new Error("Sketch class or sketch not found.");
           }
           const sketchClass = rows[0];
-          console.log({ sketchClass, name, userGeom });
           // Check to see if preprocessing is required. If so, do it
           let geometry: Feature;
           if (sketchClass.preprocessing_endpoint) {
-            // TODO: submit for geoprocessing
-            geometry = userGeom;
+            // submit for geoprocessing
+            const response = await preprocess(
+              sketchClass.preprocessing_endpoint,
+              userGeom
+            );
+            geometry = response;
           } else {
             geometry = userGeom;
           }
@@ -206,3 +230,29 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
 });
 
 export default SketchingPlugin;
+
+async function preprocess(endpoint: string, feature: Feature<any>) {
+  return fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ feature }),
+  }).then(async (response) => {
+    if (response.ok) {
+      const { data, error } = await response.json();
+      if (error) {
+        throw new Error(`Preprocessing Error: ${error}`);
+      }
+      return data;
+    } else {
+      const { data, error } = await response.json();
+      if (error) {
+        throw new Error(`Preprocessing Error: ${error}`);
+      } else {
+        throw new Error("Unrecognized response from preprocessor");
+      }
+    }
+  });
+}

@@ -112,7 +112,10 @@ DrawPolygon.clickOnVertex = function (state: any) {
     return;
   } else {
     if (state.getNextMode) {
-      this.changeMode.apply(this, state.getNextMode(state.polygon.id));
+      this.changeMode.apply(
+        this,
+        state.getNextMode(state.polygon.id, state.kinks?.features.length > 0)
+      );
     } else {
       return _clickOnVertex(state);
     }

@@ -7,7 +7,9 @@ fragment SketchTocDetails on Sketch {
   collectionId
   bbox
   folderId
+  timestamp
   sketchClass {
+    id
     geometryType
   }
 }
@@ -56,6 +58,18 @@ mutation CreateSketchFolder(
   }
 }
 
+fragment SketchCRUDResponse on Sketch {
+  ...SketchTocDetails
+  id
+  name
+  userGeom {
+    geojson
+  }
+  properties
+  geojsonProperties
+  ...SketchEditorModalDetails
+}
+
 mutation CreateSketch(
   $name: String!
   $sketchClassId: Int!
@@ -72,7 +86,7 @@ mutation CreateSketch(
     collectionId: $collectionId
     properties: $properties
   ) {
-    ...SketchTocDetails
+    ...SketchCRUDResponse
   }
 }
 
@@ -88,13 +102,7 @@ mutation UpdateSketch(
     userGeom: $userGeom
     properties: $properties
   ) {
-    ...SketchTocDetails
-    id
-    name
-    userGeom {
-      geojson
-    }
-    properties
+    ...SketchCRUDResponse
   }
 }
 

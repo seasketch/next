@@ -6,6 +6,7 @@ import {
   useCreateSketchMutation,
   SketchEditorModalDetailsFragment,
   useUpdateSketchMutation,
+  SketchCrudResponseFragment,
 } from "../../generated/graphql";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
@@ -13,21 +14,25 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
 import getSlug from "../../getSlug";
-import { ArrowLeftIcon, ArrowRightIcon, XIcon } from "@heroicons/react/outline";
+import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/outline";
 import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import useMapboxGLDraw, {
+  DigitizingState,
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import DigitizingTools from "../../formElements/DigitizingTools";
 import { ZoomToFeature } from "../../draw/MapSettingsPopup";
-import { Feature } from "geojson";
+import { BBox, Feature, Geometry } from "geojson";
 import { toFeatureCollection } from "../../formElements/FormElement";
 import useDialog from "../../components/useDialog";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
 import Skeleton from "../../components/Skeleton";
+import { MapMouseEvent } from "mapbox-gl";
+import area from "@turf/area";
+import bboxPolygon from "@turf/bbox-polygon";
+import { currentSidebarState } from "../ProjectAppSidebar";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -53,6 +58,8 @@ export default function SketchEditorModal({
   const baseRoute = useRouteMatch(`/${getSlug()}/app`);
   const mapContext = useContext(MapContext);
   const [feature, setFeature] = useState<Feature | null>(null);
+  const [preprocessedGeometry, setPreprocessedGeometry] =
+    useState<Geometry | null>(null);
   const [name, _setName] = useState(sketch?.name || "");
   const [nameErrors, setNameErrors] = useState<string | null>(null);
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
@@ -70,9 +77,12 @@ export default function SketchEditorModal({
     [nameErrors?.length, submissionAttempted, t, _setName]
   );
 
-  const onError = useGlobalErrorHandler();
+  const handleCancel = useCallback(() => {
+    mapContext.manager?.clearSketchEditingState();
+    onCancel();
+  }, [onCancel, mapContext.manager]);
+
   const [createSketch, createSketchState] = useCreateSketchMutation({
-    onError,
     update: (cache, { data }) => {
       if (data?.createSketch) {
         const sketch = data.createSketch;
@@ -99,32 +109,114 @@ export default function SketchEditorModal({
     },
   });
 
-  const [updateSketch, updateSketchState] = useUpdateSketchMutation({
-    onError,
-  });
+  const [updateSketch, updateSketchState] = useUpdateSketchMutation({});
 
   const draw = useMapboxGLDraw(
     mapContext.manager?.map,
     sketchClass.geometryType,
-    feature ? toFeatureCollection([feature]) : EMPTY_FEATURE_COLLECTION,
+    EMPTY_FEATURE_COLLECTION,
     (feature) => {
       setFeature(feature);
     },
     undefined,
-    sketchClass.preprocessingEndpoint || undefined
+    sketchClass.preprocessingEndpoint || undefined,
+    setPreprocessedGeometry
   );
 
   useEffect(() => {
-    if (mapContext.manager && sketch) {
+    if (sketch?.bbox && mapContext.manager?.map) {
+      // If the sketch is not within the current viewport bounds, or is very
+      // small or otherwise hard to see, zoom to it.
+      const map = mapContext.manager.map;
+      const bbox = sketch.bbox as number[];
+      const boundsLike = [
+        [bbox[0], bbox[1]],
+        [bbox[2], bbox[3]],
+      ] as [[number, number], [number, number]];
+      const mapBounds = map.getBounds();
+      // If the map contains the coordinates of our bbox, skip
+      if (
+        mapBounds.contains(boundsLike[0]) ||
+        mapBounds.contains(boundsLike[1])
+      ) {
+        // make sure that the size of the feature on the screen > 0.05%
+        const viewport = [
+          mapBounds.getWest(),
+          mapBounds.getSouth(),
+          mapBounds.getEast(),
+          mapBounds.getNorth(),
+        ] as [number, number, number, number];
+        const bboxArea = area(bboxPolygon(sketch.bbox as BBox));
+        const viewportArea = area(bboxPolygon(viewport));
+        const fraction = bboxArea / viewportArea;
+        if (fraction > 0.0005) {
+          return;
+        }
+      }
+      const sidebarInfo = currentSidebarState();
+      map.fitBounds(boundsLike, {
+        animate: true,
+        padding: true // sidebarInfo.open
+          ? {
+              top: 150,
+              bottom: 150,
+              right: 150,
+              left: sidebarInfo.width + 50,
+            }
+          : 150,
+      });
+    }
+  }, [sketch?.bbox, mapContext.manager?.map]);
+
+  useEffect(() => {
+    if (
+      mapContext.manager &&
+      sketch &&
+      mapContext.manager.interactivityManager
+    ) {
       const manager = mapContext.manager;
+      const interactivityManager = mapContext.manager.interactivityManager;
+      const focusedSketchClickHandler = (
+        focusedFeature: Feature<any>,
+        originalEvent: MapMouseEvent
+      ) => {
+        manager.hideEditableSketch(sketch.id);
+        draw.setCollection(
+          toFeatureCollection([
+            {
+              id: sketch.id.toString(),
+              type: "Feature",
+              properties: {},
+              geometry: sketch.userGeom!.geojson,
+            },
+          ]),
+          true
+        );
+      };
       manager.markSketchAsEditable(sketch.id);
+      // draw.disable();
+      interactivityManager.on(
+        "click:focused-sketch",
+        focusedSketchClickHandler
+      );
       return () => {
         manager.unmarkSketchAsEditable();
+        interactivityManager.off(
+          "click:focused-sketch",
+          focusedSketchClickHandler
+        );
       };
-    } else if (mapContext.manager) {
-      mapContext.manager.unmarkSketchAsEditable();
+    } else if (mapContext.manager && sketch) {
+      // draw.disable();
+      mapContext.manager?.clearSketchEditingState();
+    } else {
+      mapContext.manager?.clearSketchEditingState();
     }
-  }, [mapContext.manager, sketch]);
+  }, [
+    mapContext.manager,
+    mapContext.manager?.interactivityManager,
+    sketch?.id,
+  ]);
 
   useEffect(() => {
     if (sketch) {
@@ -159,14 +251,16 @@ export default function SketchEditorModal({
   const [geometryErrors, setGeometryErrors] = useState<string | null>(null);
 
   const onSubmit = useCallback(async () => {
-    draw.disable();
     setSubmissionAttempted(true);
     if (!name || name.length < 1) {
       setNameErrors(t("You must name your sketch"));
       return;
     }
 
-    if (draw.selfIntersects) {
+    if (
+      draw.selfIntersects ||
+      draw.digitizingState === DigitizingState.PREPROCESSING_ERROR
+    ) {
       setGeometryErrors(t("You must fix problems with your geometry first"));
       return;
     }
@@ -176,6 +270,18 @@ export default function SketchEditorModal({
       return;
     }
 
+    if (draw.digitizingState === DigitizingState.PREPROCESSING) {
+      setGeometryErrors(t("Wait until processing is complete"));
+      return;
+    }
+
+    if (draw.digitizingState !== DigitizingState.NO_SELECTION) {
+      setGeometryErrors(t("Please complete your geometry first"));
+      return;
+    }
+
+    // draw.disable();
+
     // See if geometry has been changed.
     let geometryChanged = false;
     if (sketch?.userGeom?.geojson) {
@@ -184,6 +290,7 @@ export default function SketchEditorModal({
       geometryChanged = originalGeom !== newGeom;
     }
 
+    let data: SketchCrudResponseFragment | undefined;
     if (sketch) {
       const response = await updateSketch({
         variables: geometryChanged
@@ -199,9 +306,7 @@ export default function SketchEditorModal({
               id: sketch.id,
             },
       });
-      if (response.data?.updateSketch) {
-        onComplete(response.data.updateSketch);
-      }
+      data = response.data?.updateSketch || undefined;
     } else {
       const response = await createSketch({
         variables: {
@@ -212,9 +317,29 @@ export default function SketchEditorModal({
           properties: feature.properties,
         },
       });
-      if (response.data?.createSketch) {
-        onComplete(response.data.createSketch);
+      data = response.data?.createSketch || undefined;
+    }
+    const manager = mapContext.manager;
+    if (manager && data) {
+      if (geometryChanged) {
+        await manager.pushLocalSketchGeometryCopy(
+          data.id,
+          {
+            type: "Feature",
+            id: data.id,
+            properties: data.geojsonProperties || {},
+            bbox: (data.bbox as [number, number, number, number]) || undefined,
+            geometry: preprocessedGeometry || feature.geometry,
+          },
+          data.timestamp
+        );
       }
+      manager.clearSketchEditingState();
+      onComplete(data);
+    } else {
+      throw new Error(
+        "No response from mutation or mapContext.manager is unset"
+      );
     }
   }, [
     draw,
@@ -227,21 +352,28 @@ export default function SketchEditorModal({
     createSketch,
     sketchClass.id,
     folderId,
+    mapContext.manager,
+    preprocessedGeometry,
   ]);
 
   useEffect(() => {
-    if (feature && !draw.selfIntersects && geometryErrors) {
+    if (
+      feature &&
+      !draw.selfIntersects &&
+      geometryErrors &&
+      !draw.preprocessingError
+    ) {
       setGeometryErrors(null);
     }
-  }, [feature, draw.selfIntersects, geometryErrors]);
+  }, [feature, draw.selfIntersects, geometryErrors, draw.preprocessingError]);
 
-  useEffect(() => {
-    if (createSketchState.loading || loading) {
-      draw.disable();
-    } else {
-      draw.enable();
-    }
-  }, [draw.disable, draw.enable, createSketchState.loading, draw, loading]);
+  // useEffect(() => {
+  //   if (loading) {
+  //     draw.disable();
+  //   } else {
+  //     draw.enable();
+  //   }
+  // }, [draw, draw.disable, draw.enable, loading]);
 
   return (
     <>
@@ -283,7 +415,7 @@ export default function SketchEditorModal({
                 </div>
               </div>
               <div className="pt-3 space-y-1 bg-gray-50 border-t flex items-center space-x-2 p-4">
-                <Button label={t("Cancel")} onClick={onCancel} />
+                <Button label={t("Cancel")} onClick={handleCancel} />
               </div>
             </div>
           ) : (
@@ -322,9 +454,19 @@ export default function SketchEditorModal({
                   }}
                 />
                 {geometryErrors && <Warning>{geometryErrors}</Warning>}
+                {createSketchState.error && (
+                  <Warning level="error">
+                    {createSketchState.error.message}
+                  </Warning>
+                )}
+                {updateSketchState.error && (
+                  <Warning level="error">
+                    {updateSketchState.error.message}
+                  </Warning>
+                )}
               </div>
               <div className="space-x-2 bg-gray-100 p-4 border-t">
-                <Button onClick={onCancel} label={<Trans>Cancel</Trans>} />
+                <Button onClick={handleCancel} label={<Trans>Cancel</Trans>} />
                 <Button
                   loading={
                     createSketchState.loading || updateSketchState.loading
@@ -346,6 +488,7 @@ export default function SketchEditorModal({
         createPortal(
           <div className="flex items-center justify-center w-screen h-full">
             <DigitizingTools
+              preprocessingError={draw.preprocessingError || undefined}
               multiFeature={false}
               isSketchingWorkflow={true}
               selfIntersects={draw.selfIntersects}
@@ -374,7 +517,6 @@ export default function SketchEditorModal({
             >
               <ZoomToFeature
                 map={mapContext.manager?.map!}
-                // feature={}
                 isSmall={false}
                 geometryType={sketchClass.geometryType}
               />

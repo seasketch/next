@@ -32,6 +32,7 @@ export default function useSketchingSelectionState({
 
   const clearSelection = useCallback(() => {
     setSelectedIds([]);
+    document.querySelectorAll(".mapboxgl-popup").forEach((el) => el.remove());
   }, [setSelectedIds]);
 
   /**
@@ -210,7 +211,7 @@ export default function useSketchingSelectionState({
           .map((s) => parseInt(s.split(":")[1]))
       );
     }
-  }, [selectedIds, mapContext.manager]);
+  }, [selectedIds, mapContext.manager, mySketches]);
 
   return {
     selectedIds,

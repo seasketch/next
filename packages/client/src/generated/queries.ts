@@ -10139,6 +10139,12 @@ export type Sketch = Node & {
   formElement?: Maybe<FormElement>;
   formElementId?: Maybe<Scalars['Int']>;
   /**
+   * Use this to get a copy of the sketch with properties populated exactly as they
+   * would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
+   */
+  geojsonFeature?: Maybe<Scalars['JSON']>;
+  geojsonProperties?: Maybe<Scalars['JSON']>;
+  /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
    * large and complex, so it may be necessary to access them through a vector tile
@@ -10158,6 +10164,11 @@ export type Sketch = Node & {
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
+  /**
+   * Greater of updatedAt, createdAt, as stringified epoch timestamp.
+   * Useful for requesting the latest geometry
+   */
+  timestamp: Scalars['String'];
   updatedAt: Scalars['Datetime'];
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
@@ -15513,10 +15524,10 @@ export type UpdateGeoprocessingServicesMutation = (
 
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId'>
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'geometryType'>
+    & Pick<SketchClass, 'id' | 'geometryType'>
   )> }
 );
 
@@ -15567,6 +15578,35 @@ export type CreateSketchFolderMutation = (
   )> }
 );
 
+export type SketchCrudResponseFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'name' | 'properties' | 'geojsonProperties'>
+  & { userGeom?: Maybe<(
+    { __typename?: 'GeometryGeometryCollection' }
+    & Pick<GeometryGeometryCollection, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryLineString' }
+    & Pick<GeometryLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiLineString' }
+    & Pick<GeometryMultiLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPoint' }
+    & Pick<GeometryMultiPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPolygon' }
+    & Pick<GeometryMultiPolygon, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPoint' }
+    & Pick<GeometryPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  )> }
+  & SketchTocDetailsFragment
+  & SketchEditorModalDetailsFragment
+);
+
 export type CreateSketchMutationVariables = Exact<{
   name: Scalars['String'];
   sketchClassId: Scalars['Int'];
@@ -15581,7 +15621,7 @@ export type CreateSketchMutation = (
   { __typename?: 'Mutation' }
   & { createSketch?: Maybe<(
     { __typename?: 'Sketch' }
-    & SketchTocDetailsFragment
+    & SketchCrudResponseFragment
   )> }
 );
 
@@ -15597,30 +15637,7 @@ export type UpdateSketchMutation = (
   { __typename?: 'Mutation' }
   & { updateSketch?: Maybe<(
     { __typename?: 'Sketch' }
-    & Pick<Sketch, 'id' | 'name' | 'properties'>
-    & { userGeom?: Maybe<(
-      { __typename?: 'GeometryGeometryCollection' }
-      & Pick<GeometryGeometryCollection, 'geojson'>
-    ) | (
-      { __typename?: 'GeometryLineString' }
-      & Pick<GeometryLineString, 'geojson'>
-    ) | (
-      { __typename?: 'GeometryMultiLineString' }
-      & Pick<GeometryMultiLineString, 'geojson'>
-    ) | (
-      { __typename?: 'GeometryMultiPoint' }
-      & Pick<GeometryMultiPoint, 'geojson'>
-    ) | (
-      { __typename?: 'GeometryMultiPolygon' }
-      & Pick<GeometryMultiPolygon, 'geojson'>
-    ) | (
-      { __typename?: 'GeometryPoint' }
-      & Pick<GeometryPoint, 'geojson'>
-    ) | (
-      { __typename?: 'GeometryPolygon' }
-      & Pick<GeometryPolygon, 'geojson'>
-    )> }
-    & SketchTocDetailsFragment
+    & SketchCrudResponseFragment
   )> }
 );
 
@@ -17707,7 +17724,9 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   collectionId
   bbox
   folderId
+  timestamp
   sketchClass {
+    id
     geometryType
   }
 }
@@ -17770,6 +17789,20 @@ export const SketchEditorModalDetailsFragmentDoc = /*#__PURE__*/ gql`
 }
     ${SketchTocDetailsFragmentDoc}
 ${SketchingDetailsFragmentDoc}`;
+export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchCRUDResponse on Sketch {
+  ...SketchTocDetails
+  id
+  name
+  userGeom {
+    geojson
+  }
+  properties
+  geojsonProperties
+  ...SketchEditorModalDetails
+}
+    ${SketchTocDetailsFragmentDoc}
+${SketchEditorModalDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
@@ -19728,23 +19761,17 @@ export const CreateSketchDocument = /*#__PURE__*/ gql`
     collectionId: $collectionId
     properties: $properties
   ) {
-    ...SketchTocDetails
+    ...SketchCRUDResponse
   }
 }
-    ${SketchTocDetailsFragmentDoc}`;
+    ${SketchCrudResponseFragmentDoc}`;
 export const UpdateSketchDocument = /*#__PURE__*/ gql`
     mutation UpdateSketch($id: Int!, $name: String!, $userGeom: GeoJSON, $properties: JSON!) {
   updateSketch(id: $id, name: $name, userGeom: $userGeom, properties: $properties) {
-    ...SketchTocDetails
-    id
-    name
-    userGeom {
-      geojson
-    }
-    properties
+    ...SketchCRUDResponse
   }
 }
-    ${SketchTocDetailsFragmentDoc}`;
+    ${SketchCrudResponseFragmentDoc}`;
 export const DeleteSketchDocument = /*#__PURE__*/ gql`
     mutation DeleteSketch($id: Int!) {
   deleteSketch(input: {id: $id}) {
@@ -21043,6 +21070,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
+    SketchCRUDResponse: 'SketchCRUDResponse',
     SketchEditorModalDetails: 'SketchEditorModalDetails',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',

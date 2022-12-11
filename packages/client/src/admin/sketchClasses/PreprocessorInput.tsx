@@ -9,6 +9,7 @@ import Modal, { FooterButtonProps } from "../../components/Modal";
 import Skeleton from "../../components/Skeleton";
 import Warning from "../../components/Warning";
 import {
+  SketchGeometryType,
   SketchingDetailsFragment,
   useUpdateGeoprocessingServicesMutation,
 } from "../../generated/graphql";
@@ -148,17 +149,29 @@ export default function PreprocessorInput({
         </Trans>
       </p>
       {(!sketchClass.preprocessingEndpoint ||
-        !sketchClass.preprocessingProjectUrl) && (
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="hover:shadow rounded p-4 text-sm border shadow-sm w-full text-left text-gray-500 flex items-center"
-        >
-          <span className="flex-1">
-            <Trans>Specify a preprocessing service</Trans>
-          </span>
-          <ChevronRightIcon className="w-6 h-6 text-gray-400" />
-        </button>
-      )}
+        !sketchClass.preprocessingProjectUrl) &&
+        sketchClass.geometryType === SketchGeometryType.Polygon && (
+          <button
+            onClick={() => setDialogOpen(true)}
+            className="hover:shadow rounded p-4 text-sm border shadow-sm w-full text-left text-gray-500 flex items-center"
+          >
+            <span className="flex-1">
+              <Trans>Specify a preprocessing service</Trans>
+            </span>
+            <ChevronRightIcon className="w-6 h-6 text-gray-400" />
+          </button>
+        )}
+
+      {(!sketchClass.preprocessingEndpoint ||
+        !sketchClass.preprocessingProjectUrl) &&
+        sketchClass.geometryType !== SketchGeometryType.Polygon && (
+          <div className=" rounded p-4 text-sm border shadow-sm w-full text-left text-gray-500 flex items-center opacity-50">
+            <Trans ns="admin:sketching">
+              Preprocessing services only support polygons at this time, with
+              support planned for a future version of the tool.
+            </Trans>
+          </div>
+        )}
       {sketchClass.preprocessingEndpoint &&
         sketchClass.preprocessingProjectUrl && (
           <PreprocessorButton

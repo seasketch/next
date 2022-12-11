@@ -35,8 +35,8 @@ const ProjectAppSidebar: React.FunctionComponent<{
       initial={{ opacity: 0, translateX: -320 }}
       animate={props.hidden ? "hidden" : "visible"}
       variants={{
-        hidden: { opacity: 0, translateX: -320 },
-        visible: { opacity: 1, translateX: 0 },
+        hidden: { opacity: 0, translateX: -320, pointerEvents: "none" },
+        visible: { opacity: 1, translateX: 0, pointerEvents: "auto" },
       }}
       transition={{
         bounce: false,
@@ -125,3 +125,13 @@ export const ProjectAppSidebarToolbar = React.forwardRef<
   }
 });
 export default ProjectAppSidebar;
+
+export function currentSidebarState() {
+  const isSmall = window.matchMedia("(max-width: 1535px)").matches;
+  const open = /\/app\/\w+/.test(window.location.pathname);
+  return {
+    isSmall,
+    open,
+    width: isSmall ? 384 : 512,
+  };
+}

@@ -11,9 +11,6 @@ import mapboxgl, {
   AnySourceImpl,
   AnySourceData,
   AnyLayer,
-  VectorSource,
-  GeoJSONSource,
-  LineLayer,
 } from "mapbox-gl";
 import {
   createContext,
@@ -49,10 +46,18 @@ import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 import md5 from "md5";
 import useAccessToken from "../useAccessToken";
+import LRU from "lru-cache";
 
 const graphqlURL = new URL(process.env.REACT_APP_GRAPHQL_ENDPOINT);
 
 const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
+
+const LocalSketchGeometryCache = new LRU<
+  number,
+  { timestamp: string; feature: Feature<any> }
+>({
+  max: 10,
+});
 
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -148,6 +153,8 @@ class MapContextManager {
   private userAccessToken?: string | null;
   private editableSketchId?: number;
   private selectedSketches?: number[];
+  private sketchTimestamps = new global.Map<number, string>();
+  private hideEditableSketchId?: number;
 
   constructor(
     initialState: MapContextInterface,
@@ -280,20 +287,28 @@ class MapContextManager {
       optimizeForTerrain: true,
       logoPosition: "bottom-right",
       transformRequest: (url, resoureType) => {
+        const Url = new URL(url);
         if (
           this.internalState.offlineTileSimulatorActive &&
           /api\.mapbox\./.test(url)
         ) {
           url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
-        } else {
-          const Url = new URL(url);
-          if (
-            this.userAccessToken &&
-            Url.host === graphqlURL.host &&
-            /\/sketches\/\d+\.geojson.json/.test(url)
-          ) {
-            Url.searchParams.set("token", this.userAccessToken);
+        } else if (
+          this.userAccessToken &&
+          Url.host === graphqlURL.host &&
+          /\/sketches\/\d+\.geojson.json/.test(url)
+        ) {
+          const id = url.match(/sketches\/(\d+)\.geojson/)![1];
+          const timestamp = this.sketchTimestamps.get(parseInt(id));
+          if (timestamp) {
+            Url.searchParams.set("timestamp", timestamp);
           }
+          return {
+            url: Url.toString(),
+            // eslint-disable-next-line i18next/no-literal-string
+            headers: { authorization: `Bearer ${this.userAccessToken}` },
+          };
+        } else {
           Url.searchParams.set("ssn-tr", "true");
           url = Url.toString();
         }
@@ -348,6 +363,39 @@ class MapContextManager {
     });
 
     return this.map;
+  }
+
+  /**
+   * Adds a local Feature to cache so that the map client need not request
+   * GeoJSON or MVT representations of a Sketch. This is useful when editing
+   * sketches. The client will already have potentially very large geometries
+   * handy from visualizing the preprocessing step. Rather than submitting
+   * edits, then waiting for new requests for GeoJSON or vector tiles to update
+   * the map, we can make use of this geometry that is already available. This
+   * prevents a flash (or long pause) where the map is blank after editing.
+   *
+   * The cache is not boundless, and items will age out. When they do and the
+   * map style is recalculated, they may disappear while requesting new map
+   * tiles or GeoJSON content.
+   *
+   * @param id Sketch ID
+   * @param feature Complete GeoJSON feature for representation on the map. Will
+   * need to match the same struture and properties of that returned by the
+   * GeoJSON & MVT endpoints. To do so, use the Sketch.geojsonProperties GraphQL
+   * field to reconstruct from local geometry.
+   * @param timestamp Latest timestamp of the sketch. This acts as part of the
+   * cache key, so if not matching the latest timestamp in the ToC/GraphQL
+   * client cache it will not be used.
+   */
+  pushLocalSketchGeometryCopy(
+    id: number,
+    feature: Feature<any>,
+    timestamp: string
+  ) {
+    LocalSketchGeometryCache.set(id, {
+      timestamp,
+      feature,
+    });
   }
 
   toggleTerrain() {
@@ -657,7 +705,8 @@ class MapContextManager {
     }
   }
 
-  setVisibleSketches(sketchIds: number[]) {
+  setVisibleSketches(sketches: { id: number; timestamp?: string }[]) {
+    const sketchIds = sketches.map(({ id }) => id);
     // remove missing ids from internal state
     for (const id in this.internalState.sketchLayerStates) {
       if (sketchIds.indexOf(parseInt(id)) === -1) {
@@ -676,6 +725,13 @@ class MapContextManager {
       ...prev,
       sketchLayerStates: this.internalState.sketchLayerStates,
     }));
+    for (const sketch of sketches) {
+      if (sketch.timestamp) {
+        this.sketchTimestamps.set(sketch.id, sketch.timestamp);
+      } else {
+        this.sketchTimestamps.delete(sketch.id);
+      }
+    }
     // request a redraw
     this.debouncedUpdateStyle();
   }
@@ -688,12 +744,27 @@ class MapContextManager {
 
   markSketchAsEditable(sketchId: number) {
     this.editableSketchId = sketchId;
+    this.interactivityManager?.setFocusedSketchId(sketchId);
     // request a redraw
     this.debouncedUpdateStyle();
   }
 
   unmarkSketchAsEditable() {
     delete this.editableSketchId;
+    this.interactivityManager?.setFocusedSketchId(null);
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  hideEditableSketch(sketchId: number) {
+    this.hideEditableSketchId = sketchId;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  clearSketchEditingState() {
+    delete this.hideEditableSketchId;
+    this.unmarkSketchAsEditable();
     // request a redraw
     this.debouncedUpdateStyle();
   }
@@ -1063,16 +1134,23 @@ class MapContextManager {
     const sketchLayerIds: string[] = [];
     for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
       const id = parseInt(stringId);
-      if (id !== this.editableSketchId) {
+      if (id !== this.hideEditableSketchId) {
+        const timestamp = this.sketchTimestamps.get(id);
+        const cache = LocalSketchGeometryCache.get(id);
         baseStyle.sources[`sketch-${id}`] = {
           type: "geojson",
-          data: `${
-            BASE_SERVER_ENDPOINT +
-            // eslint-disable-next-line i18next/no-literal-string
-            `/sketches/${id}.geojson.json`
-          }`,
+          data:
+            cache && cache.timestamp === timestamp
+              ? cache.feature
+              : sketchGeoJSONUrl(id),
         };
-        const layers = this.getLayersForSketch(id);
+        const layers = this.getLayersForSketch(
+          id,
+          id === this.editableSketchId
+        );
+        if (this.editableSketchId && id !== this.editableSketchId) {
+          reduceOpacity(layers);
+        }
         baseStyle.layers.push(...layers);
         sketchLayerIds.push(...layers.map((l) => l.id));
       }
@@ -1081,19 +1159,10 @@ class MapContextManager {
       this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     }
 
-    if (this.internalState.offlineTileSimulatorActive) {
-      // find and update composite source
-      const composite = baseStyle.sources["composite"] as VectorSource;
-      if (composite?.url && /^mapbox:/.test(composite.url)) {
-        // @ts-ignore
-        // composite.url = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8,seasketch.dskwrmxn,seasketch.6672zknn,seasketch.6yh2wu12,seasketch.82q84d6r,seasketch.9zvvkm9d,seasketch.ckyp9o0hl65b020o8j7u4putw-0oi0y,seasketch.azores_bathy,mapbox-public.bathymetry,seasketch.526fkzz1,mapbox.country-boundaries-v1,seasketch.cniiyc48,mapbox.mapbox-terrain-v2/13/8176/4513.vector.pbf?sku=101Fa7O74OJnQ&access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!}`;
-      }
-    }
-
     return { style: baseStyle, sprites };
   }
 
-  getLayersForSketch(id: number): AnyLayer[] {
+  getLayersForSketch(id: number, focusOfEditing?: boolean): AnyLayer[] {
     const layers = [
       {
         // eslint-disable-next-line i18next/no-literal-string
@@ -1109,7 +1178,10 @@ class MapContextManager {
         layout: {},
       },
     ] as AnyLayer[];
-    if (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) {
+    if (
+      (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||
+      focusOfEditing
+    ) {
       layers.push(
         ...([
           {
@@ -1798,4 +1870,50 @@ function idForImageSource(sourceId: number | string) {
 const layerIdRE = /^seasketch\//;
 export function isSeaSketchLayerId(id: string) {
   return layerIdRE.test(id);
+}
+
+function reduceOpacity(layers: AnyLayer[], fraction = 0.5) {
+  for (const layer of layers) {
+    if ("paint" in layer) {
+      switch (layer.type) {
+        case "circle":
+          reducePaintPropOpacity(layer, "circle-opacity", fraction);
+          break;
+        case "fill":
+          reducePaintPropOpacity(layer, "fill-opacity", fraction);
+          break;
+        case "line":
+          reducePaintPropOpacity(layer, "line-opacity", fraction);
+          break;
+        case "symbol":
+          reducePaintPropOpacity(layer, "icon-opacity", fraction);
+          reducePaintPropOpacity(layer, "text-opacity", fraction);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+}
+
+function reducePaintPropOpacity(
+  layer: any,
+  propName: string,
+  fraction: number
+) {
+  if ("paint" in layer) {
+    if (layer.paint[propName]) {
+      layer.paint[propName] = layer.paint[propName] * fraction;
+    } else {
+      layer.paint[propName] = fraction;
+    }
+  }
+}
+
+function sketchGeoJSONUrl(id: number) {
+  return `${
+    BASE_SERVER_ENDPOINT +
+    // eslint-disable-next-line i18next/no-literal-string
+    `/sketches/${id}.geojson.json`
+  }`;
 }

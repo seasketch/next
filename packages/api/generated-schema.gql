@@ -11106,6 +11106,13 @@ type Sketch implements Node {
   formElementId: Int
 
   """
+  Use this to get a copy of the sketch with properties populated exactly as they
+  would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
+  """
+  geojsonFeature: JSON
+  geojsonProperties: JSON
+
+  """
   The geometry of the Sketch **after** it has been preprocessed. This is the
   geometry that is used for reporting. Preprocessed geometries may be extremely
   large and complex, so it may be necessary to access them through a vector tile
@@ -11131,6 +11138,12 @@ type Sketch implements Node {
 
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
+
+  """
+  Greater of updatedAt, createdAt, as stringified epoch timestamp.
+  Useful for requesting the latest geometry
+  """
+  timestamp: String!
   updatedAt: Datetime!
 
   """Reads a single `User` that is related to this `Sketch`."""

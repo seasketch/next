@@ -1,6 +1,7 @@
 import Button from "../../components/Button";
 import DropdownButton from "../../components/DropdownButton";
 import {
+  currentSidebarState,
   ProjectAppSidebarContext,
   ProjectAppSidebarToolbar,
 } from "../ProjectAppSidebar";
@@ -33,18 +34,27 @@ import LoginPrompt from "./LoginPrompt";
 import useSketchingSelectionState from "./useSketchingSelectionState";
 import useSketchVisibilityState from "./useSketchVisibilityState";
 import { useApolloClient } from "@apollo/client";
+import { MapContext } from "../../dataLayers/MapContextManager";
+import mapboxgl from "mapbox-gl";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 type ItemType = FolderNodeDataProps | SketchNodeDataProps;
 
-export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
+export default memo(function SketchingTools({
+  hidden,
+  hideFullSidebar,
+}: {
+  hidden?: boolean;
+  hideFullSidebar?: () => void;
+}) {
   const { isSmall } = useContext(ProjectAppSidebarContext);
   const { user } = useAuth0();
   const [toolbarRef, setToolbarRef] = useState<HTMLElement | null>(null);
   const onError = useGlobalErrorHandler();
   const history = useHistory();
   const client = useApolloClient();
+  const mapContext = useContext(MapContext);
 
   const { data, loading } = useSketchingQuery({
     variables: {
@@ -55,7 +65,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
 
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
   const { visibleSketches, setVisibleSketches, onChecked } =
-    useSketchVisibilityState();
+    useSketchVisibilityState(data?.projectBySlug?.mySketches || []);
 
   const { expandedIds, setExpandedIds, onExpand } = useExpandedIds(
     getSlug(),
@@ -81,6 +91,9 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       );
       if (sketch) {
         history.replace(`/${getSlug()}/app`);
+        if (hideFullSidebar) {
+          hideFullSidebar();
+        }
         setEditor({
           loadingTitle: sketch.name,
           loading: true,
@@ -95,6 +108,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             variables: {
               id,
             },
+            fetchPolicy: "cache-first",
           });
           // then set editor state again with sketch, loading=false
           if (response.data.sketch) {
@@ -131,6 +145,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       data?.projectBySlug?.sketchClasses,
       history,
       onError,
+      hideFullSidebar,
     ]
   );
 
@@ -169,6 +184,31 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     });
   }, [selectedIds]);
 
+  const zoomTo = useCallback(
+    (bbox: number[]) => {
+      const boundsLike = [
+        [bbox[0], bbox[1]],
+        [bbox[2], bbox[3]],
+      ];
+      const sidebar = currentSidebarState();
+      if (mapContext.manager?.map) {
+        mapContext.manager.map.fitBounds(
+          boundsLike as mapboxgl.LngLatBoundsLike,
+          {
+            animate: true,
+            padding: {
+              bottom: 100,
+              top: 100,
+              left: sidebar.open ? sidebar.width + 100 : 100,
+              right: 100,
+            },
+          }
+        );
+      }
+    },
+    [mapContext.manager?.map]
+  );
+
   /**
    * List of "actions" like edit, delete, zoom to, that are relevent to the
    * current selection. These are used directly by the toolbar, and also bundled
@@ -191,6 +231,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     setExpandedIds,
     folders: data?.projectBySlug?.myFolders,
     sketches: data?.projectBySlug?.mySketches,
+    zoomTo,
   });
 
   useEffect(() => {
