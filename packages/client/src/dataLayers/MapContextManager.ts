@@ -48,7 +48,9 @@ import md5 from "md5";
 import useAccessToken from "../useAccessToken";
 import LRU from "lru-cache";
 
-const graphqlURL = new URL(process.env.REACT_APP_GRAPHQL_ENDPOINT);
+const graphqlURL = new URL(
+  process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
+);
 
 const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
 
