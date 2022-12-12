@@ -519,7 +519,7 @@ export default function useMapboxGLDraw(
           getNextMode = (featureId) => [
             "unfinished_feature_select",
             {
-              featureIds: [featureId],
+              featureId,
               ...commonModeOpts,
             },
           ];
