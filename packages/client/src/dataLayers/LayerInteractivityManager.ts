@@ -82,6 +82,13 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   setSketchLayerIds(ids: string[]) {
     this.sketchLayerIds = ids;
+    this.map.off("mousemove", this.debouncedMouseMoveListener);
+    if (
+      this.interactiveVectorLayerIds.length > 0 ||
+      this.sketchLayerIds.length > 0
+    ) {
+      this.map.on("mousemove", this.debouncedMouseMoveListener);
+    }
   }
 
   setFocusedSketchId(id: number | null) {
