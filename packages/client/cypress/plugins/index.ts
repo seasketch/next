@@ -9,6 +9,8 @@ export default function BasePlugin(on, config) {
   config.env.auth0_client_id = process.env.REACT_APP_AUTH0_CLIENT_ID;
   config.env.auth0_client_secret = process.env.CYPRESS_AUTH0_CLIENT_SECRET;
   config.env.graphql_endpoint = process.env.REACT_APP_GRAPHQL_ENDPOINT;
+  config.env.auth0_management_api_client_id = process.env.AUTH0_MANAGEMENT_API_CLIENT_ID;
+  config.env.auth0_management_api_client_secret = process.env.AUTH0_MANAGEMENT_API_CLIENT_SECRET;
   return config;
 }
 

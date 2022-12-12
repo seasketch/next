@@ -23,7 +23,6 @@ const AUTH0_DOMAIN = Cypress.env("auth0_domain");
 
 const loginCounts = {};
 
-
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -86,7 +85,29 @@ declare global {
        * re-used. For testing purproses, these need to be permanently deleted.
        * @param slug
        */
+      getProject(projectId: number, token:string);
+      
+      joinProject(projectId: number, token: string);
+
+      updateProject(projectId: number, token: string, attributes: object);
+
       deleteProject(slug: string);
+
+      createProjectInvites(
+        projectId: number, 
+        projectInviteOptions: object, 
+        token:string
+      );
+
+      verifyProjectInvite(
+        token: string
+      );
+
+      approveParticipant(projectId: number, userId: number, token:string);
+
+      toggleAdminAccess(userId: number, projectId: number, token: string)
+
+      deleteUser(username: string);
 
       createSurvey(
         name: string, 
@@ -231,6 +252,7 @@ Cypress.Commands.add("login", (userName) => {
       },
       expiresAt: exp,
     };
+    let stringify = JSON.stringify(item)
     window.localStorage.setItem(
       // The client sets up a connection using @auth/auth0-react
       // This ID used to store the data in localstorage is determined by it
@@ -339,6 +361,10 @@ Cypress.Commands.add(
                 project {
                   id
                   accessControl
+                  isListed
+                  admins {
+                    canonicalEmail
+                  }
                 }
               }
             }
@@ -368,6 +394,10 @@ Cypress.Commands.add(
                     ) {
                       project {
                         id
+                        accessControl
+                        admins {
+                          canonicalEmail
+                        }
                       }
                     }
                   }
@@ -388,8 +418,234 @@ Cypress.Commands.add(
   }
 );
 
+Cypress.Commands.add("getProject", (projectId: number, token: string) => {
+  return cy
+    .query(
+      gql`
+        query CypressGetProject($projectId: Int!) {
+          query {
+            project(id: $projectId) {
+              id
+              accessControl
+              slug
+              name
+              admins {
+                canonicalEmail
+              }
+            }
+          
+          }
+        }
+      `,
+     {
+      "projectId": projectId
+      },
+      (token as unknown) as string
+    ).then((data) => {
+      Cypress.log(data)
+    });
+  });
+
+Cypress.Commands.add("joinProject", (projectId: number, token: string) => {
+  return cy
+  .mutation(
+    gql`
+      mutation CypressJoinProject($projectId: Int!) {
+        joinProject(input: { projectId: $projectId }) {
+          query {
+            project(id: $projectId) {
+              id
+              unapprovedParticipants {
+                id
+                canonicalEmail
+              }
+            }
+          }
+        }
+      }
+    `,
+  { projectId },
+  (token as any)
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  });
+});
+
+Cypress.Commands.add("updateProject", (projectId: number, token: string, attributes: object,  ) => {
+    return cy
+      .mutation(
+        gql`
+          mutation CypressUpdateProject(
+            $projectId: Int!
+          ) {
+            updateProject(
+              input: {
+                id: $projectId
+                patch: {
+                  isListed: true
+                }
+              }
+            ) {
+              project {
+                id
+                isListed
+              }
+            }
+          }
+        `,
+        {
+          projectId
+        },
+        (token as unknown) as string
+      )
+      .then((data) => {
+        return data
+    })
+  }
+);
+
+Cypress.Commands.add("approveParticipant", (projectId: number, userId: number, token: string) => {
+  return cy
+    .mutation(
+      gql`
+        mutation CypressApproveParticipant($projectId: Int!, $userId: Int!) {
+          approveParticipant(input: {projectId: $projectId, userId: $userId } ) {
+            user {
+              id
+              needsAccessRequestApproval
+              approvedBy {
+                canonicalEmail
+              }
+            }
+            query {
+              project (id: $projectId) {
+                slug
+                sessionHasPrivilegedAccess
+                sessionIsAdmin
+                sessionParticipationStatus
+                participants {
+                  canonicalEmail
+                }
+              }
+            }
+          }
+        }
+      `,
+      { projectId, userId },
+      (token as any)
+    ).then((data) => {
+      Cypress.log(data);
+      return data
+  });
+});
+
+Cypress.Commands.add("toggleAdminAccess", (projectId: number, userId: number, token: string) => {
+  return cy
+    .mutation(
+      gql`
+        mutation CypressToggleAdminAccess($projectId: Int!, $userId: Int!) {
+          toggleAdminAccess(input: {projectId: $projectId, userId: $userId } ) {
+            query {
+              project (id: $projectId) {
+                slug
+                sessionHasPrivilegedAccess
+                sessionIsAdmin
+                sessionParticipationStatus
+                participants {
+                  canonicalEmail
+                }
+              }
+            }
+          }
+        }
+      `,
+      { projectId, userId },
+      (token as any)
+    ).then((data) => {
+      Cypress.log(data);
+      return data
+  });
+});
+
 Cypress.Commands.add("deleteProject", (slug: string) => {
   cy.exec(`cypress/support/deleteProject.js ${slug}`, {failOnNonZeroExit: false}).then((out) => {
+    cy.log(out.stdout);
+  });
+});
+
+Cypress.Commands.add("createProjectInvites", (projectId: number, projectInviteOptions: object, token: string) => {
+  return cy
+    .mutation(
+      gql`
+        mutation CypressCreateProjectInvites($input: CreateProjectInvitesInput!) {
+          createProjectInvites(input: $input) {
+            projectInvites {
+              projectId
+              email
+            }
+            query {
+              project (id: ${projectId}) {
+              slug
+              admins {
+                canonicalEmail
+              }
+              accessControl
+              isListed
+              id
+              }
+            }
+          }
+        }
+      `,
+    {
+      "input": {
+        "projectId": projectId,
+        "projectInviteOptions": [
+          {
+            "email": `${projectInviteOptions[0]}`
+          }
+        ],
+        "sendEmailNow": projectInviteOptions[1],
+        "makeAdmin": projectInviteOptions[2]
+      }
+    },
+    (token as any)
+    ).then((data) => {
+      Cypress.log(data);
+      return data
+  })
+})
+
+Cypress.Commands.add("verifyProjectInvite", (token: string) => {
+  return cy
+  .query(
+    gql`
+      query CypressVerifyProjectInvites($token: String!) {
+        verifyProjectInvite(token: $token) {
+          error
+          claims {
+            wasUsed
+            email
+            fullname
+            admin
+            projectName
+          }
+          existingAccount
+        }
+      }
+    `,
+  {
+    "token": token
+  },
+  ).then((data) => {
+    Cypress.log(data);
+    return data
+  })
+})
+
+Cypress.Commands.add("deleteUser", (username: string) => {
+  cy.exec(`cypress/support/deleteUser.js ${username}`).then((out) => {
     cy.log(out.stdout);
   });
 });

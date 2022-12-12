@@ -18,6 +18,8 @@
     "@mapbox/mapbox-gl-style-spec": "^13.17.0",
     "@mapbox/polyline": "^1.1.1",
     "@mapbox/tilebelt": "^1.0.2",
+    "@percy/cli": "^1.15.0",
+    "@percy/cypress": "^3.1.2",
     "@popperjs/core": "^2.11.6",
     "@seasketch/map-tile-cache-calculator": "^1.0.0",
     "@seasketch/vector-data-source": "^1.0.0",
@@ -285,3 +287,5 @@
     "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.16"
   }
 }
+
+

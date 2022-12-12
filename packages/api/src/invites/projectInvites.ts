@@ -142,7 +142,12 @@ export async function sendProjectInviteEmail(
 
 async function createToken(client: DBClient, claims: ProjectInviteTokenClaims) {
   // admins have less time to use invites since they'are more sensitive
-  const expiration = claims.admin ? "30 days" : "90 days";
+  let expiration
+  if (process.env.IS_CYPRESS_TEST_ENV === "true" && claims.email === "test_user_3@seasketch.org") {
+    expiration = "0 days";
+  } else {
+    expiration = claims.admin ? "30 days" : "90 days";
+  }
   const token = await sign(client, claims, expiration, HOST);
   return {
     token,
