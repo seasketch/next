@@ -159,6 +159,7 @@ jobs:
         working-directory: ./packages/client
         env:
           SKIP_PREFLIGHT_CHECK: true
+          REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
         run: |
           npm run test -- --ci --testResultsProcessor="jest-junit" --watchAll=false
       - uses: IgnusG/jest-report-action@v2.3.3
@@ -218,7 +219,7 @@ jobs:
   integration-tests:
     name: Cypress Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     # container: cypress/browsers:node16.5.0-chrome94-ff93
     services:
       postgres:
