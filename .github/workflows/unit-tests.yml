@@ -336,7 +336,7 @@ jobs:
   percy-visual-tests:
     name: Percy Visual Testing
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     # container: cypress/browsers:node16.5.0-chrome94-ff93
     services:
       postgres:
