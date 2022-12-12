@@ -4,11 +4,11 @@ import { useEffect, useState } from "react";
 export default function useAccessToken() {
   const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
   const [state, setState] = useState<string | null>();
-  const opts = {
-    audience: process.env.REACT_APP_AUTH0_AUDIENCE,
-    scope: process.env.REACT_APP_AUTH0_SCOPE,
-  };
   useEffect(() => {
+    const opts = {
+      audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+      scope: process.env.REACT_APP_AUTH0_SCOPE,
+    };
     let token: string | null = null;
     if ("Cypress" in window) {
       token = window.localStorage.getItem(
@@ -18,7 +18,6 @@ export default function useAccessToken() {
         }::${process.env.REACT_APP_AUTH0_SCOPE!}`
       );
       setState(token);
-      console.warn("using token from cypress", { token });
     } else {
       getAccessTokenSilently(opts)
         .then((token) => {
@@ -37,6 +36,6 @@ export default function useAccessToken() {
           }
         });
     }
-  });
+  }, [getAccessTokenSilently, getAccessTokenWithPopup, setState]);
   return state;
 }
