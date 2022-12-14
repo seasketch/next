@@ -269,7 +269,6 @@ export default function SketchEditorModal({
   const [geometryErrors, setGeometryErrors] = useState<string | null>(null);
 
   const onSubmit = useCallback(async () => {
-    console.log("onSubmit", name, properties);
     setSubmissionAttempted(true);
 
     if (
