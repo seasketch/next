@@ -61,6 +61,7 @@ export default memo(function SketchingTools({
       slug: getSlug(),
     },
     onError,
+    skip: !user,
   });
 
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
