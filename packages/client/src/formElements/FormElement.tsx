@@ -35,7 +35,7 @@ import {
   MapContextInterface,
 } from "../dataLayers/MapContextManager";
 import { BBox, Feature, FeatureCollection } from "geojson";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import { LangDetails } from "../lang/supported";
 import set from "lodash.setwith";
 import deepCopy from "lodash.clonedeep";
@@ -46,18 +46,18 @@ require("./prosemirror-body.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
 
-export const FormEditorPortalContext =
-  createContext<{
-    container: HTMLDivElement | null;
-    formElementSettings: any;
-    surveyId: number;
-  } | null>(null);
+export const FormEditorPortalContext = createContext<{
+  container: HTMLDivElement | null;
+  formElementSettings: any;
+  surveyId: number;
+} | null>(null);
 
 export const SurveyButtonFooterPortalContext =
   createContext<HTMLDivElement | null>(null);
 
-export const SurveyMapPortalContext =
-  createContext<HTMLDivElement | null>(null);
+export const SurveyMapPortalContext = createContext<HTMLDivElement | null>(
+  null
+);
 
 /**
  * Common props that will be supplied to all FormElement React Component
@@ -99,6 +99,8 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   autoFocus?: boolean;
   /** Set to true if this is the last question in a survey */
   isLastQuestion?: boolean;
+  /** Whether this is a sketch in "MyPlans" vs a survey */
+  isSketchWorkflow?: boolean;
 }
 
 /**
@@ -237,7 +239,7 @@ export class FormElementEditorPortal extends Component<{
 export const SurveyMapPortal: FunctionComponent<{
   mapContext: MapContextInterface;
 }> = (props) => {
-  const portalContext = useContext(SurveyLayoutContext).mapPortal;
+  const portalContext = useContext(FormElementLayoutContext).mapPortal;
   if (portalContext) {
     return createPortal(
       <MapContext.Provider value={props.mapContext}>
@@ -590,43 +592,42 @@ export const defaultFormElementIcon = (
   </div>
 );
 
-export const SurveyContext =
-  createContext<{
-    surveyId: number;
-    slug: string;
-    isAdmin: boolean;
-    projectId: number;
-    projectName: string;
-    projectUrl: string;
-    surveyUrl: string;
-    surveySupportsFacilitation: boolean;
-    isFacilitatedResponse: boolean;
-    bestName?: string;
-    bestEmail?: string;
-    projectBounds?: BBox;
-    saveResponse?: () => Promise<
-      FetchResult<
-        CreateResponseMutation,
-        Record<string, any>,
-        Record<string, any>
-      >
-    >;
-    saveResponseToOfflineStore: () => Promise<void>;
-    offlineResponseCount: number;
-    clientIsPreppedForOfflineUse: boolean;
-    resetResponse?: () => Promise<void>;
-    savingResponse?: boolean;
-    /**
-     * Survey's supported languages
-     * Current languge can be gotten from the useTranslation() hook
-     * */
-    supportedLanguages: string[];
-    lang: LangDetails;
-    setLanguage: (code: string) => void;
-    practiceMode: boolean;
-    togglePracticeMode: (enable: boolean) => void;
-    toggleFacilitation: (enable: boolean) => void;
-  } | null>(null);
+export const SurveyContext = createContext<{
+  surveyId: number;
+  slug: string;
+  isAdmin: boolean;
+  projectId: number;
+  projectName: string;
+  projectUrl: string;
+  surveyUrl: string;
+  surveySupportsFacilitation: boolean;
+  isFacilitatedResponse: boolean;
+  bestName?: string;
+  bestEmail?: string;
+  projectBounds?: BBox;
+  saveResponse?: () => Promise<
+    FetchResult<
+      CreateResponseMutation,
+      Record<string, any>,
+      Record<string, any>
+    >
+  >;
+  saveResponseToOfflineStore: () => Promise<void>;
+  offlineResponseCount: number;
+  clientIsPreppedForOfflineUse: boolean;
+  resetResponse?: () => Promise<void>;
+  savingResponse?: boolean;
+  /**
+   * Survey's supported languages
+   * Current languge can be gotten from the useTranslation() hook
+   * */
+  supportedLanguages: string[];
+  lang: LangDetails;
+  setLanguage: (code: string) => void;
+  practiceMode: boolean;
+  togglePracticeMode: (enable: boolean) => void;
+  toggleFacilitation: (enable: boolean) => void;
+} | null>(null);
 
 export function getLayout(
   formElement: Pick<

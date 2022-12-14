@@ -21,7 +21,7 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
   const [val, setVal] = useState(props.value);
 
   useEffect(() => {
-    if (props.value === undefined) {
+    if (props.value === undefined && !props.isSketchWorkflow) {
       const value = `${
         props.componentSettings.generatedNamePrefix || "Location"
       } ${props.featureNumber.toLocaleString()}`;
@@ -37,7 +37,7 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
     setErrors(!(val && val.length > 0));
   }, [props.componentSettings, props.isRequired, val]);
   useEffect(() => {
-    if (props.editable) {
+    if (props.editable && !props.isSketchWorkflow) {
       setVal(
         (props.componentSettings.generatedNamePrefix || "Location") +
           ` ${props.featureNumber.toLocaleString()}`
@@ -47,14 +47,23 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
 
   return (
     <>
-      <FormElementBody
-        formElementId={props.id}
-        isInput={true}
-        body={props.body}
-        required={props.isRequired}
-        editable={props.editable}
-        alternateLanguageSettings={props.alternateLanguageSettings}
-      />
+      {props.isSketchWorkflow && true ? (
+        <span className="prosemirror-body required input">
+          <h1 data-question="yes">
+            <Trans ns="sketching">Name</Trans>
+          </h1>
+        </span>
+      ) : (
+        <FormElementBody
+          formElementId={props.id}
+          isInput={true}
+          body={props.body}
+          required={props.isRequired}
+          editable={props.editable}
+          alternateLanguageSettings={props.alternateLanguageSettings}
+        />
+      )}
+
       <div
         className="w-full md:w-96 max-w-full form-element-short-text pt-1"
         style={{ height: 68 }}

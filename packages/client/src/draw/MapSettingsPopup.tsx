@@ -25,7 +25,7 @@ import {
   BasemapDetailsFragment,
   SketchGeometryType,
 } from "../generated/graphql";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 
 type PopupPosition = "top" | "bottom";
 
@@ -72,7 +72,7 @@ const MapSettingsPopup: FunctionComponent<{
     }
   }, [handleScroll, scrollable]);
 
-  const { isSmall } = useContext(SurveyLayoutContext).style;
+  const { isSmall } = useContext(FormElementLayoutContext).style;
 
   const [left, top, right, bottom] = useMemo(() => {
     const anchorClientRect = anchor?.getBoundingClientRect() || {
@@ -189,7 +189,7 @@ const Item: FunctionComponent<{
   phoneOnly?: boolean;
   selected?: boolean;
 }> = ({ onClick, title, Icon, disabled, phoneOnly, selected }) => {
-  const { isSmall } = useContext(SurveyLayoutContext).style;
+  const { isSmall } = useContext(FormElementLayoutContext).style;
   if (phoneOnly && !isSmall) {
     return null;
   }

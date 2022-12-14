@@ -17,7 +17,7 @@ import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import Spinner from "../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
 
@@ -66,7 +66,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   preprocessingError,
 }) => {
   const { t } = useTranslation("surveys");
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   const isMobile = useMobileDeviceDetector();
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);

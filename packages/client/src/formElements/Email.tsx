@@ -111,7 +111,8 @@ Email.defaultBody = questionBodyFromMarkdown(`
 Email.defaultExportId = "email";
 
 // via https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/email#basic_validation
-const regexp = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+const regexp =
+  /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
 
 function validate(text: string | undefined, required: boolean) {
   if (required && (!text || text.length < 1)) {

@@ -1,3 +1,22 @@
+fragment SketchFormElement on FormElement {
+  id
+  componentSettings
+  alternateLanguageSettings
+  body
+  isRequired
+  isInput
+  position
+  typeId
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+    isHidden
+  }
+}
+
 fragment SketchingDetails on SketchClass {
   id
   name
@@ -23,6 +42,9 @@ fragment SketchingDetails on SketchClass {
   allowMulti
   form {
     id
+    formElements {
+      ...SketchFormElement
+    }
   }
   geometryType
   geoprocessingClientName

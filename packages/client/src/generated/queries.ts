@@ -15398,6 +15398,15 @@ export type SimpleProjectListQuery = (
   )> }
 );
 
+export type SketchFormElementFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
+  )> }
+);
+
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
   & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl'>
@@ -15414,6 +15423,10 @@ export type SketchingDetailsFragment = (
   )>>, form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & SketchFormElementFragment
+    )>> }
   )> }
 );
 
@@ -15716,18 +15729,6 @@ export type SketchEditorModalDetailsFragment = (
     & Pick<GeometryPolygon, 'geojson'>
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & { form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & Pick<FormElement, 'id'>
-        & { type?: Maybe<(
-          { __typename?: 'FormElementType' }
-          & Pick<FormElementType, 'componentName'>
-        )> }
-      )>> }
-    )> }
     & SketchingDetailsFragment
   )> }
   & SketchTocDetailsFragment
@@ -17731,6 +17732,26 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchFormElement on FormElement {
+  id
+  componentSettings
+  alternateLanguageSettings
+  body
+  isRequired
+  isInput
+  position
+  typeId
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+    isHidden
+  }
+}
+    `;
 export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -17757,6 +17778,9 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   allowMulti
   form {
     id
+    formElements {
+      ...SketchFormElement
+    }
   }
   geometryType
   geoprocessingClientName
@@ -17766,7 +17790,7 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   preprocessingEndpoint
   preprocessingProjectUrl
 }
-    `;
+    ${SketchFormElementFragmentDoc}`;
 export const SketchEditorModalDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchEditorModalDetails on Sketch {
   ...SketchTocDetails
@@ -17776,15 +17800,6 @@ export const SketchEditorModalDetailsFragmentDoc = /*#__PURE__*/ gql`
   properties
   sketchClass {
     ...SketchingDetails
-    form {
-      id
-      formElements {
-        id
-        type {
-          componentName
-        }
-      }
-    }
   }
 }
     ${SketchTocDetailsFragmentDoc}
@@ -21066,6 +21081,7 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
     SketchTocDetails: 'SketchTocDetails',

@@ -15,7 +15,7 @@ import Switch from "../components/Switch";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import LanguageSelector from "../surveys/LanguageSelector";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
   FormElementComponent,
@@ -34,7 +34,7 @@ const WelcomeMessage: FormElementComponent<
   { dropdownSelection?: string }
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   const context = useContext(SurveyContext);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   if (!context) {

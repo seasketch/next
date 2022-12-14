@@ -40,6 +40,7 @@ export type ComputedFormElementStyle = {
   backgroundPalette?: string[];
   mapBasemaps: number[] | undefined;
   mapCameraOptions: CameraOptions | undefined;
+  compactAppearance?: boolean;
 };
 
 export const defaultStyle = {

@@ -19,6 +19,7 @@ import getSlug from "../../getSlug";
 import { SketchClassTemplateIcon } from "./TemplateChooser";
 import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 import PreprocessorInput from "./PreprocessorInput";
+import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
 
 const Trans = (props: any) => <I18n ns="admin:sketching" {...props} />;
 
@@ -46,6 +47,11 @@ export default function SketchClassForm({
         current: selectedTab === "settings",
       },
       {
+        name: "Attribute Form",
+        id: "attributes",
+        current: selectedTab === "attributes",
+      },
+      {
         name: "Geoprocessing",
         id: "geoprocessing",
         current: selectedTab === "geoprocessing",
@@ -60,7 +66,7 @@ export default function SketchClassForm({
 
   const { confirmDelete } = useDialog();
 
-  const [del, deleteState] = useDeleteSketchClassMutation({
+  const [del] = useDeleteSketchClassMutation({
     variables: {
       id: sketchClass.id,
     },
@@ -120,7 +126,7 @@ export default function SketchClassForm({
     });
   }, [sketchClass, mutate]);
   return (
-    <div className="min-h-screen flex-col flex">
+    <div className="min-h-screen max-h-screen overflow-hidden flex-col flex">
       <div className="p-2 bg-gray-700">
         <h1 className="text-lg font-semibold flex items-center text-gray-50 mb-2">
           <span className="flex-1">
@@ -137,9 +143,9 @@ export default function SketchClassForm({
           <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
         </div>
       </div>
-      <div className="bg-white p-4 flex-1 max-w-xl shadow space-y-4 z-0 w-128">
+      <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-hidden">
         {selectedTab === "settings" && (
-          <>
+          <div className="p-4 space-y-4">
             <div className="">
               <MutableAutosaveInput
                 value={sketchClass.name}
@@ -203,14 +209,17 @@ export default function SketchClassForm({
                 )
               }
             />
-          </>
+          </div>
         )}
         {selectedTab === "geoprocessing" && (
           <>
-            <div className="">
+            <div className="p-4">
               <PreprocessorInput sketchClass={sketchClass} />
             </div>
           </>
+        )}
+        {selectedTab === "attributes" && (
+          <SketchClassAttributesAdmin sketchClass={sketchClass} />
         )}
       </div>
     </div>

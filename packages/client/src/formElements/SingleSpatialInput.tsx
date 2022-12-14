@@ -38,7 +38,7 @@ import BoundsInput from "../admin/surveys/BoundsInput";
 import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
 import DigitizingMiniMap from "./DigitizingMiniMap";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import useDialog from "../components/useDialog";
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
@@ -69,7 +69,7 @@ const SingleSpatialInput: FormElementComponent<
   const [miniMap, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
   const mapContext = useMapContext();
-  const layoutContext = useContext(SurveyLayoutContext);
+  const layoutContext = useContext(FormElementLayoutContext);
   const mapPortalContext = layoutContext.mapPortal;
   const style = layoutContext.style;
   const context = useContext(SurveyContext);

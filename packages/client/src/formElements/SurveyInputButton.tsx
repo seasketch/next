@@ -1,6 +1,6 @@
 import { colord } from "colord";
 import { FunctionComponent, MouseEventHandler, useContext } from "react";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 
 export default function SurveyInputButton({
   label,
@@ -19,7 +19,7 @@ export default function SurveyInputButton({
   iconPlacement?: "right" | "left";
   disabled?: boolean;
 }) {
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   return (
     <button
       disabled={disabled}
@@ -27,7 +27,9 @@ export default function SurveyInputButton({
       onClick={onClick}
       className={`border rounded transition-transform duration-200 transform inline-flex items-center ${
         style.isDark ? "bg-white" : "bg-black"
-      } bg-opacity-5 hover:bg-opacity-10 hover:bg-white px-4 py-2 ${
+      } bg-opacity-5 hover:bg-opacity-10 hover:bg-white ${
+        style.compactAppearance ? "px-3 py-1" : "px-4 py-2"
+      } ${
         Icon &&
         (iconPlacement === "left"
           ? "ltr:pl-10 ltr:pr-6 rtl:pr-10"

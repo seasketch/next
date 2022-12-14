@@ -1,5 +1,6 @@
 import {
   ApolloError,
+  OperationVariables,
   Reference,
   StoreObject,
   useMutation,
@@ -95,7 +96,7 @@ export function useCreate<Mutation, Variables>(
     },
   });
 
-  return (variables: Variables) => {
+  return (variables: OperationVariables) => {
     return mutate({ variables });
   };
 }

@@ -2,7 +2,7 @@ import { CameraIcon } from "@heroicons/react/solid";
 import { useContext } from "react";
 import { Trans } from "react-i18next";
 import { FormElementLayout } from "../generated/graphql";
-import { SurveyLayoutContext } from "./SurveyAppLayout";
+import { FormElementLayoutContext } from "./SurveyAppLayout";
 
 export default function UnsplashCredit({
   name,
@@ -15,7 +15,7 @@ export default function UnsplashCredit({
   layout: FormElementLayout;
   isDark: boolean;
 }) {
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   if (
     layout === FormElementLayout.Cover ||
     style.isSmall ||
