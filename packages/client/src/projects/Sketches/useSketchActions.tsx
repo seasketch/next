@@ -232,7 +232,7 @@ export default function useSketchActions({
     setState({
       create: [
         ...(sketchClasses || [])
-          .filter((sc) => !sc.formElementId)
+          .filter((sc) => !sc.formElementId && !sc.isArchived)
           .sort((a, b) => a.name.localeCompare(b.name))
           .map(
             (sc) =>
