@@ -142,7 +142,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
       <div
         onClick={() => (isOpen ? closeMenu() : openMenu())}
         className={`bg-white rounded w-full text-black ${
-          style.compactAppearance ? "border shadow-sm" : ""
+          style.compactAppearance ? "border-gray-300 border shadow-sm" : ""
         } relative flex justify-center ${
           getComboboxProps()["aria-expanded"]
             ? "ring ring-blue-200 ring-opacity-50"
