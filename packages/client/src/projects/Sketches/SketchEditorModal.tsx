@@ -10,7 +10,7 @@ import {
 } from "../../generated/graphql";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
 import getSlug from "../../getSlug";
@@ -33,6 +33,7 @@ import { MapMouseEvent } from "mapbox-gl";
 import area from "@turf/area";
 import bboxPolygon from "@turf/bbox-polygon";
 import { currentSidebarState } from "../ProjectAppSidebar";
+import SketchForm from "./SketchForm";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -60,22 +61,38 @@ export default function SketchEditorModal({
   const [feature, setFeature] = useState<Feature | null>(null);
   const [preprocessedGeometry, setPreprocessedGeometry] =
     useState<Geometry | null>(null);
-  const [name, _setName] = useState(sketch?.name || "");
-  const [nameErrors, setNameErrors] = useState<string | null>(null);
   const [submissionAttempted, setSubmissionAttempted] = useState(false);
-  const setName = useCallback(
-    (value: string) => {
-      if (nameErrors?.length || submissionAttempted) {
-        if (value.length > 0) {
-          setNameErrors(null);
-        } else {
-          setNameErrors(t("You must name your sketch"));
-        }
+  const [name, setName] = useState<string>();
+  const [properties, setProperties] = useState<any>(sketch?.properties || {});
+  const [hasValidationErrors, setHasValidationErrors] = useState(false);
+
+  const formElements = useMemo(() => {
+    const elements = sketchClass.form?.formElements || [];
+    let sorted = [...elements].sort((a, b) => a.position - b.position);
+    return [
+      sorted.find((el) => el.typeId === "FeatureName")!,
+      ...sorted.filter((el) => el.typeId !== "FeatureName"),
+    ];
+  }, [sketchClass.form?.formElements]);
+
+  const nameElementId = useMemo(() => {
+    return (sketchClass.form?.formElements || []).find(
+      (e) => e.typeId === "FeatureName"
+    )?.id;
+  }, [sketchClass.form?.formElements]);
+
+  const startingProperties = useMemo(() => {
+    if (!sketch) {
+      return {};
+    } else {
+      const properties = { ...sketch.properties } || {};
+      const nameElement = formElements.find((f) => f.typeId === "FeatureName");
+      if (nameElement) {
+        properties[nameElement.id] = sketch.name;
       }
-      _setName(value);
-    },
-    [nameErrors?.length, submissionAttempted, t, _setName]
-  );
+      return properties;
+    }
+  }, [sketch, formElements]);
 
   const handleCancel = useCallback(() => {
     mapContext.manager?.clearSketchEditingState();
@@ -220,25 +237,26 @@ export default function SketchEditorModal({
 
   useEffect(() => {
     if (sketch) {
-      _setName(sketch.name);
       if (sketch.userGeom?.geojson) {
         setFeature({
           id: sketch.id.toString(),
           type: "Feature",
-          properties: {},
+          properties: startingProperties,
           geometry: sketch.userGeom.geojson,
         });
       }
     }
-  }, [sketch, setFeature]);
+  }, [sketch, setFeature, startingProperties]);
 
   useEffect(() => {
     if (sketch) {
       draw.actions.clearSelection();
+      setName(sketch.name);
+      setProperties(sketch.properties);
     } else {
       draw.create(false, true);
     }
-  }, [sketch]);
+  }, [sketch, setName, setProperties]);
 
   useEffect(() => {
     if (!baseRoute?.isExact) {
@@ -251,11 +269,8 @@ export default function SketchEditorModal({
   const [geometryErrors, setGeometryErrors] = useState<string | null>(null);
 
   const onSubmit = useCallback(async () => {
+    console.log("onSubmit", name, properties);
     setSubmissionAttempted(true);
-    if (!name || name.length < 1) {
-      setNameErrors(t("You must name your sketch"));
-      return;
-    }
 
     if (
       draw.selfIntersects ||
@@ -280,6 +295,10 @@ export default function SketchEditorModal({
       return;
     }
 
+    if (hasValidationErrors) {
+      return;
+    }
+
     // draw.disable();
 
     // See if geometry has been changed.
@@ -290,6 +309,10 @@ export default function SketchEditorModal({
       geometryChanged = originalGeom !== newGeom;
     }
 
+    if (!name) {
+      throw new Error("Name not specified");
+    }
+
     let data: SketchCrudResponseFragment | undefined;
     if (sketch) {
       const response = await updateSketch({
@@ -297,12 +320,12 @@ export default function SketchEditorModal({
           ? {
               name,
               userGeom: feature,
-              properties: {},
+              properties,
               id: sketch.id,
             }
           : {
               name,
-              properties: {},
+              properties,
               id: sketch.id,
             },
       });
@@ -314,7 +337,7 @@ export default function SketchEditorModal({
           sketchClassId: sketchClass.id,
           userGeom: feature,
           folderId,
-          properties: feature.properties,
+          properties: properties,
         },
       });
       data = response.data?.createSketch || undefined;
@@ -344,6 +367,7 @@ export default function SketchEditorModal({
   }, [
     draw,
     name,
+    properties,
     feature,
     sketch,
     t,
@@ -397,8 +421,8 @@ export default function SketchEditorModal({
             bounce: false,
           }}
           animate={left ? "left" : "right"}
-          className={`w-128 bg-white rounder absolute top-2 z-10 rounded-lg shadow-xl flex-col overflow-hidden`}
-          style={{ maxHeight: "calc(100vh - 200px)" }}
+          className={`bg-white rounder absolute top-2 z-10 rounded-lg shadow-xl flex-col overflow-hidden`}
+          style={{ maxHeight: "calc(100vh - 200px)", width: "26rem" }}
         >
           {" "}
           {loading ? (
@@ -438,22 +462,27 @@ export default function SketchEditorModal({
                 )}
               </h1>
               <div className="p-4 pt-0 flex-1 overflow-y-auto">
-                <TextInput
-                  disabled={createSketchState.loading}
-                  error={nameErrors || undefined}
-                  autoFocus
-                  required={true}
-                  label={<Trans>Name</Trans>}
-                  value={name}
-                  onChange={(value) => setName(value)}
-                  name="name"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      onSubmit();
-                    }
+                <SketchForm
+                  onChange={(props, validationErrors) => {
+                    const nameValue = nameElementId
+                      ? props[nameElementId]
+                      : undefined;
+                    setName(nameValue);
+                    setProperties(props);
+                    setHasValidationErrors(validationErrors);
                   }}
+                  formElements={formElements}
+                  submissionAttempted={submissionAttempted}
+                  startingProperties={startingProperties}
                 />
                 {geometryErrors && <Warning>{geometryErrors}</Warning>}
+                {hasValidationErrors && (
+                  <Warning>
+                    <Trans ns="sketching">
+                      Please complete your submission first.
+                    </Trans>
+                  </Warning>
+                )}
                 {createSketchState.error && (
                   <Warning level="error">
                     {createSketchState.error.message}
@@ -472,7 +501,9 @@ export default function SketchEditorModal({
                     createSketchState.loading || updateSketchState.loading
                   }
                   disabled={
-                    createSketchState.loading || updateSketchState.loading
+                    createSketchState.loading ||
+                    updateSketchState.loading ||
+                    (hasValidationErrors && submissionAttempted)
                   }
                   onClick={onSubmit}
                   label={<Trans>Submit</Trans>}

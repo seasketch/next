@@ -15402,7 +15402,7 @@ export type SimpleProjectListQuery = (
 
 export type SketchFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
@@ -15423,6 +15423,23 @@ export type SketchingDetailsFragment = (
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
   )>>, form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & SketchFormElementFragment
+    )>> }
+  )> }
+);
+
+export type SketchClassFormQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SketchClassFormQuery = (
+  { __typename?: 'Query' }
+  & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
     & { formElements?: Maybe<Array<(
@@ -15533,6 +15550,24 @@ export type UpdateGeoprocessingServicesMutation = (
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
       & Pick<SketchClass, 'id' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
+    )> }
+  )> }
+);
+
+export type UpdateSketchFormElementMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isRequired?: Maybe<Scalars['Boolean']>;
+  exportId?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateSketchFormElementMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'isRequired' | 'exportId'>
     )> }
   )> }
 );
@@ -17744,6 +17779,7 @@ export const SketchFormElementFragmentDoc = gql`
   isInput
   position
   typeId
+  exportId
   type {
     componentName
     isInput
@@ -22552,6 +22588,44 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export const SketchClassFormDocument = gql`
+    query SketchClassForm($id: Int!) {
+  form(id: $id) {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+  }
+}
+    ${SketchFormElementFragmentDoc}`;
+
+/**
+ * __useSketchClassFormQuery__
+ *
+ * To run a query within a React component, call `useSketchClassFormQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchClassFormQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchClassFormQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSketchClassFormQuery(baseOptions: Apollo.QueryHookOptions<SketchClassFormQuery, SketchClassFormQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchClassFormQuery, SketchClassFormQueryVariables>(SketchClassFormDocument, options);
+      }
+export function useSketchClassFormLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchClassFormQuery, SketchClassFormQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchClassFormQuery, SketchClassFormQueryVariables>(SketchClassFormDocument, options);
+        }
+export type SketchClassFormQueryHookResult = ReturnType<typeof useSketchClassFormQuery>;
+export type SketchClassFormLazyQueryHookResult = ReturnType<typeof useSketchClassFormLazyQuery>;
+export type SketchClassFormQueryResult = Apollo.QueryResult<SketchClassFormQuery, SketchClassFormQueryVariables>;
 export const CreateSketchClassDocument = gql`
     mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
   createSketchClassFromTemplate(
@@ -22783,6 +22857,47 @@ export function useUpdateGeoprocessingServicesMutation(baseOptions?: Apollo.Muta
 export type UpdateGeoprocessingServicesMutationHookResult = ReturnType<typeof useUpdateGeoprocessingServicesMutation>;
 export type UpdateGeoprocessingServicesMutationResult = Apollo.MutationResult<UpdateGeoprocessingServicesMutation>;
 export type UpdateGeoprocessingServicesMutationOptions = Apollo.BaseMutationOptions<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>;
+export const UpdateSketchFormElementDocument = gql`
+    mutation UpdateSketchFormElement($id: Int!, $isRequired: Boolean, $exportId: String) {
+  updateFormElement(
+    input: {id: $id, patch: {isRequired: $isRequired, exportId: $exportId}}
+  ) {
+    formElement {
+      id
+      isRequired
+      exportId
+    }
+  }
+}
+    `;
+export type UpdateSketchFormElementMutationFn = Apollo.MutationFunction<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>;
+
+/**
+ * __useUpdateSketchFormElementMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchFormElementMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchFormElementMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchFormElementMutation, { data, loading, error }] = useUpdateSketchFormElementMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      isRequired: // value for 'isRequired'
+ *      exportId: // value for 'exportId'
+ *   },
+ * });
+ */
+export function useUpdateSketchFormElementMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>(UpdateSketchFormElementDocument, options);
+      }
+export type UpdateSketchFormElementMutationHookResult = ReturnType<typeof useUpdateSketchFormElementMutation>;
+export type UpdateSketchFormElementMutationResult = Apollo.MutationResult<UpdateSketchFormElementMutation>;
+export type UpdateSketchFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -26119,6 +26234,7 @@ export const namedOperations = {
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
     SimpleProjectList: 'SimpleProjectList',
+    SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
     Sketching: 'Sketching',
@@ -26211,6 +26327,7 @@ export const namedOperations = {
     UpdateSketchClass: 'UpdateSketchClass',
     DeleteSketchClass: 'DeleteSketchClass',
     UpdateGeoprocessingServices: 'UpdateGeoprocessingServices',
+    UpdateSketchFormElement: 'UpdateSketchFormElement',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',

@@ -218,8 +218,8 @@ export default function SketchClassForm({
             </div>
           </>
         )}
-        {selectedTab === "attributes" && (
-          <SketchClassAttributesAdmin sketchClass={sketchClass} />
+        {selectedTab === "attributes" && sketchClass.form && (
+          <SketchClassAttributesAdmin formId={sketchClass.form.id} />
         )}
       </div>
     </div>

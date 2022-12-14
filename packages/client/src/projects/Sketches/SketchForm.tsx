@@ -1,19 +1,8 @@
-import {
-  FormElementTextVariant,
-  SketchFormElementFragment,
-  useUpdateFormElementOrderMutation,
-} from "../../generated/graphql";
+import { SketchFormElementFragment } from "../../generated/graphql";
 import { ReactNode, useCallback, useState } from "react";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import { defaultStyle } from "../../surveys/appearance";
-import {
-  DragDropContext,
-  Draggable,
-  DraggableProvidedDragHandleProps,
-  Droppable,
-} from "react-beautiful-dnd";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 require("./sketching.css");
 
 type SketchProperties = { name?: string } & { [id: number]: string };
@@ -24,7 +13,6 @@ export default function SketchForm({
   submissionAttempted,
   formElements,
   editable,
-  buttons,
   ...props
 }: {
   startingProperties: { [id: number]: any };
@@ -35,10 +23,6 @@ export default function SketchForm({
   submissionAttempted: boolean;
   formElements: SketchFormElementFragment[];
   editable?: boolean;
-  buttons?: (
-    element: SketchFormElementFragment,
-    dragHandleProps: DraggableProvidedDragHandleProps | undefined
-  ) => ReactNode;
   renderElement?: (
     children: ReactNode,
     element: SketchFormElementFragment,
@@ -73,7 +57,7 @@ export default function SketchForm({
     (element) => {
       return (
         <FormElementFactory
-          key={element.id}
+          key={`${element.typeId}-${element.id}`}
           typeName={element.type!.componentName}
           componentSettings={element.componentSettings}
           value={state[element.id] ? state[element.id].value : undefined}

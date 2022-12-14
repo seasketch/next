@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import EditableResponseCell, {
   CellEditorComponent,
@@ -6,14 +6,14 @@ import EditableResponseCell, {
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import InputBlock from "../components/InputBlock";
 import NumberInput from "../components/NumberInput";
-import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import {
+  FormEditorPortalContext,
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
 } from "./FormElement";
-import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
+import { questionBodyFromMarkdown } from "./fromMarkdown";
 
 export type ShortTextProps = {
   minLength?: number;

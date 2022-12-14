@@ -35,6 +35,7 @@ interface ModalProps {
   zeroPadding?: boolean;
   onTabChange?: (selectedIndex: number) => void;
   initialFocus?: any;
+  open?: boolean;
 }
 
 export default function Modal(props: ModalProps) {
@@ -67,7 +68,7 @@ export default function Modal(props: ModalProps) {
 
   return (
     <Dialog
-      open={true}
+      open={props.open === undefined ? true : props.open}
       as={motion.div}
       className={`relative ${props.tipyTop ? "z-50" : "z-20"}`}
       onClose={() => {

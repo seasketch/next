@@ -4376,7 +4376,7 @@ CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, te
         if num_similarly_named > 0 then
           new_name = new_name || ' (' || num_similarly_named::text || ')';
         end if;
-        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style) returning * into created;
+        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style, preprocessing_endpoint, preprocessing_project_url) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style, base.preprocessing_endpoint, base.preprocessing_project_url) returning * into created;
         perform initialize_sketch_class_form_from_template(created.id, (select id from forms where sketch_class_id = base.id));
         return created;
       else

@@ -7,6 +7,7 @@ fragment SketchFormElement on FormElement {
   isInput
   position
   typeId
+  exportId
   type {
     componentName
     isInput
@@ -53,6 +54,15 @@ fragment SketchingDetails on SketchClass {
   formElementId
   preprocessingEndpoint
   preprocessingProjectUrl
+}
+
+query SketchClassForm($id: Int!) {
+  form(id: $id) {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+  }
 }
 
 mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
@@ -132,6 +142,22 @@ mutation UpdateGeoprocessingServices(
       geoprocessingClientName
       geoprocessingClientUrl
       geoprocessingProjectUrl
+    }
+  }
+}
+
+mutation UpdateSketchFormElement(
+  $id: Int!
+  $isRequired: Boolean
+  $exportId: String
+) {
+  updateFormElement(
+    input: { id: $id, patch: { isRequired: $isRequired, exportId: $exportId } }
+  ) {
+    formElement {
+      id
+      isRequired
+      exportId
     }
   }
 }

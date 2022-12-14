@@ -15400,7 +15400,7 @@ export type SimpleProjectListQuery = (
 
 export type SketchFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
@@ -15421,6 +15421,23 @@ export type SketchingDetailsFragment = (
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
   )>>, form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & SketchFormElementFragment
+    )>> }
+  )> }
+);
+
+export type SketchClassFormQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SketchClassFormQuery = (
+  { __typename?: 'Query' }
+  & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
     & { formElements?: Maybe<Array<(
@@ -15531,6 +15548,24 @@ export type UpdateGeoprocessingServicesMutation = (
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
       & Pick<SketchClass, 'id' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
+    )> }
+  )> }
+);
+
+export type UpdateSketchFormElementMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isRequired?: Maybe<Scalars['Boolean']>;
+  exportId?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateSketchFormElementMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'isRequired' | 'exportId'>
     )> }
   )> }
 );
@@ -17742,6 +17777,7 @@ export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
   isInput
   position
   typeId
+  exportId
   type {
     componentName
     isInput
@@ -19671,6 +19707,16 @@ export const SimpleProjectListDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SketchClassFormDocument = /*#__PURE__*/ gql`
+    query SketchClassForm($id: Int!) {
+  form(id: $id) {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+  }
+}
+    ${SketchFormElementFragmentDoc}`;
 export const CreateSketchClassDocument = /*#__PURE__*/ gql`
     mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
   createSketchClassFromTemplate(
@@ -19731,6 +19777,19 @@ export const UpdateGeoprocessingServicesDocument = /*#__PURE__*/ gql`
       geoprocessingClientName
       geoprocessingClientUrl
       geoprocessingProjectUrl
+    }
+  }
+}
+    `;
+export const UpdateSketchFormElementDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketchFormElement($id: Int!, $isRequired: Boolean, $exportId: String) {
+  updateFormElement(
+    input: {id: $id, patch: {isRequired: $isRequired, exportId: $exportId}}
+  ) {
+    formElement {
+      id
+      isRequired
+      exportId
     }
   }
 }
@@ -20897,6 +20956,7 @@ export const namedOperations = {
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
     SimpleProjectList: 'SimpleProjectList',
+    SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
     Sketching: 'Sketching',
@@ -20989,6 +21049,7 @@ export const namedOperations = {
     UpdateSketchClass: 'UpdateSketchClass',
     DeleteSketchClass: 'DeleteSketchClass',
     UpdateGeoprocessingServices: 'UpdateGeoprocessingServices',
+    UpdateSketchFormElement: 'UpdateSketchFormElement',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',

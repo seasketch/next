@@ -246,7 +246,6 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   );
 
   const { confirm } = useDialog();
-
   return (
     <>
       <FormElementBody
