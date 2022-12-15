@@ -55,7 +55,6 @@ export default memo(function SketchingTools({
   const history = useHistory();
   const client = useApolloClient();
   const mapContext = useContext(MapContext);
-  const;
 
   const { data, loading } = useSketchingQuery({
     variables: {
