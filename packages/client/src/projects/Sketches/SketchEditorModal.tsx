@@ -468,14 +468,14 @@ export default function SketchEditorModal({
                       : undefined;
                     setName(nameValue);
                     setProperties(props);
-                    setHasValidationErrors(validationErrors);
+                    setHasValidationErrors(validationErrors || !nameValue);
                   }}
                   formElements={formElements}
                   submissionAttempted={submissionAttempted}
                   startingProperties={startingProperties}
                 />
                 {geometryErrors && <Warning>{geometryErrors}</Warning>}
-                {hasValidationErrors && (
+                {hasValidationErrors && submissionAttempted && (
                   <Warning>
                     <Trans ns="sketching">
                       Please complete your submission first.
