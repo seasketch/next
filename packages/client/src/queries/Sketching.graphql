@@ -1,0 +1,180 @@
+fragment SketchTocDetails on Sketch {
+  id
+  bbox
+  name
+  numVertices
+  sketchClassId
+  collectionId
+  bbox
+  folderId
+  timestamp
+  sketchClass {
+    id
+    geometryType
+  }
+}
+
+fragment SketchFolderDetails on SketchFolder {
+  collectionId
+  folderId
+  id
+  name
+}
+
+query Sketching($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchClasses {
+      ...SketchingDetails
+    }
+    mySketches {
+      __typename
+      ...SketchTocDetails
+    }
+    myFolders {
+      __typename
+      ...SketchFolderDetails
+    }
+  }
+}
+
+mutation CreateSketchFolder(
+  $slug: String!
+  $name: String!
+  $folderId: Int
+  $collectionId: Int
+) {
+  createSketchFolder(
+    input: {
+      slug: $slug
+      name: $name
+      folderId: $folderId
+      collectionId: $collectionId
+    }
+  ) {
+    sketchFolder {
+      ...SketchFolderDetails
+    }
+  }
+}
+
+fragment SketchCRUDResponse on Sketch {
+  ...SketchTocDetails
+  id
+  name
+  userGeom {
+    geojson
+  }
+  properties
+  geojsonProperties
+  ...SketchEditorModalDetails
+}
+
+mutation CreateSketch(
+  $name: String!
+  $sketchClassId: Int!
+  $userGeom: GeoJSON!
+  $collectionId: Int
+  $folderId: Int
+  $properties: JSON!
+) {
+  createSketch(
+    name: $name
+    sketchClassId: $sketchClassId
+    userGeom: $userGeom
+    folderId: $folderId
+    collectionId: $collectionId
+    properties: $properties
+  ) {
+    ...SketchCRUDResponse
+  }
+}
+
+mutation UpdateSketch(
+  $id: Int!
+  $name: String!
+  $userGeom: GeoJSON
+  $properties: JSON!
+) {
+  updateSketch(
+    id: $id
+    name: $name
+    userGeom: $userGeom
+    properties: $properties
+  ) {
+    ...SketchCRUDResponse
+  }
+}
+
+mutation DeleteSketch($id: Int!) {
+  deleteSketch(input: { id: $id }) {
+    sketch {
+      id
+    }
+  }
+}
+
+mutation DeleteSketchFolder($id: Int!) {
+  deleteSketchFolder(input: { id: $id }) {
+    sketchFolder {
+      id
+    }
+  }
+}
+
+mutation RenameFolder($id: Int!, $name: String!) {
+  updateSketchFolder(input: { id: $id, patch: { name: $name } }) {
+    sketchFolder {
+      id
+      name
+    }
+  }
+}
+
+fragment SketchEditorModalDetails on Sketch {
+  ...SketchTocDetails
+  userGeom {
+    geojson
+  }
+  properties
+  sketchClass {
+    ...SketchingDetails
+  }
+}
+
+query GetSketchForEditing($id: Int!) {
+  sketch(id: $id) {
+    ...SketchEditorModalDetails
+  }
+}
+
+mutation UpdateSketchFolderParent(
+  $id: Int!
+  $folderId: Int
+  $collectionId: Int
+) {
+  updateSketchFolder(
+    input: {
+      id: $id
+      patch: { folderId: $folderId, collectionId: $collectionId }
+    }
+  ) {
+    sketchFolder {
+      id
+      folderId
+      collectionId
+    }
+  }
+}
+
+mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketchParent(
+    input: { id: $id, folderId: $folderId, collectionId: $collectionId }
+  ) {
+    sketch {
+      id
+      folderId
+      collectionId
+    }
+  }
+}

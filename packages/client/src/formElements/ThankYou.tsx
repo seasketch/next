@@ -23,7 +23,7 @@ import { LinkIcon, StatusOfflineIcon } from "@heroicons/react/outline";
 import Button from "../components/Button";
 import { useContext } from "react";
 import { Link } from "react-router-dom";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import useClipboard from "react-use-clipboard";
 import LocalizableTextInput from "../surveys/LocalizableTextInput";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
@@ -40,7 +40,7 @@ export interface ThankYouProps {
  */
 const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   const context = useContext(SurveyContext);
   const shareUrl = new URL(context!.surveyUrl).toString();
   const shareClassName = "w-8 h-8 rounded shadow cursor-pointer";

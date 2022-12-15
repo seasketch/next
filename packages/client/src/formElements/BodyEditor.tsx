@@ -37,7 +37,7 @@ export default function BodyEditor({
     : editorConfig.content;
 
   const context = useContext(SurveyContext);
-  const selectedLanguage = context!.lang.code;
+  const selectedLanguage = context?.lang.code || "EN";
 
   let body = defaultBody;
   if (

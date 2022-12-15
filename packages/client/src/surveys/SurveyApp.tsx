@@ -62,13 +62,12 @@ interface FormElementState {
  * validation and input rendering to FormElements.
  */
 function SurveyApp() {
-  const { surveyId, position, practice, slug } =
-    useParams<{
-      surveyId: string;
-      position: string;
-      practice?: string;
-      slug: string;
-    }>();
+  const { surveyId, position, practice, slug } = useParams<{
+    surveyId: string;
+    position: string;
+    practice?: string;
+    slug: string;
+  }>();
   const { t, i18n } = useTranslation("surveys");
 
   let language = languages.find((lang) => lang.code === "EN")!;

@@ -35,7 +35,7 @@ type LayoutContext = {
   navigatingBackwards?: boolean;
 };
 
-export const SurveyLayoutContext = createContext({
+export const FormElementLayoutContext = createContext({
   mapPortal: null,
   style: {},
 } as LayoutContext);
@@ -213,7 +213,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
     style.layout === FormElementLayout.MapSidebarRight;
 
   const content = (
-    <SurveyLayoutContext.Provider value={layoutContext}>
+    <FormElementLayoutContext.Provider value={layoutContext}>
       <SurveyMapPortalContext.Provider value={mapPortal}>
         <SurveyStyleContext.Provider value={style}>
           <AnimatePresence initial={false} presenceAffectsLayout={false}>
@@ -321,7 +321,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
           </AnimatePresence>
         </SurveyStyleContext.Provider>
       </SurveyMapPortalContext.Provider>
-    </SurveyLayoutContext.Provider>
+    </FormElementLayoutContext.Provider>
   );
   if (embeddedInAdmin) {
     return <div className={`w-full h-full relative`}>{content}</div>;

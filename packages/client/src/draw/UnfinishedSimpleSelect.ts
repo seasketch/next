@@ -1,4 +1,6 @@
-import SimpleSelect from "./SimpleSelect";
+import S from "./SimpleSelect";
+
+const SimpleSelect = S();
 
 const _onSetup = SimpleSelect.onSetup;
 

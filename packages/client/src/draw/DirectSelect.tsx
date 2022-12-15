@@ -9,12 +9,6 @@ const _stopDragging = DirectSelect.stopDragging;
 const _onSetup = DirectSelect.onSetup;
 const _clickNoTarget = DirectSelect.clickNoTarget;
 
-DirectSelect.onSetup = function (opts: any) {
-  const state = _onSetup.apply(this, [opts]);
-  this.checkForKinks(state);
-  return state;
-};
-
 DirectSelect.stopDragging = function (state: any, e: any) {
   this.map.fire("seasketch.drag_target", {} as DragTargetEvent);
   return _stopDragging.apply(this, [state, e]);
@@ -97,22 +91,6 @@ DirectSelect.fireUpdate = function () {
   } else {
     _fireUpdate.apply(this, []);
   }
-  // this.map.fire(Constants.events.UPDATE, {
-  //   action: Constants.updateActions.CHANGE_COORDINATES,
-  //   features: this.getSelected().map((f) => f.toGeoJSON()),
-  // });
-};
-
-DirectSelect.clickNoTarget = function (state: any, e: any) {
-  if (state.kinks?.features.length > 0) {
-    // clear coordinate selection but don't allow change of mode
-    state.selectedCoordPaths = [];
-    this.clearSelectedCoordinates();
-    state.feature.changed();
-    return false;
-  } else {
-    return _clickNoTarget.apply(this, [state, e]);
-  }
 };
 
 // inspired by mapbox-gl-draw-waypoint
@@ -121,17 +99,39 @@ DirectSelect.clickInactive = function (state: any, e: any) {
   if (state.kinks?.features.length > 0) {
     // do nothing. don't allow switching away
   } else {
-    if (e.featureTarget.geometry.type !== "Point") {
-      // switch to direct_select mode for polygon/line features
-      this.changeMode("direct_select", {
-        featureId: e.featureTarget.properties.id,
-      });
+    if (state.preprocessingEndpoint) {
+      this.changeMode("preprocessing");
     } else {
-      // switch to simple_select mode for point features
-      this.changeMode("simple_select", {
-        featureIds: [e.featureTarget.properties.id],
+      if (e.featureTarget.geometry.type !== "Point") {
+        // switch to direct_select mode for polygon/line features
+        this.changeMode("direct_select", {
+          featureId: e.featureTarget.properties.id,
+        });
+      } else {
+        // switch to simple_select mode for point features
+        this.changeMode("simple_select", {
+          featureIds: [e.featureTarget.properties.id],
+        });
+      }
+    }
+  }
+};
+
+DirectSelect.clickNoTarget = function (state: any, e: any) {
+  if (state.kinks?.features.length > 0 || state.preprocessingEndpoint) {
+    // clear coordinate selection but don't allow change of mode
+    state.selectedCoordPaths = [];
+    this.clearSelectedCoordinates();
+    state.feature.changed();
+    if (state.kinks?.features.length > 0) {
+      return false;
+    } else {
+      this.changeMode("preprocessing", {
+        featureId: state.feature.id,
       });
     }
+  } else {
+    _clickNoTarget.apply(this, [state, e]);
   }
 };
 
@@ -180,4 +180,18 @@ DirectSelect.dragFeature = function (state: any, e: any, delta: any) {
   // noop
 };
 
-export default DirectSelect;
+export default function DirectSelectFactory(
+  preprocessingEndpoint?: string,
+  preprocessingResults?: { [id: string]: Feature<any> }
+) {
+  return {
+    ...DirectSelect,
+    onSetup: function (opts: any) {
+      const state = _onSetup.apply(this, [opts]);
+      state.preprocessingEndpoint = preprocessingEndpoint;
+      state.preprocessingResults = preprocessingResults;
+      this.checkForKinks(state);
+      return state;
+    },
+  };
+}

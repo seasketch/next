@@ -45,7 +45,7 @@ import {
   SketchGeometryType,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
-import { SurveyLayoutContext } from "../../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import SurveyButton from "../../surveys/SurveyButton";
 import DigitizingTools from "../DigitizingTools";
 import {
@@ -131,7 +131,7 @@ const SpatialAccessPriority: FormElementComponent<
   SAPValueType
 > = (props) => {
   const { t } = useTranslation("admin:surveys");
-  const context = useContext(SurveyLayoutContext);
+  const context = useContext(FormElementLayoutContext);
   const { mapContext, basemaps, bounds } = useMapEssentials({
     bounds: props.componentSettings.startingBounds,
     filterBasemapIds: props.componentSettings.basemaps,
@@ -157,11 +157,10 @@ const SpatialAccessPriority: FormElementComponent<
   const [miniMap, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
-  const [geometryEditingState, setGeometryEditingState] =
-    useState<{
-      isNew: boolean;
-      feature?: Feature<any>;
-    } | null>(null);
+  const [geometryEditingState, setGeometryEditingState] = useState<{
+    isNew: boolean;
+    feature?: Feature<any>;
+  } | null>(null);
   const [responseState, setResponseState] = useState<ResponseState>({
     submissionAttempted: false,
   });

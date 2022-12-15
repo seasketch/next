@@ -66,6 +66,7 @@ app.use(compression());
 app.use(
   cors({
     origin: true,
+    credentials: true,
     allowedHeaders: [
       "authorization",
       "content-type",
@@ -203,6 +204,7 @@ run({
 });
 
 const tilesetPool = createPool();
+const geoPool = createPool();
 const loadersPool = createPool({}, "admin");
 
 app.use(
@@ -224,12 +226,51 @@ app.use(
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/x-protobuf");
-      res.setHeader("Cache-Control", "public, max-age=300");
+      res.setHeader("Cache-Control", "public, max-age=10");
       if (tile === null || tile.length === 0) {
         res.status(204);
       }
       res.send(tile);
     } catch (e: any) {
+      client.query("COMMIT");
+      res.status(500).send(`Problem generating tiles.\n${e.toString()}`);
+      return;
+    } finally {
+      client.release();
+    }
+  }
+);
+
+app.use(
+  "/sketches/:id.geojson.json",
+  authorizationMiddleware,
+  currentProjectMiddlware,
+  userAccountMiddlware,
+  async function (req, res, next) {
+    const client = await geoPool.connect();
+    try {
+      await client.query("BEGIN");
+      await setTransactionSessionVariables(getPgSettings(req), client);
+      const id = parseInt(req.params.id);
+      const { rows } = await client.query(
+        `
+          SELECT sketch_as_geojson($1)
+          `,
+        [id]
+      );
+      const geojson = rows[0].sketch_as_geojson;
+      await client.query("COMMIT");
+      await client.release();
+      res.setHeader("Content-Type", "application/json");
+      if (req.query && req.query.timestamp) {
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+      }
+      if (geojson === null) {
+        res.status(404);
+      }
+      res.send(geojson);
+    } catch (e: any) {
+      client.query("COMMIT");
       client.release();
       res.status(500).send(`Problem generating tiles.\n${e.toString()}`);
       return;

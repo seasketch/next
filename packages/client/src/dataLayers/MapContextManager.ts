@@ -11,7 +11,6 @@ import mapboxgl, {
   AnySourceImpl,
   AnySourceData,
   AnyLayer,
-  VectorSource,
 } from "mapbox-gl";
 import {
   createContext,
@@ -22,7 +21,6 @@ import {
 } from "react";
 import { BBox, Feature, Polygon } from "geojson";
 import {
-  Basemap,
   BasemapDetailsFragment,
   DataLayer,
   DataSource as GeneratedDataSource,
@@ -47,6 +45,21 @@ import { useParams } from "react-router";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 import md5 from "md5";
+import useAccessToken from "../useAccessToken";
+import LRU from "lru-cache";
+
+const graphqlURL = new URL(
+  process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
+);
+
+const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
+
+const LocalSketchGeometryCache = new LRU<
+  number,
+  { timestamp: string; feature: Feature<any> }
+>({
+  max: 10,
+});
 
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
@@ -56,11 +69,6 @@ interface LayerState {
   loading: boolean;
   error?: Error;
 }
-
-// export type SourceInstance =
-//   | MapBoxSource
-//   | ArcGISVectorSource
-//   | WMSSource;
 
 export type ClientDataSource = Pick<
   GeneratedDataSource,
@@ -123,47 +131,10 @@ export type ClientDataLayer = Pick<
 };
 
 export type ClientBasemap = BasemapDetailsFragment;
-// Pick<
-//   Basemap,
-//   | "id"
-//   | "attribution"
-//   | "type"
-//   | "description"
-//   | "name"
-//   | "projectId"
-//   | "labelsLayerId"
-//   | "terrainExaggeration"
-//   | "terrainMaxZoom"
-//   | "terrainOptional"
-//   | "terrainTileSize"
-//   | "terrainUrl"
-//   | "terrainVisibilityDefault"
-//   | "thumbnail"
-//   | "tileSize"
-//   | "url"
-// > & {
-//   optionalBasemapLayers: Pick<
-//     OptionalBasemapLayer,
-//     | "basemapId"
-//     | "id"
-//     | "options"
-//     | "name"
-//     | "groupType"
-//     | "defaultVisibility"
-//     | "description"
-//     | "layers"
-//     | "metadata"
-//   >[];
-// } & {
-//   interactivitySettings?: Pick<
-//     InteractivitySetting,
-//     "id" | "cursor" | "layers" | "longTemplate" | "shortTemplate" | "type"
-//   >;
-// };
 
 class MapContextManager {
   map?: Map;
-  private interactivityManager?: LayerInteractivityManager;
+  interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
   private clientDataSources: { [dataSourceId: string]: ClientDataSource } = {};
   private layersByZIndex: string[] = [];
@@ -181,6 +152,11 @@ class MapContextManager {
   private mapContainer?: HTMLDivElement;
   private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
   private basemapsWereSet = false;
+  private userAccessToken?: string | null;
+  private editableSketchId?: number;
+  private selectedSketches?: number[];
+  private sketchTimestamps = new global.Map<number, string>();
+  private hideEditableSketchId?: number;
 
   constructor(
     initialState: MapContextInterface,
@@ -251,6 +227,10 @@ class MapContextManager {
     }));
   };
 
+  setToken(token: string | null | undefined) {
+    this.userAccessToken = token;
+  }
+
   /**
    * Call whenever the context will be replaced or no longer used
    */
@@ -309,13 +289,28 @@ class MapContextManager {
       optimizeForTerrain: true,
       logoPosition: "bottom-right",
       transformRequest: (url, resoureType) => {
+        const Url = new URL(url);
         if (
           this.internalState.offlineTileSimulatorActive &&
           /api\.mapbox\./.test(url)
         ) {
           url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
+        } else if (
+          this.userAccessToken &&
+          Url.host === graphqlURL.host &&
+          /\/sketches\/\d+\.geojson.json/.test(url)
+        ) {
+          const id = url.match(/sketches\/(\d+)\.geojson/)![1];
+          const timestamp = this.sketchTimestamps.get(parseInt(id));
+          if (timestamp) {
+            Url.searchParams.set("timestamp", timestamp);
+          }
+          return {
+            url: Url.toString(),
+            // eslint-disable-next-line i18next/no-literal-string
+            headers: { authorization: `Bearer ${this.userAccessToken}` },
+          };
         } else {
-          const Url = new URL(url);
           Url.searchParams.set("ssn-tr", "true");
           url = Url.toString();
         }
@@ -370,6 +365,39 @@ class MapContextManager {
     });
 
     return this.map;
+  }
+
+  /**
+   * Adds a local Feature to cache so that the map client need not request
+   * GeoJSON or MVT representations of a Sketch. This is useful when editing
+   * sketches. The client will already have potentially very large geometries
+   * handy from visualizing the preprocessing step. Rather than submitting
+   * edits, then waiting for new requests for GeoJSON or vector tiles to update
+   * the map, we can make use of this geometry that is already available. This
+   * prevents a flash (or long pause) where the map is blank after editing.
+   *
+   * The cache is not boundless, and items will age out. When they do and the
+   * map style is recalculated, they may disappear while requesting new map
+   * tiles or GeoJSON content.
+   *
+   * @param id Sketch ID
+   * @param feature Complete GeoJSON feature for representation on the map. Will
+   * need to match the same struture and properties of that returned by the
+   * GeoJSON & MVT endpoints. To do so, use the Sketch.geojsonProperties GraphQL
+   * field to reconstruct from local geometry.
+   * @param timestamp Latest timestamp of the sketch. This acts as part of the
+   * cache key, so if not matching the latest timestamp in the ToC/GraphQL
+   * client cache it will not be used.
+   */
+  pushLocalSketchGeometryCopy(
+    id: number,
+    feature: Feature<any>,
+    timestamp: string
+  ) {
+    LocalSketchGeometryCache.set(id, {
+      timestamp,
+      feature,
+    });
   }
 
   toggleTerrain() {
@@ -677,6 +705,70 @@ class MapContextManager {
         visible: true,
       };
     }
+  }
+
+  setVisibleSketches(sketches: { id: number; timestamp?: string }[]) {
+    const sketchIds = sketches.map(({ id }) => id);
+    // remove missing ids from internal state
+    for (const id in this.internalState.sketchLayerStates) {
+      if (sketchIds.indexOf(parseInt(id)) === -1) {
+        delete this.internalState.sketchLayerStates[parseInt(id)];
+      }
+    }
+    // add new sketches to internal state
+    for (const id of sketchIds) {
+      this.internalState.sketchLayerStates[id] = {
+        loading: true,
+        visible: true,
+      };
+    }
+    // update public state
+    this.setState((prev) => ({
+      ...prev,
+      sketchLayerStates: this.internalState.sketchLayerStates,
+    }));
+    for (const sketch of sketches) {
+      if (sketch.timestamp) {
+        this.sketchTimestamps.set(sketch.id, sketch.timestamp);
+      } else {
+        this.sketchTimestamps.delete(sketch.id);
+      }
+    }
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  setSelectedSketches(sketchIds: number[]) {
+    this.selectedSketches = sketchIds;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  markSketchAsEditable(sketchId: number) {
+    this.editableSketchId = sketchId;
+    this.interactivityManager?.setFocusedSketchId(sketchId);
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  unmarkSketchAsEditable() {
+    delete this.editableSketchId;
+    this.interactivityManager?.setFocusedSketchId(null);
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  hideEditableSketch(sketchId: number) {
+    this.hideEditableSketchId = sketchId;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  clearSketchEditingState() {
+    delete this.hideEditableSketchId;
+    this.unmarkSketchAsEditable();
+    // request a redraw
+    this.debouncedUpdateStyle();
   }
 
   async getComputedStyle(): Promise<{ style: Style; sprites: ClientSprite[] }> {
@@ -1040,16 +1132,94 @@ class MapContextManager {
       }
     });
 
-    if (this.internalState.offlineTileSimulatorActive) {
-      // find and update composite source
-      const composite = baseStyle.sources["composite"] as VectorSource;
-      if (composite?.url && /^mapbox:/.test(composite.url)) {
-        // @ts-ignore
-        // composite.url = `https://api.mapbox.com/v4/mapbox.mapbox-streets-v8,seasketch.dskwrmxn,seasketch.6672zknn,seasketch.6yh2wu12,seasketch.82q84d6r,seasketch.9zvvkm9d,seasketch.ckyp9o0hl65b020o8j7u4putw-0oi0y,seasketch.azores_bathy,mapbox-public.bathymetry,seasketch.526fkzz1,mapbox.country-boundaries-v1,seasketch.cniiyc48,mapbox.mapbox-terrain-v2/13/8176/4513.vector.pbf?sku=101Fa7O74OJnQ&access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!}`;
+    // Add sketches
+    const sketchLayerIds: string[] = [];
+    for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
+      const id = parseInt(stringId);
+      if (id !== this.hideEditableSketchId) {
+        const timestamp = this.sketchTimestamps.get(id);
+        const cache = LocalSketchGeometryCache.get(id);
+        baseStyle.sources[`sketch-${id}`] = {
+          type: "geojson",
+          data:
+            cache && cache.timestamp === timestamp
+              ? cache.feature
+              : sketchGeoJSONUrl(id),
+        };
+        const layers = this.getLayersForSketch(
+          id,
+          id === this.editableSketchId
+        );
+        if (this.editableSketchId && id !== this.editableSketchId) {
+          reduceOpacity(layers);
+        }
+        baseStyle.layers.push(...layers);
+        sketchLayerIds.push(...layers.map((l) => l.id));
       }
+    }
+    if (this.interactivityManager) {
+      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     }
 
     return { style: baseStyle, sprites };
+  }
+
+  getLayersForSketch(id: number, focusOfEditing?: boolean): AnyLayer[] {
+    const layers = [
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-fill`,
+        type: "fill",
+        // eslint-disable-next-line i18next/no-literal-string
+        source: `sketch-${id}`,
+        paint: {
+          "fill-color": "orange",
+          "fill-outline-color": "red",
+          "fill-opacity": 0.5,
+        },
+        layout: {},
+      },
+    ] as AnyLayer[];
+    if (
+      (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||
+      focusOfEditing
+    ) {
+      layers.push(
+        ...([
+          {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `sketch-${id}-selection-second-outline`,
+            type: "line",
+            // eslint-disable-next-line i18next/no-literal-string
+            source: `sketch-${id}`,
+            paint: {
+              "line-color": "white",
+              "line-opacity": 0.25,
+              "line-width": 6,
+              "line-blur": 0,
+              "line-offset": -3,
+            },
+            // layout: { "line-join": "miter" },
+          },
+          {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `sketch-${id}-selection-outline`,
+            type: "line",
+            // eslint-disable-next-line i18next/no-literal-string
+            source: `sketch-${id}`,
+            paint: {
+              "line-color": "rgb(46, 115, 182)",
+              "line-opacity": 1,
+              "line-width": 2,
+              "line-blur": 0,
+              "line-offset": -1,
+            },
+            // layout: { "line-join": "miter" },
+          },
+        ] as AnyLayer[])
+      );
+    }
+    return layers;
   }
 
   getSelectedBasemap() {
@@ -1166,32 +1336,7 @@ class MapContextManager {
     }
   }
 
-  // private isSourceLoading(id: string) {
-  //   // let loaded = this.map.isSourceLoaded(id);
-  //   let loading = false;
-  //   const instance = this.sourceCache[id];
-  //   // if (instance) {
-  //   //   return this.arcgisVectorSourceCache.isSourceLoading(id);
-  //   // } else {
-  //     loading = !this.map!.isSourceLoaded(id);
-  //   }
-  //   return loading;
-  // }
-
   highlightLayer(layerId: string) {}
-
-  // private resetPromise: Promise<any> | undefined;
-  // // prevent reset from being called multiple times before completion
-  // async reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
-  //   if (this.resetPromise) {
-  //     return this.resetPromise;
-  //     // this._reset(sources, layers);
-  //   } else {
-  //     this.resetPromise = this._reset(sources, layers);
-  //     await this.resetPromise;
-  //     delete this.resetPromise;
-  //   }
-  // }
 
   reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
     this.clientDataSources = {};
@@ -1492,6 +1637,7 @@ export interface Tooltip {
 
 export interface MapContextInterface {
   layerStates: { [id: string]: LayerState };
+  sketchLayerStates: { [id: number]: LayerState };
   manager?: MapContextManager;
   bannerMessages: string[];
   tooltip?: Tooltip;
@@ -1508,6 +1654,7 @@ export interface MapContextInterface {
   showScale?: boolean;
   offlineTileSimulatorActive?: boolean;
   styleHash: string;
+  containerPortal: HTMLDivElement | null;
 }
 
 interface MapContextOptions {
@@ -1519,6 +1666,7 @@ interface MapContextOptions {
   bounds?: BBox;
   /** Starting camera of map. Will override bounds if both are provided */
   camera?: CameraOptions;
+  containerPortal?: HTMLDivElement | null;
 }
 
 /**
@@ -1530,8 +1678,10 @@ interface MapContextOptions {
  * @param ignoreLayerVisibilityState Don't store layer visibility state in localStorage
  */
 export function useMapContext(options?: MapContextOptions) {
-  const { preferencesKey, cacheSize, bounds, camera } = options || {};
+  const { preferencesKey, cacheSize, bounds, camera, containerPortal } =
+    options || {};
   let initialState: MapContextInterface = {
+    sketchLayerStates: {},
     layerStates: {},
     bannerMessages: [],
     fixedBlocks: [],
@@ -1539,7 +1689,9 @@ export function useMapContext(options?: MapContextOptions) {
     terrainEnabled: false,
     basemapOptionalLayerStates: {},
     styleHash: "",
+    containerPortal: containerPortal || null,
   };
+  const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
   const { slug } = useParams<{ slug: string }>();
   if (preferencesKey) {
@@ -1571,7 +1723,7 @@ export function useMapContext(options?: MapContextOptions) {
     }
   }
   const [state, setState] = useState<MapContextInterface>(initialState);
-  const { data, loading, error } = useProjectRegionQuery({
+  const { data, error } = useProjectRegionQuery({
     variables: {
       slug,
     },
@@ -1590,7 +1742,12 @@ export function useMapContext(options?: MapContextOptions) {
       manager,
     };
     setState(newState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    state.manager?.setToken(token);
+  }, [token, state.manager]);
 
   useEffect(() => {
     if (error) {
@@ -1599,22 +1756,25 @@ export function useMapContext(options?: MapContextOptions) {
     if (data?.projectBySlug?.region.geojson && state.manager) {
       state.manager.setProjectBounds(data.projectBySlug.region.geojson);
     }
-  }, [data?.projectBySlug, state.manager]);
+  }, [data?.projectBySlug, error, state.manager]);
   return state;
 }
 
 export const MapContext = createContext<MapContextInterface>({
   layerStates: {},
+  sketchLayerStates: {},
   styleHash: "",
   manager: new MapContextManager(
     {
       layerStates: {},
+      sketchLayerStates: {},
       bannerMessages: [],
       fixedBlocks: [],
       ready: false,
       terrainEnabled: false,
       basemapOptionalLayerStates: {},
       styleHash: "",
+      containerPortal: null,
     },
     (state) => {}
   ),
@@ -1623,6 +1783,7 @@ export const MapContext = createContext<MapContextInterface>({
   ready: false,
   terrainEnabled: false,
   basemapOptionalLayerStates: {},
+  containerPortal: null,
 });
 
 async function createImage(
@@ -1711,4 +1872,50 @@ function idForImageSource(sourceId: number | string) {
 const layerIdRE = /^seasketch\//;
 export function isSeaSketchLayerId(id: string) {
   return layerIdRE.test(id);
+}
+
+function reduceOpacity(layers: AnyLayer[], fraction = 0.5) {
+  for (const layer of layers) {
+    if ("paint" in layer) {
+      switch (layer.type) {
+        case "circle":
+          reducePaintPropOpacity(layer, "circle-opacity", fraction);
+          break;
+        case "fill":
+          reducePaintPropOpacity(layer, "fill-opacity", fraction);
+          break;
+        case "line":
+          reducePaintPropOpacity(layer, "line-opacity", fraction);
+          break;
+        case "symbol":
+          reducePaintPropOpacity(layer, "icon-opacity", fraction);
+          reducePaintPropOpacity(layer, "text-opacity", fraction);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+}
+
+function reducePaintPropOpacity(
+  layer: any,
+  propName: string,
+  fraction: number
+) {
+  if ("paint" in layer) {
+    if (layer.paint[propName]) {
+      layer.paint[propName] = layer.paint[propName] * fraction;
+    } else {
+      layer.paint[propName] = fraction;
+    }
+  }
+}
+
+function sketchGeoJSONUrl(id: number) {
+  return `${
+    BASE_SERVER_ENDPOINT +
+    // eslint-disable-next-line i18next/no-literal-string
+    `/sketches/${id}.geojson.json`
+  }`;
 }

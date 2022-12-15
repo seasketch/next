@@ -1155,6 +1155,8 @@ CREATE TABLE public.sketch_classes (
     form_element_id integer,
     is_template boolean DEFAULT false NOT NULL,
     template_description text,
+    preprocessing_endpoint text,
+    preprocessing_project_url text,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
@@ -2927,6 +2929,9 @@ CREATE FUNCTION public.before_sketch_folders_insert_or_update() RETURNS trigger
     declare
       parent_project_id int;
     begin
+      if NEW.folder_id = NEW.id then
+        raise exception 'Cannot make a folder a child of itself';
+      end if;
       if NEW.folder_id is null and NEW.collection_id is null then
         return NEW;
       else
@@ -4371,13 +4376,67 @@ CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, te
         if num_similarly_named > 0 then
           new_name = new_name || ' (' || num_similarly_named::text || ')';
         end if;
-        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style) returning * into created;
+        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style, preprocessing_endpoint, preprocessing_project_url) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style, base.preprocessing_endpoint, base.preprocessing_project_url) returning * into created;
         perform initialize_sketch_class_form_from_template(created.id, (select id from forms where sketch_class_id = base.id));
         return created;
       else
         raise exception 'Permission denied';
       end if;
     end;
+  $$;
+
+
+--
+-- Name: sketch_folders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_folders (
+    id integer NOT NULL,
+    name text NOT NULL,
+    user_id integer NOT NULL,
+    project_id integer NOT NULL,
+    folder_id integer,
+    collection_id integer,
+    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
+);
+
+
+--
+-- Name: TABLE sketch_folders; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketch_folders IS '@omit create';
+
+
+--
+-- Name: COLUMN sketch_folders.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.project_id IS '@omit many';
+
+
+--
+-- Name: COLUMN sketch_folders.folder_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.folder_id IS 'The parent folder, if any.';
+
+
+--
+-- Name: COLUMN sketch_folders.collection_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.collection_id IS 'The parent sketch collection, if any. Folders can only have a single parent entity.';
+
+
+--
+-- Name: create_sketch_folder(text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer) RETURNS public.sketch_folders
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    insert into sketch_folders (user_id, project_id, folder_id, collection_id, name) values (nullif(current_setting('session.user_id', TRUE), '')::int, ((select id from projects where slug = create_sketch_folder.slug)), "folderId", "collectionId", name) returning *;
   $$;
 
 
@@ -6447,55 +6506,6 @@ CREATE FUNCTION public.modify_survey_answers(response_ids integer[], answers jso
 
 
 --
--- Name: sketch_folders; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.sketch_folders (
-    id integer NOT NULL,
-    name text NOT NULL,
-    user_id integer NOT NULL,
-    project_id integer NOT NULL,
-    folder_id integer,
-    collection_id integer,
-    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
-);
-
-
---
--- Name: TABLE sketch_folders; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.sketch_folders IS '
-@omit all
-SketchFolders can be used by users to organize their sketches. Collection-type
-sketches can be used to organize sketches as well, but they are limited in that 
-they cannot be nested, and also represent specific management semantics. Folders
-can be used by users to arbitrarily organize their Sketches.
-';
-
-
---
--- Name: COLUMN sketch_folders.project_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.project_id IS '@omit many';
-
-
---
--- Name: COLUMN sketch_folders.folder_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.folder_id IS 'The parent folder, if any.';
-
-
---
--- Name: COLUMN sketch_folders.collection_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.collection_id IS 'The parent sketch collection, if any. Folders can only have a single parent entity.';
-
-
---
 -- Name: my_folders(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6535,6 +6545,8 @@ CREATE TABLE public.sketches (
     form_element_id integer,
     response_id integer,
     mercator_geometry public.geometry(Geometry,3857) GENERATED ALWAYS AS (public.st_transform(COALESCE(geom, user_geom), 3857)) STORED,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
 
@@ -6544,7 +6556,7 @@ CREATE TABLE public.sketches (
 --
 
 COMMENT ON TABLE public.sketches IS '
-@omit all,many
+@omit all,many,create,update
 A *Sketch* is a spatial feature that matches the schema defined by the related 
 *SketchClass*. User *Sketches* appears in the user''s "My Plans" tab and can be
 shared in the discussion forum. They are also the gateway to analytical reports.
@@ -6625,7 +6637,7 @@ CREATE FUNCTION public.my_sketches("projectId" integer) RETURNS SETOF public.ske
       sketches
     where
       it_me(user_id) and sketch_class_id in (
-        select id from sketch_classes where project_id = "projectId");
+        select id from sketch_classes where project_id = "projectId") and response_id is null;
   $$;
 
 
@@ -9516,6 +9528,34 @@ COMMENT ON FUNCTION public.shared_basemaps() IS '
 
 
 --
+-- Name: sketch_as_geojson(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketch_as_geojson(id integer) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    output jsonb;
+  begin
+    SELECT json_build_object(
+      'type', 'Feature',
+      'type',       'Feature',
+      'id',         sketches.id,
+      'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
+      'bbox', sketches.bbox,
+      'properties', sketches_geojson_properties(sketches.*)
+    ) 
+    FROM sketches
+    inner join user_profiles
+    on user_profiles.user_id = sketches.user_id
+    where sketches.id = sketch_as_geojson.id 
+    into output;
+    return output;
+  end;
+$$;
+
+
+--
 -- Name: sketch_classes_can_digitize(public.sketch_classes); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9601,6 +9641,48 @@ CREATE FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_
 COMMENT ON FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_classes) IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: sketches_geojson_feature(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_geojson_feature(sketch public.sketches) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+    select sketch_as_geojson(sketch.id);
+  $$;
+
+
+--
+-- Name: FUNCTION sketches_geojson_feature(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) IS 'Use this to get a copy of the sketch with properties populated exactly as they would in the geojson or mvt endpoint. Useful for seeding a client-side cache.';
+
+
+--
+-- Name: sketches_geojson_properties(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+    select sketches.properties::jsonb || 
+        to_jsonb(
+          json_build_object(
+            'user_id', sketches.user_id, 
+            'created_at', sketches.created_at,
+            'user_slug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
+            'collection_id', sketches.collection_id, 
+            'name', sketches.name
+          )
+        )
+    from sketches
+    inner join user_profiles
+    on user_profiles.user_id = sketches.user_id
+    where sketches.id = sketch.id;
+  $$;
 
 
 --
@@ -10207,6 +10289,20 @@ User Profile of the author. If a user has not shared their profile the first pos
 
 
 --
+-- Name: trigger_set_timestamp(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_set_timestamp() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: unsubscribed(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10393,6 +10489,17 @@ CREATE FUNCTION public.update_project_invite("inviteId" integer, make_admin bool
         raise exception 'Must be a project admin';
       end if;
     end;
+  $$;
+
+
+--
+-- Name: update_sketch_parent(integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_sketch_parent(id integer, "folderId" integer, "collectionId" integer) RETURNS public.sketches
+    LANGUAGE sql
+    AS $$
+    update sketches set folder_id = "folderId", collection_id = "collectionId" where sketches.id = update_sketch_parent.id returning *;
   $$;
 
 
@@ -13916,6 +14023,13 @@ CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline
 
 
 --
+-- Name: sketches set_timestamp; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER set_timestamp BEFORE UPDATE ON public.sketches FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
 -- Name: sketch_classes sketch_classes_before_update; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -16236,6 +16350,20 @@ GRANT UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_u
 
 
 --
+-- Name: COLUMN sketch_classes.preprocessing_endpoint; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(preprocessing_endpoint) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.preprocessing_project_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -16247,6 +16375,7 @@ REVOKE ALL ON FUNCTION public._create_sketch_class(name text, project_id integer
 --
 
 REVOKE ALL ON FUNCTION public.geography(public.geography, integer, boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography(public.geography, integer, boolean) TO anon;
 
 
 --
@@ -17989,6 +18118,21 @@ GRANT ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integ
 
 
 --
+-- Name: TABLE sketch_folders; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.sketch_folders TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_sketch_folder(slug text, name text, "folderId" integer, "collectionId" integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18590,6 +18734,7 @@ REVOKE ALL ON FUNCTION public.geog_brin_inclusion_add_value(internal, internal, 
 --
 
 REVOKE ALL ON FUNCTION public.geography(bytea) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography(bytea) TO anon;
 
 
 --
@@ -18597,6 +18742,7 @@ REVOKE ALL ON FUNCTION public.geography(bytea) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geography(public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 
 
 --
@@ -19893,13 +20039,6 @@ GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answe
 
 
 --
--- Name: TABLE sketch_folders; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.sketch_folders TO seasketch_user;
-
-
---
 -- Name: FUNCTION my_folders("projectId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19956,6 +20095,20 @@ GRANT UPDATE(user_geom) ON TABLE public.sketches TO seasketch_user;
 --
 
 GRANT UPDATE(geom) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.folder_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(folder_id) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.properties; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(properties) ON TABLE public.sketches TO seasketch_user;
 
 
 --
@@ -21381,6 +21534,14 @@ GRANT ALL ON FUNCTION public.shared_basemaps() TO anon;
 
 
 --
+-- Name: FUNCTION sketch_as_geojson(id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketch_as_geojson(id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketch_as_geojson(id integer) TO anon;
+
+
+--
 -- Name: FUNCTION sketch_classes_can_digitize(sketch_class public.sketch_classes); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21409,6 +21570,22 @@ GRANT ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.ske
 
 REVOKE ALL ON FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_classes) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketch_classes_valid_children(sketch_class public.sketch_classes) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_geojson_feature(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_geojson_properties(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) TO anon;
 
 
 --
@@ -21578,6 +21755,7 @@ REVOKE ALL ON FUNCTION public.st_angle(pt1 public.geometry, pt2 public.geometry,
 --
 
 REVOKE ALL ON FUNCTION public.st_area(text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_area(text) TO anon;
 
 
 --
@@ -21585,6 +21763,7 @@ REVOKE ALL ON FUNCTION public.st_area(text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_area(public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_area(public.geometry) TO anon;
 
 
 --
@@ -21592,6 +21771,7 @@ REVOKE ALL ON FUNCTION public.st_area(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_area(geog public.geography, use_spheroid boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_area(geog public.geography, use_spheroid boolean) TO anon;
 
 
 --
@@ -24534,6 +24714,13 @@ REVOKE ALL ON FUNCTION public.translate(public.citext, public.citext, text) FROM
 
 
 --
+-- Name: FUNCTION trigger_set_timestamp(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_set_timestamp() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION unaccent(text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -24606,6 +24793,14 @@ GRANT ALL ON FUNCTION public.update_post("postId" integer, message jsonb) TO sea
 
 REVOKE ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_sketch_parent(id integer, "folderId" integer, "collectionId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_sketch_parent(id integer, "folderId" integer, "collectionId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_sketch_parent(id integer, "folderId" integer, "collectionId" integer) TO seasketch_user;
 
 
 --

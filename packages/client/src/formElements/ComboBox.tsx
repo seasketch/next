@@ -18,7 +18,7 @@ import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import { XIcon } from "@heroicons/react/outline";
 import Button from "../components/Button";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import Badge from "../components/Badge";
 import EditableResponseCell, {
@@ -42,8 +42,9 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   const items: FormElementOption[] =
     useLocalizedComponentSetting("options", props) || [];
   const [choices, setChoices] = useState<string[]>(items.map((i) => i.label));
-  const [selectedOption, setSelectedOption] =
-    useState<FormElementOption | undefined | null>();
+  const [selectedOption, setSelectedOption] = useState<
+    FormElementOption | undefined | null
+  >();
   const context = useContext(SurveyContext);
 
   useEffect(() => {
@@ -89,7 +90,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
     }
   }, [props.componentSettings.autoSelectFirstOptionInList]);
 
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   const {
     isOpen,
     getToggleButtonProps,
@@ -140,7 +141,9 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
     >
       <div
         onClick={() => (isOpen ? closeMenu() : openMenu())}
-        className={`bg-white rounded w-full text-black relative flex justify-center ${
+        className={`bg-white rounded w-full text-black ${
+          style.compactAppearance ? "border-gray-300 border shadow-sm" : ""
+        } relative flex justify-center ${
           getComboboxProps()["aria-expanded"]
             ? "ring ring-blue-200 ring-opacity-50"
             : ""
@@ -243,7 +246,6 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   );
 
   const { confirm } = useDialog();
-
   return (
     <>
       <FormElementBody

@@ -1560,19 +1560,20 @@ type CreateSketchClassFromTemplatePayload {
   ): SketchClassesEdge
 }
 
-"""All input for the create `SketchFolder` mutation."""
+"""All input for the `createSketchFolder` mutation."""
 input CreateSketchFolderInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-
-  """The `SketchFolder` to be created by this mutation."""
-  sketchFolder: SketchFolderInput!
+  collectionId: Int
+  folderId: Int
+  name: String
+  slug: String
 }
 
-"""The output of our create `SketchFolder` mutation."""
+"""The output of our `createSketchFolder` mutation."""
 type CreateSketchFolderPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
@@ -1584,8 +1585,6 @@ type CreateSketchFolderPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-
-  """The `SketchFolder` that was created by this mutation."""
   sketchFolder: SketchFolder
 
   """An edge for our `SketchFolder`. May be used by Relay 1."""
@@ -1593,50 +1592,6 @@ type CreateSketchFolderPayload {
     """The method to use when ordering `SketchFolder`."""
     orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
   ): SketchFoldersEdge
-}
-
-"""All input for the create `Sketch` mutation."""
-input CreateSketchInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `Sketch` to be created by this mutation."""
-  sketch: SketchInput!
-}
-
-"""The output of our create `Sketch` mutation."""
-type CreateSketchPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """Reads a single `Sketch` that is related to this `Sketch`."""
-  collection: Sketch
-
-  """Reads a single `Sketch` that is related to this `Sketch`."""
-  copiedFrom: Sketch
-
-  """Reads a single `FormElement` that is related to this `Sketch`."""
-  formElement: FormElement
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """The `Sketch` that was created by this mutation."""
-  sketch: Sketch
-
-  """Reads a single `SketchClass` that is related to this `Sketch`."""
-  sketchClass: SketchClass
-
-  """Reads a single `User` that is related to this `Sketch`."""
-  user: User
 }
 
 """All input for the create `SurveyInvitedGroup` mutation."""
@@ -6844,21 +6799,36 @@ type Mutation {
     input: CreateProjectsSharedBasemapInput!
   ): CreateProjectsSharedBasemapPayload
 
-  """Creates a single `Sketch`."""
+  """
+  Create a new sketch in the user's account. If preprocessing is enabled,
+  the sketch's final geometry will be set by running the proprocessing
+  function again on userGeom. This ensures the value conforms to the
+  project's rules, and also benefits the user in that they need not submit
+  a huge geometry to the server.
+  """
   createSketch(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateSketchInput!
-  ): CreateSketchPayload
+    """Sketches can be assigned directly to a collection on creation."""
+    collectionId: Int
+
+    """Sketches can be assigned directly to a folder on creation."""
+    folderId: Int
+
+    """Name for the sketch. Required."""
+    name: String!
+
+    """Form element data"""
+    properties: JSON!
+    sketchClassId: Int!
+
+    """Sketch as drawn by the user."""
+    userGeom: GeoJSON!
+  ): Sketch
   createSketchClassFromTemplate(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
     input: CreateSketchClassFromTemplateInput!
   ): CreateSketchClassFromTemplatePayload
-
-  """Creates a single `SketchFolder`."""
   createSketchFolder(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -7719,6 +7689,12 @@ type Mutation {
     """
     input: ShareSpriteInput!
   ): ShareSpritePayload
+  sketchAsGeojson(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SketchAsGeojsonInput!
+  ): SketchAsGeojsonPayload
 
   """
   Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it.
@@ -8158,21 +8134,25 @@ type Mutation {
     input: UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput!
   ): UpdateProjectsSharedBasemapPayload
 
-  """Updates a single `Sketch` using a unique key and a patch."""
+  """
+  If preprocessing is enabled,
+  the sketch's final geometry will be set by running the proprocessing
+  function again on userGeom. This ensures the value conforms to the
+  project's rules, and also benefits the user in that they need not submit
+  a huge geometry to the server.
+  """
   updateSketch(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSketchInput!
-  ): UpdateSketchPayload
+    id: Int!
 
-  """Updates a single `Sketch` using its globally unique id and a patch."""
-  updateSketchByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSketchByNodeIdInput!
-  ): UpdateSketchPayload
+    """Name for the sketch. Required."""
+    name: String!
+
+    """Form element data"""
+    properties: JSON!
+
+    """Sketch as drawn by the user. If unchanged this can be omitted"""
+    userGeom: GeoJSON
+  ): Sketch
 
   """Updates a single `SketchClass` using a unique key and a patch."""
   updateSketchClass(
@@ -8217,6 +8197,12 @@ type Mutation {
     """
     input: UpdateSketchFolderByNodeIdInput!
   ): UpdateSketchFolderPayload
+  updateSketchParent(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateSketchParentInput!
+  ): UpdateSketchParentPayload
 
   """Updates a single `Survey` using a unique key and a patch."""
   updateSurvey(
@@ -10430,6 +10416,35 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SketchFolder
+
+  """Reads and enables pagination through a set of `SketchFolder`."""
+  sketchFoldersConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SketchFolderCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SketchFolder`."""
+    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchFoldersConnection
   sprite(id: Int!): Sprite
 
   """Reads a single `Sprite` using its globally unique `ID`."""
@@ -11079,6 +11094,7 @@ type Sketch implements Node {
   SeaSketch may have a means of visualizing how plans are iterated on over time.
   """
   copyOf: Int
+  createdAt: Datetime!
 
   """
   Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
@@ -11088,6 +11104,13 @@ type Sketch implements Node {
   """Reads a single `FormElement` that is related to this `Sketch`."""
   formElement: FormElement
   formElementId: Int
+
+  """
+  Use this to get a copy of the sketch with properties populated exactly as they
+  would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
+  """
+  geojsonFeature: JSON
+  geojsonProperties: JSON
 
   """
   The geometry of the Sketch **after** it has been preprocessed. This is the
@@ -11116,6 +11139,13 @@ type Sketch implements Node {
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
 
+  """
+  Greater of updatedAt, createdAt, as stringified epoch timestamp.
+  Useful for requesting the latest geometry
+  """
+  timestamp: String!
+  updatedAt: Datetime!
+
   """Reads a single `User` that is related to this `Sketch`."""
   user: User
 
@@ -11127,6 +11157,31 @@ type Sketch implements Node {
 
   """Owner of the sketch."""
   userId: Int
+}
+
+"""All input for the `sketchAsGeojson` mutation."""
+input SketchAsGeojsonInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int
+}
+
+"""The output of our `sketchAsGeojson` mutation."""
+type SketchAsGeojsonPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  json: JSON
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """
@@ -11221,6 +11276,8 @@ type SketchClass implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  preprocessingEndpoint: String
+  preprocessingProjectUrl: String
 
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project
@@ -11341,16 +11398,11 @@ input SketchClassPatch {
 
   """Label chosen by project admins that is shown to users."""
   name: String
+  preprocessingEndpoint: String
+  preprocessingProjectUrl: String
   templateDescription: String
 }
 
-"""
-SketchFolders can be used by users to organize their sketches. Collection-type
-sketches can be used to organize sketches as well, but they are limited in that 
-they cannot be nested, and also represent specific management semantics. Folders
-can be used by users to arbitrarily organize their Sketches.
-
-"""
 type SketchFolder implements Node {
   """
   The parent sketch collection, if any. Folders can only have a single parent entity.
@@ -11370,19 +11422,16 @@ type SketchFolder implements Node {
   userId: Int!
 }
 
-"""An input for mutations affecting `SketchFolder`"""
-input SketchFolderInput {
-  """
-  The parent sketch collection, if any. Folders can only have a single parent entity.
-  """
-  collectionId: Int
-
-  """The parent folder, if any."""
-  folderId: Int
+"""
+A condition to be used against `SketchFolder` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input SketchFolderCondition {
+  """Checks for equality with the object’s `id` field."""
   id: Int
-  name: String!
-  projectId: Int!
-  userId: Int!
+
+  """Checks for equality with the object’s `userId` field."""
+  userId: Int
 }
 
 """
@@ -11400,6 +11449,23 @@ input SketchFolderPatch {
   name: String
   projectId: Int
   userId: Int
+}
+
+"""A connection to a list of `SketchFolder` values."""
+type SketchFoldersConnection {
+  """
+  A list of edges which contains the `SketchFolder` and cursor to aid in pagination.
+  """
+  edges: [SketchFoldersEdge!]!
+
+  """A list of `SketchFolder` objects."""
+  nodes: [SketchFolder!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `SketchFolder` you could get from the connection."""
+  totalCount: Int!
 }
 
 """A `SketchFolder` edge in the connection."""
@@ -11428,83 +11494,6 @@ enum SketchGeometryType {
   LINESTRING
   POINT
   POLYGON
-}
-
-"""An input for mutations affecting `Sketch`"""
-input SketchInput {
-  bbox: [Float]
-
-  """
-  If the sketch is not a collection, it can belong to a collection (collections cannot be nested).
-  """
-  collectionId: Int
-
-  """
-  If this Sketch started as a copy of another it is tracked here. Eventually
-  SeaSketch may have a means of visualizing how plans are iterated on over time.
-  """
-  copyOf: Int
-
-  """
-  Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
-  """
-  folderId: Int
-  formElementId: Int
-
-  """
-  The geometry of the Sketch **after** it has been preprocessed. This is the
-  geometry that is used for reporting. Preprocessed geometries may be extremely
-  large and complex, so it may be necessary to access them through a vector tile
-  service or some other optimization.
-  """
-  geom: GeoJSON
-  id: Int
-  mercatorGeometry: GeoJSON
-
-  """User provided name for the sketch."""
-  name: String!
-  numVertices: Int
-  properties: JSON
-  responseId: Int
-
-  """SketchClass that defines the behavior of this type of sketch."""
-  sketchClassId: Int!
-
-  """
-  Spatial feature the user directly digitized, without preprocessing. This is
-  the feature that should be used if the Sketch is later edited.
-  """
-  userGeom: GeoJSON
-
-  """Owner of the sketch."""
-  userId: Int
-}
-
-"""
-Represents an update to a `Sketch`. Fields that are set will be updated.
-"""
-input SketchPatch {
-  """
-  If the sketch is not a collection, it can belong to a collection (collections cannot be nested).
-  """
-  collectionId: Int
-
-  """
-  The geometry of the Sketch **after** it has been preprocessed. This is the
-  geometry that is used for reporting. Preprocessed geometries may be extremely
-  large and complex, so it may be necessary to access them through a vector tile
-  service or some other optimization.
-  """
-  geom: GeoJSON
-
-  """User provided name for the sketch."""
-  name: String
-
-  """
-  Spatial feature the user directly digitized, without preprocessing. This is
-  the feature that should be used if the Sketch is later edited.
-  """
-  userGeom: GeoJSON
 }
 
 """All input for the `softDeleteSprite` mutation."""
@@ -14151,25 +14140,6 @@ type UpdateProjectsSharedBasemapPayload {
   query: Query
 }
 
-"""All input for the `updateSketchByNodeId` mutation."""
-input UpdateSketchByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `Sketch` to be updated.
-  """
-  nodeId: ID!
-
-  """
-  An object where the defined keys will be set on the `Sketch` being updated.
-  """
-  patch: SketchPatch!
-}
-
 """All input for the `updateSketchClassByFormElementId` mutation."""
 input UpdateSketchClassByFormElementIdInput {
   """
@@ -14310,23 +14280,20 @@ type UpdateSketchFolderPayload {
   ): SketchFoldersEdge
 }
 
-"""All input for the `updateSketch` mutation."""
-input UpdateSketchInput {
+"""All input for the `updateSketchParent` mutation."""
+input UpdateSketchParentInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-  id: Int!
-
-  """
-  An object where the defined keys will be set on the `Sketch` being updated.
-  """
-  patch: SketchPatch!
+  collectionId: Int
+  folderId: Int
+  id: Int
 }
 
-"""The output of our update `Sketch` mutation."""
-type UpdateSketchPayload {
+"""The output of our `updateSketchParent` mutation."""
+type UpdateSketchParentPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -14346,8 +14313,6 @@ type UpdateSketchPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-
-  """The `Sketch` that was updated by this mutation."""
   sketch: Sketch
 
   """Reads a single `SketchClass` that is related to this `Sketch`."""

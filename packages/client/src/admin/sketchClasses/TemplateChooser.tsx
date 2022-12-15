@@ -51,6 +51,9 @@ export default function TemplateChooser({
         ];
         cache.writeQuery({
           query: SketchClassesDocument,
+          variables: {
+            slug: getSlug(),
+          },
           data: {
             ...existingSketchClasses,
             projectBySlug: {

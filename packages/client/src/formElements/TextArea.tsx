@@ -42,7 +42,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
         <textarea
           autoFocus={props.autoFocus}
           required={props.isRequired}
-          className={`w-full rounded text-base text-black  my-4 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${
+          className={`border-gray-300 shadow-sm w-full rounded text-base text-black  my-4 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${
             showError ? "bg-red-50" : "bg-white"
           }`}
           placeholder={showError ? t("Required field") : placeholder}

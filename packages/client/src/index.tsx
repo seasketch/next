@@ -1,5 +1,5 @@
 import "./wdyr";
-import React, { Suspense, useContext, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 import App from "./App";
@@ -190,6 +190,20 @@ function ApolloProviderWithToken(props: any) {
           },
           DataUploadTasks: {
             keyFields: ["id"],
+          },
+          Project: {
+            fields: {
+              myFolders: {
+                merge(existing = [], incoming: any[]) {
+                  return incoming;
+                },
+              },
+              mySketches: {
+                merge(existing = [], incoming: any[]) {
+                  return incoming;
+                },
+              },
+            },
           },
         },
       });

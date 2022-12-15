@@ -26,7 +26,7 @@ Statement.description = <Trans ns="admin:surveys">Rich text block</Trans>;
 Statement.defaultBody = fromMarkdown(`
 # Heading
 
-Use this page to explain **something**, provide [links](https://seasketch.org), or list items.
+Use this area to explain **something**, provide [links](https://seasketch.org), or list items.
 
   * Option A
   * Option B

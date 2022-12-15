@@ -1,28 +1,4 @@
 const styles = [
-  // {
-  //   id: "gl-draw-polygon-kinks-label",
-  //   type: "symbol",
-  //   filter: [
-  //     "all",
-  //     // ["==", "active", "false"],
-  //     // ["==", "kinks", true],
-  //     ["==", "$type", "Polygon"],
-  //     // ["!=", "mode", "static"],
-  //   ],
-  //   layout: {
-  //     // text: "foo",
-  //     "text-field": ["get", "user_error_message"],
-  //     // "text-variable-anchor": ["top", "bottom", "left", "right"],
-  //     "text-radial-offset": 0.5,
-  //     "text-justify": "auto",
-
-  //     // "icon-image": ["get", "icon"],
-  //   },
-  //   paint: {
-  //     "text-halo-color": "white",
-  //     "text-halo-width": 2,
-  //   },
-  // },
   {
     id: "gl-draw-polygon-fill-inactive-no-kinks",
     type: "fill",
@@ -32,6 +8,7 @@ const styles = [
       ["!=", "kinks", "true"],
       ["==", "$type", "Polygon"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "fill-color": "#3bb2d0",
@@ -48,6 +25,7 @@ const styles = [
       ["==", "kinks", "true"],
       ["==", "$type", "Polygon"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "fill-color": "#d03b3b",
@@ -63,6 +41,7 @@ const styles = [
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
       ["!=", "kinks", "true"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "fill-color": "#fbb03b",
@@ -78,6 +57,7 @@ const styles = [
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
       ["==", "kinks", "true"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "fill-color": "#fb3e3b",
@@ -88,7 +68,12 @@ const styles = [
   {
     id: "gl-draw-polygon-midpoint",
     type: "circle",
-    filter: ["all", ["==", "$type", "Point"], ["==", "meta", "midpoint"]],
+    filter: [
+      "all",
+      ["==", "$type", "Point"],
+      ["==", "meta", "midpoint"],
+      ["!=", "preprocessing", "true"],
+    ],
     paint: {
       "circle-radius": 3,
       "circle-color": "#fbb03b",
@@ -103,6 +88,7 @@ const styles = [
       ["==", "$type", "Polygon"],
       ["!=", "kinks", "true"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -122,6 +108,7 @@ const styles = [
       ["==", "$type", "Polygon"],
       ["==", "kinks", "true"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -140,6 +127,7 @@ const styles = [
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
       ["!=", "kinks", "true"],
+      ["!=", "preprocessing", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -159,6 +147,7 @@ const styles = [
       ["==", "active", "true"],
       ["==", "$type", "Polygon"],
       ["==", "kinks", "true"],
+      ["!=", "preprocessing", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -178,6 +167,7 @@ const styles = [
       ["==", "active", "false"],
       ["==", "$type", "LineString"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -191,7 +181,12 @@ const styles = [
   {
     id: "gl-draw-line-active",
     type: "line",
-    filter: ["all", ["==", "$type", "LineString"], ["==", "active", "true"]],
+    filter: [
+      "all",
+      ["==", "$type", "LineString"],
+      ["==", "active", "true"],
+      ["!=", "preprocessing", "true"],
+    ],
     layout: {
       "line-cap": "round",
       "line-join": "round",
@@ -210,6 +205,7 @@ const styles = [
       ["==", "meta", "vertex"],
       ["==", "$type", "Point"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "circle-radius": 5,
@@ -224,6 +220,7 @@ const styles = [
       ["==", "meta", "vertex"],
       ["==", "$type", "Point"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "circle-radius": 3,
@@ -239,6 +236,7 @@ const styles = [
       ["==", "$type", "Point"],
       ["==", "meta", "feature"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "circle-radius": 5,
@@ -255,6 +253,7 @@ const styles = [
       ["==", "$type", "Point"],
       ["==", "meta", "feature"],
       ["!=", "mode", "static"],
+      ["!=", "preprocessing", "true"],
     ],
     paint: {
       "circle-radius": 3,
@@ -334,28 +333,58 @@ const styles = [
       "circle-color": "#404040",
     },
   },
+  // Booting up gl-draw when sketching from my plans with this on always causes
+  // an exception. Further, it can block cursor changes when hovering over a
+  // vertex to finish a shape. Note sure why so I'm going to have to disable
+  // this. -cburt TODO: fix...
+  // {
+  //   id: "gl-draw-polygon-self-intersection",
+  //   type: "symbol",
+  //   filter: [
+  //     "all",
+  //     ["has", "meta"],
+  //     ["==", ["get", "meta"], "self-intersection"],
+  //   ],
+  //   layout: {
+  //     "text-field": "✕",
+  //     "text-size": 14,
+  //     "text-offset": [0, 0],
+  //     "text-allow-overlap": true,
+  //   },
+  //   paint: {
+  //     "text-opacity": 0.8,
+  //     "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
+  //     "text-halo-width": 1,
+  //     "text-halo-blur": 0,
+  //   },
+  // },
   {
-    id: "gl-draw-polygon-self-intersection",
-    type: "symbol",
+    id: "gl-draw-polygon-preprocessing-outline",
+    type: "line",
     filter: [
       "all",
-      ["==", "$type", "Point"],
-      ["==", "meta", "self-intersection"],
+      ["==", "preprocessing", "true"],
+      ["==", "$type", "Polygon"],
+      ["has", "animationFraction"],
     ],
-    layout: {
-      // "text-field": "↚",
-      // "text-size": 32,
-      "text-field": "✕",
-      "text-size": 14,
-      "text-offset": [0, 0],
-      "text-allow-overlap": true,
-    },
     paint: {
-      "text-opacity": 0.8,
-      "text-halo-color": "rgba(81.6%, 23.1%, 23.1%, 0.8)",
-      // "text-color": "#fe6400",
-      "text-halo-width": 1,
-      "text-halo-blur": 0,
+      "line-color": "white",
+      "line-width": ["-", 3, ["*", ["get", "animationFraction"], 0.8]],
+      "line-dasharray": [1, 2, 1],
+    },
+  },
+  {
+    id: "gl-draw-polygon-preprocessing-fill",
+    type: "fill",
+    filter: [
+      "all",
+      ["==", "preprocessing", "true"],
+      ["==", "$type", "Polygon"],
+      ["has", "animationFraction"],
+    ],
+    paint: {
+      "fill-color": "white",
+      "fill-opacity": ["*", 0.1, ["get", "animationFraction"]],
     },
   },
 ];

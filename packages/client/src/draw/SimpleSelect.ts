@@ -7,6 +7,7 @@ const SimpleSelect = MapboxDraw.modes.simple_select;
 
 const _dragMove = SimpleSelect.dragMove;
 const _onTouchEnd = SimpleSelect.onTouchEnd;
+const _onSetup = SimpleSelect.onSetup;
 
 export type DragTargetEvent =
   | {
@@ -52,7 +53,14 @@ SimpleSelect.toDisplayFeatures = function (
       geojson.properties.kinks = "true";
     }
   }
-
+  if (
+    state.preprocessingEndpoint &&
+    state.preprocessingResults &&
+    geojson.properties.id in state.preprocessingResults
+  ) {
+    geojson.geometry =
+      state.preprocessingResults[geojson.properties.id].geometry;
+  }
   return _toDisplayFeatures.apply(this, [state, geojson, push]);
 };
 
@@ -73,4 +81,17 @@ SimpleSelect.clickOnFeature = function (state: any, e: any) {
   }
 };
 
-export default SimpleSelect;
+export default function SimpleSelectFactory(
+  preprocessingEndpoint?: string,
+  preprocessingResults?: { [id: string]: Feature<any> }
+) {
+  return {
+    ...SimpleSelect,
+    onSetup: function (opts: any) {
+      const state = _onSetup.apply(this, [opts]);
+      state.preprocessingEndpoint = preprocessingEndpoint;
+      state.preprocessingResults = preprocessingResults;
+      return state;
+    },
+  };
+}

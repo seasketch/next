@@ -1390,18 +1390,20 @@ export type CreateSketchClassFromTemplatePayloadSketchClassEdgeArgs = {
   orderBy?: Maybe<Array<SketchClassesOrderBy>>;
 };
 
-/** All input for the create `SketchFolder` mutation. */
+/** All input for the `createSketchFolder` mutation. */
 export type CreateSketchFolderInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** The `SketchFolder` to be created by this mutation. */
-  sketchFolder: SketchFolderInput;
+  collectionId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  name?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
 };
 
-/** The output of our create `SketchFolder` mutation. */
+/** The output of our `createSketchFolder` mutation. */
 export type CreateSketchFolderPayload = {
   __typename?: 'CreateSketchFolderPayload';
   /**
@@ -1411,51 +1413,15 @@ export type CreateSketchFolderPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  /** The `SketchFolder` that was created by this mutation. */
   sketchFolder?: Maybe<SketchFolder>;
   /** An edge for our `SketchFolder`. May be used by Relay 1. */
   sketchFolderEdge?: Maybe<SketchFoldersEdge>;
 };
 
 
-/** The output of our create `SketchFolder` mutation. */
+/** The output of our `createSketchFolder` mutation. */
 export type CreateSketchFolderPayloadSketchFolderEdgeArgs = {
   orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
-};
-
-/** All input for the create `Sketch` mutation. */
-export type CreateSketchInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `Sketch` to be created by this mutation. */
-  sketch: SketchInput;
-};
-
-/** The output of our create `Sketch` mutation. */
-export type CreateSketchPayload = {
-  __typename?: 'CreateSketchPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Sketch` that is related to this `Sketch`. */
-  collection?: Maybe<Sketch>;
-  /** Reads a single `Sketch` that is related to this `Sketch`. */
-  copiedFrom?: Maybe<Sketch>;
-  /** Reads a single `FormElement` that is related to this `Sketch`. */
-  formElement?: Maybe<FormElement>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** The `Sketch` that was created by this mutation. */
-  sketch?: Maybe<Sketch>;
-  /** Reads a single `SketchClass` that is related to this `Sketch`. */
-  sketchClass?: Maybe<SketchClass>;
-  /** Reads a single `User` that is related to this `Sketch`. */
-  user?: Maybe<User>;
 };
 
 /** All input for the create `SurveyInvitedGroup` mutation. */
@@ -5716,10 +5682,15 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
-  /** Creates a single `Sketch`. */
-  createSketch?: Maybe<CreateSketchPayload>;
+  /**
+   * Create a new sketch in the user's account. If preprocessing is enabled,
+   * the sketch's final geometry will be set by running the proprocessing
+   * function again on userGeom. This ensures the value conforms to the
+   * project's rules, and also benefits the user in that they need not submit
+   * a huge geometry to the server.
+   */
+  createSketch?: Maybe<Sketch>;
   createSketchClassFromTemplate?: Maybe<CreateSketchClassFromTemplatePayload>;
-  /** Creates a single `SketchFolder`. */
   createSketchFolder?: Maybe<CreateSketchFolderPayload>;
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
@@ -5969,6 +5940,7 @@ export type Mutation = {
   setUserGroups?: Maybe<SetUserGroupsPayload>;
   /** Superusers only. Promote a sprite to be globally available. */
   shareSprite?: Maybe<ShareSpritePayload>;
+  sketchAsGeojson?: Maybe<SketchAsGeojsonPayload>;
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
@@ -6071,10 +6043,14 @@ export type Mutation = {
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
   /** Updates a single `ProjectsSharedBasemap` using a unique key and a patch. */
   updateProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<UpdateProjectsSharedBasemapPayload>;
-  /** Updates a single `Sketch` using a unique key and a patch. */
-  updateSketch?: Maybe<UpdateSketchPayload>;
-  /** Updates a single `Sketch` using its globally unique id and a patch. */
-  updateSketchByNodeId?: Maybe<UpdateSketchPayload>;
+  /**
+   * If preprocessing is enabled,
+   * the sketch's final geometry will be set by running the proprocessing
+   * function again on userGeom. This ensures the value conforms to the
+   * project's rules, and also benefits the user in that they need not submit
+   * a huge geometry to the server.
+   */
+  updateSketch?: Maybe<Sketch>;
   /** Updates a single `SketchClass` using a unique key and a patch. */
   updateSketchClass?: Maybe<UpdateSketchClassPayload>;
   /** Updates a single `SketchClass` using a unique key and a patch. */
@@ -6085,6 +6061,7 @@ export type Mutation = {
   updateSketchFolder?: Maybe<UpdateSketchFolderPayload>;
   /** Updates a single `SketchFolder` using its globally unique id and a patch. */
   updateSketchFolderByNodeId?: Maybe<UpdateSketchFolderPayload>;
+  updateSketchParent?: Maybe<UpdateSketchParentPayload>;
   /** Updates a single `Survey` using a unique key and a patch. */
   updateSurvey?: Maybe<UpdateSurveyPayload>;
   /** Updates a single `Survey` using its globally unique id and a patch. */
@@ -6334,7 +6311,12 @@ export type MutationCreateProjectsSharedBasemapArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchArgs = {
-  input: CreateSketchInput;
+  collectionId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  name: Scalars['String'];
+  properties: Scalars['JSON'];
+  sketchClassId: Scalars['Int'];
+  userGeom: Scalars['GeoJSON'];
 };
 
 
@@ -6953,6 +6935,12 @@ export type MutationShareSpriteArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSketchAsGeojsonArgs = {
+  input: SketchAsGeojsonInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSoftDeleteSpriteArgs = {
   input: SoftDeleteSpriteInput;
 };
@@ -7266,13 +7254,10 @@ export type MutationUpdateProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchArgs = {
-  input: UpdateSketchInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSketchByNodeIdArgs = {
-  input: UpdateSketchByNodeIdInput;
+  id: Scalars['Int'];
+  name: Scalars['String'];
+  properties: Scalars['JSON'];
+  userGeom?: Maybe<Scalars['GeoJSON']>;
 };
 
 
@@ -7303,6 +7288,12 @@ export type MutationUpdateSketchFolderArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchFolderByNodeIdArgs = {
   input: UpdateSketchFolderByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchParentArgs = {
+  input: UpdateSketchParentInput;
 };
 
 
@@ -8878,6 +8869,8 @@ export type Query = Node & {
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
+  /** Reads and enables pagination through a set of `SketchFolder`. */
+  sketchFoldersConnection?: Maybe<SketchFoldersConnection>;
   sprite?: Maybe<Sprite>;
   /** Reads a single `Sprite` using its globally unique `ID`. */
   spriteByNodeId?: Maybe<Sprite>;
@@ -9518,6 +9511,18 @@ export type QuerySketchFolderByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QuerySketchFoldersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SketchFolderCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySpriteArgs = {
   id: Scalars['Int'];
 };
@@ -10129,11 +10134,18 @@ export type Sketch = Node & {
    * SeaSketch may have a means of visualizing how plans are iterated on over time.
    */
   copyOf?: Maybe<Scalars['Int']>;
+  createdAt: Scalars['Datetime'];
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
   formElement?: Maybe<FormElement>;
   formElementId?: Maybe<Scalars['Int']>;
+  /**
+   * Use this to get a copy of the sketch with properties populated exactly as they
+   * would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
+   */
+  geojsonFeature?: Maybe<Scalars['JSON']>;
+  geojsonProperties?: Maybe<Scalars['JSON']>;
   /**
    * The geometry of the Sketch **after** it has been preprocessed. This is the
    * geometry that is used for reporting. Preprocessed geometries may be extremely
@@ -10154,6 +10166,12 @@ export type Sketch = Node & {
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
+  /**
+   * Greater of updatedAt, createdAt, as stringified epoch timestamp.
+   * Useful for requesting the latest geometry
+   */
+  timestamp: Scalars['String'];
+  updatedAt: Scalars['Datetime'];
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
   /**
@@ -10163,6 +10181,29 @@ export type Sketch = Node & {
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
+};
+
+/** All input for the `sketchAsGeojson` mutation. */
+export type SketchAsGeojsonInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `sketchAsGeojson` mutation. */
+export type SketchAsGeojsonPayload = {
+  __typename?: 'SketchAsGeojsonPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  json?: Maybe<Scalars['JSON']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
@@ -10224,6 +10265,8 @@ export type SketchClass = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  preprocessingEndpoint?: Maybe<Scalars['String']>;
+  preprocessingProjectUrl?: Maybe<Scalars['String']>;
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
@@ -10295,6 +10338,8 @@ export type SketchClassPatch = {
   mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
+  preprocessingEndpoint?: Maybe<Scalars['String']>;
+  preprocessingProjectUrl?: Maybe<Scalars['String']>;
   templateDescription?: Maybe<Scalars['String']>;
 };
 
@@ -10320,12 +10365,6 @@ export enum SketchClassesOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
-/**
- * SketchFolders can be used by users to organize their sketches. Collection-type
- * sketches can be used to organize sketches as well, but they are limited in that
- * they cannot be nested, and also represent specific management semantics. Folders
- * can be used by users to arbitrarily organize their Sketches.
- */
 export type SketchFolder = Node & {
   __typename?: 'SketchFolder';
   /** The parent sketch collection, if any. Folders can only have a single parent entity. */
@@ -10340,16 +10379,15 @@ export type SketchFolder = Node & {
   userId: Scalars['Int'];
 };
 
-/** An input for mutations affecting `SketchFolder` */
-export type SketchFolderInput = {
-  /** The parent sketch collection, if any. Folders can only have a single parent entity. */
-  collectionId?: Maybe<Scalars['Int']>;
-  /** The parent folder, if any. */
-  folderId?: Maybe<Scalars['Int']>;
+/**
+ * A condition to be used against `SketchFolder` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type SketchFolderCondition = {
+  /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
-  userId: Scalars['Int'];
+  /** Checks for equality with the object’s `userId` field. */
+  userId?: Maybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `SketchFolder`. Fields that are set will be updated. */
@@ -10362,6 +10400,19 @@ export type SketchFolderPatch = {
   name?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
   userId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `SketchFolder` values. */
+export type SketchFoldersConnection = {
+  __typename?: 'SketchFoldersConnection';
+  /** A list of edges which contains the `SketchFolder` and cursor to aid in pagination. */
+  edges: Array<SketchFoldersEdge>;
+  /** A list of `SketchFolder` objects. */
+  nodes: Array<SketchFolder>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `SketchFolder` you could get from the connection. */
+  totalCount: Scalars['Int'];
 };
 
 /** A `SketchFolder` edge in the connection. */
@@ -10391,64 +10442,6 @@ export enum SketchGeometryType {
   Point = 'POINT',
   Polygon = 'POLYGON'
 }
-
-/** An input for mutations affecting `Sketch` */
-export type SketchInput = {
-  bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
-  /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
-  /**
-   * If this Sketch started as a copy of another it is tracked here. Eventually
-   * SeaSketch may have a means of visualizing how plans are iterated on over time.
-   */
-  copyOf?: Maybe<Scalars['Int']>;
-  /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
-  folderId?: Maybe<Scalars['Int']>;
-  formElementId?: Maybe<Scalars['Int']>;
-  /**
-   * The geometry of the Sketch **after** it has been preprocessed. This is the
-   * geometry that is used for reporting. Preprocessed geometries may be extremely
-   * large and complex, so it may be necessary to access them through a vector tile
-   * service or some other optimization.
-   */
-  geom?: Maybe<Scalars['GeoJSON']>;
-  id?: Maybe<Scalars['Int']>;
-  mercatorGeometry?: Maybe<Scalars['GeoJSON']>;
-  /** User provided name for the sketch. */
-  name: Scalars['String'];
-  numVertices?: Maybe<Scalars['Int']>;
-  properties?: Maybe<Scalars['JSON']>;
-  responseId?: Maybe<Scalars['Int']>;
-  /** SketchClass that defines the behavior of this type of sketch. */
-  sketchClassId: Scalars['Int'];
-  /**
-   * Spatial feature the user directly digitized, without preprocessing. This is
-   * the feature that should be used if the Sketch is later edited.
-   */
-  userGeom?: Maybe<Scalars['GeoJSON']>;
-  /** Owner of the sketch. */
-  userId?: Maybe<Scalars['Int']>;
-};
-
-/** Represents an update to a `Sketch`. Fields that are set will be updated. */
-export type SketchPatch = {
-  /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
-  collectionId?: Maybe<Scalars['Int']>;
-  /**
-   * The geometry of the Sketch **after** it has been preprocessed. This is the
-   * geometry that is used for reporting. Preprocessed geometries may be extremely
-   * large and complex, so it may be necessary to access them through a vector tile
-   * service or some other optimization.
-   */
-  geom?: Maybe<Scalars['GeoJSON']>;
-  /** User provided name for the sketch. */
-  name?: Maybe<Scalars['String']>;
-  /**
-   * Spatial feature the user directly digitized, without preprocessing. This is
-   * the feature that should be used if the Sketch is later edited.
-   */
-  userGeom?: Maybe<Scalars['GeoJSON']>;
-};
 
 /** All input for the `softDeleteSprite` mutation. */
 export type SoftDeleteSpriteInput = {
@@ -12554,19 +12547,6 @@ export type UpdateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
-/** All input for the `updateSketchByNodeId` mutation. */
-export type UpdateSketchByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `Sketch` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `Sketch` being updated. */
-  patch: SketchPatch;
-};
-
 /** All input for the `updateSketchClassByFormElementId` mutation. */
 export type UpdateSketchClassByFormElementIdInput = {
   /**
@@ -12678,21 +12658,21 @@ export type UpdateSketchFolderPayloadSketchFolderEdgeArgs = {
   orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
 };
 
-/** All input for the `updateSketch` mutation. */
-export type UpdateSketchInput = {
+/** All input for the `updateSketchParent` mutation. */
+export type UpdateSketchParentInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `Sketch` being updated. */
-  patch: SketchPatch;
+  collectionId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  id?: Maybe<Scalars['Int']>;
 };
 
-/** The output of our update `Sketch` mutation. */
-export type UpdateSketchPayload = {
-  __typename?: 'UpdateSketchPayload';
+/** The output of our `updateSketchParent` mutation. */
+export type UpdateSketchParentPayload = {
+  __typename?: 'UpdateSketchParentPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -12706,7 +12686,6 @@ export type UpdateSketchPayload = {
   formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  /** The `Sketch` that was updated by this mutation. */
   sketch?: Maybe<Sketch>;
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
@@ -15421,9 +15400,18 @@ export type SimpleProjectListQuery = (
   )> }
 );
 
+export type SketchFormElementFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
+  )> }
+);
+
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
@@ -15437,6 +15425,27 @@ export type SketchingDetailsFragment = (
   )>>, form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & SketchFormElementFragment
+    )>> }
+  )> }
+);
+
+export type SketchClassFormQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SketchClassFormQuery = (
+  { __typename?: 'Query' }
+  & { form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & SketchFormElementFragment
+    )>> }
   )> }
 );
 
@@ -15520,6 +15529,293 @@ export type DeleteSketchClassMutation = (
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateGeoprocessingServicesMutationVariables = Exact<{
+  id: Scalars['Int'];
+  preprocessingEndpoint?: Maybe<Scalars['String']>;
+  preprocessingProjectUrl?: Maybe<Scalars['String']>;
+  geoprocessingClientName?: Maybe<Scalars['String']>;
+  geoprocessingClientUrl?: Maybe<Scalars['String']>;
+  geoprocessingProjectUrl?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateGeoprocessingServicesMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClass?: Maybe<(
+    { __typename?: 'UpdateSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
+    )> }
+  )> }
+);
+
+export type UpdateSketchFormElementMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isRequired?: Maybe<Scalars['Boolean']>;
+  exportId?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateSketchFormElementMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormElement?: Maybe<(
+    { __typename?: 'UpdateFormElementPayload' }
+    & { formElement?: Maybe<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'id' | 'isRequired' | 'exportId'>
+    )> }
+  )> }
+);
+
+export type SketchTocDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp'>
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'geometryType'>
+  )> }
+);
+
+export type SketchFolderDetailsFragment = (
+  { __typename?: 'SketchFolder' }
+  & Pick<SketchFolder, 'collectionId' | 'folderId' | 'id' | 'name'>
+);
+
+export type SketchingQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SketchingQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & SketchingDetailsFragment
+    )>, mySketches?: Maybe<Array<(
+      { __typename: 'Sketch' }
+      & SketchTocDetailsFragment
+    )>>, myFolders?: Maybe<Array<(
+      { __typename: 'SketchFolder' }
+      & SketchFolderDetailsFragment
+    )>> }
+  )> }
+);
+
+export type CreateSketchFolderMutationVariables = Exact<{
+  slug: Scalars['String'];
+  name: Scalars['String'];
+  folderId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type CreateSketchFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { createSketchFolder?: Maybe<(
+    { __typename?: 'CreateSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & SketchFolderDetailsFragment
+    )> }
+  )> }
+);
+
+export type SketchCrudResponseFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'name' | 'properties' | 'geojsonProperties'>
+  & { userGeom?: Maybe<(
+    { __typename?: 'GeometryGeometryCollection' }
+    & Pick<GeometryGeometryCollection, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryLineString' }
+    & Pick<GeometryLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiLineString' }
+    & Pick<GeometryMultiLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPoint' }
+    & Pick<GeometryMultiPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPolygon' }
+    & Pick<GeometryMultiPolygon, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPoint' }
+    & Pick<GeometryPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  )> }
+  & SketchTocDetailsFragment
+  & SketchEditorModalDetailsFragment
+);
+
+export type CreateSketchMutationVariables = Exact<{
+  name: Scalars['String'];
+  sketchClassId: Scalars['Int'];
+  userGeom: Scalars['GeoJSON'];
+  collectionId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  properties: Scalars['JSON'];
+}>;
+
+
+export type CreateSketchMutation = (
+  { __typename?: 'Mutation' }
+  & { createSketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & SketchCrudResponseFragment
+  )> }
+);
+
+export type UpdateSketchMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+  userGeom?: Maybe<Scalars['GeoJSON']>;
+  properties: Scalars['JSON'];
+}>;
+
+
+export type UpdateSketchMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & SketchCrudResponseFragment
+  )> }
+);
+
+export type DeleteSketchMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketch?: Maybe<(
+    { __typename?: 'DeleteSketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id'>
+    )> }
+  )> }
+);
+
+export type DeleteSketchFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteSketchFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteSketchFolder?: Maybe<(
+    { __typename?: 'DeleteSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id'>
+    )> }
+  )> }
+);
+
+export type RenameFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+}>;
+
+
+export type RenameFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchFolder?: Maybe<(
+    { __typename?: 'UpdateSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id' | 'name'>
+    )> }
+  )> }
+);
+
+export type SketchEditorModalDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'properties'>
+  & { userGeom?: Maybe<(
+    { __typename?: 'GeometryGeometryCollection' }
+    & Pick<GeometryGeometryCollection, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryLineString' }
+    & Pick<GeometryLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiLineString' }
+    & Pick<GeometryMultiLineString, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPoint' }
+    & Pick<GeometryMultiPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryMultiPolygon' }
+    & Pick<GeometryMultiPolygon, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPoint' }
+    & Pick<GeometryPoint, 'geojson'>
+  ) | (
+    { __typename?: 'GeometryPolygon' }
+    & Pick<GeometryPolygon, 'geojson'>
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & SketchingDetailsFragment
+  )> }
+  & SketchTocDetailsFragment
+);
+
+export type GetSketchForEditingQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GetSketchForEditingQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & SketchEditorModalDetailsFragment
+  )> }
+);
+
+export type UpdateSketchFolderParentMutationVariables = Exact<{
+  id: Scalars['Int'];
+  folderId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateSketchFolderParentMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchFolder?: Maybe<(
+    { __typename?: 'UpdateSketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & Pick<SketchFolder, 'id' | 'folderId' | 'collectionId'>
+    )> }
+  )> }
+);
+
+export type UpdateSketchParentMutationVariables = Exact<{
+  id: Scalars['Int'];
+  folderId?: Maybe<Scalars['Int']>;
+  collectionId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type UpdateSketchParentMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchParent?: Maybe<(
+    { __typename?: 'UpdateSketchParentPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
     )> }
   )> }
 );
@@ -17440,6 +17736,60 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
   }
 }
     `;
+export const TemplateSketchClassFragmentDoc = gql`
+    fragment TemplateSketchClass on SketchClass {
+  id
+  name
+  geometryType
+  templateDescription
+}
+    `;
+export const SketchFolderDetailsFragmentDoc = gql`
+    fragment SketchFolderDetails on SketchFolder {
+  collectionId
+  folderId
+  id
+  name
+}
+    `;
+export const SketchTocDetailsFragmentDoc = gql`
+    fragment SketchTocDetails on Sketch {
+  id
+  bbox
+  name
+  numVertices
+  sketchClassId
+  collectionId
+  bbox
+  folderId
+  timestamp
+  sketchClass {
+    id
+    geometryType
+  }
+}
+    `;
+export const SketchFormElementFragmentDoc = gql`
+    fragment SketchFormElement on FormElement {
+  id
+  componentSettings
+  alternateLanguageSettings
+  body
+  isRequired
+  isInput
+  position
+  typeId
+  exportId
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+    isHidden
+  }
+}
+    `;
 export const SketchingDetailsFragmentDoc = gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -17466,22 +17816,46 @@ export const SketchingDetailsFragmentDoc = gql`
   allowMulti
   form {
     id
+    formElements {
+      ...SketchFormElement
+    }
   }
   geometryType
   geoprocessingClientName
   geoprocessingClientUrl
   geoprocessingProjectUrl
   formElementId
+  preprocessingEndpoint
+  preprocessingProjectUrl
 }
-    `;
-export const TemplateSketchClassFragmentDoc = gql`
-    fragment TemplateSketchClass on SketchClass {
+    ${SketchFormElementFragmentDoc}`;
+export const SketchEditorModalDetailsFragmentDoc = gql`
+    fragment SketchEditorModalDetails on Sketch {
+  ...SketchTocDetails
+  userGeom {
+    geojson
+  }
+  properties
+  sketchClass {
+    ...SketchingDetails
+  }
+}
+    ${SketchTocDetailsFragmentDoc}
+${SketchingDetailsFragmentDoc}`;
+export const SketchCrudResponseFragmentDoc = gql`
+    fragment SketchCRUDResponse on Sketch {
+  ...SketchTocDetails
   id
   name
-  geometryType
-  templateDescription
+  userGeom {
+    geojson
+  }
+  properties
+  geojsonProperties
+  ...SketchEditorModalDetails
 }
-    `;
+    ${SketchTocDetailsFragmentDoc}
+${SketchEditorModalDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -22214,6 +22588,44 @@ export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
 export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
 export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export const SketchClassFormDocument = gql`
+    query SketchClassForm($id: Int!) {
+  form(id: $id) {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+  }
+}
+    ${SketchFormElementFragmentDoc}`;
+
+/**
+ * __useSketchClassFormQuery__
+ *
+ * To run a query within a React component, call `useSketchClassFormQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchClassFormQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchClassFormQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSketchClassFormQuery(baseOptions: Apollo.QueryHookOptions<SketchClassFormQuery, SketchClassFormQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchClassFormQuery, SketchClassFormQueryVariables>(SketchClassFormDocument, options);
+      }
+export function useSketchClassFormLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchClassFormQuery, SketchClassFormQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchClassFormQuery, SketchClassFormQueryVariables>(SketchClassFormDocument, options);
+        }
+export type SketchClassFormQueryHookResult = ReturnType<typeof useSketchClassFormQuery>;
+export type SketchClassFormLazyQueryHookResult = ReturnType<typeof useSketchClassFormLazyQuery>;
+export type SketchClassFormQueryResult = Apollo.QueryResult<SketchClassFormQuery, SketchClassFormQueryVariables>;
 export const CreateSketchClassDocument = gql`
     mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
   createSketchClassFromTemplate(
@@ -22398,6 +22810,487 @@ export function useDeleteSketchClassMutation(baseOptions?: Apollo.MutationHookOp
 export type DeleteSketchClassMutationHookResult = ReturnType<typeof useDeleteSketchClassMutation>;
 export type DeleteSketchClassMutationResult = Apollo.MutationResult<DeleteSketchClassMutation>;
 export type DeleteSketchClassMutationOptions = Apollo.BaseMutationOptions<DeleteSketchClassMutation, DeleteSketchClassMutationVariables>;
+export const UpdateGeoprocessingServicesDocument = gql`
+    mutation UpdateGeoprocessingServices($id: Int!, $preprocessingEndpoint: String, $preprocessingProjectUrl: String, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
+  updateSketchClass(
+    input: {id: $id, patch: {preprocessingEndpoint: $preprocessingEndpoint, preprocessingProjectUrl: $preprocessingProjectUrl, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
+  ) {
+    sketchClass {
+      id
+      preprocessingEndpoint
+      preprocessingProjectUrl
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+    }
+  }
+}
+    `;
+export type UpdateGeoprocessingServicesMutationFn = Apollo.MutationFunction<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>;
+
+/**
+ * __useUpdateGeoprocessingServicesMutation__
+ *
+ * To run a mutation, you first call `useUpdateGeoprocessingServicesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateGeoprocessingServicesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateGeoprocessingServicesMutation, { data, loading, error }] = useUpdateGeoprocessingServicesMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      preprocessingEndpoint: // value for 'preprocessingEndpoint'
+ *      preprocessingProjectUrl: // value for 'preprocessingProjectUrl'
+ *      geoprocessingClientName: // value for 'geoprocessingClientName'
+ *      geoprocessingClientUrl: // value for 'geoprocessingClientUrl'
+ *      geoprocessingProjectUrl: // value for 'geoprocessingProjectUrl'
+ *   },
+ * });
+ */
+export function useUpdateGeoprocessingServicesMutation(baseOptions?: Apollo.MutationHookOptions<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>(UpdateGeoprocessingServicesDocument, options);
+      }
+export type UpdateGeoprocessingServicesMutationHookResult = ReturnType<typeof useUpdateGeoprocessingServicesMutation>;
+export type UpdateGeoprocessingServicesMutationResult = Apollo.MutationResult<UpdateGeoprocessingServicesMutation>;
+export type UpdateGeoprocessingServicesMutationOptions = Apollo.BaseMutationOptions<UpdateGeoprocessingServicesMutation, UpdateGeoprocessingServicesMutationVariables>;
+export const UpdateSketchFormElementDocument = gql`
+    mutation UpdateSketchFormElement($id: Int!, $isRequired: Boolean, $exportId: String) {
+  updateFormElement(
+    input: {id: $id, patch: {isRequired: $isRequired, exportId: $exportId}}
+  ) {
+    formElement {
+      id
+      isRequired
+      exportId
+    }
+  }
+}
+    `;
+export type UpdateSketchFormElementMutationFn = Apollo.MutationFunction<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>;
+
+/**
+ * __useUpdateSketchFormElementMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchFormElementMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchFormElementMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchFormElementMutation, { data, loading, error }] = useUpdateSketchFormElementMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      isRequired: // value for 'isRequired'
+ *      exportId: // value for 'exportId'
+ *   },
+ * });
+ */
+export function useUpdateSketchFormElementMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>(UpdateSketchFormElementDocument, options);
+      }
+export type UpdateSketchFormElementMutationHookResult = ReturnType<typeof useUpdateSketchFormElementMutation>;
+export type UpdateSketchFormElementMutationResult = Apollo.MutationResult<UpdateSketchFormElementMutation>;
+export type UpdateSketchFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>;
+export const SketchingDocument = gql`
+    query Sketching($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchClasses {
+      ...SketchingDetails
+    }
+    mySketches {
+      __typename
+      ...SketchTocDetails
+    }
+    myFolders {
+      __typename
+      ...SketchFolderDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}
+${SketchFolderDetailsFragmentDoc}`;
+
+/**
+ * __useSketchingQuery__
+ *
+ * To run a query within a React component, call `useSketchingQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchingQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchingQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useSketchingQuery(baseOptions: Apollo.QueryHookOptions<SketchingQuery, SketchingQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchingQuery, SketchingQueryVariables>(SketchingDocument, options);
+      }
+export function useSketchingLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchingQuery, SketchingQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchingQuery, SketchingQueryVariables>(SketchingDocument, options);
+        }
+export type SketchingQueryHookResult = ReturnType<typeof useSketchingQuery>;
+export type SketchingLazyQueryHookResult = ReturnType<typeof useSketchingLazyQuery>;
+export type SketchingQueryResult = Apollo.QueryResult<SketchingQuery, SketchingQueryVariables>;
+export const CreateSketchFolderDocument = gql`
+    mutation CreateSketchFolder($slug: String!, $name: String!, $folderId: Int, $collectionId: Int) {
+  createSketchFolder(
+    input: {slug: $slug, name: $name, folderId: $folderId, collectionId: $collectionId}
+  ) {
+    sketchFolder {
+      ...SketchFolderDetails
+    }
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}`;
+export type CreateSketchFolderMutationFn = Apollo.MutationFunction<CreateSketchFolderMutation, CreateSketchFolderMutationVariables>;
+
+/**
+ * __useCreateSketchFolderMutation__
+ *
+ * To run a mutation, you first call `useCreateSketchFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateSketchFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createSketchFolderMutation, { data, loading, error }] = useCreateSketchFolderMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      name: // value for 'name'
+ *      folderId: // value for 'folderId'
+ *      collectionId: // value for 'collectionId'
+ *   },
+ * });
+ */
+export function useCreateSketchFolderMutation(baseOptions?: Apollo.MutationHookOptions<CreateSketchFolderMutation, CreateSketchFolderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateSketchFolderMutation, CreateSketchFolderMutationVariables>(CreateSketchFolderDocument, options);
+      }
+export type CreateSketchFolderMutationHookResult = ReturnType<typeof useCreateSketchFolderMutation>;
+export type CreateSketchFolderMutationResult = Apollo.MutationResult<CreateSketchFolderMutation>;
+export type CreateSketchFolderMutationOptions = Apollo.BaseMutationOptions<CreateSketchFolderMutation, CreateSketchFolderMutationVariables>;
+export const CreateSketchDocument = gql`
+    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON!, $collectionId: Int, $folderId: Int, $properties: JSON!) {
+  createSketch(
+    name: $name
+    sketchClassId: $sketchClassId
+    userGeom: $userGeom
+    folderId: $folderId
+    collectionId: $collectionId
+    properties: $properties
+  ) {
+    ...SketchCRUDResponse
+  }
+}
+    ${SketchCrudResponseFragmentDoc}`;
+export type CreateSketchMutationFn = Apollo.MutationFunction<CreateSketchMutation, CreateSketchMutationVariables>;
+
+/**
+ * __useCreateSketchMutation__
+ *
+ * To run a mutation, you first call `useCreateSketchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateSketchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createSketchMutation, { data, loading, error }] = useCreateSketchMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      sketchClassId: // value for 'sketchClassId'
+ *      userGeom: // value for 'userGeom'
+ *      collectionId: // value for 'collectionId'
+ *      folderId: // value for 'folderId'
+ *      properties: // value for 'properties'
+ *   },
+ * });
+ */
+export function useCreateSketchMutation(baseOptions?: Apollo.MutationHookOptions<CreateSketchMutation, CreateSketchMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateSketchMutation, CreateSketchMutationVariables>(CreateSketchDocument, options);
+      }
+export type CreateSketchMutationHookResult = ReturnType<typeof useCreateSketchMutation>;
+export type CreateSketchMutationResult = Apollo.MutationResult<CreateSketchMutation>;
+export type CreateSketchMutationOptions = Apollo.BaseMutationOptions<CreateSketchMutation, CreateSketchMutationVariables>;
+export const UpdateSketchDocument = gql`
+    mutation UpdateSketch($id: Int!, $name: String!, $userGeom: GeoJSON, $properties: JSON!) {
+  updateSketch(id: $id, name: $name, userGeom: $userGeom, properties: $properties) {
+    ...SketchCRUDResponse
+  }
+}
+    ${SketchCrudResponseFragmentDoc}`;
+export type UpdateSketchMutationFn = Apollo.MutationFunction<UpdateSketchMutation, UpdateSketchMutationVariables>;
+
+/**
+ * __useUpdateSketchMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchMutation, { data, loading, error }] = useUpdateSketchMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *      userGeom: // value for 'userGeom'
+ *      properties: // value for 'properties'
+ *   },
+ * });
+ */
+export function useUpdateSketchMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchMutation, UpdateSketchMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchMutation, UpdateSketchMutationVariables>(UpdateSketchDocument, options);
+      }
+export type UpdateSketchMutationHookResult = ReturnType<typeof useUpdateSketchMutation>;
+export type UpdateSketchMutationResult = Apollo.MutationResult<UpdateSketchMutation>;
+export type UpdateSketchMutationOptions = Apollo.BaseMutationOptions<UpdateSketchMutation, UpdateSketchMutationVariables>;
+export const DeleteSketchDocument = gql`
+    mutation DeleteSketch($id: Int!) {
+  deleteSketch(input: {id: $id}) {
+    sketch {
+      id
+    }
+  }
+}
+    `;
+export type DeleteSketchMutationFn = Apollo.MutationFunction<DeleteSketchMutation, DeleteSketchMutationVariables>;
+
+/**
+ * __useDeleteSketchMutation__
+ *
+ * To run a mutation, you first call `useDeleteSketchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteSketchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteSketchMutation, { data, loading, error }] = useDeleteSketchMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteSketchMutation(baseOptions?: Apollo.MutationHookOptions<DeleteSketchMutation, DeleteSketchMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteSketchMutation, DeleteSketchMutationVariables>(DeleteSketchDocument, options);
+      }
+export type DeleteSketchMutationHookResult = ReturnType<typeof useDeleteSketchMutation>;
+export type DeleteSketchMutationResult = Apollo.MutationResult<DeleteSketchMutation>;
+export type DeleteSketchMutationOptions = Apollo.BaseMutationOptions<DeleteSketchMutation, DeleteSketchMutationVariables>;
+export const DeleteSketchFolderDocument = gql`
+    mutation DeleteSketchFolder($id: Int!) {
+  deleteSketchFolder(input: {id: $id}) {
+    sketchFolder {
+      id
+    }
+  }
+}
+    `;
+export type DeleteSketchFolderMutationFn = Apollo.MutationFunction<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>;
+
+/**
+ * __useDeleteSketchFolderMutation__
+ *
+ * To run a mutation, you first call `useDeleteSketchFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteSketchFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteSketchFolderMutation, { data, loading, error }] = useDeleteSketchFolderMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteSketchFolderMutation(baseOptions?: Apollo.MutationHookOptions<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>(DeleteSketchFolderDocument, options);
+      }
+export type DeleteSketchFolderMutationHookResult = ReturnType<typeof useDeleteSketchFolderMutation>;
+export type DeleteSketchFolderMutationResult = Apollo.MutationResult<DeleteSketchFolderMutation>;
+export type DeleteSketchFolderMutationOptions = Apollo.BaseMutationOptions<DeleteSketchFolderMutation, DeleteSketchFolderMutationVariables>;
+export const RenameFolderDocument = gql`
+    mutation RenameFolder($id: Int!, $name: String!) {
+  updateSketchFolder(input: {id: $id, patch: {name: $name}}) {
+    sketchFolder {
+      id
+      name
+    }
+  }
+}
+    `;
+export type RenameFolderMutationFn = Apollo.MutationFunction<RenameFolderMutation, RenameFolderMutationVariables>;
+
+/**
+ * __useRenameFolderMutation__
+ *
+ * To run a mutation, you first call `useRenameFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRenameFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [renameFolderMutation, { data, loading, error }] = useRenameFolderMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useRenameFolderMutation(baseOptions?: Apollo.MutationHookOptions<RenameFolderMutation, RenameFolderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RenameFolderMutation, RenameFolderMutationVariables>(RenameFolderDocument, options);
+      }
+export type RenameFolderMutationHookResult = ReturnType<typeof useRenameFolderMutation>;
+export type RenameFolderMutationResult = Apollo.MutationResult<RenameFolderMutation>;
+export type RenameFolderMutationOptions = Apollo.BaseMutationOptions<RenameFolderMutation, RenameFolderMutationVariables>;
+export const GetSketchForEditingDocument = gql`
+    query GetSketchForEditing($id: Int!) {
+  sketch(id: $id) {
+    ...SketchEditorModalDetails
+  }
+}
+    ${SketchEditorModalDetailsFragmentDoc}`;
+
+/**
+ * __useGetSketchForEditingQuery__
+ *
+ * To run a query within a React component, call `useGetSketchForEditingQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetSketchForEditingQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetSketchForEditingQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetSketchForEditingQuery(baseOptions: Apollo.QueryHookOptions<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>(GetSketchForEditingDocument, options);
+      }
+export function useGetSketchForEditingLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>(GetSketchForEditingDocument, options);
+        }
+export type GetSketchForEditingQueryHookResult = ReturnType<typeof useGetSketchForEditingQuery>;
+export type GetSketchForEditingLazyQueryHookResult = ReturnType<typeof useGetSketchForEditingLazyQuery>;
+export type GetSketchForEditingQueryResult = Apollo.QueryResult<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>;
+export const UpdateSketchFolderParentDocument = gql`
+    mutation UpdateSketchFolderParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketchFolder(
+    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+  ) {
+    sketchFolder {
+      id
+      folderId
+      collectionId
+    }
+  }
+}
+    `;
+export type UpdateSketchFolderParentMutationFn = Apollo.MutationFunction<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
+
+/**
+ * __useUpdateSketchFolderParentMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchFolderParentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchFolderParentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchFolderParentMutation, { data, loading, error }] = useUpdateSketchFolderParentMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      folderId: // value for 'folderId'
+ *      collectionId: // value for 'collectionId'
+ *   },
+ * });
+ */
+export function useUpdateSketchFolderParentMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>(UpdateSketchFolderParentDocument, options);
+      }
+export type UpdateSketchFolderParentMutationHookResult = ReturnType<typeof useUpdateSketchFolderParentMutation>;
+export type UpdateSketchFolderParentMutationResult = Apollo.MutationResult<UpdateSketchFolderParentMutation>;
+export type UpdateSketchFolderParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
+export const UpdateSketchParentDocument = gql`
+    mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
+  updateSketchParent(
+    input: {id: $id, folderId: $folderId, collectionId: $collectionId}
+  ) {
+    sketch {
+      id
+      folderId
+      collectionId
+    }
+  }
+}
+    `;
+export type UpdateSketchParentMutationFn = Apollo.MutationFunction<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
+
+/**
+ * __useUpdateSketchParentMutation__
+ *
+ * To run a mutation, you first call `useUpdateSketchParentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSketchParentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSketchParentMutation, { data, loading, error }] = useUpdateSketchParentMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      folderId: // value for 'folderId'
+ *      collectionId: // value for 'collectionId'
+ *   },
+ * });
+ */
+export function useUpdateSketchParentMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>(UpdateSketchParentDocument, options);
+      }
+export type UpdateSketchParentMutationHookResult = ReturnType<typeof useUpdateSketchParentMutation>;
+export type UpdateSketchParentMutationResult = Apollo.MutationResult<UpdateSketchParentMutation>;
+export type UpdateSketchParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -25341,8 +26234,11 @@ export const namedOperations = {
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
     SimpleProjectList: 'SimpleProjectList',
+    SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
+    Sketching: 'Sketching',
+    GetSketchForEditing: 'GetSketchForEditing',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
@@ -25430,6 +26326,16 @@ export const namedOperations = {
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',
     DeleteSketchClass: 'DeleteSketchClass',
+    UpdateGeoprocessingServices: 'UpdateGeoprocessingServices',
+    UpdateSketchFormElement: 'UpdateSketchFormElement',
+    CreateSketchFolder: 'CreateSketchFolder',
+    CreateSketch: 'CreateSketch',
+    UpdateSketch: 'UpdateSketch',
+    DeleteSketch: 'DeleteSketch',
+    DeleteSketchFolder: 'DeleteSketchFolder',
+    RenameFolder: 'RenameFolder',
+    UpdateSketchFolderParent: 'UpdateSketchFolderParent',
+    UpdateSketchParent: 'UpdateSketchParent',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
@@ -25514,8 +26420,13 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
+    SketchTocDetails: 'SketchTocDetails',
+    SketchFolderDetails: 'SketchFolderDetails',
+    SketchCRUDResponse: 'SketchCRUDResponse',
+    SketchEditorModalDetails: 'SketchEditorModalDetails',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

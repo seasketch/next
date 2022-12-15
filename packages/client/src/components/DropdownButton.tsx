@@ -10,8 +10,9 @@ function classNames(...classes: (string | undefined)[]) {
 
 export interface DropdownOption {
   onClick: () => void;
-  label: string;
+  label: string | ReactNode;
   disabled?: boolean;
+  id?: string;
 }
 
 interface DropdownButtonProps {
@@ -21,6 +22,7 @@ interface DropdownButtonProps {
   className?: string;
   small?: boolean;
   buttonClassName?: string;
+  alignment?: "right" | "left";
 }
 
 export default function DropdownButton({
@@ -30,11 +32,15 @@ export default function DropdownButton({
   className,
   buttonClassName,
   small,
+  alignment,
 }: DropdownButtonProps) {
   return (
     <Menu
       as="div"
-      className={classNames("relative inline-block text-left", className)}
+      className={classNames(
+        "relative inline-block text-left select-none",
+        className
+      )}
     >
       <div>
         <Menu.Button
@@ -42,7 +48,9 @@ export default function DropdownButton({
           className={classNames(
             small ? "px-2 py-0.5" : "px-4 py-2",
             "inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm bg-white text-sm font-medium text-gray-700  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-primary-500",
-            disabled ? "opacity-50 cursor-default" : "hover:bg-gray-50",
+            disabled
+              ? "opacity-75 cursor-default bg-gray-100"
+              : "hover:bg-gray-50",
             buttonClassName
           )}
         >
@@ -65,14 +73,24 @@ export default function DropdownButton({
         leaveFrom="transform opacity-100 scale-100"
         leaveTo="transform opacity-0 scale-95"
       >
-        <Menu.Items className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+        <Menu.Items
+          className={`${
+            alignment && alignment === "left"
+              ? "origin-top-left left-0"
+              : "origin-top-right right-0"
+          } absolute mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50`}
+        >
           <div className="py-1">
-            {options.map(({ label, onClick, disabled }) => (
-              <Menu.Item key={label} disabled={disabled}>
+            {options.map(({ label, onClick, disabled, id }, i) => (
+              <Menu.Item
+                key={typeof label === "string" ? id || label : i}
+                disabled={disabled}
+              >
                 {({ active }) => (
                   <button
                     onClick={onClick}
                     className={classNames(
+                      "group",
                       active ? "bg-gray-100 text-gray-900" : "text-gray-700",
                       "block px-4 py-2 text-sm w-full text-left",
                       disabled ? "pointer-events-none opacity-50" : ""

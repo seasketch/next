@@ -235,12 +235,25 @@ label.required:after {
   position: absolute !important;
 }
 
-@media (max-width: 420px) {
+/* @media (max-width: 420px) {
   .survey .absolute.mapboxgl-map .mapboxgl-ctrl-logo {
-    /* display: none; */
+    display: none;
   }
-}
+} */
 
 .zebra-stripe-child-div > div:nth-child(even) {
   background-color: rgba(249, 250, 251);
+}
+
+.mapbox-gl-draw_ctrl-draw-btn {
+  display: none !important;
+}
+
+input[type="checkbox"][indeterminate="true"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='8' height='2' x='4' y='7' rx='1'/%3E%3C/svg%3E");
+}
+
+.SketchPopup .mapboxgl-popup-close-button {
+  padding-left: 8px;
+  padding-right: 8px;
 }

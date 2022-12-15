@@ -5,6 +5,7 @@ export default function VisibilityCheckbox(props: {
   visibility: boolean | "mixed";
   error?: boolean;
   radio?: boolean;
+  className?: string;
 }) {
   return (
     <>
@@ -19,9 +20,9 @@ export default function VisibilityCheckbox(props: {
             : "rounded-md"
         } focus:outline-none focus:shadow-outline-blue focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${
           props.disabled
-            ? "pointer-events-none border-gray-200 bg-gray-100 mr-2"
-            : "border-gray-300 mr-2"
-        }`}
+            ? "pointer-events-none border-gray-200 bg-gray-100"
+            : "border-gray-300"
+        } ${props.className}`}
         style={{
           ...(props.error === true
             ? { color: "#c54141" }
@@ -34,6 +35,9 @@ export default function VisibilityCheckbox(props: {
           if (props.onClick) {
             props.onClick();
           }
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
         }}
         aria-checked={props.visibility}
         type="checkbox"

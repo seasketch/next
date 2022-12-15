@@ -1,11 +1,11 @@
 import { useContext } from "react";
 import Button, { ButtonProps } from "../components/Button";
-import { SurveyLayoutContext } from "./SurveyAppLayout";
+import { FormElementLayoutContext } from "./SurveyAppLayout";
 
 export default function SurveyButton(
   props: ButtonProps & { secondary?: boolean }
 ) {
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   let buttonClassName = props.buttonClassName || "";
   if (props.secondary) {
     buttonClassName += " opacity-80";

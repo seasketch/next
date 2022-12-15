@@ -6,6 +6,7 @@ import { Dialog, Tab } from "@headlessui/react";
 import {
   ExclamationCircleIcon,
   ExclamationIcon,
+  TrashIcon,
 } from "@heroicons/react/outline";
 import { motion } from "framer-motion";
 
@@ -13,7 +14,7 @@ export type FooterButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
-  variant?: "primary" | "secondary" | "danger";
+  variant?: "primary" | "secondary" | "danger" | "trash";
   label: string | ReactNode;
   autoFocus?: boolean;
 };
@@ -34,6 +35,7 @@ interface ModalProps {
   zeroPadding?: boolean;
   onTabChange?: (selectedIndex: number) => void;
   initialFocus?: any;
+  open?: boolean;
 }
 
 export default function Modal(props: ModalProps) {
@@ -66,7 +68,7 @@ export default function Modal(props: ModalProps) {
 
   return (
     <Dialog
-      open={true}
+      open={props.open === undefined ? true : props.open}
       as={motion.div}
       className={`relative ${props.tipyTop ? "z-50" : "z-20"}`}
       onClose={() => {
@@ -310,9 +312,10 @@ function FooterButton(props: FooterButtonProps) {
       type="button"
       className={`${
         props.disabled && "pointer-events-none opacity-50"
-      } inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm ${colors}`}
+      } inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm ${colors} items-center`}
       onClick={props.onClick}
     >
+      {props.variant === "trash" && <TrashIcon className="w-4 h-4 mr-2" />}
       {props.label}
       {props.loading && <Spinner className="ml-2" color="white" />}
     </button>

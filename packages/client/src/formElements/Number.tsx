@@ -10,7 +10,7 @@ import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { MinusIcon, PlusIcon } from "@heroicons/react/outline";
 import NumberInput from "../components/NumberInput";
 import InputBlock from "../components/InputBlock";
-import { SurveyLayoutContext } from "../surveys/SurveyAppLayout";
+import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import EditableResponseCell, {
   CellEditorComponent,
@@ -29,7 +29,7 @@ export type NumberProps = {
  */
 const Number: FormElementComponent<NumberProps, number | null> = (props) => {
   const { t } = useTranslation("surveys");
-  const style = useContext(SurveyLayoutContext).style;
+  const style = useContext(FormElementLayoutContext).style;
   const defaultValue = props.componentSettings.defaultValue || 0;
   const min = valueOrUndefined(props.componentSettings.min);
   const max = valueOrUndefined(props.componentSettings.max);
@@ -102,7 +102,9 @@ const Number: FormElementComponent<NumberProps, number | null> = (props) => {
         alternateLanguageSettings={props.alternateLanguageSettings}
       />
       <div
-        className="max-w-full form-element-short-text flex flex-row h-12 w-40 overflow-hidden bg-opacity-10 text-4xl rounded-md shadow-lg mt-4 mb-4 focus:outline-white items-center"
+        className={`max-w-full form-element-short-text flex flex-row ${
+          style.compactAppearance ? "w-32 h-8 shadow-sm" : "h-12 w-40 shadow-lg"
+        } overflow-hidden bg-opacity-10 text-4xl rounded-md mt-4 mb-4 focus:outline-white items-center`}
         style={{
           background: `linear-gradient(170deg, ${style.secondaryColor}, ${style.secondaryColor2})`,
         }}
@@ -125,11 +127,15 @@ const Number: FormElementComponent<NumberProps, number | null> = (props) => {
           <MinusIcon className={`h-4 w-4 ${style.secondaryTextClass}`} />
         </button>
         <input
-          className={`block bg-transparent text-xl font-bold form-element-number-input text-center h-full border-none shadow-inner focus:ring-transparent  mt-2 mb-2 bg-opacity-90 ${
+          className={`block bg-transparent ${
+            style.compactAppearance
+              ? "text-base font-normal p-0"
+              : "text-xl font-bold"
+          }  form-element-number-input text-center h-full border-none shadow-inner focus:ring-transparent  mt-2 mb-2 bg-opacity-90 ${
             state.errors ? "bg-red-50 text-red-900" : "bg-white text-gray-900"
           }`}
           style={{
-            width: 70,
+            width: style.compactAppearance ? 60 : 70,
             borderTop: `2px solid ${style.secondaryColor}`,
             borderBottom: `2px solid ${style.secondaryColor2}`,
           }}

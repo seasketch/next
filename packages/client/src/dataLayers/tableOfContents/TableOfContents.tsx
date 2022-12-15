@@ -261,6 +261,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
             }`,
             icons: [
               <VisibilityCheckbox
+                className="mr-2"
                 id={data.node.id}
                 radio={!!inRadioFolder}
                 disabled={
