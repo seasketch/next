@@ -420,7 +420,7 @@ export default function SketchEditorModal({
             bounce: false,
           }}
           animate={left ? "left" : "right"}
-          className={`bg-white rounder absolute top-2 z-10 rounded-lg shadow-xl flex-col overflow-hidden`}
+          className={`bg-white rounder absolute top-2 z-10 rounded-lg shadow-xl flex flex-col overflow-hidden`}
           style={{ maxHeight: "calc(100vh - 200px)", width: "26rem" }}
         >
           {" "}
@@ -443,7 +443,7 @@ export default function SketchEditorModal({
             </div>
           ) : (
             <>
-              <h1 className="flex items-center p-4">
+              <h1 className="flex items-center p-4 border-b mb-3">
                 <span className="flex-1">
                   <span className="font-bold">
                     {!sketch && <Trans>New</Trans>} {sketchClass.name}
