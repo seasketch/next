@@ -20,6 +20,9 @@ import { SketchClassTemplateIcon } from "./TemplateChooser";
 import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 import PreprocessorInput from "./PreprocessorInput";
 import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
+import GeoprocessingClientInput, {
+  GeoprocessingClientButton,
+} from "./GeoprocessingClientInput";
 
 const Trans = (props: any) => <I18n ns="admin:sketching" {...props} />;
 
@@ -213,8 +216,9 @@ export default function SketchClassForm({
         )}
         {selectedTab === "geoprocessing" && (
           <>
-            <div className="p-4">
+            <div className="p-4 space-y-4">
               <PreprocessorInput sketchClass={sketchClass} />
+              <GeoprocessingClientInput sketchClass={sketchClass} />
             </div>
           </>
         )}
