@@ -36,6 +36,8 @@ import useSketchVisibilityState from "./useSketchVisibilityState";
 import { useApolloClient } from "@apollo/client";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import mapboxgl from "mapbox-gl";
+import SketchReportWindow, { ReportWindowUIState } from "./SketchReportWindow";
+import decode from "jwt-decode";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
@@ -55,14 +57,46 @@ export default memo(function SketchingTools({
   const history = useHistory();
   const client = useApolloClient();
   const mapContext = useContext(MapContext);
+  const [openReports, setOpenReports] = useState<
+    { sketchId: number; uiState: ReportWindowUIState; sketchClassId: number }[]
+  >([]);
+  const onRequestReportClose = useCallback(
+    (id: number) => {
+      setOpenReports((prev) => prev.filter((i) => i.sketchId !== id));
+    },
+    [setOpenReports]
+  );
 
-  const { data, loading } = useSketchingQuery({
+  const { data, loading, refetch } = useSketchingQuery({
     variables: {
       slug: getSlug(),
     },
     onError,
     skip: !user,
   });
+
+  useEffect(() => {
+    if (data?.projectBySlug?.sketchGeometryToken) {
+      const claims = decode(data.projectBySlug.sketchGeometryToken) as any;
+      if (claims && claims.exp) {
+        const expiresAt = new Date(claims.exp * 1000);
+        const checker = () => {
+          const expiresInHours =
+            (expiresAt.getTime() - new Date().getTime()) / 36e5;
+          if (expiresInHours < 2) {
+            console.warn("sketch access token is expiring. refetching...");
+            refetch();
+          }
+          if (expiresInHours < 2) {
+            refetch();
+          }
+        };
+        checker();
+        const intervalId = setInterval(checker, 120000);
+        return () => clearInterval(intervalId);
+      }
+    }
+  }, [data?.projectBySlug?.sketchGeometryToken, refetch]);
 
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
   const { visibleSketches, setVisibleSketches, onChecked } =
@@ -87,6 +121,7 @@ export default memo(function SketchingTools({
 
   const editSketch = useCallback(
     async (id: number) => {
+      setOpenReports([]);
       const sketch = (data?.projectBySlug?.mySketches || []).find(
         (s) => s.id === id
       );
@@ -147,6 +182,7 @@ export default memo(function SketchingTools({
       history,
       onError,
       hideFullSidebar,
+      setOpenReports,
     ]
   );
 
@@ -210,6 +246,23 @@ export default memo(function SketchingTools({
     [mapContext.manager?.map]
   );
 
+  const openSketchReport = useCallback(
+    (sketchId: number, uiState?: "left" | "right" | "docked") => {
+      const sketch = (data?.projectBySlug?.mySketches || []).find(
+        (s) => s.id === sketchId
+      );
+      if (sketch) {
+        setOpenReports([
+          { sketchId, uiState: "right", sketchClassId: sketch?.sketchClassId },
+        ]);
+      }
+    },
+    [setOpenReports, data?.projectBySlug?.mySketches]
+  );
+
+  const clearOpenSketchReports = useCallback(() => {
+    setOpenReports([]);
+  }, [setOpenReports]);
   /**
    * List of "actions" like edit, delete, zoom to, that are relevent to the
    * current selection. These are used directly by the toolbar, and also bundled
@@ -233,6 +286,8 @@ export default memo(function SketchingTools({
     folders: data?.projectBySlug?.myFolders,
     sketches: data?.projectBySlug?.mySketches,
     zoomTo,
+    openSketchReport,
+    clearOpenSketchReports,
   });
 
   useEffect(() => {
@@ -358,8 +413,11 @@ export default memo(function SketchingTools({
             options={menuOptions.edit}
           />
           <Button
-            disabled
+            disabled={
+              menuOptions.viewReports ? menuOptions.viewReports.disabled : true
+            }
             small
+            onClick={menuOptions.viewReports?.onClick}
             label={
               isSmall ? (
                 <Trans>View Attributes</Trans>
@@ -440,6 +498,16 @@ export default memo(function SketchingTools({
           }}
         />
       )}
+      {openReports.map(({ sketchId, uiState, sketchClassId }) => (
+        <SketchReportWindow
+          key={sketchId}
+          sketchId={sketchId}
+          sketchClassId={sketchClassId}
+          onRequestClose={onRequestReportClose}
+          uiState={uiState}
+          selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
+        />
+      ))}
     </div>
   );
 });

@@ -9288,6 +9288,14 @@ type Project implements Node {
   ): [SketchClass!]!
 
   """
+  This token can be used to access this user's sketches from the geojson endpoint.
+  For example, `/sketches/123.geojson.json?access_token=xxx`
+  Returns null if user is not singed in. Can be used only for a single
+  project. Must be refreshed occasionally.
+  """
+  sketchGeometryToken: String
+
+  """
   Short identifier for the project used in the url. This property cannot be changed after project creation.
   """
   slug: String!

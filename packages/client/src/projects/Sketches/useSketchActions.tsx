@@ -29,6 +29,8 @@ import getSlug from "../../getSlug";
 import { useApolloClient } from "@apollo/client";
 import { DropdownOption } from "../../components/DropdownButton";
 import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
+import { ReportWindowUIState } from "./SketchReportWindow";
+import { actions } from "react-table";
 
 export interface SketchAction {
   id: string;
@@ -71,6 +73,8 @@ export default function useSketchActions({
   sketches,
   folders,
   zoomTo,
+  openSketchReport,
+  clearOpenSketchReports,
 }: {
   folderSelected: boolean;
   selectedSketchClasses: number[];
@@ -110,6 +114,8 @@ export default function useSketchActions({
   sketches?: SketchTocDetailsFragment[] | null;
   folders?: SketchFolderDetailsFragment[] | null;
   zoomTo: (bbox: number[]) => void;
+  openSketchReport: (id: number, uiState?: ReportWindowUIState) => void;
+  clearOpenSketchReports: () => void;
 }) {
   const { t } = useTranslation("sketching");
   const client = useApolloClient();
@@ -321,10 +327,19 @@ export default function useSketchActions({
               ...(!multiple && selectedSketchClasses.length
                 ? ([
                     {
+                      id: "view-reports",
+                      label: t("View Reports"),
+                      keycode: "v",
+                      action: ({ selectedSketches }) => {
+                        openSketchReport(selectedSketches[0].id);
+                      },
+                    },
+                    {
                       id: "edit-sketch",
                       label: t("Edit"),
                       keycode: "e",
                       action: ({ selectedSketches, setEditor }) => {
+                        clearOpenSketchReports();
                         setTimeout(() => {
                           history.replace(`/${getSlug()}/app`);
                           setEditor({
@@ -436,6 +451,7 @@ export default function useSketchActions({
     deleteSketchFolder,
     renameFolder,
     zoomTo,
+    openSketchReport,
   ]);
 
   /**
@@ -554,8 +570,18 @@ export default function useSketchActions({
         }
       }
     }
+    const viewReportsAction = edit.find((a) => a.id === "view-reports");
+
     return {
       contextMenu,
+      viewReports: viewReportsAction
+        ? {
+            id: viewReportsAction.id,
+            label: viewReportsAction.label,
+            onClick: () => callAction(viewReportsAction),
+            disabled: viewReportsAction.disabled,
+          }
+        : undefined,
       create: create.map(
         (action) =>
           ({
@@ -567,29 +593,31 @@ export default function useSketchActions({
             disabled: action.disabled,
           } as DropdownOption)
       ),
-      edit: edit.map(
-        (action) =>
-          ({
-            id: action.id,
-            label: (
-              <div className="flex">
-                <span className="flex-1">{action.label}</span>
-                {action.keycode && (
-                  <span
-                    style={{ fontSize: 10 }}
-                    className="font-mono bg-gray-50 text-gray-500 py-0 rounded border border-gray-300 shadow-sm text-xs px-1 opacity-0 group-hover:opacity-100"
-                  >
-                    {action.keycode}
-                  </span>
-                )}
-              </div>
-            ),
-            onClick: () => {
-              callAction(action);
-            },
-            disabled: action.disabled,
-          } as DropdownOption)
-      ),
+      edit: edit
+        .filter((a) => a.id !== "view-reports")
+        .map(
+          (action) =>
+            ({
+              id: action.id,
+              label: (
+                <div className="flex">
+                  <span className="flex-1">{action.label}</span>
+                  {action.keycode && (
+                    <span
+                      style={{ fontSize: 10 }}
+                      className="font-mono bg-gray-50 text-gray-500 py-0 rounded border border-gray-300 shadow-sm text-xs px-1 opacity-0 group-hover:opacity-100"
+                    >
+                      {action.keycode}
+                    </span>
+                  )}
+                </div>
+              ),
+              onClick: () => {
+                callAction(action);
+              },
+              disabled: action.disabled,
+            } as DropdownOption)
+        ),
     };
   }, [create, edit, callAction, t]);
 

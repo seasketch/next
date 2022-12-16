@@ -2,6 +2,8 @@ import { Pool } from "pg";
 import DataLoader from "dataloader";
 import * as cache from "./cache";
 import { Style } from "mapbox-gl";
+import { sign } from "./auth/jwks";
+const HOST = process.env.HOST || "seasketch.org";
 
 export function makeDataLoaders(pool: Pool) {
   return {
@@ -25,6 +27,10 @@ export function makeDataLoaders(pool: Pool) {
         })
       )
     ),
+    signToken: async (claims: any, expires: string) => {
+      const token = await sign(pool, claims, expires, HOST);
+      return token;
+    },
   };
 }
 

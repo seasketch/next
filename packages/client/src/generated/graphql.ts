@@ -7974,6 +7974,13 @@ export type Project = Node & {
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
+  /**
+   * This token can be used to access this user's sketches from the geojson endpoint.
+   * For example, `/sketches/123.geojson.json?access_token=xxx`
+   * Returns null if user is not singed in. Can be used only for a single
+   * project. Must be refreshed occasionally.
+   */
+  sketchGeometryToken?: Maybe<Scalars['String']>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `Sprite`. */
@@ -15595,7 +15602,7 @@ export type SketchingQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'sketchGeometryToken'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
@@ -15816,6 +15823,31 @@ export type UpdateSketchParentMutation = (
     & { sketch?: Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
+    )> }
+  )> }
+);
+
+export type SketchReportingDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type SketchReportingDetailsQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties'>
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body'>
+      )>> }
     )> }
   )> }
 );
@@ -22913,6 +22945,7 @@ export const SketchingDocument = gql`
       __typename
       ...SketchFolderDetails
     }
+    sketchGeometryToken
   }
 }
     ${SketchingDetailsFragmentDoc}
@@ -23291,6 +23324,63 @@ export function useUpdateSketchParentMutation(baseOptions?: Apollo.MutationHookO
 export type UpdateSketchParentMutationHookResult = ReturnType<typeof useUpdateSketchParentMutation>;
 export type UpdateSketchParentMutationResult = Apollo.MutationResult<UpdateSketchParentMutation>;
 export type UpdateSketchParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
+export const SketchReportingDetailsDocument = gql`
+    query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
+  sketch(id: $id) {
+    id
+    name
+    createdAt
+    updatedAt
+    properties
+  }
+  sketchClass(id: $sketchClassId) {
+    id
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    geometryType
+    form {
+      id
+      formElements {
+        exportId
+        id
+        isInput
+        typeId
+        body
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useSketchReportingDetailsQuery__
+ *
+ * To run a query within a React component, call `useSketchReportingDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchReportingDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchReportingDetailsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useSketchReportingDetailsQuery(baseOptions: Apollo.QueryHookOptions<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>(SketchReportingDetailsDocument, options);
+      }
+export function useSketchReportingDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>(SketchReportingDetailsDocument, options);
+        }
+export type SketchReportingDetailsQueryHookResult = ReturnType<typeof useSketchReportingDetailsQuery>;
+export type SketchReportingDetailsLazyQueryHookResult = ReturnType<typeof useSketchReportingDetailsLazyQuery>;
+export type SketchReportingDetailsQueryResult = Apollo.QueryResult<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -26239,6 +26329,7 @@ export const namedOperations = {
     SketchClasses: 'SketchClasses',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
+    SketchReportingDetails: 'SketchReportingDetails',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',

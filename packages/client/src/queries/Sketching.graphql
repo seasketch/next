@@ -35,6 +35,7 @@ query Sketching($slug: String!) {
       __typename
       ...SketchFolderDetails
     }
+    sketchGeometryToken
   }
 }
 
@@ -175,6 +176,33 @@ mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
       id
       folderId
       collectionId
+    }
+  }
+}
+
+query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
+  sketch(id: $id) {
+    id
+    name
+    createdAt
+    updatedAt
+    properties
+  }
+  sketchClass(id: $sketchClassId) {
+    id
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    geometryType
+    form {
+      id
+      formElements {
+        exportId
+        id
+        isInput
+        typeId
+        body
+      }
     }
   }
 }

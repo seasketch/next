@@ -259,6 +259,7 @@ app.use(
         [id]
       );
       const geojson = rows[0].sketch_as_geojson;
+      console.log("geojson", geojson);
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");

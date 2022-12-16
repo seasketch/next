@@ -1,6 +1,7 @@
 import { postgraphile } from "postgraphile";
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { Feature, GeoJsonObject } from "geojson";
+import { sign } from "../auth/jwks";
 
 const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -12,6 +13,16 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         Useful for requesting the latest geometry
         """
         timestamp: String! @requires(columns: ["created_at", "updated_at"])
+      }
+
+      extend type Project {
+        """
+        This token can be used to access this user's sketches from the geojson endpoint.
+        For example, \`/sketches/123.geojson.json?access_token=xxx\`
+        Returns null if user is not singed in. Can be used only for a single
+        project. Must be refreshed occasionally.
+        """
+        sketchGeometryToken: String @requires(columns: ["id"])
       }
 
       extend type Mutation {
@@ -78,6 +89,24 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             date = new Date(sketch.updatedAt);
           }
           return date.getTime().toString();
+        },
+      },
+      Project: {
+        sketchGeometryToken: async (project, args, context, info) => {
+          const projectId = project.id;
+          const userId = context?.user?.id;
+          if (projectId && userId) {
+            return context.loaders.signToken(
+              {
+                type: "sketch-geometry-access",
+                userId,
+                projectId,
+              },
+              "1 day"
+            );
+          } else {
+            return null;
+          }
         },
       },
       Mutation: {

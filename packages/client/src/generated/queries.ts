@@ -7972,6 +7972,13 @@ export type Project = Node & {
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
+  /**
+   * This token can be used to access this user's sketches from the geojson endpoint.
+   * For example, `/sketches/123.geojson.json?access_token=xxx`
+   * Returns null if user is not singed in. Can be used only for a single
+   * project. Must be refreshed occasionally.
+   */
+  sketchGeometryToken?: Maybe<Scalars['String']>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `Sprite`. */
@@ -15593,7 +15600,7 @@ export type SketchingQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'sketchGeometryToken'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
@@ -15814,6 +15821,31 @@ export type UpdateSketchParentMutation = (
     & { sketch?: Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
+    )> }
+  )> }
+);
+
+export type SketchReportingDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type SketchReportingDetailsQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties'>
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body'>
+      )>> }
     )> }
   )> }
 );
@@ -19809,6 +19841,7 @@ export const SketchingDocument = /*#__PURE__*/ gql`
       __typename
       ...SketchFolderDetails
     }
+    sketchGeometryToken
   }
 }
     ${SketchingDetailsFragmentDoc}
@@ -19903,6 +19936,34 @@ export const UpdateSketchParentDocument = /*#__PURE__*/ gql`
       id
       folderId
       collectionId
+    }
+  }
+}
+    `;
+export const SketchReportingDetailsDocument = /*#__PURE__*/ gql`
+    query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
+  sketch(id: $id) {
+    id
+    name
+    createdAt
+    updatedAt
+    properties
+  }
+  sketchClass(id: $sketchClassId) {
+    id
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    geometryType
+    form {
+      id
+      formElements {
+        exportId
+        id
+        isInput
+        typeId
+        body
+      }
     }
   }
 }
@@ -20961,6 +21022,7 @@ export const namedOperations = {
     SketchClasses: 'SketchClasses',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
+    SketchReportingDetails: 'SketchReportingDetails',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
