@@ -1,5 +1,5 @@
 import { XIcon } from "@heroicons/react/outline";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Skeleton from "../../components/Skeleton";
 import {
@@ -11,6 +11,8 @@ import { collectText, collectQuestion } from "../../admin/surveys/collectText";
 import slugify from "slugify";
 import Warning from "../../components/Warning";
 import { Trans } from "react-i18next";
+import { Card } from "../../components/CenteredCardListLayout";
+import Spinner from "../../components/Spinner";
 
 export default function SketchReportWindow({
   sketchId,
@@ -38,6 +40,7 @@ export default function SketchReportWindow({
 
   // eslint-disable-next-line i18next/no-literal-string
   const frameId = `${sketchId}-report-iframe`;
+  const [iframeLoading, setIframeLoading] = useState(true);
 
   const iframe = useRef<HTMLIFrameElement>(null);
 
@@ -70,6 +73,10 @@ export default function SketchReportWindow({
   }, [data?.sketchClass?.form?.formElements, data?.sketch?.properties]);
 
   useEffect(() => {
+    console.log({ iframeLoading });
+  }, [iframeLoading]);
+
+  useEffect(() => {
     const handler = async (e: MessageEvent<any>) => {
       if (
         e.data.frameId &&
@@ -77,6 +84,7 @@ export default function SketchReportWindow({
         e.data.type === "SeaSketchReportingInitEvent" &&
         iframe.current?.contentWindow
       ) {
+        setIframeLoading(false);
         const geometryUri = process.env.REACT_APP_GRAPHQL_ENDPOINT.replace(
           "/graphql",
           // eslint-disable-next-line i18next/no-literal-string
@@ -153,7 +161,7 @@ export default function SketchReportWindow({
             ref={iframe}
             name={frameId}
             title={`${data.sketch?.name} Reports`}
-            className="w-full h-full"
+            className={iframeLoading ? "w-0 h-0" : `w-full h-full`}
             src={data.sketchClass.geoprocessingClientUrl}
           />
         )}
@@ -162,6 +170,11 @@ export default function SketchReportWindow({
             <Warning>
               <Trans ns="sketching">Reports not configured</Trans>
             </Warning>
+          </div>
+        )}
+        {iframeLoading && (
+          <div className="p-4 flex-1 z-50 flex items-center justify-center">
+            <Spinner large />
           </div>
         )}
       </div>
