@@ -8,6 +8,8 @@ fragment SketchTocDetails on Sketch {
   bbox
   folderId
   timestamp
+  updatedAt
+  createdAt
   sketchClass {
     id
     geometryType

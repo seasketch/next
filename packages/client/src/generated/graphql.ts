@@ -15581,7 +15581,7 @@ export type UpdateSketchFormElementMutation = (
 
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp'>
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geometryType'>
@@ -17795,6 +17795,8 @@ export const SketchTocDetailsFragmentDoc = gql`
   bbox
   folderId
   timestamp
+  updatedAt
+  createdAt
   sketchClass {
     id
     geometryType
