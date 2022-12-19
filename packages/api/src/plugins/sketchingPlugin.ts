@@ -1,7 +1,6 @@
 import { postgraphile } from "postgraphile";
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { Feature, GeoJsonObject } from "geojson";
-import { sign } from "../auth/jwks";
 
 const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -95,12 +94,14 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         sketchGeometryToken: async (project, args, context, info) => {
           const projectId = project.id;
           const userId = context?.user?.id;
+          const canonicalEmail = context.user?.canonicalEmail;
           if (projectId && userId) {
             return context.loaders.signToken(
               {
                 type: "sketch-geometry-access",
                 userId,
                 projectId,
+                canonicalEmail,
               },
               "1 day"
             );

@@ -1,18 +1,16 @@
 import express, { Request } from "express";
-import { postgraphile, makePluginHook } from "postgraphile";
+import { postgraphile } from "postgraphile";
 import compression from "compression";
 import path from "path";
 import pool, { createPool, workerPool } from "./pool";
-import { getJWKS, rotateKeys } from "./auth/jwks";
+import { getJWKS, rotateKeys, verify } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
 import currentProjectMiddlware from "./middleware/currentProjectMiddleware";
 import surveyInviteMiddlware from "./middleware/surveyInviteMiddleware";
-import { IncomingRequest } from "./middleware/IncomingRequest";
 import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
 import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
 import { graphqlUploadExpress } from "graphql-upload";
-import { default as PgPubsub } from "@graphile/pg-pubsub";
 import bytes from "bytes";
 import { run } from "graphile-worker";
 import cors from "cors";
@@ -250,7 +248,33 @@ app.use(
     const client = await geoPool.connect();
     try {
       await client.query("BEGIN");
-      await setTransactionSessionVariables(getPgSettings(req), client);
+      let token: string | undefined = req.query.reporting_access_token;
+      let claims:
+        | { userId?: number; projectId?: number; canonicalEmail?: string }
+        | undefined;
+      if (token) {
+        claims = await verify(
+          loadersPool,
+          token,
+          process.env.HOST || "seasketch.org"
+        );
+      }
+      const pgSettings = getPgSettings(req);
+      if (
+        claims &&
+        claims.canonicalEmail &&
+        claims.userId &&
+        pgSettings.role === "anon"
+      ) {
+        pgSettings.role = "seasketch_user";
+        pgSettings["session.user_id"] = claims.userId;
+        pgSettings["session.email_verified"] = true;
+        pgSettings["session.canonical_email"] = claims.canonicalEmail;
+      }
+      if (claims && claims.projectId) {
+        pgSettings["session.project_id"] = claims.projectId;
+      }
+      await setTransactionSessionVariables(pgSettings, client);
       const id = parseInt(req.params.id);
       const { rows } = await client.query(
         `

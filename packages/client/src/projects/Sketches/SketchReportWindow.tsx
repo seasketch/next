@@ -16,12 +16,14 @@ export default function SketchReportWindow({
   uiState,
   selected,
   onRequestClose,
+  reportingAccessToken,
 }: {
   sketchClassId: number;
   sketchId: number;
   uiState: ReportWindowUIState;
   selected: boolean;
   onRequestClose: (id: number) => void;
+  reportingAccessToken?: string | null;
 }) {
   const token = useAccessToken();
   const { data, loading } = useSketchReportingDetailsQuery({
@@ -32,11 +34,10 @@ export default function SketchReportWindow({
     fetchPolicy: "cache-first",
   });
 
+  // eslint-disable-next-line i18next/no-literal-string
+  const frameId = `${sketchId}-report-iframe`;
+
   const iframe = useRef<HTMLIFrameElement>(null);
-  const frameId = useMemo(() => {
-    // eslint-disable-next-line i18next/no-literal-string
-    return `${sketchId}-report-iframe`;
-  }, [sketchId]);
 
   const userAttributes = useMemo(() => {
     const properties = data?.sketch?.properties || {};
@@ -77,7 +78,7 @@ export default function SketchReportWindow({
         const geometryUri = process.env.REACT_APP_GRAPHQL_ENDPOINT.replace(
           "/graphql",
           // eslint-disable-next-line i18next/no-literal-string
-          `/sketches/${sketchId}.geojson.json?token=${token}`
+          `/sketches/${sketchId}.geojson.json?reporting_access_token=${reportingAccessToken}`
         );
         const initMessage = {
           type: "SeaSketchReportingMessageEventType",
@@ -96,13 +97,18 @@ export default function SketchReportWindow({
             visibleLayers: [],
           },
         };
+        // For local testing only
         if (/localhost/.test(geometryUri)) {
           const response = await fetch(geometryUri);
           const data = await response.text();
           var dataUri = "data:application/json;base64," + btoa(data);
           initMessage.geometryUri = dataUri;
+          if (initMessage.geometryUri.length >= 8000) {
+            throw new Error(
+              "geometryUri is >= 8k characters. When running from localhost SeaSketch uses a data-url to reference local geometry, which would be otherwise inaccessible to the remote lambda. This hack only works when the url length is short. Try drawing a shape that doesn't include much shoreline."
+            );
+          }
         }
-        console.log("init message", initMessage);
         iframe.current.contentWindow.postMessage(initMessage, "*");
       }
     };
@@ -119,6 +125,7 @@ export default function SketchReportWindow({
     data?.sketch?.updatedAt,
     sketchClassId,
     userAttributes,
+    reportingAccessToken,
   ]);
 
   return createPortal(

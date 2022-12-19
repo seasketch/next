@@ -506,6 +506,7 @@ export default memo(function SketchingTools({
           onRequestClose={onRequestReportClose}
           uiState={uiState}
           selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
+          reportingAccessToken={data?.projectBySlug?.sketchGeometryToken}
         />
       ))}
     </div>
