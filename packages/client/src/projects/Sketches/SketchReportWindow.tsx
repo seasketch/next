@@ -9,6 +9,8 @@ import {
 import useAccessToken from "../../useAccessToken";
 import { collectText, collectQuestion } from "../../admin/surveys/collectText";
 import slugify from "slugify";
+import Warning from "../../components/Warning";
+import { Trans } from "react-i18next";
 
 export default function SketchReportWindow({
   sketchId,
@@ -154,6 +156,13 @@ export default function SketchReportWindow({
             className="w-full h-full"
             src={data.sketchClass.geoprocessingClientUrl}
           />
+        )}
+        {!data?.sketchClass?.geoprocessingClientUrl && (
+          <div className="p-4">
+            <Warning>
+              <Trans ns="sketching">Reports not configured</Trans>
+            </Warning>
+          </div>
         )}
       </div>
     </div>,
