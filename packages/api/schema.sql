@@ -2157,6 +2157,47 @@ $$;
 
 
 --
+-- Name: generate_export_id(integer, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.generate_export_id(id integer, export_id text, body jsonb) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      collected_text text;
+    begin
+      if export_id is not null then
+        return export_id;
+      end if;
+      collected_text = collect_text_from_prosemirror_body(body);
+      if length(collected_text) < 2 then
+        return concat('form_element_', id::text);
+      end if;
+      return substring(slugify(collected_text), 0, 32);
+    end;
+  $$;
+
+
+--
+-- Name: generate_label(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.generate_label(id integer, body jsonb) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      collected_text text;
+    begin
+      collected_text = collect_text_from_prosemirror_body_for_label(body);
+      if length(collected_text) < 2 then
+        return concat('Form Element ', id::text);
+      end if;
+      return collected_text;
+    end;
+  $$;
+
+
+--
 -- Name: basemaps; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -2294,6 +2335,8 @@ CREATE TABLE public.form_elements (
     created_at timestamp without time zone DEFAULT now() NOT NULL,
     map_camera_options jsonb,
     map_basemaps integer[],
+    generated_export_id text GENERATED ALWAYS AS (public.generate_export_id(id, export_id, body)) STORED NOT NULL,
+    generated_label text GENERATED ALWAYS AS (public.generate_label(id, body)) STORED NOT NULL,
     CONSTRAINT form_fields_component_settings_check CHECK ((char_length((component_settings)::text) < 200000)),
     CONSTRAINT form_fields_position_check CHECK (("position" > 0))
 );
@@ -2519,39 +2562,6 @@ CREATE FUNCTION public.before_delete_sketch_class_check_form_element_id() RETURN
     end if;
     return OLD;
     end;
-  $$;
-
-
---
--- Name: before_deleted__data_layers(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.before_deleted__data_layers() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-  BEGIN
-    insert into deleted_data_layers (
-      data_source_id,
-      data_layer_id,
-      project_id,
-      data_upload_task_id,
-      bucket_id,
-      object_key,
-      outputs
-    ) select 
-        OLD.data_source_id,
-        data_layers.id, 
-        data_layers.project_id, 
-        data_sources.upload_task_id, 
-        data_sources.bucket_id, 
-        data_sources.object_key, 
-        data_upload_tasks.outputs
-      from data_layers 
-      inner join data_sources on data_sources.id = OLD.data_source_id 
-      inner join data_upload_tasks on data_upload_tasks.id = data_sources.upload_task_id 
-      where data_layers.id = OLD.id;
-      return OLD;
-    END;
   $$;
 
 
@@ -3295,6 +3305,66 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
     LANGUAGE sql
     AS $$
     update form_elements set background_image = null, background_color = null, layout = null, background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
+  $$;
+
+
+--
+-- Name: collect_text_from_prosemirror_body(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_text_from_prosemirror_body(body jsonb) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output text;
+      i jsonb;
+    begin
+      output = '';
+      if body ? 'text' then
+        output = concat(output, body->>'text');
+      end if;
+      if body ? 'content' then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          if length(output) > 32 then
+            return output;
+          else
+            output = concat(output, collect_text_from_prosemirror_body(i));
+          end if;
+        end loop;
+      end if;
+      return output;
+    end;
+  $$;
+
+
+--
+-- Name: collect_text_from_prosemirror_body_for_label(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_text_from_prosemirror_body_for_label(body jsonb) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output text;
+      i jsonb;
+    begin
+      output = '';
+      if body ? 'text' then
+        output = concat(output, body->>'text');
+      end if;
+      if body ? 'type' and body->>'type' != 'paragraph' and body ? 'content' then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          if length(output) > 32 then
+            return output;
+          elsif i ? 'type' and i->>'type' != 'paragraph' then
+            output = concat(output, collect_text_from_prosemirror_body(i));
+          end if;
+        end loop;
+      end if;
+      return output;
+    end;
   $$;
 
 
@@ -9668,16 +9738,33 @@ COMMENT ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) IS '
 CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETURNS jsonb
     LANGUAGE sql STABLE
     AS $$
-    select sketches.properties::jsonb || 
-        to_jsonb(
-          json_build_object(
-            'user_id', sketches.user_id, 
-            'created_at', sketches.created_at,
+    select sketches.properties || jsonb_build_object(
+            'userId', sketches.user_id, 
+            'createdAt', sketches.created_at,
+            'updatedAt', sketches.updated_at,
+            'sketchClassId', sketches.sketch_class_id,
             'user_slug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
-            'collection_id', sketches.collection_id, 
-            'name', sketches.name
-          )
-        )
+            'collectionId', sketches.collection_id, 
+            'isCollection', (select geometry_type = 'COLLECTION' from sketch_classes where id = sketches.sketch_class_id),
+            'name', sketches.name,
+            'userAttributes', (
+              select array_agg(jsonb_build_object(
+                'label', form_elements.generated_label,
+                'value', sketches.properties->form_elements.id::text,
+                'exportId', form_elements.generated_export_id,
+                'fieldType', form_elements.type_id
+              )) from form_elements where form_id = (
+                select id from forms where sketch_class_id = sketches.sketch_class_id
+              )
+            )
+          ) || (
+            select 
+              jsonb_object_agg(generated_export_id, sketches.properties->form_elements.id::text) 
+              from form_elements 
+              where form_id = (
+                select id from forms where sketch_class_id = sketches.sketch_class_id
+              )
+          ) 
     from sketches
     inner join user_profiles
     on user_profiles.user_id = sketches.user_id
@@ -9719,7 +9806,7 @@ CREATE FUNCTION public.slugify(value text, allow_unicode boolean) RETURNS text
         )
       )
     ),
-    E'[-\\s]+', '-', 'gi'
+    E'[-\\s]+', '_', 'gi'
   ) FROM "normalized";
 
 $$;
@@ -11115,15 +11202,6 @@ ALTER TABLE public.basemaps ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 
 
 --
--- Name: bbox; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.bbox (
-    st_extent public.box2d
-);
-
-
---
 -- Name: community_guidelines; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -11883,60 +11961,6 @@ ALTER TABLE public.sprites ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY 
 
 
 --
--- Name: style_template_groups; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.style_template_groups (
-    id integer NOT NULL,
-    name text NOT NULL,
-    CONSTRAINT style_template_groups_name_check CHECK (((char_length(name) <= 32) AND (char_length(name) >= 0)))
-);
-
-
---
--- Name: style_template_groups_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.style_template_groups ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.style_template_groups_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: style_templates; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.style_templates (
-    id integer NOT NULL,
-    project_id integer,
-    group_id integer,
-    mapbox_gl_styles jsonb NOT NULL,
-    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_styles)::text)) STORED,
-    render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
-    keywords text DEFAULT ''::text NOT NULL
-);
-
-
---
--- Name: style_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.style_templates ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.style_templates_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
 -- Name: survey_consent_documents; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -12612,22 +12636,6 @@ ALTER TABLE ONLY public.sprites
 
 
 --
--- Name: style_template_groups style_template_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_template_groups
-    ADD CONSTRAINT style_template_groups_pkey PRIMARY KEY (id);
-
-
---
--- Name: style_templates style_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_templates
-    ADD CONSTRAINT style_templates_pkey PRIMARY KEY (id);
-
-
---
 -- Name: survey_consent_documents survey_consent_documents_form_element_id_version_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -12994,416 +13002,10 @@ CREATE INDEX offline_tile_settings_basemap_id_idx ON public.offline_tile_setting
 
 
 --
--- Name: offline_tile_settings_basemap_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx1 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx10; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx10 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx11; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx11 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx12; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx12 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx13; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx13 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx14; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx14 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx15; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx15 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx16; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx16 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx17; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx17 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx18; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx18 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx19; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx19 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx2 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx20; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx20 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx21; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx21 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx22; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx22 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx23; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx23 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx24; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx24 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx25; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx25 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx26; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx26 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx27; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx27 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx28; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx28 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx29; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx29 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx3 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx4 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx5 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx6; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx6 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx7; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx7 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx8; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx8 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx9; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx9 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
 -- Name: offline_tile_settings_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX offline_tile_settings_project_id_idx ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx1 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx10; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx10 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx11; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx11 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx12; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx12 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx13; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx13 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx14; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx14 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx15; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx15 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx16; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx16 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx17; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx17 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx18; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx18 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx19; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx19 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx2 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx20; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx20 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx21; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx21 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx22; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx22 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx23; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx23 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx24; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx24 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx25; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx25 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx26; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx26 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx27; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx27 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx28; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx28 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx29; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx29 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx3 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx4 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx5 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx6; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx6 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx7; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx7 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx8; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx8 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx9; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx9 ON public.offline_tile_settings USING btree (project_id);
 
 
 --
@@ -13488,13 +13090,6 @@ CREATE INDEX project_invites_project_id_idx ON public.project_invites USING btre
 --
 
 CREATE INDEX project_invites_user_id_idx ON public.project_invites USING btree (user_id);
-
-
---
--- Name: project_invites_user_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX project_invites_user_id_idx1 ON public.project_invites USING btree (user_id);
 
 
 --
@@ -14851,22 +14446,6 @@ ALTER TABLE ONLY public.sprites
 --
 
 COMMENT ON CONSTRAINT sprites_project_id_fkey ON public.sprites IS '@omit';
-
-
---
--- Name: style_templates style_templates_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_templates
-    ADD CONSTRAINT style_templates_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.style_template_groups(id) ON DELETE SET NULL;
-
-
---
--- Name: style_templates style_templates_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_templates
-    ADD CONSTRAINT style_templates_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -17096,10 +16675,40 @@ GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boo
 
 
 --
+-- Name: FUNCTION armor(bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.armor(bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION armor(bytea, text[], text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.armor(bytea, text[], text[]) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION auto_create_profile(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.auto_create_profile() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION generate_export_id(id integer, export_id text, body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.generate_export_id(id integer, export_id text, body jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.generate_export_id(id integer, export_id text, body jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION generate_label(id integer, body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.generate_label(id integer, body jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.generate_label(id integer, body jsonb) TO anon;
 
 
 --
@@ -17250,13 +16859,6 @@ REVOKE ALL ON FUNCTION public.before_basemap_insert_create_interactivity_setting
 --
 
 REVOKE ALL ON FUNCTION public.before_delete_sketch_class_check_form_element_id() FROM PUBLIC;
-
-
---
--- Name: FUNCTION before_deleted__data_layers(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.before_deleted__data_layers() FROM PUBLIC;
 
 
 --
@@ -17658,6 +17260,22 @@ GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) T
 
 
 --
+-- Name: FUNCTION collect_text_from_prosemirror_body(body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_text_from_prosemirror_body(body jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.collect_text_from_prosemirror_body(body jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION collect_text_from_prosemirror_body_for_label(body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_text_from_prosemirror_body_for_label(body jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.collect_text_from_prosemirror_body_for_label(body jsonb) TO anon;
+
+
+--
 -- Name: FUNCTION confirm_onboarded(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -17900,19 +17518,11 @@ GRANT SELECT ON TABLE public.projects TO anon;
 
 
 --
--- Name: COLUMN projects.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.projects TO anon;
-
-
---
 -- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(name) ON TABLE public.projects TO anon;
 
 
 --
@@ -17921,21 +17531,6 @@ GRANT SELECT(name) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(description) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.legacy_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(legacy_id) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.slug; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 
 --
@@ -17944,7 +17539,6 @@ GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 
 
 --
@@ -17953,7 +17547,6 @@ GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 
 
 --
@@ -17962,7 +17555,6 @@ GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 
 
 --
@@ -17971,7 +17563,6 @@ GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 
 
 --
@@ -17979,21 +17570,6 @@ GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 --
 
 GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
-GRANT SELECT(is_featured) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.is_deleted; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_deleted) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.deleted_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 
 --
@@ -18002,7 +17578,6 @@ GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(region) ON TABLE public.projects TO anon;
 
 
 --
@@ -18011,7 +17586,6 @@ GRANT SELECT(region) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 
 
 --
@@ -18019,7 +17593,6 @@ GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 --
 
 GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(invite_email_subject) ON TABLE public.projects TO anon;
 
 
 --
@@ -18037,13 +17610,6 @@ GRANT SELECT(created_at) ON TABLE public.projects TO anon;
 
 
 --
--- Name: COLUMN projects.creator_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(creator_id) ON TABLE public.projects TO anon;
-
-
---
 -- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
 --
 
@@ -18055,7 +17621,6 @@ GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projec
 --
 
 GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(mapbox_public_key) ON TABLE public.projects TO anon;
 
 
 --
@@ -18235,6 +17800,13 @@ GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message
 --
 
 REVOKE ALL ON FUNCTION public.create_upload_task_job() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION crypt(text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
 
 
 --
@@ -18464,13 +18036,6 @@ GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE p
 
 
 --
--- Name: COLUMN data_sources.uploaded_source_filename; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(uploaded_source_filename) ON TABLE public.data_sources TO seasketch_user;
-
-
---
 -- Name: FUNCTION data_sources_uploaded_by(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18484,6 +18049,27 @@ GRANT ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_so
 
 REVOKE ALL ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION dearmor(text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.dearmor(text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.decrypt(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION decrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.decrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
 
 
 --
@@ -18523,6 +18109,20 @@ GRANT ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsIte
 
 REVOKE ALL ON FUNCTION public.deny_participant("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.deny_participant("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION digest(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.digest(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION digest(text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.digest(text, text) FROM PUBLIC;
 
 
 --
@@ -18622,6 +18222,20 @@ REVOKE ALL ON FUNCTION public.enablelongtransactions() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION encrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.encrypt(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION encrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.encrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION equals(geom1 public.geometry, geom2 public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18712,6 +18326,34 @@ GRANT ALL ON FUNCTION public.forms_form_elements(f public.forms) TO anon;
 
 REVOKE ALL ON FUNCTION public.forms_logic_rules(form public.forms) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.forms_logic_rules(form public.forms) TO anon;
+
+
+--
+-- Name: FUNCTION gen_random_bytes(integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_random_bytes(integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_random_uuid() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION gen_salt(text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_salt(text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION gen_salt(text, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_salt(text, integer) FROM PUBLIC;
 
 
 --
@@ -19570,6 +19212,20 @@ GRANT ALL ON FUNCTION public.has_session() TO anon;
 
 
 --
+-- Name: FUNCTION hmac(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION hmac(text, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION index(public.ltree, public.ltree); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20382,6 +20038,146 @@ REVOKE ALL ON FUNCTION public.pgis_geometry_union_finalfn(internal) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION pgp_armor_headers(text, OUT key text, OUT value text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_armor_headers(text, OUT key text, OUT value text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_key_id(bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_key_id(bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt(bytea, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt(text, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt(text, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt(bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt(text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt(text, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text, text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION point(public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21083,7 +20879,6 @@ GRANT ALL ON FUNCTION public.projects_sprites(p public.projects) TO seasketch_us
 --
 
 REVOKE ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) TO anon;
 
 

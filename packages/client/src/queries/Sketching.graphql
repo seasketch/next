@@ -204,6 +204,8 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
         isInput
         typeId
         body
+        generatedExportId
+        generatedLabel
       }
     }
   }

@@ -41,7 +41,7 @@ export function createExportId(id: number, body: any, exportId?: string) {
     return `form_element_${id}`;
   } else {
     const text = collectText(body);
-    if (text.length < 5) {
+    if (text.length < 2) {
       return `form_element_${id}`;
     } else {
       return slugify(text.toLowerCase(), "_").slice(0, 32);

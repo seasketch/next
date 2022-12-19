@@ -56,16 +56,10 @@ export default function SketchReportWindow({
       if (element.isInput) {
         attributes.push({
           fieldType: element.typeId,
-          exportId: createExportId(
-            element.id,
-            element.body,
-            element.exportId || undefined
-          ),
+          exportId: element.generatedExportId,
           value: properties[element.id],
           label:
-            element.typeId === "FeatureName"
-              ? "Name"
-              : collectQuestion(element.body) || "Unknown",
+            element.typeId === "FeatureName" ? "Name" : element.generatedLabel,
         });
       }
     }
@@ -161,7 +155,7 @@ export default function SketchReportWindow({
             src={data.sketchClass.geoprocessingClientUrl}
           />
         )}
-        {!data?.sketchClass?.geoprocessingClientUrl && (
+        {!loading && !data?.sketchClass?.geoprocessingClientUrl && (
           <div className="p-4">
             <Warning>
               <Trans ns="sketching">Reports not configured</Trans>
@@ -199,7 +193,7 @@ export function createExportId(id: number, body: any, exportId?: string) {
     return `form_element_${id}`;
   } else {
     const text = collectText(body);
-    if (text.length < 5) {
+    if (text.length < 2) {
       // eslint-disable-next-line i18next/no-literal-string
       return `form_element_${id}`;
     } else {

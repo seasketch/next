@@ -8,6 +8,8 @@ fragment SketchFormElement on FormElement {
   position
   typeId
   exportId
+  generatedExportId
+  generatedLabel
   type {
     componentName
     isInput

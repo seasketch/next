@@ -4083,6 +4083,8 @@ export type FormElement = Node & {
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
+  generatedExportId: Scalars['String'];
+  generatedLabel: Scalars['String'];
   id: Scalars['Int'];
   isInput?: Maybe<Scalars['Boolean']>;
   /** Users must provide input for these fields before submission. */
@@ -4193,6 +4195,8 @@ export type FormElementInput = {
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
+  generatedExportId?: Maybe<Scalars['String']>;
+  generatedLabel?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
@@ -4283,6 +4287,8 @@ export type FormElementPatch = {
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId?: Maybe<Scalars['Int']>;
+  generatedExportId?: Maybe<Scalars['String']>;
+  generatedLabel?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
@@ -8745,6 +8751,8 @@ export type Query = Node & {
    * We return "dev" if build cannot be determined from deployment environment.
    */
   build: Scalars['String'];
+  collectTextFromProsemirrorBody?: Maybe<Scalars['String']>;
+  collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
@@ -8797,6 +8805,8 @@ export type Query = Node & {
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
+  generateExportId?: Maybe<Scalars['String']>;
+  generateLabel?: Maybe<Scalars['String']>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
@@ -8988,6 +8998,18 @@ export type QueryBasemapsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCollectTextFromProsemirrorBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCollectTextFromProsemirrorBodyForLabelArgs = {
+  body?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -9201,6 +9223,21 @@ export type QueryForumArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryForumByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGenerateExportIdArgs = {
+  body?: Maybe<Scalars['JSON']>;
+  exportId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGenerateLabelArgs = {
+  body?: Maybe<Scalars['JSON']>;
+  id?: Maybe<Scalars['Int']>;
 };
 
 
@@ -15407,7 +15444,7 @@ export type SimpleProjectListQuery = (
 
 export type SketchFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
@@ -15844,7 +15881,7 @@ export type SketchReportingDetailsQuery = (
       & Pick<Form, 'id'>
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
-        & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body'>
+        & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body' | 'generatedExportId' | 'generatedLabel'>
       )>> }
     )> }
   )> }
@@ -17812,6 +17849,8 @@ export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
   position
   typeId
   exportId
+  generatedExportId
+  generatedLabel
   type {
     componentName
     isInput
@@ -19965,6 +20004,8 @@ export const SketchReportingDetailsDocument = /*#__PURE__*/ gql`
         isInput
         typeId
         body
+        generatedExportId
+        generatedLabel
       }
     }
   }

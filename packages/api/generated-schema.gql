@@ -4763,6 +4763,8 @@ type FormElement implements Node {
 
   """Form this field belongs to."""
   formId: Int!
+  generatedExportId: String!
+  generatedLabel: String!
   id: Int!
   isInput: Boolean
 
@@ -4922,6 +4924,8 @@ input FormElementInput {
 
   """Form this field belongs to."""
   formId: Int!
+  generatedExportId: String
+  generatedLabel: String
   id: Int
 
   """Users must provide input for these fields before submission."""
@@ -5048,6 +5052,8 @@ input FormElementPatch {
 
   """Form this field belongs to."""
   formId: Int
+  generatedExportId: String
+  generatedLabel: String
   id: Int
 
   """Users must provide input for these fields before submission."""
@@ -9896,6 +9902,8 @@ type Query implements Node {
   We return "dev" if build cannot be determined from deployment environment.
   """
   build: String!
+  collectTextFromProsemirrorBody(body: JSON): String
+  collectTextFromProsemirrorBodyForLabel(body: JSON): String
   communityGuideline(projectId: Int!): CommunityGuideline
 
   """Reads a single `CommunityGuideline` using its globally unique `ID`."""
@@ -10104,6 +10112,8 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Forum`."""
     nodeId: ID!
   ): Forum
+  generateExportId(body: JSON, exportId: String, id: Int): String
+  generateLabel(body: JSON, id: Int): String
   getDefaultDataSourcesBucket: String
 
   """Reads and enables pagination through a set of `Survey`."""
