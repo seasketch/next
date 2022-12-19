@@ -87,12 +87,9 @@ export default memo(function SketchingTools({
             console.warn("sketch access token is expiring. refetching...");
             refetch();
           }
-          if (expiresInHours < 2) {
-            refetch();
-          }
         };
         checker();
-        const intervalId = setInterval(checker, 120000);
+        const intervalId = setInterval(checker, 1000 * 60 * 5);
         return () => clearInterval(intervalId);
       }
     }
