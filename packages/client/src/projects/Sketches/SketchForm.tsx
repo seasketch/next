@@ -13,6 +13,7 @@ export default function SketchForm({
   submissionAttempted,
   formElements,
   editable,
+  onSubmissionRequested,
   ...props
 }: {
   startingProperties: { [id: number]: any };
@@ -20,6 +21,7 @@ export default function SketchForm({
     properties: SketchProperties,
     hasValidationErrors: boolean
   ) => void;
+  onSubmissionRequested?: () => void;
   submissionAttempted: boolean;
   formElements: SketchFormElementFragment[];
   editable?: boolean;
@@ -90,7 +92,11 @@ export default function SketchForm({
             }
           }}
           submissionAttempted={submissionAttempted}
-          onSubmit={noop}
+          onSubmit={
+            element.typeId === "FeatureName"
+              ? onSubmissionRequested || noop
+              : noop
+          }
           isSpatial={false}
           featureNumber={0}
           onRequestStageChange={noop}

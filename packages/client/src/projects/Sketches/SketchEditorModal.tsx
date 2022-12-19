@@ -473,6 +473,7 @@ export default function SketchEditorModal({
                   formElements={formElements}
                   submissionAttempted={submissionAttempted}
                   startingProperties={startingProperties}
+                  onSubmissionRequested={() => onSubmit()}
                 />
                 {geometryErrors && <Warning>{geometryErrors}</Warning>}
                 {hasValidationErrors && submissionAttempted && (
