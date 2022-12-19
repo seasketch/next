@@ -103,7 +103,6 @@ export default function SketchReportWindow({
             visibleLayers: [],
           },
         };
-        console.log(initMessage);
         // For local testing only
         if (/localhost/.test(geometryUri)) {
           const response = await fetch(geometryUri);
