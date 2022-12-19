@@ -73,10 +73,6 @@ export default function SketchReportWindow({
   }, [data?.sketchClass?.form?.formElements, data?.sketch?.properties]);
 
   useEffect(() => {
-    console.log({ iframeLoading });
-  }, [iframeLoading]);
-
-  useEffect(() => {
     const handler = async (e: MessageEvent<any>) => {
       if (
         e.data.frameId &&
