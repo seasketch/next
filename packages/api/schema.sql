@@ -24520,6 +24520,7 @@ REVOKE ALL ON FUNCTION public.trigger_set_timestamp() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.unaccent(text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.unaccent(text) TO anon;
 
 
 --
@@ -24527,6 +24528,7 @@ REVOKE ALL ON FUNCTION public.unaccent(text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.unaccent(regdictionary, text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.unaccent(regdictionary, text) TO anon;
 
 
 --
