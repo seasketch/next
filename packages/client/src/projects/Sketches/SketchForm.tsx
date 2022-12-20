@@ -103,9 +103,9 @@ export default function SketchForm({
           onRequestNext={noop}
           onRequestPrevious={noop}
           stage={0}
-          autoFocus={false}
           isSketchWorkflow={true}
           editable={editable}
+          autoFocus={element.typeId === "FeatureName"}
         />
       );
     },

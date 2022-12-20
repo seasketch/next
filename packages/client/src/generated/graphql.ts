@@ -5694,6 +5694,8 @@ export type Mutation = {
    * function again on userGeom. This ensures the value conforms to the
    * project's rules, and also benefits the user in that they need not submit
    * a huge geometry to the server.
+   *
+   * In the case of collections, the userGeom can be omitted.
    */
   createSketch?: Maybe<Sketch>;
   createSketchClassFromTemplate?: Maybe<CreateSketchClassFromTemplatePayload>;
@@ -6322,7 +6324,7 @@ export type MutationCreateSketchArgs = {
   name: Scalars['String'];
   properties: Scalars['JSON'];
   sketchClassId: Scalars['Int'];
-  userGeom: Scalars['GeoJSON'];
+  userGeom?: Maybe<Scalars['GeoJSON']>;
 };
 
 
@@ -15704,7 +15706,7 @@ export type SketchCrudResponseFragment = (
 export type CreateSketchMutationVariables = Exact<{
   name: Scalars['String'];
   sketchClassId: Scalars['Int'];
-  userGeom: Scalars['GeoJSON'];
+  userGeom?: Maybe<Scalars['GeoJSON']>;
   collectionId?: Maybe<Scalars['Int']>;
   folderId?: Maybe<Scalars['Int']>;
   properties: Scalars['JSON'];
@@ -23061,7 +23063,7 @@ export type CreateSketchFolderMutationHookResult = ReturnType<typeof useCreateSk
 export type CreateSketchFolderMutationResult = Apollo.MutationResult<CreateSketchFolderMutation>;
 export type CreateSketchFolderMutationOptions = Apollo.BaseMutationOptions<CreateSketchFolderMutation, CreateSketchFolderMutationVariables>;
 export const CreateSketchDocument = gql`
-    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON!, $collectionId: Int, $folderId: Int, $properties: JSON!) {
+    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON, $collectionId: Int, $folderId: Int, $properties: JSON!) {
   createSketch(
     name: $name
     sketchClassId: $sketchClassId

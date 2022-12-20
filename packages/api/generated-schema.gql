@@ -6811,6 +6811,8 @@ type Mutation {
   function again on userGeom. This ensures the value conforms to the
   project's rules, and also benefits the user in that they need not submit
   a huge geometry to the server.
+  
+  In the case of collections, the userGeom can be omitted.
   """
   createSketch(
     """Sketches can be assigned directly to a collection on creation."""
@@ -6827,7 +6829,7 @@ type Mutation {
     sketchClassId: Int!
 
     """Sketch as drawn by the user."""
-    userGeom: GeoJSON!
+    userGeom: GeoJSON
   ): Sketch
   createSketchClassFromTemplate(
     """

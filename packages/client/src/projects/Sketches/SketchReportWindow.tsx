@@ -7,11 +7,8 @@ import {
   useSketchReportingDetailsQuery,
 } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
-import { collectText, collectQuestion } from "../../admin/surveys/collectText";
-import slugify from "slugify";
 import Warning from "../../components/Warning";
 import { Trans } from "react-i18next";
-import { Card } from "../../components/CenteredCardListLayout";
 import Spinner from "../../components/Spinner";
 
 export default function SketchReportWindow({
@@ -155,17 +152,18 @@ export default function SketchReportWindow({
             src={data.sketchClass.geoprocessingClientUrl}
           />
         )}
-        {!loading && !data?.sketchClass?.geoprocessingClientUrl && (
+        {!loading && !data?.sketchClass?.geoprocessingClientUrl ? (
           <div className="p-4">
             <Warning>
               <Trans ns="sketching">Reports not configured</Trans>
             </Warning>
           </div>
-        )}
-        {iframeLoading && (
+        ) : iframeLoading ? (
           <div className="p-4 flex-1 z-50 flex items-center justify-center">
             <Spinner large />
           </div>
+        ) : (
+          ""
         )}
       </div>
     </div>,
@@ -174,30 +172,3 @@ export default function SketchReportWindow({
 }
 
 export type ReportWindowUIState = "left" | "right" | "docked";
-
-/**
- * Returns a useable stable identifier for the FormElement if a exportId is not
- * specified. Will attempt to extract text from the begining of
- * FormElement.body, if available. Otherwise returns form_element_{id}.
- *
- * @param id FormElement ID
- * @param body ProseMirror document from which text can be extracted to create an exportId
- * @param exportId The admin-defined exportId, if defined
- * @returns
- */
-export function createExportId(id: number, body: any, exportId?: string) {
-  if (exportId) {
-    return exportId;
-  } else if (!body) {
-    // eslint-disable-next-line i18next/no-literal-string
-    return `form_element_${id}`;
-  } else {
-    const text = collectText(body);
-    if (text.length < 2) {
-      // eslint-disable-next-line i18next/no-literal-string
-      return `form_element_${id}`;
-    } else {
-      return slugify(text.toLowerCase(), "_").slice(0, 32);
-    }
-  }
-}

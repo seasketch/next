@@ -76,7 +76,7 @@ fragment SketchCRUDResponse on Sketch {
 mutation CreateSketch(
   $name: String!
   $sketchClassId: Int!
-  $userGeom: GeoJSON!
+  $userGeom: GeoJSON
   $collectionId: Int
   $folderId: Int
   $properties: JSON!

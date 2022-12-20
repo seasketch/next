@@ -7,6 +7,7 @@ import {
   SketchEditorModalDetailsFragment,
   useUpdateSketchMutation,
   SketchCrudResponseFragment,
+  SketchGeometryType,
 } from "../../generated/graphql";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
@@ -141,7 +142,11 @@ export default function SketchEditorModal({
   );
 
   useEffect(() => {
-    if (sketch?.bbox && mapContext.manager?.map) {
+    if (
+      sketch?.bbox &&
+      mapContext.manager?.map &&
+      sketchClass.geometryType !== SketchGeometryType.Collection
+    ) {
       // If the sketch is not within the current viewport bounds, or is very
       // small or otherwise hard to see, zoom to it.
       const map = mapContext.manager.map;
@@ -183,7 +188,7 @@ export default function SketchEditorModal({
           : 150,
       });
     }
-  }, [sketch?.bbox, mapContext.manager?.map]);
+  }, [sketch?.bbox, mapContext.manager?.map, sketchClass.geometryType]);
 
   useEffect(() => {
     if (
@@ -279,7 +284,10 @@ export default function SketchEditorModal({
       return;
     }
 
-    if (!feature) {
+    if (
+      !feature &&
+      sketchClass.geometryType !== SketchGeometryType.Collection
+    ) {
       setGeometryErrors(t("You must finish your geometry first"));
       return;
     }
@@ -289,7 +297,10 @@ export default function SketchEditorModal({
       return;
     }
 
-    if (draw.digitizingState !== DigitizingState.NO_SELECTION) {
+    if (
+      sketchClass.geometryType !== SketchGeometryType.Collection &&
+      draw.digitizingState !== DigitizingState.NO_SELECTION
+    ) {
       setGeometryErrors(t("Please complete your geometry first"));
       return;
     }
@@ -302,7 +313,11 @@ export default function SketchEditorModal({
 
     // See if geometry has been changed.
     let geometryChanged = false;
-    if (sketch?.userGeom?.geojson) {
+    if (
+      feature &&
+      sketchClass.geometryType !== SketchGeometryType.Collection &&
+      sketch?.userGeom?.geojson
+    ) {
       const originalGeom = JSON.stringify(sketch.userGeom.geojson);
       const newGeom = JSON.stringify(feature.geometry);
       geometryChanged = originalGeom !== newGeom;
@@ -343,7 +358,7 @@ export default function SketchEditorModal({
     }
     const manager = mapContext.manager;
     if (manager && data) {
-      if (geometryChanged) {
+      if (geometryChanged && feature) {
         await manager.pushLocalSketchGeometryCopy(
           data.id,
           {
@@ -377,6 +392,7 @@ export default function SketchEditorModal({
     folderId,
     mapContext.manager,
     preprocessedGeometry,
+    sketchClass.geometryType,
   ]);
 
   useEffect(() => {

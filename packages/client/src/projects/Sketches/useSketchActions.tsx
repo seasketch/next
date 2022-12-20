@@ -31,6 +31,7 @@ import { DropdownOption } from "../../components/DropdownButton";
 import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 import { ReportWindowUIState } from "./SketchReportWindow";
 import { actions } from "react-table";
+import { SketchGeometryType } from "../../generated/queries";
 
 export interface SketchAction {
   id: string;
@@ -75,6 +76,8 @@ export default function useSketchActions({
   zoomTo,
   openSketchReport,
   clearOpenSketchReports,
+  showSketches,
+  hideSketches,
 }: {
   folderSelected: boolean;
   selectedSketchClasses: number[];
@@ -116,6 +119,8 @@ export default function useSketchActions({
   zoomTo: (bbox: number[]) => void;
   openSketchReport: (id: number, uiState?: ReportWindowUIState) => void;
   clearOpenSketchReports: () => void;
+  showSketches: (ids: string[]) => void;
+  hideSketches: (ids: string[]) => void;
 }) {
   const { t } = useTranslation("sketching");
   const client = useApolloClient();
@@ -127,6 +132,10 @@ export default function useSketchActions({
     create: [],
     edit: [],
   });
+  const isCollection =
+    selectedSketchClasses.length === 1 &&
+    sketchClasses?.find((c) => c.id === selectedSketchClasses[0])
+      ?.geometryType === SketchGeometryType.Collection;
   const { prompt, confirmDelete } = useDialog();
   const history = useHistory();
   const [createFolder] = useCreateSketchFolderMutation({
@@ -340,6 +349,10 @@ export default function useSketchActions({
                       keycode: "e",
                       action: ({ selectedSketches, setEditor }) => {
                         clearOpenSketchReports();
+                        showSketches(
+                          // eslint-disable-next-line i18next/no-literal-string
+                          selectedSketches.map((s) => `Sketch:${s.id}`)
+                        );
                         setTimeout(() => {
                           history.replace(`/${getSlug()}/app`);
                           setEditor({
@@ -418,7 +431,7 @@ export default function useSketchActions({
                   });
                 },
               },
-              ...(selectedSketchClasses && !folderSelected
+              ...(selectedSketchClasses && !folderSelected && !isCollection
                 ? ([
                     {
                       id: "zoom-to",

@@ -257,6 +257,19 @@ export default memo(function SketchingTools({
     [setOpenReports, data?.projectBySlug?.mySketches]
   );
 
+  const [showSketches, hideSketches] = useMemo(() => {
+    const showSketches = (ids: string[]) =>
+      setVisibleSketches((prev) => [
+        ...prev.filter((id) => ids.indexOf(id) === -1),
+        ...ids,
+      ]);
+    const hideSketches = (ids: string[]) =>
+      setVisibleSketches((prev) => [
+        ...prev.filter((id) => ids.indexOf(id) === -1),
+      ]);
+    return [showSketches, hideSketches];
+  }, [setVisibleSketches]);
+
   const clearOpenSketchReports = useCallback(() => {
     setOpenReports([]);
   }, [setOpenReports]);
@@ -285,6 +298,8 @@ export default memo(function SketchingTools({
     zoomTo,
     openSketchReport,
     clearOpenSketchReports,
+    showSketches,
+    hideSketches,
   });
 
   useEffect(() => {

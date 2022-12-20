@@ -167,21 +167,19 @@ function FolderItem({
       }}
     >
       <span className={`flex items-center text-sm space-x-0.5 ${className}`}>
-        {
-          <button
-            title={numChildren === 0 ? "Empty" : "Expand"}
-            className={!numChildren || numChildren < 1 ? "opacity-50" : ""}
-            onClick={(e) => {
-              if (onExpand) {
-                onExpand(node, !isExpanded);
-                e.preventDefault();
-                e.stopPropagation();
-              }
-            }}
-          >
-            <ArrowIcon isOpen={isExpanded || false} />
-          </button>
-        }
+        <button
+          title={numChildren === 0 ? "Empty" : "Expand"}
+          className={!numChildren || numChildren < 1 ? "opacity-50" : ""}
+          onClick={(e) => {
+            if (onExpand) {
+              onExpand(node, !isExpanded);
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+        >
+          <ArrowIcon isOpen={isExpanded || false} />
+        </button>
         {
           <VisibilityCheckbox
             onClick={() => {
