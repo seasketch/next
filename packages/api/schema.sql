@@ -9777,7 +9777,7 @@ COMMENT ON FUNCTION public.shared_basemaps() IS '
 CREATE FUNCTION public.sketch_as_geojson(id integer) RETURNS jsonb
     LANGUAGE sql
     AS $$
-    SELECT json_build_object(
+    SELECT jsonb_build_object(
       'type', 'Feature',
       'id',         sketches.id,
       'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
