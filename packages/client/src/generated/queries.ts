@@ -5946,7 +5946,6 @@ export type Mutation = {
   setUserGroups?: Maybe<SetUserGroupsPayload>;
   /** Superusers only. Promote a sprite to be globally available. */
   shareSprite?: Maybe<ShareSpritePayload>;
-  sketchAsGeojson?: Maybe<SketchAsGeojsonPayload>;
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
@@ -6937,12 +6936,6 @@ export type MutationSetUserGroupsArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationShareSpriteArgs = {
   input: ShareSpriteInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationSketchAsGeojsonArgs = {
-  input: SketchAsGeojsonInput;
 };
 
 
@@ -10167,6 +10160,13 @@ export type ShareSpritePayload = {
 export type Sketch = Node & {
   __typename?: 'Sketch';
   bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
+  /**
+   * If the sketch is a collection, includes an array of properties for all
+   * sketches that belong to it. These objects will match the `properties` member
+   * of the GeoJSON Feature representation of each sketch. This can be passed to
+   * report clients in the initialization message.
+   */
+  childProperties?: Maybe<Scalars['JSON']>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
@@ -10218,6 +10218,7 @@ export type Sketch = Node & {
   updatedAt: Scalars['Datetime'];
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
+  userAttributes?: Maybe<Scalars['JSON']>;
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
@@ -10225,29 +10226,6 @@ export type Sketch = Node & {
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
-};
-
-/** All input for the `sketchAsGeojson` mutation. */
-export type SketchAsGeojsonInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `sketchAsGeojson` mutation. */
-export type SketchAsGeojsonPayload = {
-  __typename?: 'SketchAsGeojsonPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  json?: Maybe<Scalars['JSON']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
 };
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
@@ -15786,7 +15764,7 @@ export type RenameFolderMutation = (
 
 export type SketchEditorModalDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'properties'>
+  & Pick<Sketch, 'properties' | 'userAttributes'>
   & { userGeom?: Maybe<(
     { __typename?: 'GeometryGeometryCollection' }
     & Pick<GeometryGeometryCollection, 'geojson'>
@@ -15874,7 +15852,7 @@ export type SketchReportingDetailsQuery = (
   { __typename?: 'Query' }
   & { sketch?: Maybe<(
     { __typename?: 'Sketch' }
-    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties'>
+    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties'>
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
@@ -17909,6 +17887,7 @@ export const SketchEditorModalDetailsFragmentDoc = /*#__PURE__*/ gql`
     geojson
   }
   properties
+  userAttributes
   sketchClass {
     ...SketchingDetails
   }
@@ -19991,6 +19970,8 @@ export const SketchReportingDetailsDocument = /*#__PURE__*/ gql`
     createdAt
     updatedAt
     properties
+    userAttributes
+    childProperties
   }
   sketchClass(id: $sketchClassId) {
     id

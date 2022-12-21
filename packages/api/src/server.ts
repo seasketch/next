@@ -278,11 +278,11 @@ app.use(
       const id = parseInt(req.params.id);
       const { rows } = await client.query(
         `
-          SELECT sketch_as_geojson($1)
+          SELECT sketch_or_collection_as_geojson($1)
           `,
         [id]
       );
-      const geojson = rows[0].sketch_as_geojson;
+      const geojson = rows[0].sketch_or_collection_as_geojson;
       console.log("geojson", geojson);
       await client.query("COMMIT");
       await client.release();

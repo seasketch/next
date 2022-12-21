@@ -522,6 +522,16 @@ CREATE TYPE public.render_under_type AS ENUM (
 
 
 --
+-- Name: sketch_child_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.sketch_child_type AS ENUM (
+    'sketch',
+    'sketch_folder'
+);
+
+
+--
 -- Name: sketch_geometry_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -3369,6 +3379,32 @@ CREATE FUNCTION public.collect_text_from_prosemirror_body_for_label(body jsonb) 
 
 
 --
+-- Name: collection_as_geojson(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collection_as_geojson(id integer) RETURNS jsonb
+    LANGUAGE sql
+    AS $$
+    select jsonb_build_object(
+      'type', 'FeatureCollection',
+      'id', sketches.id,
+      'properties', sketches_geojson_properties(sketches.*),
+      'features', (select jsonb_agg(sketch_as_geojson(sketches.id)) from sketches where id = any(
+        (select unnest(get_child_sketches_recursive(collection_as_geojson.id, 'sketch')))
+      ))
+    ) from sketches
+    where sketches.id = collection_as_geojson.id;
+  $$;
+
+
+--
+-- Name: FUNCTION collection_as_geojson(id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.collection_as_geojson(id integer) IS '@omit';
+
+
+--
 -- Name: confirm_onboarded(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5971,6 +6007,125 @@ CREATE FUNCTION public.generate_offline_tile_package("projectId" integer, "dataS
 
 
 --
+-- Name: get_child_sketches_recursive(integer, public.sketch_child_type); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_child_sketches_recursive(parent_id integer, child_type public.sketch_child_type) RETURNS integer[]
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    ids int[] = '{}';
+    child_ids int[];
+    child record;
+  begin
+    if child_type = 'sketch' then
+      FOR child IN SELECT * FROM get_children_of_collection(parent_id)
+      LOOP
+      if child.type = 'sketch' and child.is_leaf then
+        ids := ids || child.id;
+      end if;
+      if child.is_leaf = false then
+        select get_child_sketches_recursive(child.id, child.type) into child_ids;
+        ids := ids || child_ids;
+      end if;
+      END LOOP;
+    else
+      FOR child IN SELECT * FROM get_children_of_folder(parent_id)
+      LOOP
+      if child.type = 'sketch' and child.is_leaf then
+        ids := ids || child.id;
+      end if;
+      if child.is_leaf = false then
+        select get_child_sketches_recursive(child.id, child.type) into child_ids;
+        ids := ids || child_ids;
+      end if;
+      END LOOP;
+    end if;
+    return ids;
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_child_sketches_recursive(parent_id integer, child_type public.sketch_child_type); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_child_sketches_recursive(parent_id integer, child_type public.sketch_child_type) IS '@omit';
+
+
+--
+-- Name: get_children_of_collection(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_children_of_collection("collectionId" integer) RETURNS TABLE(id integer, type public.sketch_child_type, name text, is_leaf boolean)
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    return query select
+      sketches.id as id,
+      'sketch'::sketch_child_type as type,
+      sketches.name,
+      is_collection(sketches.sketch_class_id) = false as is_leaf
+    from sketches
+    where
+      collection_id = "collectionId"
+    union ALL
+    select
+      sketch_folders.id as id,
+      'sketch_folder'::sketch_child_type as type,
+      sketch_folders.name,
+      false as is_leaf
+    from sketch_folders
+    where
+      collection_id = "collectionId";
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_children_of_collection("collectionId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_children_of_collection("collectionId" integer) IS '@omit';
+
+
+--
+-- Name: get_children_of_folder(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_children_of_folder("folderId" integer) RETURNS TABLE(id integer, type public.sketch_child_type, name text, is_leaf boolean)
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    return query select
+      sketches.id as id,
+      'sketch'::sketch_child_type as type,
+      sketches.name,
+      is_collection(sketches.sketch_class_id) = false as is_leaf
+    from sketches
+    where
+      folder_id = "folderId"
+    union ALL
+    select
+      sketch_folders.id,
+      'sketch_folder'::sketch_child_type as type,
+      sketch_folders.name,
+      false as is_leaf
+    from sketch_folders
+    where
+      folder_id = "folderId";
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_children_of_folder("folderId" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_children_of_folder("folderId" integer) IS '@omit';
+
+
+--
 -- Name: get_or_create_user_by_sub(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6333,6 +6488,24 @@ $$;
 --
 
 COMMENT ON FUNCTION public.is_admin(_project_id integer, _user_id integer) IS '@omit';
+
+
+--
+-- Name: is_collection(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_collection(sketch_class_id integer) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select geometry_type = 'COLLECTION' from sketch_classes where id = sketch_class_id;
+  $$;
+
+
+--
+-- Name: FUNCTION is_collection(sketch_class_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.is_collection(sketch_class_id integer) IS '@omit';
 
 
 --
@@ -9602,27 +9775,25 @@ COMMENT ON FUNCTION public.shared_basemaps() IS '
 --
 
 CREATE FUNCTION public.sketch_as_geojson(id integer) RETURNS jsonb
-    LANGUAGE plpgsql
+    LANGUAGE sql
     AS $$
-  declare
-    output jsonb;
-  begin
     SELECT json_build_object(
       'type', 'Feature',
-      'type',       'Feature',
       'id',         sketches.id,
       'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
       'bbox', sketches.bbox,
       'properties', sketches_geojson_properties(sketches.*)
     ) 
     FROM sketches
-    inner join user_profiles
-    on user_profiles.user_id = sketches.user_id
-    where sketches.id = sketch_as_geojson.id 
-    into output;
-    return output;
-  end;
+    where sketches.id = sketch_as_geojson.id;
 $$;
+
+
+--
+-- Name: FUNCTION sketch_as_geojson(id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketch_as_geojson(id integer) IS '@omit';
 
 
 --
@@ -9714,6 +9885,60 @@ COMMENT ON FUNCTION public.sketch_classes_valid_children(sketch_class public.ske
 
 
 --
+-- Name: sketch_or_collection_as_geojson(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketch_or_collection_as_geojson(id integer) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+    declare
+      output jsonb;
+    begin
+      if (select is_collection(sketches.sketch_class_id) from sketches where sketches.id = sketch_or_collection_as_geojson.id) then
+        select collection_as_geojson(sketch_or_collection_as_geojson.id) into output;
+      else
+        select sketch_as_geojson(sketch_or_collection_as_geojson.id) into output;
+      end if;
+      return output;
+    end
+  $$;
+
+
+--
+-- Name: FUNCTION sketch_or_collection_as_geojson(id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketch_or_collection_as_geojson(id integer) IS '@omit';
+
+
+--
+-- Name: sketches_child_properties(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_child_properties(sketch public.sketches) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+    declare
+      output jsonb;
+    begin
+      if (select is_collection(sketch_class_id) from sketches where id = sketch.id) then
+        select jsonb_agg(sketches_geojson_properties(sketches.*)) into output from sketches where id = any(
+          (select unnest(get_child_sketches_recursive(sketch.id, 'sketch')))
+        );
+      end if;
+      return output;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION sketches_child_properties(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_child_properties(sketch public.sketches) IS 'If the sketch is a collection, includes an array of properties for all sketches that belong to it. These objects will match the `properties` member of the GeoJSON Feature representation of each sketch. This can be passed to report clients in the initialization message.';
+
+
+--
 -- Name: sketches_geojson_feature(public.sketches); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9738,7 +9963,8 @@ COMMENT ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) IS '
 CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETURNS jsonb
     LANGUAGE sql STABLE
     AS $$
-    select sketches.properties || jsonb_build_object(
+    select jsonb_build_object(
+            'id', sketches.id,
             'userId', sketches.user_id, 
             'createdAt', sketches.created_at,
             'updatedAt', sketches.updated_at,
@@ -9747,28 +9973,36 @@ CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETUR
             'collectionId', sketches.collection_id, 
             'isCollection', (select geometry_type = 'COLLECTION' from sketch_classes where id = sketches.sketch_class_id),
             'name', sketches.name,
-            'userAttributes', (
-              select array_agg(jsonb_build_object(
-                'label', form_elements.generated_label,
-                'value', sketches.properties->form_elements.id::text,
-                'exportId', form_elements.generated_export_id,
-                'fieldType', form_elements.type_id
-              )) from form_elements where form_id = (
-                select id from forms where sketch_class_id = sketches.sketch_class_id
-              )
-            )
-          ) || (
+            'userAttributes', sketches_user_attributes(sketch)) || sketches.properties || (
             select 
-              jsonb_object_agg(generated_export_id, sketches.properties->form_elements.id::text) 
+              coalesce(jsonb_object_agg(generated_export_id, sketches.properties->form_elements.id::text), '{}'::jsonb)
               from form_elements 
               where form_id = (
                 select id from forms where sketch_class_id = sketches.sketch_class_id
-              )
+              ) and type_id != 'FeatureName'
           ) 
     from sketches
     inner join user_profiles
     on user_profiles.user_id = sketches.user_id
     where sketches.id = sketch.id;
+  $$;
+
+
+--
+-- Name: sketches_user_attributes(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_user_attributes(sketch public.sketches) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+    select jsonb_agg(jsonb_build_object(
+                'label', form_elements.generated_label,
+                'value', sketch.properties->form_elements.id::text,
+                'exportId', form_elements.generated_export_id,
+                'fieldType', form_elements.type_id
+              )) from form_elements where form_id = (
+                select id from forms where sketch_class_id = sketch.sketch_class_id
+              ) and type_id != 'FeatureName';
   $$;
 
 
@@ -11397,6 +11631,15 @@ COMMENT ON COLUMN public.email_notification_preferences.notify_on_reply IS '
 If set, users should receive realtime notifications of responses to discussion
 forum threads for which they are a participant.
 ';
+
+
+--
+-- Name: foo; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.foo (
+    get_children_recursive integer[]
+);
 
 
 --
@@ -17276,6 +17519,14 @@ GRANT ALL ON FUNCTION public.collect_text_from_prosemirror_body_for_label(body j
 
 
 --
+-- Name: FUNCTION collection_as_geojson(id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collection_as_geojson(id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.collection_as_geojson(id integer) TO anon;
+
+
+--
 -- Name: FUNCTION confirm_onboarded(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19114,6 +19365,30 @@ REVOKE ALL ON FUNCTION public.geomfromewkt(text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION get_child_sketches_recursive(parent_id integer, child_type public.sketch_child_type); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_child_sketches_recursive(parent_id integer, child_type public.sketch_child_type) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_child_sketches_recursive(parent_id integer, child_type public.sketch_child_type) TO anon;
+
+
+--
+-- Name: FUNCTION get_children_of_collection("collectionId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_children_of_collection("collectionId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_children_of_collection("collectionId" integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_children_of_folder("folderId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_children_of_folder("folderId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_children_of_folder("folderId" integer) TO anon;
+
+
+--
 -- Name: FUNCTION get_or_create_user_by_sub(_sub text, OUT user_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19274,6 +19549,14 @@ REVOKE ALL ON FUNCTION public.initialize_survey_form_from_template(survey_id int
 --
 
 REVOKE ALL ON FUNCTION public.is_admin(_project_id integer, _user_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION is_collection(sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_collection(sketch_class_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.is_collection(sketch_class_id integer) TO anon;
 
 
 --
@@ -21368,6 +21651,22 @@ GRANT ALL ON FUNCTION public.sketch_classes_valid_children(sketch_class public.s
 
 
 --
+-- Name: FUNCTION sketch_or_collection_as_geojson(id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketch_or_collection_as_geojson(id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketch_or_collection_as_geojson(id integer) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_child_properties(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_child_properties(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_child_properties(sketch public.sketches) TO anon;
+
+
+--
 -- Name: FUNCTION sketches_geojson_feature(sketch public.sketches); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21381,6 +21680,14 @@ GRANT ALL ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) TO
 
 REVOKE ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_user_attributes(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_user_attributes(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_user_attributes(sketch public.sketches) TO anon;
 
 
 --

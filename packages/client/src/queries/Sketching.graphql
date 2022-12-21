@@ -140,6 +140,7 @@ fragment SketchEditorModalDetails on Sketch {
     geojson
   }
   properties
+  userAttributes
   sketchClass {
     ...SketchingDetails
   }
@@ -189,6 +190,8 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     createdAt
     updatedAt
     properties
+    userAttributes
+    childProperties
   }
   sketchClass(id: $sketchClassId) {
     id

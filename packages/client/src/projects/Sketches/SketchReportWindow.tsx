@@ -41,28 +41,6 @@ export default function SketchReportWindow({
 
   const iframe = useRef<HTMLIFrameElement>(null);
 
-  const userAttributes = useMemo(() => {
-    const properties = data?.sketch?.properties || {};
-    const attributes: {
-      exportId: string;
-      label: string;
-      fieldType: string;
-      value: any;
-    }[] = [];
-    for (const element of data?.sketchClass?.form?.formElements || []) {
-      if (element.isInput) {
-        attributes.push({
-          fieldType: element.typeId,
-          exportId: element.generatedExportId,
-          value: properties[element.id],
-          label:
-            element.typeId === "FeatureName" ? "Name" : element.generatedLabel,
-        });
-      }
-    }
-    return attributes;
-  }, [data?.sketchClass?.form?.formElements, data?.sketch?.properties]);
-
   useEffect(() => {
     const handler = async (e: MessageEvent<any>) => {
       if (
@@ -89,9 +67,15 @@ export default function SketchReportWindow({
             sketchClassId: sketchClassId,
             isCollection:
               data?.sketchClass?.geometryType === SketchGeometryType.Collection,
-            userAttributes,
+            userAttributes: data?.sketch?.userAttributes || [],
             // TODO: populate this from map context
             visibleLayers: [],
+            ...(data?.sketchClass?.geometryType ===
+            SketchGeometryType.Collection
+              ? {
+                  childProperties: data.sketch?.childProperties || [],
+                }
+              : {}),
           },
         };
         // For local testing only
@@ -120,8 +104,9 @@ export default function SketchReportWindow({
     data?.sketch?.name,
     data?.sketch?.createdAt,
     data?.sketch?.updatedAt,
+    data?.sketch?.userAttributes,
+    data?.sketch?.childProperties,
     sketchClassId,
-    userAttributes,
     reportingAccessToken,
   ]);
 

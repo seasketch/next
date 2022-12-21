@@ -170,7 +170,7 @@ export default function useSketchingSelectionState({
               <p class=""><span>${
                 feature.properties!.user_slug || feature.properties!.user_id
               }</span> ${t("created this sketch on ")}${new Date(
-                  feature.properties!.created_at
+                  feature.properties!.createdAt
                 ).toLocaleDateString()}</p>
                 <button id="popup-edit-sketch" class="underline">edit</button>
                 </div>
