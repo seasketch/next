@@ -69,6 +69,7 @@ query layersAndSourcesForItems(
         shortTemplate
         type
       }
+      staticId
       sprites {
         id
         spriteImages {
@@ -219,6 +220,7 @@ query GetLayerItem($id: Int!) {
       renderUnder
       sourceLayer
       sublayer
+      staticId
       sprites {
         id
         spriteImages {
@@ -308,6 +310,7 @@ mutation UpdateLayer(
   $renderUnder: RenderUnderType
   $mapboxGlStyles: JSON
   $sublayer: String
+  $staticId: String
 ) {
   updateDataLayer(
     input: {
@@ -316,6 +319,7 @@ mutation UpdateLayer(
         renderUnder: $renderUnder
         mapboxGlStyles: $mapboxGlStyles
         sublayer: $sublayer
+        staticId: $staticId
       }
     }
   ) {
@@ -325,6 +329,7 @@ mutation UpdateLayer(
       renderUnder
       mapboxGlStyles
       sublayer
+      staticId
       sprites {
         id
         spriteImages {

@@ -67,6 +67,7 @@ mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 interface LayerState {
   visible: true;
   loading: boolean;
+  staticId?: string | null;
   error?: Error;
 }
 
@@ -117,7 +118,12 @@ export type ClientSprite = {
 
 export type ClientDataLayer = Pick<
   DataLayer,
-  "mapboxGlStyles" | "renderUnder" | "sourceLayer" | "sublayer" | "zIndex"
+  | "mapboxGlStyles"
+  | "renderUnder"
+  | "sourceLayer"
+  | "sublayer"
+  | "zIndex"
+  | "staticId"
 > & {
   /** IDs from the server are Int. Temporary client IDs are UUID v4 */
   id: string | number;
@@ -681,6 +687,14 @@ class MapContextManager {
   }
 
   private hideLayerId(id: string) {
+    let layer: ClientDataLayer | undefined = this.layers[id];
+    if (!layer) {
+      // Look to see if a staticId is being used
+      layer = Object.values(this.layers).find((l) => l.staticId === id);
+    }
+    if (layer) {
+      id = layer.id.toString();
+    }
     delete this.visibleLayers[id];
     const key = this.layers[id]?.dataSourceId?.toString();
     if (key) {
@@ -689,6 +703,14 @@ class MapContextManager {
   }
 
   private showLayerId(id: string) {
+    let layer: ClientDataLayer | undefined = this.layers[id];
+    if (!layer) {
+      // Look to see if a staticId is being used
+      layer = Object.values(this.layers).find((l) => l.staticId === id);
+    }
+    if (layer) {
+      id = layer.id.toString();
+    }
     if (this.visibleLayers[id]) {
       const state = this.visibleLayers[id];
       if (state.error) {
@@ -703,6 +725,7 @@ class MapContextManager {
       this.visibleLayers[id] = {
         loading: true,
         visible: true,
+        staticId: layer?.staticId,
       };
     }
   }
@@ -720,6 +743,7 @@ class MapContextManager {
       this.internalState.sketchLayerStates[id] = {
         loading: true,
         visible: true,
+        staticId: this.layers[id]?.staticId,
       };
     }
     // update public state

@@ -194,6 +194,8 @@ export function SketchClassTemplateIcon({
               return <PolygonIcon className="w-8 h-8" />;
             case SketchGeometryType.Linestring:
               return <LineIcon className="w-8 h-8" />;
+            case SketchGeometryType.Collection:
+              return <CollectionIcon className="w-8 h-8" />;
             default:
               return "";
           }
@@ -245,6 +247,25 @@ export function MPAIcon({ className }: { className?: string }) {
         }}
         stroke="currentColor"
         d="M 9.459 15.763 L 7.738 13.515"
+      />
+    </svg>
+  );
+}
+
+export function CollectionIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      className={className}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
       />
     </svg>
   );

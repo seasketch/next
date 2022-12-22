@@ -639,13 +639,15 @@ export default function useMapboxGLDraw(
 function glDrawMode(
   isSmall: boolean,
   geometryType: SketchGeometryType
-): "draw_line_string" | "draw_point" | "draw_polygon" {
+): "draw_line_string" | "draw_point" | "draw_polygon" | "simple_select" {
   if (geometryType === SketchGeometryType.Point) {
     return "draw_point";
   } else if (geometryType === SketchGeometryType.Linestring) {
     return "draw_line_string";
   } else if (geometryType === SketchGeometryType.Polygon) {
     return "draw_polygon";
+  } else if (geometryType === SketchGeometryType.Collection) {
+    return "simple_select";
   }
   throw new Error("Not implemented");
 }

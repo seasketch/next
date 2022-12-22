@@ -1665,6 +1665,15 @@ export type DataLayer = Node & {
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
   /**
+   * Used as a stable reference identifier for the layer. In the event that the
+   * layer is completely replaced, this ID can be assigned to the new one.
+   * Geoprocessing Clients (reports) are an important use case for these IDs, which
+   * they use to toggle layers on and off. Map Bookmarks will also use this
+   * identifier if present. In both cases, the numeric ID of DataLayers can be used
+   * but this is more likely to change.
+   */
+  staticId?: Maybe<Scalars['String']>;
+  /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
@@ -1747,6 +1756,15 @@ export type DataLayerInput = {
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /**
+   * Used as a stable reference identifier for the layer. In the event that the
+   * layer is completely replaced, this ID can be assigned to the new one.
+   * Geoprocessing Clients (reports) are an important use case for these IDs, which
+   * they use to toggle layers on and off. Map Bookmarks will also use this
+   * identifier if present. In both cases, the numeric ID of DataLayers can be used
+   * but this is more likely to change.
+   */
+  staticId?: Maybe<Scalars['String']>;
+  /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
@@ -1774,6 +1792,15 @@ export type DataLayerPatch = {
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * Used as a stable reference identifier for the layer. In the event that the
+   * layer is completely replaced, this ID can be assigned to the new one.
+   * Geoprocessing Clients (reports) are an important use case for these IDs, which
+   * they use to toggle layers on and off. Map Bookmarks will also use this
+   * identifier if present. In both cases, the numeric ID of DataLayers can be used
+   * but this is more likely to change.
+   */
+  staticId?: Maybe<Scalars['String']>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
@@ -4085,6 +4112,8 @@ export type FormElement = Node & {
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
+  generatedExportId: Scalars['String'];
+  generatedLabel: Scalars['String'];
   id: Scalars['Int'];
   isInput?: Maybe<Scalars['Boolean']>;
   /** Users must provide input for these fields before submission. */
@@ -4195,6 +4224,8 @@ export type FormElementInput = {
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
+  generatedExportId?: Maybe<Scalars['String']>;
+  generatedLabel?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
@@ -4285,6 +4316,8 @@ export type FormElementPatch = {
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId?: Maybe<Scalars['Int']>;
+  generatedExportId?: Maybe<Scalars['String']>;
+  generatedLabel?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
@@ -5688,6 +5721,8 @@ export type Mutation = {
    * function again on userGeom. This ensures the value conforms to the
    * project's rules, and also benefits the user in that they need not submit
    * a huge geometry to the server.
+   *
+   * In the case of collections, the userGeom can be omitted.
    */
   createSketch?: Maybe<Sketch>;
   createSketchClassFromTemplate?: Maybe<CreateSketchClassFromTemplatePayload>;
@@ -5940,7 +5975,6 @@ export type Mutation = {
   setUserGroups?: Maybe<SetUserGroupsPayload>;
   /** Superusers only. Promote a sprite to be globally available. */
   shareSprite?: Maybe<ShareSpritePayload>;
-  sketchAsGeojson?: Maybe<SketchAsGeojsonPayload>;
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
@@ -6316,7 +6350,7 @@ export type MutationCreateSketchArgs = {
   name: Scalars['String'];
   properties: Scalars['JSON'];
   sketchClassId: Scalars['Int'];
-  userGeom: Scalars['GeoJSON'];
+  userGeom?: Maybe<Scalars['GeoJSON']>;
 };
 
 
@@ -6931,12 +6965,6 @@ export type MutationSetUserGroupsArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationShareSpriteArgs = {
   input: ShareSpriteInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationSketchAsGeojsonArgs = {
-  input: SketchAsGeojsonInput;
 };
 
 
@@ -7974,6 +8002,13 @@ export type Project = Node & {
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
+  /**
+   * This token can be used to access this user's sketches from the geojson endpoint.
+   * For example, `/sketches/123.geojson.json?access_token=xxx`
+   * Returns null if user is not singed in. Can be used only for a single
+   * project. Must be refreshed occasionally.
+   */
+  sketchGeometryToken?: Maybe<Scalars['String']>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `Sprite`. */
@@ -8740,6 +8775,8 @@ export type Query = Node & {
    * We return "dev" if build cannot be determined from deployment environment.
    */
   build: Scalars['String'];
+  collectTextFromProsemirrorBody?: Maybe<Scalars['String']>;
+  collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
   communityGuidelineByNodeId?: Maybe<CommunityGuideline>;
@@ -8792,6 +8829,8 @@ export type Query = Node & {
   forum?: Maybe<Forum>;
   /** Reads a single `Forum` using its globally unique `ID`. */
   forumByNodeId?: Maybe<Forum>;
+  generateExportId?: Maybe<Scalars['String']>;
+  generateLabel?: Maybe<Scalars['String']>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
@@ -8983,6 +9022,18 @@ export type QueryBasemapsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCollectTextFromProsemirrorBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCollectTextFromProsemirrorBodyForLabelArgs = {
+  body?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -9196,6 +9247,21 @@ export type QueryForumArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryForumByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGenerateExportIdArgs = {
+  body?: Maybe<Scalars['JSON']>;
+  exportId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGenerateLabelArgs = {
+  body?: Maybe<Scalars['JSON']>;
+  id?: Maybe<Scalars['Int']>;
 };
 
 
@@ -10123,6 +10189,13 @@ export type ShareSpritePayload = {
 export type Sketch = Node & {
   __typename?: 'Sketch';
   bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
+  /**
+   * If the sketch is a collection, includes an array of properties for all
+   * sketches that belong to it. These objects will match the `properties` member
+   * of the GeoJSON Feature representation of each sketch. This can be passed to
+   * report clients in the initialization message.
+   */
+  childProperties?: Maybe<Scalars['JSON']>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
@@ -10174,6 +10247,7 @@ export type Sketch = Node & {
   updatedAt: Scalars['Datetime'];
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
+  userAttributes?: Maybe<Scalars['JSON']>;
   /**
    * Spatial feature the user directly digitized, without preprocessing. This is
    * the feature that should be used if the Sketch is later edited.
@@ -10181,29 +10255,6 @@ export type Sketch = Node & {
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
-};
-
-/** All input for the `sketchAsGeojson` mutation. */
-export type SketchAsGeojsonInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `sketchAsGeojson` mutation. */
-export type SketchAsGeojsonPayload = {
-  __typename?: 'SketchAsGeojsonPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  json?: Maybe<Scalars['JSON']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
 };
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
@@ -14410,7 +14461,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -14531,7 +14582,7 @@ export type GetLayerItemQuery = (
       )>> }
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'dataSourceId'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'staticId' | 'dataSourceId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -14588,6 +14639,7 @@ export type UpdateLayerMutationVariables = Exact<{
   renderUnder?: Maybe<RenderUnderType>;
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   sublayer?: Maybe<Scalars['String']>;
+  staticId?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -14597,7 +14649,7 @@ export type UpdateLayerMutation = (
     { __typename?: 'UpdateDataLayerPayload' }
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer' | 'staticId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -15402,7 +15454,7 @@ export type SimpleProjectListQuery = (
 
 export type SketchFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
@@ -15574,7 +15626,7 @@ export type UpdateSketchFormElementMutation = (
 
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp'>
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geometryType'>
@@ -15595,7 +15647,7 @@ export type SketchingQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'sketchGeometryToken'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
@@ -15660,7 +15712,7 @@ export type SketchCrudResponseFragment = (
 export type CreateSketchMutationVariables = Exact<{
   name: Scalars['String'];
   sketchClassId: Scalars['Int'];
-  userGeom: Scalars['GeoJSON'];
+  userGeom?: Maybe<Scalars['GeoJSON']>;
   collectionId?: Maybe<Scalars['Int']>;
   folderId?: Maybe<Scalars['Int']>;
   properties: Scalars['JSON'];
@@ -15742,7 +15794,7 @@ export type RenameFolderMutation = (
 
 export type SketchEditorModalDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'properties'>
+  & Pick<Sketch, 'properties' | 'userAttributes'>
   & { userGeom?: Maybe<(
     { __typename?: 'GeometryGeometryCollection' }
     & Pick<GeometryGeometryCollection, 'geojson'>
@@ -15816,6 +15868,31 @@ export type UpdateSketchParentMutation = (
     & { sketch?: Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
+    )> }
+  )> }
+);
+
+export type SketchReportingDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type SketchReportingDetailsQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties'>
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & Pick<Form, 'id'>
+      & { formElements?: Maybe<Array<(
+        { __typename?: 'FormElement' }
+        & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body' | 'generatedExportId' | 'generatedLabel'>
+      )>> }
     )> }
   )> }
 );
@@ -17763,6 +17840,8 @@ export const SketchTocDetailsFragmentDoc = gql`
   bbox
   folderId
   timestamp
+  updatedAt
+  createdAt
   sketchClass {
     id
     geometryType
@@ -17780,6 +17859,8 @@ export const SketchFormElementFragmentDoc = gql`
   position
   typeId
   exportId
+  generatedExportId
+  generatedLabel
   type {
     componentName
     isInput
@@ -17836,6 +17917,7 @@ export const SketchEditorModalDetailsFragmentDoc = gql`
     geojson
   }
   properties
+  userAttributes
   sketchClass {
     ...SketchingDetails
   }
@@ -20520,6 +20602,7 @@ export const LayersAndSourcesForItemsDocument = gql`
         shortTemplate
         type
       }
+      staticId
       sprites {
         id
         spriteImages {
@@ -20812,6 +20895,7 @@ export const GetLayerItemDocument = gql`
       renderUnder
       sourceLayer
       sublayer
+      staticId
       sprites {
         id
         spriteImages {
@@ -20975,9 +21059,9 @@ export type UpdateEnableDownloadMutationHookResult = ReturnType<typeof useUpdate
 export type UpdateEnableDownloadMutationResult = Apollo.MutationResult<UpdateEnableDownloadMutation>;
 export type UpdateEnableDownloadMutationOptions = Apollo.BaseMutationOptions<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>;
 export const UpdateLayerDocument = gql`
-    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String) {
+    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String, $staticId: String) {
   updateDataLayer(
-    input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}
+    input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer, staticId: $staticId}}
   ) {
     dataLayer {
       id
@@ -20985,6 +21069,7 @@ export const UpdateLayerDocument = gql`
       renderUnder
       mapboxGlStyles
       sublayer
+      staticId
       sprites {
         id
         spriteImages {
@@ -21018,6 +21103,7 @@ export type UpdateLayerMutationFn = Apollo.MutationFunction<UpdateLayerMutation,
  *      renderUnder: // value for 'renderUnder'
  *      mapboxGlStyles: // value for 'mapboxGlStyles'
  *      sublayer: // value for 'sublayer'
+ *      staticId: // value for 'staticId'
  *   },
  * });
  */
@@ -22913,6 +22999,7 @@ export const SketchingDocument = gql`
       __typename
       ...SketchFolderDetails
     }
+    sketchGeometryToken
   }
 }
     ${SketchingDetailsFragmentDoc}
@@ -22987,7 +23074,7 @@ export type CreateSketchFolderMutationHookResult = ReturnType<typeof useCreateSk
 export type CreateSketchFolderMutationResult = Apollo.MutationResult<CreateSketchFolderMutation>;
 export type CreateSketchFolderMutationOptions = Apollo.BaseMutationOptions<CreateSketchFolderMutation, CreateSketchFolderMutationVariables>;
 export const CreateSketchDocument = gql`
-    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON!, $collectionId: Int, $folderId: Int, $properties: JSON!) {
+    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON, $collectionId: Int, $folderId: Int, $properties: JSON!) {
   createSketch(
     name: $name
     sketchClassId: $sketchClassId
@@ -23291,6 +23378,67 @@ export function useUpdateSketchParentMutation(baseOptions?: Apollo.MutationHookO
 export type UpdateSketchParentMutationHookResult = ReturnType<typeof useUpdateSketchParentMutation>;
 export type UpdateSketchParentMutationResult = Apollo.MutationResult<UpdateSketchParentMutation>;
 export type UpdateSketchParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
+export const SketchReportingDetailsDocument = gql`
+    query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
+  sketch(id: $id) {
+    id
+    name
+    createdAt
+    updatedAt
+    properties
+    userAttributes
+    childProperties
+  }
+  sketchClass(id: $sketchClassId) {
+    id
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    geometryType
+    form {
+      id
+      formElements {
+        exportId
+        id
+        isInput
+        typeId
+        body
+        generatedExportId
+        generatedLabel
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useSketchReportingDetailsQuery__
+ *
+ * To run a query within a React component, call `useSketchReportingDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchReportingDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchReportingDetailsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useSketchReportingDetailsQuery(baseOptions: Apollo.QueryHookOptions<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>(SketchReportingDetailsDocument, options);
+      }
+export function useSketchReportingDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>(SketchReportingDetailsDocument, options);
+        }
+export type SketchReportingDetailsQueryHookResult = ReturnType<typeof useSketchReportingDetailsQuery>;
+export type SketchReportingDetailsLazyQueryHookResult = ReturnType<typeof useSketchReportingDetailsLazyQuery>;
+export type SketchReportingDetailsQueryResult = Apollo.QueryResult<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -26239,6 +26387,7 @@ export const namedOperations = {
     SketchClasses: 'SketchClasses',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
+    SketchReportingDetails: 'SketchReportingDetails',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',

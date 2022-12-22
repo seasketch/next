@@ -178,6 +178,22 @@ export default function LayerTableOfContentsItemEditor(
               variables={{ id: source?.id }}
             />
           </div>
+          <div className="md:max-w-sm mt-5">
+            <MutableAutosaveInput
+              propName="staticId"
+              placeholder={
+                layer?.id ? `None. Layer ID is "${layer.id}"` : undefined
+              }
+              mutation={mutateLayer}
+              mutationStatus={mutateLayerState}
+              value={layer?.staticId || ""}
+              label={t("Static ID")}
+              description={t(
+                "Overlays can be assigned a stable id for reference by geoprocessing clients and map bookmarks."
+              )}
+              variables={{ id: layer?.id }}
+            />
+          </div>
           <div className="mt-5">
             {item.acl?.nodeId && (
               <AccessControlListEditor nodeId={item.acl?.nodeId} />

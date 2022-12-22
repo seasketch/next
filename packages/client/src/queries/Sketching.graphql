@@ -8,6 +8,8 @@ fragment SketchTocDetails on Sketch {
   bbox
   folderId
   timestamp
+  updatedAt
+  createdAt
   sketchClass {
     id
     geometryType
@@ -35,6 +37,7 @@ query Sketching($slug: String!) {
       __typename
       ...SketchFolderDetails
     }
+    sketchGeometryToken
   }
 }
 
@@ -73,7 +76,7 @@ fragment SketchCRUDResponse on Sketch {
 mutation CreateSketch(
   $name: String!
   $sketchClassId: Int!
-  $userGeom: GeoJSON!
+  $userGeom: GeoJSON
   $collectionId: Int
   $folderId: Int
   $properties: JSON!
@@ -137,6 +140,7 @@ fragment SketchEditorModalDetails on Sketch {
     geojson
   }
   properties
+  userAttributes
   sketchClass {
     ...SketchingDetails
   }
@@ -175,6 +179,37 @@ mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
       id
       folderId
       collectionId
+    }
+  }
+}
+
+query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
+  sketch(id: $id) {
+    id
+    name
+    createdAt
+    updatedAt
+    properties
+    userAttributes
+    childProperties
+  }
+  sketchClass(id: $sketchClassId) {
+    id
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    geometryType
+    form {
+      id
+      formElements {
+        exportId
+        id
+        isInput
+        typeId
+        body
+        generatedExportId
+        generatedLabel
+      }
     }
   }
 }

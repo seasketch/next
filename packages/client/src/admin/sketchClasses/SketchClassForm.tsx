@@ -5,6 +5,7 @@ import {
   useDeleteSketchClassMutation,
   SketchClassesQuery,
   SketchClassesDocument,
+  SketchGeometryType,
 } from "../../generated/graphql";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -59,13 +60,18 @@ export default function SketchClassForm({
         id: "geoprocessing",
         current: selectedTab === "geoprocessing",
       },
-      {
-        name: "Style",
-        id: "style",
-        current: selectedTab === "style",
-      },
+      ...(sketchClass.geometryType !== SketchGeometryType.Collection &&
+      sketchClass.geometryType !== SketchGeometryType.ChooseFeature
+        ? [
+            {
+              name: "Style",
+              id: "style",
+              current: selectedTab === "style",
+            },
+          ]
+        : []),
     ];
-  }, [selectedTab]);
+  }, [selectedTab, sketchClass.geometryType]);
 
   const { confirmDelete } = useDialog();
 
@@ -217,7 +223,11 @@ export default function SketchClassForm({
         {selectedTab === "geoprocessing" && (
           <>
             <div className="p-4 space-y-4">
-              <PreprocessorInput sketchClass={sketchClass} />
+              {sketchClass.geometryType !== SketchGeometryType.Collection &&
+                sketchClass.geometryType !==
+                  SketchGeometryType.ChooseFeature && (
+                  <PreprocessorInput sketchClass={sketchClass} />
+                )}
               <GeoprocessingClientInput sketchClass={sketchClass} />
             </div>
           </>

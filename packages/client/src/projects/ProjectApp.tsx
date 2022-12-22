@@ -107,7 +107,7 @@ export default function ProjectApp() {
             <Suspense
               fallback={
                 <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
-                  Loading <Spinner />
+                  <Spinner />
                 </div>
               }
             >

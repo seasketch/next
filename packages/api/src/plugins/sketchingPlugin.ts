@@ -14,6 +14,16 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         timestamp: String! @requires(columns: ["created_at", "updated_at"])
       }
 
+      extend type Project {
+        """
+        This token can be used to access this user's sketches from the geojson endpoint.
+        For example, \`/sketches/123.geojson.json?access_token=xxx\`
+        Returns null if user is not singed in. Can be used only for a single
+        project. Must be refreshed occasionally.
+        """
+        sketchGeometryToken: String @requires(columns: ["id"])
+      }
+
       extend type Mutation {
         """
         Create a new sketch in the user's account. If preprocessing is enabled,
@@ -21,6 +31,8 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         function again on userGeom. This ensures the value conforms to the
         project's rules, and also benefits the user in that they need not submit
         a huge geometry to the server.
+
+        In the case of collections, the userGeom can be omitted.
         """
         createSketch(
           """
@@ -31,7 +43,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           """
           Sketch as drawn by the user.
           """
-          userGeom: GeoJSON!
+          userGeom: GeoJSON
           """
           Sketches can be assigned directly to a collection on creation.
           """
@@ -80,6 +92,26 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           return date.getTime().toString();
         },
       },
+      Project: {
+        sketchGeometryToken: async (project, args, context, info) => {
+          const projectId = project.id;
+          const userId = context?.user?.id;
+          const canonicalEmail = context.user?.canonicalEmail;
+          if (projectId && userId) {
+            return context.loaders.signToken(
+              {
+                type: "sketch-geometry-access",
+                userId,
+                projectId,
+                canonicalEmail,
+              },
+              "1 day"
+            );
+          } else {
+            return null;
+          }
+        },
+      },
       Mutation: {
         createSketch: async (
           _query,
@@ -100,44 +132,73 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             [sketchClassId]
           );
           const sketchClass = rows[0];
-          delete userGeom.id;
-          // Check to see if preprocessing is required. If so, do it
-          let geometry: Feature;
-          if (sketchClass.preprocessing_endpoint) {
-            // submit for geoprocessing
-            const response = await preprocess(
-              sketchClass.preprocessing_endpoint,
-              userGeom
+          console.log("sketchClass", sketchClass);
+          if (sketchClass.geometry_type === "COLLECTION") {
+            const {
+              rows: [sketch],
+            } = await pgClient.query(
+              `INSERT INTO sketches(name, sketch_class_id, user_id, collection_id, folder_id, properties) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+              [
+                name,
+                sketchClassId,
+                context.user.id,
+                collectionId,
+                folderId,
+                properties,
+              ]
             );
-            geometry = response;
-          } else {
-            geometry = userGeom;
-          }
-          const {
-            rows: [sketch],
-          } = await pgClient.query(
-            `INSERT INTO sketches(name, sketch_class_id, user_id, collection_id, user_geom, geom, folder_id, properties) VALUES ($1, $2, $3, $4, ST_GeomFromGeoJSON($5), ST_GeomFromGeoJSON($6), $7, $8) RETURNING id`,
-            [
-              name,
-              sketchClassId,
-              context.user.id,
-              collectionId,
-              JSON.stringify(userGeom.geometry),
-              JSON.stringify(geometry.geometry),
-              folderId,
-              properties,
-            ]
-          );
 
-          const [row] = await resolveInfo.graphile.selectGraphQLResultFromTable(
-            sql.fragment`sketches`,
-            (tableAlias, queryBuilder) => {
-              queryBuilder.where(
-                sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+            const [row] =
+              await resolveInfo.graphile.selectGraphQLResultFromTable(
+                sql.fragment`sketches`,
+                (tableAlias, queryBuilder) => {
+                  queryBuilder.where(
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                  );
+                }
               );
+            return row;
+          } else {
+            delete userGeom.id;
+            // Check to see if preprocessing is required. If so, do it
+            let geometry: Feature;
+            if (sketchClass.preprocessing_endpoint) {
+              // submit for geoprocessing
+              const response = await preprocess(
+                sketchClass.preprocessing_endpoint,
+                userGeom
+              );
+              geometry = response;
+            } else {
+              geometry = userGeom;
             }
-          );
-          return row;
+            const {
+              rows: [sketch],
+            } = await pgClient.query(
+              `INSERT INTO sketches(name, sketch_class_id, user_id, collection_id, user_geom, geom, folder_id, properties) VALUES ($1, $2, $3, $4, ST_GeomFromGeoJSON($5), ST_GeomFromGeoJSON($6), $7, $8) RETURNING id`,
+              [
+                name,
+                sketchClassId,
+                context.user.id,
+                collectionId,
+                JSON.stringify(userGeom.geometry),
+                JSON.stringify(geometry.geometry),
+                folderId,
+                properties,
+              ]
+            );
+
+            const [row] =
+              await resolveInfo.graphile.selectGraphQLResultFromTable(
+                sql.fragment`sketches`,
+                (tableAlias, queryBuilder) => {
+                  queryBuilder.where(
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                  );
+                }
+              );
+            return row;
+          }
         },
         updateSketch: async (
           _query,
