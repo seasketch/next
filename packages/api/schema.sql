@@ -9964,13 +9964,13 @@ CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETUR
     LANGUAGE sql STABLE
     AS $$
     select jsonb_build_object(
-            'id', sketches.id,
-            'userId', sketches.user_id, 
+            'id', sketches.id::text,
+            'userId', sketches.user_id::text, 
             'createdAt', sketches.created_at,
             'updatedAt', sketches.updated_at,
-            'sketchClassId', sketches.sketch_class_id,
+            'sketchClassId', sketches.sketch_class_id::text,
             'user_slug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
-            'collectionId', sketches.collection_id, 
+            'collectionId', sketches.collection_id::text, 
             'isCollection', (select geometry_type = 'COLLECTION' from sketch_classes where id = sketches.sketch_class_id),
             'name', sketches.name,
             'userAttributes', sketches_user_attributes(sketch)) || sketches.properties || (
