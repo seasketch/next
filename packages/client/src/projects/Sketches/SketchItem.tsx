@@ -95,7 +95,11 @@ export default function SketchItem({
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
     canDrop: (item: DragItemProps<FolderNodeDataProps>, monitor) => {
-      if (item.id === data.id || node.parents.indexOf(item.nodeId) !== -1) {
+      if (
+        !data.isCollection ||
+        item.id === data.id ||
+        node.parents.indexOf(item.nodeId) !== -1
+      ) {
         return false;
       }
       return true;
