@@ -1,5 +1,5 @@
 import { XIcon } from "@heroicons/react/outline";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Skeleton from "../../components/Skeleton";
 import {
@@ -10,6 +10,7 @@ import useAccessToken from "../../useAccessToken";
 import Warning from "../../components/Warning";
 import { Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
+import { MapContext } from "../../dataLayers/MapContextManager";
 
 export default function SketchReportWindow({
   sketchId,
@@ -26,6 +27,7 @@ export default function SketchReportWindow({
   onRequestClose: (id: number) => void;
   reportingAccessToken?: string | null;
 }) {
+  const mapContext = useContext(MapContext);
   const token = useAccessToken();
   const { data, loading } = useSketchReportingDetailsQuery({
     variables: {
@@ -40,6 +42,18 @@ export default function SketchReportWindow({
   const [iframeLoading, setIframeLoading] = useState(true);
 
   const iframe = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (iframe.current?.contentWindow) {
+      const message = {
+        type: "SeaSketchReportingVisibleLayersChangeEvent",
+        visibleLayers: Object.keys(mapContext.layerStates)
+          .filter((id) => mapContext.layerStates[id].visible)
+          .map((id) => mapContext.layerStates[id].staticId || id),
+      };
+      iframe.current.contentWindow.postMessage(message, "*");
+    }
+  }, [mapContext.layerStates, iframe.current?.contentWindow]);
 
   useEffect(() => {
     const handler = async (e: MessageEvent<any>) => {
@@ -59,6 +73,9 @@ export default function SketchReportWindow({
           type: "SeaSketchReportingMessageEventType",
           client: data?.sketchClass?.geoprocessingClientName,
           geometryUri,
+          visibleLayers: Object.keys(mapContext.layerStates)
+            .filter((id) => mapContext.layerStates[id].visible)
+            .map((id) => mapContext.layerStates[id].staticId || id),
           sketchProperties: {
             id: sketchId,
             name: data?.sketch?.name,
@@ -69,7 +86,6 @@ export default function SketchReportWindow({
               data?.sketchClass?.geometryType === SketchGeometryType.Collection,
             userAttributes: data?.sketch?.userAttributes || [],
             // TODO: populate this from map context
-            visibleLayers: [],
             ...(data?.sketchClass?.geometryType ===
             SketchGeometryType.Collection
               ? {
@@ -91,6 +107,25 @@ export default function SketchReportWindow({
           }
         }
         iframe.current.contentWindow.postMessage(initMessage, "*");
+      } else if (
+        e.data.type === "SeaSketchReportingToggleLayerVisibilityEvent" &&
+        iframe.current?.contentWindow &&
+        e.data.layerId
+      ) {
+        const { layerId, on } = e.data as { layerId: string; on: boolean };
+        if (mapContext.manager) {
+          if (on) {
+            mapContext.manager.showLayers([layerId]);
+          } else {
+            mapContext.manager.hideLayers([layerId]);
+          }
+        }
+      } else if (
+        e.data.type === "SeaSketchReportingKeydownEvent" &&
+        e.data.key &&
+        e.data.key === "x"
+      ) {
+        onRequestClose(sketchId);
       }
     };
     window.addEventListener("message", handler);
@@ -108,6 +143,9 @@ export default function SketchReportWindow({
     data?.sketch?.childProperties,
     sketchClassId,
     reportingAccessToken,
+    mapContext?.layerStates,
+    mapContext?.manager,
+    onRequestClose,
   ]);
 
   return createPortal(

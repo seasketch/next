@@ -1665,6 +1665,15 @@ export type DataLayer = Node & {
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
   /**
+   * Used as a stable reference identifier for the layer. In the event that the
+   * layer is completely replaced, this ID can be assigned to the new one.
+   * Geoprocessing Clients (reports) are an important use case for these IDs, which
+   * they use to toggle layers on and off. Map Bookmarks will also use this
+   * identifier if present. In both cases, the numeric ID of DataLayers can be used
+   * but this is more likely to change.
+   */
+  staticId?: Maybe<Scalars['String']>;
+  /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
@@ -1747,6 +1756,15 @@ export type DataLayerInput = {
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /**
+   * Used as a stable reference identifier for the layer. In the event that the
+   * layer is completely replaced, this ID can be assigned to the new one.
+   * Geoprocessing Clients (reports) are an important use case for these IDs, which
+   * they use to toggle layers on and off. Map Bookmarks will also use this
+   * identifier if present. In both cases, the numeric ID of DataLayers can be used
+   * but this is more likely to change.
+   */
+  staticId?: Maybe<Scalars['String']>;
+  /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
    * making image requests.
@@ -1774,6 +1792,15 @@ export type DataLayerPatch = {
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * Used as a stable reference identifier for the layer. In the event that the
+   * layer is completely replaced, this ID can be assigned to the new one.
+   * Geoprocessing Clients (reports) are an important use case for these IDs, which
+   * they use to toggle layers on and off. Map Bookmarks will also use this
+   * identifier if present. In both cases, the numeric ID of DataLayers can be used
+   * but this is more likely to change.
+   */
+  staticId?: Maybe<Scalars['String']>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
    * is blank and this layer merely controls the display of a single sublayer when
@@ -14434,7 +14461,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -14555,7 +14582,7 @@ export type GetLayerItemQuery = (
       )>> }
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'dataSourceId'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'staticId' | 'dataSourceId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -14612,6 +14639,7 @@ export type UpdateLayerMutationVariables = Exact<{
   renderUnder?: Maybe<RenderUnderType>;
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   sublayer?: Maybe<Scalars['String']>;
+  staticId?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -14621,7 +14649,7 @@ export type UpdateLayerMutation = (
     { __typename?: 'UpdateDataLayerPayload' }
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'renderUnder' | 'mapboxGlStyles' | 'sublayer' | 'staticId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -20574,6 +20602,7 @@ export const LayersAndSourcesForItemsDocument = gql`
         shortTemplate
         type
       }
+      staticId
       sprites {
         id
         spriteImages {
@@ -20866,6 +20895,7 @@ export const GetLayerItemDocument = gql`
       renderUnder
       sourceLayer
       sublayer
+      staticId
       sprites {
         id
         spriteImages {
@@ -21029,9 +21059,9 @@ export type UpdateEnableDownloadMutationHookResult = ReturnType<typeof useUpdate
 export type UpdateEnableDownloadMutationResult = Apollo.MutationResult<UpdateEnableDownloadMutation>;
 export type UpdateEnableDownloadMutationOptions = Apollo.BaseMutationOptions<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>;
 export const UpdateLayerDocument = gql`
-    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String) {
+    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String, $staticId: String) {
   updateDataLayer(
-    input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}
+    input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer, staticId: $staticId}}
   ) {
     dataLayer {
       id
@@ -21039,6 +21069,7 @@ export const UpdateLayerDocument = gql`
       renderUnder
       mapboxGlStyles
       sublayer
+      staticId
       sprites {
         id
         spriteImages {
@@ -21072,6 +21103,7 @@ export type UpdateLayerMutationFn = Apollo.MutationFunction<UpdateLayerMutation,
  *      renderUnder: // value for 'renderUnder'
  *      mapboxGlStyles: // value for 'mapboxGlStyles'
  *      sublayer: // value for 'sublayer'
+ *      staticId: // value for 'staticId'
  *   },
  * });
  */

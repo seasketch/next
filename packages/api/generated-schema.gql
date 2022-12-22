@@ -1873,6 +1873,16 @@ type DataLayer implements Node {
   ): [Sprite!]
 
   """
+  Used as a stable reference identifier for the layer. In the event that the
+  layer is completely replaced, this ID can be assigned to the new one.
+  Geoprocessing Clients (reports) are an important use case for these IDs, which
+  they use to toggle layers on and off. Map Bookmarks will also use this
+  identifier if present. In both cases, the numeric ID of DataLayers can be used
+  but this is more likely to change.
+  """
+  staticId: String
+
+  """
   For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
   is blank and this layer merely controls the display of a single sublayer when
   making image requests.
@@ -1959,6 +1969,16 @@ input DataLayerInput {
   spriteIds: [Int]
 
   """
+  Used as a stable reference identifier for the layer. In the event that the
+  layer is completely replaced, this ID can be assigned to the new one.
+  Geoprocessing Clients (reports) are an important use case for these IDs, which
+  they use to toggle layers on and off. Map Bookmarks will also use this
+  identifier if present. In both cases, the numeric ID of DataLayers can be used
+  but this is more likely to change.
+  """
+  staticId: String
+
+  """
   For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
   is blank and this layer merely controls the display of a single sublayer when
   making image requests.
@@ -1994,6 +2014,16 @@ input DataLayerPatch {
   """
   sourceLayer: String
   spriteIds: [Int]
+
+  """
+  Used as a stable reference identifier for the layer. In the event that the
+  layer is completely replaced, this ID can be assigned to the new one.
+  Geoprocessing Clients (reports) are an important use case for these IDs, which
+  they use to toggle layers on and off. Map Bookmarks will also use this
+  identifier if present. In both cases, the numeric ID of DataLayers can be used
+  but this is more likely to change.
+  """
+  staticId: String
 
   """
   For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles

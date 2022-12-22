@@ -5021,7 +5021,9 @@ CREATE TABLE public.data_layers (
     mapbox_gl_styles jsonb,
     z_index integer DEFAULT 0 NOT NULL,
     interactivity_settings_id integer NOT NULL,
-    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_styles)::text)) STORED
+    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_styles)::text)) STORED,
+    static_id text,
+    CONSTRAINT length_check CHECK ((char_length(static_id) <= 128))
 );
 
 
@@ -5076,6 +5078,13 @@ JSON array of MapBox GL Style layers. Layers should not specify an id or sourceI
 --
 
 COMMENT ON COLUMN public.data_layers.interactivity_settings_id IS '@omit create';
+
+
+--
+-- Name: COLUMN data_layers.static_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.static_id IS 'Used as a stable reference identifier for the layer. In the event that the layer is completely replaced, this ID can be assigned to the new one. Geoprocessing Clients (reports) are an important use case for these IDs, which they use to toggle layers on and off. Map Bookmarks will also use this identifier if present. In both cases, the numeric ID of DataLayers can be used but this is more likely to change.';
 
 
 --
@@ -8596,7 +8605,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer,
             render_under,
             mapbox_gl_styles,
-            interactivity_settings_id
+            interactivity_settings_id,
+            static_id
           )
           select "projectId", 
             data_source_id, 
@@ -8604,7 +8614,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer, 
             render_under, 
             mapbox_gl_styles,
-            new_interactivity_settings_id
+            new_interactivity_settings_id,
+            static_id
           from 
             data_layers
           where 
@@ -8626,7 +8637,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           is_click_off_only,
           metadata,
           bounds,
-          data_layer_id
+          data_layer_id,
+          sort_index
         ) values (
           false,
           "projectId",
@@ -8639,7 +8651,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           item.is_click_off_only,
           item.metadata,
           item.bounds,
-          lid
+          lid,
+          item.sort_index
         ) returning id into new_toc_id;
         select 
           type, id into acl_type, orig_acl_id 

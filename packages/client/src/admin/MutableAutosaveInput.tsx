@@ -65,6 +65,7 @@ export default function MutableAutosaveInput(props: {
             : "SAVED"
           : "NONE"
       }
+      placeholder={props.placeholder}
     />
   );
 }

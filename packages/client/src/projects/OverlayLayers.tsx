@@ -24,7 +24,7 @@ export default function OverlayLayers({
   }>("overlays-expansion-state", {});
   useEffect(() => {
     setNodes(nestItems(items, expansionState));
-  }, [items]);
+  }, [items, expansionState]);
 
   return (
     <div className="mt-3">
