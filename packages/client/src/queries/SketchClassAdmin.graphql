@@ -56,6 +56,7 @@ fragment SketchingDetails on SketchClass {
   formElementId
   preprocessingEndpoint
   preprocessingProjectUrl
+  canDigitize
 }
 
 query SketchClassForm($id: Int!) {

@@ -247,7 +247,7 @@ export default function useSketchActions({
     setState({
       create: [
         ...(sketchClasses || [])
-          .filter((sc) => !sc.formElementId && !sc.isArchived)
+          .filter((sc) => !sc.formElementId && !sc.isArchived && sc.canDigitize)
           .sort((a, b) => a.name.localeCompare(b.name))
           .map(
             (sc) =>

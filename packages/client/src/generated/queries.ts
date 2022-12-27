@@ -15461,7 +15461,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
@@ -17906,6 +17906,7 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   formElementId
   preprocessingEndpoint
   preprocessingProjectUrl
+  canDigitize
 }
     ${SketchFormElementFragmentDoc}`;
 export const SketchEditorModalDetailsFragmentDoc = /*#__PURE__*/ gql`
