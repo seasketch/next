@@ -92,7 +92,7 @@ export default function SketchItem({
     [isSelected, node, onContextMenu, onSelect]
   );
 
-  const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
+  const [{ canDrop, isOverCurrent, isOver }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
     canDrop: (item: DragItemProps<FolderNodeDataProps>, monitor) => {
       if (
@@ -108,6 +108,7 @@ export default function SketchItem({
     collect: (monitor) => ({
       isOverCurrent: monitor.isOver({ shallow: true }),
       canDrop: monitor.canDrop(),
+      isOver: monitor.isOver(),
     }),
     drop: (item, monitor) => {
       if (monitor.didDrop()) {
@@ -158,20 +159,26 @@ export default function SketchItem({
           ? {
               marginLeft: -15,
               opacity: isDisabled ? 0.5 : 1,
-              paddingLeft: 0,
             }
           : {
               opacity: isDisabled ? 0.5 : 1,
-              paddingLeft: 3,
             }
       }
-      className={`border rounded border-transparent ${
-        isSelected ? "bg-blue-200" : ""
+      className={`rounded ${
+        isOverCurrent && !isDragging && canDrop
+          ? "bg-blue-100 border-blue-400 border"
+          : isSelected && !isDragging
+          ? "bg-blue-50 border-blue-200 border"
+          : "border border-transparent"
       }`}
     >
       <span
         className={`flex items-center text-sm space-x-0.5 ${className}`}
-        style={{ paddingTop: 2, paddingBottom: 2 }}
+        style={{
+          paddingTop: 2,
+          paddingBottom: 2,
+          paddingLeft: data.isCollection ? 0 : 3,
+        }}
       >
         {data.isCollection && (
           <button
