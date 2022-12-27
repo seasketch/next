@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:11d2b3bee1ca632120c91e69eec19564a1a4c9bb
 --! Hash: sha1:9303dd949ddda589082594d22075ec9cc7609ede
 
@@ -110,7 +111,7 @@ create or replace function get_child_sketches_recursive(parent_id int, child_typ
 CREATE OR REPLACE FUNCTION public.sketch_as_geojson(id integer) RETURNS jsonb
     LANGUAGE sql
     AS $$
-    SELECT json_build_object(
+    SELECT jsonb_build_object(
       'type', 'Feature',
       'id',         sketches.id,
       'geometry',   ST_AsGeoJSON(coalesce(geom, user_geom))::jsonb,
