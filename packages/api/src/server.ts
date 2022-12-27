@@ -283,10 +283,13 @@ app.use(
         [id]
       );
       const geojson = rows[0].sketch_or_collection_as_geojson;
-      console.log("geojson", geojson);
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=Sketch-${id}.geojson.json`
+      );
       if (req.query && req.query.timestamp) {
         res.setHeader("Cache-Control", "public, max-age=31536000");
       }

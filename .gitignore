@@ -6,3 +6,4 @@ NOTES.md
 .cert/
 lerna-debug.log
 *.lerna_backup
+packages/api/coverage

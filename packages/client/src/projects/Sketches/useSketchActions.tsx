@@ -32,6 +32,9 @@ import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 import { ReportWindowUIState } from "./SketchReportWindow";
 import { actions } from "react-table";
 import { SketchGeometryType } from "../../generated/queries";
+import { download } from "../../download";
+import useAccessToken from "../../useAccessToken";
+import { BASE_SERVER_ENDPOINT } from "../../dataLayers/MapContextManager";
 
 export interface SketchAction {
   id: string;
@@ -123,6 +126,7 @@ export default function useSketchActions({
   hideSketches: (ids: string[]) => void;
 }) {
   const { t } = useTranslation("sketching");
+  const token = useAccessToken();
   const client = useApolloClient();
   const onError = useGlobalErrorHandler();
   const [{ create, edit }, setState] = useState<{
@@ -443,6 +447,26 @@ export default function useSketchActions({
                         if (bbox) {
                           zoomTo(bbox as number[]);
                         }
+                      },
+                    },
+                  ] as SketchAction[])
+                : []),
+              ...(selectedSketchClasses && !multiple && !folderSelected
+                ? ([
+                    {
+                      id: "export",
+                      label: t("Export as GeoJSON"),
+                      disabled: multiple,
+                      action: ({ selectedSketches }) => {
+                        // TODO: support multiple
+                        download(
+                          // eslint-disable-next-line i18next/no-literal-string
+                          `${BASE_SERVER_ENDPOINT}/sketches/${
+                            selectedIds[0].split(":")[1]
+                          }.geojson.json?token=${token}`,
+                          // eslint-disable-next-line i18next/no-literal-string
+                          `${selectedIds[0].replace(":", "-")}.geojson.json`
+                        );
                       },
                     },
                   ] as SketchAction[])
