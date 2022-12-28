@@ -19,6 +19,7 @@ export default function SketchReportWindow({
   selected,
   onRequestClose,
   reportingAccessToken,
+  onClick,
 }: {
   sketchClassId: number;
   sketchId: number;
@@ -26,6 +27,7 @@ export default function SketchReportWindow({
   selected: boolean;
   onRequestClose: (id: number) => void;
   reportingAccessToken?: string | null;
+  onClick?: (metaKey: boolean, id: number) => void;
 }) {
   const mapContext = useContext(MapContext);
   const token = useAccessToken();
@@ -152,6 +154,16 @@ export default function SketchReportWindow({
     <div
       className="flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg z-10 absolute top-2 right-2"
       style={{ height: "calc(100vh - 32px)", maxHeight: 1024 }}
+      onClick={(e) => {
+        if (onClick) {
+          e.stopPropagation();
+          e.preventDefault();
+          e.nativeEvent.stopImmediatePropagation();
+          e.nativeEvent.preventDefault();
+          onClick(e.metaKey, sketchId);
+          return false;
+        }
+      }}
     >
       <div className="p-4 border-b flex items-center">
         <h1 className="flex-1 truncate text-lg">

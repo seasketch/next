@@ -190,7 +190,7 @@ export default memo(function SketchingTools({
       );
       if (sketch) {
         setOpenReports((prev) => [
-          ...prev,
+          ...prev.filter((r) => r.sketchId !== id),
           {
             sketchId: id,
             sketchClassId: sketch.sketchClassId,
@@ -327,7 +327,7 @@ export default memo(function SketchingTools({
     const handler = (e: KeyboardEvent) => {
       // @ts-ignore
       const tagName = e.target?.tagName || "";
-      if (["INPUT", "BUTTON", "TEXTAREA"].indexOf(tagName) !== -1) {
+      if (["INPUT", "TEXTAREA"].indexOf(tagName) !== -1) {
         return;
       }
       if (keyboardShortcuts.length) {
@@ -336,6 +336,13 @@ export default memo(function SketchingTools({
         );
         if (shortcut) {
           callAction(shortcut);
+        } else if (e.key === "x" && selectedIds.length && openReports.length) {
+          const ids = selectedIds
+            .filter((s) => /Sketch:/.test(s))
+            .map((s) => parseInt(s.split(":")[1]));
+          setOpenReports((prev) =>
+            prev.filter((r) => ids.indexOf(r.sketchId) === -1)
+          );
         }
       }
     };
@@ -343,7 +350,7 @@ export default memo(function SketchingTools({
     return () => {
       document.body.removeEventListener("keydown", handler);
     };
-  }, [keyboardShortcuts, callAction]);
+  }, [keyboardShortcuts, callAction, selectedIds, openReports]);
 
   /**
    * Convert GraphQL fragment data into a flat list of TreeItemI elements for
@@ -373,6 +380,14 @@ export default memo(function SketchingTools({
       });
     },
     [setExpandedIds]
+  );
+
+  const onReportClick = useCallback(
+    (metaKey: boolean, sketchId: number) => {
+      // eslint-disable-next-line i18next/no-literal-string
+      onSelect(metaKey, { id: `Sketch:${sketchId}` }, true);
+    },
+    [onSelect]
   );
 
   const [{ canDrop, isOver }, drop] = useDrop(() => ({
@@ -540,6 +555,7 @@ export default memo(function SketchingTools({
           uiState={uiState}
           selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
           reportingAccessToken={data?.projectBySlug?.sketchGeometryToken}
+          onClick={onReportClick}
         />
       ))}
     </div>

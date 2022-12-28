@@ -107,6 +107,7 @@ export default function useSketchingSelectionState({
 
   const onSelect = useCallback(
     (metaKey: boolean, item: any, isSelected: boolean) => {
+      document.querySelectorAll(".mapboxgl-popup").forEach((el) => el.remove());
       if (isSelected) {
         setSelectedIds([item.id]);
       } else {
