@@ -406,6 +406,27 @@ class MapContextManager {
     });
   }
 
+  updateLocalSketchGeometryProperties(
+    id: number,
+    timestamp: string,
+    properties: any
+  ) {
+    const cached = LocalSketchGeometryCache.get(id);
+    if (cached) {
+      LocalSketchGeometryCache.set(id, {
+        ...cached,
+        timestamp,
+        feature: {
+          ...cached.feature,
+          properties,
+        },
+      });
+      this.debouncedUpdateStyle();
+    } else {
+      this.debouncedUpdateStyle();
+    }
+  }
+
   toggleTerrain() {
     let on = true;
     if (this.internalState.terrainEnabled) {
@@ -1168,7 +1189,7 @@ class MapContextManager {
           data:
             cache && cache.timestamp === timestamp
               ? cache.feature
-              : sketchGeoJSONUrl(id),
+              : sketchGeoJSONUrl(id, timestamp),
         };
         const layers = this.getLayersForSketch(
           id,
@@ -1936,10 +1957,10 @@ function reducePaintPropOpacity(
   }
 }
 
-function sketchGeoJSONUrl(id: number) {
+function sketchGeoJSONUrl(id: number, timestamp?: string | number) {
   return `${
     BASE_SERVER_ENDPOINT +
     // eslint-disable-next-line i18next/no-literal-string
-    `/sketches/${id}.geojson.json`
+    `/sketches/${id}.geojson.json${timestamp ? `?timestamp=${timestamp}` : ""}`
   }`;
 }

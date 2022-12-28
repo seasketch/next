@@ -16,7 +16,6 @@ import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
 import getSlug from "../../getSlug";
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/outline";
-import TextInput from "../../components/TextInput";
 import Button from "../../components/Button";
 import useMapboxGLDraw, {
   DigitizingState,
@@ -370,6 +369,13 @@ export default function SketchEditorModal({
           },
           data.timestamp
         );
+      } else {
+        // update local geometry copy attributes if it exists
+        manager.updateLocalSketchGeometryProperties(
+          data.id,
+          data.timestamp,
+          data.geojsonProperties || {}
+        );
       }
       manager.clearSketchEditingState();
       onComplete(data);
@@ -393,6 +399,7 @@ export default function SketchEditorModal({
     mapContext.manager,
     preprocessedGeometry,
     sketchClass.geometryType,
+    hasValidationErrors,
   ]);
 
   useEffect(() => {
