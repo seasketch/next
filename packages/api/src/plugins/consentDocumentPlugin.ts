@@ -57,7 +57,6 @@ const ConsentDocumentPlugin = makeExtendSchemaPlugin((build) => {
               );
             }
           );
-          console.log("row", row);
           return row;
         },
       },

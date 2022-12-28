@@ -3616,24 +3616,6 @@ COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id
 
 
 --
--- Name: create_basemap_acl(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_basemap_acl() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-begin
-  if new.project_id is not null then
-  insert into
-    access_control_lists(project_id, basemap_id, type)
-    values(new.project_id, new.id, 'public'::access_control_list_type);
-  end if;
-  return new;
-end;
-$$;
-
-
---
 -- Name: create_bbox(public.geometry); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3649,6 +3631,304 @@ CREATE FUNCTION public.create_bbox(geom public.geometry) RETURNS real[]
 --
 
 COMMENT ON FUNCTION public.create_bbox(geom public.geometry) IS '@omit';
+
+
+--
+-- Name: sketches; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketches (
+    id integer NOT NULL,
+    name text NOT NULL,
+    sketch_class_id integer NOT NULL,
+    user_id integer,
+    collection_id integer,
+    copy_of integer,
+    user_geom public.geometry(Geometry,4326),
+    geom public.geometry(Geometry,4326),
+    folder_id integer,
+    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
+    bbox real[] GENERATED ALWAYS AS (public.create_bbox(COALESCE(geom, user_geom))) STORED,
+    num_vertices integer GENERATED ALWAYS AS (public.st_npoints(COALESCE(geom, user_geom))) STORED,
+    form_element_id integer,
+    response_id integer,
+    mercator_geometry public.geometry(Geometry,3857) GENERATED ALWAYS AS (public.st_transform(COALESCE(geom, user_geom), 3857)) STORED,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
+);
+
+
+--
+-- Name: TABLE sketches; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketches IS '
+@omit all,many,create,update
+A *Sketch* is a spatial feature that matches the schema defined by the related 
+*SketchClass*. User *Sketches* appears in the user''s "My Plans" tab and can be
+shared in the discussion forum. They are also the gateway to analytical reports.
+
+Sketches are completely owned by individual users, so access control rules 
+ensure that only the owner of a sketch can perform CRUD operations on them. 
+Admins have no special access. Use the graphile-generated mutations to manage 
+these records.
+';
+
+
+--
+-- Name: COLUMN sketches.name; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.name IS 'User provided name for the sketch.';
+
+
+--
+-- Name: COLUMN sketches.sketch_class_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.sketch_class_id IS 'SketchClass that defines the behavior of this type of sketch.';
+
+
+--
+-- Name: COLUMN sketches.user_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.user_id IS 'Owner of the sketch.';
+
+
+--
+-- Name: COLUMN sketches.collection_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.collection_id IS 'If the sketch is not a collection, it can belong to a collection (collections cannot be nested).';
+
+
+--
+-- Name: COLUMN sketches.copy_of; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.copy_of IS 'If this Sketch started as a copy of another it is tracked here. Eventually SeaSketch may have a means of visualizing how plans are iterated on over time.';
+
+
+--
+-- Name: COLUMN sketches.user_geom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.user_geom IS 'Spatial feature the user directly digitized, without preprocessing. This is the feature that should be used if the Sketch is later edited.';
+
+
+--
+-- Name: COLUMN sketches.geom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.geom IS 'The geometry of the Sketch **after** it has been preprocessed. This is the geometry that is used for reporting. Preprocessed geometries may be extremely large and complex, so it may be necessary to access them through a vector tile service or some other optimization.';
+
+
+--
+-- Name: COLUMN sketches.folder_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketches.folder_id IS 'Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.';
+
+
+--
+-- Name: copy_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_sketch(sketch_id integer) RETURNS public.sketches
+    LANGUAGE plpgsql
+    AS $$
+    declare 
+      output sketches;
+    begin
+      -- this will check RLS policy. DO NOT use security definer!
+      if (select exists (select id from sketches where id = sketch_id)) then
+        insert into sketches (
+          user_id,
+          copy_of,
+          name,
+          sketch_class_id,
+          collection_id,
+          folder_id,
+          user_geom,
+          geom,
+          properties
+        ) select
+          nullif(current_setting('session.user_id', TRUE), '')::int,
+          sketch_id,
+          name,
+          sketch_class_id,
+          collection_id,
+          folder_id,
+          user_geom,
+          geom,
+          properties
+        from sketches where id = sketch_id returning * into output;
+        return output;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: sketch_folders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_folders (
+    id integer NOT NULL,
+    name text NOT NULL,
+    user_id integer NOT NULL,
+    project_id integer NOT NULL,
+    folder_id integer,
+    collection_id integer,
+    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
+);
+
+
+--
+-- Name: TABLE sketch_folders; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketch_folders IS '@omit create';
+
+
+--
+-- Name: COLUMN sketch_folders.project_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.project_id IS '@omit many';
+
+
+--
+-- Name: COLUMN sketch_folders.folder_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.folder_id IS 'The parent folder, if any.';
+
+
+--
+-- Name: COLUMN sketch_folders.collection_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.sketch_folders.collection_id IS 'The parent sketch collection, if any. Folders can only have a single parent entity.';
+
+
+--
+-- Name: copy_sketch_folder(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_sketch_folder(folder_id integer) RETURNS public.sketch_folders
+    LANGUAGE plpgsql
+    AS $$
+    declare 
+      output sketch_folders;
+    begin
+      -- this will check RLS policy. DO NOT use security definer!
+      if (select exists (select id from sketch_folders where id = copy_sketch_folder.folder_id)) then
+        insert into sketch_folders (
+          user_id,
+          name,
+          project_id,
+          collection_id,
+          folder_id
+        ) select
+          nullif(current_setting('session.user_id', TRUE), '')::int,
+          name,
+          project_id,
+          collection_id,
+          sketch_folders.folder_id
+        from sketch_folders where id = copy_sketch_folder.folder_id returning * into output;
+        return output;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: copy_sketch_toc_item_recursive(integer, public.sketch_child_type, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    declare
+      copy_id int;
+      child_copy_id int;
+      is_collection boolean;
+      child record;
+    begin
+      if type = 'sketch' then
+        -- copy it and get the copy id
+        select id, is_collection(sketch_class_id) from copy_sketch(parent_id) into copy_id, is_collection;
+        if append_copy_to_name = true then
+          update sketches set name = name || ' (copy)' where id = copy_id;
+        end if;
+        if is_collection then
+          -- copy subfolders and sub-sketches
+          FOR child IN SELECT * FROM get_children_of_collection(parent_id)
+          LOOP
+            raise notice 'copying %', child.type;
+            select copy_sketch_toc_item_recursive(child.id, child.type, false) into child_copy_id;
+            raise notice 'assigning collection_id=%', copy_id;
+            if child.type = 'sketch_folder' then
+              update sketch_folders set collection_id = copy_id, folder_id = null where id = child_copy_id;
+            else
+              update sketches set collection_id = copy_id, folder_id = null where id = child_copy_id;
+            end if;
+          END LOOP;
+        end if;
+      elsif type = 'sketch_folder' then
+        -- copy it and get the copy id
+        select id from copy_sketch_folder(parent_id) into copy_id;
+        if append_copy_to_name = true then
+          update sketch_folders set name = name || ' (copy)' where id = copy_id;
+        end if;
+        -- copy subfolders and sub-sketches
+        FOR child IN SELECT * FROM get_children_of_folder(parent_id)
+          LOOP
+            raise notice 'copying %', child.type;
+            select copy_sketch_toc_item_recursive(child.id, child.type, false) into child_copy_id;
+            raise notice 'assigning folder_id=%', copy_id;
+            if child.type = 'sketch_folder' then
+              update sketch_folders set folder_id = copy_id, collection_id = null where id = child_copy_id;
+            else
+              update sketches set folder_id = copy_id, collection_id = null where id = child_copy_id;
+            end if;
+          END LOOP;
+      end if;
+      return copy_id;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) IS '@omit';
+
+
+--
+-- Name: create_basemap_acl(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_basemap_acl() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+begin
+  if new.project_id is not null then
+  insert into
+    access_control_lists(project_id, basemap_id, type)
+    values(new.project_id, new.id, 'public'::access_control_list_type);
+  end if;
+  return new;
+end;
+$$;
 
 
 --
@@ -4490,49 +4770,6 @@ CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, te
       end if;
     end;
   $$;
-
-
---
--- Name: sketch_folders; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.sketch_folders (
-    id integer NOT NULL,
-    name text NOT NULL,
-    user_id integer NOT NULL,
-    project_id integer NOT NULL,
-    folder_id integer,
-    collection_id integer,
-    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
-);
-
-
---
--- Name: TABLE sketch_folders; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.sketch_folders IS '@omit create';
-
-
---
--- Name: COLUMN sketch_folders.project_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.project_id IS '@omit many';
-
-
---
--- Name: COLUMN sketch_folders.folder_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.folder_id IS 'The parent folder, if any.';
-
-
---
--- Name: COLUMN sketch_folders.collection_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketch_folders.collection_id IS 'The parent sketch collection, if any. Folders can only have a single parent entity.';
 
 
 --
@@ -6016,6 +6253,93 @@ CREATE FUNCTION public.generate_offline_tile_package("projectId" integer, "dataS
 
 
 --
+-- Name: get_child_folders_recursive(integer, public.sketch_child_type); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_child_folders_recursive(parent_id integer, child_type public.sketch_child_type) RETURNS integer[]
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    ids int[] = '{}';
+    child_ids int[];
+    child record;
+  begin
+    if child_type = 'sketch' then
+      FOR child IN SELECT * FROM get_children_of_collection(parent_id)
+      LOOP
+      if child.type = 'sketch_folder' then
+        ids := ids || child.id;
+      end if;
+      if child.is_leaf = false then
+        select get_child_folders_recursive(child.id, child.type) into child_ids;
+        ids := ids || child_ids;
+      end if;
+      END LOOP;
+    else
+      FOR child IN SELECT * FROM get_children_of_folder(parent_id)
+      LOOP
+      if child.type = 'sketch_folder' then
+        ids := ids || child.id;
+      end if;
+      if child.is_leaf = false then
+        select get_child_folders_recursive(child.id, child.type) into child_ids;
+        ids := ids || child_ids;
+      end if;
+      END LOOP;
+    end if;
+    return ids;
+  end;
+  $$;
+
+
+--
+-- Name: get_child_sketches_and_collections_recursive(integer, public.sketch_child_type); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_child_sketches_and_collections_recursive(parent_id integer, child_type public.sketch_child_type) RETURNS integer[]
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    ids int[] = '{}';
+    child_ids int[];
+    child record;
+  begin
+    if child_type = 'sketch' then
+      FOR child IN SELECT * FROM get_children_of_collection(parent_id)
+      LOOP
+      if child.type = 'sketch' then
+        ids := ids || child.id;
+      end if;
+      if child.is_leaf = false then
+        select get_child_sketches_and_collections_recursive(child.id, child.type) into child_ids;
+        ids := ids || child_ids;
+      end if;
+      END LOOP;
+    else
+      FOR child IN SELECT * FROM get_children_of_folder(parent_id)
+      LOOP
+      if child.type = 'sketch' then
+        ids := ids || child.id;
+      end if;
+      if child.is_leaf = false then
+        select get_child_sketches_and_collections_recursive(child.id, child.type) into child_ids;
+        ids := ids || child_ids;
+      end if;
+      END LOOP;
+    end if;
+    return ids;
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_child_sketches_and_collections_recursive(parent_id integer, child_type public.sketch_child_type); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_child_sketches_and_collections_recursive(parent_id integer, child_type public.sketch_child_type) IS '@omit';
+
+
+--
 -- Name: get_child_sketches_recursive(integer, public.sketch_child_type); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6775,105 +7099,6 @@ CREATE FUNCTION public.my_folders("projectId" integer) RETURNS SETOF public.sket
 COMMENT ON FUNCTION public.my_folders("projectId" integer) IS '
 @omit
 ';
-
-
---
--- Name: sketches; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.sketches (
-    id integer NOT NULL,
-    name text NOT NULL,
-    sketch_class_id integer NOT NULL,
-    user_id integer,
-    collection_id integer,
-    copy_of integer,
-    user_geom public.geometry(Geometry,4326),
-    geom public.geometry(Geometry,4326),
-    folder_id integer,
-    properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    bbox real[] GENERATED ALWAYS AS (public.create_bbox(COALESCE(geom, user_geom))) STORED,
-    num_vertices integer GENERATED ALWAYS AS (public.st_npoints(COALESCE(geom, user_geom))) STORED,
-    form_element_id integer,
-    response_id integer,
-    mercator_geometry public.geometry(Geometry,3857) GENERATED ALWAYS AS (public.st_transform(COALESCE(geom, user_geom), 3857)) STORED,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
-);
-
-
---
--- Name: TABLE sketches; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.sketches IS '
-@omit all,many,create,update
-A *Sketch* is a spatial feature that matches the schema defined by the related 
-*SketchClass*. User *Sketches* appears in the user''s "My Plans" tab and can be
-shared in the discussion forum. They are also the gateway to analytical reports.
-
-Sketches are completely owned by individual users, so access control rules 
-ensure that only the owner of a sketch can perform CRUD operations on them. 
-Admins have no special access. Use the graphile-generated mutations to manage 
-these records.
-';
-
-
---
--- Name: COLUMN sketches.name; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.name IS 'User provided name for the sketch.';
-
-
---
--- Name: COLUMN sketches.sketch_class_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.sketch_class_id IS 'SketchClass that defines the behavior of this type of sketch.';
-
-
---
--- Name: COLUMN sketches.user_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.user_id IS 'Owner of the sketch.';
-
-
---
--- Name: COLUMN sketches.collection_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.collection_id IS 'If the sketch is not a collection, it can belong to a collection (collections cannot be nested).';
-
-
---
--- Name: COLUMN sketches.copy_of; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.copy_of IS 'If this Sketch started as a copy of another it is tracked here. Eventually SeaSketch may have a means of visualizing how plans are iterated on over time.';
-
-
---
--- Name: COLUMN sketches.user_geom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.user_geom IS 'Spatial feature the user directly digitized, without preprocessing. This is the feature that should be used if the Sketch is later edited.';
-
-
---
--- Name: COLUMN sketches.geom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.geom IS 'The geometry of the Sketch **after** it has been preprocessed. This is the geometry that is used for reporting. Preprocessed geometries may be extremely large and complex, so it may be necessary to access them through a vector tile service or some other optimization.';
-
-
---
--- Name: COLUMN sketches.folder_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.sketches.folder_id IS 'Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.';
 
 
 --
@@ -17601,18 +17826,122 @@ GRANT ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_
 
 
 --
--- Name: FUNCTION create_basemap_acl(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.create_basemap_acl() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION create_bbox(geom public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.create_bbox(geom public.geometry) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry) TO anon;
+
+
+--
+-- Name: FUNCTION geometry(public.geometry, integer, boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) TO anon;
+
+
+--
+-- Name: FUNCTION st_npoints(public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_npoints(public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_npoints(public.geometry) TO anon;
+
+
+--
+-- Name: FUNCTION st_transform(public.geometry, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_transform(public.geometry, integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_transform(public.geometry, integer) TO anon;
+
+
+--
+-- Name: TABLE sketches; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(name) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.collection_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(collection_id) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.user_geom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(user_geom) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.geom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(geom) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.folder_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(folder_id) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketches.properties; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(properties) ON TABLE public.sketches TO seasketch_user;
+
+
+--
+-- Name: FUNCTION copy_sketch(sketch_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_sketch(sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_sketch(sketch_id integer) TO seasketch_user;
+
+
+--
+-- Name: TABLE sketch_folders; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.sketch_folders TO seasketch_user;
+
+
+--
+-- Name: FUNCTION copy_sketch_folder(folder_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_sketch_folder(folder_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_sketch_folder(folder_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_basemap_acl(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_basemap_acl() FROM PUBLIC;
 
 
 --
@@ -17748,14 +18077,6 @@ GRANT DELETE ON TABLE public.posts TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION geometry(public.geometry, integer, boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) TO anon;
 
 
 --
@@ -17944,13 +18265,6 @@ REVOKE ALL ON FUNCTION public.create_sketch_class_acl() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) TO seasketch_user;
-
-
---
--- Name: TABLE sketch_folders; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.sketch_folders TO seasketch_user;
 
 
 --
@@ -19378,6 +19692,22 @@ REVOKE ALL ON FUNCTION public.geomfromewkt(text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION get_child_folders_recursive(parent_id integer, child_type public.sketch_child_type); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_child_folders_recursive(parent_id integer, child_type public.sketch_child_type) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_child_folders_recursive(parent_id integer, child_type public.sketch_child_type) TO anon;
+
+
+--
+-- Name: FUNCTION get_child_sketches_and_collections_recursive(parent_id integer, child_type public.sketch_child_type); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_child_sketches_and_collections_recursive(parent_id integer, child_type public.sketch_child_type) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_child_sketches_and_collections_recursive(parent_id integer, child_type public.sketch_child_type) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION get_child_sketches_recursive(parent_id integer, child_type public.sketch_child_type); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19996,71 +20326,6 @@ GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answe
 
 REVOKE ALL ON FUNCTION public.my_folders("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_folders("projectId" integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION st_npoints(public.geometry); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_npoints(public.geometry) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.st_npoints(public.geometry) TO anon;
-
-
---
--- Name: FUNCTION st_transform(public.geometry, integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_transform(public.geometry, integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.st_transform(public.geometry, integer) TO anon;
-
-
---
--- Name: TABLE sketches; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE ON TABLE public.sketches TO seasketch_user;
-
-
---
--- Name: COLUMN sketches.name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(name) ON TABLE public.sketches TO seasketch_user;
-
-
---
--- Name: COLUMN sketches.collection_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(collection_id) ON TABLE public.sketches TO seasketch_user;
-
-
---
--- Name: COLUMN sketches.user_geom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(user_geom) ON TABLE public.sketches TO seasketch_user;
-
-
---
--- Name: COLUMN sketches.geom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(geom) ON TABLE public.sketches TO seasketch_user;
-
-
---
--- Name: COLUMN sketches.folder_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(folder_id) ON TABLE public.sketches TO seasketch_user;
-
-
---
--- Name: COLUMN sketches.properties; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(properties) ON TABLE public.sketches TO seasketch_user;
 
 
 --

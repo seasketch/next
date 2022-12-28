@@ -702,6 +702,77 @@ export type CopyAppearancePayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
+/** All input for the `copySketchFolder` mutation. */
+export type CopySketchFolderInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  folderId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `copySketchFolder` mutation. */
+export type CopySketchFolderPayload = {
+  __typename?: 'CopySketchFolderPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchFolder?: Maybe<SketchFolder>;
+  /** An edge for our `SketchFolder`. May be used by Relay 1. */
+  sketchFolderEdge?: Maybe<SketchFoldersEdge>;
+};
+
+
+/** The output of our `copySketchFolder` mutation. */
+export type CopySketchFolderPayloadSketchFolderEdgeArgs = {
+  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+};
+
+/** All input for the `copySketch` mutation. */
+export type CopySketchInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sketchId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `copySketch` mutation. */
+export type CopySketchPayload = {
+  __typename?: 'CopySketchPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Sketch` that is related to this `Sketch`. */
+  collection?: Maybe<Sketch>;
+  /** Reads a single `Sketch` that is related to this `Sketch`. */
+  copiedFrom?: Maybe<Sketch>;
+  /** Reads a single `FormElement` that is related to this `Sketch`. */
+  formElement?: Maybe<FormElement>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketch?: Maybe<Sketch>;
+  /** Reads a single `SketchClass` that is related to this `Sketch`. */
+  sketchClass?: Maybe<SketchClass>;
+  /** Reads a single `User` that is related to this `Sketch`. */
+  user?: Maybe<User>;
+};
+
+export type CopySketchTocItemResults = {
+  __typename?: 'CopySketchTocItemResults';
+  folders?: Maybe<Array<SketchFolder>>;
+  parentId: Scalars['Int'];
+  sketches?: Maybe<Array<Sketch>>;
+};
+
 /** All input for the create `Basemap` mutation. */
 export type CreateBasemapInput = {
   /** The `Basemap` to be created by this mutation. */
@@ -5086,6 +5157,30 @@ export type GeometryPolygonZm = GeometryGeometryZm & GeometryInterface & {
   srid: Scalars['Int'];
 };
 
+/** All input for the `getChildFoldersRecursive` mutation. */
+export type GetChildFoldersRecursiveInput = {
+  childType?: Maybe<SketchChildType>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  parentId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getChildFoldersRecursive` mutation. */
+export type GetChildFoldersRecursivePayload = {
+  __typename?: 'GetChildFoldersRecursivePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integers?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `grantAdminAccess` mutation. */
 export type GrantAdminAccessInput = {
   /**
@@ -5661,6 +5756,9 @@ export type Mutation = {
    * from the defaults set by a previous question.
    */
   copyAppearance?: Maybe<CopyAppearancePayload>;
+  copySketch?: Maybe<CopySketchPayload>;
+  copySketchFolder?: Maybe<CopySketchFolderPayload>;
+  copySketchTocItem?: Maybe<CopySketchTocItemResults>;
   /** Creates a single `Basemap`. */
   createBasemap?: Maybe<CreateBasemapPayload>;
   /** Creates a single `CommunityGuideline`. */
@@ -5870,6 +5968,7 @@ export type Mutation = {
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
+  getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -6220,6 +6319,25 @@ export type MutationConfirmProjectInviteWithVerifiedEmailArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCopyAppearanceArgs = {
   input: CopyAppearanceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCopySketchArgs = {
+  input: CopySketchInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCopySketchFolderArgs = {
+  input: CopySketchFolderInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCopySketchTocItemArgs = {
+  id: Scalars['Int'];
+  type: SketchChildType;
 };
 
 
@@ -6783,6 +6901,12 @@ export type MutationFailDataUploadArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGenerateOfflineTilePackageArgs = {
   input: GenerateOfflineTilePackageInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetChildFoldersRecursiveArgs = {
+  input: GetChildFoldersRecursiveInput;
 };
 
 
@@ -10256,6 +10380,11 @@ export type Sketch = Node & {
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
 };
+
+export enum SketchChildType {
+  Sketch = 'SKETCH',
+  SketchFolder = 'SKETCH_FOLDER'
+}
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
 export type SketchClass = Node & {
@@ -15894,6 +16023,59 @@ export type SketchReportingDetailsQuery = (
         & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body' | 'generatedExportId' | 'generatedLabel'>
       )>> }
     )> }
+  )> }
+);
+
+export type CopySketchMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type CopySketchMutation = (
+  { __typename?: 'Mutation' }
+  & { copySketch?: Maybe<(
+    { __typename?: 'CopySketchPayload' }
+    & { sketch?: Maybe<(
+      { __typename?: 'Sketch' }
+      & SketchTocDetailsFragment
+    )> }
+  )> }
+);
+
+export type CopySketchFolderMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type CopySketchFolderMutation = (
+  { __typename?: 'Mutation' }
+  & { copySketchFolder?: Maybe<(
+    { __typename?: 'CopySketchFolderPayload' }
+    & { sketchFolder?: Maybe<(
+      { __typename?: 'SketchFolder' }
+      & SketchFolderDetailsFragment
+    )> }
+  )> }
+);
+
+export type CopyTocItemMutationVariables = Exact<{
+  id: Scalars['Int'];
+  type: SketchChildType;
+}>;
+
+
+export type CopyTocItemMutation = (
+  { __typename?: 'Mutation' }
+  & { copySketchTocItem?: Maybe<(
+    { __typename?: 'CopySketchTocItemResults' }
+    & Pick<CopySketchTocItemResults, 'parentId'>
+    & { folders?: Maybe<Array<(
+      { __typename?: 'SketchFolder' }
+      & SketchFolderDetailsFragment
+    )>>, sketches?: Maybe<Array<(
+      { __typename?: 'Sketch' }
+      & SketchTocDetailsFragment
+    )>> }
   )> }
 );
 
@@ -23440,6 +23622,117 @@ export function useSketchReportingDetailsLazyQuery(baseOptions?: Apollo.LazyQuer
 export type SketchReportingDetailsQueryHookResult = ReturnType<typeof useSketchReportingDetailsQuery>;
 export type SketchReportingDetailsLazyQueryHookResult = ReturnType<typeof useSketchReportingDetailsLazyQuery>;
 export type SketchReportingDetailsQueryResult = Apollo.QueryResult<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>;
+export const CopySketchDocument = gql`
+    mutation CopySketch($id: Int!) {
+  copySketch(input: {sketchId: $id}) {
+    sketch {
+      ...SketchTocDetails
+    }
+  }
+}
+    ${SketchTocDetailsFragmentDoc}`;
+export type CopySketchMutationFn = Apollo.MutationFunction<CopySketchMutation, CopySketchMutationVariables>;
+
+/**
+ * __useCopySketchMutation__
+ *
+ * To run a mutation, you first call `useCopySketchMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCopySketchMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [copySketchMutation, { data, loading, error }] = useCopySketchMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useCopySketchMutation(baseOptions?: Apollo.MutationHookOptions<CopySketchMutation, CopySketchMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CopySketchMutation, CopySketchMutationVariables>(CopySketchDocument, options);
+      }
+export type CopySketchMutationHookResult = ReturnType<typeof useCopySketchMutation>;
+export type CopySketchMutationResult = Apollo.MutationResult<CopySketchMutation>;
+export type CopySketchMutationOptions = Apollo.BaseMutationOptions<CopySketchMutation, CopySketchMutationVariables>;
+export const CopySketchFolderDocument = gql`
+    mutation CopySketchFolder($id: Int!) {
+  copySketchFolder(input: {folderId: $id}) {
+    sketchFolder {
+      ...SketchFolderDetails
+    }
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}`;
+export type CopySketchFolderMutationFn = Apollo.MutationFunction<CopySketchFolderMutation, CopySketchFolderMutationVariables>;
+
+/**
+ * __useCopySketchFolderMutation__
+ *
+ * To run a mutation, you first call `useCopySketchFolderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCopySketchFolderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [copySketchFolderMutation, { data, loading, error }] = useCopySketchFolderMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useCopySketchFolderMutation(baseOptions?: Apollo.MutationHookOptions<CopySketchFolderMutation, CopySketchFolderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CopySketchFolderMutation, CopySketchFolderMutationVariables>(CopySketchFolderDocument, options);
+      }
+export type CopySketchFolderMutationHookResult = ReturnType<typeof useCopySketchFolderMutation>;
+export type CopySketchFolderMutationResult = Apollo.MutationResult<CopySketchFolderMutation>;
+export type CopySketchFolderMutationOptions = Apollo.BaseMutationOptions<CopySketchFolderMutation, CopySketchFolderMutationVariables>;
+export const CopyTocItemDocument = gql`
+    mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}`;
+export type CopyTocItemMutationFn = Apollo.MutationFunction<CopyTocItemMutation, CopyTocItemMutationVariables>;
+
+/**
+ * __useCopyTocItemMutation__
+ *
+ * To run a mutation, you first call `useCopyTocItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCopyTocItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [copyTocItemMutation, { data, loading, error }] = useCopyTocItemMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      type: // value for 'type'
+ *   },
+ * });
+ */
+export function useCopyTocItemMutation(baseOptions?: Apollo.MutationHookOptions<CopyTocItemMutation, CopyTocItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CopyTocItemMutation, CopyTocItemMutationVariables>(CopyTocItemDocument, options);
+      }
+export type CopyTocItemMutationHookResult = ReturnType<typeof useCopyTocItemMutation>;
+export type CopyTocItemMutationResult = Apollo.MutationResult<CopyTocItemMutation>;
+export type CopyTocItemMutationOptions = Apollo.BaseMutationOptions<CopyTocItemMutation, CopyTocItemMutationVariables>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -26486,6 +26779,9 @@ export const namedOperations = {
     RenameFolder: 'RenameFolder',
     UpdateSketchFolderParent: 'UpdateSketchFolderParent',
     UpdateSketchParent: 'UpdateSketchParent',
+    CopySketch: 'CopySketch',
+    CopySketchFolder: 'CopySketchFolder',
+    CopyTocItem: 'CopyTocItem',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',

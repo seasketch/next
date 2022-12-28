@@ -800,6 +800,83 @@ type CopyAppearancePayload {
   query: Query
 }
 
+"""All input for the `copySketchFolder` mutation."""
+input CopySketchFolderInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  folderId: Int
+}
+
+"""The output of our `copySketchFolder` mutation."""
+type CopySketchFolderPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sketchFolder: SketchFolder
+
+  """An edge for our `SketchFolder`. May be used by Relay 1."""
+  sketchFolderEdge(
+    """The method to use when ordering `SketchFolder`."""
+    orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchFoldersEdge
+}
+
+"""All input for the `copySketch` mutation."""
+input CopySketchInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sketchId: Int
+}
+
+"""The output of our `copySketch` mutation."""
+type CopySketchPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  collection: Sketch
+
+  """Reads a single `Sketch` that is related to this `Sketch`."""
+  copiedFrom: Sketch
+
+  """Reads a single `FormElement` that is related to this `Sketch`."""
+  formElement: FormElement
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sketch: Sketch
+
+  """Reads a single `SketchClass` that is related to this `Sketch`."""
+  sketchClass: SketchClass
+
+  """Reads a single `User` that is related to this `Sketch`."""
+  user: User
+}
+
+type CopySketchTocItemResults {
+  folders: [SketchFolder!]
+  parentId: Int!
+  sketches: [Sketch!]
+}
+
 """All input for the create `Basemap` mutation."""
 input CreateBasemapInput {
   """The `Basemap` to be created by this mutation."""
@@ -5914,6 +5991,33 @@ type GeometryPolygonZM implements GeometryGeometryZM & GeometryInterface {
   srid: Int!
 }
 
+"""All input for the `getChildFoldersRecursive` mutation."""
+input GetChildFoldersRecursiveInput {
+  childType: SketchChildType
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  parentId: Int
+}
+
+"""The output of our `getChildFoldersRecursive` mutation."""
+type GetChildFoldersRecursivePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  integers: [Int]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `grantAdminAccess` mutation."""
 input GrantAdminAccessInput {
   """
@@ -6661,6 +6765,19 @@ type Mutation {
     """
     input: CopyAppearanceInput!
   ): CopyAppearancePayload
+  copySketch(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CopySketchInput!
+  ): CopySketchPayload
+  copySketchFolder(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CopySketchFolderInput!
+  ): CopySketchFolderPayload
+  copySketchTocItem(id: Int!, type: SketchChildType!): CopySketchTocItemResults
 
   """Creates a single `Basemap`."""
   createBasemap(
@@ -7434,6 +7551,12 @@ type Mutation {
     """
     input: GenerateOfflineTilePackageInput!
   ): GenerateOfflineTilePackagePayload
+  getChildFoldersRecursive(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: GetChildFoldersRecursiveInput!
+  ): GetChildFoldersRecursivePayload
 
   """
   Use to create new sprites. If an existing sprite in the database for this
@@ -11210,6 +11333,11 @@ type Sketch implements Node {
 
   """Owner of the sketch."""
   userId: Int
+}
+
+enum SketchChildType {
+  SKETCH
+  SKETCH_FOLDER
 }
 
 """

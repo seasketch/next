@@ -676,3 +676,94 @@ describe("Folders", () => {
     });
   });
 });
+
+describe("Copy operations", () => {
+  test("Copying a single sketch", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, userIds) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const polygonClassId = await conn.oneFirst(
+          sql`insert into sketch_classes (project_id, name, geometry_type, allow_multi) values (${projectId}, 'Poly', 'POLYGON', false) returning id`
+        );
+        await createSession(conn, userIds[0], true, false, projectId);
+        const polyId = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom, collection_id) values (${userIds[0]}, ${polygonClassId}, 'my shape', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon}), null) returning id`
+        );
+        expect(polyId).toBeTruthy();
+        const copyId = await conn.oneFirst(
+          sql`select id from copy_sketch(${polyId});`
+        );
+        expect(copyId).toBeTruthy();
+        expect(copyId).not.toBe(polyId);
+      }
+    );
+  });
+  test("Copying a complex collection with multiple subfolders and child sketches", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, userIds) => {
+        /**
+         * 
+        Testing copying the following structure:
+
+        > my collection
+          * shape a
+          > folder a
+            * shape b
+            > folder b
+              * shape c
+
+        */
+
+        await createSession(conn, adminId, true, false, projectId);
+        const polygonClassId = await conn.oneFirst(
+          sql`insert into sketch_classes (project_id, name, geometry_type, allow_multi) values (${projectId}, 'Poly', 'POLYGON', false) returning id`
+        );
+        const collectionClassId = await conn.oneFirst(
+          sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+        );
+        await createSession(conn, userIds[0], true, false, projectId);
+        const collectionId = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name) values (${userIds[0]}, ${collectionClassId}, 'my collection') returning id`
+        );
+        const shapeA = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom, collection_id) values (${userIds[0]}, ${polygonClassId}, 'shape a', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon}), ${collectionId}) returning id`
+        );
+        const folderA = await conn.oneFirst(
+          sql`insert into sketch_folders (name, user_id, project_id, collection_id) values ('folder a', ${userIds[0]}, ${projectId}, ${collectionId}) returning id`
+        );
+        const shapeB = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom, folder_id) values (${userIds[0]}, ${polygonClassId}, 'shape b', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon}), ${folderA}) returning id`
+        );
+        const folderB = await conn.oneFirst(
+          sql`insert into sketch_folders (name, user_id, project_id, folder_id) values ('folder b', ${userIds[0]}, ${projectId}, ${folderA}) returning id`
+        );
+        expect(shapeA).toBeTruthy();
+        const shapeC = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom, folder_id) values (${userIds[0]}, ${polygonClassId}, 'shape c', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon}), ${folderB}) returning id`
+        );
+
+        const rows = await conn.any(
+          sql`select copy_sketch_toc_item_recursive(${collectionId}, 'sketch');`
+        );
+        const copyId = rows[0].copy_sketch_toc_item_recursive;
+        expect(copyId).toBeTruthy();
+        expect(copyId).not.toBe(collectionId);
+        const folders = await conn.manyFirst(
+          sql`select * from get_child_folders_recursive(${copyId}, 'sketch')`
+        );
+        console.log("folders", folders);
+        // @ts-ignore
+        expect(folders[0].length).toBe(2);
+        const sketches = await conn.manyFirst(
+          sql`select * from get_child_sketches_recursive(${copyId}, 'sketch')`
+        );
+        // @ts-ignore
+        expect(sketches[0].length).toBe(3);
+      }
+    );
+  });
+});

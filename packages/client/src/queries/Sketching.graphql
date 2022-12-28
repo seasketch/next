@@ -213,3 +213,31 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     }
   }
 }
+
+mutation CopySketch($id: Int!) {
+  copySketch(input: { sketchId: $id }) {
+    sketch {
+      ...SketchTocDetails
+    }
+  }
+}
+
+mutation CopySketchFolder($id: Int!) {
+  copySketchFolder(input: { folderId: $id }) {
+    sketchFolder {
+      ...SketchFolderDetails
+    }
+  }
+}
+
+mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+  }
+}

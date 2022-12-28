@@ -1,11 +1,16 @@
-import { postgraphile } from "postgraphile";
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
-import { Feature, GeoJsonObject } from "geojson";
+import { Feature } from "geojson";
 
 const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
     typeDefs: gql`
+      type CopySketchTocItemResults {
+        sketches: [Sketch!]
+        folders: [SketchFolder!]
+        parentId: Int!
+      }
+
       extend type Sketch {
         """
         Greater of updatedAt, createdAt, as stringified epoch timestamp.
@@ -80,9 +85,40 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           """
           properties: JSON!
         ): Sketch
+
+        copySketchTocItem(
+          id: Int!
+          type: SketchChildType!
+        ): CopySketchTocItemResults
       }
     `,
     resolvers: {
+      CopySketchTocItemResults: {
+        sketches: async (results, args, context, resolveInfo) => {
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`sketches`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(${sql.value(
+                  context.sketchIds
+                )})`
+              );
+            }
+          );
+        },
+        folders: async (results, args, context, resolveInfo) => {
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`sketch_folders`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(${sql.value(
+                  context.folderIds
+                )})`
+              );
+            }
+          );
+        },
+      },
       Sketch: {
         timestamp: async (sketch, args, context, info) => {
           let date = new Date(sketch.createdAt);
@@ -132,7 +168,6 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             [sketchClassId]
           );
           const sketchClass = rows[0];
-          console.log("sketchClass", sketchClass);
           if (sketchClass.geometry_type === "COLLECTION") {
             const {
               rows: [sketch],
@@ -284,6 +319,46 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             }
           );
           return row;
+        },
+        copySketchTocItem: async (
+          _query,
+          { id, type },
+          context,
+          resolveInfo
+        ) => {
+          const { pgClient } = context;
+
+          const {
+            rows: [row],
+          } = await pgClient.query(
+            `select copy_sketch_toc_item_recursive($1, $2, true)`,
+            [id, type]
+          );
+          const copyId = row.copy_sketch_toc_item_recursive;
+          let {
+            rows: [{ get_child_folders_recursive: folderIds }],
+          } = await pgClient.query(
+            `select get_child_folders_recursive($1, $2)`,
+            [copyId, type]
+          );
+          let {
+            rows: [{ get_child_sketches_and_collections_recursive: sketchIds }],
+          } = await pgClient.query(
+            `select get_child_sketches_and_collections_recursive($1, $2)`,
+            [copyId, type]
+          );
+          if (type === "sketch") {
+            sketchIds.push(copyId);
+          } else {
+            folderIds.push(copyId);
+          }
+          context.sketchIds = sketchIds;
+          context.folderIds = folderIds;
+          // will be finished by CopySketchTocItemResults functions at the top
+          // of the resolvers
+          return {
+            parentId: copyId,
+          };
         },
       },
     },

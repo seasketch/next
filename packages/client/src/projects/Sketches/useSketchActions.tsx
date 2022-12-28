@@ -20,6 +20,9 @@ import {
   SketchEditorModalDetailsFragment,
   GetSketchForEditingDocument,
   GetSketchForEditingQuery,
+  useCopySketchMutation,
+  useCopySketchFolderMutation,
+  useCopyTocItemMutation,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import useDialog from "../../components/useDialog";
@@ -31,10 +34,11 @@ import { DropdownOption } from "../../components/DropdownButton";
 import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 import { ReportWindowUIState } from "./SketchReportWindow";
 import { actions } from "react-table";
-import { SketchGeometryType } from "../../generated/queries";
+import { SketchChildType, SketchGeometryType } from "../../generated/queries";
 import { download } from "../../download";
 import useAccessToken from "../../useAccessToken";
 import { BASE_SERVER_ENDPOINT } from "../../dataLayers/MapContextManager";
+import { treeItemId } from ".";
 
 export interface SketchAction {
   id: string;
@@ -237,6 +241,65 @@ export default function useSketchActions({
     },
   });
 
+  const [copy] = useCopyTocItemMutation({
+    onError,
+    update: async (cache, response) => {
+      const sketches = response.data?.copySketchTocItem?.sketches || [];
+      const folders = response.data?.copySketchTocItem?.folders || [];
+      const results = cache.readQuery<SketchingQuery>({
+        query: SketchingDocument,
+        variables: {
+          slug: getSlug(),
+        },
+      });
+      if (
+        results?.projectBySlug?.mySketches &&
+        results?.projectBySlug?.myFolders
+      ) {
+        await cache.writeQuery({
+          query: SketchingDocument,
+          variables: { slug: getSlug() },
+          data: {
+            ...results,
+            projectBySlug: {
+              ...results.projectBySlug,
+              mySketches: [...results.projectBySlug.mySketches, ...sketches],
+              myFolders: [...results.projectBySlug.myFolders, ...folders],
+            },
+          },
+        });
+      }
+    },
+  });
+
+  const [copySketchFolder] = useCopySketchFolderMutation({
+    onError,
+    update: async (cache, response) => {
+      if (response.data?.copySketchFolder?.sketchFolder) {
+        const folder = response.data.copySketchFolder.sketchFolder;
+        const results = cache.readQuery<SketchingQuery>({
+          query: SketchingDocument,
+          variables: {
+            slug: getSlug(),
+          },
+        });
+        if (results?.projectBySlug?.myFolders) {
+          await cache.writeQuery({
+            query: SketchingDocument,
+            variables: { slug: getSlug() },
+            data: {
+              ...results,
+              projectBySlug: {
+                ...results.projectBySlug,
+                myFolders: [...results.projectBySlug.myFolders, folder],
+              },
+            },
+          });
+        }
+      }
+    },
+  });
+
   useEffect(() => {
     function isValidChild(parentId: number, child: SketchingDetailsFragment) {
       const parent = sketchClasses?.find((sc) => sc.id === parentId);
@@ -397,7 +460,6 @@ export default function useSketchActions({
                     },
                   ] as SketchAction[])
                 : []),
-
               {
                 id: "delete",
                 label: t("Delete"),
@@ -435,6 +497,50 @@ export default function useSketchActions({
                   });
                 },
               },
+              ...(selectedSketchClasses || folderSelected
+                ? ([
+                    {
+                      id: "copy",
+                      label: t("Copy"),
+                      action: async ({
+                        selectedSketches,
+                        selectedFolders,
+                        focus,
+                      }) => {
+                        const item = selectedSketches[0] || selectedFolders[0];
+                        if (item) {
+                          const type = selectedSketches.length
+                            ? SketchChildType.Sketch
+                            : SketchChildType.SketchFolder;
+                          const response = await copy({
+                            variables: {
+                              id: item.id,
+                              type,
+                            },
+                          });
+                          const parentId =
+                            response.data?.copySketchTocItem?.parentId;
+                          const sketches =
+                            response.data?.copySketchTocItem?.sketches || [];
+                          if (parentId) {
+                            clearSelection();
+                            setTimeout(() => {
+                              focus(
+                                type === SketchChildType.Sketch
+                                  ? "Sketch"
+                                  : "SketchFolder",
+                                parentId
+                              );
+                              showSketches(
+                                sketches.map((s) => treeItemId(s.id, "Sketch"))
+                              );
+                            }, 100);
+                          }
+                        }
+                      },
+                    },
+                  ] as SketchAction[])
+                : []),
               ...(selectedSketchClasses && !folderSelected && !isCollection
                 ? ([
                     {
