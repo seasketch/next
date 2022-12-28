@@ -21973,6 +21973,7 @@ GRANT ALL ON FUNCTION public.sketches_user_attributes(sketch public.sketches) TO
 --
 
 REVOKE ALL ON FUNCTION public.slugify(text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.slugify(text) TO anon;
 
 
 --
@@ -21980,6 +21981,7 @@ REVOKE ALL ON FUNCTION public.slugify(text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.slugify(value text, allow_unicode boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.slugify(value text, allow_unicode boolean) TO anon;
 
 
 --
