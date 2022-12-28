@@ -747,7 +747,7 @@ describe("Copy operations", () => {
         );
 
         const rows = await conn.any(
-          sql`select copy_sketch_toc_item_recursive(${collectionId}, 'sketch');`
+          sql`select copy_sketch_toc_item_recursive(${collectionId}, 'sketch', true);`
         );
         const copyId = rows[0].copy_sketch_toc_item_recursive;
         expect(copyId).toBeTruthy();
