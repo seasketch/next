@@ -195,6 +195,7 @@ export default memo(function SketchingTools({
     setExpandedIds,
     setVisibleSketches,
     editSketch,
+    myFolders: data?.projectBySlug?.myFolders,
   });
 
   const [contextMenu, setContextMenu] = useState<

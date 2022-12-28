@@ -92,7 +92,7 @@ export default function SketchItem({
     [isSelected, node, onContextMenu, onSelect]
   );
 
-  const [{ canDrop, isOverCurrent, isOver }, drop] = useDrop(() => ({
+  const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
     canDrop: (item: DragItemProps<FolderNodeDataProps>, monitor) => {
       if (

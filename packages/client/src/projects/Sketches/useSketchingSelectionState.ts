@@ -11,7 +11,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { treeItemId } from ".";
 import { MapContext } from "../../dataLayers/MapContextManager";
-import { SketchTocDetailsFragment } from "../../generated/graphql";
+import {
+  SketchFolderDetailsFragment,
+  SketchTocDetailsFragment,
+} from "../../generated/graphql";
+import { getChildrenOfSketchOrSketchFolder } from "./useSketchActions";
 
 export default function useSketchingSelectionState({
   mySketches,
@@ -19,8 +23,10 @@ export default function useSketchingSelectionState({
   setExpandedIds,
   setVisibleSketches,
   editSketch,
+  myFolders,
 }: {
   mySketches?: SketchTocDetailsFragment[] | null;
+  myFolders?: SketchFolderDetailsFragment[] | null;
   toolbarRef: HTMLElement | null;
   setExpandedIds: (value: SetStateAction<string[]>) => void;
   setVisibleSketches: (val: string[] | ((prev: string[]) => string[])) => void;
@@ -166,7 +172,9 @@ export default function useSketchingSelectionState({
               .setHTML(
                 `
                 <div class="w-72">
-              <h2 class="truncate text-sm font-semibold">${name}</h2>
+              <h2 class="truncate text-sm font-semibold">${name} ${
+                  feature.id
+                }</h2>
               <p class=""><span>${
                 feature.properties!.user_slug || feature.properties!.user_id
               }</span> ${t("created this sketch on ")}${new Date(
@@ -205,13 +213,40 @@ export default function useSketchingSelectionState({
 
   useEffect(() => {
     if (mapContext?.manager) {
-      mapContext.manager.setSelectedSketches(
-        selectedIds
+      // get child sketches
+      const children = [];
+      for (const id of selectedIds) {
+        if (/SketchFolder:/.test(id)) {
+          const childNodes = getChildrenOfSketchOrSketchFolder(
+            {
+              __typename: "SketchFolder",
+              id: parseInt(id.split(":")[1]),
+            },
+            mySketches || [],
+            myFolders || []
+          );
+          children.push(...childNodes.sketches);
+        } else if (/Sketch:/.test(id)) {
+          const childNodes = getChildrenOfSketchOrSketchFolder(
+            {
+              __typename: "Sketch",
+              id: parseInt(id.split(":")[1]),
+            },
+            mySketches || [],
+            myFolders || []
+          );
+          children.push(...childNodes.sketches);
+        }
+      }
+
+      mapContext.manager.setSelectedSketches([
+        ...selectedIds
           .filter((s) => /Sketch:/.test(s))
-          .map((s) => parseInt(s.split(":")[1]))
-      );
+          .map((s) => parseInt(s.split(":")[1])),
+        ...children,
+      ]);
     }
-  }, [selectedIds, mapContext.manager, mySketches]);
+  }, [selectedIds, mapContext.manager, mySketches, myFolders]);
 
   return {
     selectedIds,

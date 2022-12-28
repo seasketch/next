@@ -1,6 +1,9 @@
 import { useCallback, useContext, useEffect } from "react";
 import { MapContext } from "../../dataLayers/MapContextManager";
-import { SketchTocDetailsFragment } from "../../generated/graphql";
+import {
+  SketchGeometryType,
+  SketchTocDetailsFragment,
+} from "../../generated/graphql";
 import getSlug from "../../getSlug";
 import useLocalStorage from "../../useLocalStorage";
 
@@ -28,6 +31,18 @@ export default function useSketchVisibilityState(
       mapContext.manager.setVisibleSketches(
         visibleSketches
           .filter((id) => /Sketch:/.test(id))
+          .filter((id) => {
+            const intId = parseInt(id.split(":")[1]);
+            const sketch = sketches.find((s) => s.id === intId);
+            if (
+              sketch &&
+              sketch.sketchClass?.geometryType !== SketchGeometryType.Collection
+            ) {
+              return true;
+            } else {
+              return false;
+            }
+          })
           .map((id) => parseInt(id.split(":")[1]))
           .map((id) => sketches.find((s) => s.id === id))
           .filter((sketch) => sketch !== undefined)

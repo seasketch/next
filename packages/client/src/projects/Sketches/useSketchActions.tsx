@@ -20,8 +20,6 @@ import {
   SketchEditorModalDetailsFragment,
   GetSketchForEditingDocument,
   GetSketchForEditingQuery,
-  useCopySketchMutation,
-  useCopySketchFolderMutation,
   useCopyTocItemMutation,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
@@ -33,7 +31,6 @@ import { useApolloClient } from "@apollo/client";
 import { DropdownOption } from "../../components/DropdownButton";
 import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 import { ReportWindowUIState } from "./SketchReportWindow";
-import { actions } from "react-table";
 import { SketchChildType, SketchGeometryType } from "../../generated/queries";
 import { download } from "../../download";
 import useAccessToken from "../../useAccessToken";
@@ -186,7 +183,9 @@ export default function useSketchActions({
                 ],
                 mySketches: [
                   ...(results.projectBySlug.mySketches || []).filter(
-                    (s) => deletedIds.sketches.indexOf(s.id) === -1
+                    (s) =>
+                      deletedIds.sketches.indexOf(s.id) === -1 &&
+                      s.id !== sketch.id
                   ),
                 ],
               },
@@ -225,7 +224,9 @@ export default function useSketchActions({
                 ...results.projectBySlug,
                 myFolders: [
                   ...results.projectBySlug.myFolders.filter(
-                    (f) => deletedIds.folders.indexOf(f.id) === -1
+                    (f) =>
+                      deletedIds.folders.indexOf(f.id) === -1 &&
+                      f.id !== folder.id
                   ),
                 ],
                 mySketches: [
@@ -268,34 +269,6 @@ export default function useSketchActions({
             },
           },
         });
-      }
-    },
-  });
-
-  const [copySketchFolder] = useCopySketchFolderMutation({
-    onError,
-    update: async (cache, response) => {
-      if (response.data?.copySketchFolder?.sketchFolder) {
-        const folder = response.data.copySketchFolder.sketchFolder;
-        const results = cache.readQuery<SketchingQuery>({
-          query: SketchingDocument,
-          variables: {
-            slug: getSlug(),
-          },
-        });
-        if (results?.projectBySlug?.myFolders) {
-          await cache.writeQuery({
-            query: SketchingDocument,
-            variables: { slug: getSlug() },
-            data: {
-              ...results,
-              projectBySlug: {
-                ...results.projectBySlug,
-                myFolders: [...results.projectBySlug.myFolders, folder],
-              },
-            },
-          });
-        }
       }
     },
   });
@@ -595,6 +568,13 @@ export default function useSketchActions({
     renameFolder,
     zoomTo,
     openSketchReport,
+    clearOpenSketchReports,
+    clearSelection,
+    copy,
+    isCollection,
+    selectedIds,
+    showSketches,
+    token,
   ]);
 
   /**
@@ -778,7 +758,7 @@ export default function useSketchActions({
   };
 }
 
-function getChildrenOfSketchOrSketchFolder(
+export function getChildrenOfSketchOrSketchFolder(
   parent: { __typename?: "Sketch" | "SketchFolder"; id: number },
   folders: {
     __typename?: "Sketch" | "SketchFolder";
@@ -792,36 +772,24 @@ function getChildrenOfSketchOrSketchFolder(
     collectionId?: number | null;
     folderId?: number | null;
   }[],
-  deletedIds = { sketches: [] as number[], folders: [] as number[] }
+  children = { sketches: [] as number[], folders: [] as number[] }
 ) {
   let isSketch = false;
   if (parent.__typename === "Sketch") {
     isSketch = true;
-    deletedIds.sketches.push(parent.id);
+    children.sketches.push(parent.id);
   } else {
-    deletedIds.folders.push(parent.id);
+    children.folders.push(parent.id);
   }
-  let found = false;
   for (const folder of folders) {
     if ((isSketch ? folder.collectionId : folder.folderId) === parent.id) {
-      found = true;
-      getChildrenOfSketchOrSketchFolder(folder, folders, sketches, deletedIds);
-      break;
+      getChildrenOfSketchOrSketchFolder(folder, folders, sketches, children);
     }
   }
-  if (!found) {
-    for (const sketch of sketches) {
-      if ((isSketch ? sketch.collectionId : sketch.folderId) === parent.id) {
-        found = true;
-        getChildrenOfSketchOrSketchFolder(
-          sketch,
-          folders,
-          sketches,
-          deletedIds
-        );
-        break;
-      }
+  for (const sketch of sketches) {
+    if ((isSketch ? sketch.collectionId : sketch.folderId) === parent.id) {
+      getChildrenOfSketchOrSketchFolder(sketch, folders, sketches, children);
     }
   }
-  return deletedIds;
+  return children;
 }
