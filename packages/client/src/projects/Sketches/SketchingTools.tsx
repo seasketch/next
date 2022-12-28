@@ -183,6 +183,25 @@ export default memo(function SketchingTools({
     ]
   );
 
+  const viewSketch = useCallback(
+    (id: number) => {
+      const sketch = (data?.projectBySlug?.mySketches || []).find(
+        (s) => s.id === id
+      );
+      if (sketch) {
+        setOpenReports((prev) => [
+          ...prev,
+          {
+            sketchId: id,
+            sketchClassId: sketch.sketchClassId,
+            uiState: "right",
+          },
+        ]);
+      }
+    },
+    [setOpenReports, data?.projectBySlug?.mySketches]
+  );
+
   const {
     selectedIds,
     clearSelection,
@@ -196,6 +215,7 @@ export default memo(function SketchingTools({
     setVisibleSketches,
     editSketch,
     myFolders: data?.projectBySlug?.myFolders,
+    viewSketch,
   });
 
   const [contextMenu, setContextMenu] = useState<

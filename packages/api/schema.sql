@@ -10207,7 +10207,7 @@ CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETUR
             'createdAt', sketches.created_at,
             'updatedAt', sketches.updated_at,
             'sketchClassId', sketches.sketch_class_id::text,
-            'user_slug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
+            'userSlug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
             'collectionId', sketches.collection_id::text, 
             'isCollection', (select geometry_type = 'COLLECTION' from sketch_classes where id = sketches.sketch_class_id),
             'name', sketches.name,

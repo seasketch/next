@@ -14,8 +14,10 @@ import { MapContext } from "../../dataLayers/MapContextManager";
 import {
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
+  useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { getChildrenOfSketchOrSketchFolder } from "./useSketchActions";
+import getSlug from "../../getSlug";
 
 export default function useSketchingSelectionState({
   mySketches,
@@ -23,6 +25,7 @@ export default function useSketchingSelectionState({
   setExpandedIds,
   setVisibleSketches,
   editSketch,
+  viewSketch,
   myFolders,
 }: {
   mySketches?: SketchTocDetailsFragment[] | null;
@@ -31,10 +34,16 @@ export default function useSketchingSelectionState({
   setExpandedIds: (value: SetStateAction<string[]>) => void;
   setVisibleSketches: (val: string[] | ((prev: string[]) => string[])) => void;
   editSketch: (id: number) => void;
+  viewSketch: (id: number) => void;
 }) {
   const mapContext = useContext(MapContext);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { t } = useTranslation("sketching");
+  const { data } = useProjectMetadataQuery({
+    variables: {
+      slug: getSlug(),
+    },
+  });
 
   const clearSelection = useCallback(() => {
     setSelectedIds([]);
@@ -160,8 +169,18 @@ export default function useSketchingSelectionState({
         if (feature.id) {
           const id = parseInt(feature.id.toString());
           setTimeout(() => {
+            const props = feature.properties!;
             focusOnTableOfContentsItem("Sketch", id);
             const name = feature.properties?.name;
+            const itMe =
+              data?.me?.id &&
+              data.me.id === parseInt(feature.properties!.userId);
+            const wasUpdated =
+              props.updatedAt &&
+              new Date(props.updatedAt) > new Date(props.createdAt);
+            const dateString = new Date(
+              wasUpdated ? props.updatedAt : props.createdAt
+            ).toLocaleDateString();
             const popup = new Popup({
               closeOnClick: true,
               closeButton: true,
@@ -172,27 +191,47 @@ export default function useSketchingSelectionState({
               .setHTML(
                 `
                 <div class="w-72">
-              <h2 class="truncate text-sm font-semibold">${name} ${
-                  feature.id
-                }</h2>
-              <p class=""><span>${
-                feature.properties!.user_slug || feature.properties!.user_id
-              }</span> ${t("created this sketch on ")}${new Date(
-                  feature.properties!.createdAt
-                ).toLocaleDateString()}</p>
-                <button id="popup-edit-sketch" class="underline">edit</button>
+                  <div class="p-2">
+                    <h2 class="truncate text-sm font-semibold">${name}</h2>
+                    <p class="">
+                      <span>
+                      ${
+                        itMe
+                          ? t("You")
+                          : feature.properties!.userSlug ||
+                            feature.properties!.user_slug
+                      }
+                      </span> 
+                      ${
+                        wasUpdated
+                          ? t("last updated this sketch on")
+                          : t("created this sketch on")
+                      } ${dateString}
+                    </p>
+                  </div>
+                  <div class="py-2 space-x-1 bg-gray-50 p-2 border-t">
+                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">edit</button>
+                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-view-sketch" class="underline">view reports</button>
+                  </div>
                 </div>
               `
               )
               .addTo(map);
             const el = popup.getElement();
-            const button = el.querySelector("button[id=popup-edit-sketch]");
-            if (button) {
-              button.addEventListener("click", () => {
+            const edit = el.querySelector("button[id=popup-edit-sketch]");
+            if (edit) {
+              edit.addEventListener("click", () => {
                 popup.remove();
                 editSketch(id);
               });
             }
+            const view = el.querySelector("button[id=popup-view-sketch]");
+            if (view) {
+              view.addEventListener("click", () => {
+                viewSketch(id);
+              });
+            }
+
             // setSelectedIds([treeItemId(id, "Sketch")]);
           }, 1);
         }
@@ -209,6 +248,8 @@ export default function useSketchingSelectionState({
     mapContext.manager?.map,
     setSelectedIds,
     t,
+    data?.me?.id,
+    viewSketch,
   ]);
 
   useEffect(() => {

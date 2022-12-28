@@ -257,3 +257,7 @@ input[type="checkbox"][indeterminate="true"]:checked {
   padding-left: 8px;
   padding-right: 8px;
 }
+
+.SketchPopup .mapboxgl-popup-content {
+  padding: 0;
+}
