@@ -4732,9 +4732,11 @@ export type Forum = Node & {
    * admin dashboard. This is an alternative to deleting a forum.
    */
   archived?: Maybe<Scalars['Boolean']>;
+  canPost?: Maybe<Scalars['Boolean']>;
   /** Optional description of the forum to be displayed to project users. */
   description?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
+  lastPostDate?: Maybe<Scalars['Datetime']>;
   /** Title displayed for the forum. */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -4744,11 +4746,15 @@ export type Forum = Node & {
    * position in ascending order. Set using `setForumOrder()`
    */
   position?: Maybe<Scalars['Int']>;
+  postCount?: Maybe<Scalars['Int']>;
   /** Reads a single `Project` that is related to this `Forum`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  readAcl?: Maybe<Acl>;
+  topicCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Topic`. */
   topicsConnection: TopicsConnection;
+  writeAcl?: Maybe<Acl>;
 };
 
 
@@ -8063,6 +8069,8 @@ export type Project = Node & {
    */
   isListed: Scalars['Boolean'];
   isOfflineEnabled?: Maybe<Scalars['Boolean']>;
+  /** Reads and enables pagination through a set of `Post`. */
+  latestPostsConnection: PostsConnection;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
   /**
@@ -8319,6 +8327,19 @@ export type ProjectInvitesConnectionArgs = {
  */
 export type ProjectIsAdminArgs = {
   userId?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectLatestPostsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -11510,6 +11531,7 @@ export type Topic = Node & {
   nodeId: Scalars['ID'];
   /** Reads and enables pagination through a set of `Post`. */
   postsConnection: PostsConnection;
+  postsCount?: Maybe<Scalars['Int']>;
   /**
    * Sticky topics will be listed at the topic of the forum.
    *
@@ -14995,6 +15017,161 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type ForumListDetailsFragment = (
+  { __typename?: 'Forum' }
+  & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate'>
+  & { readAcl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId'>
+  )>, writeAcl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId'>
+  )> }
+);
+
+export type ForumAdminListQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ForumAdminListQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { forums: Array<(
+      { __typename?: 'Forum' }
+      & ForumListDetailsFragment
+    )> }
+  )> }
+);
+
+export type CreateForumMutationVariables = Exact<{
+  name: Scalars['String'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CreateForumMutation = (
+  { __typename?: 'Mutation' }
+  & { createForum?: Maybe<(
+    { __typename?: 'CreateForumPayload' }
+    & { forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & ForumListDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateForumMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name?: Maybe<Scalars['String']>;
+  archived?: Maybe<Scalars['Boolean']>;
+  description?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateForumMutation = (
+  { __typename?: 'Mutation' }
+  & { updateForum?: Maybe<(
+    { __typename?: 'UpdateForumPayload' }
+    & { forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'name' | 'archived' | 'description'>
+    )> }
+  )> }
+);
+
+export type DeleteForumMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteForumMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteForum?: Maybe<(
+    { __typename?: 'DeleteForumPayload' }
+    & { forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id'>
+    )> }
+  )> }
+);
+
+export type AuthorProfileFragment = (
+  { __typename?: 'Profile' }
+  & Pick<Profile, 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture' | 'userId'>
+);
+
+export type ForumPostFragment = (
+  { __typename?: 'Post' }
+  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'message' | 'topicId'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & AuthorProfileFragment
+  )> }
+);
+
+export type ForumsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ForumsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { forums: Array<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
+    )>, latestPostsConnection: (
+      { __typename?: 'PostsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Post' }
+        & { topic?: Maybe<(
+          { __typename?: 'Topic' }
+          & Pick<Topic, 'id' | 'title' | 'sticky'>
+          & { forum?: Maybe<(
+            { __typename?: 'Forum' }
+            & Pick<Forum, 'id' | 'name'>
+          )> }
+        )> }
+        & ForumPostFragment
+      )> }
+    ) }
+  )> }
+);
+
+export type ForumTopicFragment = (
+  { __typename?: 'Topic' }
+  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & AuthorProfileFragment
+  )> }
+);
+
+export type TopicListQueryVariables = Exact<{
+  forumId: Scalars['Int'];
+}>;
+
+
+export type TopicListQuery = (
+  { __typename?: 'Query' }
+  & { forum?: Maybe<(
+    { __typename?: 'Forum' }
+    & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
+    & { topicsConnection: (
+      { __typename?: 'TopicsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Topic' }
+        & ForumTopicFragment
+      )> }
+    ) }
+  )> }
+);
+
 export type SpriteDetailsFragment = (
   { __typename?: 'Sprite' }
   & Pick<Sprite, 'id' | 'type' | 'category' | 'projectId'>
@@ -17807,6 +17984,61 @@ export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ForumListDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ForumListDetails on Forum {
+  id
+  name
+  description
+  archived
+  position
+  topicCount
+  postCount
+  lastPostDate
+  readAcl {
+    id
+    nodeId
+  }
+  writeAcl {
+    id
+    nodeId
+  }
+}
+    `;
+export const AuthorProfileFragmentDoc = /*#__PURE__*/ gql`
+    fragment AuthorProfile on Profile {
+  affiliations
+  email
+  fullname
+  nickname
+  picture
+  userId
+}
+    `;
+export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
+    fragment ForumPost on Post {
+  id
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  hiddenByModerator
+  message
+  topicId
+}
+    ${AuthorProfileFragmentDoc}`;
+export const ForumTopicFragmentDoc = /*#__PURE__*/ gql`
+    fragment ForumTopic on Topic {
+  id
+  title
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  locked
+  sticky
+  postsCount
+}
+    ${AuthorProfileFragmentDoc}`;
 export const SpriteDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SpriteDetails on Sprite {
   id
@@ -19617,6 +19849,98 @@ export const PublishTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ForumAdminListDocument = /*#__PURE__*/ gql`
+    query ForumAdminList($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    forums {
+      ...ForumListDetails
+    }
+  }
+}
+    ${ForumListDetailsFragmentDoc}`;
+export const CreateForumDocument = /*#__PURE__*/ gql`
+    mutation CreateForum($name: String!, $projectId: Int!) {
+  createForum(input: {forum: {name: $name, projectId: $projectId}}) {
+    forum {
+      ...ForumListDetails
+    }
+  }
+}
+    ${ForumListDetailsFragmentDoc}`;
+export const UpdateForumDocument = /*#__PURE__*/ gql`
+    mutation UpdateForum($id: Int!, $name: String, $archived: Boolean, $description: String) {
+  updateForum(
+    input: {id: $id, patch: {name: $name, archived: $archived, description: $description}}
+  ) {
+    forum {
+      id
+      name
+      archived
+      description
+    }
+  }
+}
+    `;
+export const DeleteForumDocument = /*#__PURE__*/ gql`
+    mutation DeleteForum($id: Int!) {
+  deleteForum(input: {id: $id}) {
+    forum {
+      id
+    }
+  }
+}
+    `;
+export const ForumsDocument = /*#__PURE__*/ gql`
+    query Forums($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    forums {
+      id
+      archived
+      name
+      description
+      topicCount
+      postCount
+      lastPostDate
+      canPost
+    }
+    latestPostsConnection(first: 5) {
+      nodes {
+        ...ForumPost
+        topic {
+          id
+          title
+          sticky
+          forum {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+    ${ForumPostFragmentDoc}`;
+export const TopicListDocument = /*#__PURE__*/ gql`
+    query TopicList($forumId: Int!) {
+  forum(id: $forumId) {
+    id
+    archived
+    name
+    description
+    topicCount
+    postCount
+    lastPostDate
+    canPost
+    topicsConnection {
+      nodes {
+        ...ForumTopic
+      }
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21273,6 +21597,9 @@ export const namedOperations = {
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
+    ForumAdminList: 'ForumAdminList',
+    Forums: 'Forums',
+    TopicList: 'TopicList',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
@@ -21371,6 +21698,9 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    CreateForum: 'CreateForum',
+    UpdateForum: 'UpdateForum',
+    DeleteForum: 'DeleteForum',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
@@ -21469,6 +21799,10 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
     DataUploadDetails: 'DataUploadDetails',
+    ForumListDetails: 'ForumListDetails',
+    AuthorProfile: 'AuthorProfile',
+    ForumPost: 'ForumPost',
+    ForumTopic: 'ForumTopic',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',

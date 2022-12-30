@@ -46,6 +46,10 @@ const LazyUserSettings = React.lazy(
 const LazySurveyAdmin = React.lazy(
   () => import(/* webpackChunkName: "AdminSurveys" */ "./surveys/SurveyAdmin")
 );
+
+const LazyForumAdmin = React.lazy(
+  () => import(/* webpackChunkName: "AdminForums" */ "./forums/ForumsAdmin")
+);
 const LazyOfflineAdmin = React.lazy(
   () =>
     import(
@@ -394,7 +398,11 @@ export default function AdminApp() {
               <LazySketchingAdmin />
             </React.Suspense>
           </Route>
-          <Route exact path={`${path}/forums`}></Route>
+          <Route exact path={`${path}/forums/:id?`}>
+            <React.Suspense fallback={<Spinner />}>
+              <LazyForumAdmin />
+            </React.Suspense>
+          </Route>
           <Route path={`${path}/surveys/:surveyId?`}>
             <React.Suspense fallback={<Spinner />}>
               <LazySurveyAdmin />

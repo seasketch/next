@@ -25,6 +25,9 @@ const LazySketchingTools = React.lazy(
       /* webpackChunkName: "Sketching" */ "./Sketches/SketchingDragDropContextContainer"
     )
 );
+const LazyForums = React.lazy(
+  () => import(/* webpackChunkName: "Forums" */ "./Forums/Forums")
+);
 const LazyCacheSettingsPage = React.lazy(
   () =>
     import(
@@ -102,7 +105,10 @@ export default function ProjectApp() {
             onClose={() => history.replace(`/${slug}/app`)}
             dark={dark}
             hidden={Boolean(!showSidebar)}
-            noPadding={/sketches/.test(history.location.pathname)}
+            noPadding={
+              /sketches/.test(history.location.pathname) ||
+              /forums/.test(history.location.pathname)
+            }
           >
             <Suspense
               fallback={
@@ -125,9 +131,21 @@ export default function ProjectApp() {
                     items={tableOfContentsItems as TableOfContentsItem[]}
                   />
                 </Route>
-                <Route path={`/${slug}/app/forums`}>
-                  <JoinProjectPrompt variant="forums" />
-                </Route>
+                <Route
+                  children={(match) => (
+                    <LazyForums
+                      hidden={!Boolean(match.match)}
+                      forumId={
+                        match.match?.params.id
+                          ? parseInt(match.match?.params.id)
+                          : undefined
+                      }
+                      // hideFullSidebar={hideFullSidebar}
+                    />
+                  )}
+                  path={`/${slug}/app/forums/:id?`}
+                  // component={SketchingTools}
+                />
                 <Route
                   children={(match) => (
                     <LazySketchingTools

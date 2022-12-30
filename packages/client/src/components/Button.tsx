@@ -107,7 +107,7 @@ export default function Button(props: ButtonProps) {
       : // eslint-disable-next-line i18next/no-literal-string
         `text-gray-700 ${
           props.disabled ? "bg-gray-100" : "bg-white"
-        } hover:text-gray-500 focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50`
+        } hover:text-black focus:border-blue-300 focus:shadow-outline-blue active:text-gray-800 active:bg-gray-50`
   } focus:outline-none  transition ease-in-out duration-150 ${
     props.segmentItems && "pr-10"
   }`;

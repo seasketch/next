@@ -123,7 +123,7 @@ function NavSidebarItem({
         )}
         <div className="ml-3 text-sm flex-1">
           <p className="font-medium ">{item.label}</p>
-          <p className="mt-1 ">{item.description}</p>
+          <p className="mt-1 opacity-70">{item.description}</p>
         </div>
         {item.badge !== undefined && (
           <div className="flex flex-col justify-center ml-1">

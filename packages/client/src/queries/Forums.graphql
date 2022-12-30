@@ -1,0 +1,79 @@
+fragment AuthorProfile on Profile {
+  affiliations
+  email
+  fullname
+  nickname
+  picture
+  userId
+}
+
+fragment ForumPost on Post {
+  id
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  hiddenByModerator
+  message
+  topicId
+}
+
+query Forums($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    forums {
+      id
+      archived
+      name
+      description
+      topicCount
+      postCount
+      lastPostDate
+      canPost
+    }
+    latestPostsConnection(first: 5) {
+      nodes {
+        ...ForumPost
+        topic {
+          id
+          title
+          sticky
+          forum {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+
+fragment ForumTopic on Topic {
+  id
+  title
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  locked
+  sticky
+  postsCount
+}
+
+query TopicList($forumId: Int!) {
+  forum(id: $forumId) {
+    id
+    archived
+    name
+    description
+    topicCount
+    postCount
+    lastPostDate
+    canPost
+    topicsConnection {
+      nodes {
+        ...ForumTopic
+      }
+    }
+  }
+}

@@ -5558,10 +5558,12 @@ type Forum implements Node {
   admin dashboard. This is an alternative to deleting a forum.
   """
   archived: Boolean
+  canPost: Boolean
 
   """Optional description of the forum to be displayed to project users."""
   description: String
   id: Int!
+  lastPostDate: Datetime
 
   """Title displayed for the forum."""
   name: String!
@@ -5576,10 +5578,13 @@ type Forum implements Node {
   position in ascending order. Set using `setForumOrder()`
   """
   position: Int
+  postCount: Int
 
   """Reads a single `Project` that is related to this `Forum`."""
   project: Project
   projectId: Int!
+  readAcl: Acl
+  topicCount: Int
 
   """Reads and enables pagination through a set of `Topic`."""
   topicsConnection(
@@ -5609,6 +5614,7 @@ type Forum implements Node {
     """The method to use when ordering `Topic`."""
     orderBy: [TopicsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TopicsConnection!
+  writeAcl: Acl
 }
 
 """
@@ -9271,6 +9277,27 @@ type Project implements Node {
   isListed: Boolean!
   isOfflineEnabled: Boolean
 
+  """Reads and enables pagination through a set of `Post`."""
+  latestPostsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+  ): PostsConnection!
+
   """
   If a logoUrl is provided, it will link to this url in a new window if provided.
   """
@@ -12813,6 +12840,7 @@ type Topic implements Node {
     """The method to use when ordering `Post`."""
     orderBy: [PostsOrderBy!] = [PRIMARY_KEY_ASC]
   ): PostsConnection!
+  postsCount: Int
 
   """
   Sticky topics will be listed at the topic of the forum.

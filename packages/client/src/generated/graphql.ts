@@ -4734,9 +4734,11 @@ export type Forum = Node & {
    * admin dashboard. This is an alternative to deleting a forum.
    */
   archived?: Maybe<Scalars['Boolean']>;
+  canPost?: Maybe<Scalars['Boolean']>;
   /** Optional description of the forum to be displayed to project users. */
   description?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
+  lastPostDate?: Maybe<Scalars['Datetime']>;
   /** Title displayed for the forum. */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -4746,11 +4748,15 @@ export type Forum = Node & {
    * position in ascending order. Set using `setForumOrder()`
    */
   position?: Maybe<Scalars['Int']>;
+  postCount?: Maybe<Scalars['Int']>;
   /** Reads a single `Project` that is related to this `Forum`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  readAcl?: Maybe<Acl>;
+  topicCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Topic`. */
   topicsConnection: TopicsConnection;
+  writeAcl?: Maybe<Acl>;
 };
 
 
@@ -8065,6 +8071,8 @@ export type Project = Node & {
    */
   isListed: Scalars['Boolean'];
   isOfflineEnabled?: Maybe<Scalars['Boolean']>;
+  /** Reads and enables pagination through a set of `Post`. */
+  latestPostsConnection: PostsConnection;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
   /**
@@ -8321,6 +8329,19 @@ export type ProjectInvitesConnectionArgs = {
  */
 export type ProjectIsAdminArgs = {
   userId?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectLatestPostsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -11512,6 +11533,7 @@ export type Topic = Node & {
   nodeId: Scalars['ID'];
   /** Reads and enables pagination through a set of `Post`. */
   postsConnection: PostsConnection;
+  postsCount?: Maybe<Scalars['Int']>;
   /**
    * Sticky topics will be listed at the topic of the forum.
    *
@@ -14997,6 +15019,161 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type ForumListDetailsFragment = (
+  { __typename?: 'Forum' }
+  & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate'>
+  & { readAcl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId'>
+  )>, writeAcl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId'>
+  )> }
+);
+
+export type ForumAdminListQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ForumAdminListQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { forums: Array<(
+      { __typename?: 'Forum' }
+      & ForumListDetailsFragment
+    )> }
+  )> }
+);
+
+export type CreateForumMutationVariables = Exact<{
+  name: Scalars['String'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CreateForumMutation = (
+  { __typename?: 'Mutation' }
+  & { createForum?: Maybe<(
+    { __typename?: 'CreateForumPayload' }
+    & { forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & ForumListDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateForumMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name?: Maybe<Scalars['String']>;
+  archived?: Maybe<Scalars['Boolean']>;
+  description?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateForumMutation = (
+  { __typename?: 'Mutation' }
+  & { updateForum?: Maybe<(
+    { __typename?: 'UpdateForumPayload' }
+    & { forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'name' | 'archived' | 'description'>
+    )> }
+  )> }
+);
+
+export type DeleteForumMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteForumMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteForum?: Maybe<(
+    { __typename?: 'DeleteForumPayload' }
+    & { forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id'>
+    )> }
+  )> }
+);
+
+export type AuthorProfileFragment = (
+  { __typename?: 'Profile' }
+  & Pick<Profile, 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture' | 'userId'>
+);
+
+export type ForumPostFragment = (
+  { __typename?: 'Post' }
+  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'message' | 'topicId'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & AuthorProfileFragment
+  )> }
+);
+
+export type ForumsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ForumsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { forums: Array<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
+    )>, latestPostsConnection: (
+      { __typename?: 'PostsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Post' }
+        & { topic?: Maybe<(
+          { __typename?: 'Topic' }
+          & Pick<Topic, 'id' | 'title' | 'sticky'>
+          & { forum?: Maybe<(
+            { __typename?: 'Forum' }
+            & Pick<Forum, 'id' | 'name'>
+          )> }
+        )> }
+        & ForumPostFragment
+      )> }
+    ) }
+  )> }
+);
+
+export type ForumTopicFragment = (
+  { __typename?: 'Topic' }
+  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & AuthorProfileFragment
+  )> }
+);
+
+export type TopicListQueryVariables = Exact<{
+  forumId: Scalars['Int'];
+}>;
+
+
+export type TopicListQuery = (
+  { __typename?: 'Query' }
+  & { forum?: Maybe<(
+    { __typename?: 'Forum' }
+    & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
+    & { topicsConnection: (
+      { __typename?: 'TopicsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Topic' }
+        & ForumTopicFragment
+      )> }
+    ) }
+  )> }
+);
+
 export type SpriteDetailsFragment = (
   { __typename?: 'Sprite' }
   & Pick<Sprite, 'id' | 'type' | 'category' | 'projectId'>
@@ -17809,6 +17986,61 @@ export const DataUploadDetailsFragmentDoc = gql`
   }
 }
     `;
+export const ForumListDetailsFragmentDoc = gql`
+    fragment ForumListDetails on Forum {
+  id
+  name
+  description
+  archived
+  position
+  topicCount
+  postCount
+  lastPostDate
+  readAcl {
+    id
+    nodeId
+  }
+  writeAcl {
+    id
+    nodeId
+  }
+}
+    `;
+export const AuthorProfileFragmentDoc = gql`
+    fragment AuthorProfile on Profile {
+  affiliations
+  email
+  fullname
+  nickname
+  picture
+  userId
+}
+    `;
+export const ForumPostFragmentDoc = gql`
+    fragment ForumPost on Post {
+  id
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  hiddenByModerator
+  message
+  topicId
+}
+    ${AuthorProfileFragmentDoc}`;
+export const ForumTopicFragmentDoc = gql`
+    fragment ForumTopic on Topic {
+  id
+  title
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  locked
+  sticky
+  postsCount
+}
+    ${AuthorProfileFragmentDoc}`;
 export const SpriteDetailsFragmentDoc = gql`
     fragment SpriteDetails on Sprite {
   id
@@ -21829,6 +22061,264 @@ export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationH
 export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
+export const ForumAdminListDocument = gql`
+    query ForumAdminList($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    forums {
+      ...ForumListDetails
+    }
+  }
+}
+    ${ForumListDetailsFragmentDoc}`;
+
+/**
+ * __useForumAdminListQuery__
+ *
+ * To run a query within a React component, call `useForumAdminListQuery` and pass it any options that fit your needs.
+ * When your component renders, `useForumAdminListQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useForumAdminListQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useForumAdminListQuery(baseOptions: Apollo.QueryHookOptions<ForumAdminListQuery, ForumAdminListQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ForumAdminListQuery, ForumAdminListQueryVariables>(ForumAdminListDocument, options);
+      }
+export function useForumAdminListLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ForumAdminListQuery, ForumAdminListQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ForumAdminListQuery, ForumAdminListQueryVariables>(ForumAdminListDocument, options);
+        }
+export type ForumAdminListQueryHookResult = ReturnType<typeof useForumAdminListQuery>;
+export type ForumAdminListLazyQueryHookResult = ReturnType<typeof useForumAdminListLazyQuery>;
+export type ForumAdminListQueryResult = Apollo.QueryResult<ForumAdminListQuery, ForumAdminListQueryVariables>;
+export const CreateForumDocument = gql`
+    mutation CreateForum($name: String!, $projectId: Int!) {
+  createForum(input: {forum: {name: $name, projectId: $projectId}}) {
+    forum {
+      ...ForumListDetails
+    }
+  }
+}
+    ${ForumListDetailsFragmentDoc}`;
+export type CreateForumMutationFn = Apollo.MutationFunction<CreateForumMutation, CreateForumMutationVariables>;
+
+/**
+ * __useCreateForumMutation__
+ *
+ * To run a mutation, you first call `useCreateForumMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateForumMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createForumMutation, { data, loading, error }] = useCreateForumMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useCreateForumMutation(baseOptions?: Apollo.MutationHookOptions<CreateForumMutation, CreateForumMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateForumMutation, CreateForumMutationVariables>(CreateForumDocument, options);
+      }
+export type CreateForumMutationHookResult = ReturnType<typeof useCreateForumMutation>;
+export type CreateForumMutationResult = Apollo.MutationResult<CreateForumMutation>;
+export type CreateForumMutationOptions = Apollo.BaseMutationOptions<CreateForumMutation, CreateForumMutationVariables>;
+export const UpdateForumDocument = gql`
+    mutation UpdateForum($id: Int!, $name: String, $archived: Boolean, $description: String) {
+  updateForum(
+    input: {id: $id, patch: {name: $name, archived: $archived, description: $description}}
+  ) {
+    forum {
+      id
+      name
+      archived
+      description
+    }
+  }
+}
+    `;
+export type UpdateForumMutationFn = Apollo.MutationFunction<UpdateForumMutation, UpdateForumMutationVariables>;
+
+/**
+ * __useUpdateForumMutation__
+ *
+ * To run a mutation, you first call `useUpdateForumMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateForumMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateForumMutation, { data, loading, error }] = useUpdateForumMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *      archived: // value for 'archived'
+ *      description: // value for 'description'
+ *   },
+ * });
+ */
+export function useUpdateForumMutation(baseOptions?: Apollo.MutationHookOptions<UpdateForumMutation, UpdateForumMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateForumMutation, UpdateForumMutationVariables>(UpdateForumDocument, options);
+      }
+export type UpdateForumMutationHookResult = ReturnType<typeof useUpdateForumMutation>;
+export type UpdateForumMutationResult = Apollo.MutationResult<UpdateForumMutation>;
+export type UpdateForumMutationOptions = Apollo.BaseMutationOptions<UpdateForumMutation, UpdateForumMutationVariables>;
+export const DeleteForumDocument = gql`
+    mutation DeleteForum($id: Int!) {
+  deleteForum(input: {id: $id}) {
+    forum {
+      id
+    }
+  }
+}
+    `;
+export type DeleteForumMutationFn = Apollo.MutationFunction<DeleteForumMutation, DeleteForumMutationVariables>;
+
+/**
+ * __useDeleteForumMutation__
+ *
+ * To run a mutation, you first call `useDeleteForumMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteForumMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteForumMutation, { data, loading, error }] = useDeleteForumMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteForumMutation(baseOptions?: Apollo.MutationHookOptions<DeleteForumMutation, DeleteForumMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteForumMutation, DeleteForumMutationVariables>(DeleteForumDocument, options);
+      }
+export type DeleteForumMutationHookResult = ReturnType<typeof useDeleteForumMutation>;
+export type DeleteForumMutationResult = Apollo.MutationResult<DeleteForumMutation>;
+export type DeleteForumMutationOptions = Apollo.BaseMutationOptions<DeleteForumMutation, DeleteForumMutationVariables>;
+export const ForumsDocument = gql`
+    query Forums($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    forums {
+      id
+      archived
+      name
+      description
+      topicCount
+      postCount
+      lastPostDate
+      canPost
+    }
+    latestPostsConnection(first: 5) {
+      nodes {
+        ...ForumPost
+        topic {
+          id
+          title
+          sticky
+          forum {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+}
+    ${ForumPostFragmentDoc}`;
+
+/**
+ * __useForumsQuery__
+ *
+ * To run a query within a React component, call `useForumsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useForumsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useForumsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useForumsQuery(baseOptions: Apollo.QueryHookOptions<ForumsQuery, ForumsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ForumsQuery, ForumsQueryVariables>(ForumsDocument, options);
+      }
+export function useForumsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ForumsQuery, ForumsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ForumsQuery, ForumsQueryVariables>(ForumsDocument, options);
+        }
+export type ForumsQueryHookResult = ReturnType<typeof useForumsQuery>;
+export type ForumsLazyQueryHookResult = ReturnType<typeof useForumsLazyQuery>;
+export type ForumsQueryResult = Apollo.QueryResult<ForumsQuery, ForumsQueryVariables>;
+export const TopicListDocument = gql`
+    query TopicList($forumId: Int!) {
+  forum(id: $forumId) {
+    id
+    archived
+    name
+    description
+    topicCount
+    postCount
+    lastPostDate
+    canPost
+    topicsConnection {
+      nodes {
+        ...ForumTopic
+      }
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}`;
+
+/**
+ * __useTopicListQuery__
+ *
+ * To run a query within a React component, call `useTopicListQuery` and pass it any options that fit your needs.
+ * When your component renders, `useTopicListQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTopicListQuery({
+ *   variables: {
+ *      forumId: // value for 'forumId'
+ *   },
+ * });
+ */
+export function useTopicListQuery(baseOptions: Apollo.QueryHookOptions<TopicListQuery, TopicListQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<TopicListQuery, TopicListQueryVariables>(TopicListDocument, options);
+      }
+export function useTopicListLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<TopicListQuery, TopicListQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<TopicListQuery, TopicListQueryVariables>(TopicListDocument, options);
+        }
+export type TopicListQueryHookResult = ReturnType<typeof useTopicListQuery>;
+export type TopicListLazyQueryHookResult = ReturnType<typeof useTopicListLazyQuery>;
+export type TopicListQueryResult = Apollo.QueryResult<TopicListQuery, TopicListQueryVariables>;
 export const SpritesDocument = gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -26660,6 +27150,9 @@ export const namedOperations = {
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
+    ForumAdminList: 'ForumAdminList',
+    Forums: 'Forums',
+    TopicList: 'TopicList',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
@@ -26758,6 +27251,9 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    CreateForum: 'CreateForum',
+    UpdateForum: 'UpdateForum',
+    DeleteForum: 'DeleteForum',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
@@ -26856,6 +27352,10 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     BasemapDetails: 'BasemapDetails',
     DataUploadDetails: 'DataUploadDetails',
+    ForumListDetails: 'ForumListDetails',
+    AuthorProfile: 'AuthorProfile',
+    ForumPost: 'ForumPost',
+    ForumTopic: 'ForumTopic',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',

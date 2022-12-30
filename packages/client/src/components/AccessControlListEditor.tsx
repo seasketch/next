@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import Spinner from "./Spinner";
+import { useEffect, useState } from "react";
 import {
   AccessControlListType,
   useAddGroupToAclMutation,
@@ -9,11 +8,14 @@ import {
   useUpdateAclTypeMutation,
 } from "../generated/graphql";
 import RadioGroup from "./RadioGroup";
-import { useTranslation, Trans } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import MiniSwitch from "./MiniSwitch";
 
-export default function AccessControlListEditor(props: { nodeId: string }) {
+export default function AccessControlListEditor(props: {
+  nodeId: string;
+  legend?: string;
+}) {
   const { t } = useTranslation(["admin"]);
   const { slug } = useParams<{ slug: string }>();
 
@@ -32,7 +34,7 @@ export default function AccessControlListEditor(props: { nodeId: string }) {
 
   const groups = groupsQuery.data?.projectBySlug?.groups;
 
-  const { data, loading, error } = useGetAclQuery({
+  const { data } = useGetAclQuery({
     variables: {
       nodeId: props.nodeId,
     },
@@ -123,7 +125,7 @@ export default function AccessControlListEditor(props: { nodeId: string }) {
           ),
         },
       ]}
-      legend={t("Access Control")}
+      legend={props.legend || t("Access Control")}
       onChange={(value) => {
         setState(value);
         updateType({

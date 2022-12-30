@@ -1,0 +1,64 @@
+fragment ForumListDetails on Forum {
+  id
+  name
+  description
+  archived
+  position
+  topicCount
+  postCount
+  lastPostDate
+  readAcl {
+    id
+    nodeId
+  }
+  writeAcl {
+    id
+    nodeId
+  }
+}
+
+query ForumAdminList($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    forums {
+      ...ForumListDetails
+    }
+  }
+}
+
+mutation CreateForum($name: String!, $projectId: Int!) {
+  createForum(input: { forum: { name: $name, projectId: $projectId } }) {
+    forum {
+      ...ForumListDetails
+    }
+  }
+}
+
+mutation UpdateForum(
+  $id: Int!
+  $name: String
+  $archived: Boolean
+  $description: String
+) {
+  updateForum(
+    input: {
+      id: $id
+      patch: { name: $name, archived: $archived, description: $description }
+    }
+  ) {
+    forum {
+      id
+      name
+      archived
+      description
+    }
+  }
+}
+
+mutation DeleteForum($id: Int!) {
+  deleteForum(input: { id: $id }) {
+    forum {
+      id
+    }
+  }
+}

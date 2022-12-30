@@ -340,18 +340,18 @@ export default function FullSidebar({
           <div className="flex-col items-center">
             <div className="text-xs">{t("Powered by")}</div>
             <h2 className="text-xl">SeaSketch</h2>
-            <nav className="text-xs underline mt-1">
-              <a className="mr-1" href="/about">
+            <nav className="text-xs underline mt-1 flex space-x-2">
+              {/* <a className="mr-1" href="/about">
                 {t("About")}
-              </a>
-              <a className="mx-1" href="/tou">
+              </a> */}
+              <a
+                // className="mx-1"
+                href="https://github.com/seasketch/next/wiki/Terms-of-Service"
+              >
                 {t("Terms of Use")}
               </a>
-              <a className="mx-1" href="mailto:support@seasketch.org">
-                {t("Contact")}
-              </a>
+              <a href="mailto:support@seasketch.org">{t("Contact Us")}</a>
               <a
-                className="mx-1"
                 target="_blank"
                 rel="noreferrer"
                 href="https://github.com/seasketch/next/deployments"
