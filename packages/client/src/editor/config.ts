@@ -76,6 +76,16 @@ const contentSchema = new Schema({
   marks: baseMarks,
 });
 
+const forumPostSchema = new Schema({
+  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
+    // TODO: these should be added back in as styles and menu option support is added
+    .remove("horizontal_rule")
+    .remove("image")
+    .remove("code_block")
+    .remove("blockquote"),
+  marks: baseMarks,
+});
+
 export const metadata = {
   schema: metadataSchema,
   plugins: exampleSetup({ schema: metadataSchema, menuBar: false }),
@@ -93,4 +103,12 @@ export const formElements = {
     schema: contentSchema,
     plugins: exampleSetup({ schema: contentSchema, menuBar: false }),
   },
+};
+
+export const forumPosts = {
+  schema: forumPostSchema,
+  plugins: exampleSetup({
+    schema: forumPostSchema,
+    menuBar: true,
+  }),
 };

@@ -15121,7 +15121,14 @@ export type ForumsQueryVariables = Exact<{
 
 export type ForumsQuery = (
   { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
+  & { me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & AuthorProfileFragment
+    )> }
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { forums: Array<(
@@ -22215,6 +22222,12 @@ export type DeleteForumMutationResult = Apollo.MutationResult<DeleteForumMutatio
 export type DeleteForumMutationOptions = Apollo.BaseMutationOptions<DeleteForumMutation, DeleteForumMutationVariables>;
 export const ForumsDocument = gql`
     query Forums($slug: String!) {
+  me {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
   projectBySlug(slug: $slug) {
     id
     forums {
@@ -22243,7 +22256,8 @@ export const ForumsDocument = gql`
     }
   }
 }
-    ${ForumPostFragmentDoc}`;
+    ${AuthorProfileFragmentDoc}
+${ForumPostFragmentDoc}`;
 
 /**
  * __useForumsQuery__

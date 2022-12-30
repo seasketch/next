@@ -9,41 +9,59 @@ const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function ForumBreadcrumbs({
   state,
+  postingNewTopic,
 }: {
   state: ForumBreadcrumbState;
+  postingNewTopic?: boolean;
 }) {
   const slug = getSlug();
   const { t } = useTranslation("forums");
   return (
-    <div className="flex items-center w-full bg-gray-100 p-2 px-4 text-sm font-semibold border-b shadow-sm">
-      <BreadcrumbLink to={`/${slug}/app/forums`} label={t("Forums")} />
-      {state.forum && (
+    <div className="flex w-full overflow-hidden bg-gray-100 p-2 px-4 text-sm font-semibold border-b shadow-sm h-10 items-center">
+      <div className="flex items-center w-full overflow-hidden">
         <BreadcrumbLink
-          showSlash
-          to={`/${slug}/app/forums/${state.forum.id}`}
-          label={state.forum.name}
-          className="flex-1"
+          className="flex-none"
+          to={`/${slug}/app/forums`}
+          label={t("Forums")}
         />
-      )}
-      {state.topic && state.forum && (
-        <BreadcrumbLink
-          showSlash
-          to={`/${slug}/app/forums/${state.forum.id}/${state.topic.id}`}
-          label={state.topic.name}
-          className="flex-2"
-        />
-      )}
-      {!state.topic && state.forum && (
-        <Button
-          disabled
-          small
-          label={
-            <>
-              {t("Post a topic")}
-              <PlusIcon className="w-4 h-4 ml-1" />
-            </>
-          }
-        />
+        {state.forum && (
+          <BreadcrumbLink
+            showSlash
+            to={`/${slug}/app/forums/${state.forum.id}`}
+            label={state.forum.name}
+            className=""
+          />
+        )}
+        {state.topic && state.forum && (
+          <BreadcrumbLink
+            showSlash
+            to={`/${slug}/app/forums/${state.forum.id}/${state.topic.id}`}
+            label={state.topic.name}
+            className=""
+          />
+        )}
+        {postingNewTopic && (
+          <BreadcrumbLink
+            showSlash
+            className="flex-none"
+            to={`/${slug}/app/forums/${state.forum?.id}/new-post`}
+            label={t("New Topic")}
+          />
+        )}
+      </div>
+      {!state.topic && state.forum && state.canPost && !postingNewTopic && (
+        <div className="flex-none text-right">
+          <Button
+            small
+            href={`./${state.forum.id}/new-post`}
+            label={
+              <>
+                {t("Post a topic")}
+                <PlusIcon className="w-4 h-4 ml-1" />
+              </>
+            }
+          />
+        </div>
       )}
     </div>
   );

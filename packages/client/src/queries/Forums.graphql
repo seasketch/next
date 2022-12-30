@@ -19,6 +19,12 @@ fragment ForumPost on Post {
 }
 
 query Forums($slug: String!) {
+  me {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
   projectBySlug(slug: $slug) {
     id
     forums {

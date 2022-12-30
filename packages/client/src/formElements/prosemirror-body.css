@@ -24,6 +24,26 @@
   outline: none;
 }
 
+.prosemirror-body.forum-post [contenteditable] {
+  min-height: 300px;
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 16px;
+}
+
+.forum-post .ProseMirror-menubar-wrapper {
+  @apply flex flex-col-reverse border-b border-black border-opacity-20;
+}
+
+.forum-post .ProseMirror-menubar {
+  border-bottom: none;
+  @apply border-t border-gray-200 text-black whitespace-nowrap pt-1.5 bg-gray-50 bg-opacity-50 pb-1;
+}
+
+.forum-post .ProseMirror-menu-active {
+  @apply bg-gray-200;
+}
+
 /* .prosemirror-body a {
   text-decoration: underline;
 }
@@ -47,4 +67,16 @@
 
 .ProseMirror h1.empty-node::before {
   content: "Type your question here...";
+}
+
+.prosemirror-body.forum-post p {
+  margin-top: 0;
+  margin-bottom: 0;
+  @apply text-sm;
+}
+
+.ProseMirror-prompt {
+  position: absolute;
+  z-index: 999999;
+  @apply bg-white p-4 rounded shadow;
 }

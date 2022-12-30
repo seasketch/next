@@ -7,6 +7,8 @@ import Skeleton from "../../components/Skeleton";
 import { useEffect, useState } from "react";
 import ForumBreadcrumbs from "./ForumBreadcrumbs";
 import TopicList from "./TopicList";
+import { useRouteMatch } from "react-router-dom";
+import NewTopicForm from "./NewTopicForm";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export type ForumBreadcrumb = { name: string; id: number };
@@ -14,14 +16,19 @@ export type ForumBreadcrumb = { name: string; id: number };
 export interface ForumBreadcrumbState {
   forum?: ForumBreadcrumb;
   topic?: ForumBreadcrumb;
+  canPost?: boolean;
 }
 
 export default function Forums({
   hidden,
   forumId,
+  topicId,
+  postNewTopic,
 }: {
   hidden?: boolean;
   forumId?: number;
+  topicId?: number;
+  postNewTopic?: boolean;
 }) {
   const slug = getSlug();
   const [breadcrumbState, setBreadcrumbState] =
@@ -46,12 +53,14 @@ export default function Forums({
               name: forum.name,
               id: forumId,
             },
+            canPost: forum.canPost || false,
           }));
         }
       } else {
         setBreadcrumbState((prev) => ({
           ...prev,
           forum: undefined,
+          canPost: false,
         }));
       }
     }
@@ -77,7 +86,12 @@ export default function Forums({
 
   return (
     <div className="">
-      {breadcrumbState?.forum && <ForumBreadcrumbs state={breadcrumbState} />}
+      {breadcrumbState?.forum && (
+        <ForumBreadcrumbs
+          postingNewTopic={postNewTopic}
+          state={breadcrumbState}
+        />
+      )}
       {!forumId && !breadcrumbState?.forum && (
         <>
           <div className="space-y-4 p-4">
@@ -98,8 +112,12 @@ export default function Forums({
           </div>
         </>
       )}
-      {forumId && breadcrumbState?.forum && !breadcrumbState.topic && (
-        <TopicList forumId={forumId} />
+      {forumId &&
+        breadcrumbState?.forum &&
+        !breadcrumbState.topic &&
+        !postNewTopic && <TopicList forumId={forumId} />}
+      {forumId && postNewTopic && data?.me?.profile && (
+        <NewTopicForm profile={data.me.profile} />
       )}
     </div>
   );

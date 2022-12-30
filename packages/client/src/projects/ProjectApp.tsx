@@ -136,14 +136,31 @@ export default function ProjectApp() {
                     <LazyForums
                       hidden={!Boolean(match.match)}
                       forumId={
-                        match.match?.params.id
-                          ? parseInt(match.match?.params.id)
+                        match.match &&
+                        match.match.params &&
+                        "id" in match.match.params
+                          ? parseInt(match.match.params.id)
                           : undefined
                       }
+                      topicId={
+                        match.match &&
+                        match.match.params &&
+                        "topicId" in match.match.params
+                          ? parseInt(match.match.params.topicId)
+                          : undefined
+                      }
+                      postNewTopic={Boolean(
+                        match.match?.path && /new-post/.test(match.match.path)
+                      )}
                       // hideFullSidebar={hideFullSidebar}
                     />
                   )}
-                  path={`/${slug}/app/forums/:id?`}
+                  path={[
+                    `/${slug}/app/forums/:id/new-post`,
+                    `/${slug}/app/forums/:id/:topicId`,
+                    `/${slug}/app/forums/:id`,
+                    `/${slug}/app/forums`,
+                  ]}
                   // component={SketchingTools}
                 />
                 <Route

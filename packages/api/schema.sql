@@ -6320,7 +6320,7 @@ CREATE FUNCTION public.forums_can_post(forum public.forums) RETURNS boolean
       select id, type, project_id from access_control_lists where forum_id_write = forum.id
     )
     select 
-      (
+      ((
         exists(select 1 from acl where type = 'public') or 
         (
           exists(select 1 from acl where type = 'group') and 
@@ -6332,7 +6332,7 @@ CREATE FUNCTION public.forums_can_post(forum public.forums) RETURNS boolean
               )
           )
         )
-      ) or session_is_admin((select project_id from acl))
+      ) or session_is_admin((select project_id from acl))) and current_setting('session.user_id', TRUE) != '';
   $$;
 
 

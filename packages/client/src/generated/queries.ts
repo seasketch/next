@@ -15119,7 +15119,14 @@ export type ForumsQueryVariables = Exact<{
 
 export type ForumsQuery = (
   { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
+  & { me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & AuthorProfileFragment
+    )> }
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { forums: Array<(
@@ -19893,6 +19900,12 @@ export const DeleteForumDocument = /*#__PURE__*/ gql`
     `;
 export const ForumsDocument = /*#__PURE__*/ gql`
     query Forums($slug: String!) {
+  me {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
   projectBySlug(slug: $slug) {
     id
     forums {
@@ -19921,7 +19934,8 @@ export const ForumsDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    ${ForumPostFragmentDoc}`;
+    ${AuthorProfileFragmentDoc}
+${ForumPostFragmentDoc}`;
 export const TopicListDocument = /*#__PURE__*/ gql`
     query TopicList($forumId: Int!) {
   forum(id: $forumId) {
