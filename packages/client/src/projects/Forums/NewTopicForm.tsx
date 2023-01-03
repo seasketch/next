@@ -1,29 +1,94 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useHistory } from "react-router-dom";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import Button from "../../components/Button";
-import { AuthorProfileFragment } from "../../generated/graphql";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import {
+  AuthorProfileFragment,
+  ForumsDocument,
+  ForumsQuery,
+  TopicListDocument,
+  TopicListQuery,
+  useCreateTopicMutation,
+} from "../../generated/graphql";
 import getSlug from "../../getSlug";
 import useLocalStorage from "../../useLocalStorage";
 import UserProfileModal from "../UserProfileModal";
 import PostContentEditor from "./PostContentEditor";
+import { nameForProfile } from "./TopicListItem";
 
 export default function NewTopicForm({
   profile,
+  forumId,
 }: {
   profile: AuthorProfileFragment;
+  forumId: number;
 }) {
   const { t } = useTranslation("forums");
-  const [title, setTitle] = useLocalStorage(`post-title-${getSlug()}`, "");
-  const [content, setContent] = useLocalStorage(
+  const [title, setTitle, clearTitle] = useLocalStorage(
+    `post-title-${getSlug()}`,
+    ""
+  );
+  const [content, setContent, clearContent] = useLocalStorage(
     `post-content-${getSlug()}`,
     undefined
   );
   const [modalOpen, setModalOpen] = useState(false);
+  const history = useHistory();
+  const onCancel = useCallback(() => {
+    clearTitle();
+    clearContent();
+    history.replace(`/${getSlug()}/app/forums/${forumId}`);
+  }, [clearTitle, clearContent, history, forumId]);
 
   const openProfileModal = useCallback(() => {
     setModalOpen(true);
   }, [setModalOpen]);
+
+  const onError = useGlobalErrorHandler();
+  const [createTopic] = useCreateTopicMutation({
+    variables: {
+      forumId,
+      content,
+      title,
+    },
+    update: async (cache, result) => {
+      const topic = result.data?.createTopic?.topic;
+      if (topic) {
+        const data = cache.readQuery<TopicListQuery>({
+          query: TopicListDocument,
+          variables: {
+            forumId,
+          },
+        });
+        if (data?.forum?.topicsConnection?.nodes) {
+          cache.writeQuery({
+            query: TopicListDocument,
+            variables: {
+              forumId,
+            },
+            data: {
+              ...data,
+              forum: {
+                ...data.forum,
+                topicsConnection: {
+                  ...data.forum.topicsConnection,
+                  nodes: [
+                    ...data.forum.topicsConnection.nodes.filter(
+                      (n) => n.id !== topic.id
+                    ),
+                    topic,
+                  ],
+                },
+              },
+            },
+          });
+        }
+      }
+    },
+  });
+
   return (
     <div>
       <div className="bg-white shadow">
@@ -39,7 +104,7 @@ export default function NewTopicForm({
               onClick={openProfileModal}
               className="text-sm pl-3 hover:text-gray-600"
             >
-              {profile.nickname || profile.fullname || profile.email}
+              {nameForProfile(profile)}
             </button>
             <input
               autoFocus={!content}
@@ -58,8 +123,17 @@ export default function NewTopicForm({
         />
       </div>
       <div className="flex justify-end items-center p-2 py-3 space-x-2">
-        <Button label={t("Cancel")} />
-        <Button label={t("Post New Topic")} primary />
+        <Button label={t("Cancel")} onClick={onCancel} />
+        <Button
+          label={t("Post New Topic")}
+          primary
+          onClick={async () => {
+            await createTopic();
+            clearTitle();
+            clearContent();
+            history.replace(`/${getSlug()}/app/forums/${forumId}`);
+          }}
+        />
       </div>
       {modalOpen && (
         <UserProfileModal onRequestClose={() => setModalOpen(false)} />

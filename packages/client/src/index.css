@@ -261,3 +261,20 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .SketchPopup .mapboxgl-popup-content {
   padding: 0;
 }
+
+/* .topic-blurb {
+  position: relative;
+}
+
+.topic-blurb:after {
+  content: " ";
+  display: inline-block;
+  width: 150px;
+  height: 1.5rem;
+  bottom: 0px;
+  color: red;
+  position: absolute;
+  right: 150px;
+  background-image: linear-gradient(to left, rgb(249, 250, 251), transparent);
+  z-index: 10;
+} */

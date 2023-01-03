@@ -2,6 +2,7 @@ import { useTopicListQuery } from "../../generated/graphql";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import Skeleton from "../../components/Skeleton";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import TopicListItem from "./TopicListItem";
 
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
@@ -11,6 +12,7 @@ export default function TopicList({ forumId }: { forumId: number }) {
     variables: {
       forumId,
     },
+    pollInterval: 60000,
     onError,
     fetchPolicy: "cache-and-network",
   });
@@ -48,5 +50,11 @@ export default function TopicList({ forumId }: { forumId: number }) {
     );
   }
 
-  return <div></div>;
+  return (
+    <div className="space-y-3 p-4">
+      {data?.forum?.topicsConnection.nodes.map((topic) => (
+        <TopicListItem key={topic.id} topic={topic} />
+      ))}
+    </div>
+  );
 }

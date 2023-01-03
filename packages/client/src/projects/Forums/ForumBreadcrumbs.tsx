@@ -5,17 +5,72 @@ import { ForumBreadcrumbState } from "./Forums";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import { PlusIcon } from "@heroicons/react/outline";
+import {
+  ForumTopicFragment,
+  ForumTopicFragmentDoc,
+  useBreadcrumbTopicQuery,
+  useForumsQuery,
+} from "../../generated/graphql";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { useEffect, useMemo } from "react";
+import { useApolloClient } from "@apollo/client";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function ForumBreadcrumbs({
-  state,
   postingNewTopic,
+  topicId,
+  forumId,
 }: {
-  state: ForumBreadcrumbState;
   postingNewTopic?: boolean;
+  topicId?: number | null;
+  forumId?: number | null;
 }) {
   const slug = getSlug();
   const { t } = useTranslation("forums");
+  const onError = useGlobalErrorHandler();
+
+  const forumData = useForumsQuery({
+    onError,
+    variables: {
+      slug: getSlug(),
+    },
+  });
+
+  const topicData = useBreadcrumbTopicQuery({
+    variables: {
+      topicId: topicId || 0,
+    },
+    errorPolicy: "ignore",
+    fetchPolicy: "cache-first",
+  });
+
+  const forum = useMemo(() => {
+    return (forumData.data?.projectBySlug?.forums || []).find(
+      (f) => f.id === forumId
+    );
+  }, [forumData.data?.projectBySlug?.forums, forumId]);
+
+  const client = useApolloClient();
+
+  const topic = useMemo(() => {
+    if (topicData.data?.topic) {
+      return topicData.data?.topic;
+    } else if (topicId) {
+      return client.cache.readFragment({
+        fragment: ForumTopicFragmentDoc,
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `Topic:${topicId}`,
+        fragmentName: "ForumTopic",
+      }) as ForumTopicFragment;
+    } else {
+      return undefined;
+    }
+  }, [topicData.data?.topic, topicId, client.cache]);
+
+  const canPost = useMemo(() => {
+    return forum && forum.canPost;
+  }, [forum]);
+
   return (
     <div className="flex w-full overflow-hidden bg-gray-100 p-2 px-4 text-sm font-semibold border-b shadow-sm h-10 items-center">
       <div className="flex items-center w-full overflow-hidden">
@@ -24,36 +79,36 @@ export default function ForumBreadcrumbs({
           to={`/${slug}/app/forums`}
           label={t("Forums")}
         />
-        {state.forum && (
+        {forum && (
           <BreadcrumbLink
             showSlash
-            to={`/${slug}/app/forums/${state.forum.id}`}
-            label={state.forum.name}
+            to={`/${slug}/app/forums/${forumId}`}
+            label={forum.name}
             className=""
           />
         )}
-        {state.topic && state.forum && (
+        {/* {topic && forum && (
           <BreadcrumbLink
             showSlash
-            to={`/${slug}/app/forums/${state.forum.id}/${state.topic.id}`}
-            label={state.topic.name}
+            to={`/${slug}/app/forums/${forum.id}/${topic.id}`}
+            label={topic.title}
             className=""
           />
-        )}
+        )} */}
         {postingNewTopic && (
           <BreadcrumbLink
             showSlash
             className="flex-none"
-            to={`/${slug}/app/forums/${state.forum?.id}/new-post`}
+            to={`/${slug}/app/forums/${forum?.id}/new-post`}
             label={t("New Topic")}
           />
         )}
       </div>
-      {!state.topic && state.forum && state.canPost && !postingNewTopic && (
+      {!topicId && forumId && canPost && !postingNewTopic && (
         <div className="flex-none text-right">
           <Button
             small
-            href={`./${state.forum.id}/new-post`}
+            href={`./${forumId}/new-post`}
             label={
               <>
                 {t("Post a topic")}

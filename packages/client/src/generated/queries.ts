@@ -11516,11 +11516,14 @@ export type Topic = Node & {
   authorId: Scalars['Int'];
   /** User Profile of the author. If a user has not shared their profile the first post contents will be hidden. */
   authorProfile?: Maybe<Profile>;
+  blurb?: Maybe<Scalars['String']>;
   createdAt: Scalars['Datetime'];
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
   forumId: Scalars['Int'];
   id: Scalars['Int'];
+  lastAuthor?: Maybe<User>;
+  lastPostDate?: Maybe<Scalars['Datetime']>;
   /**
    * Locked topics can only be posted to by project admins and will display a lock symbol.
    *
@@ -11529,6 +11532,8 @@ export type Topic = Node & {
   locked: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `User`. */
+  participantsConnection: UsersConnection;
   /** Reads and enables pagination through a set of `Post`. */
   postsConnection: PostsConnection;
   postsCount?: Maybe<Scalars['Int']>;
@@ -11540,6 +11545,15 @@ export type Topic = Node & {
   sticky: Scalars['Boolean'];
   /** Title displayed in the topics listing. Can be updated in the first 5 minutes after creation. */
   title: Scalars['String'];
+};
+
+
+export type TopicParticipantsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -15152,11 +15166,28 @@ export type ForumsQuery = (
 
 export type ForumTopicFragment = (
   { __typename?: 'Topic' }
-  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount'>
+  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount' | 'lastPostDate' | 'blurb' | 'forumId'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
-  )> }
+  )>, lastAuthor?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & AuthorProfileFragment
+    )> }
+  )>, participantsConnection: (
+    { __typename?: 'UsersConnection' }
+    & { nodes: Array<(
+      { __typename?: 'User' }
+      & Pick<User, 'id'>
+      & { profile?: Maybe<(
+        { __typename?: 'Profile' }
+        & Pick<Profile, 'userId' | 'email' | 'picture' | 'fullname' | 'nickname'>
+      )> }
+    )> }
+  ) }
 );
 
 export type TopicListQueryVariables = Exact<{
@@ -15176,6 +15207,61 @@ export type TopicListQuery = (
         & ForumTopicFragment
       )> }
     ) }
+  )> }
+);
+
+export type CreateTopicMutationVariables = Exact<{
+  forumId: Scalars['Int'];
+  content?: Maybe<Scalars['JSON']>;
+  title: Scalars['String'];
+}>;
+
+
+export type CreateTopicMutation = (
+  { __typename?: 'Mutation' }
+  & { createTopic?: Maybe<(
+    { __typename?: 'CreateTopicPayload' }
+    & { topic?: Maybe<(
+      { __typename?: 'Topic' }
+      & ForumTopicFragment
+    )>, forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'topicCount' | 'lastPostDate'>
+    )> }
+  )> }
+);
+
+export type BreadcrumbTopicQueryVariables = Exact<{
+  topicId: Scalars['Int'];
+}>;
+
+
+export type BreadcrumbTopicQuery = (
+  { __typename?: 'Query' }
+  & { topic?: Maybe<(
+    { __typename?: 'Topic' }
+    & Pick<Topic, 'id' | 'title'>
+  )> }
+);
+
+export type TopicDetailQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type TopicDetailQuery = (
+  { __typename?: 'Query' }
+  & { topic?: Maybe<(
+    { __typename?: 'Topic' }
+    & { postsConnection: (
+      { __typename?: 'PostsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Post' }
+        & Pick<Post, 'message'>
+        & ForumPostFragment
+      )> }
+    ) }
+    & ForumTopicFragment
   )> }
 );
 
@@ -18044,6 +18130,27 @@ export const ForumTopicFragmentDoc = /*#__PURE__*/ gql`
   locked
   sticky
   postsCount
+  lastPostDate
+  blurb
+  forumId
+  lastAuthor {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
+  participantsConnection(first: 5) {
+    nodes {
+      id
+      profile {
+        userId
+        email
+        picture
+        fullname
+        nickname
+      }
+    }
+  }
 }
     ${AuthorProfileFragmentDoc}`;
 export const SpriteDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -19947,7 +20054,7 @@ export const TopicListDocument = /*#__PURE__*/ gql`
     postCount
     lastPostDate
     canPost
-    topicsConnection {
+    topicsConnection(orderBy: LAST_POST_CREATED_AT_AND_STICKY) {
       nodes {
         ...ForumTopic
       }
@@ -19955,6 +20062,42 @@ export const TopicListDocument = /*#__PURE__*/ gql`
   }
 }
     ${ForumTopicFragmentDoc}`;
+export const CreateTopicDocument = /*#__PURE__*/ gql`
+    mutation CreateTopic($forumId: Int!, $content: JSON, $title: String!) {
+  createTopic(input: {forumId: $forumId, message: $content, title: $title}) {
+    topic {
+      ...ForumTopic
+    }
+    forum {
+      id
+      topicCount
+      lastPostDate
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}`;
+export const BreadcrumbTopicDocument = /*#__PURE__*/ gql`
+    query BreadcrumbTopic($topicId: Int!) {
+  topic(id: $topicId) {
+    id
+    title
+  }
+}
+    `;
+export const TopicDetailDocument = /*#__PURE__*/ gql`
+    query TopicDetail($id: Int!) {
+  topic(id: $id) {
+    ...ForumTopic
+    postsConnection(orderBy: ID_ASC) {
+      nodes {
+        ...ForumPost
+        message
+      }
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}
+${ForumPostFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21614,6 +21757,8 @@ export const namedOperations = {
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
+    BreadcrumbTopic: 'BreadcrumbTopic',
+    TopicDetail: 'TopicDetail',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
@@ -21715,6 +21860,7 @@ export const namedOperations = {
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
+    CreateTopic: 'CreateTopic',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',

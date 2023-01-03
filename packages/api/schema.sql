@@ -10980,6 +10980,64 @@ User Profile of the author. If a user has not shared their profile the first pos
 
 
 --
+-- Name: topics_blurb(public.topics); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.topics_blurb(topic public.topics) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+    select collect_text_from_prosemirror_body(posts.message_contents) from posts where id = (select id from posts where topic_id = topic.id order by created_at asc limit 1);
+  $$;
+
+
+--
+-- Name: topics_last_author(public.topics); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.topics_last_author(topic public.topics) RETURNS public.users
+    LANGUAGE sql STABLE
+    AS $$
+    select * from users where id = (select author_id from posts where topic_id = topic.id order by created_at desc limit 1);
+  $$;
+
+
+--
+-- Name: topics_last_post_date(public.topics); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.topics_last_post_date(topic public.topics) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE
+    AS $$
+    select created_at from posts where topic_id = topic.id order by created_at desc limit 1;
+  $$;
+
+
+--
+-- Name: topics_participants(public.topics); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.topics_participants(topic public.topics) RETURNS SETOF public.users
+    LANGUAGE sql STABLE
+    AS $$
+    with user_ids as (
+      select author_id from posts where topic_id = topic.id order by created_at asc
+    )
+    select
+      distinct(users.*)
+    from
+      user_ids
+    inner join
+      users
+    on
+      users.id = user_ids.author_id;
+    -- select 
+    --   * 
+    -- from users 
+    -- where id in (select distinct(author_id) from user_ids);
+  $$;
+
+
+--
 -- Name: topics_posts_count(public.topics); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -25601,6 +25659,38 @@ GRANT ALL ON FUNCTION public.toggle_responses_practice(ids integer[], "isPractic
 
 REVOKE ALL ON FUNCTION public.topics_author_profile(topic public.topics) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.topics_author_profile(topic public.topics) TO anon;
+
+
+--
+-- Name: FUNCTION topics_blurb(topic public.topics); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.topics_blurb(topic public.topics) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.topics_blurb(topic public.topics) TO anon;
+
+
+--
+-- Name: FUNCTION topics_last_author(topic public.topics); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.topics_last_author(topic public.topics) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.topics_last_author(topic public.topics) TO anon;
+
+
+--
+-- Name: FUNCTION topics_last_post_date(topic public.topics); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.topics_last_post_date(topic public.topics) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.topics_last_post_date(topic public.topics) TO anon;
+
+
+--
+-- Name: FUNCTION topics_participants(topic public.topics); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.topics_participants(topic public.topics) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.topics_participants(topic public.topics) TO anon;
 
 
 --

@@ -11518,11 +11518,14 @@ export type Topic = Node & {
   authorId: Scalars['Int'];
   /** User Profile of the author. If a user has not shared their profile the first post contents will be hidden. */
   authorProfile?: Maybe<Profile>;
+  blurb?: Maybe<Scalars['String']>;
   createdAt: Scalars['Datetime'];
   /** Reads a single `Forum` that is related to this `Topic`. */
   forum?: Maybe<Forum>;
   forumId: Scalars['Int'];
   id: Scalars['Int'];
+  lastAuthor?: Maybe<User>;
+  lastPostDate?: Maybe<Scalars['Datetime']>;
   /**
    * Locked topics can only be posted to by project admins and will display a lock symbol.
    *
@@ -11531,6 +11534,8 @@ export type Topic = Node & {
   locked: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `User`. */
+  participantsConnection: UsersConnection;
   /** Reads and enables pagination through a set of `Post`. */
   postsConnection: PostsConnection;
   postsCount?: Maybe<Scalars['Int']>;
@@ -11542,6 +11547,15 @@ export type Topic = Node & {
   sticky: Scalars['Boolean'];
   /** Title displayed in the topics listing. Can be updated in the first 5 minutes after creation. */
   title: Scalars['String'];
+};
+
+
+export type TopicParticipantsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -15154,11 +15168,28 @@ export type ForumsQuery = (
 
 export type ForumTopicFragment = (
   { __typename?: 'Topic' }
-  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount'>
+  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount' | 'lastPostDate' | 'blurb' | 'forumId'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
-  )> }
+  )>, lastAuthor?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & AuthorProfileFragment
+    )> }
+  )>, participantsConnection: (
+    { __typename?: 'UsersConnection' }
+    & { nodes: Array<(
+      { __typename?: 'User' }
+      & Pick<User, 'id'>
+      & { profile?: Maybe<(
+        { __typename?: 'Profile' }
+        & Pick<Profile, 'userId' | 'email' | 'picture' | 'fullname' | 'nickname'>
+      )> }
+    )> }
+  ) }
 );
 
 export type TopicListQueryVariables = Exact<{
@@ -15178,6 +15209,61 @@ export type TopicListQuery = (
         & ForumTopicFragment
       )> }
     ) }
+  )> }
+);
+
+export type CreateTopicMutationVariables = Exact<{
+  forumId: Scalars['Int'];
+  content?: Maybe<Scalars['JSON']>;
+  title: Scalars['String'];
+}>;
+
+
+export type CreateTopicMutation = (
+  { __typename?: 'Mutation' }
+  & { createTopic?: Maybe<(
+    { __typename?: 'CreateTopicPayload' }
+    & { topic?: Maybe<(
+      { __typename?: 'Topic' }
+      & ForumTopicFragment
+    )>, forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'topicCount' | 'lastPostDate'>
+    )> }
+  )> }
+);
+
+export type BreadcrumbTopicQueryVariables = Exact<{
+  topicId: Scalars['Int'];
+}>;
+
+
+export type BreadcrumbTopicQuery = (
+  { __typename?: 'Query' }
+  & { topic?: Maybe<(
+    { __typename?: 'Topic' }
+    & Pick<Topic, 'id' | 'title'>
+  )> }
+);
+
+export type TopicDetailQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type TopicDetailQuery = (
+  { __typename?: 'Query' }
+  & { topic?: Maybe<(
+    { __typename?: 'Topic' }
+    & { postsConnection: (
+      { __typename?: 'PostsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Post' }
+        & Pick<Post, 'message'>
+        & ForumPostFragment
+      )> }
+    ) }
+    & ForumTopicFragment
   )> }
 );
 
@@ -18046,6 +18132,27 @@ export const ForumTopicFragmentDoc = gql`
   locked
   sticky
   postsCount
+  lastPostDate
+  blurb
+  forumId
+  lastAuthor {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
+  participantsConnection(first: 5) {
+    nodes {
+      id
+      profile {
+        userId
+        email
+        picture
+        fullname
+        nickname
+      }
+    }
+  }
 }
     ${AuthorProfileFragmentDoc}`;
 export const SpriteDetailsFragmentDoc = gql`
@@ -22297,7 +22404,7 @@ export const TopicListDocument = gql`
     postCount
     lastPostDate
     canPost
-    topicsConnection {
+    topicsConnection(orderBy: LAST_POST_CREATED_AT_AND_STICKY) {
       nodes {
         ...ForumTopic
       }
@@ -22333,6 +22440,126 @@ export function useTopicListLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<
 export type TopicListQueryHookResult = ReturnType<typeof useTopicListQuery>;
 export type TopicListLazyQueryHookResult = ReturnType<typeof useTopicListLazyQuery>;
 export type TopicListQueryResult = Apollo.QueryResult<TopicListQuery, TopicListQueryVariables>;
+export const CreateTopicDocument = gql`
+    mutation CreateTopic($forumId: Int!, $content: JSON, $title: String!) {
+  createTopic(input: {forumId: $forumId, message: $content, title: $title}) {
+    topic {
+      ...ForumTopic
+    }
+    forum {
+      id
+      topicCount
+      lastPostDate
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}`;
+export type CreateTopicMutationFn = Apollo.MutationFunction<CreateTopicMutation, CreateTopicMutationVariables>;
+
+/**
+ * __useCreateTopicMutation__
+ *
+ * To run a mutation, you first call `useCreateTopicMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateTopicMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createTopicMutation, { data, loading, error }] = useCreateTopicMutation({
+ *   variables: {
+ *      forumId: // value for 'forumId'
+ *      content: // value for 'content'
+ *      title: // value for 'title'
+ *   },
+ * });
+ */
+export function useCreateTopicMutation(baseOptions?: Apollo.MutationHookOptions<CreateTopicMutation, CreateTopicMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateTopicMutation, CreateTopicMutationVariables>(CreateTopicDocument, options);
+      }
+export type CreateTopicMutationHookResult = ReturnType<typeof useCreateTopicMutation>;
+export type CreateTopicMutationResult = Apollo.MutationResult<CreateTopicMutation>;
+export type CreateTopicMutationOptions = Apollo.BaseMutationOptions<CreateTopicMutation, CreateTopicMutationVariables>;
+export const BreadcrumbTopicDocument = gql`
+    query BreadcrumbTopic($topicId: Int!) {
+  topic(id: $topicId) {
+    id
+    title
+  }
+}
+    `;
+
+/**
+ * __useBreadcrumbTopicQuery__
+ *
+ * To run a query within a React component, call `useBreadcrumbTopicQuery` and pass it any options that fit your needs.
+ * When your component renders, `useBreadcrumbTopicQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useBreadcrumbTopicQuery({
+ *   variables: {
+ *      topicId: // value for 'topicId'
+ *   },
+ * });
+ */
+export function useBreadcrumbTopicQuery(baseOptions: Apollo.QueryHookOptions<BreadcrumbTopicQuery, BreadcrumbTopicQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<BreadcrumbTopicQuery, BreadcrumbTopicQueryVariables>(BreadcrumbTopicDocument, options);
+      }
+export function useBreadcrumbTopicLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<BreadcrumbTopicQuery, BreadcrumbTopicQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<BreadcrumbTopicQuery, BreadcrumbTopicQueryVariables>(BreadcrumbTopicDocument, options);
+        }
+export type BreadcrumbTopicQueryHookResult = ReturnType<typeof useBreadcrumbTopicQuery>;
+export type BreadcrumbTopicLazyQueryHookResult = ReturnType<typeof useBreadcrumbTopicLazyQuery>;
+export type BreadcrumbTopicQueryResult = Apollo.QueryResult<BreadcrumbTopicQuery, BreadcrumbTopicQueryVariables>;
+export const TopicDetailDocument = gql`
+    query TopicDetail($id: Int!) {
+  topic(id: $id) {
+    ...ForumTopic
+    postsConnection(orderBy: ID_ASC) {
+      nodes {
+        ...ForumPost
+        message
+      }
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}
+${ForumPostFragmentDoc}`;
+
+/**
+ * __useTopicDetailQuery__
+ *
+ * To run a query within a React component, call `useTopicDetailQuery` and pass it any options that fit your needs.
+ * When your component renders, `useTopicDetailQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useTopicDetailQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useTopicDetailQuery(baseOptions: Apollo.QueryHookOptions<TopicDetailQuery, TopicDetailQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<TopicDetailQuery, TopicDetailQueryVariables>(TopicDetailDocument, options);
+      }
+export function useTopicDetailLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<TopicDetailQuery, TopicDetailQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<TopicDetailQuery, TopicDetailQueryVariables>(TopicDetailDocument, options);
+        }
+export type TopicDetailQueryHookResult = ReturnType<typeof useTopicDetailQuery>;
+export type TopicDetailLazyQueryHookResult = ReturnType<typeof useTopicDetailLazyQuery>;
+export type TopicDetailQueryResult = Apollo.QueryResult<TopicDetailQuery, TopicDetailQueryVariables>;
 export const SpritesDocument = gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -27167,6 +27394,8 @@ export const namedOperations = {
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
+    BreadcrumbTopic: 'BreadcrumbTopic',
+    TopicDetail: 'TopicDetail',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
@@ -27268,6 +27497,7 @@ export const namedOperations = {
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
+    CreateTopic: 'CreateTopic',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',

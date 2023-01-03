@@ -9,9 +9,13 @@ import ForumBreadcrumbs from "./ForumBreadcrumbs";
 import TopicList from "./TopicList";
 import { useRouteMatch } from "react-router-dom";
 import NewTopicForm from "./NewTopicForm";
+import { createContext } from "vm";
+import Topic from "./Topic";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export type ForumBreadcrumb = { name: string; id: number };
+
+export const BreadcrumbContext = createContext();
 
 export interface ForumBreadcrumbState {
   forum?: ForumBreadcrumb;
@@ -31,40 +35,12 @@ export default function Forums({
   postNewTopic?: boolean;
 }) {
   const slug = getSlug();
-  const [breadcrumbState, setBreadcrumbState] =
-    useState<null | ForumBreadcrumbState>(null);
 
   const { data, loading } = useForumsQuery({
     variables: {
       slug,
     },
   });
-
-  useEffect(() => {
-    if (data) {
-      if (forumId) {
-        const forum = (data?.projectBySlug?.forums || []).find(
-          (f) => f.id === forumId
-        );
-        if (forum) {
-          setBreadcrumbState((prev) => ({
-            ...prev,
-            forum: {
-              name: forum.name,
-              id: forumId,
-            },
-            canPost: forum.canPost || false,
-          }));
-        }
-      } else {
-        setBreadcrumbState((prev) => ({
-          ...prev,
-          forum: undefined,
-          canPost: false,
-        }));
-      }
-    }
-  }, [forumId, data?.projectBySlug?.forums, data]);
 
   if (hidden) {
     return null;
@@ -86,13 +62,14 @@ export default function Forums({
 
   return (
     <div className="">
-      {breadcrumbState?.forum && (
+      {forumId && (
         <ForumBreadcrumbs
           postingNewTopic={postNewTopic}
-          state={breadcrumbState}
+          forumId={forumId}
+          topicId={topicId}
         />
       )}
-      {!forumId && !breadcrumbState?.forum && (
+      {!forumId && (
         <>
           <div className="space-y-4 p-4">
             {(data?.projectBySlug?.forums || []).map((f) => (
@@ -112,13 +89,11 @@ export default function Forums({
           </div>
         </>
       )}
-      {forumId &&
-        breadcrumbState?.forum &&
-        !breadcrumbState.topic &&
-        !postNewTopic && <TopicList forumId={forumId} />}
+      {forumId && !topicId && !postNewTopic && <TopicList forumId={forumId} />}
       {forumId && postNewTopic && data?.me?.profile && (
-        <NewTopicForm profile={data.me.profile} />
+        <NewTopicForm forumId={forumId} profile={data.me.profile} />
       )}
+      {topicId && <Topic id={topicId} />}
     </div>
   );
 }

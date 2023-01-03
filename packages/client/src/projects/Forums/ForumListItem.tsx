@@ -34,7 +34,10 @@ export default function ForumListItem({
         </Badge>
 
         {forum.lastPostDate && (
-          <Badge>{formatTimeAgo(new Date(forum.lastPostDate))}</Badge>
+          <Badge>
+            <Trans>Latest activity</Trans>{" "}
+            {formatTimeAgo(new Date(forum.lastPostDate))}
+          </Badge>
         )}
       </div>
     </Link>

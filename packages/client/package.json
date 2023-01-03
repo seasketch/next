@@ -22,6 +22,7 @@
     "@percy/cypress": "^3.1.2",
     "@popperjs/core": "^2.11.6",
     "@seasketch/map-tile-cache-calculator": "^1.0.0",
+    "@seasketch/prosemirror-schema": "^1.0.0",
     "@seasketch/vector-data-source": "^1.0.0",
     "@sentry/react": "^6.17.1",
     "@sentry/tracing": "^6.17.1",
@@ -287,5 +288,3 @@
     "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.16"
   }
 }
-
-

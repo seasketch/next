@@ -26,6 +26,7 @@ import OfflineTilePackagePlugin from "./plugins/offlineTilePackagePlugin";
 import BasemapOfflineDetailsPlugin from "./plugins/BasemapOfflineDetailsPlugin";
 import DataUploadTaskPlugin from "./plugins/dataUploadTaskPlugin";
 import SketchingPlugin from "./plugins/sketchingPlugin";
+import ForumPostsPlugin from "./plugins/forumPostsPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -64,6 +65,7 @@ export default function graphileOptions(): PostGraphileOptions {
       BasemapOfflineDetailsPlugin,
       DataUploadTaskPlugin,
       SketchingPlugin,
+      // ForumPostsPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

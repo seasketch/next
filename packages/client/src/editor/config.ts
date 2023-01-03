@@ -1,21 +1,14 @@
-import { Schema, Node } from "prosemirror-model";
+/**
+ * WARNING!!
+ * This file must be manually made up-to-date with the contents of the client
+ * schema.
+ */
+import { Schema, Node, NodeSpec } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
 let spec = baseSchema.spec;
-
-// console.log(baseSchema.spec.marks.get("link"));
-// let spec = new Schema({
-//   nodes: baseSchema.nodes,
-//   marks: baseSchema.spec.marks.update("link", {
-//     // @ts-ignore
-//     toDOM: (node: Node) => {
-//       let { href, title } = node.attrs;
-//       return ["a", { href, title }, 0];
-//     },
-//   }),
-// }).spec;
 
 baseSchema.spec.marks.update("link", {
   ...baseSchema.spec.marks.get("link"),
@@ -37,7 +30,6 @@ const baseMarks = baseSchema.spec.marks.update("link", {
 
 const questionSchema: Schema = new Schema({
   nodes: spec.nodes
-    // @ts-ignore
     .append({
       question: {
         content: "text*",
@@ -54,6 +46,7 @@ const questionSchema: Schema = new Schema({
         group: "block",
         defining: true,
         parseDOM: [{ tag: "h2" }],
+        // @ts-ignore
         toDOM(node: Node) {
           return ["h2", 0];
         },
@@ -63,26 +56,33 @@ const questionSchema: Schema = new Schema({
       content: "question block*",
     })
     .remove("heading"),
+  // @ts-ignore
   marks: baseMarks,
 });
 
 const metadataSchema = new Schema({
+  // @ts-ignore
   nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  // @ts-ignore
   marks: baseMarks,
 });
 
 const contentSchema = new Schema({
+  // @ts-ignore
   nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  // @ts-ignore
   marks: baseMarks,
 });
 
 const forumPostSchema = new Schema({
+  // @ts-ignore
   nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
     // TODO: these should be added back in as styles and menu option support is added
     .remove("horizontal_rule")
     .remove("image")
     .remove("code_block")
     .remove("blockquote"),
+  // @ts-ignore
   marks: baseMarks,
 });
 
