@@ -10965,7 +10965,8 @@ CREATE FUNCTION public.topics_author_profile(topic public.topics) RETURNS public
     on
       project_participants.user_id = topic.author_id
     where
-      project_participants.share_profile = true
+      project_participants.share_profile = true and
+      user_profiles.user_id = topic.author_id
     limit 1;
   $$;
 
@@ -11030,10 +11031,6 @@ CREATE FUNCTION public.topics_participants(topic public.topics) RETURNS SETOF pu
       users
     on
       users.id = user_ids.author_id;
-    -- select 
-    --   * 
-    -- from users 
-    -- where id in (select distinct(author_id) from user_ids);
   $$;
 
 
