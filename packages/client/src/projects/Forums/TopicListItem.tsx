@@ -19,11 +19,8 @@ export default function TopicListItem({
   const timeAgo = formatTimeAgo(
     new Date(topic.lastPostDate || topic.createdAt)
   );
-  const lastAuthor = nameForProfile(topic.lastAuthor?.profile);
-  const profiles =
-    topic.participantsConnection.nodes
-      .filter((p) => Boolean(p.profile))
-      .map((p) => p.profile!) || [];
+  const lastAuthor = nameForProfile(topic.authorProfile);
+  const profiles = topic.participantsConnection.nodes;
 
   return (
     <div className="">
@@ -91,11 +88,11 @@ export function ParticipantAvatarCollection({
     return (
       <div>
         {profiles.map((p) => (
-          <div className="w-10 h-10">
+          <div className="w-10 h-10" key={p.userId}>
             <ProfilePhoto
-              email={profiles[0].email}
-              fullname={profiles[0].fullname}
-              picture={profiles[0].picture}
+              email={p.email}
+              fullname={p.fullname}
+              picture={p.picture}
               canonicalEmail=""
             />
           </div>

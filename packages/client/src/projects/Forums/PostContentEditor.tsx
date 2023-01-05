@@ -1,6 +1,6 @@
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { useEffect, useRef, useState } from "react";
+import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Node } from "prosemirror-model";
 import { forumPosts as editorConfig } from "../../editor/config";
 
@@ -8,15 +8,25 @@ export default function PostContentEditor({
   initialContent,
   onChange,
   autofocus,
+  onSubmit,
+  disabled,
 }: {
   initialContent: any;
   onChange: (content: any) => void;
   autofocus?: boolean;
+  onSubmit?: (content: any) => void;
+  disabled?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<EditorState>();
   const viewRef = useRef<EditorView>();
   const { schema, plugins } = editorConfig;
+  const editable = useRef(!disabled);
+
+  useEffect(() => {
+    editable.current = !disabled;
+    viewRef.current?.updateState(state!);
+  }, [disabled]);
 
   useEffect(() => {
     let doc: Node | undefined;
@@ -31,6 +41,9 @@ export default function PostContentEditor({
         plugins,
         doc,
       }),
+      editable: () => {
+        return editable.current;
+      },
       dispatchTransaction: (transaction) => {
         const view = viewRef.current!;
         const newState = view.state.apply(transaction);
@@ -52,9 +65,25 @@ export default function PostContentEditor({
     };
   }, [onChange, plugins, schema]);
 
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent<any>) => {
+      if (onSubmit && state) {
+        if (e.metaKey && e.key === "Enter") {
+          onSubmit(state.doc.toJSON());
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }
+    },
+    [state, onSubmit]
+  );
+
   return (
     <div
-      className="prosemirror-body forum-post new-forum-post"
+      className={`prosemirror-body forum-post new-forum-post ${
+        disabled === true ? "opacity-50" : "opacity-100"
+      }`}
+      onKeyDown={onKeyDown}
       ref={root}
     ></div>
   );

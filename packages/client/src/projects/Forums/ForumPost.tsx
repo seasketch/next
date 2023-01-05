@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 import { ForumPostFragment } from "../../generated/graphql";
 import { DOMSerializer, Node } from "prosemirror-model";
 import { forumPosts } from "../../editor/config";
+import InlineAuthorDetails from "./InlineAuthorDetails";
+import { motion } from "framer-motion";
 
 const renderer = (doc: any) => {
   return DOMSerializer.fromSchema(forumPosts.schema).serializeFragment(
@@ -11,8 +13,10 @@ const renderer = (doc: any) => {
 
 export default function ForumPost({
   post,
+  isFirstPostInTopic,
 }: {
-  post: ForumPostFragment | { message: JSON };
+  post: ForumPostFragment;
+  isFirstPostInTopic: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -25,8 +29,29 @@ export default function ForumPost({
     }
   }, [ref, post.message]);
   return (
-    <div className="bg-white p-4 border">
+    <motion.div
+      initial={{
+        opacity: 0.5,
+        scale: 0,
+        backgroundColor: "rgb(100, 100, 255)",
+      }}
+      animate={{ opacity: 1, scale: 1, backgroundColor: "rgb(255, 255, 255)" }}
+      exit={{ opacity: 0 }}
+      transition={{
+        duration: 0.25,
+      }}
+      className="p-4 pt-3 border bg-white"
+    >
+      <div className="mb-3 text-gray-600">
+        {post.authorProfile && (
+          <InlineAuthorDetails
+            profile={post.authorProfile}
+            dateString={post.createdAt}
+            firstPostInTopic={isFirstPostInTopic}
+          />
+        )}
+      </div>
       <div className="prosemirror-body forum-post" ref={ref}></div>
-    </div>
+    </motion.div>
   );
 }

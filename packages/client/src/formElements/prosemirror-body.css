@@ -80,3 +80,15 @@
   z-index: 999999;
   @apply bg-white p-4 rounded shadow;
 }
+
+.forum-post.prosemirror-body h1 {
+  @apply text-xl;
+}
+
+.forum-post.prosemirror-body h2 {
+  @apply text-lg;
+}
+
+.forum-post.prosemirror-body h3 {
+  @apply text-base;
+}

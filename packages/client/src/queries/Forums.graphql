@@ -27,6 +27,7 @@ query Forums($slug: String!) {
   }
   projectBySlug(slug: $slug) {
     id
+    sessionParticipationStatus
     forums {
       id
       archived
@@ -67,22 +68,13 @@ fragment ForumTopic on Topic {
   lastPostDate
   blurb
   forumId
-  lastAuthor {
-    id
-    profile {
-      ...AuthorProfile
-    }
-  }
   participantsConnection(first: 5) {
     nodes {
-      id
-      profile {
-        userId
-        email
-        picture
-        fullname
-        nickname
-      }
+      userId
+      email
+      picture
+      fullname
+      nickname
     }
   }
 }
@@ -96,6 +88,10 @@ query TopicList($forumId: Int!) {
     topicCount
     postCount
     lastPostDate
+    project {
+      id
+      sessionParticipationStatus
+    }
     canPost
     topicsConnection(orderBy: LAST_POST_CREATED_AT_AND_STICKY) {
       nodes {
@@ -109,10 +105,13 @@ mutation CreateTopic($forumId: Int!, $content: JSON, $title: String!) {
   createTopic(input: { forumId: $forumId, message: $content, title: $title }) {
     topic {
       ...ForumTopic
+      postsCount
+      lastPostDate
     }
     forum {
       id
       topicCount
+      postCount
       lastPostDate
     }
   }
@@ -132,6 +131,37 @@ query TopicDetail($id: Int!) {
       nodes {
         ...ForumPost
         message
+      }
+    }
+    forum {
+      id
+      canPost
+      project {
+        id
+        sessionParticipationStatus
+      }
+    }
+  }
+  me {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
+}
+
+mutation CreateReply($topicId: Int!, $content: JSON) {
+  createPost(input: { topicId: $topicId, message: $content }) {
+    post {
+      ...ForumPost
+      topic {
+        ...ForumTopic
+        forum {
+          id
+          postCount
+          topicCount
+          lastPostDate
+        }
       }
     }
   }

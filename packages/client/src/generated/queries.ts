@@ -7967,6 +7967,19 @@ export type ProfilePatch = {
   userId?: Maybe<Scalars['Int']>;
 };
 
+/** A connection to a list of `Profile` values. */
+export type ProfilesConnection = {
+  __typename?: 'ProfilesConnection';
+  /** A list of edges which contains the `Profile` and cursor to aid in pagination. */
+  edges: Array<ProfilesEdge>;
+  /** A list of `Profile` objects. */
+  nodes: Array<Profile>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `Profile` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
 /** A `Profile` edge in the connection. */
 export type ProfilesEdge = {
   __typename?: 'ProfilesEdge';
@@ -11522,7 +11535,6 @@ export type Topic = Node & {
   forum?: Maybe<Forum>;
   forumId: Scalars['Int'];
   id: Scalars['Int'];
-  lastAuthor?: Maybe<User>;
   lastPostDate?: Maybe<Scalars['Datetime']>;
   /**
    * Locked topics can only be posted to by project admins and will display a lock symbol.
@@ -11532,8 +11544,8 @@ export type Topic = Node & {
   locked: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /** Reads and enables pagination through a set of `User`. */
-  participantsConnection: UsersConnection;
+  /** Reads and enables pagination through a set of `Profile`. */
+  participantsConnection: ProfilesConnection;
   /** Reads and enables pagination through a set of `Post`. */
   postsConnection: PostsConnection;
   postsCount?: Maybe<Scalars['Int']>;
@@ -15142,7 +15154,7 @@ export type ForumsQuery = (
     )> }
   )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'sessionParticipationStatus'>
     & { forums: Array<(
       { __typename?: 'Forum' }
       & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
@@ -15170,22 +15182,11 @@ export type ForumTopicFragment = (
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
-  )>, lastAuthor?: Maybe<(
-    { __typename?: 'User' }
-    & Pick<User, 'id'>
-    & { profile?: Maybe<(
-      { __typename?: 'Profile' }
-      & AuthorProfileFragment
-    )> }
   )>, participantsConnection: (
-    { __typename?: 'UsersConnection' }
+    { __typename?: 'ProfilesConnection' }
     & { nodes: Array<(
-      { __typename?: 'User' }
-      & Pick<User, 'id'>
-      & { profile?: Maybe<(
-        { __typename?: 'Profile' }
-        & Pick<Profile, 'userId' | 'email' | 'picture' | 'fullname' | 'nickname'>
-      )> }
+      { __typename?: 'Profile' }
+      & Pick<Profile, 'userId' | 'email' | 'picture' | 'fullname' | 'nickname'>
     )> }
   ) }
 );
@@ -15200,7 +15201,10 @@ export type TopicListQuery = (
   & { forum?: Maybe<(
     { __typename?: 'Forum' }
     & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
-    & { topicsConnection: (
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'sessionParticipationStatus'>
+    )>, topicsConnection: (
       { __typename?: 'TopicsConnection' }
       & { nodes: Array<(
         { __typename?: 'Topic' }
@@ -15223,10 +15227,11 @@ export type CreateTopicMutation = (
     { __typename?: 'CreateTopicPayload' }
     & { topic?: Maybe<(
       { __typename?: 'Topic' }
+      & Pick<Topic, 'postsCount' | 'lastPostDate'>
       & ForumTopicFragment
     )>, forum?: Maybe<(
       { __typename?: 'Forum' }
-      & Pick<Forum, 'id' | 'topicCount' | 'lastPostDate'>
+      & Pick<Forum, 'id' | 'topicCount' | 'postCount' | 'lastPostDate'>
     )> }
   )> }
 );
@@ -15260,8 +15265,47 @@ export type TopicDetailQuery = (
         & Pick<Post, 'message'>
         & ForumPostFragment
       )> }
-    ) }
+    ), forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'canPost'>
+      & { project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id' | 'sessionParticipationStatus'>
+      )> }
+    )> }
     & ForumTopicFragment
+  )>, me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & AuthorProfileFragment
+    )> }
+  )> }
+);
+
+export type CreateReplyMutationVariables = Exact<{
+  topicId: Scalars['Int'];
+  content?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type CreateReplyMutation = (
+  { __typename?: 'Mutation' }
+  & { createPost?: Maybe<(
+    { __typename?: 'CreatePostPayload' }
+    & { post?: Maybe<(
+      { __typename?: 'Post' }
+      & { topic?: Maybe<(
+        { __typename?: 'Topic' }
+        & { forum?: Maybe<(
+          { __typename?: 'Forum' }
+          & Pick<Forum, 'id' | 'postCount' | 'topicCount' | 'lastPostDate'>
+        )> }
+        & ForumTopicFragment
+      )> }
+      & ForumPostFragment
+    )> }
   )> }
 );
 
@@ -18133,22 +18177,13 @@ export const ForumTopicFragmentDoc = /*#__PURE__*/ gql`
   lastPostDate
   blurb
   forumId
-  lastAuthor {
-    id
-    profile {
-      ...AuthorProfile
-    }
-  }
   participantsConnection(first: 5) {
     nodes {
-      id
-      profile {
-        userId
-        email
-        picture
-        fullname
-        nickname
-      }
+      userId
+      email
+      picture
+      fullname
+      nickname
     }
   }
 }
@@ -20015,6 +20050,7 @@ export const ForumsDocument = /*#__PURE__*/ gql`
   }
   projectBySlug(slug: $slug) {
     id
+    sessionParticipationStatus
     forums {
       id
       archived
@@ -20053,6 +20089,10 @@ export const TopicListDocument = /*#__PURE__*/ gql`
     topicCount
     postCount
     lastPostDate
+    project {
+      id
+      sessionParticipationStatus
+    }
     canPost
     topicsConnection(orderBy: LAST_POST_CREATED_AT_AND_STICKY) {
       nodes {
@@ -20067,10 +20107,13 @@ export const CreateTopicDocument = /*#__PURE__*/ gql`
   createTopic(input: {forumId: $forumId, message: $content, title: $title}) {
     topic {
       ...ForumTopic
+      postsCount
+      lastPostDate
     }
     forum {
       id
       topicCount
+      postCount
       lastPostDate
     }
   }
@@ -20094,10 +20137,44 @@ export const TopicDetailDocument = /*#__PURE__*/ gql`
         message
       }
     }
+    forum {
+      id
+      canPost
+      project {
+        id
+        sessionParticipationStatus
+      }
+    }
+  }
+  me {
+    id
+    profile {
+      ...AuthorProfile
+    }
   }
 }
     ${ForumTopicFragmentDoc}
-${ForumPostFragmentDoc}`;
+${ForumPostFragmentDoc}
+${AuthorProfileFragmentDoc}`;
+export const CreateReplyDocument = /*#__PURE__*/ gql`
+    mutation CreateReply($topicId: Int!, $content: JSON) {
+  createPost(input: {topicId: $topicId, message: $content}) {
+    post {
+      ...ForumPost
+      topic {
+        ...ForumTopic
+        forum {
+          id
+          postCount
+          topicCount
+          lastPostDate
+        }
+      }
+    }
+  }
+}
+    ${ForumPostFragmentDoc}
+${ForumTopicFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21861,6 +21938,7 @@ export const namedOperations = {
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
     CreateTopic: 'CreateTopic',
+    CreateReply: 'CreateReply',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',

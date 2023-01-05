@@ -8984,6 +8984,23 @@ input ProfilePatch {
   userId: Int
 }
 
+"""A connection to a list of `Profile` values."""
+type ProfilesConnection {
+  """
+  A list of edges which contains the `Profile` and cursor to aid in pagination.
+  """
+  edges: [ProfilesEdge!]!
+
+  """A list of `Profile` objects."""
+  nodes: [Profile!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `Profile` you could get from the connection."""
+  totalCount: Int!
+}
+
 """A `Profile` edge in the connection."""
 type ProfilesEdge {
   """A cursor for use in pagination."""
@@ -12799,7 +12816,6 @@ type Topic implements Node {
   forum: Forum
   forumId: Int!
   id: Int!
-  lastAuthor: User
   lastPostDate: Datetime
 
   """
@@ -12815,7 +12831,7 @@ type Topic implements Node {
   """
   nodeId: ID!
 
-  """Reads and enables pagination through a set of `User`."""
+  """Reads and enables pagination through a set of `Profile`."""
   participantsConnection(
     """Read all values in the set after (below) this cursor."""
     after: Cursor
@@ -12834,7 +12850,7 @@ type Topic implements Node {
     based pagination. May not be used with `last`.
     """
     offset: Int
-  ): UsersConnection!
+  ): ProfilesConnection!
 
   """Reads and enables pagination through a set of `Post`."""
   postsConnection(

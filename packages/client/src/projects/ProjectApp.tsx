@@ -122,6 +122,7 @@ export default function ProjectApp() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
+                className="flex flex-col max-h-full overflow-hidden"
               >
                 <Route path={`/${slug}/app/maps`}>
                   <BasemapControl basemaps={basemaps} />

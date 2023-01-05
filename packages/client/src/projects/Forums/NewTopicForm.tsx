@@ -6,8 +6,6 @@ import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   AuthorProfileFragment,
-  ForumsDocument,
-  ForumsQuery,
   TopicListDocument,
   TopicListQuery,
   useCreateTopicMutation,
@@ -47,7 +45,7 @@ export default function NewTopicForm({
   }, [setModalOpen]);
 
   const onError = useGlobalErrorHandler();
-  const [createTopic] = useCreateTopicMutation({
+  const [createTopic, mutationState] = useCreateTopicMutation({
     variables: {
       forumId,
       content,
@@ -91,7 +89,11 @@ export default function NewTopicForm({
 
   return (
     <div>
-      <div className="bg-white shadow">
+      <div
+        className={`bg-white shadow ${
+          mutationState.loading ? "opacity-70" : ""
+        }`}
+      >
         <div className="flex border-b p-1 pt-2 px-2 pb-1.5 items-center">
           <button
             onClick={openProfileModal}
@@ -117,6 +119,7 @@ export default function NewTopicForm({
           </div>
         </div>
         <PostContentEditor
+          disabled={mutationState.loading}
           autofocus={Boolean(title && title.length)}
           initialContent={content}
           onChange={setContent}
@@ -125,6 +128,8 @@ export default function NewTopicForm({
       <div className="flex justify-end items-center p-2 py-3 space-x-2">
         <Button label={t("Cancel")} onClick={onCancel} />
         <Button
+          loading={mutationState.loading}
+          disabled={mutationState.loading}
           label={t("Post New Topic")}
           primary
           onClick={async () => {

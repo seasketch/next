@@ -11,6 +11,8 @@ import { useRouteMatch } from "react-router-dom";
 import NewTopicForm from "./NewTopicForm";
 import { createContext } from "vm";
 import Topic from "./Topic";
+import Warning from "../../components/Warning";
+import SignInPrompt from "./SignInPrompt";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export type ForumBreadcrumb = { name: string; id: number };
@@ -61,7 +63,7 @@ export default function Forums({
   }
 
   return (
-    <div className="">
+    <>
       {forumId && (
         <ForumBreadcrumbs
           postingNewTopic={postNewTopic}
@@ -84,9 +86,6 @@ export default function Forums({
               </h2>
             </div>
           )}
-          <div className="pt-8 p-4">
-            <JoinProjectPrompt variant="forums" />
-          </div>
         </>
       )}
       {forumId && !topicId && !postNewTopic && <TopicList forumId={forumId} />}
@@ -94,6 +93,6 @@ export default function Forums({
         <NewTopicForm forumId={forumId} profile={data.me.profile} />
       )}
       {topicId && <Topic id={topicId} />}
-    </div>
+    </>
   );
 }

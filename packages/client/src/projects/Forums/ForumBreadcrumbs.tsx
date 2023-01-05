@@ -8,8 +8,10 @@ import { PlusIcon } from "@heroicons/react/outline";
 import {
   ForumTopicFragment,
   ForumTopicFragmentDoc,
+  ParticipationStatus,
   useBreadcrumbTopicQuery,
   useForumsQuery,
+  useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useEffect, useMemo } from "react";
@@ -31,6 +33,12 @@ export default function ForumBreadcrumbs({
 
   const forumData = useForumsQuery({
     onError,
+    variables: {
+      slug: getSlug(),
+    },
+  });
+
+  const projectData = useProjectMetadataQuery({
     variables: {
       slug: getSlug(),
     },
@@ -72,7 +80,7 @@ export default function ForumBreadcrumbs({
   }, [forum]);
 
   return (
-    <div className="flex w-full overflow-hidden bg-gray-100 p-2 px-4 text-sm font-semibold border-b shadow-sm h-10 items-center">
+    <div className="flex w-full overflow-hidden bg-gray-100 p-2 px-4 h-10 text-sm font-semibold border-b shadow-sm flex-none items-center">
       <div className="flex items-center w-full overflow-hidden">
         <BreadcrumbLink
           className="flex-none"
@@ -87,14 +95,6 @@ export default function ForumBreadcrumbs({
             className=""
           />
         )}
-        {/* {topic && forum && (
-          <BreadcrumbLink
-            showSlash
-            to={`/${slug}/app/forums/${forum.id}/${topic.id}`}
-            label={topic.title}
-            className=""
-          />
-        )} */}
         {postingNewTopic && (
           <BreadcrumbLink
             showSlash
@@ -104,20 +104,25 @@ export default function ForumBreadcrumbs({
           />
         )}
       </div>
-      {!topicId && forumId && canPost && !postingNewTopic && (
-        <div className="flex-none text-right">
-          <Button
-            small
-            href={`./${forumId}/new-post`}
-            label={
-              <>
-                {t("Post a topic")}
-                <PlusIcon className="w-4 h-4 ml-1" />
-              </>
-            }
-          />
-        </div>
-      )}
+      {!topicId &&
+        forumId &&
+        canPost &&
+        !postingNewTopic &&
+        projectData?.data?.project?.sessionParticipationStatus ===
+          ParticipationStatus.ParticipantSharedProfile && (
+          <div className="flex-none text-right">
+            <Button
+              small
+              href={`./${forumId}/new-post`}
+              label={
+                <>
+                  {t("Post a topic")}
+                  <PlusIcon className="w-4 h-4 ml-1" />
+                </>
+              }
+            />
+          </div>
+        )}
     </div>
   );
 }

@@ -7429,7 +7429,7 @@ means of listing out all profiles in bulk.
 --
 
 CREATE FUNCTION public.posts_author_profile(post public.posts) RETURNS public.user_profiles
-    LANGUAGE sql STABLE
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select
       user_profiles.*
@@ -7440,7 +7440,9 @@ CREATE FUNCTION public.posts_author_profile(post public.posts) RETURNS public.us
     on
       project_participants.user_id = post.author_id
     where
-      project_participants.share_profile = true
+      project_participants.share_profile = true and
+      project_participants.project_id = (select project_id from forums where forums.id = ((select forum_id from topics where topics.id = post.topic_id))) and
+      user_profiles.user_id = post.author_id
     limit 1;
   $$;
 
@@ -10950,7 +10952,7 @@ $$;
 --
 
 CREATE FUNCTION public.topics_author_profile(topic public.topics) RETURNS public.user_profiles
-    LANGUAGE sql STABLE
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select
       user_profiles.*
@@ -10966,6 +10968,7 @@ CREATE FUNCTION public.topics_author_profile(topic public.topics) RETURNS public
       project_participants.user_id = topic.author_id
     where
       project_participants.share_profile = true and
+      project_participants.project_id = (select project_id from forums where forums.id = ((select forum_id from topics where topics.id = topic.id))) and
       user_profiles.user_id = topic.author_id
     limit 1;
   $$;
@@ -10992,17 +10995,6 @@ CREATE FUNCTION public.topics_blurb(topic public.topics) RETURNS text
 
 
 --
--- Name: topics_last_author(public.topics); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.topics_last_author(topic public.topics) RETURNS public.users
-    LANGUAGE sql STABLE
-    AS $$
-    select * from users where id = (select author_id from posts where topic_id = topic.id order by created_at desc limit 1);
-  $$;
-
-
---
 -- Name: topics_last_post_date(public.topics); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11017,20 +11009,24 @@ CREATE FUNCTION public.topics_last_post_date(topic public.topics) RETURNS timest
 -- Name: topics_participants(public.topics); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.topics_participants(topic public.topics) RETURNS SETOF public.users
-    LANGUAGE sql STABLE
+CREATE FUNCTION public.topics_participants(topic public.topics) RETURNS SETOF public.user_profiles
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     with user_ids as (
       select author_id from posts where topic_id = topic.id order by created_at asc
     )
     select
-      distinct(users.*)
+      distinct(user_profiles.*)
     from
-      user_ids
+      user_profiles
     inner join
-      users
+      project_participants
     on
-      users.id = user_ids.author_id;
+      project_participants.user_id = user_profiles.user_id
+    where 
+      user_profiles.user_id in (select author_id from user_ids) and
+      project_participants.project_id = (select project_id from forums where forums.id = ((select forum_id from topics where topics.id = topic.id))) and
+      project_participants.share_profile = true;
   $$;
 
 
@@ -16597,7 +16593,7 @@ CREATE POLICY topics_delete ON public.topics FOR DELETE USING ((public.session_i
 -- Name: topics topics_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY topics_select ON public.topics FOR SELECT TO seasketch_user USING ((public.session_has_project_access(( SELECT forums.project_id
+CREATE POLICY topics_select ON public.topics FOR SELECT TO anon USING ((public.session_has_project_access(( SELECT forums.project_id
    FROM public.forums
   WHERE (forums.id = topics.forum_id))) AND public.session_on_acl(( SELECT access_control_lists.id
    FROM public.access_control_lists
@@ -25664,14 +25660,6 @@ GRANT ALL ON FUNCTION public.topics_author_profile(topic public.topics) TO anon;
 
 REVOKE ALL ON FUNCTION public.topics_blurb(topic public.topics) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.topics_blurb(topic public.topics) TO anon;
-
-
---
--- Name: FUNCTION topics_last_author(topic public.topics); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.topics_last_author(topic public.topics) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.topics_last_author(topic public.topics) TO anon;
 
 
 --
