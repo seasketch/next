@@ -12,12 +12,16 @@ export default function ProfilePhoto({
   canonicalEmail,
   picture,
   defaultImg,
+  border,
+  square,
 }: {
   fullname?: string | Maybe<string>;
   email?: string | Maybe<string>;
   canonicalEmail: string;
   picture?: string | Maybe<string>;
   defaultImg?: Gravatar.DefaultImage;
+  border?: boolean;
+  square?: boolean;
 }) {
   const hash = picture
     ? ""
@@ -29,7 +33,9 @@ export default function ProfilePhoto({
     : `url("http://www.gravatar.com/avatar/${hash}?d=retro&r=g&s=200")`;
   return (
     <div
-      className="w-full h-full inline-block rounded-full"
+      className={`w-full h-full inline-block ${
+        square ? "rounded-sm" : "rounded-full"
+      } ${border ? "border-2 shadow bg-white border-white" : ""}`}
       style={{
         backgroundImage: bg,
         backgroundSize: "cover",

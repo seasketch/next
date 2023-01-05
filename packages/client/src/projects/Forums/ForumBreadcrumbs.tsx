@@ -1,22 +1,15 @@
-import { HomeIcon } from "@heroicons/react/solid";
-import { Link, NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import getSlug from "../../getSlug";
-import { ForumBreadcrumbState } from "./Forums";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import { PlusIcon } from "@heroicons/react/outline";
 import {
-  ForumTopicFragment,
-  ForumTopicFragmentDoc,
   ParticipationStatus,
-  useBreadcrumbTopicQuery,
   useForumsQuery,
   useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import { useEffect, useMemo } from "react";
-import { useApolloClient } from "@apollo/client";
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
+import { useMemo } from "react";
 
 export default function ForumBreadcrumbs({
   postingNewTopic,
@@ -44,36 +37,11 @@ export default function ForumBreadcrumbs({
     },
   });
 
-  const topicData = useBreadcrumbTopicQuery({
-    variables: {
-      topicId: topicId || 0,
-    },
-    errorPolicy: "ignore",
-    fetchPolicy: "cache-first",
-  });
-
   const forum = useMemo(() => {
     return (forumData.data?.projectBySlug?.forums || []).find(
       (f) => f.id === forumId
     );
   }, [forumData.data?.projectBySlug?.forums, forumId]);
-
-  const client = useApolloClient();
-
-  const topic = useMemo(() => {
-    if (topicData.data?.topic) {
-      return topicData.data?.topic;
-    } else if (topicId) {
-      return client.cache.readFragment({
-        fragment: ForumTopicFragmentDoc,
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `Topic:${topicId}`,
-        fragmentName: "ForumTopic",
-      }) as ForumTopicFragment;
-    } else {
-      return undefined;
-    }
-  }, [topicData.data?.topic, topicId, client.cache]);
 
   const canPost = useMemo(() => {
     return forum && forum.canPost;

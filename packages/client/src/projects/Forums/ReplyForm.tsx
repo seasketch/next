@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useHistory } from "react-router-dom";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -34,7 +33,6 @@ export default function ReplyForm({
     undefined
   );
   const [modalOpen, setModalOpen] = useState(false);
-  const history = useHistory();
 
   const openProfileModal = useCallback(() => {
     setModalOpen(true);

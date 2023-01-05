@@ -2,12 +2,12 @@ import {
   AuthorProfileFragment,
   ForumTopicFragment,
 } from "../../generated/graphql";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans as I18n } from "react-i18next";
 import { formatTimeAgo } from "../../admin/data/CreateBasemapModal";
 import { Link } from "react-router-dom";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
-import { useCallback, useContext } from "react";
-import { ForumBreadcrumbState } from "./Forums";
+import { useContext } from "react";
+import { ProjectAppSidebarContext } from "../ProjectAppSidebar";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function TopicListItem({
@@ -20,12 +20,13 @@ export default function TopicListItem({
     new Date(topic.lastPostDate || topic.createdAt)
   );
   const lastAuthor = nameForProfile(topic.authorProfile);
-  const profiles = topic.participantsConnection.nodes;
+  const profiles = [...topic.participantsConnection.nodes].reverse();
+  const { isSmall } = useContext(ProjectAppSidebarContext);
 
   return (
     <div className="">
       <div className="flex">
-        <div className="flex-1">
+        <div className="flex-1 overflow-hidden">
           <Link to={`./${topic.forumId}/${topic.id}`}>
             <h4 className="text-base font-semibold">
               <Link to={`./${topic.forumId}/${topic.id}`}>{topic.title}</Link>
@@ -51,8 +52,21 @@ export default function TopicListItem({
             </div>
           </Link>
         </div>
-        <Link to={`./${topic.forumId}/${topic.id}`}>
-          <ParticipantAvatarCollection profiles={profiles} />
+        <Link
+          className="flex-none pl-2 flex flex-col text-xs items-center justify-center"
+          to={`./${topic.forumId}/${topic.id}`}
+        >
+          <ParticipantAvatarCollection
+            limit={isSmall ? 3 : 4}
+            profiles={profiles}
+          />
+          {(topic.participantCount || 0) > 1 && (
+            <span>
+              <Trans i18nKey="participantCount" count={topic.participantCount}>
+                {{ count: topic.participantCount }} people
+              </Trans>
+            </span>
+          )}
         </Link>
       </div>
     </div>
@@ -65,9 +79,12 @@ export function nameForProfile(profile?: AuthorProfileFragment | null) {
 
 export function ParticipantAvatarCollection({
   profiles,
+  limit,
 }: {
   profiles: AuthorProfileFragment[];
+  limit?: number;
 }) {
+  limit = limit || 4;
   if (profiles.length === 1) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -86,10 +103,20 @@ export function ParticipantAvatarCollection({
     );
   } else {
     return (
-      <div>
-        {profiles.map((p) => (
-          <div className="w-10 h-10" key={p.userId}>
+      <div
+        className="whitespace-nowrap flex-nowrap items-center flex-col-reverse"
+        style={{ width: 20 * profiles.slice(0, limit).length + 20 }}
+      >
+        {profiles.slice(0, limit).map((p, i) => (
+          <div
+            className="w-10 h-10 inline-block -mr-5"
+            style={{
+              zIndex: 5 - i,
+            }}
+            key={p.userId}
+          >
             <ProfilePhoto
+              border
               email={p.email}
               fullname={p.fullname}
               picture={p.picture}

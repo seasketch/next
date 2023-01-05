@@ -18,6 +18,27 @@ fragment ForumPost on Post {
   topicId
 }
 
+fragment RecentPost on Post {
+  ...ForumPost
+  blurb
+  topic {
+    id
+    postsCount
+    title
+    sticky
+    forum {
+      id
+      name
+    }
+    participantCount
+    participantsConnection(first: 4) {
+      nodes {
+        ...AuthorProfile
+      }
+    }
+  }
+}
+
 query Forums($slug: String!) {
   me {
     id
@@ -40,16 +61,7 @@ query Forums($slug: String!) {
     }
     latestPostsConnection(first: 5) {
       nodes {
-        ...ForumPost
-        topic {
-          id
-          title
-          sticky
-          forum {
-            id
-            name
-          }
-        }
+        ...RecentPost
       }
     }
   }
@@ -68,6 +80,7 @@ fragment ForumTopic on Topic {
   lastPostDate
   blurb
   forumId
+  participantCount
   participantsConnection(first: 5) {
     nodes {
       userId

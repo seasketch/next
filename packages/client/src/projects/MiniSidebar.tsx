@@ -1,4 +1,3 @@
-import React from "react";
 import logo from "../header/seasketch-logo.png";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -8,12 +7,12 @@ import {
   SketchingButton,
   ForumsButton,
   AdminButton,
-  SettingsButton,
 } from "./MiniSidebarButtons";
 import { useHistory, useParams } from "react-router-dom";
 import { MenuToggle } from "./MenuToggle";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { getLastFormUrl } from "./Forums/Forums";
 
 export default function MiniSidebar({
   onExpand,
@@ -30,9 +29,26 @@ export default function MiniSidebar({
 
   const openSidebar = (s: string) => () => {
     if (sidebar === s) {
-      history.replace(`/${slug}/app`);
+      if (s === "forums") {
+        if (history.location.pathname !== `/${slug}/app/forums`) {
+          history.replace(`/${slug}/app/forums`);
+        } else {
+          history.replace(`/${slug}/app`);
+        }
+      } else {
+        history.replace(`/${slug}/app`);
+      }
     } else {
-      history.replace(`/${slug}/app/${s}`);
+      if (s === "forums") {
+        const lastUrl = getLastFormUrl();
+        if (lastUrl) {
+          history.replace(lastUrl);
+        } else {
+          history.replace(`/${slug}/app/${s}`);
+        }
+      } else {
+        history.replace(`/${slug}/app/${s}`);
+      }
     }
   };
 

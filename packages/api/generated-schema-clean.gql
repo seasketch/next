@@ -8870,6 +8870,7 @@ type Post implements Node {
   
   """
   authorProfile: Profile
+  blurb: String
   createdAt: Datetime!
 
   """
@@ -12830,6 +12831,7 @@ type Topic implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  participantCount: Int
 
   """Reads and enables pagination through a set of `Profile`."""
   participantsConnection(

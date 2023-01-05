@@ -51,6 +51,7 @@ export default function NewTopicForm({
       content,
       title,
     },
+    onError,
     update: async (cache, result) => {
       const topic = result.data?.createTopic?.topic;
       if (topic) {

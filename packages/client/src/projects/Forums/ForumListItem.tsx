@@ -1,9 +1,11 @@
-import { Link, useRouteMatch } from "react-router-dom";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { Trans as I18n } from "react-i18next";
 
 import Badge from "../../components/Badge";
 import { ForumListDetailsFragment } from "../../generated/graphql";
 import { formatTimeAgo } from "../../admin/data/CreateBasemapModal";
+import { useContext } from "react";
+import { ProjectAppSidebarContext } from "../ProjectAppSidebar";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function ForumListItem({
@@ -11,6 +13,7 @@ export default function ForumListItem({
 }: {
   forum: ForumListDetailsFragment;
 }) {
+  const { isSmall } = useContext(ProjectAppSidebarContext);
   return (
     <Link
       to={"./forums/" + forum.id}
@@ -22,16 +25,21 @@ export default function ForumListItem({
         <p className="text-sm opacity-80">{forum.description}</p>
       )}
       <div className="space-x-1">
-        <Badge className="">
-          <Trans i18nKey="NumTopics" count={forum.topicCount || 0}>
-            {{ count: forum.topicCount || 0 }} topics
-          </Trans>
-        </Badge>
-        <Badge className="">
-          <Trans i18nKey="NumPosts" count={forum.postCount || 0}>
-            {{ count: forum.postCount || 0 }} posts
-          </Trans>
-        </Badge>
+        {!isSmall && (
+          <Badge className="">
+            <Trans i18nKey="NumTopics" count={forum.topicCount || 0}>
+              {{ count: forum.topicCount || 0 }} topics
+            </Trans>
+          </Badge>
+        )}
+
+        {!isSmall && (
+          <Badge className="">
+            <Trans i18nKey="NumPosts" count={forum.postCount || 0}>
+              {{ count: forum.postCount || 0 }} posts
+            </Trans>
+          </Badge>
+        )}
 
         {forum.lastPostDate && (
           <Badge>

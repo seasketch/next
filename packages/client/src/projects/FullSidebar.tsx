@@ -16,6 +16,7 @@ import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphq
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
 import { ParticipationStatus } from "../generated/graphql";
 import { CogIcon } from "@heroicons/react/solid";
+import { getLastFormUrl } from "./Forums/Forums";
 
 export default function FullSidebar({
   open,
@@ -51,7 +52,16 @@ export default function FullSidebar({
   }, [data?.project?.sessionParticipationStatus, history, slug]);
 
   const chooseSidebar = (sidebar: string) => () => {
-    history.replace(`/${slug}/app/${sidebar}`);
+    if (sidebar === "forums") {
+      const lastUrl = getLastFormUrl();
+      if (lastUrl) {
+        history.replace(lastUrl);
+      } else {
+        history.replace(`/${slug}/app/${sidebar}`);
+      }
+    } else {
+      history.replace(`/${slug}/app/${sidebar}`);
+    }
     onClose();
   };
 

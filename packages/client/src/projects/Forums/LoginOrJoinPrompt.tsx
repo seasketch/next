@@ -1,5 +1,5 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans as I18n } from "react-i18next";
 import JoinProjectPrompt from "../../auth/JoinProjectPrompt";
 import Warning from "../../components/Warning";
 import {

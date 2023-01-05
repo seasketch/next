@@ -755,7 +755,6 @@ describe("Copy operations", () => {
         const folders = await conn.manyFirst(
           sql`select * from get_child_folders_recursive(${copyId}, 'sketch')`
         );
-        console.log("folders", folders);
         // @ts-ignore
         expect(folders[0].length).toBe(2);
         const sketches = await conn.manyFirst(

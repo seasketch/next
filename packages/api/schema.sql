@@ -7457,6 +7457,17 @@ User Profile of the author. If a user has not shared their profile the post mess
 
 
 --
+-- Name: posts_blurb(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.posts_blurb(post public.posts) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+    select collect_text_from_prosemirror_body(post.message_contents);
+  $$;
+
+
+--
 -- Name: posts_message(public.posts); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11002,6 +11013,17 @@ CREATE FUNCTION public.topics_last_post_date(topic public.topics) RETURNS timest
     LANGUAGE sql STABLE
     AS $$
     select created_at from posts where topic_id = topic.id order by created_at desc limit 1;
+  $$;
+
+
+--
+-- Name: topics_participant_count(public.topics); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.topics_participant_count(topic public.topics) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select count(*) from ((select distinct(author_id) from posts where topic_id = topic.id)) as foo;
   $$;
 
 
@@ -21608,6 +21630,14 @@ GRANT ALL ON FUNCTION public.posts_author_profile(post public.posts) TO anon;
 
 
 --
+-- Name: FUNCTION posts_blurb(post public.posts); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.posts_blurb(post public.posts) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.posts_blurb(post public.posts) TO anon;
+
+
+--
 -- Name: FUNCTION posts_message(post public.posts); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25668,6 +25698,14 @@ GRANT ALL ON FUNCTION public.topics_blurb(topic public.topics) TO anon;
 
 REVOKE ALL ON FUNCTION public.topics_last_post_date(topic public.topics) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.topics_last_post_date(topic public.topics) TO anon;
+
+
+--
+-- Name: FUNCTION topics_participant_count(topic public.topics); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.topics_participant_count(topic public.topics) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.topics_participant_count(topic public.topics) TO anon;
 
 
 --

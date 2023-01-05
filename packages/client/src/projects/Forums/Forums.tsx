@@ -1,18 +1,17 @@
-import JoinProjectPrompt from "../../auth/JoinProjectPrompt";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans as I18n } from "react-i18next";
 import { useForumsQuery } from "../../generated/graphql";
 import getSlug from "../../getSlug";
 import ForumListItem from "./ForumListItem";
 import Skeleton from "../../components/Skeleton";
-import { useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useEffect } from "react";
 import ForumBreadcrumbs from "./ForumBreadcrumbs";
 import TopicList from "./TopicList";
 import { useRouteMatch } from "react-router-dom";
 import NewTopicForm from "./NewTopicForm";
 import { createContext } from "vm";
 import Topic from "./Topic";
-import Warning from "../../components/Warning";
-import SignInPrompt from "./SignInPrompt";
+import useSessionStorage from "../../useSessionStorage";
+import RecentPostItem from "./RecentPostItem";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export type ForumBreadcrumb = { name: string; id: number };
@@ -23,6 +22,31 @@ export interface ForumBreadcrumbState {
   forum?: ForumBreadcrumb;
   topic?: ForumBreadcrumb;
   canPost?: boolean;
+}
+
+export function getLastFormUrl() {
+  // eslint-disable-next-line i18next/no-literal-string
+  const item = window.sessionStorage.getItem(`${getSlug()}-last-forum-url`);
+  if (item && item.length && !/undefined/.test(item)) {
+    return JSON.parse(item) as string;
+  } else {
+    return null;
+  }
+}
+
+export function useLastForumUrl(): [
+  string | undefined | null,
+  Dispatch<SetStateAction<string>>
+] {
+  const slug = getSlug();
+  const route = useRouteMatch();
+
+  const [lastUrl, setLastUrl] = useSessionStorage(
+    // eslint-disable-next-line i18next/no-literal-string
+    `${slug}-last-forum-url`,
+    route?.url
+  );
+  return [lastUrl, setLastUrl];
 }
 
 export default function Forums({
@@ -37,11 +61,23 @@ export default function Forums({
   postNewTopic?: boolean;
 }) {
   const slug = getSlug();
+  const route = useRouteMatch();
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [lastUrl, setLastUrl] = useLastForumUrl();
+
+  useEffect(() => {
+    if (route?.url) {
+      setLastUrl(route.url);
+    }
+  }, [setLastUrl, route?.url]);
 
   const { data, loading } = useForumsQuery({
     variables: {
       slug,
     },
+    pollInterval: 60000,
+    fetchPolicy: "cache-and-network",
   });
 
   if (hidden) {
@@ -81,9 +117,14 @@ export default function Forums({
           {(data?.projectBySlug?.latestPostsConnection.nodes || []).length >
             0 && (
             <div className="mt-1 p-4">
-              <h2 className="font-semibold">
+              <h2 className="font-semibold mb-4">
                 <Trans>Latest Discussions</Trans>
               </h2>
+              <div className="space-y-4">
+                {data?.projectBySlug?.latestPostsConnection.nodes.map((p) => (
+                  <RecentPostItem key={p.id} post={p} />
+                ))}
+              </div>
             </div>
           )}
         </>

@@ -1,5 +1,8 @@
-import { useEffect, useRef } from "react";
-import { ForumPostFragment } from "../../generated/graphql";
+import { useEffect, useRef, MouseEvent } from "react";
+import {
+  AuthorProfileFragment,
+  ForumPostFragment,
+} from "../../generated/graphql";
 import { DOMSerializer, Node } from "prosemirror-model";
 import { forumPosts } from "../../editor/config";
 import InlineAuthorDetails from "./InlineAuthorDetails";
@@ -14,9 +17,14 @@ const renderer = (doc: any) => {
 export default function ForumPost({
   post,
   isFirstPostInTopic,
+  onProfileClick,
 }: {
   post: ForumPostFragment;
   isFirstPostInTopic: boolean;
+  onProfileClick?: (
+    e: MouseEvent<HTMLElement>,
+    profile: AuthorProfileFragment
+  ) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -41,10 +49,12 @@ export default function ForumPost({
         duration: 0.25,
       }}
       className="p-4 pt-3 border bg-white"
+      id={`post-${post.id}`}
     >
       <div className="mb-3 text-gray-600">
         {post.authorProfile && (
           <InlineAuthorDetails
+            onProfileClick={onProfileClick}
             profile={post.authorProfile}
             dateString={post.createdAt}
             firstPostInTopic={isFirstPostInTopic}

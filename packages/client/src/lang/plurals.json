@@ -32,5 +32,9 @@
   "NumTopics": "{{count}} topic",
   "NumTopics_plural": "{{count}} topics",
   "NumPosts": "{{count}} posts",
-  "NumPosts_plural": "{{count}} posts"
+  "NumPosts_plural": "{{count}} posts",
+  "participantCount": "{{count}} person",
+  "participantCount_plural": "{{count}} people",
+  "ReplyCount_plural": "{{count}} replies",
+  "ReplyCount": "{{count}} reply"
 }

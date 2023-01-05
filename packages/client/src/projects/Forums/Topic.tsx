@@ -1,7 +1,15 @@
 import { useApolloClient } from "@apollo/client";
-import { useMemo, useRef } from "react";
+import {
+  MouseEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Skeleton from "../../components/Skeleton";
 import {
+  AuthorProfileFragment,
   ForumTopicFragment,
   ForumTopicFragmentDoc,
   ParticipationStatus,
@@ -9,11 +17,12 @@ import {
 } from "../../generated/graphql";
 import ForumPost from "./ForumPost";
 import ReplyForm from "./ReplyForm";
-import { Trans as I18n } from "react-i18next";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import LoginOrJoinPrompt from "./LoginOrJoinPrompt";
-
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
+import { createPortal } from "react-dom";
+import { usePopper } from "react-popper";
+import AuthorProfilePopupContents from "./AuthorProfilePopupContents";
+import { useHistory } from "react-router-dom";
 
 export default function Topic({ id }: { id: number }) {
   const { data } = useTopicDetailQuery({
@@ -24,6 +33,28 @@ export default function Topic({ id }: { id: number }) {
     fetchPolicy: "cache-and-network",
     pollInterval: 40000,
   });
+
+  const history = useHistory();
+  const scrollable = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (
+      data?.topic?.postsConnection?.nodes?.length &&
+      scrollable.current &&
+      history?.location?.hash?.length &&
+      /#post-\d+$/.test(history.location.hash)
+    ) {
+      const postId = history.location.hash;
+      const post = scrollable.current.querySelector(postId);
+      if (post) {
+        post.scrollIntoView();
+      }
+    }
+  }, [
+    history?.location?.hash,
+    scrollable,
+    data?.topic?.postsConnection?.nodes,
+  ]);
 
   const client = useApolloClient();
   const title = useMemo(() => {
@@ -53,10 +84,47 @@ export default function Topic({ id }: { id: number }) {
     }
   }, [data?.topic?.postsConnection?.nodes]);
 
-  const scrollable = useRef<HTMLDivElement>(null);
+  const [authorProfile, setAuthorProfile] =
+    useState<AuthorProfileFragment | null>(null);
+
+  const [referenceElement, setReferenceElement] = useState<any | null>(null);
+  const [popperElement, setPopperElement] = useState<any | null>(null);
+  const { styles, attributes } = usePopper(referenceElement, popperElement, {
+    placement: "right-start",
+  });
+
+  const onProfileClick = useCallback(
+    (e: MouseEvent<HTMLElement>, profile: AuthorProfileFragment) => {
+      setAuthorProfile(profile);
+      setReferenceElement(e.target);
+    },
+    []
+  );
 
   return (
     <div className="max-h-full flex flex-col overflow-hidden flex-1">
+      {authorProfile &&
+        createPortal(
+          <div
+            ref={setPopperElement}
+            className="bg-white max-w-sm shadow-xl border border-black border-opacity-20 rounded z-50  p-2 text-sm"
+            {...attributes.popper}
+            style={{ ...styles.popper, zIndex: 99999999 }}
+          >
+            <AuthorProfilePopupContents profile={authorProfile} />
+          </div>,
+          document.body
+        )}
+      {authorProfile &&
+        createPortal(
+          <div
+            onClick={() => setAuthorProfile(null)}
+            className="w-screen h-screen absolute top-0 left-0 bg-black opacity-5 z-10"
+          >
+            &nbsp;
+          </div>,
+          document.body
+        )}
       <div className="p-4 bg-gray-50 shadow z-10">
         {title ? (
           <h3 className="font-semibold">{title}</h3>
@@ -73,6 +141,7 @@ export default function Topic({ id }: { id: number }) {
                   key={post.id}
                   isFirstPostInTopic={i === 0}
                   post={post}
+                  onProfileClick={onProfileClick}
                 />
               ))}
             </AnimatePresence>

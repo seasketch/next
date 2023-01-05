@@ -2,20 +2,16 @@ import {
   ParticipationStatus,
   useTopicListQuery,
 } from "../../generated/graphql";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans as I18n } from "react-i18next";
 import Skeleton from "../../components/Skeleton";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import TopicListItem from "./TopicListItem";
-import JoinProjectPrompt from "../../auth/JoinProjectPrompt";
-import SignInPrompt from "./SignInPrompt";
-import { useAuth0 } from "@auth0/auth0-react";
 import LoginOrJoinPrompt from "./LoginOrJoinPrompt";
 
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function TopicList({ forumId }: { forumId: number }) {
   const onError = useGlobalErrorHandler();
-  const { user } = useAuth0();
   const { data, loading } = useTopicListQuery({
     variables: {
       forumId,

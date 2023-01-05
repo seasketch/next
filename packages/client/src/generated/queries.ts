@@ -7870,6 +7870,7 @@ export type Post = Node & {
   authorId: Scalars['Int'];
   /** User Profile of the author. If a user has not shared their profile the post message will be hidden. */
   authorProfile?: Maybe<Profile>;
+  blurb?: Maybe<Scalars['String']>;
   createdAt: Scalars['Datetime'];
   /**
    * If set, the post has been hidden by a project admin. Contents of the post will
@@ -11544,6 +11545,7 @@ export type Topic = Node & {
   locked: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  participantCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Profile`. */
   participantsConnection: ProfilesConnection;
   /** Reads and enables pagination through a set of `Post`. */
@@ -15138,6 +15140,26 @@ export type ForumPostFragment = (
   )> }
 );
 
+export type RecentPostFragment = (
+  { __typename?: 'Post' }
+  & Pick<Post, 'blurb'>
+  & { topic?: Maybe<(
+    { __typename?: 'Topic' }
+    & Pick<Topic, 'id' | 'postsCount' | 'title' | 'sticky' | 'participantCount'>
+    & { forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & Pick<Forum, 'id' | 'name'>
+    )>, participantsConnection: (
+      { __typename?: 'ProfilesConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Profile' }
+        & AuthorProfileFragment
+      )> }
+    ) }
+  )> }
+  & ForumPostFragment
+);
+
 export type ForumsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -15162,15 +15184,7 @@ export type ForumsQuery = (
       { __typename?: 'PostsConnection' }
       & { nodes: Array<(
         { __typename?: 'Post' }
-        & { topic?: Maybe<(
-          { __typename?: 'Topic' }
-          & Pick<Topic, 'id' | 'title' | 'sticky'>
-          & { forum?: Maybe<(
-            { __typename?: 'Forum' }
-            & Pick<Forum, 'id' | 'name'>
-          )> }
-        )> }
-        & ForumPostFragment
+        & RecentPostFragment
       )> }
     ) }
   )> }
@@ -15178,7 +15192,7 @@ export type ForumsQuery = (
 
 export type ForumTopicFragment = (
   { __typename?: 'Topic' }
-  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount' | 'lastPostDate' | 'blurb' | 'forumId'>
+  & Pick<Topic, 'id' | 'title' | 'createdAt' | 'locked' | 'sticky' | 'postsCount' | 'lastPostDate' | 'blurb' | 'forumId' | 'participantCount'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
@@ -18163,6 +18177,29 @@ export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
   topicId
 }
     ${AuthorProfileFragmentDoc}`;
+export const RecentPostFragmentDoc = /*#__PURE__*/ gql`
+    fragment RecentPost on Post {
+  ...ForumPost
+  blurb
+  topic {
+    id
+    postsCount
+    title
+    sticky
+    forum {
+      id
+      name
+    }
+    participantCount
+    participantsConnection(first: 4) {
+      nodes {
+        ...AuthorProfile
+      }
+    }
+  }
+}
+    ${ForumPostFragmentDoc}
+${AuthorProfileFragmentDoc}`;
 export const ForumTopicFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumTopic on Topic {
   id
@@ -18177,6 +18214,7 @@ export const ForumTopicFragmentDoc = /*#__PURE__*/ gql`
   lastPostDate
   blurb
   forumId
+  participantCount
   participantsConnection(first: 5) {
     nodes {
       userId
@@ -20063,22 +20101,13 @@ export const ForumsDocument = /*#__PURE__*/ gql`
     }
     latestPostsConnection(first: 5) {
       nodes {
-        ...ForumPost
-        topic {
-          id
-          title
-          sticky
-          forum {
-            id
-            name
-          }
-        }
+        ...RecentPost
       }
     }
   }
 }
     ${AuthorProfileFragmentDoc}
-${ForumPostFragmentDoc}`;
+${RecentPostFragmentDoc}`;
 export const TopicListDocument = /*#__PURE__*/ gql`
     query TopicList($forumId: Int!) {
   forum(id: $forumId) {
@@ -22040,6 +22069,7 @@ export const namedOperations = {
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',
+    RecentPost: 'RecentPost',
     ForumTopic: 'ForumTopic',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',

@@ -26,6 +26,7 @@ export default function PostContentEditor({
   useEffect(() => {
     editable.current = !disabled;
     viewRef.current?.updateState(state!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function PostContentEditor({
     return () => {
       view.destroy();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onChange, plugins, schema]);
 
   const onKeyDown = useCallback(
