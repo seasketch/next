@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:198df168d6c24567e6810e85744b193988acd68e
 --! Hash: sha1:387d48889ee50111e8902accebb1d3a9296831af
 
@@ -8,7 +9,7 @@ create or replace function topics_participant_count(topic topics)
   security definer
   stable
   as $$
-    select count(*) from ((select distinct(author_id) from posts where topic_id = topic.id)) as foo;
+    select count(*)::int from ((select distinct(author_id) from posts where topic_id = topic.id)) as foo;
   $$;
 
 grant execute on function topics_participant_count to anon;
