@@ -398,7 +398,7 @@ export default function AdminApp() {
               <LazySketchingAdmin />
             </React.Suspense>
           </Route>
-          <Route exact path={`${path}/forums/id?`}>
+          <Route exact path={`${path}/forums/:id?`}>
             <React.Suspense fallback={<Spinner />}>
               <LazyForumAdmin />
             </React.Suspense>
