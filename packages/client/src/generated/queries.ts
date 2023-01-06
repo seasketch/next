@@ -1256,40 +1256,6 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
-/** All input for the `createPost` mutation. */
-export type CreatePostInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  message?: Maybe<Scalars['JSON']>;
-  topicId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `createPost` mutation. */
-export type CreatePostPayload = {
-  __typename?: 'CreatePostPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  post?: Maybe<Post>;
-  /** An edge for our `Post`. May be used by Relay 1. */
-  postEdge?: Maybe<PostsEdge>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `Topic` that is related to this `Post`. */
-  topic?: Maybe<Topic>;
-};
-
-
-/** The output of our `createPost` mutation. */
-export type CreatePostPayloadPostEdgeArgs = {
-  orderBy?: Maybe<Array<PostsOrderBy>>;
-};
-
 /** All input for the `createProject` mutation. */
 export type CreateProjectInput = {
   /**
@@ -1653,41 +1619,6 @@ export type CreateTableOfContentsItemPayload = {
 /** The output of our create `TableOfContentsItem` mutation. */
 export type CreateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
   orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
-};
-
-/** All input for the `createTopic` mutation. */
-export type CreateTopicInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  forumId?: Maybe<Scalars['Int']>;
-  message?: Maybe<Scalars['JSON']>;
-  title?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `createTopic` mutation. */
-export type CreateTopicPayload = {
-  __typename?: 'CreateTopicPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Forum` that is related to this `Topic`. */
-  forum?: Maybe<Forum>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  topic?: Maybe<Topic>;
-  /** An edge for our `Topic`. May be used by Relay 1. */
-  topicEdge?: Maybe<TopicsEdge>;
-};
-
-
-/** The output of our `createTopic` mutation. */
-export type CreateTopicPayloadTopicEdgeArgs = {
-  orderBy?: Maybe<Array<TopicsOrderBy>>;
 };
 
 
@@ -5790,11 +5721,7 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
-  /**
-   * Must have write permission for the specified forum. Create reply to a
-   * discussion topic. `message` must be JSON, something like the output of DraftJS.
-   */
-  createPost?: Maybe<CreatePostPayload>;
+  createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
    * and url slug. This project will be unlisted with admin_only access and the
@@ -5837,12 +5764,7 @@ export type Mutation = {
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
-  /**
-   * Must have write permission for the specified forum. Create a new discussion
-   * topic, including the first post. `message` must be JSON, something like the
-   * output of DraftJS.
-   */
-  createTopic?: Maybe<CreateTopicPayload>;
+  createTopic: Topic;
   /** Deletes a single `Basemap` using a unique key. */
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
   /** Deletes a single `Basemap` using its globally unique id. */
@@ -6437,7 +6359,8 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
-  input: CreatePostInput;
+  message: Scalars['JSON'];
+  topicId: Scalars['Int'];
 };
 
 
@@ -6520,7 +6443,9 @@ export type MutationCreateTableOfContentsItemArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateTopicArgs = {
-  input: CreateTopicInput;
+  forumId: Scalars['Int'];
+  message: Scalars['JSON'];
+  title: Scalars['String'];
 };
 
 
@@ -7878,6 +7803,7 @@ export type Post = Node & {
    * `setPostHiddenByModerator()`.
    */
   hiddenByModerator: Scalars['Boolean'];
+  html: Scalars['String'];
   id: Scalars['Int'];
   /**
    * Message contents of the post as JSON for use with DraftJS.
@@ -15133,7 +15059,7 @@ export type AuthorProfileFragment = (
 
 export type ForumPostFragment = (
   { __typename?: 'Post' }
-  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'message' | 'topicId'>
+  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'topicId' | 'html'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
@@ -15230,24 +15156,22 @@ export type TopicListQuery = (
 
 export type CreateTopicMutationVariables = Exact<{
   forumId: Scalars['Int'];
-  content?: Maybe<Scalars['JSON']>;
+  content: Scalars['JSON'];
   title: Scalars['String'];
 }>;
 
 
 export type CreateTopicMutation = (
   { __typename?: 'Mutation' }
-  & { createTopic?: Maybe<(
-    { __typename?: 'CreateTopicPayload' }
-    & { topic?: Maybe<(
-      { __typename?: 'Topic' }
-      & Pick<Topic, 'postsCount' | 'lastPostDate'>
-      & ForumTopicFragment
-    )>, forum?: Maybe<(
+  & { createTopic: (
+    { __typename?: 'Topic' }
+    & Pick<Topic, 'postsCount' | 'lastPostDate'>
+    & { forum?: Maybe<(
       { __typename?: 'Forum' }
       & Pick<Forum, 'id' | 'topicCount' | 'postCount' | 'lastPostDate'>
     )> }
-  )> }
+    & ForumTopicFragment
+  ) }
 );
 
 export type BreadcrumbTopicQueryVariables = Exact<{
@@ -15276,7 +15200,6 @@ export type TopicDetailQuery = (
       { __typename?: 'PostsConnection' }
       & { nodes: Array<(
         { __typename?: 'Post' }
-        & Pick<Post, 'message'>
         & ForumPostFragment
       )> }
     ), forum?: Maybe<(
@@ -15300,27 +15223,24 @@ export type TopicDetailQuery = (
 
 export type CreateReplyMutationVariables = Exact<{
   topicId: Scalars['Int'];
-  content?: Maybe<Scalars['JSON']>;
+  content: Scalars['JSON'];
 }>;
 
 
 export type CreateReplyMutation = (
   { __typename?: 'Mutation' }
-  & { createPost?: Maybe<(
-    { __typename?: 'CreatePostPayload' }
-    & { post?: Maybe<(
-      { __typename?: 'Post' }
-      & { topic?: Maybe<(
-        { __typename?: 'Topic' }
-        & { forum?: Maybe<(
-          { __typename?: 'Forum' }
-          & Pick<Forum, 'id' | 'postCount' | 'topicCount' | 'lastPostDate'>
-        )> }
-        & ForumTopicFragment
+  & { createPost: (
+    { __typename?: 'Post' }
+    & { topic?: Maybe<(
+      { __typename?: 'Topic' }
+      & { forum?: Maybe<(
+        { __typename?: 'Forum' }
+        & Pick<Forum, 'id' | 'postCount' | 'topicCount' | 'lastPostDate'>
       )> }
-      & ForumPostFragment
+      & ForumTopicFragment
     )> }
-  )> }
+    & ForumPostFragment
+  ) }
 );
 
 export type SpriteDetailsFragment = (
@@ -18173,8 +18093,8 @@ export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
   }
   createdAt
   hiddenByModerator
-  message
   topicId
+  html
 }
     ${AuthorProfileFragmentDoc}`;
 export const RecentPostFragmentDoc = /*#__PURE__*/ gql`
@@ -20132,13 +20052,11 @@ export const TopicListDocument = /*#__PURE__*/ gql`
 }
     ${ForumTopicFragmentDoc}`;
 export const CreateTopicDocument = /*#__PURE__*/ gql`
-    mutation CreateTopic($forumId: Int!, $content: JSON, $title: String!) {
-  createTopic(input: {forumId: $forumId, message: $content, title: $title}) {
-    topic {
-      ...ForumTopic
-      postsCount
-      lastPostDate
-    }
+    mutation CreateTopic($forumId: Int!, $content: JSON!, $title: String!) {
+  createTopic(forumId: $forumId, message: $content, title: $title) {
+    ...ForumTopic
+    postsCount
+    lastPostDate
     forum {
       id
       topicCount
@@ -20163,7 +20081,6 @@ export const TopicDetailDocument = /*#__PURE__*/ gql`
     postsConnection(orderBy: ID_ASC) {
       nodes {
         ...ForumPost
-        message
       }
     }
     forum {
@@ -20186,18 +20103,16 @@ export const TopicDetailDocument = /*#__PURE__*/ gql`
 ${ForumPostFragmentDoc}
 ${AuthorProfileFragmentDoc}`;
 export const CreateReplyDocument = /*#__PURE__*/ gql`
-    mutation CreateReply($topicId: Int!, $content: JSON) {
-  createPost(input: {topicId: $topicId, message: $content}) {
-    post {
-      ...ForumPost
-      topic {
-        ...ForumTopic
-        forum {
-          id
-          postCount
-          topicCount
-          lastPostDate
-        }
+    mutation CreateReply($topicId: Int!, $content: JSON!) {
+  createPost(topicId: $topicId, message: $content) {
+    ...ForumPost
+    topic {
+      ...ForumTopic
+      forum {
+        id
+        postCount
+        topicCount
+        lastPostDate
       }
     }
   }

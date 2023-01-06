@@ -52,8 +52,13 @@ export default function NewTopicForm({
       title,
     },
     onError,
+    onCompleted: () => {
+      clearTitle();
+      clearContent();
+      history.replace(`/${getSlug()}/app/forums/${forumId}`);
+    },
     update: async (cache, result) => {
-      const topic = result.data?.createTopic?.topic;
+      const topic = result.data?.createTopic;
       if (topic) {
         const data = cache.readQuery<TopicListQuery>({
           query: TopicListDocument,
@@ -135,9 +140,6 @@ export default function NewTopicForm({
           primary
           onClick={async () => {
             await createTopic();
-            clearTitle();
-            clearContent();
-            history.replace(`/${getSlug()}/app/forums/${forumId}`);
           }}
         />
       </div>

@@ -4316,7 +4316,8 @@ CREATE TABLE public.posts (
     author_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     message_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
-    hidden_by_moderator boolean DEFAULT false NOT NULL
+    hidden_by_moderator boolean DEFAULT false NOT NULL,
+    html text NOT NULL
 );
 
 
@@ -4342,10 +4343,10 @@ COMMENT ON COLUMN public.posts.hidden_by_moderator IS 'If set, the post has been
 
 
 --
--- Name: create_post(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_post(jsonb, integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_post(message jsonb, "topicId" integer) RETURNS public.posts
+CREATE FUNCTION public.create_post(message jsonb, "topicId" integer, html text) RETURNS public.posts
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -4391,19 +4392,17 @@ CREATE FUNCTION public.create_post(message jsonb, "topicId" integer) RETURNS pub
       if is_admin = false and is_archived = true then
         raise exception 'Cannot post to archived forums';
       end if;
-      insert into posts (message_contents, topic_id, author_id) values (message, "topicId", current_setting('session.user_id', TRUE)::int) returning * into post;
+      insert into posts (message_contents, topic_id, author_id, html) values (message, "topicId", current_setting('session.user_id', TRUE)::int, create_post.html) returning * into post;
       return post;
     end;
   $$;
 
 
 --
--- Name: FUNCTION create_post(message jsonb, "topicId" integer); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION create_post(message jsonb, "topicId" integer, html text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.create_post(message jsonb, "topicId" integer) IS '
-Must have write permission for the specified forum. Create reply to a discussion topic. `message` must be JSON, something like the output of DraftJS.
-';
+COMMENT ON FUNCTION public.create_post(message jsonb, "topicId" integer, html text) IS '@omit';
 
 
 --
@@ -5085,10 +5084,10 @@ Can be toggled by project admins using `setTopicLocked()` mutation.
 
 
 --
--- Name: create_topic(integer, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_topic(integer, text, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_topic("forumId" integer, title text, message jsonb) RETURNS public.topics
+CREATE FUNCTION public.create_topic("forumId" integer, title text, message jsonb, html text) RETURNS public.topics
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -5111,7 +5110,7 @@ CREATE FUNCTION public.create_topic("forumId" integer, title text, message jsonb
         raise exception 'Cannot post to archived forums';
       else
         insert into topics (title, forum_id, author_id) values (title, "forumId", current_setting('session.user_id', TRUE)::int) returning * into topic;
-        insert into posts (topic_id, author_id, message_contents) values (topic.id, current_setting('session.user_id', TRUE)::int, message);
+        insert into posts (topic_id, author_id, message_contents, html) values (topic.id, current_setting('session.user_id', TRUE)::int, message, create_topic.html);
         return topic;
       end if;
     end;
@@ -5119,12 +5118,10 @@ CREATE FUNCTION public.create_topic("forumId" integer, title text, message jsonb
 
 
 --
--- Name: FUNCTION create_topic("forumId" integer, title text, message jsonb); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION create_topic("forumId" integer, title text, message jsonb, html text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) IS '
-Must have write permission for the specified forum. Create a new discussion topic, including the first post. `message` must be JSON, something like the output of DraftJS.
-';
+COMMENT ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb, html text) IS '@omit';
 
 
 --
@@ -18781,11 +18778,11 @@ GRANT DELETE ON TABLE public.posts TO seasketch_user;
 
 
 --
--- Name: FUNCTION create_post(message jsonb, "topicId" integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_post(message jsonb, "topicId" integer, html text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer, html text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer, html text) TO seasketch_user;
 
 
 --
@@ -19128,11 +19125,11 @@ GRANT UPDATE(locked) ON TABLE public.topics TO seasketch_user;
 
 
 --
--- Name: FUNCTION create_topic("forumId" integer, title text, message jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_topic("forumId" integer, title text, message jsonb, html text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb, html text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message jsonb, html text) TO seasketch_user;
 
 
 --

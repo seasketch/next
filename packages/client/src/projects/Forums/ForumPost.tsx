@@ -26,16 +26,6 @@ export default function ForumPost({
     profile: AuthorProfileFragment
   ) => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const parent = ref.current;
-    if (parent) {
-      while (parent.firstChild) {
-        parent.removeChild(parent.firstChild);
-      }
-      ref.current?.appendChild(renderer(post.message));
-    }
-  }, [ref, post.message]);
   return (
     <motion.div
       initial={{
@@ -61,7 +51,10 @@ export default function ForumPost({
           />
         )}
       </div>
-      <div className="prosemirror-body forum-post" ref={ref}></div>
+      <div
+        className="prosemirror-body forum-post"
+        dangerouslySetInnerHTML={{ __html: post.html }}
+      />
     </motion.div>
   );
 }

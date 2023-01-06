@@ -65,7 +65,7 @@ export default function graphileOptions(): PostGraphileOptions {
       BasemapOfflineDetailsPlugin,
       DataUploadTaskPlugin,
       SketchingPlugin,
-      // ForumPostsPlugin,
+      ForumPostsPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

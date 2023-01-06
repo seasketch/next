@@ -47,12 +47,12 @@ export default function ReplyForm({
     },
     onCompleted: (data) => {
       clearContent();
-      if (data.createPost?.post?.id && onReply) {
-        onReply(data.createPost.post.id);
+      if (data.createPost.id && onReply) {
+        onReply(data.createPost.id);
       }
     },
     update: async (cache, result) => {
-      const post = result.data?.createPost?.post;
+      const post = result.data?.createPost;
       if (post) {
         const data = cache.readQuery<TopicDetailQuery>({
           query: TopicDetailDocument,

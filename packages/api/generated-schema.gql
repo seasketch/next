@@ -1417,41 +1417,6 @@ type CreateOptionalBasemapLayerPayload {
   query: Query
 }
 
-"""All input for the `createPost` mutation."""
-input CreatePostInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  message: JSON
-  topicId: Int
-}
-
-"""The output of our `createPost` mutation."""
-type CreatePostPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  post: Post
-
-  """An edge for our `Post`. May be used by Relay 1."""
-  postEdge(
-    """The method to use when ordering `Post`."""
-    orderBy: [PostsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): PostsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `Topic` that is related to this `Post`."""
-  topic: Topic
-}
-
 """All input for the `createProject` mutation."""
 input CreateProjectInput {
   """
@@ -1846,42 +1811,6 @@ type CreateTableOfContentsItemPayload {
     """The method to use when ordering `TableOfContentsItem`."""
     orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TableOfContentsItemsEdge
-}
-
-"""All input for the `createTopic` mutation."""
-input CreateTopicInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  forumId: Int
-  message: JSON
-  title: String
-}
-
-"""The output of our `createTopic` mutation."""
-type CreateTopicPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """Reads a single `Forum` that is related to this `Topic`."""
-  forum: Forum
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  topic: Topic
-
-  """An edge for our `Topic`. May be used by Relay 1."""
-  topicEdge(
-    """The method to use when ordering `Topic`."""
-    orderBy: [TopicsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): TopicsEdge
 }
 
 """A location in a connection that can be used for resuming pagination."""
@@ -6898,18 +6827,7 @@ type Mutation {
     """
     input: CreateOptionalBasemapLayerInput!
   ): CreateOptionalBasemapLayerPayload
-
-  """
-  Must have write permission for the specified forum. Create reply to a
-  discussion topic. `message` must be JSON, something like the output of DraftJS.
-  
-  """
-  createPost(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreatePostInput!
-  ): CreatePostPayload
+  createPost(message: JSON!, topicId: Int!): Post!
 
   """
   Users with verified emails can create new projects by choosing a unique name
@@ -7035,19 +6953,7 @@ type Mutation {
     """
     input: CreateTableOfContentsItemInput!
   ): CreateTableOfContentsItemPayload
-
-  """
-  Must have write permission for the specified forum. Create a new discussion
-  topic, including the first post. `message` must be JSON, something like the
-  output of DraftJS.
-  
-  """
-  createTopic(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateTopicInput!
-  ): CreateTopicPayload
+  createTopic(forumId: Int!, message: JSON!, title: String!): Topic!
 
   """Deletes a single `Basemap` using a unique key."""
   deleteBasemap(
@@ -8879,6 +8785,7 @@ type Post implements Node {
   `setPostHiddenByModerator()`.
   """
   hiddenByModerator: Boolean!
+  html: String!
   id: Int!
 
   """

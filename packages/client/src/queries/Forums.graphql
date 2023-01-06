@@ -14,8 +14,8 @@ fragment ForumPost on Post {
   }
   createdAt
   hiddenByModerator
-  message
   topicId
+  html
 }
 
 fragment RecentPost on Post {
@@ -114,13 +114,11 @@ query TopicList($forumId: Int!) {
   }
 }
 
-mutation CreateTopic($forumId: Int!, $content: JSON, $title: String!) {
-  createTopic(input: { forumId: $forumId, message: $content, title: $title }) {
-    topic {
-      ...ForumTopic
-      postsCount
-      lastPostDate
-    }
+mutation CreateTopic($forumId: Int!, $content: JSON!, $title: String!) {
+  createTopic(forumId: $forumId, message: $content, title: $title) {
+    ...ForumTopic
+    postsCount
+    lastPostDate
     forum {
       id
       topicCount
@@ -143,7 +141,6 @@ query TopicDetail($id: Int!) {
     postsConnection(orderBy: ID_ASC) {
       nodes {
         ...ForumPost
-        message
       }
     }
     forum {
@@ -163,18 +160,16 @@ query TopicDetail($id: Int!) {
   }
 }
 
-mutation CreateReply($topicId: Int!, $content: JSON) {
-  createPost(input: { topicId: $topicId, message: $content }) {
-    post {
-      ...ForumPost
-      topic {
-        ...ForumTopic
-        forum {
-          id
-          postCount
-          topicCount
-          lastPostDate
-        }
+mutation CreateReply($topicId: Int!, $content: JSON!) {
+  createPost(topicId: $topicId, message: $content) {
+    ...ForumPost
+    topic {
+      ...ForumTopic
+      forum {
+        id
+        postCount
+        topicCount
+        lastPostDate
       }
     }
   }
