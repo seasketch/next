@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:2f31ea7bdf3d10fb4b3c515ae468ff653d8598ba
 --! Hash: sha1:563ade500e1b50ea065d38bbdd96df4a4b50f173
 
@@ -7,7 +8,7 @@ create or replace function forums_topic_count(forum forums)
   language sql
   stable
   as $$
-    select count(*) from topics where forum_id = forum.id;
+    select count(*)::int from topics where forum_id = forum.id;
   $$;
 
 grant execute on function forums_topic_count to anon;
@@ -17,7 +18,7 @@ create or replace function forums_post_count(forum forums)
   language sql
   stable
   as $$
-    select count(*) from posts where topic_id in ((select id from topics where forum_id = forum.id));
+    select count(*)::int from posts where topic_id in ((select id from topics where forum_id = forum.id));
   $$;
 
 grant execute on function forums_post_count to anon;
@@ -72,7 +73,7 @@ create or replace function topics_posts_count(topic topics)
   language sql
   stable
   as $$
-    select count(*) from posts where topic_id = topic.id;
+    select count(*)::int from posts where topic_id = topic.id;
   $$;
 
 grant execute on function topics_posts_count to anon;
