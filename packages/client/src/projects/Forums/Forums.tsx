@@ -12,6 +12,7 @@ import { createContext } from "vm";
 import Topic from "./Topic";
 import useSessionStorage from "../../useSessionStorage";
 import RecentPostItem from "./RecentPostItem";
+import Warning from "../../components/Warning";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export type ForumBreadcrumb = { name: string; id: number };
@@ -95,6 +96,14 @@ export default function Forums({
         <Skeleton className="w-1/2 h-5" />
         <Skeleton className="w-2/3 h-5" />
       </div>
+    );
+  }
+
+  if (data?.projectBySlug?.forums?.length === 0) {
+    return (
+      <Warning level="info">
+        <Trans>No forums have been configured for this project.</Trans>
+      </Warning>
     );
   }
 
