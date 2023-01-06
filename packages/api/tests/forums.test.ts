@@ -144,7 +144,7 @@ describe("Topic access control", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         const topics = await conn.any(
           sql`select * from topics where forum_id = ${forumId}`
@@ -170,7 +170,7 @@ describe("Topic access control", () => {
 
           expect(
             conn.any(
-              sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+              sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
             )
           ).rejects.toThrow(/archived/i);
         }
@@ -192,10 +192,10 @@ describe("Topic access control", () => {
           );
           await createSession(conn, userA, true, false, projectId);
           const topicId = await conn.oneFirst(
-            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           const reply1Id = await conn.oneFirst(
-            sql`select id from create_post('{}'::jsonb, ${topicId})`
+            sql`select id from create_post('{}'::jsonb, ${topicId}, '<div />')`
           );
           expect(reply1Id).toBeGreaterThan(0);
           await createSession(conn, adminId, true, false, projectId);
@@ -203,7 +203,7 @@ describe("Topic access control", () => {
           await createSession(conn, userA, true, false, projectId);
           expect(
             conn.any(
-              sql`select create_post('{"message": "foo"}'::jsonb, ${topicId})`
+              sql`select create_post('{"message": "foo"}'::jsonb, ${topicId}, '<div />')`
             )
           ).rejects.toThrow(/archived/i);
         }
@@ -224,7 +224,7 @@ describe("Topic access control", () => {
           );
           await createSession(conn, userA, true, false, projectId);
           await conn.any(
-            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           const posts = await conn.any(sql`select * from posts`);
           expect(posts.length).toBe(1);
@@ -265,7 +265,7 @@ describe("Topic access control", () => {
           await createSession(conn, userA, true, false, projectId);
           expect(
             conn.any(
-              sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+              sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
             )
           ).rejects.toThrow(/denied/);
         }
@@ -284,13 +284,13 @@ describe("Topic access control", () => {
           );
           await createSession(conn, userA, true, false, projectId);
           await conn.any(
-            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           await conn.any(sql`delete from topics where title = 'Topic A'`);
           let posts = await conn.any(sql`select * from posts`);
           expect(posts.length).toBe(0);
           await conn.any(
-            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           await clearSession(conn);
           await conn.any(
@@ -319,7 +319,7 @@ describe("Topic access control", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await conn.any(sql`update topics set title = 'Topic A (edited)'`);
         let topics = await conn.any(sql`select * from topics`);
@@ -349,7 +349,7 @@ describe("Topic access control", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         const postId = await conn.oneFirst(sql`select id from posts`);
         await conn.any(
@@ -387,7 +387,7 @@ describe("Moderation", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await clearSession(conn);
         await conn.any(
@@ -413,7 +413,7 @@ describe("Moderation", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await clearSession(conn);
         await conn.any(
@@ -440,7 +440,7 @@ describe("Moderation", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await clearSession(conn);
         await conn.any(
@@ -476,7 +476,7 @@ describe("Moderation", () => {
           expect(forum.name).toBe("Forum A");
           await createSession(conn, userA, true, false, projectId);
           const topicId = await conn.oneFirst(
-            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           await createSession(conn, adminId, true, false, projectId);
           const topic = await conn.one(
@@ -511,7 +511,7 @@ describe("Moderation", () => {
           expect(forum.name).toBe("Forum A");
           await createSession(conn, userA, true, false, projectId);
           const topicId = await conn.oneFirst(
-            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           await createSession(conn, adminId, true, false, projectId);
           const topic = await conn.one(
@@ -519,12 +519,14 @@ describe("Moderation", () => {
           );
           expect(topic.locked).toBe(true);
           const post = await conn.one(
-            sql`select * from create_post('{}'::jsonb, ${topic.id})`
+            sql`select * from create_post('{}'::jsonb, ${topic.id}, '<div />')`
           );
           expect(post.author_id).toBe(adminId);
           await createSession(conn, userA, true, false, projectId);
           expect(
-            conn.one(sql`select * from create_post('{}'::jsonb, ${topic.id})`)
+            conn.one(
+              sql`select * from create_post('{}'::jsonb, ${topic.id}, '<div />')`
+            )
           ).rejects.toThrow(/locked/i);
         }
       );
@@ -552,7 +554,7 @@ describe("Moderation", () => {
           await createSession(conn, userA, true, false, projectId);
           expect(
             conn.one(
-              sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+              sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
             )
           ).rejects.toThrow(/disabled/i);
         }
@@ -582,7 +584,7 @@ describe("Moderation", () => {
           );
           await createSession(conn, userA, true, false, projectId);
           const topic = await conn.one(
-            sql`select * from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select * from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           expect(topic.id).toBeGreaterThan(0);
         }
@@ -699,7 +701,7 @@ describe("Community guidelines", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         const hasPosts = await conn.oneFirst(
           sql`select projects_session_has_posts(projects.*) from projects where id = ${projectId}`
@@ -729,7 +731,7 @@ describe("Sticky threads", () => {
         expect(forum.name).toBe("Forum A");
         await createSession(conn, userA, true, false, projectId);
         const topicId = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await createSession(conn, adminId, true, false, projectId);
         const topic = await conn.one(
@@ -756,19 +758,19 @@ describe("Sticky threads", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         const topicA = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "topic a"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "topic a"}'::jsonb, '<div />')`
         );
         const topicB = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic B', '{"message": "topic b"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic B', '{"message": "topic b"}'::jsonb, '<div />')`
         );
         const topicC = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic C', '{"message": "topic c"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic C', '{"message": "topic c"}'::jsonb, '<div />')`
         );
         const topicD = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic D', '{"message": "topic d"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic D', '{"message": "topic d"}'::jsonb, '<div />')`
         );
         const topicE = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic E', '{"message": "topic e"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic E', '{"message": "topic e"}'::jsonb, '<div />')`
         );
         await clearSession(conn);
         await conn.any(
@@ -819,7 +821,7 @@ describe("Author profiles", () => {
           sql`update user_profiles set fullname = 'Chad' where user_id =${userA}`
         );
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         const posts = await conn.any(
           sql`select *, posts_author_profile(posts.*) as "authorProfile" from posts`
@@ -846,7 +848,7 @@ describe("Author profiles", () => {
           sql`update user_profiles set fullname = 'Chad' where user_id =${userA}`
         );
         await conn.any(
-          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await clearSession(conn);
         await conn.any(
@@ -878,7 +880,7 @@ describe("Author profiles", () => {
         await createSession(conn, userA, true, false, projectId);
         expect(
           conn.any(
-            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           )
         ).rejects.toThrow(/profile/i);
       }

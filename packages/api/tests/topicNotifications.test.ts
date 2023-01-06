@@ -31,11 +31,11 @@ describe("Topic notifications", () => {
         );
         await createSession(conn, adminId, true, false, projectId);
         const topicId = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await createSession(conn, userA, true, false, projectId);
         const reply1Id = await conn.oneFirst(
-          sql`select id from create_post('{}'::jsonb, ${topicId})`
+          sql`select id from create_post('{}'::jsonb, ${topicId}, '<div />')`
         );
         expect(reply1Id).toBeGreaterThan(0);
         await clearSession(conn);
@@ -61,7 +61,7 @@ describe("Topic notifications", () => {
         );
         await createSession(conn, adminId, true, false, projectId);
         const topicId = await conn.oneFirst(
-          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+          sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
         );
         await clearSession(conn);
         await conn.any(
@@ -69,7 +69,7 @@ describe("Topic notifications", () => {
         );
         await createSession(conn, userA, true, false, projectId);
         const reply1Id = await conn.oneFirst(
-          sql`select id from create_post('{}'::jsonb, ${topicId})`
+          sql`select id from create_post('{}'::jsonb, ${topicId}, '<div />')`
         );
         expect(reply1Id).toBeGreaterThan(0);
         await clearSession(conn);
@@ -95,7 +95,7 @@ describe("Topic notifications", () => {
           );
           await createSession(conn, adminId, true, false, projectId);
           const topicId = await conn.oneFirst(
-            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb)`
+            sql`select id from create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           );
           await clearSession(conn);
           await rotateKeys(asPg(conn));
@@ -108,7 +108,7 @@ describe("Topic notifications", () => {
           await unsubscribeFromTopic(asPg(conn), token);
           await createSession(conn, userA, true, false, projectId);
           const reply1Id = await conn.oneFirst(
-            sql`select id from create_post('{}'::jsonb, ${topicId})`
+            sql`select id from create_post('{}'::jsonb, ${topicId}, '<div />')`
           );
           expect(reply1Id).toBeGreaterThan(0);
           await clearSession(conn);
