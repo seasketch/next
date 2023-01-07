@@ -19,12 +19,12 @@
   content: none;
 }
 
-.prosemirror-body [contenteditable] {
+.prosemirror-body div[contenteditable].ProseMirror {
   border: none;
   outline: none;
 }
 
-.prosemirror-body.forum-post [contenteditable] {
+.prosemirror-body.forum-post div[contenteditable].ProseMirror {
   min-height: 300px;
   padding-left: 16px;
   padding-right: 16px;
@@ -75,6 +75,10 @@
   @apply text-sm;
 }
 
+.forum-post.prosemirror-body a {
+  @apply text-primary-500;
+}
+
 .ProseMirror-prompt {
   position: absolute;
   z-index: 999999;
@@ -91,4 +95,9 @@
 
 .forum-post.prosemirror-body h3 {
   @apply text-base;
+}
+
+.ProseMirror div.sketch-attachment {
+  @apply border border-blue-500 rounded px-1 bg-blue-50;
+  width: fit-content;
 }

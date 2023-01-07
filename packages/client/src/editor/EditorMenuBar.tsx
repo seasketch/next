@@ -1,5 +1,5 @@
 import { EditorView } from "prosemirror-view";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
 import { MarkType, Schema } from "prosemirror-model";
 // import { schema } from "./config";
@@ -8,6 +8,7 @@ import { markActive } from "./utils";
 import TextInput from "../components/TextInput";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
+import { wrapInList } from "prosemirror-schema-list";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -21,11 +22,10 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const [menuState, setMenuState] = useState<any>({});
   const schema = props.schema;
   const { t } = useTranslation("admin");
-  const [linkModalState, setLinkModalState] =
-    useState<{
-      href: string;
-      title?: string;
-    } | null>(null);
+  const [linkModalState, setLinkModalState] = useState<{
+    href: string;
+    title?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (props.state) {
@@ -53,11 +53,22 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         },
       });
     }
-  }, [props.state]);
+  }, [props.state, setMenuState]);
+
+  const buttonClass = useCallback((active: boolean, className?: string) => {
+    // eslint-disable-next-line i18next/no-literal-string
+    return `overflow-hidden m-0 py-0 h-9 px-2 inline-flex items-center justify-center ${className} ${
+      active ? "bg-gray-200" : ""
+    }`;
+  }, []);
 
   return (
-    <div style={{ ...props.style }} className={`${props.className} border-b`}>
+    <div
+      style={{ ...props.style }}
+      className={`${props.className} text-sm px-2 flex items-center`}
+    >
       <button
+        title={t("Bold")}
         disabled={menuState?.disabled?.strong}
         onClick={(e) => {
           e.preventDefault();
@@ -68,20 +79,19 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
           return false;
         }}
-        className={`font-bold text-sm p-2  mx-1 ${
-          menuState?.active?.strong ? "bg-gray-100" : ""
-        }`}
+        className={buttonClass(menuState?.active?.strong, "font-bold")}
       >
-        {
-          // eslint-disable-next-line
-        }
-        B
+        <span className="w-3">
+          {
+            // eslint-disable-next-line
+          }
+          B
+        </span>
       </button>
       <button
+        title={t("Italics")}
         disabled={menuState?.disabled?.em}
-        className={`italic font-serif text-sm p-2 mx-1 ${
-          menuState?.active?.em ? "bg-gray-100" : ""
-        }`}
+        className={buttonClass(menuState?.active?.em, "italic font-serif")}
         onClick={(e) => {
           e.preventDefault();
           props.view!.focus();
@@ -89,14 +99,17 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           return false;
         }}
       >
-        {
-          // eslint-disable-next-line
-        }
-        I
+        <span className="w-3">
+          {
+            // eslint-disable-next-line
+          }
+          I
+        </span>
       </button>
       <button
+        title={t("Paragraph")}
         disabled={menuState?.disabled?.p}
-        className="text-sm font-medium p-2"
+        className={buttonClass(menuState?.active?.p, "")}
         onClick={(e) => {
           e.preventDefault();
           props.view!.focus();
@@ -106,15 +119,18 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
-        {
-          // eslint-disable-next-line
-        }
-        ¶
+        <span className="w-3">
+          {
+            // eslint-disable-next-line
+          }
+          ¶
+        </span>
       </button>
 
       <button
+        title={t("Level 1 Heading")}
         disabled={menuState?.disabled?.h1}
-        className="text-sm font-medium p-2"
+        className={buttonClass(false, `font-medium`)}
         onClick={(e) => {
           e.preventDefault();
           props.view!.focus();
@@ -124,14 +140,17 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
-        {
-          // eslint-disable-next-line
-        }
-        H1
+        <span className="w-5">
+          {
+            // eslint-disable-next-line
+          }
+          H1
+        </span>
       </button>
       <button
+        title={t("Level 2 Heading")}
         disabled={menuState?.disabled?.h2}
-        className="text-sm font-medium p-2"
+        className={buttonClass(false, `font-medium`)}
         onClick={(e) => {
           e.preventDefault();
           props.view!.focus();
@@ -141,14 +160,17 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
-        {
-          // eslint-disable-next-line
-        }
-        H2
+        <span className="w-5">
+          {
+            // eslint-disable-next-line
+          }
+          H2
+        </span>
       </button>
       <button
+        title={t("Level 3 Heading")}
         disabled={menuState?.disabled?.h3}
-        className="text-sm font-medium p-2"
+        className={buttonClass(false, `font-medium`)}
         onClick={(e) => {
           e.preventDefault();
           props.view!.focus();
@@ -158,17 +180,93 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           );
         }}
       >
-        {
-          // eslint-disable-next-line
-        }
-        H3
+        <span className="w-5">
+          {
+            // eslint-disable-next-line
+          }
+          H3
+        </span>
       </button>
       <button
-        className={`text-sm font-medium p-2 relative w-8 ${
-          menuState?.active?.link ? "bg-gray-100" : ""
-        } ${
-          menuState?.disabled?.link ? "text-gray-500 pointer-events-none" : ""
-        }`}
+        title={t("List")}
+        // disabled={menuState?.disabled?.}
+        className={buttonClass(false, "")}
+        onClick={(e) => {
+          e.preventDefault();
+          props.view!.focus();
+          wrapInList(schema.nodes.bullet_list)(
+            props.state!,
+            props.view!.dispatch
+          );
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 20 20"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className={`w-5 h-5 -mt-1 ${
+            menuState?.disabled?.bulletList
+              ? "text-gray-400 pointer-events-none"
+              : "text-gray-800"
+          }`}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+          />
+        </svg>
+      </button>
+      <button
+        title={t("Numbered list")}
+        className={buttonClass(false, "")}
+        onClick={(e) => {
+          e.preventDefault();
+          props.view!.focus();
+          wrapInList(schema.nodes.ordered_list)(
+            props.state!,
+            props.view!.dispatch
+          );
+        }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="currentColor"
+          viewBox="0 0 420 420"
+          strokeWidth={1.5}
+          stroke="text-black"
+          className={`w-5 h-4 mt-0.5 ${
+            menuState?.disabled?.bulletList
+              ? "text-gray-400 pointer-events-none"
+              : "text-gray-800"
+          }`}
+        >
+          <g>
+            <path
+              d="M121.203,37.858c0-7.791,6.319-14.103,14.104-14.103H367.2c7.784,0,14.104,6.312,14.104,14.103
+		s-6.312,14.103-14.104,14.103H135.307C127.522,51.961,121.203,45.649,121.203,37.858z M135.307,120.908h150.426
+		c7.79,0,14.104-6.315,14.104-14.104c0-7.79-6.313-14.103-14.104-14.103H135.307c-7.785,0-14.104,6.307-14.104,14.103
+		C121.203,114.598,127.522,120.908,135.307,120.908z M367.2,269.75H135.307c-7.785,0-14.104,6.312-14.104,14.104
+		c0,7.79,6.319,14.103,14.104,14.103H367.2c7.784,0,14.104-6.312,14.104-14.103C381.304,276.062,374.984,269.75,367.2,269.75z
+		 M285.727,338.693h-150.42c-7.785,0-14.104,6.307-14.104,14.104c0,7.79,6.319,14.103,14.104,14.103h150.426
+		c7.79,0,14.104-6.312,14.104-14.103C299.836,345.005,293.517,338.693,285.727,338.693z M33.866,127.838h22.387V14.405H37.921
+		c-0.521,5.925-0.068,10.689-4.696,14.277c-4.631,3.591-14.363,5.382-23.158,5.382H6.871v15.681h26.995V127.838z M25.603,345.147
+		l28.115-20.912c9.69-6.655,16.056-12.826,19.109-18.524c3.05-5.697,4.569-11.821,4.569-18.377c0-10.716-3.585-19.357-10.737-25.941
+		c-7.161-6.579-16.568-9.865-28.23-9.865c-11.245,0-20.241,3.328-26.982,9.989c-6.75,6.655-10.113,16.691-10.113,30.115H23.02
+		c0-8.015,1.416-13.548,4.253-16.621c2.834-3.067,6.721-4.604,11.665-4.604s8.854,1.561,11.741,4.676
+		c2.888,3.12,4.327,6.998,4.327,11.632c0,4.628-1.336,8.808-4.02,12.555c-2.675,3.747-10.125,10.071-22.352,18.962
+		c-10.453,7.648-24.154,16.964-28.393,23.726L0,364.96h77.632v-19.813H25.603L25.603,345.147z"
+            />
+          </g>
+        </svg>
+      </button>
+      <button
+        className={
+          buttonClass(menuState?.active?.link, "font-medium")
+          // menuState?.disabled?.link ? "text-gray-500 pointer-events-none" : ""
+        }
         disabled={menuState?.disabled?.link}
         onClick={(e) => {
           e.preventDefault();
@@ -187,15 +285,14 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           }
         }}
       >
-        &nbsp;
         <svg
-          className={`w-4 h-4 absolute top-2.5 left-2 ${
+          className={`w-5 h-5 mt-0.5 -mr-0.5 ${
             menuState?.disabled?.link
               ? "text-gray-400 pointer-events-none"
               : "text-gray-800"
           }`}
           xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
+          viewBox="0 0 22 22"
           fill="currentColor"
         >
           <path

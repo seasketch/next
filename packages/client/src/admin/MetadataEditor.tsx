@@ -115,7 +115,7 @@ export default function MetadataEditor({
       <div className="relative min-w-full">
         <EditorMenuBar
           view={viewRef.current?.view}
-          className="mb-2 border-t"
+          className="border-t border-b mb-4 pl-0"
           state={state}
           schema={schema}
         />
