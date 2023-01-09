@@ -52,6 +52,7 @@ export default function ProjectApp() {
   }, [mapContext, mapContainerPortal]);
 
   const history = useHistory();
+  const { location } = history;
   const { slug } = useParams<{ slug: string }>();
   const showSidebar = useRouteMatch<{ sidebar: string }>(
     // eslint-disable-next-line
@@ -122,7 +123,11 @@ export default function ProjectApp() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="flex flex-col max-h-full overflow-hidden"
+                className={`flex flex-col ${
+                  /app\/forums\//.test(location.pathname)
+                    ? "max-h-full overflow-hidden fffff"
+                    : ""
+                }`}
               >
                 <Route path={`/${slug}/app/maps`}>
                   <BasemapControl basemaps={basemaps} />
