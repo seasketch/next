@@ -41,7 +41,7 @@ import decode from "jwt-decode";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
-type ItemType = FolderNodeDataProps | SketchNodeDataProps;
+export type TreeItemType = FolderNodeDataProps | SketchNodeDataProps;
 
 export default memo(function SketchingTools({
   hidden,
@@ -364,7 +364,7 @@ export default memo(function SketchingTools({
   }, [data?.projectBySlug?.mySketches, data?.projectBySlug?.myFolders]);
 
   const onDragEnd = useCallback(
-    (items: ItemType[]) => {
+    (items: TreeItemType[]) => {
       for (const item of items) {
         focusOnTableOfContentsItem(item.type, item.id);
       }
@@ -373,7 +373,7 @@ export default memo(function SketchingTools({
   );
 
   const onDropEnd = useCallback(
-    (item: ItemType) => {
+    (item: TreeItemType) => {
       const id = treeItemId(item.id, item.type);
       setExpandedIds((prev) => {
         return [...prev.filter((eid) => eid !== id), id];
@@ -423,7 +423,7 @@ export default memo(function SketchingTools({
   }));
 
   const treeRenderFn = useCallback(
-    ({ node, ...props }: TreeNodeProps<ItemType>) => {
+    ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
       if (isFolderNode(node) && props.children) {
         return <FolderItem {...props} node={node} />;
       } else if (isSketchNode(node)) {

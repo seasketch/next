@@ -45,6 +45,8 @@ interface TreeViewProps<T> {
   onDropEnd?: (item: T) => void;
   /** Amount of padding to give child lists. Defaults to 35px */
   childGroupPadding?: number;
+  disableEditing?: boolean;
+  hideCheckboxes?: boolean;
 }
 
 type ChildGroupRenderer<T> = FC<{
@@ -81,6 +83,8 @@ export interface TreeNodeProps<T> {
   ) => void;
   isChecked: boolean;
   hasCheckedChildren: boolean;
+  disableEditing: boolean;
+  hideCheckboxes: boolean;
 }
 
 interface TreeNode<T> {
@@ -105,6 +109,8 @@ export default function TreeView<T>({
   childGroupPadding,
   checkedItems,
   onChecked,
+  disableEditing,
+  hideCheckboxes,
   ...props
 }: TreeViewProps<T>) {
   const Render = props.render;
@@ -263,6 +269,8 @@ export default function TreeView<T>({
               onDragEnd={onDragEnd}
               onDropEnd={onDropEnd}
               onChecked={handleChecked}
+              disableEditing={disableEditing || false}
+              hideCheckboxes={hideCheckboxes || false}
             />
           ))}
         </ul>
@@ -279,6 +287,8 @@ export default function TreeView<T>({
       onDragEnd,
       onDropEnd,
       handleChecked,
+      disableEditing,
+      hideCheckboxes,
     ]
   );
 
@@ -304,6 +314,8 @@ export default function TreeView<T>({
           onDragEnd={onDragEnd}
           onDropEnd={onDropEnd}
           onChecked={handleChecked}
+          disableEditing={disableEditing || false}
+          hideCheckboxes={hideCheckboxes || false}
         />
       ))}
     </ul>

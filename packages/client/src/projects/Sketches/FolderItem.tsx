@@ -42,6 +42,8 @@ function FolderItem({
   isChecked,
   hasCheckedChildren,
   onChecked,
+  disableEditing,
+  hideCheckboxes,
 }: TreeNodeProps<FolderNodeDataProps>) {
   const data = node.data;
   const isDisabled = false;
@@ -53,6 +55,7 @@ function FolderItem({
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
+    canDrag: !disableEditing,
     item: {
       nodeId: node.id,
       id: data.id,
@@ -72,6 +75,9 @@ function FolderItem({
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
     canDrop: (item: DragItemProps<FolderNodeDataProps>, monitor) => {
+      if (disableEditing) {
+        return false;
+      }
       if (item.id === data.id || node.parents.indexOf(item.nodeId) !== -1) {
         return false;
       }
@@ -180,7 +186,7 @@ function FolderItem({
         >
           <ArrowIcon isOpen={isExpanded || false} />
         </button>
-        {
+        {!hideCheckboxes && (
           <VisibilityCheckbox
             onClick={() => {
               if (onChecked) {
@@ -191,7 +197,7 @@ function FolderItem({
             id={data.id}
             visibility={isChecked ? true : hasCheckedChildren ? "mixed" : false}
           />
-        }{" "}
+        )}{" "}
         {isExpanded ? (
           <FolderOpenIcon
             onContextMenu={contextMenuHandler}

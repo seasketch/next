@@ -6264,6 +6264,7 @@ export type MutationCopySketchFolderArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCopySketchTocItemArgs = {
+  forForum?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
   type: SketchChildType;
 };
@@ -10318,8 +10319,10 @@ export type Sketch = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   numVertices?: Maybe<Scalars['Int']>;
+  postId?: Maybe<Scalars['Int']>;
   properties: Scalars['JSON'];
   responseId?: Maybe<Scalars['Int']>;
+  sharedInForum: Scalars['Boolean'];
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
@@ -10516,7 +10519,9 @@ export type SketchFolder = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  postId?: Maybe<Scalars['Int']>;
   projectId: Scalars['Int'];
+  sharedInForum: Scalars['Boolean'];
   userId: Scalars['Int'];
 };
 
@@ -10539,7 +10544,9 @@ export type SketchFolderPatch = {
   folderId?: Maybe<Scalars['Int']>;
   id?: Maybe<Scalars['Int']>;
   name?: Maybe<Scalars['String']>;
+  postId?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
+  sharedInForum?: Maybe<Scalars['Boolean']>;
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -15243,6 +15250,27 @@ export type CreateReplyMutation = (
     )> }
     & ForumPostFragment
   ) }
+);
+
+export type CopyTocItemForForumPostMutationVariables = Exact<{
+  id: Scalars['Int'];
+  type: SketchChildType;
+}>;
+
+
+export type CopyTocItemForForumPostMutation = (
+  { __typename?: 'Mutation' }
+  & { copySketchTocItem?: Maybe<(
+    { __typename?: 'CopySketchTocItemResults' }
+    & Pick<CopySketchTocItemResults, 'parentId'>
+    & { folders?: Maybe<Array<(
+      { __typename?: 'SketchFolder' }
+      & SketchFolderDetailsFragment
+    )>>, sketches?: Maybe<Array<(
+      { __typename?: 'Sketch' }
+      & SketchTocDetailsFragment
+    )>> }
+  )> }
 );
 
 export type SpriteDetailsFragment = (
@@ -22608,6 +22636,47 @@ export function useCreateReplyMutation(baseOptions?: Apollo.MutationHookOptions<
 export type CreateReplyMutationHookResult = ReturnType<typeof useCreateReplyMutation>;
 export type CreateReplyMutationResult = Apollo.MutationResult<CreateReplyMutation>;
 export type CreateReplyMutationOptions = Apollo.BaseMutationOptions<CreateReplyMutation, CreateReplyMutationVariables>;
+export const CopyTocItemForForumPostDocument = gql`
+    mutation CopyTocItemForForumPost($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type, forForum: true) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}`;
+export type CopyTocItemForForumPostMutationFn = Apollo.MutationFunction<CopyTocItemForForumPostMutation, CopyTocItemForForumPostMutationVariables>;
+
+/**
+ * __useCopyTocItemForForumPostMutation__
+ *
+ * To run a mutation, you first call `useCopyTocItemForForumPostMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCopyTocItemForForumPostMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [copyTocItemForForumPostMutation, { data, loading, error }] = useCopyTocItemForForumPostMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      type: // value for 'type'
+ *   },
+ * });
+ */
+export function useCopyTocItemForForumPostMutation(baseOptions?: Apollo.MutationHookOptions<CopyTocItemForForumPostMutation, CopyTocItemForForumPostMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CopyTocItemForForumPostMutation, CopyTocItemForForumPostMutationVariables>(CopyTocItemForForumPostDocument, options);
+      }
+export type CopyTocItemForForumPostMutationHookResult = ReturnType<typeof useCopyTocItemForForumPostMutation>;
+export type CopyTocItemForForumPostMutationResult = Apollo.MutationResult<CopyTocItemForForumPostMutation>;
+export type CopyTocItemForForumPostMutationOptions = Apollo.BaseMutationOptions<CopyTocItemForForumPostMutation, CopyTocItemForForumPostMutationVariables>;
 export const SpritesDocument = gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -27547,6 +27616,7 @@ export const namedOperations = {
     DeleteForum: 'DeleteForum',
     CreateTopic: 'CreateTopic',
     CreateReply: 'CreateReply',
+    CopyTocItemForForumPost: 'CopyTocItemForForumPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',

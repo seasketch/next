@@ -89,6 +89,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         copySketchTocItem(
           id: Int!
           type: SketchChildType!
+          forForum: Boolean
         ): CopySketchTocItemResults
       }
     `,
@@ -322,7 +323,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         },
         copySketchTocItem: async (
           _query,
-          { id, type },
+          { id, type, forForum },
           context,
           resolveInfo
         ) => {
@@ -331,10 +332,14 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const {
             rows: [row],
           } = await pgClient.query(
-            `select copy_sketch_toc_item_recursive($1, $2, true)`,
+            forForum
+              ? `select copy_sketch_toc_item_recursive_for_forum($1, $2, false)`
+              : `select copy_sketch_toc_item_recursive($1, $2, true)`,
             [id, type]
           );
-          const copyId = row.copy_sketch_toc_item_recursive;
+          const copyId = forForum
+            ? row.copy_sketch_toc_item_recursive_for_forum
+            : row.copy_sketch_toc_item_recursive;
           let {
             rows: [{ get_child_folders_recursive: folderIds }],
           } = await pgClient.query(

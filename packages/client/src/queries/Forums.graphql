@@ -174,3 +174,15 @@ mutation CreateReply($topicId: Int!, $content: JSON!) {
     }
   }
 }
+
+mutation CopyTocItemForForumPost($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type, forForum: true) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+  }
+}

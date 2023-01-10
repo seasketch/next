@@ -3,6 +3,11 @@ import { EditorView } from "prosemirror-view";
 import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Node } from "prosemirror-model";
 import { forumPosts as editorConfig } from "../../editor/config";
+import { createReactNodeView } from "./ReactNodeView";
+import ReactNodeViewPortalsProvider from "./ReactNodeViewPortals";
+import { useReactNodeViewPortals } from "./ReactNodeViewPortals";
+import SketchNode from "./SketchNode";
+import EditorMenuBar from "../../editor/EditorMenuBar";
 
 export default function PostContentEditor({
   initialContent,
@@ -22,10 +27,14 @@ export default function PostContentEditor({
   const viewRef = useRef<EditorView>();
   const { schema, plugins } = editorConfig;
   const editable = useRef(!disabled);
+  const { createPortal } = useReactNodeViewPortals();
+  const handleCreatePortal = useCallback(createPortal, []);
 
   useEffect(() => {
     editable.current = !disabled;
-    viewRef.current?.updateState(state!);
+    if (viewRef.current) {
+      viewRef.current.updateState(state!);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
 
@@ -42,8 +51,23 @@ export default function PostContentEditor({
         plugins,
         doc,
       }),
+      menu: false,
       editable: () => {
         return editable.current;
+      },
+      nodeViews: {
+        // @ts-ignore
+        sketch(node, view, getPos, decorations) {
+          return createReactNodeView({
+            node,
+            view,
+            getPos,
+            // @ts-ignore
+            decorations,
+            component: SketchNode,
+            onCreatePortal: handleCreatePortal,
+          });
+        },
       },
       dispatchTransaction: (transaction) => {
         const view = viewRef.current!;
@@ -65,7 +89,7 @@ export default function PostContentEditor({
       view.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onChange, plugins, schema]);
+  }, [onChange, plugins, schema, handleCreatePortal]);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent<any>) => {
@@ -81,13 +105,24 @@ export default function PostContentEditor({
   );
 
   return (
-    <div
-      className={`prosemirror-body forum-post new-forum-post ${
-        disabled === true ? "opacity-50" : "opacity-100"
-      }`}
-      onKeyDown={onKeyDown}
-      ref={root}
-    ></div>
+    <>
+      <div
+        className={`prosemirror-body forum-post new-forum-post ${
+          disabled === true ? "opacity-50" : "opacity-100"
+        }`}
+        onKeyDown={onKeyDown}
+        ref={root}
+      ></div>
+      <EditorMenuBar
+        view={viewRef.current}
+        className=" border-t"
+        style={{
+          backgroundColor: "rgb(252, 252, 252)",
+        }}
+        state={state}
+        schema={schema}
+      />
+    </>
   );
 }
 

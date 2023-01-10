@@ -5,14 +5,20 @@ import {
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
 import useLocalStorage from "../../useLocalStorage";
+import useSessionStorage from "../../useSessionStorage";
 
 export default function useExpandedIds(
   slug: string,
   folders?: SketchFolderDetailsFragment[] | null,
-  sketches?: SketchTocDetailsFragment[] | null
+  sketches?: SketchTocDetailsFragment[] | null,
+  localStorageKey?: string,
+  sessionOnly?: boolean
 ) {
-  const [expandedIds, setExpandedIds] = useLocalStorage<string[]>(
-    `expanded-my-plans-ids-${slug}`,
+  const [expandedIds, setExpandedIds] = (
+    sessionOnly ? useSessionStorage : useLocalStorage
+  )<string[]>(
+    // eslint-disable-next-line i18next/no-literal-string
+    localStorageKey || `expanded-my-plans-ids-${slug}`,
     []
   );
 
@@ -27,13 +33,16 @@ export default function useExpandedIds(
    *      list already.
    */
   const cleanupExpandedState = useCallback(() => {
+    if (sessionOnly) {
+      return;
+    }
     if (folders && sketches) {
       const folderIds = folders.map((f) => treeItemId(f.id, "SketchFolder"));
       const sketchIds = sketches.map((s) => treeItemId(s.id, "Sketch"));
       const allIds = [...folderIds, ...sketchIds];
-      setExpandedIds((prev) => [
-        ...prev.filter((id) => allIds.indexOf(id) !== -1),
-      ]);
+      setExpandedIds((prev) => {
+        return [...prev.filter((id) => allIds.indexOf(id) !== -1)];
+      });
     }
   }, [setExpandedIds, folders, sketches]);
 

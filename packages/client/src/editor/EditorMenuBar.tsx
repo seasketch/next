@@ -1,5 +1,5 @@
 import { EditorView } from "prosemirror-view";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
 import { MarkType, Schema } from "prosemirror-model";
 // import { schema } from "./config";
@@ -9,6 +9,13 @@ import TextInput from "../components/TextInput";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import { wrapInList } from "prosemirror-schema-list";
+import ShareSketchesModal from "../projects/Forums/ShareSketchesModal";
+import {
+  SketchFolderDetailsFragment,
+  SketchTocDetailsFragment,
+} from "../generated/graphql";
+import { sketchType } from "./config";
+import { ProjectAppSidebarContext } from "../projects/ProjectAppSidebar";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -26,6 +33,12 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
     href: string;
     title?: string;
   } | null>(null);
+  const [chooseSketchesOpen, setChooseSketchesOpen] = useState(false);
+  const [copySketchIndexPlaceholder, setCopySketchIndexPlaceholder] = useState<
+    number | null
+  >(null);
+
+  const { isSmall } = useContext(ProjectAppSidebarContext);
 
   useEffect(() => {
     if (props.state) {
@@ -61,6 +74,49 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
       active ? "bg-gray-200" : ""
     }`;
   }, []);
+
+  const onSubmitCopiedTocItems = useCallback(
+    (
+      sketches: SketchTocDetailsFragment[],
+      folders: SketchFolderDetailsFragment[]
+    ) => {
+      setChooseSketchesOpen(false);
+      const dispatch = props.view?.dispatch;
+      const state = props.view?.state;
+      if (dispatch && state) {
+        console.log("copied");
+        let index = copySketchIndexPlaceholder;
+        if (index === null) {
+          let { $from } = state.selection,
+            index = $from.index();
+        }
+        const items = [...sketches, ...folders];
+        const parent = items.find(
+          (item) => !item.folderId && !item.collectionId
+        );
+        // if (!$from.parent.canReplaceWith(index, index, sketchType)) {
+        //   console.log("cant replace", index, sketchType);
+        //   return false;
+        // }
+        console.log(
+          sketchType.create({
+            title: parent!.name,
+            items: [...sketches, ...folders],
+          }),
+          index
+        );
+        dispatch(
+          state.tr.replaceSelectionWith(
+            sketchType.create({
+              title: parent!.name,
+              items: [...sketches, ...folders],
+            })
+          )
+        );
+      }
+    },
+    [props.view?.dispatch, props.view?.state, copySketchIndexPlaceholder]
+  );
 
   return (
     <div
@@ -302,6 +358,28 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           />
         </svg>
       </button>
+      {schema.nodes.sketch && (
+        <button
+          className="px-2 hover:underline text-primary-500"
+          onClick={() => {
+            if (props.view) {
+              const { $from } = props.view.state.selection;
+              setCopySketchIndexPlaceholder($from.index());
+            } else {
+              setCopySketchIndexPlaceholder(null);
+            }
+            setChooseSketchesOpen(true);
+          }}
+        >
+          {isSmall ? t("Share...") : t("Share sketch...")}
+        </button>
+      )}
+      {chooseSketchesOpen && (
+        <ShareSketchesModal
+          cancel={() => setChooseSketchesOpen(false)}
+          onSubmit={onSubmitCopiedTocItems}
+        />
+      )}
       {!!linkModalState && (
         <Modal
           onRequestClose={() => {

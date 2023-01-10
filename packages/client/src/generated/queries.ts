@@ -6262,6 +6262,7 @@ export type MutationCopySketchFolderArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCopySketchTocItemArgs = {
+  forForum?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
   type: SketchChildType;
 };
@@ -10316,8 +10317,10 @@ export type Sketch = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   numVertices?: Maybe<Scalars['Int']>;
+  postId?: Maybe<Scalars['Int']>;
   properties: Scalars['JSON'];
   responseId?: Maybe<Scalars['Int']>;
+  sharedInForum: Scalars['Boolean'];
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
@@ -10514,7 +10517,9 @@ export type SketchFolder = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  postId?: Maybe<Scalars['Int']>;
   projectId: Scalars['Int'];
+  sharedInForum: Scalars['Boolean'];
   userId: Scalars['Int'];
 };
 
@@ -10537,7 +10542,9 @@ export type SketchFolderPatch = {
   folderId?: Maybe<Scalars['Int']>;
   id?: Maybe<Scalars['Int']>;
   name?: Maybe<Scalars['String']>;
+  postId?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
+  sharedInForum?: Maybe<Scalars['Boolean']>;
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -15241,6 +15248,27 @@ export type CreateReplyMutation = (
     )> }
     & ForumPostFragment
   ) }
+);
+
+export type CopyTocItemForForumPostMutationVariables = Exact<{
+  id: Scalars['Int'];
+  type: SketchChildType;
+}>;
+
+
+export type CopyTocItemForForumPostMutation = (
+  { __typename?: 'Mutation' }
+  & { copySketchTocItem?: Maybe<(
+    { __typename?: 'CopySketchTocItemResults' }
+    & Pick<CopySketchTocItemResults, 'parentId'>
+    & { folders?: Maybe<Array<(
+      { __typename?: 'SketchFolder' }
+      & SketchFolderDetailsFragment
+    )>>, sketches?: Maybe<Array<(
+      { __typename?: 'Sketch' }
+      & SketchTocDetailsFragment
+    )>> }
+  )> }
 );
 
 export type SpriteDetailsFragment = (
@@ -20119,6 +20147,20 @@ export const CreateReplyDocument = /*#__PURE__*/ gql`
 }
     ${ForumPostFragmentDoc}
 ${ForumTopicFragmentDoc}`;
+export const CopyTocItemForForumPostDocument = /*#__PURE__*/ gql`
+    mutation CopyTocItemForForumPost($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type, forForum: true) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21883,6 +21925,7 @@ export const namedOperations = {
     DeleteForum: 'DeleteForum',
     CreateTopic: 'CreateTopic',
     CreateReply: 'CreateReply',
+    CopyTocItemForForumPost: 'CopyTocItemForForumPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
