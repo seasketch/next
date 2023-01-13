@@ -5,6 +5,7 @@ export interface TreeItemI<T> {
   parentId?: string | null;
   parents: string[];
   data: T;
+  isLeaf: boolean;
 }
 
 interface TreeViewProps<T> {
@@ -86,6 +87,11 @@ export interface TreeNodeProps<T> {
   disableEditing: boolean;
   hideCheckboxes: boolean;
 }
+export enum CheckState {
+  CHECKED,
+  PARTIAL,
+  UNCHECKED,
+}
 
 interface TreeNode<T> {
   isSelected: boolean;
@@ -94,8 +100,8 @@ interface TreeNode<T> {
   level: number;
   children: TreeNode<T>[];
   isContextMenuTarget: boolean;
-  isChecked: boolean;
-  hasCheckedChildren: boolean;
+  checked: CheckState;
+  isLeaf: boolean;
 }
 
 export default function TreeView<T>({
@@ -127,11 +133,12 @@ export default function TreeView<T>({
         level: 1,
         children: [],
         isContextMenuTarget: contextMenuItemId === item.id,
-        isChecked: Boolean(
-          checkedItems && checkedItems?.indexOf(item.id) !== -1
-        ),
+        checked: Boolean(checkedItems && checkedItems?.indexOf(item.id) !== -1)
+          ? CheckState.CHECKED
+          : CheckState.UNCHECKED,
         hasCheckedChildren: false,
-      };
+        isLeaf: item.isLeaf,
+      } as TreeNode<T>;
       map.set(item.id, node);
       return map;
     }, new Map<string, TreeNode<T>>());
@@ -159,21 +166,37 @@ export default function TreeView<T>({
     ) {
       node.node.parents.push(...parents);
       let anyVisibleChildren = false;
+      let anyHiddenChildren = false;
       for (const child of node.children) {
-        child.hasCheckedChildren = addParentsAndGetVisibility(child, [
-          ...node.node.parents,
-          node.node.id,
-        ]);
-        if (child.hasCheckedChildren || child.isChecked) {
-          anyVisibleChildren = true;
+        addParentsAndGetVisibility(child, [...node.node.parents, node.node.id]);
+        if (child.isLeaf) {
+          if (child.checked === CheckState.CHECKED) {
+            anyVisibleChildren = true;
+          } else {
+            anyHiddenChildren = true;
+          }
+        } else {
+          if (child.checked === CheckState.CHECKED) {
+            anyVisibleChildren = true;
+          } else if (child.checked === CheckState.PARTIAL) {
+            anyHiddenChildren = true;
+            anyVisibleChildren = true;
+          } else if (child.checked === CheckState.UNCHECKED) {
+            anyHiddenChildren = true;
+          }
         }
       }
-      node.hasCheckedChildren = anyVisibleChildren;
-      return anyVisibleChildren;
+      if (anyVisibleChildren) {
+        if (anyHiddenChildren) {
+          node.checked = CheckState.PARTIAL;
+        } else {
+          node.checked = CheckState.CHECKED;
+        }
+      }
     }
 
     for (const node of nodes) {
-      node.hasCheckedChildren = addParentsAndGetVisibility(node, []);
+      addParentsAndGetVisibility(node, []);
     }
     return nodes;
   }, [
@@ -188,7 +211,9 @@ export default function TreeView<T>({
     (item: TreeItemI<T>, isChecked: boolean, children?: TreeNode<T>[]) => {
       if (onChecked) {
         function getIds(item: TreeNode<T>, ids: string[]) {
-          ids.push(item.node.id);
+          if (item.isLeaf) {
+            ids.push(item.node.id);
+          }
           if (item.children) {
             for (const child of item.children) {
               getIds(child, ids);
@@ -196,7 +221,7 @@ export default function TreeView<T>({
           }
           return ids;
         }
-        const ids = [item.id];
+        const ids = item.isLeaf ? [item.id] : [];
         if (children) {
           for (const child of children) {
             getIds(child, ids);
@@ -271,6 +296,8 @@ export default function TreeView<T>({
               onChecked={handleChecked}
               disableEditing={disableEditing || false}
               hideCheckboxes={hideCheckboxes || false}
+              isChecked={item.checked === CheckState.CHECKED}
+              hasCheckedChildren={item.checked === CheckState.PARTIAL}
             />
           ))}
         </ul>
@@ -316,6 +343,8 @@ export default function TreeView<T>({
           onChecked={handleChecked}
           disableEditing={disableEditing || false}
           hideCheckboxes={hideCheckboxes || false}
+          isChecked={item.checked === CheckState.CHECKED}
+          hasCheckedChildren={item.checked === CheckState.PARTIAL}
         />
       ))}
     </ul>

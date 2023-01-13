@@ -4,9 +4,8 @@ import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Node } from "prosemirror-model";
 import { forumPosts as editorConfig } from "../../editor/config";
 import { createReactNodeView } from "./ReactNodeView";
-import ReactNodeViewPortalsProvider from "./ReactNodeViewPortals";
-import { useReactNodeViewPortals } from "./ReactNodeViewPortals";
-import SketchNode from "./SketchNode";
+import { useReactNodeViewPortals } from "./ReactNodeView/PortalProvider";
+import SketchNodeView from "./SketchNodeView";
 import EditorMenuBar from "../../editor/EditorMenuBar";
 
 export default function PostContentEditor({
@@ -27,12 +26,11 @@ export default function PostContentEditor({
   const viewRef = useRef<EditorView>();
   const { schema, plugins } = editorConfig;
   const editable = useRef(!disabled);
-  const { createPortal } = useReactNodeViewPortals();
-  const handleCreatePortal = useCallback(createPortal, []);
+  const { createPortal, removePortal } = useReactNodeViewPortals();
 
   useEffect(() => {
     editable.current = !disabled;
-    if (viewRef.current) {
+    if (viewRef.current && state) {
       viewRef.current.updateState(state!);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,8 +62,9 @@ export default function PostContentEditor({
             getPos,
             // @ts-ignore
             decorations,
-            component: SketchNode,
-            onCreatePortal: handleCreatePortal,
+            component: SketchNodeView,
+            onCreatePortal: createPortal,
+            onDestroy: removePortal,
           });
         },
       },
@@ -74,7 +73,6 @@ export default function PostContentEditor({
         const newState = view.state.apply(transaction);
         view.updateState(newState);
         setState(newState);
-
         if (transaction.docChanged) {
           onChange(newState.doc.toJSON());
         }
@@ -89,7 +87,7 @@ export default function PostContentEditor({
       view.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onChange, plugins, schema, handleCreatePortal]);
+  }, [onChange, plugins, schema, createPortal, removePortal]);
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent<any>) => {

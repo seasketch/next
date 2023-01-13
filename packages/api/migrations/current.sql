@@ -1,8 +1,10 @@
 -- Enter migration here
-alter table sketches add column if not exists post_id int references posts (id);
+drop policy if exists sketches_select on sketches;
+drop policy if exists sketch_folders_forum_read on sketch_folders;
+alter table sketches add column if not exists post_id int references posts (id) on delete cascade;
 alter table sketches add column if not exists shared_in_forum boolean not null default false;
 
-alter table sketch_folders add column if not exists post_id int references posts (id);
+alter table sketch_folders add column if not exists post_id int references posts (id) on delete cascade;
 alter table sketch_folders add column if not exists shared_in_forum boolean not null default false;
 
 -- hide shared_in_forum stuff from myPlans
@@ -28,7 +30,6 @@ CREATE OR REPLACE FUNCTION public.my_folders("projectId" integer) RETURNS SETOF 
 
 
 -- Grant select access to posted sketches if the user has access to the given forum
-drop policy if exists sketches_select on sketches;
 CREATE POLICY sketches_select ON public.sketches FOR SELECT USING (
   (public.it_me(user_id) OR 
   (
@@ -45,7 +46,6 @@ CREATE POLICY sketches_select ON public.sketches FOR SELECT USING (
   public.session_is_admin(public.project_id_from_field_id(form_element_id)))
 );
 
-drop policy if exists sketch_folders_forum_read on sketch_folders;
 create policy sketch_folders_forum_read on sketch_folders for select using (
   (public.it_me(user_id) OR (
     shared_in_forum = true and 
@@ -110,3 +110,144 @@ comment on function copy_sketch_toc_item_recursive_for_forum is '@omit';
 grant execute on function copy_sketch_toc_item_recursive_for_forum to seasketch_user; 
 
 -- add insert/update trigger to extract inline sketches from message_contents and assign post_id
+-- post_id should also be assigned to the 
+
+create or replace function sketches_is_collection(sketch sketches)
+  returns boolean
+  language sql
+  security definer
+  stable
+  as $$
+    select geometry_type = 'COLLECTION' from sketch_classes where sketch_classes.id = sketch.sketch_class_id;
+  $$;
+
+grant execute on function sketches_is_collection to anon;
+
+
+CREATE OR REPLACE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETURNS jsonb
+    LANGUAGE sql STABLE
+    security definer
+    AS $$
+    select jsonb_build_object(
+            'id', sketches.id::text,
+            'userId', sketches.user_id::text, 
+            'createdAt', sketches.created_at,
+            'updatedAt', sketches.updated_at,
+            'sharedInForum', sketches.shared_in_forum,
+            'postId', sketches.post_id,
+            'sketchClassId', sketches.sketch_class_id::text,
+            'userSlug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
+            'collectionId', sketches.collection_id::text, 
+            'isCollection', (select geometry_type = 'COLLECTION' from sketch_classes where id = sketches.sketch_class_id),
+            'name', sketches.name,
+            'userAttributes', sketches_user_attributes(sketch)) || sketches.properties || (
+            select 
+              coalesce(jsonb_object_agg(generated_export_id, sketches.properties->form_elements.id::text), '{}'::jsonb)
+              from form_elements 
+              where form_id = (
+                select id from forms where sketch_class_id = sketches.sketch_class_id
+              ) and type_id != 'FeatureName'
+          ) 
+    from sketches
+    inner join user_profiles
+    on user_profiles.user_id = sketches.user_id
+    where sketches.id = sketch.id;
+  $$;
+
+
+drop function if exists collect_sketch_nodes_from_prosemirror_body;
+CREATE OR REPLACE FUNCTION public.collect_sketch_ids_from_prosemirror_body(body jsonb) RETURNS int[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output int[];
+      i jsonb;
+    begin
+      output = '{}';
+      if body ->> 'type' = 'sketch' then
+        if jsonb_array_length(((body ->> 'attrs')::jsonb ->> 'items')::jsonb) > 0 then
+          for i in (select * from jsonb_array_elements((((body->'attrs')::jsonb ->> 'items')::jsonb)))
+          loop
+            if i->>'__typename' = 'Sketch' then
+              output = (i->>'id')::int || output;
+            end if;
+          end loop;  
+        end if;
+      end if;
+      if body ? 'content' then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          output = output || collect_sketch_ids_from_prosemirror_body(i);
+        end loop;
+      end if;
+      return output;
+    end;
+  $$;
+
+CREATE OR REPLACE FUNCTION public.collect_sketch_folder_ids_from_prosemirror_body(body jsonb) RETURNS int[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output int[];
+      i jsonb;
+    begin
+      output = '{}';
+      if body ->> 'type' = 'sketch' then
+        if jsonb_array_length(((body ->> 'attrs')::jsonb ->> 'items')::jsonb) > 0 then
+          for i in (select * from jsonb_array_elements((((body->'attrs')::jsonb ->> 'items')::jsonb)))
+          loop
+            if i->>'__typename' = 'SketchFolder' then
+              output = (i->>'id')::int || output;
+            end if;
+          end loop;  
+        end if;
+      end if;
+      if body ? 'content' then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          output = output || collect_sketch_folder_ids_from_prosemirror_body(i);
+        end loop;
+      end if;
+      return output;
+    end;
+  $$;
+
+
+CREATE OR REPLACE FUNCTION assign_post_id_to_attached_sketch_nodes(body jsonb, post_id int)
+  returns boolean
+  language plpgsql
+  volatile
+  security definer
+  as $$
+    declare
+      sketch_ids int[];
+      folder_ids int[];
+    begin
+      select collect_sketch_ids_from_prosemirror_body(body) into sketch_ids;
+      select collect_sketch_folder_ids_from_prosemirror_body(body) into folder_ids;
+      update sketches set post_id = assign_post_id_to_attached_sketch_nodes.post_id where id = any(sketch_ids);
+      update sketch_folders set post_id = assign_post_id_to_attached_sketch_nodes.post_id where id = any(folder_ids);
+      return true;
+    end;
+  $$;
+
+
+CREATE OR REPLACE FUNCTION assign_sketch_node_post_ids()
+  RETURNS TRIGGER
+  LANGUAGE PLPGSQL
+  AS
+$$
+BEGIN
+  perform assign_post_id_to_attached_sketch_nodes(NEW.message_contents, NEW.id);
+	RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS assign_sketch_node_post_ids_from_message_contents on posts;
+CREATE TRIGGER assign_sketch_node_post_ids_from_message_contents
+  AFTER INSERT OR UPDATE
+  ON posts
+  FOR EACH ROW
+  EXECUTE PROCEDURE public.assign_sketch_node_post_ids();
+
+grant select on table sketches to anon;

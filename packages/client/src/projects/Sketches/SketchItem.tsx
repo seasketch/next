@@ -6,14 +6,16 @@ import Collection from "@heroicons/react/solid/CollectionIcon";
 import ArrowIcon from "./ArrowIcon";
 import { DragItemProps, FolderNodeDataProps } from "./FolderItem";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
+import { SketchGeometryType } from "../../generated/graphql";
 
 export interface SketchNodeDataProps {
   id: number;
   name: string;
-  isCollection: boolean;
+  isCollection?: boolean;
   folderId?: number | null;
   collectionId?: number | null;
   type: "Sketch";
+  timestamp: string;
 }
 
 export function isSketchNode(

@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
-import TreeView, { TreeNodeProps } from "../../components/TreeView";
+import TreeView, { TreeItemI, TreeNodeProps } from "../../components/TreeView";
 import {
   SketchChildType,
   SketchFolderDetailsFragment,
@@ -14,11 +14,15 @@ import getSlug from "../../getSlug";
 import useSketchingSelectionState from "../Sketches/useSketchingSelectionState";
 import { useCallback, useMemo, useState } from "react";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
-import FolderItem, { isFolderNode } from "../Sketches/FolderItem";
-import SketchItem, { isSketchNode } from "../Sketches/SketchItem";
+import FolderItem, {
+  FolderNodeDataProps,
+  isFolderNode,
+} from "../Sketches/FolderItem";
+import SketchItem, {
+  isSketchNode,
+  SketchNodeDataProps,
+} from "../Sketches/SketchItem";
 import { TreeItemType } from "../Sketches/SketchingTools";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import useExpandedIds from "../Sketches/useExpandedIds";
 
 export default function ShareSketchesModal({
@@ -28,7 +32,8 @@ export default function ShareSketchesModal({
   cancel: () => void;
   onSubmit: (
     sketches: SketchTocDetailsFragment[],
-    folders: SketchFolderDetailsFragment[]
+    folders: SketchFolderDetailsFragment[],
+    copiedSketches: number[]
   ) => void;
 }) {
   const { t } = useTranslation("sketching");
@@ -46,7 +51,15 @@ export default function ShareSketchesModal({
     onError,
     onCompleted: (d) => {
       if (d.copySketchTocItem?.folders && d.copySketchTocItem?.sketches) {
-        onSubmit(d.copySketchTocItem.sketches, d.copySketchTocItem.folders);
+        const copiedSketches = getCopiedSketchesRecursive(
+          parseInt(selection[0].split(":")[1]),
+          treeItems
+        );
+        onSubmit(
+          d.copySketchTocItem.sketches,
+          d.copySketchTocItem.folders,
+          copiedSketches
+        );
       }
     },
   });
@@ -117,30 +130,50 @@ export default function ShareSketchesModal({
       title={t("Choose a sketch to share...")}
     >
       <div className="h-72 px-4 pb-8">
-        <DndProvider backend={HTML5Backend}>
-          {loading && !data && <Spinner />}
-          {data && (
-            <>
-              <TreeView
-                items={treeItems}
-                render={treeRenderFn}
-                ariaLabel={"Sketch List"}
-                disableEditing={true}
-                expanded={expandedIds}
-                onExpand={onExpand}
-                hideCheckboxes={true}
-                selection={selection}
-                onSelect={(metaKey, node, isSelected) => {
-                  setSelected((prev) => {
-                    return [node.id];
-                  });
-                }}
-              />
-              <div className="h-4"></div>
-            </>
-          )}
-        </DndProvider>
+        {loading && !data && <Spinner />}
+        {data && (
+          <>
+            <TreeView
+              items={treeItems}
+              render={treeRenderFn}
+              ariaLabel={"Sketch List"}
+              disableEditing={true}
+              expanded={expandedIds}
+              onExpand={onExpand}
+              hideCheckboxes={true}
+              selection={selection}
+              onSelect={(metaKey, node, isSelected) => {
+                setSelected((prev) => {
+                  return [node.id];
+                });
+              }}
+            />
+            <div className="h-4"></div>
+          </>
+        )}
       </div>
     </Modal>
   );
+}
+
+function getCopiedSketchesRecursive(
+  parentId: number,
+  items: TreeItemI<FolderNodeDataProps | SketchNodeDataProps>[]
+) {
+  const ids: number[] = [];
+  for (const item of items) {
+    if (
+      item.data.collectionId === parentId ||
+      item.data.folderId === parentId
+    ) {
+      if (item.data.type === "Sketch") {
+        ids.push(item.data.id);
+      }
+      const children = getCopiedSketchesRecursive(item.data.id, items);
+      if (children && children.length) {
+        ids.push(...children);
+      }
+    }
+  }
+  return ids;
 }

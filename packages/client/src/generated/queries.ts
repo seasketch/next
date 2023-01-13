@@ -10311,6 +10311,7 @@ export type Sketch = Node & {
    */
   geom?: Maybe<GeometryGeometry>;
   id: Scalars['Int'];
+  isCollection?: Maybe<Scalars['Boolean']>;
   mercatorGeometry?: Maybe<GeometryGeometry>;
   /** User provided name for the sketch. */
   name: Scalars['String'];
@@ -13584,6 +13585,16 @@ export type UpdateBodyFragment = (
   & Pick<FormElement, 'body'>
 );
 
+export type MySketchFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp'>
+);
+
+export type MyFolderFragment = (
+  { __typename?: 'SketchFolder' }
+  & Pick<SketchFolder, 'name' | 'collectionId' | 'folderId'>
+);
+
 export type MapboxApiKeysQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -15700,7 +15711,7 @@ export type UpdateProjectAccessControlSettingsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken'>
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -16029,7 +16040,7 @@ export type UpdateSketchFormElementMutation = (
 
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt'>
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geometryType'>
@@ -18066,6 +18077,22 @@ export const UpdateBodyFragmentDoc = /*#__PURE__*/ gql`
   body
 }
     `;
+export const MySketchFragmentDoc = /*#__PURE__*/ gql`
+    fragment MySketch on Sketch {
+  name
+  isCollection
+  collectionId
+  folderId
+  timestamp
+}
+    `;
+export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
+    fragment MyFolder on SketchFolder {
+  name
+  collectionId
+  folderId
+}
+    `;
 export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment DataUploadDetails on DataUploadTask {
   createdAt
@@ -18334,6 +18361,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   isFeatured
   supportEmail
   isOfflineEnabled
+  sketchGeometryToken
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -18389,6 +18417,7 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   timestamp
   updatedAt
   createdAt
+  isCollection
   sketchClass {
     id
     geometryType
@@ -22022,6 +22051,8 @@ export const namedOperations = {
     UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateBody: 'UpdateBody',
+    MySketch: 'MySketch',
+    MyFolder: 'MyFolder',
     BasemapDetails: 'BasemapDetails',
     DataUploadDetails: 'DataUploadDetails',
     ForumListDetails: 'ForumListDetails',

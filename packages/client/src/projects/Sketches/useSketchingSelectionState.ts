@@ -18,23 +18,24 @@ import {
 } from "../../generated/graphql";
 import { getChildrenOfSketchOrSketchFolder } from "./useSketchActions";
 import getSlug from "../../getSlug";
+import { useOpenReports } from "../ReportContext";
 
 export default function useSketchingSelectionState({
   mySketches,
   toolbarRef,
-  setExpandedIds,
   setVisibleSketches,
   editSketch,
-  viewSketch,
   myFolders,
+  expandItem,
+  collapseItem,
 }: {
   mySketches?: SketchTocDetailsFragment[] | null;
   myFolders?: SketchFolderDetailsFragment[] | null;
   toolbarRef: HTMLElement | null;
-  setExpandedIds: (value: SetStateAction<string[]>) => void;
   setVisibleSketches: (val: string[] | ((prev: string[]) => string[])) => void;
   editSketch: (id: number) => void;
-  viewSketch: (id: number) => void;
+  expandItem: (item: { id: string }) => void;
+  collapseItem: (item: { id: string }) => void;
 }) {
   const mapContext = useContext(MapContext);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -49,6 +50,8 @@ export default function useSketchingSelectionState({
     setSelectedIds([]);
     document.querySelectorAll(".mapboxgl-popup").forEach((el) => el.remove());
   }, [setSelectedIds]);
+
+  const { setOpenReports } = useOpenReports();
 
   /**
    * Maintains a list of sketch classes associated with currently selected
@@ -138,10 +141,9 @@ export default function useSketchingSelectionState({
         normalizedIds.push(treeItemId(collectionId, "Sketch"));
       }
       if (normalizedIds.length) {
-        setExpandedIds((prev) => [
-          ...prev.filter((id) => normalizedIds.indexOf(id) === -1),
-          ...normalizedIds,
-        ]);
+        for (const id of normalizedIds) {
+          expandItem({ id });
+        }
       }
       setSelectedIds([treeItemId(id, type)]);
       // eslint-disable-next-line i18next/no-literal-string
@@ -159,7 +161,7 @@ export default function useSketchingSelectionState({
         ]);
       }
     },
-    [setExpandedIds, setVisibleSketches]
+    [expandItem, setVisibleSketches]
   );
 
   useEffect(() => {
@@ -204,14 +206,20 @@ export default function useSketchingSelectionState({
                       }
                       </span> 
                       ${
-                        wasUpdated
+                        feature.properties!.sharedInForum
+                          ? t("shared this sketch on")
+                          : wasUpdated
                           ? t("last updated this sketch on")
                           : t("created this sketch on")
                       } ${dateString}
                     </p>
                   </div>
                   <div class="py-2 space-x-1 bg-gray-50 p-2 border-t">
-                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">edit</button>
+                    ${
+                      feature.properties!.sharedInForum === true
+                        ? ""
+                        : `<button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">edit</button>`
+                    }
                     <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-view-sketch" class="underline">view reports</button>
                   </div>
                 </div>
@@ -229,7 +237,14 @@ export default function useSketchingSelectionState({
             const view = el.querySelector("button[id=popup-view-sketch]");
             if (view) {
               view.addEventListener("click", () => {
-                viewSketch(id);
+                setOpenReports((prev) => [
+                  ...prev.filter((r) => r.sketchId !== id),
+                  {
+                    sketchId: id,
+                    uiState: "right",
+                    sketchClassId: parseInt(feature.properties!.sketchClassId),
+                  },
+                ]);
               });
             }
 
@@ -250,7 +265,6 @@ export default function useSketchingSelectionState({
     setSelectedIds,
     t,
     data?.me?.id,
-    viewSketch,
   ]);
 
   useEffect(() => {

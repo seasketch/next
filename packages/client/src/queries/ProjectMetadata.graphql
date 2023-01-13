@@ -11,6 +11,7 @@ fragment ProjectMetadata on Project {
   isFeatured
   supportEmail
   isOfflineEnabled
+  sketchGeometryToken
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

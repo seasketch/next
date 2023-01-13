@@ -102,9 +102,7 @@ export default function useSketchActions({
   setExpandedIds: (value: SetStateAction<string[]>) => void;
   focusOnTableOfContentsItem: (
     type: "Sketch" | "SketchFolder",
-    id: number,
-    folderId?: number | null,
-    collectionId?: number | null
+    id: number
   ) => void;
   setEditor: Dispatch<
     SetStateAction<

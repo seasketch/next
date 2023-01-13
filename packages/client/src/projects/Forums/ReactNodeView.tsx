@@ -1,6 +1,6 @@
 import { Node } from "prosemirror-model";
 import { Decoration, EditorView, NodeView } from "prosemirror-view";
-import React, { useContext, useEffect, useRef } from "react";
+import React, { ReactPortal, useContext, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import { nanoid } from "nanoid";
 
@@ -32,13 +32,16 @@ class ReactNodeView implements NodeView {
   view: EditorView;
   getPos: TGetPos;
   decorations: Decoration[];
+  onDestroy: (key: string) => void;
+  key?: string;
 
   constructor(
     node: Node,
     view: EditorView,
     getPos: TGetPos,
     decorations: Decoration[],
-    component: React.FC<any>
+    component: React.FC<any>,
+    onDestroy: (key: string) => void
   ) {
     this.node = node;
     this.view = view;
@@ -46,37 +49,32 @@ class ReactNodeView implements NodeView {
     this.decorations = decorations;
     this.component = component;
     this.componentRef = React.createRef();
+    this.onDestroy = onDestroy;
   }
 
   init() {
     this.dom = document.createElement("div");
     this.dom.classList.add("ProseMirror__dom");
-
     if (!this.node.isLeaf) {
       this.contentDOM = document.createElement("div");
       this.contentDOM.classList.add("ProseMirror__contentDOM");
       this.dom.appendChild(this.contentDOM);
     }
 
+    const { portal, key } = this.renderPortal(this.dom);
+    this.key = key;
     return {
       nodeView: this,
-      portal: this.renderPortal(this.dom),
+      portal,
+      key,
     };
   }
 
-  toDOM(node: Node) {
-    console.log("toDom", node);
-    return [
-      "div",
-      {
-        "dino-type": node.attrs.type,
-        src: "/img/dino/" + node.attrs.type + ".png",
-        title: node.attrs.type,
-        class: "sketch-attachment",
-      },
-      ["span", node.attrs.type],
-    ];
-  }
+  // toDOM(node: Node) {
+  //   return [
+  //     "div",
+  //   ];
+  // }
 
   renderPortal(container: HTMLElement) {
     const Component: React.FC = (props) => {
@@ -107,22 +105,45 @@ class ReactNodeView implements NodeView {
       );
     };
 
-    return ReactDOM.createPortal(<Component />, container, nanoid());
+    const key = nanoid();
+    return {
+      key,
+      portal: ReactDOM.createPortal(<Component />, container, key),
+    };
   }
 
+  setSelection(anchor: number, head: number, root: Document | ShadowRoot) {
+    console.log({ anchor, head, root });
+    return;
+  }
+
+  // setSelection⁠(
+  //   anchor: number,
+  //   head: number,
+  //   root: Document | ShadowRoot
+  // ) {
+  //     console.log({anchor, head, root})
+  //     return;
+  //   }
+
   update(node: Node) {
+    console.log("UPDATE", node);
     return true;
   }
 
   destroy() {
     this.dom = undefined;
     this.contentDOM = undefined;
+    if (this.key) {
+      this.onDestroy(this.key);
+    }
   }
 }
 
 interface TCreateReactNodeView extends IReactNodeViewContext {
   component: React.FC<any>;
-  onCreatePortal: (portal: any) => void;
+  onCreatePortal: (key: string, portal: ReactPortal) => void;
+  onDestroy: (key: string) => void;
 }
 
 export const createReactNodeView = ({
@@ -132,16 +153,18 @@ export const createReactNodeView = ({
   decorations,
   component,
   onCreatePortal,
+  onDestroy,
 }: TCreateReactNodeView) => {
   const reactNodeView = new ReactNodeView(
     node,
     view,
     getPos,
     decorations,
-    component
+    component,
+    onDestroy
   );
-  const { nodeView, portal } = reactNodeView.init();
-  onCreatePortal(portal);
+  const { nodeView, portal, key } = reactNodeView.init();
+  onCreatePortal(key, portal);
 
   return nodeView;
 };

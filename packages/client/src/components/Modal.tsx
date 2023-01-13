@@ -188,6 +188,7 @@ export default function Modal(props: ModalProps) {
 function Backdrop() {
   return (
     <motion.div
+      style={{ backdropFilter: "blur(4px)" }}
       className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
       variants={{
         enter: {

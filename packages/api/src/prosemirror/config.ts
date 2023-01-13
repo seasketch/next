@@ -6,6 +6,7 @@
 import { Schema, Node, NodeSpec } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { addListNodes } from "prosemirror-schema-list";
+import sketchNodeSpec from "./SketchTocAttachmentSpec";
 let spec = baseSchema.spec;
 
 baseSchema.spec.marks.update("link", {
@@ -26,43 +27,10 @@ const baseMarks = baseSchema.spec.marks.update("link", {
   },
 });
 
-const sketchSpec: NodeSpec = {
-  attrs: {
-    sketchId: {},
-    sketchClassId: {},
-    title: { default: null },
-  },
-  inclusive: false,
-  inline: false,
-  group: "block",
-  draggable: true,
-  parseDOM: [
-    {
-      tag: "div[sketch-id]",
-      // @ts-ignore
-      getAttrs(dom: { getAttribute: (arg0: string) => any }) {
-        return {
-          sketchId: dom.getAttribute("sketch-id"),
-          sketchClassId: dom.getAttribute("sketch-class-id"),
-          title: dom.getAttribute("title"),
-        };
-      },
-    },
-  ],
-  toDOM: (node) => [
-    "div",
-    {
-      "sketch-id": node.attrs.sketchId,
-      "sketch-class-id": node.attrs.sketchClassId,
-      title: node.attrs.title,
-    },
-  ],
-};
-
 const forums = new Schema({
   // @ts-ignore
   nodes: addListNodes(
-    baseSchema.spec.nodes.addBefore("paragraph", "sketch", sketchSpec),
+    baseSchema.spec.nodes.addBefore("paragraph", "sketch", sketchNodeSpec),
     "paragraph block*",
     "block"
   )

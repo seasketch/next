@@ -74,6 +74,7 @@ export function messageToHTML(content: Fragment) {
     );
     return target.innerHTML;
   } catch (e) {
+    console.error(e);
     return `<code>${(e as Error).message}</code>`;
   }
 }

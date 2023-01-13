@@ -1,5 +1,3 @@
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import SketchingTools from "./SketchingTools";
 
 export default function SketchingDragDropContextContainer({
@@ -9,9 +7,5 @@ export default function SketchingDragDropContextContainer({
   hidden?: boolean;
   hideFullSidebar?: () => void;
 }) {
-  return (
-    <DndProvider backend={HTML5Backend}>
-      <SketchingTools hidden={hidden} hideFullSidebar={hideFullSidebar} />
-    </DndProvider>
-  );
+  return <SketchingTools hidden={hidden} hideFullSidebar={hideFullSidebar} />;
 }

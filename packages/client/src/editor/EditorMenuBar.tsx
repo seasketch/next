@@ -16,6 +16,7 @@ import {
 } from "../generated/graphql";
 import { sketchType } from "./config";
 import { ProjectAppSidebarContext } from "../projects/ProjectAppSidebar";
+import { MapContext } from "../dataLayers/MapContextManager";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -38,6 +39,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
     number | null
   >(null);
 
+  const mapContext = useContext(MapContext);
   const { isSmall } = useContext(ProjectAppSidebarContext);
 
   useEffect(() => {
@@ -78,13 +80,13 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const onSubmitCopiedTocItems = useCallback(
     (
       sketches: SketchTocDetailsFragment[],
-      folders: SketchFolderDetailsFragment[]
+      folders: SketchFolderDetailsFragment[],
+      copiedSketches: number[]
     ) => {
       setChooseSketchesOpen(false);
       const dispatch = props.view?.dispatch;
       const state = props.view?.state;
       if (dispatch && state) {
-        console.log("copied");
         let index = copySketchIndexPlaceholder;
         if (index === null) {
           let { $from } = state.selection,
@@ -98,13 +100,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         //   console.log("cant replace", index, sketchType);
         //   return false;
         // }
-        console.log(
-          sketchType.create({
-            title: parent!.name,
-            items: [...sketches, ...folders],
-          }),
-          index
-        );
         dispatch(
           state.tr.replaceSelectionWith(
             sketchType.create({
@@ -113,9 +108,18 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             })
           )
         );
+        if (mapContext.manager && parent) {
+          mapContext.manager.hideSketches(copiedSketches);
+          mapContext.manager.showSketches(sketches.map((s) => s.id));
+        }
       }
     },
-    [props.view?.dispatch, props.view?.state, copySketchIndexPlaceholder]
+    [
+      props.view?.dispatch,
+      props.view?.state,
+      copySketchIndexPlaceholder,
+      mapContext?.manager,
+    ]
   );
 
   return (

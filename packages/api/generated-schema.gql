@@ -11247,6 +11247,7 @@ type Sketch implements Node {
   """
   geom: GeometryGeometry
   id: Int!
+  isCollection: Boolean
   mercatorGeometry: GeometryGeometry
 
   """User provided name for the sketch."""

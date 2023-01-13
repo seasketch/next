@@ -3,13 +3,11 @@
  * This file must be manually made up-to-date with the contents of the client
  * schema.
  */
-import { Schema, Node, NodeSpec, NodeType } from "prosemirror-model";
+import { Schema, Node } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
-import { buildMenuItems } from "prosemirror-example-setup";
-import { MenuItem } from "prosemirror-menu";
 import sketchNodeSpec from "./SketchTocAttachmentSpec";
 
 let spec = baseSchema.spec;

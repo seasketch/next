@@ -15,7 +15,7 @@ import UserProfileModal from "../UserProfileModal";
 import PostContentEditor from "./PostContentEditor";
 import { nameForProfile } from "./TopicListItem";
 import { Trans as I18n } from "react-i18next";
-import ReactNodeViewPortalsProvider from "./ReactNodeViewPortals";
+import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 

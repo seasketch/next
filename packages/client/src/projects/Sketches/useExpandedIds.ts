@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { treeItemId } from ".";
-import {
-  SketchFolderDetailsFragment,
-  SketchTocDetailsFragment,
-} from "../../generated/graphql";
 import useLocalStorage from "../../useLocalStorage";
 import useSessionStorage from "../../useSessionStorage";
+import { FolderNodeDataProps } from "./FolderItem";
+import { SketchNodeDataProps } from "./SketchItem";
 
 export default function useExpandedIds(
   slug: string,
-  folders?: SketchFolderDetailsFragment[] | null,
-  sketches?: SketchTocDetailsFragment[] | null,
+  folders?: { id: number }[] | null,
+  sketches?: { id: number }[] | null,
   localStorageKey?: string,
   sessionOnly?: boolean
 ) {
