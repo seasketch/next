@@ -13,6 +13,7 @@ export interface DropdownOption {
   label: string | ReactNode;
   disabled?: boolean;
   id?: string;
+  keycode?: string;
 }
 
 interface DropdownButtonProps {

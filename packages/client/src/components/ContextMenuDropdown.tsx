@@ -1,7 +1,13 @@
 import { createPortal } from "react-dom";
 import { DropdownOption } from "./DropdownButton";
 import { usePopper } from "react-popper";
-import { ReactNode, useMemo, useState } from "react";
+import {
+  MouseEventHandler,
+  ReactNode,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
 
 function classNames(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -11,10 +17,12 @@ export default function ContextMenuDropdown({
   options,
   target,
   offsetX,
+  ...props
 }: {
   options: (DropdownOption | { id: string; label?: string | ReactNode })[];
   target: HTMLElement;
   offsetX?: number;
+  onClick?: (item: DropdownOption) => void;
 }) {
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(
     null
@@ -35,6 +43,19 @@ export default function ContextMenuDropdown({
     placement: "bottom-start",
     modifiers: [customModifier],
   });
+
+  const onOptionClick = useCallback(
+    (item: DropdownOption) => {
+      return ((e) => {
+        item.onClick();
+        if (props.onClick) {
+          props.onClick(item);
+        }
+      }) as MouseEventHandler<HTMLButtonElement>;
+    },
+    [props]
+  );
+
   return createPortal(
     <div
       ref={setPopperElement}
@@ -47,17 +68,27 @@ export default function ContextMenuDropdown({
       <div className="py-1">
         {options.map((props, i) => {
           if (!isDropdownOption(props)) {
-            return <DropdownDivider key={props.id} label={props.label} />;
+            return (
+              <DropdownDivider
+                key={props.id || i.toString()}
+                label={props.label}
+              />
+            );
           }
           const { label, disabled, onClick } = props;
           return (
             <span
-              key={typeof label === "string" ? label : i}
+              // @ts-ignore
+              key={
+                props.id || typeof label === "string"
+                  ? props.id || label
+                  : i.toString()
+              }
               className="block group w-full"
             >
               <button
                 disabled={disabled}
-                onClick={onClick}
+                onClick={onOptionClick(props)}
                 className={classNames(
                   "group",
                   "group-hover:bg-gray-100 group-hover:text-gray-900 text-gray-700",

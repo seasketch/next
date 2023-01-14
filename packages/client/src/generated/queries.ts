@@ -13587,12 +13587,17 @@ export type UpdateBodyFragment = (
 
 export type MySketchFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp'>
+  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'sketchClassId'>
 );
 
 export type MyFolderFragment = (
   { __typename?: 'SketchFolder' }
-  & Pick<SketchFolder, 'name' | 'collectionId' | 'folderId'>
+  & Pick<SketchFolder, 'name' | 'collectionId' | 'folderId' | 'sharedInForum'>
+);
+
+export type DataFragment = (
+  { __typename?: 'SketchFolder' }
+  & Pick<SketchFolder, 'id' | 'name'>
 );
 
 export type MapboxApiKeysQueryVariables = Exact<{
@@ -16364,6 +16369,14 @@ export type CopyTocItemMutation = (
   )> }
 );
 
+export type ProjectSketchesFragment = (
+  { __typename?: 'Project' }
+  & { sketchClasses: Array<(
+    { __typename?: 'SketchClass' }
+    & SketchingDetailsFragment
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -18084,6 +18097,8 @@ export const MySketchFragmentDoc = /*#__PURE__*/ gql`
   collectionId
   folderId
   timestamp
+  sharedInForum
+  sketchClassId
 }
     `;
 export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
@@ -18091,6 +18106,13 @@ export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
   name
   collectionId
   folderId
+  sharedInForum
+}
+    `;
+export const DataFragmentDoc = /*#__PURE__*/ gql`
+    fragment data on SketchFolder {
+  id
+  name
 }
     `;
 export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -18515,6 +18537,13 @@ export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
 }
     ${SketchTocDetailsFragmentDoc}
 ${SketchEditorModalDetailsFragmentDoc}`;
+export const ProjectSketchesFragmentDoc = /*#__PURE__*/ gql`
+    fragment ProjectSketches on Project {
+  sketchClasses {
+    ...SketchingDetails
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
@@ -22053,6 +22082,7 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     MySketch: 'MySketch',
     MyFolder: 'MyFolder',
+    data: 'data',
     BasemapDetails: 'BasemapDetails',
     DataUploadDetails: 'DataUploadDetails',
     ForumListDetails: 'ForumListDetails',
@@ -22077,6 +22107,7 @@ export const namedOperations = {
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',
     SketchEditorModalDetails: 'SketchEditorModalDetails',
+    ProjectSketches: 'ProjectSketches',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

@@ -11,7 +11,6 @@ import {
   useSketchingQuery,
 } from "../../generated/graphql";
 import getSlug from "../../getSlug";
-import useSketchingSelectionState from "../Sketches/useSketchingSelectionState";
 import { useCallback, useMemo, useState } from "react";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
 import FolderItem, {
@@ -23,7 +22,7 @@ import SketchItem, {
   SketchNodeDataProps,
 } from "../Sketches/SketchItem";
 import { TreeItemType } from "../Sketches/SketchingTools";
-import useExpandedIds from "../Sketches/useExpandedIds";
+import { useSketchUIState } from "../Sketches/SketchUIStateContextProvider";
 
 export default function ShareSketchesModal({
   cancel,
@@ -89,11 +88,7 @@ export default function ShareSketchesModal({
     []
   );
 
-  const { expandedIds, onExpand } = useExpandedIds(
-    getSlug(),
-    data?.projectBySlug?.myFolders,
-    data?.projectBySlug?.mySketches
-  );
+  const { expandedIds, onExpand } = useSketchUIState();
 
   return (
     <Modal

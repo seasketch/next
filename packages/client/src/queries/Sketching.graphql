@@ -242,3 +242,9 @@ mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
     parentId
   }
 }
+
+fragment ProjectSketches on Project {
+  sketchClasses {
+    ...SketchingDetails
+  }
+}
