@@ -15726,6 +15726,10 @@ export type UpdateProjectAccessControlSettingsMutation = (
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken'>
+  & { sketchClasses: Array<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived'>
+  )> }
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -18405,6 +18409,13 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   supportEmail
   isOfflineEnabled
   sketchGeometryToken
+  sketchClasses {
+    id
+    name
+    canDigitize
+    formElementId
+    isArchived
+  }
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`

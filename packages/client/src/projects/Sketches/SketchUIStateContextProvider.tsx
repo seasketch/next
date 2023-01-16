@@ -947,18 +947,7 @@ export default function SketchUIStateContextProvider({
       ? parseInt(selectedIds[0].split(":")[1])
       : undefined;
     const contextMenu: (DropdownOption | DropdownDividerProps)[] = [];
-    let sketchClasses: SketchingDetailsFragment[] = [];
-    if (projectMetadata.data?.project?.id) {
-      const data = client.cache.readFragment<ProjectSketchesFragment>({
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `Project:${projectMetadata.data?.project.id}`,
-        fragment: ProjectSketchesFragmentDoc,
-        fragmentName: "ProjectSketches",
-      });
-      if (data?.sketchClasses) {
-        sketchClasses = data.sketchClasses;
-      }
-    }
+    const sketchClasses = projectMetadata.data?.project?.sketchClasses || [];
 
     const create: DropdownOption[] = [
       ...(!selectionIsSharedContent && (!selectionType || !selectionType.sketch)
@@ -973,17 +962,27 @@ export default function SketchUIStateContextProvider({
           label: sc.name,
           onClick: async () => {
             history.replace(`/${getSlug()}/app`);
-            setEditor({
-              sketchClass: sc,
-              folderId:
-                selectedIds.length === 1 && /SketchFolder:/.test(selectedIds[0])
-                  ? selectedId
-                  : undefined,
-              collectionId:
-                selectedIds.length === 1 && selectionType?.collection
-                  ? selectedId
-                  : undefined,
-            });
+            const sketchClass: SketchingDetailsFragment | null =
+              client.cache.readFragment({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `SketchClass:${sc.id}`,
+                fragment: SketchingDetailsFragmentDoc,
+                fragmentName: "SketchingDetails",
+              });
+            if (sketchClass) {
+              setEditor({
+                sketchClass,
+                folderId:
+                  selectedIds.length === 1 &&
+                  /SketchFolder:/.test(selectedIds[0])
+                    ? selectedId
+                    : undefined,
+                collectionId:
+                  selectedIds.length === 1 && selectionType?.collection
+                    ? selectedId
+                    : undefined,
+              });
+            }
           },
         })),
       ...(!selectionIsSharedContent && (!selectionType || !selectionType.sketch)
@@ -1228,6 +1227,7 @@ export default function SketchUIStateContextProvider({
   }, [
     selectedIds,
     projectMetadata.data?.project?.id,
+    projectMetadata.data?.project?.sketchClasses,
     selectionType,
     t,
     selectionBBox,
