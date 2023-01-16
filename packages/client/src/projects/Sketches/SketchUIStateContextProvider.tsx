@@ -1,6 +1,6 @@
 import { gql, InMemoryCache, useApolloClient } from "@apollo/client";
 import { Feature } from "geojson";
-import { MapMouseEvent, Popup } from "mapbox-gl";
+import { KeyboardHandler, MapMouseEvent, Popup } from "mapbox-gl";
 import {
   createContext,
   Dispatch,
@@ -1166,6 +1166,55 @@ export default function SketchUIStateContextProvider({
     copy,
     showSketches,
     token,
+  ]);
+
+  // Keyboard shortcut handling
+  useEffect(() => {
+    if (menuOptions?.contextMenu?.length) {
+      const actions = menuOptions.contextMenu.filter(
+        (a: any) => a.keycode
+      ) as DropdownOption[];
+      const handler = (e: KeyboardEvent) => {
+        if (e.target) {
+          const target = e.target as HTMLElement;
+          if (target.tagName) {
+            if (target.tagName === "TEXTAREA" || target.tagName === "INPUT") {
+              return;
+            } else if (
+              target.getAttribute &&
+              target.getAttribute("contenteditable")
+            ) {
+              return;
+            }
+          }
+        }
+        if (e.key === "x" && openReports.length) {
+          if (selectedIds.length > 0) {
+            // TODO: support multiselect?
+            const id = parseInt(selectedIds[0].split(":")[1]);
+            onRequestReportClose(id);
+            return;
+          } else {
+            setOpenReports((prev) => [...prev.slice(-1)]);
+            return;
+          }
+        }
+        for (const action of actions) {
+          if (action.keycode === e.key) {
+            action.onClick();
+          }
+        }
+      };
+      document.body.addEventListener("keydown", handler);
+      return () => {
+        document.body.removeEventListener("keydown", handler);
+      };
+    }
+  }, [
+    menuOptions.contextMenu,
+    onRequestReportClose,
+    openReports.length,
+    selectedIds,
   ]);
 
   return (
