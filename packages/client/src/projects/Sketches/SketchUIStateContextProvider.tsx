@@ -258,7 +258,38 @@ export default function SketchUIStateContextProvider({
 
   // # Sketch and SketchFolder Selection
   // TODO: garbage collect missing ids
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, _setSelectedIds] = useState<string[]>([]);
+
+  const setSelectedIds = useCallback(
+    (ids) => {
+      _setSelectedIds(ids);
+      // TODO: support multiselect
+      if (ids.length > 0) {
+        const id = ids[0];
+        const typeName = id.split(":")[0];
+        // @ts-ignore Using a private api here
+        const bbox = client.cache.data.get(id, "bbox");
+        const isCollection = Boolean(
+          // @ts-ignore Using a private api here
+          client.cache.data.get(id, "isCollection")
+        );
+        setSelectionType({
+          collection: isCollection,
+          folder: typeName === "SketchFolder",
+          sketch: typeName === "Sketch",
+        });
+        if (bbox) {
+          setBBOX(bbox);
+        } else {
+          setBBOX(undefined);
+        }
+      } else {
+        setBBOX(undefined);
+        setSelectionType(undefined);
+      }
+    },
+    [_setSelectedIds, client]
+  );
 
   const [toolbarRef, setToolbarRef] = useState<HTMLDivElement | null>(null);
 
@@ -934,16 +965,16 @@ export default function SketchUIStateContextProvider({
     const update: DropdownOption[] = [];
     const read: DropdownOption[] = [];
     const viewReports: DropdownOption | undefined =
-      selectionType?.folder && selectedId
-        ? undefined
-        : {
+      selectionType?.collection || selectionType?.sketch
+        ? {
             id: "view-reports",
             label: t("View Reports"),
             keycode: "v",
             onClick: () => {
               openSketchReport(selectedId!);
             },
-          };
+          }
+        : undefined;
     if (viewReports) {
       contextMenu.push(viewReports);
     }

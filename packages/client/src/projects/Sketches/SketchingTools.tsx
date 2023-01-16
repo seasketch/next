@@ -248,11 +248,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
           />
           <Button
             disabled={
-              menuOptions
-                ? menuOptions.viewReports
-                  ? menuOptions.viewReports.disabled
-                  : true
-                : true
+              !menuOptions?.viewReports || menuOptions.viewReports.disabled
             }
             small
             onClick={menuOptions?.viewReports?.onClick}
