@@ -142,7 +142,7 @@ export default function ProjectApp() {
                       children={(match) => {
                         return (
                           <LazyForums
-                            hidden={!Boolean(match.match)}
+                            hidden={!Boolean(match.match?.url)}
                             forumId={
                               match.match &&
                               match.match.params &&

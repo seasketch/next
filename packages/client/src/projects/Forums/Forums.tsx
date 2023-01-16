@@ -108,7 +108,7 @@ export default function Forums({
     );
   }
 
-  if (data?.projectBySlug?.forums?.length === 0) {
+  if (data?.projectBySlug?.forums?.length === 0 && !hidden) {
     return (
       <Warning level="info">
         <Trans>No forums have been configured for this project.</Trans>
