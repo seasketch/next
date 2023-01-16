@@ -6,6 +6,7 @@ import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   AuthorProfileFragment,
+  ForumsDocument,
   TopicListDocument,
   TopicListQuery,
   useCreateTopicMutation,
@@ -53,6 +54,7 @@ export default function NewTopicForm({
       title,
     },
     onError,
+    refetchQueries: [ForumsDocument],
     onCompleted: () => {
       clearTitle();
       clearContent();

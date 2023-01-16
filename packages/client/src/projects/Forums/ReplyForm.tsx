@@ -5,6 +5,7 @@ import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   AuthorProfileFragment,
+  ForumsDocument,
   TopicDetailDocument,
   TopicDetailQuery,
   useCreateReplyMutation,
@@ -46,6 +47,7 @@ export default function ReplyForm({
       topicId,
       content,
     },
+    refetchQueries: [ForumsDocument],
     onCompleted: (data) => {
       clearContent();
       if (data.createPost.id && onReply) {
