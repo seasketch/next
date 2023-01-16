@@ -79,6 +79,7 @@ export default function ForumTreeView(props: {
                 timestamp
                 sharedInForum
                 sketchClassId
+                bbox
               }
             `,
           });
