@@ -13589,12 +13589,21 @@ export type UpdateBodyFragment = (
 
 export type MySketchFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'sketchClassId'>
+  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'sketchClassId' | 'bbox'>
 );
 
 export type MyFolderFragment = (
   { __typename?: 'SketchFolder' }
   & Pick<SketchFolder, 'name' | 'collectionId' | 'folderId' | 'sharedInForum'>
+);
+
+export type PopupShareDetailsFragment = (
+  { __typename?: 'Post' }
+  & Pick<Post, 'id' | 'topicId'>
+  & { topic?: Maybe<(
+    { __typename?: 'Topic' }
+    & Pick<Topic, 'id' | 'title' | 'forumId'>
+  )> }
 );
 
 export type DataFragment = (
@@ -18101,6 +18110,7 @@ export const MySketchFragmentDoc = gql`
   timestamp
   sharedInForum
   sketchClassId
+  bbox
 }
     `;
 export const MyFolderFragmentDoc = gql`
@@ -18109,6 +18119,17 @@ export const MyFolderFragmentDoc = gql`
   collectionId
   folderId
   sharedInForum
+}
+    `;
+export const PopupShareDetailsFragmentDoc = gql`
+    fragment PopupShareDetails on Post {
+  id
+  topicId
+  topic {
+    id
+    title
+    forumId
+  }
 }
     `;
 export const DataFragmentDoc = gql`
@@ -27773,6 +27794,7 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     MySketch: 'MySketch',
     MyFolder: 'MyFolder',
+    PopupShareDetails: 'PopupShareDetails',
     data: 'data',
     BasemapDetails: 'BasemapDetails',
     DataUploadDetails: 'DataUploadDetails',

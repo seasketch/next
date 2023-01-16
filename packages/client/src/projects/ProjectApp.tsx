@@ -139,30 +139,31 @@ export default function ProjectApp() {
                       />
                     </Route>
                     <Route
-                      children={(match) => (
-                        <LazyForums
-                          hidden={!Boolean(match.match)}
-                          forumId={
-                            match.match &&
-                            match.match.params &&
-                            "id" in match.match.params
-                              ? parseInt(match.match.params.id)
-                              : undefined
-                          }
-                          topicId={
-                            match.match &&
-                            match.match.params &&
-                            "topicId" in match.match.params
-                              ? parseInt(match.match.params.topicId)
-                              : undefined
-                          }
-                          postNewTopic={Boolean(
-                            match.match?.path &&
-                              /new-post/.test(match.match.path)
-                          )}
-                          // hideFullSidebar={hideFullSidebar}
-                        />
-                      )}
+                      children={(match) => {
+                        return (
+                          <LazyForums
+                            hidden={!Boolean(match.match)}
+                            forumId={
+                              match.match &&
+                              match.match.params &&
+                              "id" in match.match.params
+                                ? parseInt(match.match.params.id)
+                                : undefined
+                            }
+                            topicId={
+                              match.match &&
+                              match.match.params &&
+                              "topicId" in match.match.params
+                                ? parseInt(match.match.params.topicId)
+                                : undefined
+                            }
+                            postNewTopic={Boolean(
+                              match.match?.path &&
+                                /new-post/.test(match.match.path)
+                            )}
+                          />
+                        );
+                      }}
                       path={[
                         `/${slug}/app/forums/:id/new-post`,
                         `/${slug}/app/forums/:id/:topicId`,

@@ -43,6 +43,7 @@ import {
   ProjectSketchesFragment,
   ProjectSketchesFragmentDoc,
   SketchChildType,
+  PopupShareDetailsFragment,
 } from "../../generated/graphql";
 import { SketchFolderDetailsFragment } from "../../generated/queries";
 import getSlug from "../../getSlug";
@@ -526,6 +527,26 @@ export default function SketchUIStateContextProvider({
             const dateString = new Date(
               wasUpdated ? props.updatedAt : props.createdAt
             ).toLocaleDateString();
+            let post: PopupShareDetailsFragment | null | undefined;
+            if (feature.properties!.postId) {
+              const postId = parseInt(feature.properties!.postId);
+              post = client.cache.readFragment<PopupShareDetailsFragment>({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `Post:${postId}`,
+                // eslint-disable-next-line i18next/no-literal-string
+                fragment: gql`
+                  fragment PopupShareDetails on Post {
+                    id
+                    topicId
+                    topic {
+                      id
+                      title
+                      forumId
+                    }
+                  }
+                `,
+              });
+            }
             const popup = new Popup({
               closeOnClick: true,
               closeButton: true,
@@ -555,6 +576,21 @@ export default function SketchUIStateContextProvider({
                           : t("created this sketch on")
                       } ${dateString}
                     </p>
+                    ${
+                      post && post.topic
+                        ? `<p>
+                          ${t(
+                            "in"
+                          )} <button data-url="/${getSlug()}/app/forums/${
+                            post.topic.forumId
+                          }/${
+                            post.topicId
+                          }" class="underline text-primary-500">${
+                            post.topic.title
+                          }</button>
+                        </p>`
+                        : ""
+                    }
                   </div>
                   <div class="py-2 space-x-1 bg-gray-50 p-2 border-t">
                     ${
@@ -589,7 +625,15 @@ export default function SketchUIStateContextProvider({
                 ]);
               });
             }
-
+            const topicLink = el.querySelector("button[data-url]");
+            if (topicLink) {
+              topicLink.addEventListener("click", () => {
+                const url = topicLink.getAttribute("data-url");
+                if (url && url.length) {
+                  history.replace(url);
+                }
+              });
+            }
             setSelectedIds([treeItemId(id, "Sketch")]);
           }, 1);
         }
@@ -608,6 +652,7 @@ export default function SketchUIStateContextProvider({
     t,
     projectMetadata.data?.me?.id,
     setOpenReports,
+    client,
   ]);
 
   useEffect(() => {
@@ -812,6 +857,45 @@ export default function SketchUIStateContextProvider({
       }
     },
   });
+
+  useEffect(() => {
+    // # Garbage collection routine
+    // selectedIds and expandedIds can start to get filled with identifiers from the
+    // discussion forum, or event deleted sketches from myplans that are never accessed
+    // again. Since these are placed in localStorage, they should be routinely deleted.
+    //
+    // How do we know if they should be deleted? If the apollo client cache does not
+    // contain them, that means either there is no active query containing them, or forum
+    // post displaying the sketches. If the garbage collection routine is run without
+    // myPlans rendering, user state could be lost.
+
+    function gc() {
+      setExpandedIds((prev) => [
+        ...prev.filter((id) => {
+          // @ts-ignore private api
+          const isCached = client.cache.data.get(id, "id");
+          return isCached;
+        }),
+      ]);
+      // Using the more raw _setSelectedIds vs setSelectedIds here, but that shouldn't
+      // matter since we are getting rid of entries that would not otherwise be rendered.
+      setVisibleSketches((prev) => {
+        const newState = [
+          ...prev.filter((id) => {
+            // @ts-ignore private api
+            const isCached = client.cache.data.get(id, "id");
+            return isCached;
+          }),
+        ];
+        return newState;
+      });
+    }
+
+    const interval = setInterval(gc, 60000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [setVisibleSketches, setExpandedIds, client]);
 
   const token = useAccessToken();
   const menuOptions = useMemo(() => {
