@@ -72,6 +72,11 @@ fragment SketchCRUDResponse on Sketch {
   properties
   geojsonProperties
   ...SketchEditorModalDetails
+  parentCollection {
+    id
+    updatedAt
+    timestamp
+  }
 }
 
 mutation CreateSketch(

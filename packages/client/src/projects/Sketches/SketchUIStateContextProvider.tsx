@@ -243,7 +243,9 @@ export default function SketchUIStateContextProvider({
         if (/Sketch:/.test(stringId)) {
           // @ts-ignore private api
           const isCached = client.cache.data.get(stringId, "id");
-          if (isCached) {
+          // @ts-ignore private api
+          const isCollection = client.cache.data.get(stringId, "isCollection");
+          if (isCached && !isCollection) {
             // @ts-ignore private api
             const timestamp = client.cache.data.get(stringId, "timestamp");
             sketches.push({
@@ -375,7 +377,6 @@ export default function SketchUIStateContextProvider({
 
   const history = useHistory();
 
-  const [editorOpen, setEditorOpen] = useState(false);
   const [editor, setEditor] = useState<
     | false
     | {
@@ -423,7 +424,6 @@ export default function SketchUIStateContextProvider({
         if (sketchClass) {
           setOpenReports([]);
           history.replace(`/${getSlug()}/app`);
-          setEditorOpen(true);
           setEditor({
             loadingTitle: sketch.name,
             loading: true,
@@ -1226,7 +1226,6 @@ export default function SketchUIStateContextProvider({
     };
   }, [
     selectedIds,
-    projectMetadata.data?.project?.id,
     projectMetadata.data?.project?.sketchClasses,
     selectionType,
     t,
@@ -1286,6 +1285,8 @@ export default function SketchUIStateContextProvider({
         for (const action of actions) {
           if (action.keycode === e.key) {
             action.onClick();
+            e.preventDefault();
+            return false;
           }
         }
       };
@@ -1321,7 +1322,7 @@ export default function SketchUIStateContextProvider({
         updateFromCache,
         openReports,
         setOpenReports,
-        editorIsOpen: editorOpen,
+        editorIsOpen: editor !== false,
         editSketch,
         menuOptions,
         showSketches,

@@ -133,7 +133,9 @@ export default function TreeView<T>({
         level: 1,
         children: [],
         isContextMenuTarget: contextMenuItemId === item.id,
-        checked: Boolean(checkedItems && checkedItems?.indexOf(item.id) !== -1)
+        checked: Boolean(
+          item.isLeaf && checkedItems && checkedItems?.indexOf(item.id) !== -1
+        )
           ? CheckState.CHECKED
           : CheckState.UNCHECKED,
         hasCheckedChildren: false,

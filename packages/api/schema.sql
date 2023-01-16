@@ -6857,6 +6857,40 @@ $$;
 
 
 --
+-- Name: get_parent_collection_id(public.sketch_child_type, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      col int;
+      folder int;
+    begin
+      if type = 'sketch' then
+        select collection_id, folder_id into col, folder from sketches where id = parent_id;
+      else
+        select collection_id, folder_id into col, folder from sketch_folders where id = parent_id;
+      end if;
+      if col is not null then
+        return col;
+      elsif folder is not null then
+        return get_parent_collection_id('sketch_folder', folder);
+      else
+        return null;
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_parent_collection_id(type public.sketch_child_type, parent_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) IS 'omit';
+
+
+--
 -- Name: get_project_id(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10540,6 +10574,17 @@ CREATE FUNCTION public.sketches_is_collection(sketch public.sketches) RETURNS bo
 
 
 --
+-- Name: sketches_parent_collection(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_parent_collection(sketch public.sketches) RETURNS public.sketches
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from sketches where id = get_parent_collection_id('sketch', sketch.id);
+  $$;
+
+
+--
 -- Name: sketches_user_attributes(public.sketches); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11240,6 +11285,26 @@ CREATE FUNCTION public.trigger_set_timestamp() RETURNS trigger
     AS $$
 BEGIN
   NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: trigger_update_collection_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_update_collection_updated_at() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  sketch_collection_id int;
+BEGIN
+  -- get parent collection if exists
+  select get_parent_collection_id('sketch', NEW.id) into sketch_collection_id;
+  if sketch_collection_id is not null then
+    update sketches set updated_at = now() where id = sketch_collection_id;
+  end if;
   RETURN NEW;
 END;
 $$;
@@ -14970,6 +15035,13 @@ CREATE TRIGGER offline_tile_packages_on_insert_1 AFTER INSERT ON public.offline_
 --
 
 CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline_tile_packages FOR EACH ROW EXECUTE FUNCTION public.cleanup_tile_package();
+
+
+--
+-- Name: sketches set_parent_collection_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER set_parent_collection_updated_at AFTER UPDATE ON public.sketches FOR EACH ROW EXECUTE FUNCTION public.trigger_update_collection_updated_at();
 
 
 --
@@ -20764,6 +20836,14 @@ GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, O
 
 
 --
+-- Name: FUNCTION get_parent_collection_id(type public.sketch_child_type, parent_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION get_proj4_from_srid(integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22809,6 +22889,14 @@ GRANT ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches)
 
 REVOKE ALL ON FUNCTION public.sketches_is_collection(sketch public.sketches) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketches_is_collection(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_parent_collection(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_parent_collection(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_parent_collection(sketch public.sketches) TO anon;
 
 
 --
@@ -25991,6 +26079,13 @@ REVOKE ALL ON FUNCTION public.translate(public.citext, public.citext, text) FROM
 --
 
 REVOKE ALL ON FUNCTION public.trigger_set_timestamp() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trigger_update_collection_updated_at(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at() FROM PUBLIC;
 
 
 --

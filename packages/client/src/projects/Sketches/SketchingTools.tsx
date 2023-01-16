@@ -110,36 +110,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     });
   }, [selectedIds]);
 
-  // TODO: Hoist this into SketchUIStateContextProvider
-  // useEffect(() => {
-  //   const handler = (e: KeyboardEvent) => {
-  //     // @ts-ignore
-  //     const tagName = e.target?.tagName || "";
-  //     if (["INPUT", "TEXTAREA"].indexOf(tagName) !== -1) {
-  //       return;
-  //     }
-  //     if (keyboardShortcuts.length) {
-  //       const shortcut = keyboardShortcuts.find(
-  //         (action) => action.keycode === e.key
-  //       );
-  //       if (shortcut) {
-  //         callAction(shortcut);
-  //       } else if (e.key === "x" && selectedIds.length && openReports.length) {
-  //         const ids = selectedIds
-  //           .filter((s) => /Sketch:/.test(s))
-  //           .map((s) => parseInt(s.split(":")[1]));
-  //         setOpenReports((prev) =>
-  //           prev.filter((r) => ids.indexOf(r.sketchId) === -1)
-  //         );
-  //       }
-  //     }
-  //   };
-  //   document.body.addEventListener("keydown", handler);
-  //   return () => {
-  //     document.body.removeEventListener("keydown", handler);
-  //   };
-  // }, [keyboardShortcuts, callAction, selectedIds, openReports]);
-
   /**
    * Convert GraphQL fragment data into a flat list of TreeItemI elements for
    * feeding into TreeView
