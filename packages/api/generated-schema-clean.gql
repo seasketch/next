@@ -6712,7 +6712,7 @@ type Mutation {
     """
     input: CopySketchFolderInput!
   ): CopySketchFolderPayload
-  copySketchTocItem(id: Int!, type: SketchChildType!): CopySketchTocItemResults
+  copySketchTocItem(forForum: Boolean, id: Int!, type: SketchChildType!): CopySketchTocItemResults
 
   """Creates a single `Basemap`."""
   createBasemap(
@@ -11247,6 +11247,7 @@ type Sketch implements Node {
   """
   geom: GeometryGeometry
   id: Int!
+  isCollection: Boolean
   mercatorGeometry: GeometryGeometry
 
   """User provided name for the sketch."""
@@ -11257,8 +11258,10 @@ type Sketch implements Node {
   """
   nodeId: ID!
   numVertices: Int
+  postId: Int
   properties: JSON!
   responseId: Int
+  sharedInForum: Boolean!
 
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
@@ -11526,7 +11529,9 @@ type SketchFolder implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  postId: Int
   projectId: Int!
+  sharedInForum: Boolean!
   userId: Int!
 }
 
@@ -11555,7 +11560,9 @@ input SketchFolderPatch {
   folderId: Int
   id: Int
   name: String
+  postId: Int
   projectId: Int
+  sharedInForum: Boolean
   userId: Int
 }
 

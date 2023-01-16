@@ -6,7 +6,6 @@ import Collection from "@heroicons/react/solid/CollectionIcon";
 import ArrowIcon from "./ArrowIcon";
 import { DragItemProps, FolderNodeDataProps } from "./FolderItem";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
-import { SketchGeometryType } from "../../generated/graphql";
 
 export interface SketchNodeDataProps {
   id: number;
