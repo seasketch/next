@@ -112,10 +112,10 @@ class ReactNodeView implements NodeView {
     };
   }
 
-  setSelection(anchor: number, head: number, root: Document | ShadowRoot) {
-    console.log({ anchor, head, root });
-    return;
-  }
+  // setSelection(anchor: number, head: number, root: Document | ShadowRoot) {
+  //   // console.log({ anchor, head, root });
+  //   return;
+  // }
 
   // setSelection⁠(
   //   anchor: number,
@@ -127,7 +127,7 @@ class ReactNodeView implements NodeView {
   //   }
 
   update(node: Node) {
-    console.log("UPDATE", node);
+    // console.log("UPDATE", node);
     return true;
   }
 
