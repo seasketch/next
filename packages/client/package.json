@@ -18,6 +18,7 @@
     "@mapbox/mapbox-gl-style-spec": "^13.17.0",
     "@mapbox/polyline": "^1.1.1",
     "@mapbox/tilebelt": "^1.0.2",
+    "@oieduardorabelo/use-user-agent": "^5.0.1",
     "@percy/cli": "^1.15.0",
     "@percy/cypress": "^3.1.2",
     "@popperjs/core": "^2.11.6",
