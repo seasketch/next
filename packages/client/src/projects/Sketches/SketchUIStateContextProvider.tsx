@@ -389,10 +389,6 @@ export default function SketchUIStateContextProvider({
       }
   >(false);
 
-  const clearOpenSketchReports = useCallback(() => {
-    setOpenReports([]);
-  }, [setOpenReports]);
-
   const openSketchReport = useCallback(
     (sketchId: number, uiState?: "left" | "right" | "docked") => {
       const sketch: SketchTocDetailsFragment =
@@ -404,7 +400,7 @@ export default function SketchUIStateContextProvider({
         ]);
       }
     },
-    [client.cache]
+    [client.cache, setOpenReports]
   );
 
   const editSketch = useCallback(
@@ -615,14 +611,7 @@ export default function SketchUIStateContextProvider({
             const view = el.querySelector("button[id=popup-view-sketch]");
             if (view) {
               view.addEventListener("click", () => {
-                setOpenReports((prev) => [
-                  ...prev.filter((r) => r.sketchId !== id),
-                  {
-                    sketchId: id,
-                    uiState: "right",
-                    sketchClassId: parseInt(feature.properties!.sketchClassId),
-                  },
-                ]);
+                openSketchReport(id);
               });
             }
             const topicLink = el.querySelector("button[data-url]");
@@ -651,7 +640,8 @@ export default function SketchUIStateContextProvider({
     setSelectedIds,
     t,
     projectMetadata.data?.me?.id,
-    setOpenReports,
+    openSketchReport,
+    history,
     client,
   ]);
 
@@ -701,6 +691,8 @@ export default function SketchUIStateContextProvider({
           .map((s) => parseInt(s.split(":")[1])),
         ...children,
       ]);
+
+      // TODO: make a combined bbox and set selectedBBOX so folders can have a zoom-to context menu option
     }
   }, [selectedIds, mapContext.manager, client]);
   // mySketches, myFolders]);
