@@ -6,7 +6,11 @@
   "Dismiss": "Dismiss",
   "Last modified ": "Last modified ",
   "Leaving this page will cancel your spatial data file upload. Are you sure you want to cancel?": "Leaving this page will cancel your spatial data file upload. Are you sure you want to cancel?",
+  "NumGeostatsValues": "{{count}} values",
+  "NumGeostatsValues_plural": "NumGeostatsValues_plural",
   "Provide a MapBox Secret Key in your <2>project settings</2> to enable browsing of maps in your account.": "Provide a MapBox Secret Key in your <2>project settings</2> to enable browsing of maps in your account.",
+  "Show  more": "Show  more",
+  "Style save error - ": "Style save error - ",
   "This quota is intended to prevent abuse. Contact support@seasketch.org to discuss raising your project's storage limits. Deleting layers from your project will also free up space.": "This quota is intended to prevent abuse. Contact support@seasketch.org to discuss raising your project's storage limits. Deleting layers from your project will also free up space.",
   "Upload Failed": "Upload Failed",
   "Upload Tasks": "Upload Tasks",
@@ -16,13 +20,13 @@
   "converting...": "converting...",
   "dismissed": "dismissed",
   "failed": "failed",
+  "format": "format",
+  "key shortcuts...": "key shortcuts...",
   "queued...": "queued...",
   "requires input": "requires input",
   "retrieving...": "retrieving...",
   "saving...": "saving...",
   "tiling...": "tiling...",
   "uploading...": "uploading...",
-  "validating...": "validating...",
-  "{{count}} values": "{{count}} values",
-  "{{count}} values_plural": "{{count}} values_plural"
+  "validating...": "validating..."
 }

@@ -33,6 +33,26 @@ const languages: LangDetails[] = [
     localName: "Samoan",
     code: "sm",
   },
+  {
+    name: "Chuukese",
+    localName: "Chuukese",
+    code: "chk",
+  },
+  {
+    name: "Fijian",
+    localName: "Na vosa vaka-Viti",
+    code: "fj",
+  },
+  {
+    name: "Fiji Hindi",
+    localName: "फ़िजी हिंदी",
+    code: "fh",
+  },
+  {
+    name: "Hawaiian",
+    localName: "ʻŌlelo Hawaiʻi",
+    code: "haw",
+  },
 ];
 
 export default languages;
