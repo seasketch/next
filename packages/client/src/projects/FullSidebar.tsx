@@ -17,6 +17,7 @@ import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinPr
 import { ParticipationStatus } from "../generated/graphql";
 import { CogIcon } from "@heroicons/react/solid";
 import { getLastFormUrl } from "./Forums/Forums";
+import { useSketchUIState } from "./Sketches/SketchUIStateContextProvider";
 
 export default function FullSidebar({
   open,
@@ -34,6 +35,9 @@ export default function FullSidebar({
   const { data } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
   const cache = useContext(GraphqlQueryCacheContext);
+  const sketchingContext = useSketchUIState();
+
+  open = open && !sketchingContext.editorIsOpen;
 
   useEffect(() => {
     if (/pj/.test(window.location.search)) {

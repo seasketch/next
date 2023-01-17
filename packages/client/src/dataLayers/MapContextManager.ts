@@ -64,7 +64,7 @@ const LocalSketchGeometryCache = new LRU<
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
-interface LayerState {
+export interface LayerState {
   visible: true;
   loading: boolean;
   staticId?: string | null;
@@ -751,6 +751,10 @@ class MapContextManager {
     }
   }
 
+  /**
+   *
+   * @param sketches
+   */
   setVisibleSketches(sketches: { id: number; timestamp?: string }[]) {
     const sketchIds = sketches.map(({ id }) => id);
     // remove missing ids from internal state
@@ -770,7 +774,7 @@ class MapContextManager {
     // update public state
     this.setState((prev) => ({
       ...prev,
-      sketchLayerStates: this.internalState.sketchLayerStates,
+      sketchLayerStates: { ...this.internalState.sketchLayerStates },
     }));
     for (const sketch of sketches) {
       if (sketch.timestamp) {
@@ -779,6 +783,36 @@ class MapContextManager {
         this.sketchTimestamps.delete(sketch.id);
       }
     }
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  hideSketches(ids: number[]) {
+    for (const id of ids) {
+      if (this.internalState.sketchLayerStates[id]) {
+        delete this.internalState.sketchLayerStates[id];
+      }
+    }
+    this.setState((prev) => ({
+      ...prev,
+      sketchLayerStates: { ...this.internalState.sketchLayerStates },
+    }));
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  showSketches(ids: number[]) {
+    for (const id of ids) {
+      this.internalState.sketchLayerStates[id] = {
+        loading: true,
+        visible: true,
+        staticId: this.layers[id]?.staticId,
+      };
+    }
+    this.setState((prev) => ({
+      ...prev,
+      sketchLayerStates: { ...this.internalState.sketchLayerStates },
+    }));
     // request a redraw
     this.debouncedUpdateStyle();
   }

@@ -43,6 +43,7 @@ import { components } from ".";
 import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
 
 require("./prosemirror-body.css");
+require("../projects/Sketches/sketching.css");
 require("./unreset.css");
 const LazyBodyEditor = lazy(() => import("./BodyEditor"));
 

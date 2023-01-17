@@ -2,19 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-.SketchForm h1 {
+.SketchForm .prosemirror-body h1 {
   @apply block text-xl font-semibold leading-5 text-gray-800;
 }
 
-.SketchForm h2 {
+.SketchForm .prosemirror-body h2 {
   @apply block text-lg font-semibold leading-5 text-gray-800;
 }
 
-.SketchForm h3 {
+.SketchForm .prosemirror-body h3 {
   @apply block text-base font-medium leading-5 text-gray-800;
 }
 
-.SketchForm h1[data-question="yes"] {
+.SketchForm .prosemirror-body h1[data-question="yes"] {
   @apply block text-sm font-medium leading-5 text-gray-800;
   margin-top: 0px;
   margin-bottom: 0px;
@@ -24,12 +24,12 @@
   content: "Enter attribute name and description here...";
 }
 
-.SketchForm h1[data-question="yes"] {
+.SketchForm .prosemirror-body h1[data-question="yes"] {
   @apply block text-sm font-medium leading-5 text-gray-800;
   margin-top: 0px;
   margin-bottom: 0px;
 }
 
-.SketchForm p {
+.SketchForm .prosemirror-body p {
   @apply text-sm text-gray-500;
 }

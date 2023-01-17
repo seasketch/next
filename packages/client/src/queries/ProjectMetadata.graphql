@@ -11,6 +11,14 @@ fragment ProjectMetadata on Project {
   isFeatured
   supportEmail
   isOfflineEnabled
+  sketchGeometryToken
+  sketchClasses {
+    id
+    name
+    canDigitize
+    formElementId
+    isArchived
+  }
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

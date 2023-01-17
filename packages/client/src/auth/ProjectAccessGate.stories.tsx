@@ -24,6 +24,7 @@ const projectCommonDetails = {
   logoUrl: "",
   supportEmail: "chad@underbluewaters.net",
   isOfflineEnabled: false,
+  sketchGeometryToken: "abc123",
 };
 
 const projectPublicDetails = {

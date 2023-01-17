@@ -6,6 +6,7 @@ import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   AuthorProfileFragment,
+  ForumsDocument,
   TopicListDocument,
   TopicListQuery,
   useCreateTopicMutation,
@@ -14,6 +15,7 @@ import getSlug from "../../getSlug";
 import useLocalStorage from "../../useLocalStorage";
 import UserProfileModal from "../UserProfileModal";
 import PostContentEditor from "./PostContentEditor";
+import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 import { nameForProfile } from "./TopicListItem";
 
 export default function NewTopicForm({
@@ -52,6 +54,7 @@ export default function NewTopicForm({
       title,
     },
     onError,
+    refetchQueries: [ForumsDocument],
     onCompleted: () => {
       clearTitle();
       clearContent();
@@ -124,12 +127,14 @@ export default function NewTopicForm({
             />
           </div>
         </div>
-        <PostContentEditor
-          disabled={mutationState.loading}
-          autofocus={Boolean(title && title.length)}
-          initialContent={content}
-          onChange={setContent}
-        />
+        <ReactNodeViewPortalsProvider>
+          <PostContentEditor
+            disabled={mutationState.loading}
+            autofocus={Boolean(title && title.length)}
+            initialContent={content}
+            onChange={setContent}
+          />
+        </ReactNodeViewPortalsProvider>
       </div>
       <div className="flex justify-end items-center p-2 py-3 space-x-2">
         <Button label={t("Cancel")} onClick={onCancel} />

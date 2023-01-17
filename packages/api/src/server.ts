@@ -290,8 +290,17 @@ app.use(
         "Content-Disposition",
         `attachment; filename=Sketch-${id}.geojson.json`
       );
-      if (req.query && req.query.timestamp) {
-        res.setHeader("Cache-Control", "public, max-age=31536000");
+      if (
+        (req.query && req.query.timestamp) ||
+        geojson?.properties?.sharedInForum
+      ) {
+        // 30 minutes
+        // Ideally we'd set this to a year, but I'm conserned about updates to
+        // field exportid that could impact styled sketches. Like if sketches
+        // are styled by a "designation" field, but that field's exportid
+        // changes to "class". The attributes are burned into the cached
+        // geometry with the old exportid
+        res.setHeader("Cache-Control", "public, max-age=1800");
       }
       if (geojson === null) {
         res.status(404);

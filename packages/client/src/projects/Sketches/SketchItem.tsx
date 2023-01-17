@@ -10,10 +10,11 @@ import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfCon
 export interface SketchNodeDataProps {
   id: number;
   name: string;
-  isCollection: boolean;
+  isCollection?: boolean;
   folderId?: number | null;
   collectionId?: number | null;
   type: "Sketch";
+  timestamp: string;
 }
 
 export function isSketchNode(
@@ -40,11 +41,14 @@ export default function SketchItem({
   children,
   numChildren,
   onDropEnd,
+  disableEditing,
+  hideCheckboxes,
 }: TreeNodeProps<SketchNodeDataProps>) {
   const isDisabled = false;
   const data = node.data;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
+    canDrag: !disableEditing,
     type: "Sketch",
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
@@ -95,6 +99,9 @@ export default function SketchItem({
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
     canDrop: (item: DragItemProps<FolderNodeDataProps>, monitor) => {
+      if (disableEditing) {
+        return false;
+      }
       if (
         !data.isCollection ||
         item.id === data.id ||
@@ -195,16 +202,18 @@ export default function SketchItem({
             <ArrowIcon isOpen={isExpanded || false} />
           </button>
         )}
-        <VisibilityCheckbox
-          onClick={() => {
-            if (onChecked) {
-              onChecked(node, !isChecked && !hasCheckedChildren, children);
-            }
-          }}
-          disabled={false}
-          id={data.id}
-          visibility={isChecked ? true : hasCheckedChildren ? "mixed" : false}
-        />
+        {!hideCheckboxes && (
+          <VisibilityCheckbox
+            onClick={() => {
+              if (onChecked) {
+                onChecked(node, !isChecked && !hasCheckedChildren, children);
+              }
+            }}
+            disabled={false}
+            id={data.id}
+            visibility={isChecked ? true : hasCheckedChildren ? "mixed" : false}
+          />
+        )}
         {data.isCollection && (
           <Collection
             onContextMenu={contextMenuHandler}

@@ -15,6 +15,10 @@ export function myPlansFragmentsToTreeItems(
   for (const fragment of fragments) {
     items.push({
       id: treeItemIdForFragment(fragment),
+      isLeaf:
+        fragment.__typename === "SketchFolder"
+          ? false
+          : Boolean(fragment.__typename === "Sketch" && !fragment.isCollection),
       parentId: fragment.folderId
         ? treeItemId(fragment.folderId, "SketchFolder")
         : fragment.collectionId

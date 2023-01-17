@@ -3,11 +3,13 @@
  * This file must be manually made up-to-date with the contents of the client
  * schema.
  */
-import { Schema, Node, NodeSpec } from "prosemirror-model";
+import { Schema, Node } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
+import sketchNodeSpec from "./SketchTocAttachmentSpec";
+
 let spec = baseSchema.spec;
 
 baseSchema.spec.marks.update("link", {
@@ -74,14 +76,16 @@ const contentSchema = new Schema({
   marks: baseMarks,
 });
 
+const nodes = addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
+  .addBefore("paragraph", "sketch", sketchNodeSpec)
+  // TODO: these should be added back in as styles and menu option support is added
+  .remove("horizontal_rule")
+  // .remove("image")
+  .remove("code_block")
+  .remove("blockquote");
 const forumPostSchema = new Schema({
   // @ts-ignore
-  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
-    // TODO: these should be added back in as styles and menu option support is added
-    .remove("horizontal_rule")
-    .remove("image")
-    .remove("code_block")
-    .remove("blockquote"),
+  nodes,
   // @ts-ignore
   marks: baseMarks,
 });
@@ -105,10 +109,12 @@ export const formElements = {
   },
 };
 
+export const sketchType = forumPostSchema.nodes.sketch;
+
 export const forumPosts = {
   schema: forumPostSchema,
   plugins: exampleSetup({
     schema: forumPostSchema,
-    menuBar: true,
+    menuBar: false,
   }),
 };

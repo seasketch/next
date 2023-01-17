@@ -45,6 +45,7 @@ export default function SketchEditorModal({
   folderId,
   loading,
   loadingTitle,
+  collectionId,
 }: {
   loading?: boolean;
   loadingTitle?: string;
@@ -53,6 +54,7 @@ export default function SketchEditorModal({
   onCancel: () => void;
   onComplete: (sketch: SketchTocDetailsFragment) => void;
   folderId?: number;
+  collectionId?: number;
 }) {
   const { t } = useTranslation("sketching");
   const [left, setLeft] = useState(true);
@@ -350,6 +352,7 @@ export default function SketchEditorModal({
           sketchClassId: sketchClass.id,
           userGeom: feature,
           folderId,
+          collectionId,
           properties: properties,
         },
       });

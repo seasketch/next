@@ -5953,6 +5953,32 @@ type GetChildFoldersRecursivePayload {
   query: Query
 }
 
+"""All input for the `getParentCollectionId` mutation."""
+input GetParentCollectionIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  parentId: Int
+  type: SketchChildType
+}
+
+"""The output of our `getParentCollectionId` mutation."""
+type GetParentCollectionIdPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  integer: Int
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `grantAdminAccess` mutation."""
 input GrantAdminAccessInput {
   """
@@ -6712,7 +6738,7 @@ type Mutation {
     """
     input: CopySketchFolderInput!
   ): CopySketchFolderPayload
-  copySketchTocItem(id: Int!, type: SketchChildType!): CopySketchTocItemResults
+  copySketchTocItem(forForum: Boolean, id: Int!, type: SketchChildType!): CopySketchTocItemResults
 
   """Creates a single `Basemap`."""
   createBasemap(
@@ -7484,6 +7510,14 @@ type Mutation {
     type: String
     width: Int!
   ): Sprite
+
+  """omit"""
+  getParentCollectionId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: GetParentCollectionIdInput!
+  ): GetParentCollectionIdPayload
 
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
@@ -11247,6 +11281,7 @@ type Sketch implements Node {
   """
   geom: GeometryGeometry
   id: Int!
+  isCollection: Boolean
   mercatorGeometry: GeometryGeometry
 
   """User provided name for the sketch."""
@@ -11257,8 +11292,11 @@ type Sketch implements Node {
   """
   nodeId: ID!
   numVertices: Int
+  parentCollection: Sketch
+  postId: Int
   properties: JSON!
   responseId: Int
+  sharedInForum: Boolean!
 
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
@@ -11526,7 +11564,9 @@ type SketchFolder implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  postId: Int
   projectId: Int!
+  sharedInForum: Boolean!
   userId: Int!
 }
 
@@ -11555,7 +11595,9 @@ input SketchFolderPatch {
   folderId: Int
   id: Int
   name: String
+  postId: Int
   projectId: Int
+  sharedInForum: Boolean
   userId: Int
 }
 

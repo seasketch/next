@@ -5,6 +5,7 @@ import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   AuthorProfileFragment,
+  ForumsDocument,
   TopicDetailDocument,
   TopicDetailQuery,
   useCreateReplyMutation,
@@ -15,6 +16,7 @@ import UserProfileModal from "../UserProfileModal";
 import PostContentEditor from "./PostContentEditor";
 import { nameForProfile } from "./TopicListItem";
 import { Trans as I18n } from "react-i18next";
+import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
@@ -45,6 +47,7 @@ export default function ReplyForm({
       topicId,
       content,
     },
+    refetchQueries: [ForumsDocument],
     onCompleted: (data) => {
       clearContent();
       if (data.createPost.id && onReply) {
@@ -106,7 +109,7 @@ export default function ReplyForm({
   );
 
   return (
-    <div className="p-4">
+    <div className="p-4 mb-20">
       <div className="bg-white shadow">
         <div
           className={`flex border-b p-1 pt-2 px-2 pb-1.5 items-center ${
@@ -131,12 +134,14 @@ export default function ReplyForm({
             </button>
           </div>
         </div>
-        <PostContentEditor
-          disabled={replyState.loading}
-          onSubmit={onSubmit}
-          initialContent={content}
-          onChange={setContent}
-        />
+        <ReactNodeViewPortalsProvider>
+          <PostContentEditor
+            disabled={replyState.loading}
+            onSubmit={onSubmit}
+            initialContent={content}
+            onChange={setContent}
+          />
+        </ReactNodeViewPortalsProvider>
       </div>
       <div className="flex justify-end items-center p-2 py-3 space-x-2">
         <Button

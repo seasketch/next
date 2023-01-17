@@ -10,6 +10,7 @@ fragment SketchTocDetails on Sketch {
   timestamp
   updatedAt
   createdAt
+  isCollection
   sketchClass {
     id
     geometryType
@@ -71,6 +72,11 @@ fragment SketchCRUDResponse on Sketch {
   properties
   geojsonProperties
   ...SketchEditorModalDetails
+  parentCollection {
+    id
+    updatedAt
+    timestamp
+  }
 }
 
 mutation CreateSketch(
@@ -239,5 +245,11 @@ mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
       ...SketchTocDetails
     }
     parentId
+  }
+}
+
+fragment ProjectSketches on Project {
+  sketchClasses {
+    ...SketchingDetails
   }
 }

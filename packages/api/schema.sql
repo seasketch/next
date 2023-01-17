@@ -2151,6 +2151,40 @@ $$;
 
 
 --
+-- Name: assign_post_id_to_attached_sketch_nodes(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_post_id_to_attached_sketch_nodes(body jsonb, post_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      sketch_ids int[];
+      folder_ids int[];
+    begin
+      select collect_sketch_ids_from_prosemirror_body(body) into sketch_ids;
+      select collect_sketch_folder_ids_from_prosemirror_body(body) into folder_ids;
+      update sketches set post_id = assign_post_id_to_attached_sketch_nodes.post_id where id = any(sketch_ids);
+      update sketch_folders set post_id = assign_post_id_to_attached_sketch_nodes.post_id where id = any(folder_ids);
+      return true;
+    end;
+  $$;
+
+
+--
+-- Name: assign_sketch_node_post_ids(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_sketch_node_post_ids() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  perform assign_post_id_to_attached_sketch_nodes(NEW.message_contents, NEW.id);
+	RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: auto_create_profile(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2981,6 +3015,7 @@ CREATE FUNCTION public.before_sketch_folders_insert_or_update() RETURNS trigger
     AS $$
     declare
       parent_project_id int;
+      child_collection_count int;
     begin
       if NEW.folder_id = NEW.id then
         raise exception 'Cannot make a folder a child of itself';
@@ -3015,6 +3050,13 @@ CREATE FUNCTION public.before_sketch_folders_insert_or_update() RETURNS trigger
                 id = NEW.collection_id
             );
         end if;
+        -- TODO: Check to make sure there are no child_collections if this has a parent collection
+        select count(*) from sketches where id = any(get_child_sketches_and_collections_recursive(NEW.id, 'sketch_folder')) and is_collection(sketches.sketch_class_id) into child_collection_count;
+        if child_collection_count > 0 then
+          if NEW.collection_id is not null or (select get_parent_collection_id('sketch_folder', NEW.folder_id)) is not null then
+            raise exception 'Nested collections are not allowed';
+          end if;
+        end if;
         if NEW.project_id is null or NEW.project_id = parent_project_id then
           return NEW;
         else
@@ -3037,6 +3079,7 @@ CREATE FUNCTION public.before_sketch_insert_or_update() RETURNS trigger
       allow_multi boolean;
       incoming_geometry_type text;
       new_geometry_type text;
+      parent_collection_id int;
     begin
       select 
         geometry_type, 
@@ -3053,6 +3096,16 @@ CREATE FUNCTION public.before_sketch_insert_or_update() RETURNS trigger
         raise exception 'Parent cannot be to both folder and collection';
       end if;
       if class_geometry_type = 'COLLECTION' then
+        -- TODO: Also check for parent collection of parent folder (recursively)
+        if NEW.collection_id is not null then
+          if (select get_parent_collection_id('sketch', NEW.collection_id)) is not null then
+            raise exception 'Nested collections are not allowed';
+          end if;
+        elsif NEW.folder_id is not null then
+          if (select get_parent_collection_id('sketch_folder', NEW.folder_id)) is not null then
+            raise exception 'Nested collections are not allowed';
+          end if;
+        end if;
         -- geom must be present unless a collection
         if NEW.geom is not null or NEW.user_geom is not null then
           raise exception 'Collections should not have geometry';
@@ -3348,6 +3401,72 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
     LANGUAGE sql
     AS $$
     update form_elements set background_image = null, background_color = null, layout = null, background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
+  $$;
+
+
+--
+-- Name: collect_sketch_folder_ids_from_prosemirror_body(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_sketch_folder_ids_from_prosemirror_body(body jsonb) RETURNS integer[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output int[];
+      i jsonb;
+    begin
+      output = '{}';
+      if body ->> 'type' = 'sketch' then
+        if jsonb_array_length(((body ->> 'attrs')::jsonb ->> 'items')::jsonb) > 0 then
+          for i in (select * from jsonb_array_elements((((body->'attrs')::jsonb ->> 'items')::jsonb)))
+          loop
+            if i->>'__typename' = 'SketchFolder' then
+              output = (i->>'id')::int || output;
+            end if;
+          end loop;  
+        end if;
+      end if;
+      if body ? 'content' then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          output = output || collect_sketch_folder_ids_from_prosemirror_body(i);
+        end loop;
+      end if;
+      return output;
+    end;
+  $$;
+
+
+--
+-- Name: collect_sketch_ids_from_prosemirror_body(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_sketch_ids_from_prosemirror_body(body jsonb) RETURNS integer[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output int[];
+      i jsonb;
+    begin
+      output = '{}';
+      if body ->> 'type' = 'sketch' then
+        if jsonb_array_length(((body ->> 'attrs')::jsonb ->> 'items')::jsonb) > 0 then
+          for i in (select * from jsonb_array_elements((((body->'attrs')::jsonb ->> 'items')::jsonb)))
+          loop
+            if i->>'__typename' = 'Sketch' then
+              output = (i->>'id')::int || output;
+            end if;
+          end loop;  
+        end if;
+      end if;
+      if body ? 'content' then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          output = output || collect_sketch_ids_from_prosemirror_body(i);
+        end loop;
+      end if;
+      return output;
+    end;
   $$;
 
 
@@ -3688,6 +3807,8 @@ CREATE TABLE public.sketches (
     mercator_geometry public.geometry(Geometry,3857) GENERATED ALWAYS AS (public.st_transform(COALESCE(geom, user_geom), 3857)) STORED,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shared_in_forum boolean DEFAULT false NOT NULL,
+    post_id integer,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
 
@@ -3817,6 +3938,8 @@ CREATE TABLE public.sketch_folders (
     project_id integer NOT NULL,
     folder_id integer,
     collection_id integer,
+    shared_in_forum boolean DEFAULT false NOT NULL,
+    post_id integer,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
 
@@ -3944,6 +4067,60 @@ CREATE FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type pu
 --
 
 COMMENT ON FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) IS '@omit';
+
+
+--
+-- Name: copy_sketch_toc_item_recursive_for_forum(integer, public.sketch_child_type, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      copy_id int;
+      sketch_child_ids int[];
+      folder_child_ids int[];
+    begin
+      if type = 'sketch' then
+        if it_me((select user_id from sketches where id = parent_id)) = false then
+          raise exception 'Permission denied';
+        end if;
+      else
+        if it_me((select user_id from sketch_folders where id = parent_id)) = false then
+          raise exception 'Permission denied';
+        end if;
+      end if;
+      -- perform copy
+      select copy_sketch_toc_item_recursive(parent_id, type, append_copy_to_name) into copy_id;
+      -- for both parent and sketch & folder children, assign shared_in_forum = true
+      select get_child_sketches_and_collections_recursive(copy_id, type) into sketch_child_ids;
+      select get_child_folders_recursive(copy_id, type) into folder_child_ids;
+      if type = 'sketch' then
+        update sketches set shared_in_forum = true where id = copy_id or id = any(sketch_child_ids);
+      else
+        update sketches set shared_in_forum = true where id = any(sketch_child_ids);
+      end if;
+      if type = 'sketch_folder' then
+        update sketch_folders set shared_in_forum = true where id = copy_id or id = any(folder_child_ids);
+      else
+        update sketch_folders set shared_in_forum = true where id = any(folder_child_ids);
+      end if;
+      -- clear folder_id and collection_id on top-level parent
+      if type = 'sketch' then
+        update sketches set folder_id = null, collection_id = null where id = copy_id;
+      else
+        update sketch_folders set folder_id = null, collection_id = null where id = copy_id;
+      end if;
+      return copy_id;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) IS '@omit';
 
 
 --
@@ -6379,7 +6556,7 @@ CREATE FUNCTION public.forums_read_acl(forum public.forums) RETURNS public.acces
 CREATE FUNCTION public.forums_topic_count(forum public.forums) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(*) from topics where forum_id = forum.id;
+    select count(*)::int from topics where forum_id = forum.id;
   $$;
 
 
@@ -6696,6 +6873,40 @@ INSERT INTO users (sub, canonical_email)
       sub = _sub
     LIMIT 1
 $$;
+
+
+--
+-- Name: get_parent_collection_id(public.sketch_child_type, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      col int;
+      folder int;
+    begin
+      if type = 'sketch' then
+        select collection_id, folder_id into col, folder from sketches where id = parent_id;
+      else
+        select collection_id, folder_id into col, folder from sketch_folders where id = parent_id;
+      end if;
+      if col is not null then
+        return col;
+      elsif folder is not null then
+        return get_parent_collection_id('sketch_folder', folder);
+      else
+        return null;
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_parent_collection_id(type public.sketch_child_type, parent_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) IS 'omit';
 
 
 --
@@ -7260,7 +7471,7 @@ CREATE FUNCTION public.modify_survey_answers(response_ids integer[], answers jso
 CREATE FUNCTION public.my_folders("projectId" integer) RETURNS SETOF public.sketch_folders
     LANGUAGE sql STABLE
     AS $$
-    select * from sketch_folders where sketch_folders.project_id = "projectId" and it_me(sketch_folders.user_id);
+    select * from sketch_folders where sketch_folders.project_id = "projectId" and it_me(sketch_folders.user_id) and shared_in_forum = false;
   $$;
 
 
@@ -7286,7 +7497,7 @@ CREATE FUNCTION public.my_sketches("projectId" integer) RETURNS SETOF public.ske
       sketches
     where
       it_me(user_id) and sketch_class_id in (
-        select id from sketch_classes where project_id = "projectId") and response_id is null;
+        select id from sketch_classes where project_id = "projectId") and response_id is null and shared_in_forum is false;
   $$;
 
 
@@ -10341,13 +10552,15 @@ COMMENT ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) IS '
 --
 
 CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETURNS jsonb
-    LANGUAGE sql STABLE
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select jsonb_build_object(
             'id', sketches.id::text,
             'userId', sketches.user_id::text, 
             'createdAt', sketches.created_at,
             'updatedAt', sketches.updated_at,
+            'sharedInForum', sketches.shared_in_forum,
+            'postId', sketches.post_id,
             'sketchClassId', sketches.sketch_class_id::text,
             'userSlug', coalesce(nullif(user_profiles.nickname, ''), nullif(user_profiles.fullname, ''), nullif(user_profiles.email, '')),
             'collectionId', sketches.collection_id::text, 
@@ -10365,6 +10578,28 @@ CREATE FUNCTION public.sketches_geojson_properties(sketch public.sketches) RETUR
     inner join user_profiles
     on user_profiles.user_id = sketches.user_id
     where sketches.id = sketch.id;
+  $$;
+
+
+--
+-- Name: sketches_is_collection(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_is_collection(sketch public.sketches) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select geometry_type = 'COLLECTION' from sketch_classes where sketch_classes.id = sketch.sketch_class_id;
+  $$;
+
+
+--
+-- Name: sketches_parent_collection(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_parent_collection(sketch public.sketches) RETURNS public.sketches
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from sketches where id = get_parent_collection_id('sketch', sketch.id);
   $$;
 
 
@@ -11069,6 +11304,26 @@ CREATE FUNCTION public.trigger_set_timestamp() RETURNS trigger
     AS $$
 BEGIN
   NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: trigger_update_collection_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_update_collection_updated_at() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  sketch_collection_id int;
+BEGIN
+  -- get parent collection if exists
+  select get_parent_collection_id('sketch', NEW.id) into sketch_collection_id;
+  if sketch_collection_id is not null then
+    update sketches set updated_at = now() where id = sketch_collection_id;
+  end if;
   RETURN NEW;
 END;
 $$;
@@ -14627,6 +14882,13 @@ CREATE TRIGGER after_response_submission AFTER INSERT OR UPDATE ON public.survey
 
 
 --
+-- Name: posts assign_sketch_node_post_ids_from_message_contents; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER assign_sketch_node_post_ids_from_message_contents AFTER INSERT OR UPDATE ON public.posts FOR EACH ROW EXECUTE FUNCTION public.assign_sketch_node_post_ids();
+
+
+--
 -- Name: basemaps before_basemap_insert_create_interactivity_settings; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -14792,6 +15054,13 @@ CREATE TRIGGER offline_tile_packages_on_insert_1 AFTER INSERT ON public.offline_
 --
 
 CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline_tile_packages FOR EACH ROW EXECUTE FUNCTION public.cleanup_tile_package();
+
+
+--
+-- Name: sketches set_parent_collection_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER set_parent_collection_updated_at AFTER UPDATE ON public.sketches FOR EACH ROW EXECUTE FUNCTION public.trigger_update_collection_updated_at();
 
 
 --
@@ -15493,6 +15762,14 @@ ALTER TABLE ONLY public.sketch_folders
 
 
 --
+-- Name: sketch_folders sketch_folders_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_folders
+    ADD CONSTRAINT sketch_folders_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+
+
+--
 -- Name: sketch_folders sketch_folders_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -15569,6 +15846,14 @@ COMMENT ON CONSTRAINT sketches_folder_id_fkey ON public.sketches IS '@omit many'
 
 ALTER TABLE ONLY public.sketches
     ADD CONSTRAINT sketches_form_element_id_fkey FOREIGN KEY (form_element_id) REFERENCES public.form_elements(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sketches sketches_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketches
+    ADD CONSTRAINT sketches_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
 
 
 --
@@ -16385,6 +16670,19 @@ CREATE POLICY sketch_classes_select ON public.sketch_classes FOR SELECT USING (p
 ALTER TABLE public.sketch_folders ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: sketch_folders sketch_folders_forum_read; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY sketch_folders_forum_read ON public.sketch_folders FOR SELECT USING ((public.it_me(user_id) OR ((shared_in_forum = true) AND (post_id IS NOT NULL) AND public.session_on_acl(( SELECT access_control_lists.id
+   FROM public.access_control_lists
+  WHERE (access_control_lists.forum_id_read = ( SELECT topics.forum_id
+           FROM public.topics
+          WHERE (topics.id = ( SELECT posts.topic_id
+                   FROM public.posts
+                  WHERE (posts.id = sketch_folders.post_id))))))))));
+
+
+--
 -- Name: sketch_folders sketch_folders_policy; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -16415,7 +16713,13 @@ CREATE POLICY sketches_insert ON public.sketches FOR INSERT WITH CHECK ((public.
 -- Name: sketches sketches_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY sketches_select ON public.sketches FOR SELECT USING ((public.it_me(user_id) OR public.session_is_admin(public.project_id_from_field_id(form_element_id))));
+CREATE POLICY sketches_select ON public.sketches FOR SELECT USING ((public.it_me(user_id) OR ((shared_in_forum = true) AND (post_id IS NOT NULL) AND public.session_on_acl(( SELECT access_control_lists.id
+   FROM public.access_control_lists
+  WHERE (access_control_lists.forum_id_read = ( SELECT topics.forum_id
+           FROM public.topics
+          WHERE (topics.id = ( SELECT posts.topic_id
+                   FROM public.posts
+                  WHERE (posts.id = sketches.post_id)))))))) OR public.session_is_admin(public.project_id_from_field_id(form_element_id))));
 
 
 --
@@ -17869,6 +18173,20 @@ GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boo
 
 
 --
+-- Name: FUNCTION assign_post_id_to_attached_sketch_nodes(body jsonb, post_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_post_id_to_attached_sketch_nodes(body jsonb, post_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION assign_sketch_node_post_ids(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_sketch_node_post_ids() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION auto_create_profile(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18447,6 +18765,20 @@ GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) T
 
 
 --
+-- Name: FUNCTION collect_sketch_folder_ids_from_prosemirror_body(body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_sketch_folder_ids_from_prosemirror_body(body jsonb) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION collect_sketch_ids_from_prosemirror_body(body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_sketch_ids_from_prosemirror_body(body jsonb) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION collect_text_from_prosemirror_body(body jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18568,6 +18900,7 @@ GRANT ALL ON FUNCTION public.st_transform(public.geometry, integer) TO anon;
 --
 
 GRANT SELECT,INSERT,DELETE ON TABLE public.sketches TO seasketch_user;
+GRANT SELECT ON TABLE public.sketches TO anon;
 
 
 --
@@ -18641,6 +18974,14 @@ GRANT ALL ON FUNCTION public.copy_sketch_folder(folder_id integer) TO seasketch_
 
 REVOKE ALL ON FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) TO seasketch_user;
 
 
 --
@@ -20511,6 +20852,14 @@ GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id in
 
 REVOKE ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_parent_collection_id(type public.sketch_child_type, parent_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) TO seasketch_user;
 
 
 --
@@ -22551,6 +22900,22 @@ GRANT ALL ON FUNCTION public.sketches_geojson_feature(sketch public.sketches) TO
 
 REVOKE ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketches_geojson_properties(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_is_collection(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_is_collection(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_is_collection(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_parent_collection(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_parent_collection(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_parent_collection(sketch public.sketches) TO anon;
 
 
 --
@@ -25733,6 +26098,13 @@ REVOKE ALL ON FUNCTION public.translate(public.citext, public.citext, text) FROM
 --
 
 REVOKE ALL ON FUNCTION public.trigger_set_timestamp() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trigger_update_collection_updated_at(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at() FROM PUBLIC;
 
 
 --

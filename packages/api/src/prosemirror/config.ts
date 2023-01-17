@@ -6,6 +6,7 @@
 import { Schema, Node, NodeSpec } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { addListNodes } from "prosemirror-schema-list";
+import sketchNodeSpec from "./SketchTocAttachmentSpec";
 let spec = baseSchema.spec;
 
 baseSchema.spec.marks.update("link", {
@@ -28,10 +29,14 @@ const baseMarks = baseSchema.spec.marks.update("link", {
 
 const forums = new Schema({
   // @ts-ignore
-  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
+  nodes: addListNodes(
+    baseSchema.spec.nodes.addBefore("paragraph", "sketch", sketchNodeSpec),
+    "paragraph block*",
+    "block"
+  )
     // TODO: these should be added back in as styles and menu option support is added
-    .remove("horizontal_rule")
-    .remove("image")
+    // .remove("horizontal_rule")
+    // .remove("image")
     .remove("code_block")
     .remove("blockquote"),
   // @ts-ignore

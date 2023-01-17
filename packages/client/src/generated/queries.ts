@@ -5116,6 +5116,30 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `getParentCollectionId` mutation. */
+export type GetParentCollectionIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  parentId?: Maybe<Scalars['Int']>;
+  type?: Maybe<SketchChildType>;
+};
+
+/** The output of our `getParentCollectionId` mutation. */
+export type GetParentCollectionIdPayload = {
+  __typename?: 'GetParentCollectionIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `grantAdminAccess` mutation. */
 export type GrantAdminAccessInput = {
   /**
@@ -5900,6 +5924,8 @@ export type Mutation = {
    * project has a matching md5 hash no new Sprite will be created.
    */
   getOrCreateSprite?: Maybe<Sprite>;
+  /** omit */
+  getParentCollectionId?: Maybe<GetParentCollectionIdPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   /**
@@ -6262,6 +6288,7 @@ export type MutationCopySketchFolderArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCopySketchTocItemArgs = {
+  forForum?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
   type: SketchChildType;
 };
@@ -6847,6 +6874,12 @@ export type MutationGetOrCreateSpriteArgs = {
   smallestImage: Scalars['Upload'];
   type?: Maybe<Scalars['String']>;
   width: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetParentCollectionIdArgs = {
+  input: GetParentCollectionIdInput;
 };
 
 
@@ -10310,14 +10343,18 @@ export type Sketch = Node & {
    */
   geom?: Maybe<GeometryGeometry>;
   id: Scalars['Int'];
+  isCollection?: Maybe<Scalars['Boolean']>;
   mercatorGeometry?: Maybe<GeometryGeometry>;
   /** User provided name for the sketch. */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   numVertices?: Maybe<Scalars['Int']>;
+  parentCollection?: Maybe<Sketch>;
+  postId?: Maybe<Scalars['Int']>;
   properties: Scalars['JSON'];
   responseId?: Maybe<Scalars['Int']>;
+  sharedInForum: Scalars['Boolean'];
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
@@ -10514,7 +10551,9 @@ export type SketchFolder = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  postId?: Maybe<Scalars['Int']>;
   projectId: Scalars['Int'];
+  sharedInForum: Scalars['Boolean'];
   userId: Scalars['Int'];
 };
 
@@ -10537,7 +10576,9 @@ export type SketchFolderPatch = {
   folderId?: Maybe<Scalars['Int']>;
   id?: Maybe<Scalars['Int']>;
   name?: Maybe<Scalars['String']>;
+  postId?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
+  sharedInForum?: Maybe<Scalars['Boolean']>;
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -13577,6 +13618,30 @@ export type UpdateBodyFragment = (
   & Pick<FormElement, 'body'>
 );
 
+export type MySketchFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'sketchClassId' | 'bbox'>
+);
+
+export type MyFolderFragment = (
+  { __typename?: 'SketchFolder' }
+  & Pick<SketchFolder, 'name' | 'collectionId' | 'folderId' | 'sharedInForum'>
+);
+
+export type PopupShareDetailsFragment = (
+  { __typename?: 'Post' }
+  & Pick<Post, 'id' | 'topicId'>
+  & { topic?: Maybe<(
+    { __typename?: 'Topic' }
+    & Pick<Topic, 'id' | 'title' | 'forumId'>
+  )> }
+);
+
+export type DataFragment = (
+  { __typename?: 'SketchFolder' }
+  & Pick<SketchFolder, 'id' | 'name'>
+);
+
 export type MapboxApiKeysQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -15243,6 +15308,27 @@ export type CreateReplyMutation = (
   ) }
 );
 
+export type CopyTocItemForForumPostMutationVariables = Exact<{
+  id: Scalars['Int'];
+  type: SketchChildType;
+}>;
+
+
+export type CopyTocItemForForumPostMutation = (
+  { __typename?: 'Mutation' }
+  & { copySketchTocItem?: Maybe<(
+    { __typename?: 'CopySketchTocItemResults' }
+    & Pick<CopySketchTocItemResults, 'parentId'>
+    & { folders?: Maybe<Array<(
+      { __typename?: 'SketchFolder' }
+      & SketchFolderDetailsFragment
+    )>>, sketches?: Maybe<Array<(
+      { __typename?: 'Sketch' }
+      & SketchTocDetailsFragment
+    )>> }
+  )> }
+);
+
 export type SpriteDetailsFragment = (
   { __typename?: 'Sprite' }
   & Pick<Sprite, 'id' | 'type' | 'category' | 'projectId'>
@@ -15672,7 +15758,11 @@ export type UpdateProjectAccessControlSettingsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken'>
+  & { sketchClasses: Array<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived'>
+  )> }
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -16001,7 +16091,7 @@ export type UpdateSketchFormElementMutation = (
 
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt'>
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geometryType'>
@@ -16079,6 +16169,9 @@ export type SketchCrudResponseFragment = (
   ) | (
     { __typename?: 'GeometryPolygon' }
     & Pick<GeometryPolygon, 'geojson'>
+  )>, parentCollection?: Maybe<(
+    { __typename?: 'Sketch' }
+    & Pick<Sketch, 'id' | 'updatedAt' | 'timestamp'>
   )> }
   & SketchTocDetailsFragment
   & SketchEditorModalDetailsFragment
@@ -16322,6 +16415,14 @@ export type CopyTocItemMutation = (
       { __typename?: 'Sketch' }
       & SketchTocDetailsFragment
     )>> }
+  )> }
+);
+
+export type ProjectSketchesFragment = (
+  { __typename?: 'Project' }
+  & { sketchClasses: Array<(
+    { __typename?: 'SketchClass' }
+    & SketchingDetailsFragment
   )> }
 );
 
@@ -18038,6 +18139,43 @@ export const UpdateBodyFragmentDoc = /*#__PURE__*/ gql`
   body
 }
     `;
+export const MySketchFragmentDoc = /*#__PURE__*/ gql`
+    fragment MySketch on Sketch {
+  name
+  isCollection
+  collectionId
+  folderId
+  timestamp
+  sharedInForum
+  sketchClassId
+  bbox
+}
+    `;
+export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
+    fragment MyFolder on SketchFolder {
+  name
+  collectionId
+  folderId
+  sharedInForum
+}
+    `;
+export const PopupShareDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment PopupShareDetails on Post {
+  id
+  topicId
+  topic {
+    id
+    title
+    forumId
+  }
+}
+    `;
+export const DataFragmentDoc = /*#__PURE__*/ gql`
+    fragment data on SketchFolder {
+  id
+  name
+}
+    `;
 export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment DataUploadDetails on DataUploadTask {
   createdAt
@@ -18306,6 +18444,14 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   isFeatured
   supportEmail
   isOfflineEnabled
+  sketchGeometryToken
+  sketchClasses {
+    id
+    name
+    canDigitize
+    formElementId
+    isArchived
+  }
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -18361,6 +18507,7 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   timestamp
   updatedAt
   createdAt
+  isCollection
   sketchClass {
     id
     geometryType
@@ -18455,9 +18602,21 @@ export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
   properties
   geojsonProperties
   ...SketchEditorModalDetails
+  parentCollection {
+    id
+    updatedAt
+    timestamp
+  }
 }
     ${SketchTocDetailsFragmentDoc}
 ${SketchEditorModalDetailsFragmentDoc}`;
+export const ProjectSketchesFragmentDoc = /*#__PURE__*/ gql`
+    fragment ProjectSketches on Project {
+  sketchClasses {
+    ...SketchingDetails
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SurveyListDetails on Survey {
   id
@@ -20119,6 +20278,20 @@ export const CreateReplyDocument = /*#__PURE__*/ gql`
 }
     ${ForumPostFragmentDoc}
 ${ForumTopicFragmentDoc}`;
+export const CopyTocItemForForumPostDocument = /*#__PURE__*/ gql`
+    mutation CopyTocItemForForumPost($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type, forForum: true) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21883,6 +22056,7 @@ export const namedOperations = {
     DeleteForum: 'DeleteForum',
     CreateTopic: 'CreateTopic',
     CreateReply: 'CreateReply',
+    CopyTocItemForForumPost: 'CopyTocItemForForumPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
@@ -21979,6 +22153,10 @@ export const namedOperations = {
     UpdateAlternateLanguageSettings: 'UpdateAlternateLanguageSettings',
     UpdateComponentSettings: 'UpdateComponentSettings',
     UpdateBody: 'UpdateBody',
+    MySketch: 'MySketch',
+    MyFolder: 'MyFolder',
+    PopupShareDetails: 'PopupShareDetails',
+    data: 'data',
     BasemapDetails: 'BasemapDetails',
     DataUploadDetails: 'DataUploadDetails',
     ForumListDetails: 'ForumListDetails',
@@ -22003,6 +22181,7 @@ export const namedOperations = {
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',
     SketchEditorModalDetails: 'SketchEditorModalDetails',
+    ProjectSketches: 'ProjectSketches',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

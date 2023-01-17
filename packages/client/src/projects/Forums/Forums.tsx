@@ -3,7 +3,7 @@ import { useForumsQuery } from "../../generated/graphql";
 import getSlug from "../../getSlug";
 import ForumListItem from "./ForumListItem";
 import Skeleton from "../../components/Skeleton";
-import { Dispatch, SetStateAction, useEffect } from "react";
+import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import ForumBreadcrumbs from "./ForumBreadcrumbs";
 import TopicList from "./TopicList";
 import { useRouteMatch } from "react-router-dom";
@@ -52,9 +52,8 @@ export function useLastForumUrl(): [
 
 export default function Forums({
   hidden,
-  forumId,
-  topicId,
   postNewTopic,
+  ...props
 }: {
   hidden?: boolean;
   forumId?: number;
@@ -63,6 +62,19 @@ export default function Forums({
 }) {
   const slug = getSlug();
   const route = useRouteMatch();
+
+  const [{ forumId, topicId }, setState] = useState<{
+    forumId: number | undefined;
+    topicId: number | undefined;
+  }>({ forumId: undefined, topicId: undefined });
+
+  useEffect(() => {
+    if (hidden) {
+      // do nothing
+    } else {
+      setState({ forumId: props.forumId, topicId: props.topicId });
+    }
+  }, [hidden, props.forumId, props.topicId]);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [lastUrl, setLastUrl] = useLastForumUrl();
@@ -81,9 +93,6 @@ export default function Forums({
     fetchPolicy: "cache-and-network",
   });
 
-  if (hidden) {
-    return null;
-  }
   if (!data && loading) {
     return (
       <div className="pt-2 space-y-3">
@@ -99,7 +108,7 @@ export default function Forums({
     );
   }
 
-  if (data?.projectBySlug?.forums?.length === 0) {
+  if (data?.projectBySlug?.forums?.length === 0 && !hidden) {
     return (
       <Warning level="info">
         <Trans>No forums have been configured for this project.</Trans>
@@ -108,7 +117,7 @@ export default function Forums({
   }
 
   return (
-    <>
+    <div className={hidden ? "hidden" : "flex flex-col overflow-hidden w-full"}>
       {forumId && (
         <ForumBreadcrumbs
           postingNewTopic={postNewTopic}
@@ -143,6 +152,6 @@ export default function Forums({
         <NewTopicForm forumId={forumId} profile={data.me.profile} />
       )}
       {topicId && <Topic id={topicId} />}
-    </>
+    </div>
   );
 }
