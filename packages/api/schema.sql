@@ -18918,6 +18918,7 @@ GRANT ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_
 --
 
 REVOKE ALL ON FUNCTION public.create_bbox(geom public.geometry, sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry, sketch_id integer) TO anon;
 
 
 --
