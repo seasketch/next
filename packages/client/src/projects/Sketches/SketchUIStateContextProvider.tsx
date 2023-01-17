@@ -1,4 +1,9 @@
-import { gql, InMemoryCache, useApolloClient } from "@apollo/client";
+import {
+  ApolloClient,
+  gql,
+  InMemoryCache,
+  useApolloClient,
+} from "@apollo/client";
 import { Feature } from "geojson";
 import { KeyboardHandler, MapMouseEvent, Popup } from "mapbox-gl";
 import {
@@ -685,14 +690,20 @@ export default function SketchUIStateContextProvider({
         }
       }
 
-      mapContext.manager.setSelectedSketches([
+      const selection = [
         ...selectedIds
           .filter((s) => /Sketch:/.test(s))
           .map((s) => parseInt(s.split(":")[1])),
         ...children,
-      ]);
+      ];
+      mapContext.manager.setSelectedSketches(selection);
 
       // TODO: make a combined bbox and set selectedBBOX so folders can have a zoom-to context menu option
+      const bbox = bboxForSelection(
+        selection,
+        client as ApolloClient<InMemoryCache>
+      );
+      setBBOX(bbox as number[]);
     }
   }, [selectedIds, mapContext.manager, client]);
   // mySketches, myFolders]);
@@ -1466,4 +1477,39 @@ export function getChildrenOfSketchOrSketchFolder(
     }
   }
   return children;
+}
+
+function bboxForSelection(
+  selection: number[],
+  client: ApolloClient<InMemoryCache>
+) {
+  let bbox: [number, number, number, number] | null = null;
+  for (const id of selection) {
+    // @ts-ignore private api
+    // eslint-disable-next-line i18next/no-literal-string
+    const itemBBox = client.cache.data.get(`Sketch:${id}`, "bbox") as
+      | [number, number, number, number]
+      | null
+      | undefined;
+    if (itemBBox) {
+      if (bbox === null) {
+        bbox = [...itemBBox];
+      } else {
+        // expand bbox
+        if (itemBBox[0] < bbox[0]) {
+          bbox[0] = itemBBox[0];
+        }
+        if (itemBBox[1] < bbox[1]) {
+          bbox[1] = itemBBox[1];
+        }
+        if (itemBBox[2] > bbox[2]) {
+          bbox[2] = itemBBox[2];
+        }
+        if (itemBBox[3] > bbox[3]) {
+          bbox[3] = itemBBox[3];
+        }
+      }
+    }
+  }
+  return bbox;
 }

@@ -3051,7 +3051,7 @@ CREATE FUNCTION public.before_sketch_folders_insert_or_update() RETURNS trigger
                 id = NEW.collection_id
             );
         end if;
-        -- TODO: Check to make sure there are no child_collections if this has a parent collection
+        -- Check to make sure there are no child_collections if this has a parent collection
         select get_child_sketches_and_collections_recursive(NEW.id, 'sketch_folder') into child_ids;
         select count(*) from sketches where id = any(child_ids) and is_collection(sketches.sketch_class_id) into child_collection_count;
         if child_collection_count > 0 then
@@ -3770,21 +3770,42 @@ COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id
 
 
 --
--- Name: create_bbox(public.geometry); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_bbox(public.geometry, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_bbox(geom public.geometry) RETURNS real[]
-    LANGUAGE sql IMMUTABLE SECURITY DEFINER
+CREATE FUNCTION public.create_bbox(geom public.geometry, sketch_id integer) RETURNS real[]
+    LANGUAGE plpgsql IMMUTABLE SECURITY DEFINER
     AS $$
-    select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real];
+    declare
+      child_ids int[];
+      bbox real[];
+      is_collection boolean;
+      extent box2d;
+    begin
+      if geom is null then
+        -- select is_collection(sketch_class_id) into is_collection from sketches where id = sketch_id;
+        -- raise notice 'Is collection? %', is_collection;
+        -- if sketch_id is not null and is_collection then
+        --   -- calculate combined bbox of all children
+        --   -- get child ids
+        --   select get_child_sketches_recursive(sketch_id, 'sketch') into child_ids;
+        --   -- get extend (box2d) from children
+        --   if array_length(child_ids, 1) < 1 then
+        --     return null;
+        --   end if;
+        --   select st_extent(coalesce(sketches.geom, sketches.user_geom)) into extent from sketches where id = any(child_ids);
+        --   -- create real[] from box2d
+        --   select array[st_xmin(extent)::real, st_ymin(extent)::real, st_xmax(extent)::real, st_ymax(extent)::real] into bbox;    
+        --   return bbox;
+        -- else
+        --   return null;
+        -- end if;
+        return null;
+      end if;
+      select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real] into bbox;
+      return bbox;
+    end;
   $$;
-
-
---
--- Name: FUNCTION create_bbox(geom public.geometry); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.create_bbox(geom public.geometry) IS '@omit';
 
 
 --
@@ -3802,7 +3823,6 @@ CREATE TABLE public.sketches (
     geom public.geometry(Geometry,4326),
     folder_id integer,
     properties jsonb DEFAULT '{}'::jsonb NOT NULL,
-    bbox real[] GENERATED ALWAYS AS (public.create_bbox(COALESCE(geom, user_geom))) STORED,
     num_vertices integer GENERATED ALWAYS AS (public.st_npoints(COALESCE(geom, user_geom))) STORED,
     form_element_id integer,
     response_id integer,
@@ -3811,6 +3831,7 @@ CREATE TABLE public.sketches (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     shared_in_forum boolean DEFAULT false NOT NULL,
     post_id integer,
+    bbox real[] GENERATED ALWAYS AS (public.create_bbox(COALESCE(geom, user_geom), id)) STORED,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
 
@@ -4141,6 +4162,33 @@ begin
   return new;
 end;
 $$;
+
+
+--
+-- Name: create_bbox(public.geometry); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_bbox(geom public.geometry) RETURNS real[]
+    LANGUAGE plpgsql IMMUTABLE SECURITY DEFINER
+    AS $$
+    declare
+      child_ids int[];
+      bbox real[];
+    begin
+      if geom is null then
+        return null;
+      end if;
+      select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real] into bbox;
+      return bbox;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION create_bbox(geom public.geometry); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_bbox(geom public.geometry) IS '@omit';
 
 
 --
@@ -18866,11 +18914,10 @@ GRANT ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_
 
 
 --
--- Name: FUNCTION create_bbox(geom public.geometry); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_bbox(geom public.geometry, sketch_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_bbox(geom public.geometry) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry) TO anon;
+REVOKE ALL ON FUNCTION public.create_bbox(geom public.geometry, sketch_id integer) FROM PUBLIC;
 
 
 --
@@ -18991,6 +19038,14 @@ GRANT ALL ON FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id 
 --
 
 REVOKE ALL ON FUNCTION public.create_basemap_acl() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION create_bbox(geom public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_bbox(geom public.geometry) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry) TO anon;
 
 
 --
