@@ -3016,6 +3016,7 @@ CREATE FUNCTION public.before_sketch_folders_insert_or_update() RETURNS trigger
     declare
       parent_project_id int;
       child_collection_count int;
+      child_ids int[];
     begin
       if NEW.folder_id = NEW.id then
         raise exception 'Cannot make a folder a child of itself';
@@ -3051,7 +3052,8 @@ CREATE FUNCTION public.before_sketch_folders_insert_or_update() RETURNS trigger
             );
         end if;
         -- TODO: Check to make sure there are no child_collections if this has a parent collection
-        select count(*) from sketches where id = any(get_child_sketches_and_collections_recursive(NEW.id, 'sketch_folder')) and is_collection(sketches.sketch_class_id) into child_collection_count;
+        select get_child_sketches_and_collections_recursive(NEW.id, 'sketch_folder') into child_ids;
+        select count(*) from sketches where id = any(child_ids) and is_collection(sketches.sketch_class_id) into child_collection_count;
         if child_collection_count > 0 then
           if NEW.collection_id is not null or (select get_parent_collection_id('sketch_folder', NEW.folder_id)) is not null then
             raise exception 'Nested collections are not allowed';
@@ -3096,7 +3098,7 @@ CREATE FUNCTION public.before_sketch_insert_or_update() RETURNS trigger
         raise exception 'Parent cannot be to both folder and collection';
       end if;
       if class_geometry_type = 'COLLECTION' then
-        -- TODO: Also check for parent collection of parent folder (recursively)
+        -- Also check for parent collection of parent folder (recursively)
         if NEW.collection_id is not null then
           if (select get_parent_collection_id('sketch', NEW.collection_id)) is not null then
             raise exception 'Nested collections are not allowed';
