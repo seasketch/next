@@ -83,7 +83,11 @@ export default function ProjectApp() {
           <SketchUIStateContextProvider>
             {/* <ProjectAppHeader /> */}
             <div className="flex flex-grow w-full">
-              <MapboxMap className="ml-2" />
+              <MapboxMap
+                className="ml-2"
+                showNavigationControls={true}
+                navigationControlsLocation="top-right"
+              />
               <div
                 className="absolute flex items-center justify-center h-full pointer-events-none"
                 style={{ width: "calc(100vw - 3.5rem)" }}

@@ -18,6 +18,11 @@ export interface OverlayMapProps {
   interactive?: boolean;
   onClickNonInteractive?: () => void;
   lazyLoadReady?: boolean;
+  navigationControlsLocation?:
+    | "top-right"
+    | "top-left"
+    | "bottom-right"
+    | "bottom-left";
 }
 
 mapboxgl.prewarm();
@@ -47,7 +52,10 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           if (!cancelled && map) {
             setMap(map);
             if (props.showNavigationControls) {
-              map.addControl(new mapboxgl.NavigationControl(), "top-left");
+              map.addControl(
+                new mapboxgl.NavigationControl(),
+                props.navigationControlsLocation || "top-left"
+              );
             }
             map.on("load", () => {
               setShowSpinner(false);
