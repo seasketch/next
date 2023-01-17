@@ -1189,6 +1189,38 @@ export default function SketchUIStateContextProvider({
       });
     }
 
+    if (selectionType && selectedId && selectionIsSharedContent) {
+      update.push({
+        id: "copy-from-shared",
+        label: t("Copy"),
+        onClick: async () => {
+          const type = selectionType.sketch
+            ? SketchChildType.Sketch
+            : SketchChildType.SketchFolder;
+          const response = await copy({
+            variables: {
+              id: selectedId,
+              type,
+            },
+          });
+          const parentId = response.data?.copySketchTocItem?.parentId;
+          const sketches = response.data?.copySketchTocItem?.sketches || [];
+          if (parentId) {
+            clearSelection();
+            // eslint-disable-next-line i18next/no-literal-string
+            history.push(`/${slug}/app/sketches`);
+            setTimeout(() => {
+              focusOnTableOfContentsItem(
+                type === SketchChildType.Sketch ? "Sketch" : "SketchFolder",
+                parentId
+              );
+              showSketches(sketches.map((s) => treeItemId(s.id, "Sketch")));
+            }, 100);
+          }
+        },
+      });
+    }
+
     if (selectedId && !selectionType?.folder) {
       read.push({
         id: "export",
