@@ -287,7 +287,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
         // or, 1,666 / second
         const limiter = new Bottleneck({
           minTime: 20, // 1000 / 25 = 50 batches per second * 10 = 500 tiles / second
-          maxConcurrent: 10,
+          maxConcurrent: 5,
         });
 
         limiter.on("failed", async (error, jobInfo) => {
