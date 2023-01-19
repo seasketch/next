@@ -43,6 +43,7 @@ export abstract class GraphqlQueryCacheCommon {
   endpoint: string;
   strategies: Strategy[];
   strategyArgs: { [key: string]: string[] } = {};
+  strategyArgsWereInitialized = false;
   protected enabled?: boolean;
   cachePruningDebounceInterval = process.env.NODE_ENV === "test" ? 1 : 500;
 
@@ -128,6 +129,7 @@ export abstract class GraphqlQueryCacheCommon {
         this.strategyArgs[key] = allArgs[key];
       }
     }
+    this.strategyArgsWereInitialized = true;
   }
 
   /**
@@ -227,7 +229,10 @@ export abstract class GraphqlQueryCacheCommon {
    * @param key Key specified when constructing the strategy
    * @returns any
    */
-  getStrategyArgs(key: string) {
+  async getStrategyArgs(key: string) {
+    if (!this.strategyArgsWereInitialized) {
+      await this.updateStrategyArgs();
+    }
     const strategy = this.strategies.find((s) => isByArgs(s) && s.key === key);
     if (!strategy) {
       throw new Error(`Could not find strategy with key=${key}`);

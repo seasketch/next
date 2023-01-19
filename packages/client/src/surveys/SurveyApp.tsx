@@ -257,12 +257,12 @@ function SurveyApp() {
 
   useEffect(() => {
     if (graphqlQueryCache && data?.survey) {
-      const args =
-        graphqlQueryCache.getStrategyArgs(offlineSurveyChoiceStrategy.key) ||
-        [];
-      setClientIsPreppedForOfflineUse(
-        Boolean(args.find((arg) => arg.id === data?.survey?.id))
-      );
+      graphqlQueryCache
+        .getStrategyArgs(offlineSurveyChoiceStrategy.key)
+        .then((args) => {
+          const info = args.find((arg) => arg.id === data?.survey?.id);
+          setClientIsPreppedForOfflineUse(Boolean(info));
+        });
     } else {
       setClientIsPreppedForOfflineUse(false);
     }
