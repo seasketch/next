@@ -1,13 +1,18 @@
 import { useTranslation, Trans } from "react-i18next";
 import Modal from "../../components/Modal";
-import { usePublishTableOfContentsMutation } from "../../generated/graphql";
+import {
+  PublishedTableOfContentsDocument,
+  usePublishTableOfContentsMutation,
+} from "../../generated/graphql";
 import useProjectId from "../../useProjectId";
 
 export default function PublishTableOfContentsModal(props: {
   onRequestClose: () => void;
 }) {
   const { t } = useTranslation(["admin"]);
-  const [publish, publishState] = usePublishTableOfContentsMutation();
+  const [publish, publishState] = usePublishTableOfContentsMutation({
+    refetchQueries: [PublishedTableOfContentsDocument],
+  });
   const projectId = useProjectId();
   return (
     <Modal
