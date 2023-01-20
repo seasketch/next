@@ -172,6 +172,10 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
     </>
   );
 
+  if (isSketchingWorkflow && geometryType === SketchGeometryType.Collection) {
+    return null;
+  }
+
   if (bottomToolbar) {
     return (
       <div>
@@ -242,7 +246,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           className={`rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`}
         >
           <p className="text-sm select-none">
-            {isSketchingWorkflow && state === DigitizingState.NO_SELECTION ? (
+            {isSketchingWorkflow &&
+            state === DigitizingState.NO_SELECTION &&
+            geometryType !== SketchGeometryType.Collection ? (
               <Trans>Click your sketch to edit geometry</Trans>
             ) : (
               <DigitizingInstructions
