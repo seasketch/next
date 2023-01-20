@@ -183,6 +183,51 @@ export default function TableOfContents(props: TableOfContentsProps) {
           const isVisible = visibility === "mixed" || visibility;
           const selected = data.node.id.toString() === selectedItemId;
           const inRadioFolder = data.parentNode?.showRadioChildren;
+          const onCheckboxClick = () => {
+            let childIds = [];
+            let layerIds = [];
+            if (!data.node.isFolder) {
+              childIds = [data.node.id];
+              layerIds = [data.node.dataLayerId];
+            } else {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              [childIds, layerIds] = getEnabledChildren(
+                data.node as ClientTableOfContentsItem,
+
+                isVisible,
+                layerStates
+              );
+            }
+            if (isVisible) {
+              manager?.hideLayers(layerIds);
+            } else {
+              // TODO: handle radio siblings
+              if (
+                data.parentNode &&
+                data.parentNode.showRadioChildren &&
+                data.parentNode.children &&
+                Array.isArray(data.parentNode.children)
+              ) {
+                for (const sibling of data.parentNode.children.filter(
+                  (item) => item.id !== data.node.id
+                )) {
+                  let [childIds, layerIds] = getEnabledChildren(
+                    sibling as ClientTableOfContentsItem,
+                    false,
+                    layerStates
+                  );
+                  if (
+                    !sibling.isFolder &&
+                    layerStates[sibling.dataLayerId.toString()]?.visible
+                  ) {
+                    layerIds.push(sibling.dataLayerId);
+                  }
+                  manager?.hideLayers(layerIds.map((n) => n.toString()));
+                }
+              }
+              manager?.showLayers(layerIds);
+            }
+          };
           return {
             style: {
               border: selected ? "1px solid inset rgba(0,0,0,0.05)" : "none",
@@ -243,7 +288,10 @@ export default function TableOfContents(props: TableOfContentsProps) {
                     }, 8);
                   }
                 }}
-                className={data.node.disabled ? "text-gray-500" : ""}
+                className={`${data.node.disabled ? "text-gray-500" : ""} ${
+                  props.canDrag ? "" : "cursor-pointer"
+                } select-none`}
+                onClick={props.canDrag ? undefined : onCheckboxClick}
               >
                 {data.node.title}
                 {data.node.disabled && props.disabledMessage
@@ -269,51 +317,7 @@ export default function TableOfContents(props: TableOfContentsProps) {
                   (!visibility && data.node.isClickOffOnly)
                 }
                 error={!!layerState?.error}
-                onClick={() => {
-                  let childIds = [];
-                  let layerIds = [];
-                  if (!data.node.isFolder) {
-                    childIds = [data.node.id];
-                    layerIds = [data.node.dataLayerId];
-                  } else {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                    [childIds, layerIds] = getEnabledChildren(
-                      data.node as ClientTableOfContentsItem,
-
-                      isVisible,
-                      layerStates
-                    );
-                  }
-                  if (isVisible) {
-                    manager?.hideLayers(layerIds);
-                  } else {
-                    // TODO: handle radio siblings
-                    if (
-                      data.parentNode &&
-                      data.parentNode.showRadioChildren &&
-                      data.parentNode.children &&
-                      Array.isArray(data.parentNode.children)
-                    ) {
-                      for (const sibling of data.parentNode.children.filter(
-                        (item) => item.id !== data.node.id
-                      )) {
-                        let [childIds, layerIds] = getEnabledChildren(
-                          sibling as ClientTableOfContentsItem,
-                          false,
-                          layerStates
-                        );
-                        if (
-                          !sibling.isFolder &&
-                          layerStates[sibling.dataLayerId.toString()]?.visible
-                        ) {
-                          layerIds.push(sibling.dataLayerId);
-                        }
-                        manager?.hideLayers(layerIds.map((n) => n.toString()));
-                      }
-                    }
-                    manager?.showLayers(layerIds);
-                  }
-                }}
+                onClick={onCheckboxClick}
                 visibility={visibility}
               />,
               ...(props.extraButtons
