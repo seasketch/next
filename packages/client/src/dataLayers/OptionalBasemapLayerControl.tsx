@@ -58,8 +58,6 @@ export default function OptionalBasemapLayerControl({
     />
   ) : null;
 
-  const hasMetadata = !!layer.metadata;
-
   if (layer.groupType === OptionalBasemapLayersGroupType.Select) {
     return (
       <div>

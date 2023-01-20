@@ -14059,6 +14059,18 @@ export type UploadBasemapMutation = (
   ) }
 );
 
+export type BasemapAdminDetailsFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+  & { interactivitySettings?: Maybe<(
+    { __typename?: 'InteractivitySetting' }
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
+  )>, optionalBasemapLayers: Array<(
+    { __typename?: 'OptionalBasemapLayer' }
+    & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
+  )> }
+);
+
 export type GetBasemapQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -14068,14 +14080,7 @@ export type GetBasemapQuery = (
   { __typename?: 'Query' }
   & { basemap?: Maybe<(
     { __typename?: 'Basemap' }
-    & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-    & { interactivitySettings?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-    )>, optionalBasemapLayers: Array<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
-    )> }
+    & BasemapAdminDetailsFragment
   )> }
 );
 
@@ -14244,6 +14249,10 @@ export type CreateOptionalLayerMutation = (
     & { optionalBasemapLayer?: Maybe<(
       { __typename?: 'OptionalBasemapLayer' }
       & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
+      & { basemap?: Maybe<(
+        { __typename?: 'Basemap' }
+        & BasemapAdminDetailsFragment
+      )> }
     )> }
   )> }
 );
@@ -18176,6 +18185,45 @@ export const DataFragmentDoc = /*#__PURE__*/ gql`
   name
 }
     `;
+export const BasemapAdminDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment BasemapAdminDetails on Basemap {
+  id
+  attribution
+  interactivitySettings {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+  description
+  labelsLayerId
+  name
+  optionalBasemapLayers {
+    basemapId
+    defaultVisibility
+    description
+    options
+    groupType
+    id
+    layers
+    metadata
+    name
+  }
+  projectId
+  terrainExaggeration
+  terrainMaxZoom
+  terrainOptional
+  terrainTileSize
+  terrainUrl
+  terrainVisibilityDefault
+  thumbnail
+  tileSize
+  type
+  url
+}
+    `;
 export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment DataUploadDetails on DataUploadTask {
   createdAt
@@ -19278,44 +19326,10 @@ export const UploadBasemapDocument = /*#__PURE__*/ gql`
 export const GetBasemapDocument = /*#__PURE__*/ gql`
     query GetBasemap($id: Int!) {
   basemap(id: $id) {
-    id
-    attribution
-    interactivitySettings {
-      cursor
-      id
-      layers
-      longTemplate
-      shortTemplate
-      type
-    }
-    description
-    labelsLayerId
-    name
-    optionalBasemapLayers {
-      basemapId
-      defaultVisibility
-      description
-      options
-      groupType
-      id
-      layers
-      metadata
-      name
-    }
-    projectId
-    terrainExaggeration
-    terrainMaxZoom
-    terrainOptional
-    terrainTileSize
-    terrainUrl
-    terrainVisibilityDefault
-    thumbnail
-    tileSize
-    type
-    url
+    ...BasemapAdminDetails
   }
 }
-    `;
+    ${BasemapAdminDetailsFragmentDoc}`;
 export const UpdateBasemapDocument = /*#__PURE__*/ gql`
     mutation UpdateBasemap($id: Int!, $name: String) {
   updateBasemap(input: {id: $id, patch: {name: $name}}) {
@@ -19422,6 +19436,9 @@ export const CreateOptionalLayerDocument = /*#__PURE__*/ gql`
     input: {optionalBasemapLayer: {name: $name, basemapId: $basemapId, groupType: $groupType, options: $options}}
   ) {
     optionalBasemapLayer {
+      basemap {
+        ...BasemapAdminDetails
+      }
       id
       basemapId
       defaultVisibility
@@ -19434,7 +19451,7 @@ export const CreateOptionalLayerDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    `;
+    ${BasemapAdminDetailsFragmentDoc}`;
 export const UpdateOptionalLayerDocument = /*#__PURE__*/ gql`
     mutation UpdateOptionalLayer($id: Int!, $name: String, $description: String, $defaultVisibility: Boolean, $metadata: JSON) {
   updateOptionalBasemapLayer(
@@ -22158,6 +22175,7 @@ export const namedOperations = {
     PopupShareDetails: 'PopupShareDetails',
     data: 'data',
     BasemapDetails: 'BasemapDetails',
+    BasemapAdminDetails: 'BasemapAdminDetails',
     DataUploadDetails: 'DataUploadDetails',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',

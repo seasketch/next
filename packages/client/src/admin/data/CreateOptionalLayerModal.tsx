@@ -49,25 +49,6 @@ export default function CreateOptionalLayerModal({
     }
     createOption({
       variables: props,
-      update: (cache, mutationResult) => {
-        const basemapId = cache.identify({
-          __typename: "Basemap",
-          id: props.basemapId,
-        });
-
-        const layer =
-          mutationResult.data?.createOptionalBasemapLayer?.optionalBasemapLayer;
-        if (layer) {
-          cache.modify({
-            id: basemapId,
-            fields: {
-              optionalBasemapLayers(existingOptionalLayerRefs, { readField }) {
-                return [...existingOptionalLayerRefs, layer];
-              },
-            },
-          });
-        }
-      },
     })
       .then(() => {
         if (onRequestClose) {

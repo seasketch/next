@@ -14061,6 +14061,18 @@ export type UploadBasemapMutation = (
   ) }
 );
 
+export type BasemapAdminDetailsFragment = (
+  { __typename?: 'Basemap' }
+  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+  & { interactivitySettings?: Maybe<(
+    { __typename?: 'InteractivitySetting' }
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
+  )>, optionalBasemapLayers: Array<(
+    { __typename?: 'OptionalBasemapLayer' }
+    & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
+  )> }
+);
+
 export type GetBasemapQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -14070,14 +14082,7 @@ export type GetBasemapQuery = (
   { __typename?: 'Query' }
   & { basemap?: Maybe<(
     { __typename?: 'Basemap' }
-    & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
-    & { interactivitySettings?: Maybe<(
-      { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
-    )>, optionalBasemapLayers: Array<(
-      { __typename?: 'OptionalBasemapLayer' }
-      & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
-    )> }
+    & BasemapAdminDetailsFragment
   )> }
 );
 
@@ -14246,6 +14251,10 @@ export type CreateOptionalLayerMutation = (
     & { optionalBasemapLayer?: Maybe<(
       { __typename?: 'OptionalBasemapLayer' }
       & Pick<OptionalBasemapLayer, 'id' | 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
+      & { basemap?: Maybe<(
+        { __typename?: 'Basemap' }
+        & BasemapAdminDetailsFragment
+      )> }
     )> }
   )> }
 );
@@ -18178,6 +18187,45 @@ export const DataFragmentDoc = gql`
   name
 }
     `;
+export const BasemapAdminDetailsFragmentDoc = gql`
+    fragment BasemapAdminDetails on Basemap {
+  id
+  attribution
+  interactivitySettings {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+  description
+  labelsLayerId
+  name
+  optionalBasemapLayers {
+    basemapId
+    defaultVisibility
+    description
+    options
+    groupType
+    id
+    layers
+    metadata
+    name
+  }
+  projectId
+  terrainExaggeration
+  terrainMaxZoom
+  terrainOptional
+  terrainTileSize
+  terrainUrl
+  terrainVisibilityDefault
+  thumbnail
+  tileSize
+  type
+  url
+}
+    `;
 export const DataUploadDetailsFragmentDoc = gql`
     fragment DataUploadDetails on DataUploadTask {
   createdAt
@@ -19967,44 +20015,10 @@ export type UploadBasemapMutationOptions = Apollo.BaseMutationOptions<UploadBase
 export const GetBasemapDocument = gql`
     query GetBasemap($id: Int!) {
   basemap(id: $id) {
-    id
-    attribution
-    interactivitySettings {
-      cursor
-      id
-      layers
-      longTemplate
-      shortTemplate
-      type
-    }
-    description
-    labelsLayerId
-    name
-    optionalBasemapLayers {
-      basemapId
-      defaultVisibility
-      description
-      options
-      groupType
-      id
-      layers
-      metadata
-      name
-    }
-    projectId
-    terrainExaggeration
-    terrainMaxZoom
-    terrainOptional
-    terrainTileSize
-    terrainUrl
-    terrainVisibilityDefault
-    thumbnail
-    tileSize
-    type
-    url
+    ...BasemapAdminDetails
   }
 }
-    `;
+    ${BasemapAdminDetailsFragmentDoc}`;
 
 /**
  * __useGetBasemapQuery__
@@ -20384,6 +20398,9 @@ export const CreateOptionalLayerDocument = gql`
     input: {optionalBasemapLayer: {name: $name, basemapId: $basemapId, groupType: $groupType, options: $options}}
   ) {
     optionalBasemapLayer {
+      basemap {
+        ...BasemapAdminDetails
+      }
       id
       basemapId
       defaultVisibility
@@ -20396,7 +20413,7 @@ export const CreateOptionalLayerDocument = gql`
     }
   }
 }
-    `;
+    ${BasemapAdminDetailsFragmentDoc}`;
 export type CreateOptionalLayerMutationFn = Apollo.MutationFunction<CreateOptionalLayerMutation, CreateOptionalLayerMutationVariables>;
 
 /**
@@ -27849,6 +27866,7 @@ export const namedOperations = {
     PopupShareDetails: 'PopupShareDetails',
     data: 'data',
     BasemapDetails: 'BasemapDetails',
+    BasemapAdminDetails: 'BasemapAdminDetails',
     DataUploadDetails: 'DataUploadDetails',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',

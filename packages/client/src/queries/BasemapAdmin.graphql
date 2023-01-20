@@ -97,43 +97,47 @@ mutation UploadBasemap(
   }
 }
 
+fragment BasemapAdminDetails on Basemap {
+  id
+  attribution
+  interactivitySettings {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+  description
+  labelsLayerId
+  name
+  optionalBasemapLayers {
+    basemapId
+    defaultVisibility
+    description
+    options
+    groupType
+    id
+    layers
+    metadata
+    name
+  }
+  projectId
+  terrainExaggeration
+  terrainMaxZoom
+  terrainOptional
+  terrainTileSize
+  terrainUrl
+  terrainVisibilityDefault
+  thumbnail
+  tileSize
+  type
+  url
+}
+
 query GetBasemap($id: Int!) {
   basemap(id: $id) {
-    id
-    attribution
-    interactivitySettings {
-      cursor
-      id
-      layers
-      longTemplate
-      shortTemplate
-      type
-    }
-    description
-    labelsLayerId
-    name
-    optionalBasemapLayers {
-      basemapId
-      defaultVisibility
-      description
-      options
-      groupType
-      id
-      layers
-      metadata
-      name
-    }
-    projectId
-    terrainExaggeration
-    terrainMaxZoom
-    terrainOptional
-    terrainTileSize
-    terrainUrl
-    terrainVisibilityDefault
-    thumbnail
-    tileSize
-    type
-    url
+    ...BasemapAdminDetails
   }
 }
 
@@ -257,6 +261,9 @@ mutation CreateOptionalLayer(
     }
   ) {
     optionalBasemapLayer {
+      basemap {
+        ...BasemapAdminDetails
+      }
       id
       basemapId
       defaultVisibility
