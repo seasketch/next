@@ -32,7 +32,8 @@ export default function useAccessToken() {
             setState(null);
           } else {
             console.error(e.error);
-            throw e;
+            // Don't throw an uncaught error here as it might upset offline use
+            // throw e;
           }
         });
     }
