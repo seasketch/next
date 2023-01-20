@@ -4,7 +4,7 @@ import { SyntaxNode } from "@lezer/common";
 import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
 
 export function glStyleAutocomplete(context: CompletionContext) {
-  let word = context.matchBefore(/\w*/);
+  let word = context.matchBefore(/[\w-]*/);
   let { state, pos } = context,
     around = syntaxTree(state).resolveInner(pos),
     tree = around.resolve(pos, -1);
