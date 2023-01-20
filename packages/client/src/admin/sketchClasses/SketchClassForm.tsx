@@ -152,7 +152,7 @@ export default function SketchClassForm({
           <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
         </div>
       </div>
-      <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-hidden">
+      <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-x-hidden overflow-y-auto">
         {selectedTab === "settings" && (
           <div className="p-4 space-y-4">
             <div className="">

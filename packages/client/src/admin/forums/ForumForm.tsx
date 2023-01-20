@@ -81,7 +81,7 @@ export default function ForumForm({
           <span className="flex-1">{forum.name}</span>
         </h1>
       </div>
-      <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-hidden">
+      <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-x-hidden overflow-y-auto">
         {selectedTab === "settings" && (
           <div className="p-4 space-y-4">
             <div className="">
