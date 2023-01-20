@@ -307,7 +307,6 @@ export default function SketchEditorModal({
     }
 
     if (hasValidationErrors) {
-      console.log("has validation errors");
       return;
     }
 
