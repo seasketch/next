@@ -307,6 +307,7 @@ export default function SketchEditorModal({
     }
 
     if (hasValidationErrors) {
+      console.log("has validation errors");
       return;
     }
 
@@ -410,11 +411,18 @@ export default function SketchEditorModal({
       feature &&
       !draw.selfIntersects &&
       geometryErrors &&
-      !draw.preprocessingError
+      !draw.preprocessingError &&
+      draw.digitizingState !== DigitizingState.EDITING
     ) {
       setGeometryErrors(null);
     }
-  }, [feature, draw.selfIntersects, geometryErrors, draw.preprocessingError]);
+  }, [
+    feature,
+    draw.selfIntersects,
+    geometryErrors,
+    draw.preprocessingError,
+    draw.digitizingState,
+  ]);
 
   // useEffect(() => {
   //   if (loading) {
