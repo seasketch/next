@@ -1,4 +1,5 @@
 import {
+  UserIsSuperuserDocument,
   ProjectMetadataDocument,
   SurveyDocument,
 } from "../../generated/queries";
@@ -18,6 +19,7 @@ export const surveyLRUStrategy = lruStrategy(SurveyDocument, 3, { swr: true });
 
 export const strategies = [
   lruStrategy(ProjectMetadataDocument, 5, { swr: true }),
+  lruStrategy(UserIsSuperuserDocument, 1, { swr: false }),
   surveyLRUStrategy,
   offlineSurveyChoiceStrategy,
 ];
