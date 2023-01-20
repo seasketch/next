@@ -15,7 +15,11 @@ module.exports = {
           swSrc: path.resolve(__dirname, "src/service-worker.ts"),
           dontCacheBustURLsMatching: /\.[0-9a-f]{8}\./,
           exclude: [/\.map$/, /asset-manifest\.json$/, /LICENSE/],
-          additionalManifestEntries: ["/favicon.ico", "/fonts.css"],
+          additionalManifestEntries: [
+            "/favicon.ico",
+            "/fonts.css",
+            "/index.html",
+          ],
           maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         }),
       ],
