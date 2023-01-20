@@ -82,14 +82,16 @@ class StaticAssetCache {
    * Manifest must be set before most Cache operation can be performed.
    * @param entries [Precache manifest entries](https://developer.chrome.com/docs/workbox/modules/workbox-precaching/#explanation-of-the-precache-list)
    */
-  setManifest(entries: PrecacheManifest) {
-    this.manifest = entries;
-    for (const key of this.urlsToCacheKeys.keys()) {
-      this.urlsToCacheKeys.delete(key);
-    }
-    for (const entry of this.manifest) {
-      const [url, cacheKey] = this.cacheKeyForEntry(entry);
-      this.urlsToCacheKeys.set(url, cacheKey);
+  setManifest(entries?: PrecacheManifest) {
+    if (entries) {
+      this.manifest = entries;
+      for (const key of this.urlsToCacheKeys.keys()) {
+        this.urlsToCacheKeys.delete(key);
+      }
+      for (const entry of this.manifest) {
+        const [url, cacheKey] = this.cacheKeyForEntry(entry);
+        this.urlsToCacheKeys.set(url, cacheKey);
+      }
     }
   }
 
