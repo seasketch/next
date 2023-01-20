@@ -15,7 +15,14 @@ module.exports = {
     sourceType: "module",
   },
   plugins: ["react", "@typescript-eslint", "i18next"],
-  ignorePatterns: ["**/generated/*.ts", "**/*.stories.*"],
+  ignorePatterns: [
+    "**/generated/*.ts",
+    "**/*.stories.*",
+    "build/*",
+    "cypress/*",
+    "src/workers/worker.sql-wasm.js",
+    "bin/",
+  ],
   rules: {
     "i18next/no-literal-string": [
       2,
