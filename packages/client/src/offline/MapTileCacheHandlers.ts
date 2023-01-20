@@ -23,7 +23,9 @@ export function handleSimulatorRequest(
       }
     });
   } else {
-    return fetch(event.request);
+    return fetch(event.request).catch((e) => {
+      return new Response(e.toString(), { status: 500 });
+    });
   }
 }
 
