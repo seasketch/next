@@ -4044,6 +4044,10 @@ CREATE FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type pu
       if type = 'sketch' then
         -- copy it and get the copy id
         select id, is_collection(sketch_class_id) from copy_sketch(parent_id) into copy_id, is_collection;
+        -- When copying a sketch from the forum, make sure its folder_id and collection_id are cleared
+        if ((select shared_in_forum from sketches where id = parent_id)) then
+          update sketches set collection_id = null, folder_id = null where id = copy_id;
+        end if;
         if append_copy_to_name = true then
           update sketches set name = name || ' (copy)' where id = copy_id;
         end if;
@@ -4064,6 +4068,10 @@ CREATE FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type pu
       elsif type = 'sketch_folder' then
         -- copy it and get the copy id
         select id from copy_sketch_folder(parent_id) into copy_id;
+        -- When copying a sketch from the forum, make sure its folder_id and collection_id are cleared
+        if ((select shared_in_forum from sketch_folders where id = parent_id)) then
+          update sketch_folders set collection_id = null, folder_id = null where id = copy_id;
+        end if;
         if append_copy_to_name = true then
           update sketch_folders set name = name || ' (copy)' where id = copy_id;
         end if;

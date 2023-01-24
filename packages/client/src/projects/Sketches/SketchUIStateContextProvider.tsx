@@ -600,6 +600,7 @@ export default function SketchUIStateContextProvider({
                         : `<button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">edit</button>`
                     }
                     <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-view-sketch" class="underline">view reports</button>
+                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-hide-sketch" class="underline">hide</button>
                   </div>
                 </div>
               `
@@ -626,6 +627,12 @@ export default function SketchUIStateContextProvider({
                 if (url && url.length) {
                   history.replace(url);
                 }
+              });
+            }
+            const hide = el.querySelector("button[id=popup-hide-sketch]");
+            if (hide) {
+              hide.addEventListener("click", () => {
+                hideSketches([`Sketch:${id}`]);
               });
             }
             setSelectedIds([treeItemId(id, "Sketch")]);
