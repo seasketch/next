@@ -63,7 +63,6 @@ class ReactNodeView implements NodeView {
 
     const { portal, key } = this.renderPortal(this.dom);
     this.key = key;
-    console.log("init", key, this.dom);
     return {
       nodeView: this,
       portal,
@@ -136,7 +135,6 @@ class ReactNodeView implements NodeView {
   }
 
   destroy() {
-    console.log("destroy", this.dom);
     this.dom = undefined;
     this.contentDOM = undefined;
     if (this.key) {
