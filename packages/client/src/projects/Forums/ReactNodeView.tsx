@@ -63,6 +63,7 @@ class ReactNodeView implements NodeView {
 
     const { portal, key } = this.renderPortal(this.dom);
     this.key = key;
+    console.log("init", key, this.dom);
     return {
       nodeView: this,
       portal,
@@ -127,11 +128,15 @@ class ReactNodeView implements NodeView {
   //   }
 
   update(node: Node) {
-    // console.log("UPDATE", node);
+    // see for reason: https://discuss.prosemirror.net/t/why-is-nodeview-update-called-with-different-node-types/4805
+    if (node.type.name !== "sketch") {
+      return false;
+    }
     return true;
   }
 
   destroy() {
+    console.log("destroy", this.dom);
     this.dom = undefined;
     this.contentDOM = undefined;
     if (this.key) {
