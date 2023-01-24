@@ -5546,6 +5546,17 @@ type Forum implements Node {
   writeAcl: Acl
 }
 
+type ForumActivityPayload {
+  forum: Forum
+  forumId: Int!
+  post: Post
+  postId: Int!
+  project: Project
+  projectId: Int!
+  topic: Topic
+  topicId: Int!
+}
+
 """
 A condition to be used against `Forum` object types. All fields are tested for equality and combined with a logical ‘and.’
 """
@@ -11805,6 +11816,9 @@ type SubmitDataUploadPayload {
 The root subscription type: contains realtime events you can subscribe to with the `subscription` operation.
 """
 type Subscription {
+  """Triggered when a new post is created in the subscribed topic"""
+  forumActivity(slug: String!): ForumActivityPayload
+
   """
   Triggered when the status of a project invite changes, generally because
   of a change in the delivery status of a related InviteEmail. Uses 

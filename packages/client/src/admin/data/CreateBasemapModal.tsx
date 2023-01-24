@@ -707,7 +707,9 @@ const DIVISIONS: {
 
 export function formatTimeAgo(date: Date) {
   let duration = (date.getTime() - new Date().getTime()) / 1000;
-
+  if (Math.abs(duration) < 60) {
+    return <Trans>seconds ago</Trans>;
+  }
   for (let i = 0; i <= DIVISIONS.length; i++) {
     const division = DIVISIONS[i];
     if (Math.abs(duration) < division.amount) {

@@ -1907,6 +1907,29 @@ CREATE FUNCTION public.after_post_insert() RETURNS trigger
 
 
 --
+-- Name: after_post_insert_notify_subscriptions(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_post_insert_notify_subscriptions() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  DECLARE
+    pid int;
+    slug text;
+    fid int;
+    event_topic text;
+  BEGIN
+  select forum_id into fid from topics where id = NEW.topic_id;
+  select project_id into pid from forums where id = fid;
+  select projects.slug into slug from projects where id = pid;
+  select concat('graphql:project:', slug, ':forumActivity') into event_topic;
+  perform pg_notify(event_topic, json_build_object('postId', NEW.id, 'forumId', fid, 'projectId', pid, 'topicId', NEW.topic_id)::text);
+  return NEW;
+  END;
+  $$;
+
+
+--
 -- Name: after_response_submission(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15115,6 +15138,13 @@ CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline
 
 
 --
+-- Name: posts post_after_insert_notify_subscriptions; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER post_after_insert_notify_subscriptions AFTER INSERT ON public.posts FOR EACH ROW EXECUTE FUNCTION public.after_post_insert_notify_subscriptions();
+
+
+--
 -- Name: sketches set_parent_collection_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -18149,6 +18179,13 @@ REVOKE ALL ON FUNCTION public.after_insert_or_update_or_delete_project_invite_em
 --
 
 REVOKE ALL ON FUNCTION public.after_post_insert() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_post_insert_notify_subscriptions(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_post_insert_notify_subscriptions() FROM PUBLIC;
 
 
 --

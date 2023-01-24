@@ -39,6 +39,17 @@ fragment RecentPost on Post {
   }
 }
 
+fragment ForumDetails on Forum {
+  id
+  archived
+  name
+  description
+  topicCount
+  postCount
+  lastPostDate
+  canPost
+}
+
 query Forums($slug: String!) {
   me {
     id
@@ -50,14 +61,7 @@ query Forums($slug: String!) {
     id
     sessionParticipationStatus
     forums {
-      id
-      archived
-      name
-      description
-      topicCount
-      postCount
-      lastPostDate
-      canPost
+      ...ForumDetails
     }
     latestPostsConnection(first: 5) {
       nodes {
@@ -184,5 +188,19 @@ mutation CopyTocItemForForumPost($id: Int!, $type: SketchChildType!) {
       ...SketchTocDetails
     }
     parentId
+  }
+}
+
+subscription NewPosts($slug: String!) {
+  forumActivity(slug: $slug) {
+    post {
+      ...ForumPost
+    }
+    topic {
+      ...ForumTopic
+    }
+    forum {
+      ...ForumDetails
+    }
   }
 }

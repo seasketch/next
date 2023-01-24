@@ -4706,6 +4706,18 @@ export type ForumTopicsConnectionArgs = {
   orderBy?: Maybe<Array<TopicsOrderBy>>;
 };
 
+export type ForumActivityPayload = {
+  __typename?: 'ForumActivityPayload';
+  forum?: Maybe<Forum>;
+  forumId: Scalars['Int'];
+  post?: Maybe<Post>;
+  postId: Scalars['Int'];
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  topic?: Maybe<Topic>;
+  topicId: Scalars['Int'];
+};
+
 /** A condition to be used against `Forum` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ForumCondition = {
   /** Checks for equality with the object’s `id` field. */
@@ -10766,12 +10778,20 @@ export type SubmitDataUploadPayloadDataUploadTaskEdgeArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type Subscription = {
   __typename?: 'Subscription';
+  /** Triggered when a new post is created in the subscribed topic */
+  forumActivity?: Maybe<ForumActivityPayload>;
   /**
    * Triggered when the status of a project invite changes, generally because
    * of a change in the delivery status of a related InviteEmail. Uses
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionForumActivityArgs = {
+  slug: Scalars['String'];
 };
 
 export type Survey = Node & {
@@ -15162,6 +15182,11 @@ export type RecentPostFragment = (
   & ForumPostFragment
 );
 
+export type ForumDetailsFragment = (
+  { __typename?: 'Forum' }
+  & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
+);
+
 export type ForumsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -15181,7 +15206,7 @@ export type ForumsQuery = (
     & Pick<Project, 'id' | 'sessionParticipationStatus'>
     & { forums: Array<(
       { __typename?: 'Forum' }
-      & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
+      & ForumDetailsFragment
     )>, latestPostsConnection: (
       { __typename?: 'PostsConnection' }
       & { nodes: Array<(
@@ -15337,6 +15362,28 @@ export type CopyTocItemForForumPostMutation = (
       { __typename?: 'Sketch' }
       & SketchTocDetailsFragment
     )>> }
+  )> }
+);
+
+export type NewPostsSubscriptionVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type NewPostsSubscription = (
+  { __typename?: 'Subscription' }
+  & { forumActivity?: Maybe<(
+    { __typename?: 'ForumActivityPayload' }
+    & { post?: Maybe<(
+      { __typename?: 'Post' }
+      & ForumPostFragment
+    )>, topic?: Maybe<(
+      { __typename?: 'Topic' }
+      & ForumTopicFragment
+    )>, forum?: Maybe<(
+      { __typename?: 'Forum' }
+      & ForumDetailsFragment
+    )> }
   )> }
 );
 
@@ -18308,6 +18355,18 @@ export const RecentPostFragmentDoc = gql`
 }
     ${ForumPostFragmentDoc}
 ${AuthorProfileFragmentDoc}`;
+export const ForumDetailsFragmentDoc = gql`
+    fragment ForumDetails on Forum {
+  id
+  archived
+  name
+  description
+  topicCount
+  postCount
+  lastPostDate
+  canPost
+}
+    `;
 export const ForumTopicFragmentDoc = gql`
     fragment ForumTopic on Topic {
   id
@@ -22508,14 +22567,7 @@ export const ForumsDocument = gql`
     id
     sessionParticipationStatus
     forums {
-      id
-      archived
-      name
-      description
-      topicCount
-      postCount
-      lastPostDate
-      canPost
+      ...ForumDetails
     }
     latestPostsConnection(first: 5) {
       nodes {
@@ -22525,6 +22577,7 @@ export const ForumsDocument = gql`
   }
 }
     ${AuthorProfileFragmentDoc}
+${ForumDetailsFragmentDoc}
 ${RecentPostFragmentDoc}`;
 
 /**
@@ -22825,6 +22878,46 @@ export function useCopyTocItemForForumPostMutation(baseOptions?: Apollo.Mutation
 export type CopyTocItemForForumPostMutationHookResult = ReturnType<typeof useCopyTocItemForForumPostMutation>;
 export type CopyTocItemForForumPostMutationResult = Apollo.MutationResult<CopyTocItemForForumPostMutation>;
 export type CopyTocItemForForumPostMutationOptions = Apollo.BaseMutationOptions<CopyTocItemForForumPostMutation, CopyTocItemForForumPostMutationVariables>;
+export const NewPostsDocument = gql`
+    subscription NewPosts($slug: String!) {
+  forumActivity(slug: $slug) {
+    post {
+      ...ForumPost
+    }
+    topic {
+      ...ForumTopic
+    }
+    forum {
+      ...ForumDetails
+    }
+  }
+}
+    ${ForumPostFragmentDoc}
+${ForumTopicFragmentDoc}
+${ForumDetailsFragmentDoc}`;
+
+/**
+ * __useNewPostsSubscription__
+ *
+ * To run a query within a React component, call `useNewPostsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useNewPostsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useNewPostsSubscription({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useNewPostsSubscription(baseOptions: Apollo.SubscriptionHookOptions<NewPostsSubscription, NewPostsSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<NewPostsSubscription, NewPostsSubscriptionVariables>(NewPostsDocument, options);
+      }
+export type NewPostsSubscriptionHookResult = ReturnType<typeof useNewPostsSubscription>;
+export type NewPostsSubscriptionResult = Apollo.SubscriptionResult<NewPostsSubscription>;
 export const SpritesDocument = gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -27837,6 +27930,7 @@ export const namedOperations = {
     UpdateProfile: 'UpdateProfile'
   },
   Subscription: {
+    NewPosts: 'NewPosts',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {
@@ -27872,6 +27966,7 @@ export const namedOperations = {
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',
     RecentPost: 'RecentPost',
+    ForumDetails: 'ForumDetails',
     ForumTopic: 'ForumTopic',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',

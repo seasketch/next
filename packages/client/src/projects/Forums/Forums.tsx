@@ -1,5 +1,12 @@
 import { Trans as I18n } from "react-i18next";
-import { useForumsQuery } from "../../generated/graphql";
+import {
+  ForumsDocument,
+  TopicDetailDocument,
+  TopicDetailQuery,
+  TopicListQuery,
+  useForumsQuery,
+  useNewPostsSubscription,
+} from "../../generated/graphql";
 import getSlug from "../../getSlug";
 import ForumListItem from "./ForumListItem";
 import Skeleton from "../../components/Skeleton";
@@ -13,6 +20,7 @@ import Topic from "./Topic";
 import useSessionStorage from "../../useSessionStorage";
 import RecentPostItem from "./RecentPostItem";
 import Warning from "../../components/Warning";
+import { TopicListDocument } from "../../generated/queries";
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export type ForumBreadcrumb = { name: string; id: number };
@@ -85,12 +93,65 @@ export default function Forums({
     }
   }, [setLastUrl, route?.url]);
 
-  const { data, loading } = useForumsQuery({
+  const { data, loading, refetch } = useForumsQuery({
     variables: {
       slug,
     },
     pollInterval: 60000,
     fetchPolicy: "cache-and-network",
+  });
+
+  useNewPostsSubscription({
+    variables: {
+      slug,
+    },
+    shouldResubscribe: true,
+    onSubscriptionData: ({ subscriptionData, client }) => {
+      const post = subscriptionData?.data?.forumActivity?.post;
+      const topic = subscriptionData?.data?.forumActivity?.topic;
+      const forum = subscriptionData?.data?.forumActivity?.forum;
+      if (!post || !topic || !forum) {
+        throw new Error("Malformed forumActivity subscription event");
+      }
+      if (subscriptionData?.data?.forumActivity?.post) {
+        client.cache.updateQuery<TopicDetailQuery>(
+          {
+            query: TopicDetailDocument,
+            variables: {
+              id: topic.id,
+            },
+          },
+          (data) => {
+            if (data?.topic?.postsConnection) {
+              return {
+                ...data,
+                topic: {
+                  ...data?.topic,
+                  ...topic,
+                  postsConnection: {
+                    ...data.topic.postsConnection,
+                    nodes: [
+                      ...data.topic.postsConnection.nodes.filter(
+                        (n) => n.id !== post.id
+                      ),
+                      post,
+                    ],
+                  },
+                  forum: {
+                    ...data.topic.forum,
+                    ...forum,
+                  },
+                },
+              };
+            }
+          }
+        );
+      }
+      client.refetchQueries({
+        include: [TopicListDocument, ForumsDocument],
+      });
+      // refetch();
+    },
   });
 
   if (!data && loading) {

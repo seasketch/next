@@ -27,6 +27,7 @@ import BasemapOfflineDetailsPlugin from "./plugins/BasemapOfflineDetailsPlugin";
 import DataUploadTaskPlugin from "./plugins/dataUploadTaskPlugin";
 import SketchingPlugin from "./plugins/sketchingPlugin";
 import ForumPostsPlugin from "./plugins/forumPostsPlugin";
+import ForumSubscriptionsPlugin from "./plugins/forumSubscriptionsPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -66,6 +67,7 @@ export default function graphileOptions(): PostGraphileOptions {
       DataUploadTaskPlugin,
       SketchingPlugin,
       ForumPostsPlugin,
+      ForumSubscriptionsPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],
