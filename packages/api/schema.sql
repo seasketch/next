@@ -9946,18 +9946,18 @@ COMMENT ON FUNCTION public.session_is_admin("projectId" integer) IS '@omit';
 CREATE FUNCTION public.session_is_approved_participant(pid integer) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select has_session() and EXISTS (
-      SELECT 
-        1
-      FROM
-        project_participants
-      WHERE (
-        it_me(project_participants.user_id) and
-        project_participants.project_id = pid
-      ) AND project_participants.approved = TRUE AND
-      current_setting('session.email_verified', true) = 'true'
-    )
-  $$;
+  select has_session() and EXISTS (
+    SELECT 
+      1
+    FROM
+      project_participants
+    WHERE (
+      it_me(project_participants.user_id) and
+      project_participants.project_id = pid
+    ) AND project_participants.approved = TRUE AND
+    current_setting('session.email_verified', true) = 'true'
+  )
+$$;
 
 
 --
@@ -10022,7 +10022,7 @@ CREATE FUNCTION public.session_on_acl(acl_id integer) RETURNS boolean
     (
       exists(select 1 from acl where type = 'group') and 
       current_setting('session.user_id', TRUE) != '' and 
-      current_setting('session.email_verified', true) = 'true' and
+      -- current_setting('session.email_verified', true) = 'true' and
       exists (
         select 1 from access_control_list_groups 
           where access_control_list_id = acl_id and group_id in (
