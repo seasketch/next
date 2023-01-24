@@ -633,6 +633,7 @@ export default function SketchUIStateContextProvider({
             if (hide) {
               hide.addEventListener("click", () => {
                 hideSketches([`Sketch:${id}`]);
+                popup.remove();
               });
             }
             setSelectedIds([treeItemId(id, "Sketch")]);
