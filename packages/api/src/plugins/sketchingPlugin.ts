@@ -236,14 +236,17 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           );
         },
         updatedCollection: async (results, args, context, resolveInfo) => {
+          if (!context.parentCollectionId) {
+            return null;
+          }
           const [row] =
             (await resolveInfo.graphile.selectGraphQLResultFromTable(
               sql.fragment`sketches`,
               (tableAlias, queryBuilder) => {
                 queryBuilder.where(
-                  sql.fragment`${tableAlias}.id = get_parent_collection_id(${sql.value(
-                    context.parentType
-                  )}, ${sql.value(context.parentId)})`
+                  sql.fragment`${tableAlias}.id = ${sql.value(
+                    context.parentCollectionId
+                  )}`
                 );
               }
             )) as any;
@@ -505,6 +508,13 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           context.folderIds = folderIds;
           context.parentId = copyId;
           context.parentType = type;
+          let {
+            rows: [{ get_parent_collection_id }],
+          } = await pgClient.query(`select get_parent_collection_id($1, $2)`, [
+            type,
+            copyId,
+          ]);
+          context.parentCollectionId = get_parent_collection_id;
           // will be finished by CopySketchTocItemResults functions at the top
           // of the resolvers
           return {
