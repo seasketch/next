@@ -115,18 +115,12 @@ mutation UpdateSketch(
   }
 }
 
-mutation DeleteSketch($id: Int!) {
-  deleteSketch(input: { id: $id }) {
-    sketch {
+mutation DeleteSketchTocItems($items: [UpdateTocItemParentInput]!) {
+  deleteSketchTocItems(items: $items) {
+    deletedItems
+    updatedCollections {
       id
-    }
-  }
-}
-
-mutation DeleteSketchFolder($id: Int!) {
-  deleteSketchFolder(input: { id: $id }) {
-    sketchFolder {
-      id
+      updatedAt
     }
   }
 }
@@ -170,14 +164,14 @@ mutation UpdateTocItemsParent(
   ) {
     folders {
       id
+      folderId
+      collectionId
     }
     sketches {
       id
       updatedAt
-      parentCollection {
-        id
-        updatedAt
-      }
+      folderId
+      collectionId
     }
     updatedCollections {
       id

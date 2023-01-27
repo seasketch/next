@@ -18,13 +18,19 @@ export default function useUpdateSketchTableOfContentsDraggable() {
           folders: ((data.tocItems as UpdateTocItemParentInput[] | null) || [])
             .filter((i) => i.type === SketchChildType.SketchFolder)
             .map((i) => ({
+              __typename: "SketchFolder",
               id: i.id,
+              folderId: data.folderId,
+              collectionId: data.collectionId,
             })),
           sketches: ((data.tocItems as UpdateTocItemParentInput[] | null) || [])
             .filter((i) => i.type === SketchChildType.Sketch)
             .map((i) => ({
+              __typename: "Sketch",
               id: i.id,
               updatedAt: new Date().toString(),
+              folderId: data.folderId,
+              collectionId: data.collectionId,
             })),
           updatedCollections: [],
         },

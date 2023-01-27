@@ -5,7 +5,7 @@ import {
   useApolloClient,
 } from "@apollo/client";
 import { Feature } from "geojson";
-import { KeyboardHandler, MapMouseEvent, Popup } from "mapbox-gl";
+import { MapMouseEvent, Popup } from "mapbox-gl";
 import {
   createContext,
   Dispatch,
@@ -41,14 +41,11 @@ import {
   SketchTocDetailsFragment,
   useCopyTocItemMutation,
   useCreateSketchFolderMutation,
-  useDeleteSketchFolderMutation,
-  useDeleteSketchMutation,
   useProjectMetadataQuery,
   useRenameFolderMutation,
-  ProjectSketchesFragment,
-  ProjectSketchesFragmentDoc,
   SketchChildType,
   PopupShareDetailsFragment,
+  useDeleteSketchTocItemsMutation,
 } from "../../generated/graphql";
 import { SketchFolderDetailsFragment } from "../../generated/queries";
 import getSlug from "../../getSlug";
@@ -739,101 +736,16 @@ export default function SketchUIStateContextProvider({
   const [createFolder] = useCreateSketchFolderMutation({
     onError,
   });
-  const [deleteSketch] = useDeleteSketchMutation({
+  const [deleteSketchTocItem] = useDeleteSketchTocItemsMutation({
     onError,
     update: async (cache, { data }) => {
-      if (data?.deleteSketch?.sketch?.id) {
-        const sketch = data.deleteSketch.sketch;
-        const results = cache.readQuery<SketchingQuery>({
-          query: SketchingDocument,
-          variables: {
-            slug: getSlug(),
-          },
+      const items = data?.deleteSketchTocItems?.deletedItems || [];
+      hideSketches(items.filter((id) => /Sketch:/.test(id)));
+
+      for (const id of items) {
+        cache.evict({
+          id: id,
         });
-        if (results?.projectBySlug?.mySketches) {
-          // Will need to find all child items, including both folder and sketches,
-          // and remove them from the list
-          const deletedIds = getChildrenOfSketchOrSketchFolder(
-            sketch,
-            results.projectBySlug.myFolders || [],
-            results.projectBySlug.mySketches || []
-          );
-
-          // eslint-disable-next-line i18next/no-literal-string
-          hideSketches(deletedIds.sketches.map((id) => `Sketch:${id}`));
-
-          await cache.writeQuery({
-            query: SketchingDocument,
-            variables: { slug: getSlug() },
-            data: {
-              ...results,
-              projectBySlug: {
-                ...results.projectBySlug,
-                myFolders: [
-                  ...(results.projectBySlug.myFolders || []).filter(
-                    (f) => deletedIds.folders.indexOf(f.id) === -1
-                  ),
-                ],
-                mySketches: [
-                  ...(results.projectBySlug.mySketches || []).filter(
-                    (s) =>
-                      deletedIds.sketches.indexOf(s.id) === -1 &&
-                      s.id !== sketch.id
-                  ),
-                ],
-              },
-            },
-          });
-        }
-      }
-    },
-  });
-  const [deleteSketchFolder] = useDeleteSketchFolderMutation({
-    onError,
-    update: async (cache, { data }) => {
-      if (data?.deleteSketchFolder?.sketchFolder) {
-        const folder = data.deleteSketchFolder.sketchFolder;
-        const results = cache.readQuery<SketchingQuery>({
-          query: SketchingDocument,
-          variables: {
-            slug: getSlug(),
-          },
-        });
-        if (results?.projectBySlug?.myFolders) {
-          // Will need to find all child items, including both folder and sketches,
-          // and remove them from the list
-          const deletedIds = getChildrenOfSketchOrSketchFolder(
-            folder,
-            results.projectBySlug.myFolders || [],
-            results.projectBySlug.mySketches || []
-          );
-
-          // eslint-disable-next-line i18next/no-literal-string
-          hideSketches(deletedIds.sketches.map((id) => `Sketch:${id}`));
-
-          await cache.writeQuery({
-            query: SketchingDocument,
-            variables: { slug: getSlug() },
-            data: {
-              ...results,
-              projectBySlug: {
-                ...results.projectBySlug,
-                myFolders: [
-                  ...results.projectBySlug.myFolders.filter(
-                    (f) =>
-                      deletedIds.folders.indexOf(f.id) === -1 &&
-                      f.id !== folder.id
-                  ),
-                ],
-                mySketches: [
-                  ...(results.projectBySlug.mySketches || []).filter(
-                    (s) => deletedIds.sketches.indexOf(s.id) === -1
-                  ),
-                ],
-              },
-            },
-          });
-        }
       }
     },
   });
@@ -1162,9 +1074,16 @@ export default function SketchUIStateContextProvider({
               if (selectionType.folder) {
                 collapseItem({ id: selectedIds[0] });
               }
-              await (selectionType.sketch ? deleteSketch : deleteSketchFolder)({
+              await deleteSketchTocItem({
                 variables: {
-                  id: selectedId,
+                  items: [
+                    {
+                      type: selectionType?.sketch
+                        ? SketchChildType.Sketch
+                        : SketchChildType.SketchFolder,
+                      id: selectedId,
+                    },
+                  ],
                 },
               });
             },
@@ -1286,8 +1205,8 @@ export default function SketchUIStateContextProvider({
     editSketch,
     confirmDelete,
     clearSelection,
-    deleteSketch,
-    deleteSketchFolder,
+    deleteSketchTocItem,
+    slug,
     collapseItem,
     copy,
     showSketches,

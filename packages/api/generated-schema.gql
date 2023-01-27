@@ -4060,6 +4060,7 @@ type DeleteSketchPayload {
 }
 
 type DeleteSketchTocItemsResults {
+  deletedItems: [String!]!
   updatedCollections: [Sketch]!
 }
 
@@ -7362,7 +7363,13 @@ type Mutation {
     input: DeleteSketchFolderByNodeIdInput!
   ): DeleteSketchFolderPayload
 
-  """TODO: implement mutation and result resolvers"""
+  """
+  Deletes one or more Sketch or SketchFolders
+  
+  Returns an updatedCollections property which should be used to update the
+  updatedAt property on related collections so that correct cache keys are
+  used when requesting reports.
+  """
   deleteSketchTocItems(items: [UpdateTocItemParentInput]!): DeleteSketchTocItemsResults
 
   """Deletes a single `Survey` using a unique key."""
@@ -8264,6 +8271,11 @@ type Mutation {
   function again on userGeom. This ensures the value conforms to the
   project's rules, and also benefits the user in that they need not submit
   a huge geometry to the server.
+  
+  When updating a sketch, be sure to use the Sketch.parentCollection
+  association to update the client graphql cache with an up to date
+  updatedAt timestamp. This will ensure a correct cache key is used when
+  requesting collection reports.
   """
   updateSketch(
     id: Int!
@@ -8328,7 +8340,15 @@ type Mutation {
     input: UpdateSketchParentInput!
   ): UpdateSketchParentPayload
 
-  """TODO: implement mutation and result resolvers"""
+  """
+  Create to respond to drag & drop actions in the sketch table of contents.
+  Can assign a folder_id or collection_id to one or multiple Sketches or
+  SketchFolders.
+  
+  Returns an updatedCollections property which should be used to update the
+  updatedAt property on related collections so that correct cache keys are
+  used when requesting reports.
+  """
   updateSketchTocItemParent(collectionId: Int, folderId: Int, tocItems: [UpdateTocItemParentInput]!): UpdateSketchTocItemParentResults
 
   """Updates a single `Survey` using a unique key and a patch."""
@@ -10063,6 +10083,7 @@ type Query implements Node {
   We return "dev" if build cannot be determined from deployment environment.
   """
   build: String!
+  camelCase(snakeCase: String): String
   collectTextFromProsemirrorBody(body: JSON): String
   collectTextFromProsemirrorBodyForLabel(body: JSON): String
   communityGuideline(projectId: Int!): CommunityGuideline
@@ -10313,6 +10334,7 @@ type Query implements Node {
     """
     nodeId: ID!
   ): InviteEmail
+  lcfirst(word: String): String
 
   """
   Access the current session's User. The user is determined by the access token embedded in the `Authorization` header.
@@ -10760,6 +10782,7 @@ type Query implements Node {
     offset: Int
   ): [SketchClass!]
   tilebbox(srid: Int, x: Int, y: Int, z: Int): GeometryInterface
+  toGraphqlId(id: Int, type: String): String
   topic(id: Int!): Topic
 
   """Reads a single `Topic` using its globally unique `ID`."""
