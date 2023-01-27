@@ -1,42 +1,38 @@
 import { useCallback } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
-  useUpdateSketchFolderParentMutation,
-  useUpdateSketchParentMutation,
+  SketchChildType,
+  UpdateTocItemParentInput,
+  useUpdateTocItemsParentMutation,
 } from "../../generated/graphql";
 
 export default function useUpdateSketchTableOfContentsDraggable() {
   const onError = useGlobalErrorHandler();
-  const [mutateFolder] = useUpdateSketchFolderParentMutation({
+  const [mutate] = useUpdateTocItemsParentMutation({
     onError,
     optimisticResponse: (data) => {
       return {
         __typename: "Mutation",
-        updateSketchFolder: {
-          __typename: "UpdateSketchFolderPayload",
-          sketchFolder: {
-            __typename: "SketchFolder",
-            id: data.id,
-            folderId: data.folderId,
-            collectionId: data.collectionId,
-          },
-        },
-      };
-    },
-  });
-  const [mutateSketch] = useUpdateSketchParentMutation({
-    onError,
-    optimisticResponse: (data) => {
-      return {
-        __typename: "Mutation",
-        updateSketchParent: {
-          __typename: "UpdateSketchParentPayload",
-          sketch: {
-            __typename: "Sketch",
-            id: data.id,
-            folderId: data.folderId,
-            collectionId: data.collectionId,
-          },
+        updateSketchTocItemParent: {
+          __typename: "UpdateSketchTocItemParentResults",
+          folders: ((data.tocItems as UpdateTocItemParentInput[] | null) || [])
+            .filter((i) => i.type === SketchChildType.SketchFolder)
+            .map((i) => ({
+              __typename: "SketchFolder",
+              id: i.id,
+              folderId: data.folderId,
+              collectionId: data.collectionId,
+            })),
+          sketches: ((data.tocItems as UpdateTocItemParentInput[] | null) || [])
+            .filter((i) => i.type === SketchChildType.Sketch)
+            .map((i) => ({
+              __typename: "Sketch",
+              id: i.id,
+              updatedAt: new Date().toString(),
+              folderId: data.folderId,
+              collectionId: data.collectionId,
+            })),
+          updatedCollections: [],
         },
       };
     },
@@ -47,15 +43,19 @@ export default function useUpdateSketchTableOfContentsDraggable() {
       id: number,
       patch: { folderId?: number | null; collectionId?: number | null }
     ) => {
-      return mutateFolder({
+      return mutate({
         variables: {
-          id: id,
-          folderId: patch.folderId,
-          collectionId: patch.collectionId,
+          tocItems: [
+            {
+              id: id,
+              type: SketchChildType.SketchFolder,
+            },
+          ],
+          ...patch,
         },
       });
     },
-    [mutateFolder]
+    [mutate]
   );
 
   const dropSketch = useCallback(
@@ -63,15 +63,19 @@ export default function useUpdateSketchTableOfContentsDraggable() {
       id: number,
       patch: { folderId?: number | null; collectionId?: number | null }
     ) => {
-      return mutateSketch({
+      return mutate({
         variables: {
-          id: id,
-          folderId: patch.folderId,
-          collectionId: patch.collectionId,
+          tocItems: [
+            {
+              id: id,
+              type: SketchChildType.Sketch,
+            },
+          ],
+          ...patch,
         },
       });
     },
-    [mutateSketch]
+    [mutate]
   );
 
   return { dropFolder, dropSketch };

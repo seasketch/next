@@ -115,18 +115,12 @@ mutation UpdateSketch(
   }
 }
 
-mutation DeleteSketch($id: Int!) {
-  deleteSketch(input: { id: $id }) {
-    sketch {
+mutation DeleteSketchTocItems($items: [UpdateTocItemParentInput]!) {
+  deleteSketchTocItems(items: $items) {
+    deletedItems
+    updatedCollections {
       id
-    }
-  }
-}
-
-mutation DeleteSketchFolder($id: Int!) {
-  deleteSketchFolder(input: { id: $id }) {
-    sketchFolder {
-      id
+      updatedAt
     }
   }
 }
@@ -158,33 +152,30 @@ query GetSketchForEditing($id: Int!) {
   }
 }
 
-mutation UpdateSketchFolderParent(
-  $id: Int!
+mutation UpdateTocItemsParent(
   $folderId: Int
   $collectionId: Int
+  $tocItems: [UpdateTocItemParentInput]!
 ) {
-  updateSketchFolder(
-    input: {
-      id: $id
-      patch: { folderId: $folderId, collectionId: $collectionId }
-    }
+  updateSketchTocItemParent(
+    folderId: $folderId
+    collectionId: $collectionId
+    tocItems: $tocItems
   ) {
-    sketchFolder {
+    folders {
       id
       folderId
       collectionId
     }
-  }
-}
-
-mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
-  updateSketchParent(
-    input: { id: $id, folderId: $folderId, collectionId: $collectionId }
-  ) {
-    sketch {
+    sketches {
       id
+      updatedAt
       folderId
       collectionId
+    }
+    updatedCollections {
+      id
+      updatedAt
     }
   }
 }
@@ -220,22 +211,6 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
   }
 }
 
-mutation CopySketch($id: Int!) {
-  copySketch(input: { sketchId: $id }) {
-    sketch {
-      ...SketchTocDetails
-    }
-  }
-}
-
-mutation CopySketchFolder($id: Int!) {
-  copySketchFolder(input: { folderId: $id }) {
-    sketchFolder {
-      ...SketchFolderDetails
-    }
-  }
-}
-
 mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
   copySketchTocItem(id: $id, type: $type) {
     folders {
@@ -245,6 +220,10 @@ mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
       ...SketchTocDetails
     }
     parentId
+    updatedCollection {
+      id
+      updatedAt
+    }
   }
 }
 

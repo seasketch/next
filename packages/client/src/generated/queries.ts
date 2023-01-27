@@ -769,6 +769,8 @@ export type CopySketchTocItemResults = {
   folders?: Maybe<Array<SketchFolder>>;
   parentId: Scalars['Int'];
   sketches?: Maybe<Array<Sketch>>;
+  /** Returns the parent collection (if exists) so that the client can select an updated updatedAt */
+  updatedCollection?: Maybe<Sketch>;
 };
 
 /** All input for the create `Basemap` mutation. */
@@ -3441,6 +3443,12 @@ export type DeleteSketchPayload = {
   user?: Maybe<User>;
 };
 
+export type DeleteSketchTocItemsResults = {
+  __typename?: 'DeleteSketchTocItemsResults';
+  deletedItems: Array<Scalars['String']>;
+  updatedCollections: Array<Maybe<Sketch>>;
+};
+
 /** All input for the `deleteSurveyByNodeId` mutation. */
 export type DeleteSurveyByNodeIdInput = {
   /**
@@ -5893,6 +5901,14 @@ export type Mutation = {
   deleteSketchFolder?: Maybe<DeleteSketchFolderPayload>;
   /** Deletes a single `SketchFolder` using its globally unique id. */
   deleteSketchFolderByNodeId?: Maybe<DeleteSketchFolderPayload>;
+  /**
+   * Deletes one or more Sketch or SketchFolders
+   *
+   * Returns an updatedCollections property which should be used to update the
+   * updatedAt property on related collections so that correct cache keys are
+   * used when requesting reports.
+   */
+  deleteSketchTocItems?: Maybe<DeleteSketchTocItemsResults>;
   /** Deletes a single `Survey` using a unique key. */
   deleteSurvey?: Maybe<DeleteSurveyPayload>;
   /** Deletes a single `Survey` using its globally unique id. */
@@ -6146,6 +6162,11 @@ export type Mutation = {
    * function again on userGeom. This ensures the value conforms to the
    * project's rules, and also benefits the user in that they need not submit
    * a huge geometry to the server.
+   *
+   * When updating a sketch, be sure to use the Sketch.parentCollection
+   * association to update the client graphql cache with an up to date
+   * updatedAt timestamp. This will ensure a correct cache key is used when
+   * requesting collection reports.
    */
   updateSketch?: Maybe<Sketch>;
   /** Updates a single `SketchClass` using a unique key and a patch. */
@@ -6159,6 +6180,16 @@ export type Mutation = {
   /** Updates a single `SketchFolder` using its globally unique id and a patch. */
   updateSketchFolderByNodeId?: Maybe<UpdateSketchFolderPayload>;
   updateSketchParent?: Maybe<UpdateSketchParentPayload>;
+  /**
+   * Create to respond to drag & drop actions in the sketch table of contents.
+   * Can assign a folder_id or collection_id to one or multiple Sketches or
+   * SketchFolders.
+   *
+   * Returns an updatedCollections property which should be used to update the
+   * updatedAt property on related collections so that correct cache keys are
+   * used when requesting reports.
+   */
+  updateSketchTocItemParent?: Maybe<UpdateSketchTocItemParentResults>;
   /** Updates a single `Survey` using a unique key and a patch. */
   updateSurvey?: Maybe<UpdateSurveyPayload>;
   /** Updates a single `Survey` using its globally unique id and a patch. */
@@ -6755,6 +6786,12 @@ export type MutationDeleteSketchFolderArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchFolderByNodeIdArgs = {
   input: DeleteSketchFolderByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteSketchTocItemsArgs = {
+  items: Array<Maybe<UpdateTocItemParentInput>>;
 };
 
 
@@ -7420,6 +7457,14 @@ export type MutationUpdateSketchFolderByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchParentArgs = {
   input: UpdateSketchParentInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchTocItemParentArgs = {
+  collectionId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  tocItems: Array<Maybe<UpdateTocItemParentInput>>;
 };
 
 
@@ -8903,6 +8948,7 @@ export type Query = Node & {
    * We return "dev" if build cannot be determined from deployment environment.
    */
   build: Scalars['String'];
+  camelCase?: Maybe<Scalars['String']>;
   collectTextFromProsemirrorBody?: Maybe<Scalars['String']>;
   collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
@@ -8973,6 +9019,7 @@ export type Query = Node & {
   inviteEmail?: Maybe<InviteEmail>;
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
+  lcfirst?: Maybe<Scalars['String']>;
   /** Access the current session's User. The user is determined by the access token embedded in the `Authorization` header. */
   me?: Maybe<User>;
   /** Fetches an object given its globally unique `ID`. */
@@ -9071,6 +9118,7 @@ export type Query = Node & {
   /** List of template sketch classes such as "Marine Protected Area", "MPA Network", etc. */
   templateSketchClasses?: Maybe<Array<SketchClass>>;
   tilebbox?: Maybe<GeometryInterface>;
+  toGraphqlId?: Maybe<Scalars['String']>;
   topic?: Maybe<Topic>;
   /** Reads a single `Topic` using its globally unique `ID`. */
   topicByNodeId?: Maybe<Topic>;
@@ -9150,6 +9198,12 @@ export type QueryBasemapsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCamelCaseArgs = {
+  snakeCase?: Maybe<Scalars['String']>;
 };
 
 
@@ -9447,6 +9501,12 @@ export type QueryInviteEmailArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryLcfirstArgs = {
+  word?: Maybe<Scalars['String']>;
 };
 
 
@@ -9872,6 +9932,13 @@ export type QueryTilebboxArgs = {
   x?: Maybe<Scalars['Int']>;
   y?: Maybe<Scalars['Int']>;
   z?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryToGraphqlIdArgs = {
+  id?: Maybe<Scalars['Int']>;
+  type?: Maybe<Scalars['String']>;
 };
 
 
@@ -12908,6 +12975,13 @@ export type UpdateSketchParentPayload = {
   user?: Maybe<User>;
 };
 
+export type UpdateSketchTocItemParentResults = {
+  __typename?: 'UpdateSketchTocItemParentResults';
+  folders: Array<Maybe<SketchFolder>>;
+  sketches: Array<Maybe<Sketch>>;
+  updatedCollections: Array<Maybe<Sketch>>;
+};
+
 /** All input for the `updateSurveyByNodeId` mutation. */
 export type UpdateSurveyByNodeIdInput = {
   /**
@@ -13180,6 +13254,11 @@ export type UpdateTableOfContentsItemPayload = {
 /** The output of our update `TableOfContentsItem` mutation. */
 export type UpdateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
   orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
+export type UpdateTocItemParentInput = {
+  id: Scalars['Int'];
+  type: SketchChildType;
 };
 
 /** All input for the `updateTopicByNodeId` mutation. */
@@ -16267,35 +16346,20 @@ export type UpdateSketchMutation = (
   )> }
 );
 
-export type DeleteSketchMutationVariables = Exact<{
-  id: Scalars['Int'];
+export type DeleteSketchTocItemsMutationVariables = Exact<{
+  items: Array<Maybe<UpdateTocItemParentInput>> | Maybe<UpdateTocItemParentInput>;
 }>;
 
 
-export type DeleteSketchMutation = (
+export type DeleteSketchTocItemsMutation = (
   { __typename?: 'Mutation' }
-  & { deleteSketch?: Maybe<(
-    { __typename?: 'DeleteSketchPayload' }
-    & { sketch?: Maybe<(
+  & { deleteSketchTocItems?: Maybe<(
+    { __typename?: 'DeleteSketchTocItemsResults' }
+    & Pick<DeleteSketchTocItemsResults, 'deletedItems'>
+    & { updatedCollections: Array<Maybe<(
       { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id'>
-    )> }
-  )> }
-);
-
-export type DeleteSketchFolderMutationVariables = Exact<{
-  id: Scalars['Int'];
-}>;
-
-
-export type DeleteSketchFolderMutation = (
-  { __typename?: 'Mutation' }
-  & { deleteSketchFolder?: Maybe<(
-    { __typename?: 'DeleteSketchFolderPayload' }
-    & { sketchFolder?: Maybe<(
-      { __typename?: 'SketchFolder' }
-      & Pick<SketchFolder, 'id'>
-    )> }
+      & Pick<Sketch, 'id' | 'updatedAt'>
+    )>> }
   )> }
 );
 
@@ -16360,39 +16424,27 @@ export type GetSketchForEditingQuery = (
   )> }
 );
 
-export type UpdateSketchFolderParentMutationVariables = Exact<{
-  id: Scalars['Int'];
+export type UpdateTocItemsParentMutationVariables = Exact<{
   folderId?: Maybe<Scalars['Int']>;
   collectionId?: Maybe<Scalars['Int']>;
+  tocItems: Array<Maybe<UpdateTocItemParentInput>> | Maybe<UpdateTocItemParentInput>;
 }>;
 
 
-export type UpdateSketchFolderParentMutation = (
+export type UpdateTocItemsParentMutation = (
   { __typename?: 'Mutation' }
-  & { updateSketchFolder?: Maybe<(
-    { __typename?: 'UpdateSketchFolderPayload' }
-    & { sketchFolder?: Maybe<(
+  & { updateSketchTocItemParent?: Maybe<(
+    { __typename?: 'UpdateSketchTocItemParentResults' }
+    & { folders: Array<Maybe<(
       { __typename?: 'SketchFolder' }
       & Pick<SketchFolder, 'id' | 'folderId' | 'collectionId'>
-    )> }
-  )> }
-);
-
-export type UpdateSketchParentMutationVariables = Exact<{
-  id: Scalars['Int'];
-  folderId?: Maybe<Scalars['Int']>;
-  collectionId?: Maybe<Scalars['Int']>;
-}>;
-
-
-export type UpdateSketchParentMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSketchParent?: Maybe<(
-    { __typename?: 'UpdateSketchParentPayload' }
-    & { sketch?: Maybe<(
+    )>>, sketches: Array<Maybe<(
       { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
-    )> }
+      & Pick<Sketch, 'id' | 'updatedAt' | 'folderId' | 'collectionId'>
+    )>>, updatedCollections: Array<Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'updatedAt'>
+    )>> }
   )> }
 );
 
@@ -16421,38 +16473,6 @@ export type SketchReportingDetailsQuery = (
   )> }
 );
 
-export type CopySketchMutationVariables = Exact<{
-  id: Scalars['Int'];
-}>;
-
-
-export type CopySketchMutation = (
-  { __typename?: 'Mutation' }
-  & { copySketch?: Maybe<(
-    { __typename?: 'CopySketchPayload' }
-    & { sketch?: Maybe<(
-      { __typename?: 'Sketch' }
-      & SketchTocDetailsFragment
-    )> }
-  )> }
-);
-
-export type CopySketchFolderMutationVariables = Exact<{
-  id: Scalars['Int'];
-}>;
-
-
-export type CopySketchFolderMutation = (
-  { __typename?: 'Mutation' }
-  & { copySketchFolder?: Maybe<(
-    { __typename?: 'CopySketchFolderPayload' }
-    & { sketchFolder?: Maybe<(
-      { __typename?: 'SketchFolder' }
-      & SketchFolderDetailsFragment
-    )> }
-  )> }
-);
-
 export type CopyTocItemMutationVariables = Exact<{
   id: Scalars['Int'];
   type: SketchChildType;
@@ -16470,7 +16490,10 @@ export type CopyTocItemMutation = (
     )>>, sketches?: Maybe<Array<(
       { __typename?: 'Sketch' }
       & SketchTocDetailsFragment
-    )>> }
+    )>>, updatedCollection?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'updatedAt'>
+    )> }
   )> }
 );
 
@@ -20877,20 +20900,13 @@ export const UpdateSketchDocument = /*#__PURE__*/ gql`
   }
 }
     ${SketchCrudResponseFragmentDoc}`;
-export const DeleteSketchDocument = /*#__PURE__*/ gql`
-    mutation DeleteSketch($id: Int!) {
-  deleteSketch(input: {id: $id}) {
-    sketch {
+export const DeleteSketchTocItemsDocument = /*#__PURE__*/ gql`
+    mutation DeleteSketchTocItems($items: [UpdateTocItemParentInput]!) {
+  deleteSketchTocItems(items: $items) {
+    deletedItems
+    updatedCollections {
       id
-    }
-  }
-}
-    `;
-export const DeleteSketchFolderDocument = /*#__PURE__*/ gql`
-    mutation DeleteSketchFolder($id: Int!) {
-  deleteSketchFolder(input: {id: $id}) {
-    sketchFolder {
-      id
+      updatedAt
     }
   }
 }
@@ -20912,28 +20928,27 @@ export const GetSketchForEditingDocument = /*#__PURE__*/ gql`
   }
 }
     ${SketchEditorModalDetailsFragmentDoc}`;
-export const UpdateSketchFolderParentDocument = /*#__PURE__*/ gql`
-    mutation UpdateSketchFolderParent($id: Int!, $folderId: Int, $collectionId: Int) {
-  updateSketchFolder(
-    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+export const UpdateTocItemsParentDocument = /*#__PURE__*/ gql`
+    mutation UpdateTocItemsParent($folderId: Int, $collectionId: Int, $tocItems: [UpdateTocItemParentInput]!) {
+  updateSketchTocItemParent(
+    folderId: $folderId
+    collectionId: $collectionId
+    tocItems: $tocItems
   ) {
-    sketchFolder {
+    folders {
       id
       folderId
       collectionId
     }
-  }
-}
-    `;
-export const UpdateSketchParentDocument = /*#__PURE__*/ gql`
-    mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
-  updateSketchParent(
-    input: {id: $id, folderId: $folderId, collectionId: $collectionId}
-  ) {
-    sketch {
+    sketches {
       id
+      updatedAt
       folderId
       collectionId
+    }
+    updatedCollections {
+      id
+      updatedAt
     }
   }
 }
@@ -20970,24 +20985,6 @@ export const SketchReportingDetailsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
-export const CopySketchDocument = /*#__PURE__*/ gql`
-    mutation CopySketch($id: Int!) {
-  copySketch(input: {sketchId: $id}) {
-    sketch {
-      ...SketchTocDetails
-    }
-  }
-}
-    ${SketchTocDetailsFragmentDoc}`;
-export const CopySketchFolderDocument = /*#__PURE__*/ gql`
-    mutation CopySketchFolder($id: Int!) {
-  copySketchFolder(input: {folderId: $id}) {
-    sketchFolder {
-      ...SketchFolderDetails
-    }
-  }
-}
-    ${SketchFolderDetailsFragmentDoc}`;
 export const CopyTocItemDocument = /*#__PURE__*/ gql`
     mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
   copySketchTocItem(id: $id, type: $type) {
@@ -20998,6 +20995,10 @@ export const CopyTocItemDocument = /*#__PURE__*/ gql`
       ...SketchTocDetails
     }
     parentId
+    updatedCollection {
+      id
+      updatedAt
+    }
   }
 }
     ${SketchFolderDetailsFragmentDoc}
@@ -22160,13 +22161,9 @@ export const namedOperations = {
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
-    DeleteSketch: 'DeleteSketch',
-    DeleteSketchFolder: 'DeleteSketchFolder',
+    DeleteSketchTocItems: 'DeleteSketchTocItems',
     RenameFolder: 'RenameFolder',
-    UpdateSketchFolderParent: 'UpdateSketchFolderParent',
-    UpdateSketchParent: 'UpdateSketchParent',
-    CopySketch: 'CopySketch',
-    CopySketchFolder: 'CopySketchFolder',
+    UpdateTocItemsParent: 'UpdateTocItemsParent',
     CopyTocItem: 'CopyTocItem',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',

@@ -5,10 +5,35 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
     typeDefs: gql`
+      input UpdateTocItemParentInput {
+        type: SketchChildType!
+        id: Int!
+      }
+
+      type TocItemDetails {
+        type: SketchChildType!
+        id: Int!
+      }
+
+      type DeleteSketchTocItemsResults {
+        updatedCollections: [Sketch]!
+        deletedItems: [String!]!
+      }
+
       type CopySketchTocItemResults {
         sketches: [Sketch!]
         folders: [SketchFolder!]
         parentId: Int!
+        """
+        Returns the parent collection (if exists) so that the client can select an updated updatedAt
+        """
+        updatedCollection: Sketch
+      }
+
+      type UpdateSketchTocItemParentResults {
+        sketches: [Sketch]!
+        folders: [SketchFolder]!
+        updatedCollections: [Sketch]!
       }
 
       extend type Sketch {
@@ -69,6 +94,11 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         function again on userGeom. This ensures the value conforms to the
         project's rules, and also benefits the user in that they need not submit
         a huge geometry to the server.
+
+        When updating a sketch, be sure to use the Sketch.parentCollection
+        association to update the client graphql cache with an up to date
+        updatedAt timestamp. This will ensure a correct cache key is used when
+        requesting collection reports.
         """
         updateSketch(
           id: Int!
@@ -91,9 +121,95 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           type: SketchChildType!
           forForum: Boolean
         ): CopySketchTocItemResults
+
+        """
+        Create to respond to drag & drop actions in the sketch table of contents.
+        Can assign a folder_id or collection_id to one or multiple Sketches or
+        SketchFolders.
+
+        Returns an updatedCollections property which should be used to update the
+        updatedAt property on related collections so that correct cache keys are
+        used when requesting reports.
+        """
+        updateSketchTocItemParent(
+          folderId: Int
+          collectionId: Int
+          tocItems: [UpdateTocItemParentInput]!
+        ): UpdateSketchTocItemParentResults
+
+        """
+        Deletes one or more Sketch or SketchFolders
+
+        Returns an updatedCollections property which should be used to update the
+        updatedAt property on related collections so that correct cache keys are
+        used when requesting reports.
+        """
+        deleteSketchTocItems(
+          items: [UpdateTocItemParentInput]!
+        ): DeleteSketchTocItemsResults
       }
     `,
     resolvers: {
+      UpdateSketchTocItemParentResults: {
+        sketches: async (results, args, context, resolveInfo) => {
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`sketches`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(${sql.value(
+                  context.sketchIds
+                )})`
+              );
+            }
+          );
+        },
+        folders: async (results, args, context, resolveInfo) => {
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`sketch_folders`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(${sql.value(
+                  context.folderIds
+                )})`
+              );
+            }
+          );
+        },
+        updatedCollections: async (results, args, context, resolveInfo) => {
+          const {
+            sketchIds,
+            folderIds,
+            pgClient,
+            collectionId,
+            folderId,
+            tocItems,
+            previousCollectionIds,
+          } = context;
+
+          const { rows } = await pgClient.query(
+            `
+            select distinct(
+              get_parent_collection_id(type, id)
+            ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
+            [JSON.stringify(tocItems)]
+          );
+          const updatedCollectionIds = [
+            ...(previousCollectionIds || []),
+            ...rows.map((r: any) => r.collection_id),
+          ];
+
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`sketches`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(${sql.value(
+                  updatedCollectionIds
+                )})`
+              );
+            }
+          );
+        },
+      },
       CopySketchTocItemResults: {
         sketches: async (results, args, context, resolveInfo) => {
           return resolveInfo.graphile.selectGraphQLResultFromTable(
@@ -114,6 +230,34 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
                   context.folderIds
+                )})`
+              );
+            }
+          );
+        },
+        updatedCollection: async (results, args, context, resolveInfo) => {
+          const [row] =
+            (await resolveInfo.graphile.selectGraphQLResultFromTable(
+              sql.fragment`sketches`,
+              (tableAlias, queryBuilder) => {
+                queryBuilder.where(
+                  sql.fragment`${tableAlias}.id = get_parent_collection_id(${sql.value(
+                    context.parentType
+                  )}, ${sql.value(context.parentId)})`
+                );
+              }
+            )) as any;
+          return row || null;
+        },
+      },
+      DeleteSketchTocItemsResults: {
+        updatedCollections: async (results, args, context, resolveInfo) => {
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`sketches`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(${sql.value(
+                  context.previousCollectionIds
                 )})`
               );
             }
@@ -185,14 +329,14 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             );
 
             const [row] =
-              await resolveInfo.graphile.selectGraphQLResultFromTable(
+              (await resolveInfo.graphile.selectGraphQLResultFromTable(
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
                     sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
                   );
                 }
-              );
+              )) as any;
             return row;
           } else {
             delete userGeom.id;
@@ -337,7 +481,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               : `select copy_sketch_toc_item_recursive($1, $2, true)`,
             [id, type]
           );
-          const copyId = forForum
+          const copyId: number = forForum
             ? row.copy_sketch_toc_item_recursive_for_forum
             : row.copy_sketch_toc_item_recursive;
           let {
@@ -359,11 +503,111 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           }
           context.sketchIds = sketchIds;
           context.folderIds = folderIds;
+          context.parentId = copyId;
+          context.parentType = type;
           // will be finished by CopySketchTocItemResults functions at the top
           // of the resolvers
           return {
             parentId: copyId,
           };
+        },
+        updateSketchTocItemParent: async (
+          _query,
+          { folderId, collectionId, tocItems },
+          context,
+          resolveInfo
+        ) => {
+          const { pgClient } = context;
+          const { rows } = await pgClient.query(
+            `
+            select distinct(
+              get_parent_collection_id(type, id)
+            ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
+            [JSON.stringify(tocItems)]
+          );
+          context.previousCollectionIds = rows.map((r: any) => r.collection_id);
+
+          const folders: number[] = tocItems
+            .filter((f: any) => f.type === "sketch_folder")
+            .map((f: any) => f.id);
+          const sketches: number[] = tocItems
+            .filter((f: any) => f.type === "sketch")
+            .map((f: any) => f.id);
+          // update collection_id and folder_id on related sketches
+          await pgClient.query(
+            `update sketches set collection_id = $1, folder_id = $2 where id = any($3)`,
+            [collectionId, folderId, sketches]
+          );
+          // update collection_id and folder_id on related folders
+          await pgClient.query(
+            `update sketch_folders set collection_id = $1, folder_id = $2 where id = any($3)`,
+            [collectionId, folderId, folders]
+          );
+          context.sketchIds = sketches;
+          context.folderIds = folders;
+          context.tocItems = tocItems;
+
+          return {};
+        },
+        deleteSketchTocItems: async (_query, { items }, context) => {
+          const { pgClient } = context;
+          // Get IDs of collections these items belong to to be included in
+          // updatedCollections
+          const { rows } = await pgClient.query(
+            `
+            select distinct(
+              get_parent_collection_id(type, id)
+            ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
+            [JSON.stringify(items)]
+          );
+          context.previousCollectionIds = rows.map((r: any) => r.collection_id);
+          // Get IDs of all items to be deleted (including their children) to
+          // be added to deletedItems output
+          const childrenResult = await pgClient.query(
+            `
+            select distinct(
+              get_all_sketch_toc_children(id, type)
+            ) as children from json_to_recordset($1) as (type sketch_child_type, id int)`,
+            [JSON.stringify(items)]
+          );
+
+          const deletedItems: string[] = [
+            ...items.map(
+              (item: any) =>
+                `${/folder/i.test(item.type) ? "SketchFolder" : "Sketch"}:${
+                  item.id
+                }`
+            ),
+          ];
+          for (const row of childrenResult.rows) {
+            if (row.children && row.children.length) {
+              for (const id of row.children) {
+                if (deletedItems.indexOf(id) === -1) {
+                  deletedItems.push(id);
+                }
+              }
+            }
+          }
+
+          // Do the deleting
+          const folders: number[] = items
+            .filter((f: any) => f.type === "sketch_folder")
+            .map((f: any) => f.id);
+          const sketches: number[] = items
+            .filter((f: any) => f.type === "sketch")
+            .map((f: any) => f.id);
+
+          await pgClient.query(
+            `delete from sketch_folders where id = any($1)`,
+            [folders]
+          );
+
+          await pgClient.query(`delete from sketches where id = any($1)`, [
+            sketches,
+          ]);
+
+          // results will be populated by resolvers above
+          return { deletedItems };
         },
       },
     },
