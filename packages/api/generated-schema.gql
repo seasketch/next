@@ -875,6 +875,11 @@ type CopySketchTocItemResults {
   folders: [SketchFolder!]
   parentId: Int!
   sketches: [Sketch!]
+
+  """
+  Returns the parent collection (if exists) so that the client can select an updated updatedAt
+  """
+  updatedCollection: Sketch
 }
 
 """All input for the create `Basemap` mutation."""
@@ -4052,6 +4057,10 @@ type DeleteSketchPayload {
 
   """Reads a single `User` that is related to this `Sketch`."""
   user: User
+}
+
+type DeleteSketchTocItemsResults {
+  updatedCollections: [Sketch]!
 }
 
 """All input for the `deleteSurveyByNodeId` mutation."""
@@ -7353,6 +7362,9 @@ type Mutation {
     input: DeleteSketchFolderByNodeIdInput!
   ): DeleteSketchFolderPayload
 
+  """TODO: implement mutation and result resolvers"""
+  deleteSketchTocItems(items: [UpdateTocItemParentInput]!): DeleteSketchTocItemsResults
+
   """Deletes a single `Survey` using a unique key."""
   deleteSurvey(
     """
@@ -8315,6 +8327,9 @@ type Mutation {
     """
     input: UpdateSketchParentInput!
   ): UpdateSketchParentPayload
+
+  """TODO: implement mutation and result resolvers"""
+  updateSketchTocItemParent(collectionId: Int, folderId: Int, tocItems: [UpdateTocItemParentInput]!): UpdateSketchTocItemParentResults
 
   """Updates a single `Survey` using a unique key and a patch."""
   updateSurvey(
@@ -14511,6 +14526,12 @@ type UpdateSketchParentPayload {
   user: User
 }
 
+type UpdateSketchTocItemParentResults {
+  folders: [SketchFolder]!
+  sketches: [Sketch]!
+  updatedCollections: [Sketch]!
+}
+
 """All input for the `updateSurveyByNodeId` mutation."""
 input UpdateSurveyByNodeIdInput {
   """
@@ -14848,6 +14869,11 @@ type UpdateTableOfContentsItemPayload {
     """The method to use when ordering `TableOfContentsItem`."""
     orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TableOfContentsItemsEdge
+}
+
+input UpdateTocItemParentInput {
+  id: Int!
+  type: SketchChildType!
 }
 
 """All input for the `updateTopicByNodeId` mutation."""

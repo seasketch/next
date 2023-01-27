@@ -771,6 +771,8 @@ export type CopySketchTocItemResults = {
   folders?: Maybe<Array<SketchFolder>>;
   parentId: Scalars['Int'];
   sketches?: Maybe<Array<Sketch>>;
+  /** Returns the parent collection (if exists) so that the client can select an updated updatedAt */
+  updatedCollection?: Maybe<Sketch>;
 };
 
 /** All input for the create `Basemap` mutation. */
@@ -3443,6 +3445,11 @@ export type DeleteSketchPayload = {
   user?: Maybe<User>;
 };
 
+export type DeleteSketchTocItemsResults = {
+  __typename?: 'DeleteSketchTocItemsResults';
+  updatedCollections: Array<Maybe<Sketch>>;
+};
+
 /** All input for the `deleteSurveyByNodeId` mutation. */
 export type DeleteSurveyByNodeIdInput = {
   /**
@@ -5895,6 +5902,8 @@ export type Mutation = {
   deleteSketchFolder?: Maybe<DeleteSketchFolderPayload>;
   /** Deletes a single `SketchFolder` using its globally unique id. */
   deleteSketchFolderByNodeId?: Maybe<DeleteSketchFolderPayload>;
+  /** TODO: implement mutation and result resolvers */
+  deleteSketchTocItems?: Maybe<DeleteSketchTocItemsResults>;
   /** Deletes a single `Survey` using a unique key. */
   deleteSurvey?: Maybe<DeleteSurveyPayload>;
   /** Deletes a single `Survey` using its globally unique id. */
@@ -6161,6 +6170,8 @@ export type Mutation = {
   /** Updates a single `SketchFolder` using its globally unique id and a patch. */
   updateSketchFolderByNodeId?: Maybe<UpdateSketchFolderPayload>;
   updateSketchParent?: Maybe<UpdateSketchParentPayload>;
+  /** TODO: implement mutation and result resolvers */
+  updateSketchTocItemParent?: Maybe<UpdateSketchTocItemParentResults>;
   /** Updates a single `Survey` using a unique key and a patch. */
   updateSurvey?: Maybe<UpdateSurveyPayload>;
   /** Updates a single `Survey` using its globally unique id and a patch. */
@@ -6757,6 +6768,12 @@ export type MutationDeleteSketchFolderArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchFolderByNodeIdArgs = {
   input: DeleteSketchFolderByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteSketchTocItemsArgs = {
+  items: Array<Maybe<UpdateTocItemParentInput>>;
 };
 
 
@@ -7422,6 +7439,14 @@ export type MutationUpdateSketchFolderByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchParentArgs = {
   input: UpdateSketchParentInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchTocItemParentArgs = {
+  collectionId?: Maybe<Scalars['Int']>;
+  folderId?: Maybe<Scalars['Int']>;
+  tocItems: Array<Maybe<UpdateTocItemParentInput>>;
 };
 
 
@@ -12910,6 +12935,13 @@ export type UpdateSketchParentPayload = {
   user?: Maybe<User>;
 };
 
+export type UpdateSketchTocItemParentResults = {
+  __typename?: 'UpdateSketchTocItemParentResults';
+  folders: Array<Maybe<SketchFolder>>;
+  sketches: Array<Maybe<Sketch>>;
+  updatedCollections: Array<Maybe<Sketch>>;
+};
+
 /** All input for the `updateSurveyByNodeId` mutation. */
 export type UpdateSurveyByNodeIdInput = {
   /**
@@ -13182,6 +13214,11 @@ export type UpdateTableOfContentsItemPayload = {
 /** The output of our update `TableOfContentsItem` mutation. */
 export type UpdateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
   orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
+export type UpdateTocItemParentInput = {
+  id: Scalars['Int'];
+  type: SketchChildType;
 };
 
 /** All input for the `updateTopicByNodeId` mutation. */
@@ -16362,39 +16399,31 @@ export type GetSketchForEditingQuery = (
   )> }
 );
 
-export type UpdateSketchFolderParentMutationVariables = Exact<{
-  id: Scalars['Int'];
+export type UpdateTocItemsParentMutationVariables = Exact<{
   folderId?: Maybe<Scalars['Int']>;
   collectionId?: Maybe<Scalars['Int']>;
+  tocItems: Array<Maybe<UpdateTocItemParentInput>> | Maybe<UpdateTocItemParentInput>;
 }>;
 
 
-export type UpdateSketchFolderParentMutation = (
+export type UpdateTocItemsParentMutation = (
   { __typename?: 'Mutation' }
-  & { updateSketchFolder?: Maybe<(
-    { __typename?: 'UpdateSketchFolderPayload' }
-    & { sketchFolder?: Maybe<(
+  & { updateSketchTocItemParent?: Maybe<(
+    { __typename?: 'UpdateSketchTocItemParentResults' }
+    & { folders: Array<Maybe<(
       { __typename?: 'SketchFolder' }
-      & Pick<SketchFolder, 'id' | 'folderId' | 'collectionId'>
-    )> }
-  )> }
-);
-
-export type UpdateSketchParentMutationVariables = Exact<{
-  id: Scalars['Int'];
-  folderId?: Maybe<Scalars['Int']>;
-  collectionId?: Maybe<Scalars['Int']>;
-}>;
-
-
-export type UpdateSketchParentMutation = (
-  { __typename?: 'Mutation' }
-  & { updateSketchParent?: Maybe<(
-    { __typename?: 'UpdateSketchParentPayload' }
-    & { sketch?: Maybe<(
+      & Pick<SketchFolder, 'id'>
+    )>>, sketches: Array<Maybe<(
       { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id' | 'folderId' | 'collectionId'>
-    )> }
+      & Pick<Sketch, 'id' | 'updatedAt'>
+      & { parentCollection?: Maybe<(
+        { __typename?: 'Sketch' }
+        & Pick<Sketch, 'id' | 'updatedAt'>
+      )> }
+    )>>, updatedCollections: Array<Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'updatedAt'>
+    )>> }
   )> }
 );
 
@@ -16423,38 +16452,6 @@ export type SketchReportingDetailsQuery = (
   )> }
 );
 
-export type CopySketchMutationVariables = Exact<{
-  id: Scalars['Int'];
-}>;
-
-
-export type CopySketchMutation = (
-  { __typename?: 'Mutation' }
-  & { copySketch?: Maybe<(
-    { __typename?: 'CopySketchPayload' }
-    & { sketch?: Maybe<(
-      { __typename?: 'Sketch' }
-      & SketchTocDetailsFragment
-    )> }
-  )> }
-);
-
-export type CopySketchFolderMutationVariables = Exact<{
-  id: Scalars['Int'];
-}>;
-
-
-export type CopySketchFolderMutation = (
-  { __typename?: 'Mutation' }
-  & { copySketchFolder?: Maybe<(
-    { __typename?: 'CopySketchFolderPayload' }
-    & { sketchFolder?: Maybe<(
-      { __typename?: 'SketchFolder' }
-      & SketchFolderDetailsFragment
-    )> }
-  )> }
-);
-
 export type CopyTocItemMutationVariables = Exact<{
   id: Scalars['Int'];
   type: SketchChildType;
@@ -16472,7 +16469,10 @@ export type CopyTocItemMutation = (
     )>>, sketches?: Maybe<Array<(
       { __typename?: 'Sketch' }
       & SketchTocDetailsFragment
-    )>> }
+    )>>, updatedCollection?: Maybe<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'updatedAt'>
+    )> }
   )> }
 );
 
@@ -24568,88 +24568,59 @@ export function useGetSketchForEditingLazyQuery(baseOptions?: Apollo.LazyQueryHo
 export type GetSketchForEditingQueryHookResult = ReturnType<typeof useGetSketchForEditingQuery>;
 export type GetSketchForEditingLazyQueryHookResult = ReturnType<typeof useGetSketchForEditingLazyQuery>;
 export type GetSketchForEditingQueryResult = Apollo.QueryResult<GetSketchForEditingQuery, GetSketchForEditingQueryVariables>;
-export const UpdateSketchFolderParentDocument = gql`
-    mutation UpdateSketchFolderParent($id: Int!, $folderId: Int, $collectionId: Int) {
-  updateSketchFolder(
-    input: {id: $id, patch: {folderId: $folderId, collectionId: $collectionId}}
+export const UpdateTocItemsParentDocument = gql`
+    mutation UpdateTocItemsParent($folderId: Int, $collectionId: Int, $tocItems: [UpdateTocItemParentInput]!) {
+  updateSketchTocItemParent(
+    folderId: $folderId
+    collectionId: $collectionId
+    tocItems: $tocItems
   ) {
-    sketchFolder {
+    folders {
       id
-      folderId
-      collectionId
+    }
+    sketches {
+      id
+      updatedAt
+      parentCollection {
+        id
+        updatedAt
+      }
+    }
+    updatedCollections {
+      id
+      updatedAt
     }
   }
 }
     `;
-export type UpdateSketchFolderParentMutationFn = Apollo.MutationFunction<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
+export type UpdateTocItemsParentMutationFn = Apollo.MutationFunction<UpdateTocItemsParentMutation, UpdateTocItemsParentMutationVariables>;
 
 /**
- * __useUpdateSketchFolderParentMutation__
+ * __useUpdateTocItemsParentMutation__
  *
- * To run a mutation, you first call `useUpdateSketchFolderParentMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateSketchFolderParentMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useUpdateTocItemsParentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateTocItemsParentMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [updateSketchFolderParentMutation, { data, loading, error }] = useUpdateSketchFolderParentMutation({
+ * const [updateTocItemsParentMutation, { data, loading, error }] = useUpdateTocItemsParentMutation({
  *   variables: {
- *      id: // value for 'id'
  *      folderId: // value for 'folderId'
  *      collectionId: // value for 'collectionId'
+ *      tocItems: // value for 'tocItems'
  *   },
  * });
  */
-export function useUpdateSketchFolderParentMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>) {
+export function useUpdateTocItemsParentMutation(baseOptions?: Apollo.MutationHookOptions<UpdateTocItemsParentMutation, UpdateTocItemsParentMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>(UpdateSketchFolderParentDocument, options);
+        return Apollo.useMutation<UpdateTocItemsParentMutation, UpdateTocItemsParentMutationVariables>(UpdateTocItemsParentDocument, options);
       }
-export type UpdateSketchFolderParentMutationHookResult = ReturnType<typeof useUpdateSketchFolderParentMutation>;
-export type UpdateSketchFolderParentMutationResult = Apollo.MutationResult<UpdateSketchFolderParentMutation>;
-export type UpdateSketchFolderParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFolderParentMutation, UpdateSketchFolderParentMutationVariables>;
-export const UpdateSketchParentDocument = gql`
-    mutation UpdateSketchParent($id: Int!, $folderId: Int, $collectionId: Int) {
-  updateSketchParent(
-    input: {id: $id, folderId: $folderId, collectionId: $collectionId}
-  ) {
-    sketch {
-      id
-      folderId
-      collectionId
-    }
-  }
-}
-    `;
-export type UpdateSketchParentMutationFn = Apollo.MutationFunction<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
-
-/**
- * __useUpdateSketchParentMutation__
- *
- * To run a mutation, you first call `useUpdateSketchParentMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateSketchParentMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateSketchParentMutation, { data, loading, error }] = useUpdateSketchParentMutation({
- *   variables: {
- *      id: // value for 'id'
- *      folderId: // value for 'folderId'
- *      collectionId: // value for 'collectionId'
- *   },
- * });
- */
-export function useUpdateSketchParentMutation(baseOptions?: Apollo.MutationHookOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>(UpdateSketchParentDocument, options);
-      }
-export type UpdateSketchParentMutationHookResult = ReturnType<typeof useUpdateSketchParentMutation>;
-export type UpdateSketchParentMutationResult = Apollo.MutationResult<UpdateSketchParentMutation>;
-export type UpdateSketchParentMutationOptions = Apollo.BaseMutationOptions<UpdateSketchParentMutation, UpdateSketchParentMutationVariables>;
+export type UpdateTocItemsParentMutationHookResult = ReturnType<typeof useUpdateTocItemsParentMutation>;
+export type UpdateTocItemsParentMutationResult = Apollo.MutationResult<UpdateTocItemsParentMutation>;
+export type UpdateTocItemsParentMutationOptions = Apollo.BaseMutationOptions<UpdateTocItemsParentMutation, UpdateTocItemsParentMutationVariables>;
 export const SketchReportingDetailsDocument = gql`
     query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
   sketch(id: $id) {
@@ -24711,76 +24682,6 @@ export function useSketchReportingDetailsLazyQuery(baseOptions?: Apollo.LazyQuer
 export type SketchReportingDetailsQueryHookResult = ReturnType<typeof useSketchReportingDetailsQuery>;
 export type SketchReportingDetailsLazyQueryHookResult = ReturnType<typeof useSketchReportingDetailsLazyQuery>;
 export type SketchReportingDetailsQueryResult = Apollo.QueryResult<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>;
-export const CopySketchDocument = gql`
-    mutation CopySketch($id: Int!) {
-  copySketch(input: {sketchId: $id}) {
-    sketch {
-      ...SketchTocDetails
-    }
-  }
-}
-    ${SketchTocDetailsFragmentDoc}`;
-export type CopySketchMutationFn = Apollo.MutationFunction<CopySketchMutation, CopySketchMutationVariables>;
-
-/**
- * __useCopySketchMutation__
- *
- * To run a mutation, you first call `useCopySketchMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCopySketchMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [copySketchMutation, { data, loading, error }] = useCopySketchMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useCopySketchMutation(baseOptions?: Apollo.MutationHookOptions<CopySketchMutation, CopySketchMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<CopySketchMutation, CopySketchMutationVariables>(CopySketchDocument, options);
-      }
-export type CopySketchMutationHookResult = ReturnType<typeof useCopySketchMutation>;
-export type CopySketchMutationResult = Apollo.MutationResult<CopySketchMutation>;
-export type CopySketchMutationOptions = Apollo.BaseMutationOptions<CopySketchMutation, CopySketchMutationVariables>;
-export const CopySketchFolderDocument = gql`
-    mutation CopySketchFolder($id: Int!) {
-  copySketchFolder(input: {folderId: $id}) {
-    sketchFolder {
-      ...SketchFolderDetails
-    }
-  }
-}
-    ${SketchFolderDetailsFragmentDoc}`;
-export type CopySketchFolderMutationFn = Apollo.MutationFunction<CopySketchFolderMutation, CopySketchFolderMutationVariables>;
-
-/**
- * __useCopySketchFolderMutation__
- *
- * To run a mutation, you first call `useCopySketchFolderMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCopySketchFolderMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [copySketchFolderMutation, { data, loading, error }] = useCopySketchFolderMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useCopySketchFolderMutation(baseOptions?: Apollo.MutationHookOptions<CopySketchFolderMutation, CopySketchFolderMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<CopySketchFolderMutation, CopySketchFolderMutationVariables>(CopySketchFolderDocument, options);
-      }
-export type CopySketchFolderMutationHookResult = ReturnType<typeof useCopySketchFolderMutation>;
-export type CopySketchFolderMutationResult = Apollo.MutationResult<CopySketchFolderMutation>;
-export type CopySketchFolderMutationOptions = Apollo.BaseMutationOptions<CopySketchFolderMutation, CopySketchFolderMutationVariables>;
 export const CopyTocItemDocument = gql`
     mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
   copySketchTocItem(id: $id, type: $type) {
@@ -24791,6 +24692,10 @@ export const CopyTocItemDocument = gql`
       ...SketchTocDetails
     }
     parentId
+    updatedCollection {
+      id
+      updatedAt
+    }
   }
 }
     ${SketchFolderDetailsFragmentDoc}
@@ -27877,10 +27782,7 @@ export const namedOperations = {
     DeleteSketch: 'DeleteSketch',
     DeleteSketchFolder: 'DeleteSketchFolder',
     RenameFolder: 'RenameFolder',
-    UpdateSketchFolderParent: 'UpdateSketchFolderParent',
-    UpdateSketchParent: 'UpdateSketchParent',
-    CopySketch: 'CopySketch',
-    CopySketchFolder: 'CopySketchFolder',
+    UpdateTocItemsParent: 'UpdateTocItemsParent',
     CopyTocItem: 'CopyTocItem',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',

@@ -5,10 +5,29 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
     typeDefs: gql`
+      input UpdateTocItemParentInput {
+        type: SketchChildType!
+        id: Int!
+      }
+
+      type DeleteSketchTocItemsResults {
+        updatedCollections: [Sketch]!
+      }
+
       type CopySketchTocItemResults {
         sketches: [Sketch!]
         folders: [SketchFolder!]
         parentId: Int!
+        """
+        Returns the parent collection (if exists) so that the client can select an updated updatedAt
+        """
+        updatedCollection: Sketch
+      }
+
+      type UpdateSketchTocItemParentResults {
+        sketches: [Sketch]!
+        folders: [SketchFolder]!
+        updatedCollections: [Sketch]!
       }
 
       extend type Sketch {
@@ -91,6 +110,22 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           type: SketchChildType!
           forForum: Boolean
         ): CopySketchTocItemResults
+
+        """
+        TODO: implement mutation and result resolvers
+        """
+        updateSketchTocItemParent(
+          folderId: Int
+          collectionId: Int
+          tocItems: [UpdateTocItemParentInput]!
+        ): UpdateSketchTocItemParentResults
+
+        """
+        TODO: implement mutation and result resolvers
+        """
+        deleteSketchTocItems(
+          items: [UpdateTocItemParentInput]!
+        ): DeleteSketchTocItemsResults
       }
     `,
     resolvers: {
@@ -118,6 +153,19 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               );
             }
           );
+        },
+        updatedCollection: async (results, args, context, resolveInfo) => {
+          const [row] = await resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`sketches`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = get_parent_collection_id(${sql.value(
+                  context.parentType
+                )}, ${sql.value(context.parentId)})`
+              );
+            }
+          );
+          return row || null;
         },
       },
       Sketch: {
@@ -359,6 +407,8 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           }
           context.sketchIds = sketchIds;
           context.folderIds = folderIds;
+          context.parentId = copyId;
+          context.parentType = type;
           // will be finished by CopySketchTocItemResults functions at the top
           // of the resolvers
           return {

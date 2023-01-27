@@ -71,6 +71,7 @@ export default function SketchReportWindow({
           // eslint-disable-next-line i18next/no-literal-string
           `/sketches/${sketchId}.geojson.json?reporting_access_token=${reportingAccessToken}`
         );
+        console.log("updatedAt", data?.sketch?.updatedAt);
         const initMessage = {
           type: "SeaSketchReportingMessageEventType",
           client: data?.sketchClass?.geoprocessingClientName,
