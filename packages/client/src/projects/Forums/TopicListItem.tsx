@@ -42,7 +42,7 @@ export default function TopicListItem({
             >
               {hasReplies ? (
                 <Trans>
-                  Last reply {timeAgo} by {lastAuthor}
+                  Last reply {timeAgo}. Started by {lastAuthor}
                 </Trans>
               ) : (
                 <Trans>
