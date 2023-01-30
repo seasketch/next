@@ -10687,7 +10687,7 @@ COMMENT ON FUNCTION public.sketch_or_collection_as_geojson(id integer) IS '@omit
 --
 
 CREATE FUNCTION public.sketches_child_properties(sketch public.sketches) RETURNS jsonb
-    LANGUAGE plpgsql STABLE
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     declare
       output jsonb;
