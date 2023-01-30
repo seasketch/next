@@ -10084,7 +10084,6 @@ type Query implements Node {
   """
   build: String!
   camelCase(snakeCase: String): String
-  collectTextFromProsemirrorBody(body: JSON): String
   collectTextFromProsemirrorBodyForLabel(body: JSON): String
   communityGuideline(projectId: Int!): CommunityGuideline
 

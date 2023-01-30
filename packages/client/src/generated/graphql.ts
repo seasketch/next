@@ -8951,7 +8951,6 @@ export type Query = Node & {
    */
   build: Scalars['String'];
   camelCase?: Maybe<Scalars['String']>;
-  collectTextFromProsemirrorBody?: Maybe<Scalars['String']>;
   collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
@@ -9206,12 +9205,6 @@ export type QueryBasemapsConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryCamelCaseArgs = {
   snakeCase?: Maybe<Scalars['String']>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryCollectTextFromProsemirrorBodyArgs = {
-  body?: Maybe<Scalars['JSON']>;
 };
 
 

@@ -3569,6 +3569,36 @@ CREATE FUNCTION public.collect_text_from_prosemirror_body(body jsonb) RETURNS te
 
 
 --
+-- Name: collect_text_from_prosemirror_body(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_text_from_prosemirror_body(body jsonb, max_length integer) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output text;
+      i jsonb;
+    begin
+      output = '';
+      if body ? 'text' then
+        output = concat(output, body->>'text');
+      end if;
+      if body ? 'content' then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          if length(output) > max_length then
+            return output || '...';
+          else
+            output = concat(output, collect_text_from_prosemirror_body(i, max_length));
+          end if;
+        end loop;
+      end if;
+      return output;
+    end;
+  $$;
+
+
+--
 -- Name: collect_text_from_prosemirror_body_for_label(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7851,7 +7881,7 @@ User Profile of the author. If a user has not shared their profile the post mess
 CREATE FUNCTION public.posts_blurb(post public.posts) RETURNS text
     LANGUAGE sql STABLE
     AS $$
-    select collect_text_from_prosemirror_body(post.message_contents);
+    select collect_text_from_prosemirror_body(post.message_contents, 52);
   $$;
 
 
@@ -11426,7 +11456,7 @@ User Profile of the author. If a user has not shared their profile the first pos
 CREATE FUNCTION public.topics_blurb(topic public.topics) RETURNS text
     LANGUAGE sql STABLE
     AS $$
-    select collect_text_from_prosemirror_body(posts.message_contents) from posts where id = (select id from posts where topic_id = topic.id order by created_at asc limit 1);
+    select collect_text_from_prosemirror_body(posts.message_contents, 52) from posts where id = (select id from posts where topic_id = topic.id order by created_at asc limit 1);
   $$;
 
 
@@ -19046,6 +19076,14 @@ REVOKE ALL ON FUNCTION public.collect_sketch_ids_from_prosemirror_body(body json
 
 REVOKE ALL ON FUNCTION public.collect_text_from_prosemirror_body(body jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.collect_text_from_prosemirror_body(body jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION collect_text_from_prosemirror_body(body jsonb, max_length integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_text_from_prosemirror_body(body jsonb, max_length integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.collect_text_from_prosemirror_body(body jsonb, max_length integer) TO anon;
 
 
 --
