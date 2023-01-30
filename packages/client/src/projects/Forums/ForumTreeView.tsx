@@ -67,7 +67,7 @@ export default function ForumTreeView(props: {
             data: {
               __typename: "Sketch",
               ...item,
-              timestamp: props.timestamp,
+              timestamp: props.timestamp || new Date().getTime(),
               sharedInForum: true,
             },
             fragment: gql`
