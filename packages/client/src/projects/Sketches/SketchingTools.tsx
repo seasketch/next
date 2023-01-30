@@ -130,12 +130,21 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     [focusOnTableOfContentsItem]
   );
 
+  const [temporarilyHighlightedIds, setTemporarilyHighlightedIds] = useState<
+    string[]
+  >([]);
+
+  // Disabled auto-expansion of folders as requested in
+  // https://github.com/seasketch/next/issues/544
   const onDropEnd = useCallback(
     (item: TreeItemType) => {
       const id = treeItemId(item.id, item.type);
-      expandItem({ id });
+      setTemporarilyHighlightedIds((prev) => [...prev, id]);
+      setTimeout(() => {
+        setTemporarilyHighlightedIds((prev) => prev.filter((i) => i !== id));
+      }, 100);
     },
-    [expandItem]
+    [setTemporarilyHighlightedIds]
   );
 
   const [{ canDrop, isOver }, drop] = useDrop(() => ({
@@ -277,6 +286,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               onDropEnd={onDropEnd}
               checkedItems={visibleSketches}
               onChecked={onChecked}
+              temporarilyHighlightedIds={temporarilyHighlightedIds}
             />
           )}
         </div>

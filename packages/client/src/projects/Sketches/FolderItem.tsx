@@ -5,6 +5,7 @@ import ArrowIcon from "./ArrowIcon";
 import { useDrag, useDrop } from "react-dnd";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 import { TreeItemI, TreeNodeProps } from "../../components/TreeView";
+import { motion } from "framer-motion";
 
 export interface FolderNodeDataProps {
   name: string;
@@ -44,6 +45,7 @@ function FolderItem({
   onChecked,
   disableEditing,
   hideCheckboxes,
+  highlighted,
 }: TreeNodeProps<FolderNodeDataProps>) {
   const data = node.data;
   const isDisabled = false;
@@ -157,7 +159,7 @@ function FolderItem({
         opacity: isDisabled ? 0.5 : 1,
         paddingLeft: 0,
       }}
-      className={`rounded ${
+      className={`rounded relative ${
         isOverCurrent && !isDragging && canDrop
           ? "bg-blue-100 border-blue-400 border"
           : isSelected && !isDragging
@@ -223,6 +225,24 @@ function FolderItem({
       {children && children.length > 0 && isExpanded && (
         <ChildGroup items={children} />
       )}
+      <motion.div
+        variants={{
+          highlighted: {
+            opacity: 1,
+            transition: {
+              duration: 0,
+            },
+          },
+          normal: {
+            opacity: 0,
+            transition: {
+              duration: 0.5,
+            },
+          },
+        }}
+        animate={highlighted ? "highlighted" : "normal"}
+        className="absolute left-0 top-0 w-full h-full rounded bg-yellow-300 bg-opacity-50 pointer-events-none opacity-0"
+      ></motion.div>
     </div>
   );
 }

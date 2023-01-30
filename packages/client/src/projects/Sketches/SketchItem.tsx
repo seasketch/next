@@ -6,6 +6,7 @@ import Collection from "@heroicons/react/solid/CollectionIcon";
 import ArrowIcon from "./ArrowIcon";
 import { DragItemProps, FolderNodeDataProps } from "./FolderItem";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
+import { motion } from "framer-motion";
 
 export interface SketchNodeDataProps {
   id: number;
@@ -43,6 +44,7 @@ export default function SketchItem({
   onDropEnd,
   disableEditing,
   hideCheckboxes,
+  highlighted,
 }: TreeNodeProps<SketchNodeDataProps>) {
   const isDisabled = false;
   const data = node.data;
@@ -171,7 +173,7 @@ export default function SketchItem({
               opacity: isDisabled ? 0.5 : 1,
             }
       }
-      className={`rounded ${
+      className={`rounded relative ${
         isOverCurrent && !isDragging && canDrop
           ? "bg-blue-100 border-blue-400 border"
           : isSelected && !isDragging
@@ -234,6 +236,24 @@ export default function SketchItem({
       {children && children.length > 0 && isExpanded && (
         <ChildGroup items={children} />
       )}
+      <motion.div
+        variants={{
+          highlighted: {
+            opacity: 1,
+            transition: {
+              duration: 0,
+            },
+          },
+          normal: {
+            opacity: 0,
+            transition: {
+              duration: 0.5,
+            },
+          },
+        }}
+        animate={highlighted ? "highlighted" : "normal"}
+        className="absolute left-0 top-0 w-full h-full rounded bg-yellow-300 bg-opacity-50 pointer-events-none opacity-0"
+      ></motion.div>
     </div>
   );
 }

@@ -48,6 +48,7 @@ interface TreeViewProps<T> {
   childGroupPadding?: number;
   disableEditing?: boolean;
   hideCheckboxes?: boolean;
+  temporarilyHighlightedIds?: string[];
 }
 
 type ChildGroupRenderer<T> = FC<{
@@ -86,6 +87,7 @@ export interface TreeNodeProps<T> {
   hasCheckedChildren: boolean;
   disableEditing: boolean;
   hideCheckboxes: boolean;
+  highlighted: boolean;
 }
 export enum CheckState {
   CHECKED,
@@ -102,6 +104,7 @@ interface TreeNode<T> {
   isContextMenuTarget: boolean;
   checked: CheckState;
   isLeaf: boolean;
+  highlighted: boolean;
 }
 
 export default function TreeView<T>({
@@ -140,6 +143,9 @@ export default function TreeView<T>({
           : CheckState.UNCHECKED,
         hasCheckedChildren: false,
         isLeaf: item.isLeaf,
+        highlighted: props.temporarilyHighlightedIds
+          ? props.temporarilyHighlightedIds.indexOf(item.id) !== -1
+          : false,
       } as TreeNode<T>;
       map.set(item.id, node);
       return map;
@@ -207,6 +213,7 @@ export default function TreeView<T>({
     props.selection,
     contextMenuItemId,
     checkedItems,
+    props.temporarilyHighlightedIds,
   ]);
 
   const handleChecked = useCallback(
@@ -300,6 +307,7 @@ export default function TreeView<T>({
               hideCheckboxes={hideCheckboxes || false}
               isChecked={item.checked === CheckState.CHECKED}
               hasCheckedChildren={item.checked === CheckState.PARTIAL}
+              highlighted={item.highlighted}
             />
           ))}
         </ul>
@@ -347,6 +355,7 @@ export default function TreeView<T>({
           hideCheckboxes={hideCheckboxes || false}
           isChecked={item.checked === CheckState.CHECKED}
           hasCheckedChildren={item.checked === CheckState.PARTIAL}
+          highlighted={item.highlighted}
         />
       ))}
     </ul>
