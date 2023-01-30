@@ -3297,6 +3297,30 @@ CREATE FUNCTION public.before_valid_children_insert_or_update() RETURNS trigger
 
 
 --
+-- Name: bump_parent_collection_updated_at(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bump_parent_collection_updated_at(folderid integer, collectionid integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      fid int;
+      cid int;
+    begin
+      if collectionId is not null then
+        update sketches set updated_at = now() where id = collectionId;
+        return true;
+      end if;
+      if folderId is not null then
+        select folder_id, collection_id into fid, cid from sketch_folders where id = folderId;
+        perform bump_parent_collection_updated_at(fid, cid);
+      end if;
+      return true;
+    end;
+  $$;
+
+
+--
 -- Name: camel_case(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11499,6 +11523,39 @@ $$;
 
 
 --
+-- Name: trigger_update_collection_updated_at_for_sketch_folder(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_update_collection_updated_at_for_sketch_folder() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    has_sketches boolean;
+  begin
+    if TG_OP = 'UPDATE' or TG_OP = 'DELETE' then
+      select array_length(get_child_sketches_recursive(OLD.id, 'sketch_folder'), 1) > 0 into has_sketches;
+      if has_sketches then
+        -- being deleted or updated. find the previous collection
+        perform bump_parent_collection_updated_at(OLD.folder_id, OLD.collection_id);
+      end if;
+    end if;
+    if TG_OP = 'UPDATE' or TG_OP = 'INSERT' then
+      select array_length(get_child_sketches_recursive(OLD.id, 'sketch_folder'), 1) > 0 into has_sketches;
+      -- being inserted or updated
+      if has_sketches then
+        perform bump_parent_collection_updated_at(NEW.folder_id, NEW.collection_id);
+      end if;
+    end if;
+    if TG_OP = 'UPDATE' or TG_OP = 'INSERT' then
+      RETURN NEW;
+    else
+      RETURN OLD;
+    end if;
+  END;
+$$;
+
+
+--
 -- Name: unsubscribed(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15236,7 +15293,14 @@ CREATE TRIGGER post_after_insert_notify_subscriptions AFTER INSERT ON public.pos
 -- Name: sketches set_parent_collection_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER set_parent_collection_updated_at AFTER UPDATE ON public.sketches FOR EACH ROW EXECUTE FUNCTION public.trigger_update_collection_updated_at();
+CREATE TRIGGER set_parent_collection_updated_at AFTER INSERT OR DELETE OR UPDATE ON public.sketches FOR EACH ROW WHEN ((pg_trigger_depth() = 0)) EXECUTE FUNCTION public.trigger_update_collection_updated_at();
+
+
+--
+-- Name: sketch_folders set_parent_collection_updated_at_sketch_folders; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER set_parent_collection_updated_at_sketch_folders BEFORE INSERT OR DELETE OR UPDATE ON public.sketch_folders FOR EACH ROW WHEN ((pg_trigger_depth() = 0)) EXECUTE FUNCTION public.trigger_update_collection_updated_at_for_sketch_folder();
 
 
 --
@@ -18724,6 +18788,13 @@ REVOKE ALL ON FUNCTION public.box3d(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.box3dtobox(public.box3d) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION bump_parent_collection_updated_at(folderid integer, collectionid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.bump_parent_collection_updated_at(folderid integer, collectionid integer) FROM PUBLIC;
 
 
 --
@@ -26328,6 +26399,13 @@ REVOKE ALL ON FUNCTION public.trigger_set_timestamp() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trigger_update_collection_updated_at_for_sketch_folder(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at_for_sketch_folder() FROM PUBLIC;
 
 
 --
