@@ -14808,6 +14808,10 @@ export type GetFolderQuery = (
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'title' | 'hideChildren'>
+    & { acl?: Maybe<(
+      { __typename?: 'Acl' }
+      & Pick<Acl, 'nodeId' | 'id'>
+    )> }
   )> }
 );
 
@@ -19879,6 +19883,10 @@ export const GetFolderDocument = /*#__PURE__*/ gql`
     showRadioChildren
     title
     hideChildren
+    acl {
+      nodeId
+      id
+    }
   }
 }
     `;

@@ -158,6 +158,10 @@ query GetFolder($id: Int!) {
     showRadioChildren
     title
     hideChildren
+    acl {
+      nodeId
+      id
+    }
   }
 }
 

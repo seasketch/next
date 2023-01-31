@@ -24,6 +24,7 @@ import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
 import ZIndexEditor from "./ZIndexEditor";
 import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
 import useDialog from "../../components/useDialog";
+import FolderEditor from "./FolderEditor";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -91,7 +92,7 @@ export default function TableOfContentsEditor() {
 
   return (
     <div className="">
-      {(folderId || createNewFolderModalOpen) && (
+      {createNewFolderModalOpen && (
         <EditFolderModal
           className="z-30"
           folderId={folderId}
@@ -103,6 +104,14 @@ export default function TableOfContentsEditor() {
             setCreateNewFolderModalOpen(false);
           }}
           createNew={createNewFolderModalOpen}
+        />
+      )}
+      {folderId && (
+        <FolderEditor
+          id={folderId}
+          onRequestClose={() => {
+            setFolderId(undefined);
+          }}
         />
       )}
       {publishOpen && (

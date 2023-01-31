@@ -1,53 +1,37 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
-import { Trans, useTranslation } from "react-i18next";
-import AccessControlListEditor from "../../components/AccessControlListEditor";
-import Modal from "../../components/Modal";
-import Spinner from "../../components/Spinner";
-import TextInput from "../../components/TextInput";
+import { useEffect, useState } from "react";
 import {
-  TableOfContentsItem,
-  useCreateFolderMutation,
+  useUpdateTableOfContentsItemMutation,
   useGetFolderQuery,
   useUpdateFolderMutation,
 } from "../../generated/graphql";
-import useProjectId from "../../useProjectId";
-import { generateStableId } from "./arcgis/arcgis";
+import { useTranslation, Trans } from "react-i18next";
+import Spinner from "../../components/Spinner";
+import MutableAutosaveInput from "../MutableAutosaveInput";
+import AccessControlListEditor from "../../components/AccessControlListEditor";
+import { folderToType, FolderType, typeToFolderProps } from "./EditFolderModal";
+import { MutationStateIndicator } from "../../components/MutationStateIndicator";
 
-export interface EditFolderModalProps {
-  folderId?: number;
-  onRequestClose?: (created: boolean) => void;
-  className?: string;
-  createNew?: boolean;
-}
-
-export enum FolderType {
-  DEFAULT,
-  CLICK_OFF_ONLY,
-  RADIO_CHILDREN,
-  HIDE_CHILDREN,
-}
-
-export default function EditFolderModal({
-  folderId,
+export default function FolderEditor({
+  id,
   onRequestClose,
-  className,
-  createNew,
-}: EditFolderModalProps) {
+}: {
+  id: number;
+  onRequestClose?: () => void;
+}) {
+  const { t } = useTranslation(["admin"]);
   const { data, loading } = useGetFolderQuery({
     variables: {
-      id: folderId!,
+      id,
     },
   });
-  const projectId = useProjectId();
-  const [mutate, mutationState] = useUpdateFolderMutation();
-  const [create, createFolderState] = useCreateFolderMutation();
+  const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
+  const [mutateFolder, mutateFolderState] = useUpdateFolderMutation();
+
   const folder = data?.tableOfContentsItem;
+
   const [state, setState] = useState<{ title: string; folderType: FolderType }>(
     { title: "", folderType: FolderType.DEFAULT }
   );
-  const [postCreateActionFinishing, setPostCreateActionFinishing] =
-    useState(false);
-
   useEffect(() => {
     if (folder) {
       setState({
@@ -60,106 +44,77 @@ export default function EditFolderModal({
         folderType: FolderType.DEFAULT,
       });
     }
-  }, [folder, createNew]);
-
-  const onSave = async (e?: FormEvent) => {
-    e?.preventDefault();
-    try {
-      if (createNew) {
-        setPostCreateActionFinishing(true);
-        await create({
-          variables: {
-            projectId: projectId!,
-            stableId: generateStableId(),
-            title: state.title,
-            ...typeToFolderProps(state.folderType),
-          },
-        });
-        if (!createFolderState.error && onRequestClose) {
-          await onRequestClose(true);
-          setPostCreateActionFinishing(false);
-        }
-      } else {
-        await mutate({
-          variables: {
-            id: folderId!,
-            title: state.title,
-            ...typeToFolderProps(state.folderType),
-          },
-        });
-        if (!mutationState.error && onRequestClose) {
-          onRequestClose(false);
-        }
-      }
-    } catch (e) {
-      setPostCreateActionFinishing(false);
-      console.error(e);
-    }
-  };
-
+  }, [folder]);
   const updateType = (value: FolderType) => {
     setState((prev) => ({
       ...prev,
       folderType: value,
     }));
+    mutateFolder({
+      variables: {
+        id,
+        ...typeToFolderProps(value),
+      },
+    });
   };
-  const { t } = useTranslation("admin");
 
-  const nameRef = useRef(null);
-  const error = mutationState.error || createFolderState.error;
-  const isLoading =
-    mutationState.loading ||
-    createFolderState.loading ||
-    postCreateActionFinishing;
   return (
-    <Modal
-      loading={loading}
-      className={`${className}`}
-      footer={[
-        {
-          disabled: isLoading,
-          label: t("Save"),
-          loading: isLoading,
-          variant: "primary",
-          onClick: onSave,
-        },
-        {
-          disabled: isLoading,
-          label: t("Cancel"),
-          onClick: () => {
-            if (onRequestClose) {
-              onRequestClose(false);
-            }
-          },
-        },
-      ]}
-      onRequestClose={() => {}}
-      title={createNew ? t("New Folder") : t("Edit Folder")}
-      initialFocus={nameRef}
+    <div
+      className="bg-white z-50 absolute bottom-0 w-128 flex flex-col"
+      style={{ height: "calc(100vh)" }}
     >
-      {(folder || !!createNew) && (
-        <div className={``}>
-          <form onSubmit={onSave}>
-            <div className="max-w-xs">
-              <TextInput
-                autoFocus={true}
-                ref={nameRef}
-                error={error ? error.message : undefined}
-                name="folder-name"
-                label={t("Name")}
-                disabled={loading || isLoading}
-                value={state.title}
-                onChange={(val) =>
-                  setState((prev) => ({
-                    ...prev,
-                    title: val,
-                  }))
-                }
-              />
-            </div>
+      <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+        <h4 className="font-medium text-indigo-100 flex-1">
+          {t("Edit Folder")}
+        </h4>
+        <button
+          className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
+          onClick={onRequestClose}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            className="w-5 h-5 text-white"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+      {!folder && <Spinner />}
+      {folder && (
+        <div className="flex-1 overflow-y-scroll px-4 pb-4">
+          <div className="md:max-w-sm mt-5">
+            <MutableAutosaveInput
+              // autofocus
+              mutation={mutateItem}
+              mutationStatus={mutateItemState}
+              propName="title"
+              value={folder?.title || ""}
+              label={t("Name")}
+              variables={{ id }}
+            />
+          </div>
+          <div>
             <fieldset className="mt-6 mb-8">
-              <legend className="text-sm font-medium text-gray-700">
+              <legend className="text-sm font-medium text-gray-700 relative">
                 <Trans ns="admin">Folder type</Trans>
+                <MutationStateIndicator
+                  state={
+                    mutateFolderState.called
+                      ? mutateFolderState.loading
+                        ? "SAVING"
+                        : "SAVED"
+                      : "NONE"
+                  }
+                  error={Boolean(mutateFolderState.error)}
+                />
               </legend>
               <div className="mt-2 space-y-4 pr-8 pl-2">
                 <div className="relative flex items-start">
@@ -270,67 +225,14 @@ export default function EditFolderModal({
                 </div>
               </div>
             </fieldset>
-          </form>
-          {data?.tableOfContentsItem?.acl && (
-            <AccessControlListEditor
-              nodeId={data.tableOfContentsItem.acl.nodeId}
-            />
-          )}
+          </div>
+          <div className="mt-5">
+            {folder.acl?.nodeId && (
+              <AccessControlListEditor nodeId={folder.acl?.nodeId} />
+            )}
+          </div>
         </div>
       )}
-    </Modal>
+    </div>
   );
-}
-
-export function folderToType(
-  folder: Pick<
-    TableOfContentsItem,
-    | "id"
-    | "bounds"
-    | "isClickOffOnly"
-    | "showRadioChildren"
-    | "title"
-    | "hideChildren"
-  >
-): FolderType {
-  if (folder.hideChildren) {
-    return FolderType.HIDE_CHILDREN;
-  } else if (folder.isClickOffOnly) {
-    return FolderType.CLICK_OFF_ONLY;
-  } else if (folder.showRadioChildren) {
-    return FolderType.RADIO_CHILDREN;
-  }
-  return FolderType.DEFAULT;
-}
-
-export function typeToFolderProps(
-  type: FolderType
-): Pick<
-  TableOfContentsItem,
-  "isClickOffOnly" | "showRadioChildren" | "hideChildren"
-> {
-  if (type === FolderType.CLICK_OFF_ONLY) {
-    return {
-      isClickOffOnly: true,
-      showRadioChildren: false,
-      hideChildren: false,
-    };
-  } else if (type === FolderType.HIDE_CHILDREN) {
-    return {
-      isClickOffOnly: false,
-      showRadioChildren: false,
-      hideChildren: true,
-    };
-  } else if (type === FolderType.RADIO_CHILDREN) {
-    return {
-      isClickOffOnly: false,
-      showRadioChildren: true,
-      hideChildren: false,
-    };
-  }
-  return {
-    isClickOffOnly: false,
-    showRadioChildren: false,
-    hideChildren: false,
-  };
 }
