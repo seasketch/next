@@ -58,7 +58,9 @@ export default function FormElementOptionsInput({
 
   let valuesMatch = true;
   if (valuesSpecified && context?.supportedLanguages.length) {
-    const valuesString = (componentSettings?.options || [])
+    const valuesString = (
+      componentSettings ? componentSettings[prop] || [] : []
+    )
       .map((o: FormElementOption) => o.value || "")
       .sort()
       .join(",");
