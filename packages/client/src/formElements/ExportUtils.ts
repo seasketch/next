@@ -81,7 +81,7 @@ export function getDataForExport(
       );
     }
   }
-  for (const response of responses) {
+  for (const response of responses.filter((r) => !r.archived)) {
     // meta columns
     const row: ExportRow = {
       id: response.id,
