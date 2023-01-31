@@ -56,8 +56,9 @@ export default function ResponsesMap({
   const [spatialQuestions, setSpatialQuestions] = useState<
     FormElementDetailsFragment[]
   >([]);
-  const [selectedQuestion, setSelectedQuestion] =
-    useState<string | undefined>(undefined);
+  const [selectedQuestion, setSelectedQuestion] = useState<string | undefined>(
+    undefined
+  );
   const responsesQuery = useSurveyResponsesQuery({
     variables: {
       surveyId: surveyId,

@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import useProjectId from "../../useProjectId";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -86,14 +86,24 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
           <ErrorBoundaryFallback title={t("Failed to render responses grid")} />
         }
       >
-        <ResponseGrid
-          highlightedRows={highlighedRows}
-          className="flex-1 bg-white"
-          surveyId={surveyId}
-          onSelectionChange={(selection) => setSelection(selection)}
-          onTabChange={(tab) => setTab(tab)}
-          onNewMapTilesRequired={() => setCacheBuster(new Date().getTime())}
-        />
+        {Boolean(data?.survey?.submittedResponseCount) ? (
+          <ResponseGrid
+            highlightedRows={highlighedRows}
+            className="flex-1 bg-white"
+            surveyId={surveyId}
+            onSelectionChange={(selection) => setSelection(selection)}
+            onTabChange={(tab) => setTab(tab)}
+            onNewMapTilesRequired={() => setCacheBuster(new Date().getTime())}
+          />
+        ) : loading ? (
+          <Spinner />
+        ) : (
+          <div>
+            <div className="border-4 border-dashed border-gray-300 text-gray-500 w-72 rounded p-4 text-center ml-8 mt-8">
+              <Trans ns="admin:surveys">No responses yet for this survey</Trans>
+            </div>
+          </div>
+        )}
       </ErrorBoundary>
       {!survey && <Spinner />}
     </div>
