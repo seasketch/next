@@ -22,6 +22,7 @@ import * as Sentry from "@sentry/node";
 import * as Tracing from "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
+import slugify from "slugify";
 
 interface SSNRequest extends Request {
   user?: { id: number; canonicalEmail: string };
@@ -286,9 +287,10 @@ app.use(
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");
+      const name = geojson?.properties?.name || `Sketch-${id}`;
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename=Sketch-${id}.geojson.json`
+        `attachment; filename=${slugify(name)}.geojson.json`
       );
       if (
         (req.query && req.query.timestamp) ||
