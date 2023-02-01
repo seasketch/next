@@ -18,6 +18,7 @@ import { CameraOptions } from "mapbox-gl";
 import { ClientCacheManagerProvider } from "./offline/ClientCacheManager";
 import OfflineToastNotification from "./offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "./offline/OfflineResponsesToastNotification";
+import DeveloperApiPage from "./DeveloperAPIPage";
 
 const LazyProjectApp = React.lazy(
   () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
@@ -140,7 +141,9 @@ function App() {
                 <Route exact path="/projects">
                   <ProjectsPage />
                 </Route>
-                <Route exact path="/api"></Route>
+                <Route exact path="/api">
+                  <DeveloperApiPage />
+                </Route>
                 <Route exact path="/team"></Route>
                 <Route exact path="/terms-of-use">
                   <LazyTermsOfUse />

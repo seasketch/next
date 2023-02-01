@@ -43,11 +43,11 @@ export default function Header() {
       label: t("Developer API"),
       id: "nav-api",
     },
-    {
-      to: "/team",
-      label: t("Team"),
-      id: "nav-team",
-    },
+    // {
+    //   to: "/team",
+    //   label: t("Team"),
+    //   id: "nav-team",
+    // },
   ];
   return (
     <nav className="bg-gray-800">
