@@ -71,6 +71,14 @@ const LazyJoinProject = React.lazy(
   () => import(/* webpackChunkName: "JoinProject" */ "./auth/JoinProject")
 );
 
+const LazyTermsOfUse = React.lazy(
+  () => import(/* webpackChunkName: "TermsOfUse" */ "./TermsOfUse")
+);
+
+const LazyPrivacyPolicy = React.lazy(
+  () => import(/* webpackChunkName: "PrivacyPolicy" */ "./PrivacyPolicy")
+);
+
 function App() {
   const { user } = useAuth0();
   const { t } = useTranslation(["homepage"]);
@@ -108,6 +116,8 @@ function App() {
                   "/api",
                   "/team",
                   "/submit-offline-surveys",
+                  "/terms-of-use",
+                  "/privacy-policy",
                 ]}
                 exact
               >
@@ -132,6 +142,12 @@ function App() {
                 </Route>
                 <Route exact path="/api"></Route>
                 <Route exact path="/team"></Route>
+                <Route exact path="/terms-of-use">
+                  <LazyTermsOfUse />
+                </Route>
+                <Route exact path="/privacy-policy">
+                  <LazyPrivacyPolicy />
+                </Route>
                 <Route path="/new-project">
                   <NewProjectPage />
                 </Route>

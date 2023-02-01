@@ -360,7 +360,7 @@ export default function FullSidebar({
               </a> */}
               <a
                 // className="mx-1"
-                href="https://github.com/seasketch/next/wiki/Terms-of-Service"
+                href="/terms-of-use"
               >
                 {t("Terms of Use")}
               </a>

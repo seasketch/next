@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-target-blank */
 import React from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -9,26 +10,26 @@ const logos = [
     title: "Waitt Institute",
     src: "/logos/waitt.webp",
     url: "https://www.waittinstitute.org/",
+    smaller: true,
+  },
+  {
+    title: "Blue Prosperity Coalition",
+    src: "/logos/BPCLogo3.png",
+    url: "https://www.blueprosperity.org/",
+    bigger: true,
   },
   {
     title: "The Nature Conservancy",
     src: "/logos/tnc.svg",
     url: "https://tnc.org",
   },
+
   {
     title: "NOAA",
     src: "/logos/NOAA.svg",
     url: "https://www.noaa.gov",
-  },
-  {
-    title: "Rare",
-    src: "/logos/Rare.webp",
-    url: "https://rare.org/",
-  },
-  {
-    title: "Oceano Azule",
-    src: "/logos/OA.webp",
-    url: "https://www.oceanoazulfoundation.org/",
+    // bigger: true,
+    className: "-mt-1",
   },
 ];
 
@@ -50,19 +51,40 @@ export default function NewProjectPage() {
               </h2>
               <p className="mt-3 text-base text-gray-300 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
                 <Trans t={t}>
-                  Use our collaborative geodesign tools for ocean conservation
-                  planning in your region. <i>It's free!</i> Your project will
-                  include tools to visualize data, create discussion forums,
-                  sketch plans, and collect data using surveys. Built-in reports
-                  include data from Global Fishing Watch, and can be customized
-                  using our Developer API.
+                  Use our collaborative geodesign and survey tools for marine
+                  spatial planning in your region. Your project will include
+                  tools to visualize maps, create discussion forums, sketch
+                  plans, and collect data using surveys - <i>for free!</i>{" "}
+                  Analytical reports may be developed and customized using our{" "}
+                  <a
+                    target="_blank"
+                    className="text-primary-300"
+                    href="https://github.com/seasketch/geoprocessing"
+                  >
+                    geoprocessing framework
+                  </a>
+                  .
+                </Trans>
+              </p>
+              <p className="mt-3 text-base text-gray-300 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
+                <Trans t={t}>
+                  Please contact us at{" "}
+                  <a
+                    className="text-primary-300"
+                    target="_blank"
+                    href="mailto:support@seasketch.org"
+                  >
+                    support@seasketch.org
+                  </a>{" "}
+                  to arrange a discussion about how SeaSketch can be used to
+                  support your planning efforts.
                 </Trans>
               </p>
               <p className="mt-8 text-sm text-white uppercase tracking-wide font-semibold sm:mt-10">
                 {t("Trusted by")}
               </p>
               <div className="mt-5 w-full sm:mx-auto sm:max-w-lg lg:ml-0">
-                <div className="flex flex-wrap items-start justify-between">
+                <div className="flex flex-wrap justify-between items-center">
                   {logos.map((user) => (
                     <div key={user.title} className="flex justify-center px-1">
                       <a href={user.url}>
@@ -71,7 +93,13 @@ export default function NewProjectPage() {
                             filter:
                               "grayscale(100%) contrast(0.3) brightness(1.5)",
                           }}
-                          className="h-9 sm:h-10 w-auto"
+                          className={`${
+                            user.bigger
+                              ? "h-15 sm:h-16"
+                              : user.smaller
+                              ? "h-8 sm:h-9"
+                              : "h-10 sm:h-11"
+                          } w-auto ${user.className}`}
                           src={user.src}
                           alt={user.title}
                         />
@@ -90,26 +118,19 @@ export default function NewProjectPage() {
               <div className="px-4 py-6 bg-gray-50 border-t-2 border-gray-200 sm:px-10">
                 <p className="text-xs leading-5 text-gray-500">
                   <Trans ns="homepage">
-                    By creating a project, you agree to our{" "}
+                    By creating a project, you are agreeing to our{" "}
                     <Link
                       to="/terms-of-use"
                       className="font-medium text-gray-900 hover:underline"
                     >
-                      Terms
-                    </Link>
-                    ,{" "}
-                    <Link
-                      to="/data-policy"
-                      className="font-medium text-gray-900 hover:underline"
-                    >
-                      Data Policy
+                      Terms of Use
                     </Link>{" "}
                     and{" "}
                     <Link
-                      to="/cookies-policy"
+                      to="/privacy-policy"
                       className="font-medium text-gray-900 hover:underline"
                     >
-                      Cookies Policy
+                      Privacy Policy
                     </Link>
                     .
                   </Trans>
