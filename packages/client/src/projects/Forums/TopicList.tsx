@@ -2,13 +2,11 @@ import {
   ParticipationStatus,
   useTopicListQuery,
 } from "../../generated/graphql";
-import { Trans as I18n } from "react-i18next";
 import Skeleton from "../../components/Skeleton";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import TopicListItem from "./TopicListItem";
 import LoginOrJoinPrompt from "./LoginOrJoinPrompt";
-
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
+import { Trans } from "react-i18next";
 
 export default function TopicList({ forumId }: { forumId: number }) {
   const onError = useGlobalErrorHandler();
@@ -42,12 +40,12 @@ export default function TopicList({ forumId }: { forumId: number }) {
       <div className="p-4">
         <div className="mx-auto p-4 border-4 border-dashed text-sm rounded">
           {data?.forum?.canPost ? (
-            <Trans>
+            <Trans ns="forums">
               This forum has no discussion topics yet. Be the first to create
               one!
             </Trans>
           ) : (
-            <Trans>This forum has no discussion topics yet.</Trans>
+            <Trans ns="forums">This forum has no discussion topics yet.</Trans>
           )}
         </div>
       </div>

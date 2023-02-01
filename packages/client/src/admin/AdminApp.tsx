@@ -26,8 +26,6 @@ import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import Spinner from "../components/Spinner";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
-import Modal from "../components/Modal";
-import { AnimatePresence } from "framer-motion";
 import { ParticipationStatus } from "../generated/graphql";
 import useDialog from "../components/useDialog";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
@@ -103,7 +101,8 @@ export default function AdminApp() {
         history.push(`/${slug}/join?redirectUrl=${window.location.pathname}`);
       });
     }
-  }, [data?.project?.sessionParticipationStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.project?.sessionParticipationStatus, alert, slug]);
 
   const sections: Section[] = [
     {
@@ -304,6 +303,7 @@ export default function AdminApp() {
 
   const isFullscreenRoute = useMemo(
     () => /offline\/basemap/.test(window.location.pathname),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [window.location.pathname]
   );
 

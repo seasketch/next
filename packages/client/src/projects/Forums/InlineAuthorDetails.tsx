@@ -1,10 +1,9 @@
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import { AuthorProfileFragment } from "../../generated/graphql";
 import { nameForProfile } from "./TopicListItem";
-import { Trans as I18n } from "react-i18next";
 import { MouseEvent, useCallback, useContext } from "react";
 import { ProjectAppSidebarContext } from "../ProjectAppSidebar";
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
+import { Trans } from "react-i18next";
 
 export default function InlineAuthorDetails({
   profile,
@@ -50,9 +49,9 @@ export default function InlineAuthorDetails({
           <>
             <span className="inline-flex">
               {firstPostInTopic ? (
-                <Trans>posted on</Trans>
+                <Trans ns="forums">posted on</Trans>
               ) : (
-                <Trans>replied on</Trans>
+                <Trans ns="forums">replied on</Trans>
               )}
             </span>
             <span className="inline-flex" title={dateString}>

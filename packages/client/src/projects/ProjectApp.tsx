@@ -1,7 +1,7 @@
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import bytes from "bytes";
-import React, { Suspense, useState, useMemo, useCallback } from "react";
+import React, { Suspense, useState, useMemo } from "react";
 import { Route, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import MapboxMap from "../components/MapboxMap";
 import { MapContext, useMapContext } from "../dataLayers/MapContextManager";
@@ -59,9 +59,6 @@ export default function ProjectApp() {
     `/${slug}/app/:sidebar`
   );
   const [expandSidebar, setExpandSidebar] = useState(!showSidebar);
-  const hideFullSidebar = useCallback(() => {
-    setExpandSidebar(false);
-  }, [setExpandSidebar]);
   const { t } = useTranslation("sidebar");
   const sidebarTitles: { [key: string]: string } = {
     maps: t("Maps"),

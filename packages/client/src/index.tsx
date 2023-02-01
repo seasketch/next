@@ -2,8 +2,8 @@ import "./wdyr";
 import React, { Suspense, useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
-import App from "./App";
 import "./i18n";
+import App from "./App";
 import * as serviceWorkerRegistration from "./serviceWorkerRegistration";
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import {

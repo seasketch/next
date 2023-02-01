@@ -1,6 +1,8 @@
 {
   "CanCompleteLine": "Haga clic para añadir puntos, haga clic doble para terminar",
   "CanCompletePolygonTouch": "Clic en el punto inicial o clic doble para terminar",
+  "Click a line to edit": "Haga clic en una línea para editar",
+  "ClickToEditPolygonDesktop": "Haga clic en una forma para editar",
   "ContinueDrawLine": "Haga clic para añadir puntos, haga clic doble para terminar",
   "ContinuePolygon": "Haga clic para añadir puntos",
   "ContinuePolygonTouch": "Clic para añadir puntos",
@@ -12,6 +14,7 @@
   "FinishPolygonDesktop": "Haga clic en el punto inicial o clic doble en el último punto para terminar",
   "Invalid Shape": "Polígono no válido",
   "InvalidShapeInstructions": "Si su polígono se muestra en rojo no es válido. Si esto ocurre asegurese que el polígono no se cruza a sí mismo, como lo indican los símbolos X. Si continúa teniendo este problema, considere eliminar el polígono y comenzar de nuevo.",
+  "NoSelectionPoint": "Haga clic en un punto para editar",
   "Okay": "OK",
   "Reset Shape": "Redefinir polígono",
   "StartLine": "Haga clic en el mapa para iniciar una línea",

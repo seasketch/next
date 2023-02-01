@@ -31,10 +31,12 @@
   "NumGeostatsValues_plural": "{{count}} values",
   "NumTopics": "{{count}} topic",
   "NumTopics_plural": "{{count}} topics",
-  "NumPosts": "{{count}} posts",
+  "NumPosts": "{{count}} post",
   "NumPosts_plural": "{{count}} posts",
   "participantCount": "{{count}} person",
   "participantCount_plural": "{{count}} people",
   "ReplyCount_plural": "{{count}} replies",
-  "ReplyCount": "{{count}} reply"
+  "ReplyCount": "{{count}} reply",
+  "AreaCount": "{{count}} area",
+  "AreaCount_plural": "{{count}} areas"
 }

@@ -1,6 +1,8 @@
 {
   "CanCompleteLine": "Klik om meer punten toe te voegen, dubbelklik om te voltooien",
   "CanCompletePolygonTouch": "Tik op startpunt, of dubbelklik om te voltooien",
+  "Click a line to edit": "Klik op een lijn om te bewerken",
+  "ClickToEditPolygonDesktop": "Klik op een vorm om te bewerken",
   "ContinueDrawLine": "Klik om meer punten toe te voegen, dubbelklik om te voltooien",
   "ContinuePolygon": "Klik om meer punten toe te voegen",
   "ContinuePolygonTouch": "Tik om meer punten toe te voegen",
@@ -12,6 +14,7 @@
   "FinishPolygonDesktop": "Klik op het startpunt of dubbelklik het laatste punt om te voltooien",
   "Invalid Shape": "Ongeldige vorm",
   "InvalidShapeInstructions": "Uw vorm wordt rood als deze ongeldig is. Als dit gebeurt, controleer of de vorm zichzelf niet kruist (aangegeven met een X-symbool). Als de fout zich blijft voordoen, verwijder de vorm en begin opnieuw.",
+  "NoSelectionPoint": "Klik op een punt om te bewerken",
   "Okay": "Oké",
   "Reset Shape": "Vorm herstellen",
   "StartLine": "Klik op de map om een lijn te starten",

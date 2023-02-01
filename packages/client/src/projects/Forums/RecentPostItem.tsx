@@ -1,11 +1,10 @@
 import { RecentPostFragment } from "../../generated/graphql";
-import { Trans as I18n } from "react-i18next";
 import { formatTimeAgo } from "../../admin/data/CreateBasemapModal";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import { nameForProfile } from "./TopicListItem";
 import { Link } from "react-router-dom";
 import getSlug from "../../getSlug";
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
+import { Trans } from "react-i18next";
 
 export default function RecentPostItem({ post }: { post: RecentPostFragment }) {
   const replyCount = (post.topic!.postsCount || 1) - 1;
@@ -27,14 +26,14 @@ export default function RecentPostItem({ post }: { post: RecentPostFragment }) {
           <span className="font-medium text-gray-500">{timeAgo}</span>
         </div>
         <h3 className="text-sm truncate text-gray-500">
-          <Trans>
+          <Trans ns="homepage">
             Posted in <span className="font-semibold">{post.topic!.title}</span>
           </Trans>
         </h3>
         {<p className="truncate whitespace-nowrap">{post.blurb}</p>}
         <h4 className="text-sm text-gray-500 truncate">
           <span className="font-semibold">{post.topic!.forum!.name}</span>.{" "}
-          <Trans i18nKey="ReplyCount" count={replyCount}>
+          <Trans ns="homepage" i18nKey="ReplyCount" count={replyCount}>
             {{ count: replyCount }} replies
           </Trans>
         </h4>

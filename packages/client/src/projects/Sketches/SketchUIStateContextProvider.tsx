@@ -1034,7 +1034,7 @@ export default function SketchUIStateContextProvider({
             });
             if (folder) {
               await prompt({
-                message: t(`Rename "${folder.name}"`),
+                message: t("Rename {{folder.name}}", { folder }),
                 defaultValue: folder.name,
                 onSubmit: async (name) => {
                   if (name.length) {
@@ -1068,7 +1068,7 @@ export default function SketchUIStateContextProvider({
           // @ts-ignore private api
           const name: string = client.cache.data.get(selectedIds[0], "name");
           confirmDelete({
-            message: t(`Are you sure you want to delete "${name}"?`),
+            message: t(`Are you sure you want to delete "{{name}}"?`, { name }),
             onDelete: async () => {
               clearSelection();
               if (selectionType.folder) {

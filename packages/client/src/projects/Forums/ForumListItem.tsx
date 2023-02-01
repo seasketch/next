@@ -1,12 +1,10 @@
 import { Link } from "react-router-dom";
-import { Trans as I18n } from "react-i18next";
-
+import { Trans } from "react-i18next";
 import Badge from "../../components/Badge";
 import { ForumListDetailsFragment } from "../../generated/graphql";
 import { formatTimeAgo } from "../../admin/data/CreateBasemapModal";
 import { useContext } from "react";
 import { ProjectAppSidebarContext } from "../ProjectAppSidebar";
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function ForumListItem({
   forum,
@@ -27,7 +25,11 @@ export default function ForumListItem({
       <div className="space-x-1">
         {!isSmall && (
           <Badge className="">
-            <Trans i18nKey="NumTopics" count={forum.topicCount || 0}>
+            <Trans
+              ns="homepage"
+              i18nKey="NumTopics"
+              count={forum.topicCount || 0}
+            >
               {{ count: forum.topicCount || 0 }} topics
             </Trans>
           </Badge>
@@ -35,7 +37,11 @@ export default function ForumListItem({
 
         {!isSmall && (
           <Badge className="">
-            <Trans i18nKey="NumPosts" count={forum.postCount || 0}>
+            <Trans
+              ns="homepage"
+              i18nKey="NumPosts"
+              count={forum.postCount || 0}
+            >
               {{ count: forum.postCount || 0 }} posts
             </Trans>
           </Badge>
@@ -43,7 +49,7 @@ export default function ForumListItem({
 
         {forum.lastPostDate && (
           <Badge>
-            <Trans>Latest activity</Trans>{" "}
+            <Trans ns="homepage">Latest activity</Trans>{" "}
             {formatTimeAgo(new Date(forum.lastPostDate))}
           </Badge>
         )}

@@ -12,11 +12,15 @@ i18n
       namespace: string,
       callback: (errorValue: unknown, translations: null | any) => void
     ) {
+      const isDefault =
+        language.toLowerCase() === "en" || /en-/i.test(language);
       import(
-        /* webpackChunkName: "lang" */ `./lang/${language}/${namespace}.json`
+        /* webpackChunkName: "lang" */ `./lang/${
+          isDefault ? "en" : language
+        }/${namespace}.json`
       )
         .then((resources) => {
-          if (language === "en") {
+          if (isDefault) {
             callback(null, {
               ...resources,
               ...plurals,
@@ -32,8 +36,8 @@ i18n
   })
   .use(initReactI18next) // passes i18n down to react-i18next
   .init({
-    // fallbackLng: "en",
-    // debug: true,
+    fallbackLng: "en",
+    cleanCode: true,
     keySeparator: false,
     nsSeparator: ":",
     interpolation: {

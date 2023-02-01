@@ -248,7 +248,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
               />
 
               <div
-                dir={surveyContext?.lang.rtl ? "rtl" : "ltr"}
+                dir={surveyContext?.lang?.rtl ? "rtl" : "ltr"}
                 style={{
                   gridArea: "content",
                 }}

@@ -1,9 +1,8 @@
-import { Trans as I18n } from "react-i18next";
+import { Trans } from "react-i18next";
 import {
   ForumsDocument,
   TopicDetailDocument,
   TopicDetailQuery,
-  TopicListQuery,
   useForumsQuery,
   useNewPostsSubscription,
 } from "../../generated/graphql";
@@ -21,7 +20,6 @@ import useSessionStorage from "../../useSessionStorage";
 import RecentPostItem from "./RecentPostItem";
 import Warning from "../../components/Warning";
 import { TopicListDocument } from "../../generated/queries";
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export type ForumBreadcrumb = { name: string; id: number };
 
@@ -172,7 +170,9 @@ export default function Forums({
   if (data?.projectBySlug?.forums?.length === 0 && !hidden) {
     return (
       <Warning level="info">
-        <Trans>No forums have been configured for this project.</Trans>
+        <Trans ns="forums">
+          No forums have been configured for this project.
+        </Trans>
       </Warning>
     );
   }
@@ -197,7 +197,7 @@ export default function Forums({
             0 && (
             <div className="mt-1 p-4">
               <h2 className="font-semibold mb-4">
-                <Trans>Latest Discussions</Trans>
+                <Trans ns="homepage">Latest Discussions</Trans>
               </h2>
               <div className="space-y-4">
                 {data?.projectBySlug?.latestPostsConnection.nodes.map((p) => (

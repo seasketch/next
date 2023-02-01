@@ -1,4 +1,4 @@
-import React, { Suspense, useContext, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { Switch, Route, Redirect } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
@@ -184,7 +184,7 @@ function App() {
                     exact
                     path={`/:slug/edit-basemap/:id`}
                     render={(history) => {
-                      const { slug, id } = history.match.params;
+                      const { id } = history.match.params;
                       const search = new URLSearchParams(
                         history.location.search || ""
                       );
