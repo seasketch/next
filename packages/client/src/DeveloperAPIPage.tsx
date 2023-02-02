@@ -33,8 +33,10 @@ export default function DeveloperApiPage() {
               </p>
             </div>
           </div>
-          <div className="mt-12 sm:mt-16 lg:mt-0 lg:col-span-6 rounded-xl shadow-2xl transform scale-90 -rotate-2 lg:-rotate-3 ">
+          <div className="bg-gray-900 mt-12 sm:mt-16 lg:mt-0 lg:col-span-6 rounded-xl shadow-2xl transform scale-90 -rotate-2 lg:-rotate-3 ">
             <img
+              width={1810}
+              height={2320}
               alt="geoprocessing framework code sample"
               src="/geoprocessing-api-code.png"
             />
