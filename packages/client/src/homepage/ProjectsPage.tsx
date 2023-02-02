@@ -111,14 +111,14 @@ export default function ProjectsPage() {
                   key={p!.id}
                 >
                   <li
-                    className="px-4 py-2 border-t border-gray-200 flex flex-col justify-center"
+                    className="px-4 py-2 border-t border-gray-200 flex flex-col justify-center h-16"
                     style={{ minHeight: 48 }}
                   >
                     {p.isFeatured}
                     <h3 className="text-primary-500 font-bold block">
                       {p?.name}
                     </h3>
-                    <p className="truncate">{p?.description}</p>
+                    <p className="truncate text-sm">{p?.description}</p>
                   </li>
                 </Link>
               ))}
@@ -127,7 +127,7 @@ export default function ProjectsPage() {
               Array.apply(null, Array(LIST_SIZE)).map((el, i) => (
                 <li
                   key={i}
-                  className="px-4 border-t border-gray-200 flex items-center h-12"
+                  className="px-4 border-t border-gray-200 flex items-center h-16"
                 >
                   <Skeleton className="w-3/4 h-4" />
                 </li>
