@@ -16138,7 +16138,7 @@ ALTER TABLE ONLY public.sketches
 --
 
 ALTER TABLE ONLY public.sketches
-    ADD CONSTRAINT sketches_response_id_fkey FOREIGN KEY (response_id) REFERENCES public.survey_responses(id) DEFERRABLE;
+    ADD CONSTRAINT sketches_response_id_fkey FOREIGN KEY (response_id) REFERENCES public.survey_responses(id) ON DELETE CASCADE DEFERRABLE;
 
 
 --
