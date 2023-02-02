@@ -68,7 +68,7 @@ export default function ProjectsPage() {
         <h1 className="mt-4 text-xl tracking-tight font-extrabold ">
           Featured Projects
         </h1>
-        <div className="max-w-lg">
+        <div className="">
           {data?.featuredProjects?.nodes && (
             <div>
               {data.featuredProjects.nodes.map((p) => (
@@ -87,12 +87,6 @@ export default function ProjectsPage() {
               <div className="bg-white border flex items-center p-2 gap-3 my-2 rounded h-14">
                 <Skeleton className="h-5 w-1/2" />
               </div>
-              {/* <div className="bg-white border flex items-center p-2 gap-3 my-2 rounded h-14">
-                <Skeleton className="h-5 w-3/4" />
-              </div>
-              <div className="bg-white border flex items-center p-2 gap-3 my-2 rounded h-14">
-                <Skeleton className="h-5 w-1/2" />
-              </div> */}
             </div>
           )}
         </div>
@@ -107,7 +101,7 @@ export default function ProjectsPage() {
         <h1 className="mt-4 text-xl tracking-tight font-extrabold ">
           All Projects
         </h1>
-        <div className="mx-auto bg-white shadow sm:rounded-md mt-2">
+        <div className=" bg-white shadow sm:rounded-md mt-2 w-full lg:w-128">
           <ul>
             {data?.projects &&
               data?.projects!.edges.map(({ node: p }) => (
@@ -117,7 +111,7 @@ export default function ProjectsPage() {
                   key={p!.id}
                 >
                   <li
-                    className="px-4 py-2 border-t border-gray-200 flex items-center"
+                    className="px-4 py-2 border-t border-gray-200 flex flex-col justify-center"
                     style={{ minHeight: 48 }}
                   >
                     {p.isFeatured}
