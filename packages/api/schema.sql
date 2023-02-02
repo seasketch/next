@@ -14830,6 +14830,13 @@ CREATE INDEX projects_data_sources_bucket_id_idx ON public.projects USING btree 
 
 
 --
+-- Name: projects_name_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX projects_name_idx ON public.projects USING btree (name);
+
+
+--
 -- Name: sketch_classes_form_element_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 

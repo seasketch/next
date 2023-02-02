@@ -8545,6 +8545,8 @@ export type ProjectCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isFeatured` field. */
   isFeatured?: Maybe<Scalars['Boolean']>;
+  /** Checks for equality with the object’s `name` field. */
+  name?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `slug` field. */
   slug?: Maybe<Scalars['String']>;
 };
@@ -8829,6 +8831,8 @@ export enum ProjectsOrderBy {
   IdDesc = 'ID_DESC',
   IsFeaturedAsc = 'IS_FEATURED_ASC',
   IsFeaturedDesc = 'IS_FEATURED_DESC',
+  NameAsc = 'NAME_ASC',
+  NameDesc = 'NAME_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
@@ -16034,19 +16038,40 @@ export type PublishedTableOfContentsQuery = (
   )> }
 );
 
-export type SimpleProjectListQueryVariables = Exact<{
+export type ProjectListItemFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured'>
+);
+
+export type ProjectListingQueryVariables = Exact<{
   first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  after?: Maybe<Scalars['Cursor']>;
+  last?: Maybe<Scalars['Int']>;
+  before?: Maybe<Scalars['Cursor']>;
 }>;
 
 
-export type SimpleProjectListQuery = (
+export type ProjectListingQuery = (
   { __typename?: 'Query' }
-  & { projectsConnection?: Maybe<(
+  & { projects?: Maybe<(
+    { __typename?: 'ProjectsConnection' }
+    & Pick<ProjectsConnection, 'totalCount'>
+    & { edges: Array<(
+      { __typename?: 'ProjectsEdge' }
+      & Pick<ProjectsEdge, 'cursor'>
+      & { node: (
+        { __typename?: 'Project' }
+        & ProjectListItemFragment
+      ) }
+    )>, pageInfo: (
+      { __typename?: 'PageInfo' }
+      & Pick<PageInfo, 'hasNextPage' | 'hasPreviousPage' | 'endCursor' | 'startCursor'>
+    ) }
+  )>, featuredProjects?: Maybe<(
     { __typename?: 'ProjectsConnection' }
     & { nodes: Array<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'slug' | 'description' | 'url'>
+      & ProjectListItemFragment
     )> }
   )> }
 );
@@ -18605,6 +18630,17 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
     picture
     affiliations
   }
+}
+    `;
+export const ProjectListItemFragmentDoc = gql`
+    fragment ProjectListItem on Project {
+  id
+  logoUrl
+  name
+  slug
+  description
+  url
+  isFeatured
 }
     `;
 export const TemplateSketchClassFragmentDoc = gql`
@@ -23928,48 +23964,67 @@ export function usePublishedTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQu
 export type PublishedTableOfContentsQueryHookResult = ReturnType<typeof usePublishedTableOfContentsQuery>;
 export type PublishedTableOfContentsLazyQueryHookResult = ReturnType<typeof usePublishedTableOfContentsLazyQuery>;
 export type PublishedTableOfContentsQueryResult = Apollo.QueryResult<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>;
-export const SimpleProjectListDocument = gql`
-    query SimpleProjectList($first: Int, $offset: Int) {
-  projectsConnection(first: $first, offset: $offset) {
+export const ProjectListingDocument = gql`
+    query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
+  projects: projectsConnection(
+    first: $first
+    last: $last
+    after: $after
+    before: $before
+    orderBy: NAME_ASC
+  ) {
+    edges {
+      cursor
+      node {
+        ...ProjectListItem
+      }
+    }
+    totalCount
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      endCursor
+      startCursor
+    }
+  }
+  featuredProjects: projectsConnection(condition: {isFeatured: true}) {
     nodes {
-      id
-      name
-      slug
-      description
-      url
+      ...ProjectListItem
     }
   }
 }
-    `;
+    ${ProjectListItemFragmentDoc}`;
 
 /**
- * __useSimpleProjectListQuery__
+ * __useProjectListingQuery__
  *
- * To run a query within a React component, call `useSimpleProjectListQuery` and pass it any options that fit your needs.
- * When your component renders, `useSimpleProjectListQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useProjectListingQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectListingQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useSimpleProjectListQuery({
+ * const { data, loading, error } = useProjectListingQuery({
  *   variables: {
  *      first: // value for 'first'
- *      offset: // value for 'offset'
+ *      after: // value for 'after'
+ *      last: // value for 'last'
+ *      before: // value for 'before'
  *   },
  * });
  */
-export function useSimpleProjectListQuery(baseOptions?: Apollo.QueryHookOptions<SimpleProjectListQuery, SimpleProjectListQueryVariables>) {
+export function useProjectListingQuery(baseOptions?: Apollo.QueryHookOptions<ProjectListingQuery, ProjectListingQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<SimpleProjectListQuery, SimpleProjectListQueryVariables>(SimpleProjectListDocument, options);
+        return Apollo.useQuery<ProjectListingQuery, ProjectListingQueryVariables>(ProjectListingDocument, options);
       }
-export function useSimpleProjectListLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SimpleProjectListQuery, SimpleProjectListQueryVariables>) {
+export function useProjectListingLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectListingQuery, ProjectListingQueryVariables>) {
           const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<SimpleProjectListQuery, SimpleProjectListQueryVariables>(SimpleProjectListDocument, options);
+          return Apollo.useLazyQuery<ProjectListingQuery, ProjectListingQueryVariables>(ProjectListingDocument, options);
         }
-export type SimpleProjectListQueryHookResult = ReturnType<typeof useSimpleProjectListQuery>;
-export type SimpleProjectListLazyQueryHookResult = ReturnType<typeof useSimpleProjectListLazyQuery>;
-export type SimpleProjectListQueryResult = Apollo.QueryResult<SimpleProjectListQuery, SimpleProjectListQueryVariables>;
+export type ProjectListingQueryHookResult = ReturnType<typeof useProjectListingQuery>;
+export type ProjectListingLazyQueryHookResult = ReturnType<typeof useProjectListingLazyQuery>;
+export type ProjectListingQueryResult = Apollo.QueryResult<ProjectListingQuery, ProjectListingQueryVariables>;
 export const SketchClassFormDocument = gql`
     query SketchClassForm($id: Int!) {
   form(id: $id) {
@@ -27665,7 +27720,7 @@ export const namedOperations = {
     GetProjectBySlug: 'GetProjectBySlug',
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
-    SimpleProjectList: 'SimpleProjectList',
+    ProjectListing: 'ProjectListing',
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
@@ -27870,6 +27925,7 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',

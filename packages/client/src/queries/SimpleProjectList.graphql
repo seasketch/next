@@ -1,11 +1,39 @@
-query SimpleProjectList($first: Int, $offset: Int) {
-  projectsConnection(first: $first, offset: $offset) {
+fragment ProjectListItem on Project {
+  id
+  logoUrl
+  name
+  slug
+  description
+  url
+  isFeatured
+}
+
+query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
+  projects: projectsConnection(
+    first: $first
+    last: $last
+    after: $after
+    before: $before
+    orderBy: NAME_ASC
+  ) {
+    edges {
+      cursor
+      node {
+        ...ProjectListItem
+      }
+    }
+    totalCount
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      endCursor
+      startCursor
+    }
+  }
+
+  featuredProjects: projectsConnection(condition: { isFeatured: true }) {
     nodes {
-      id
-      name
-      slug
-      description
-      url
+      ...ProjectListItem
     }
   }
 }

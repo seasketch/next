@@ -8543,6 +8543,8 @@ export type ProjectCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isFeatured` field. */
   isFeatured?: Maybe<Scalars['Boolean']>;
+  /** Checks for equality with the object’s `name` field. */
+  name?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `slug` field. */
   slug?: Maybe<Scalars['String']>;
 };
@@ -8827,6 +8829,8 @@ export enum ProjectsOrderBy {
   IdDesc = 'ID_DESC',
   IsFeaturedAsc = 'IS_FEATURED_ASC',
   IsFeaturedDesc = 'IS_FEATURED_DESC',
+  NameAsc = 'NAME_ASC',
+  NameDesc = 'NAME_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
@@ -16032,19 +16036,40 @@ export type PublishedTableOfContentsQuery = (
   )> }
 );
 
-export type SimpleProjectListQueryVariables = Exact<{
+export type ProjectListItemFragment = (
+  { __typename?: 'Project' }
+  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured'>
+);
+
+export type ProjectListingQueryVariables = Exact<{
   first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
+  after?: Maybe<Scalars['Cursor']>;
+  last?: Maybe<Scalars['Int']>;
+  before?: Maybe<Scalars['Cursor']>;
 }>;
 
 
-export type SimpleProjectListQuery = (
+export type ProjectListingQuery = (
   { __typename?: 'Query' }
-  & { projectsConnection?: Maybe<(
+  & { projects?: Maybe<(
+    { __typename?: 'ProjectsConnection' }
+    & Pick<ProjectsConnection, 'totalCount'>
+    & { edges: Array<(
+      { __typename?: 'ProjectsEdge' }
+      & Pick<ProjectsEdge, 'cursor'>
+      & { node: (
+        { __typename?: 'Project' }
+        & ProjectListItemFragment
+      ) }
+    )>, pageInfo: (
+      { __typename?: 'PageInfo' }
+      & Pick<PageInfo, 'hasNextPage' | 'hasPreviousPage' | 'endCursor' | 'startCursor'>
+    ) }
+  )>, featuredProjects?: Maybe<(
     { __typename?: 'ProjectsConnection' }
     & { nodes: Array<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'slug' | 'description' | 'url'>
+      & ProjectListItemFragment
     )> }
   )> }
 );
@@ -18605,6 +18630,17 @@ export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ProjectListItemFragmentDoc = /*#__PURE__*/ gql`
+    fragment ProjectListItem on Project {
+  id
+  logoUrl
+  name
+  slug
+  description
+  url
+  isFeatured
+}
+    `;
 export const TemplateSketchClassFragmentDoc = /*#__PURE__*/ gql`
     fragment TemplateSketchClass on SketchClass {
   id
@@ -20748,19 +20784,36 @@ export const PublishedTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
-export const SimpleProjectListDocument = /*#__PURE__*/ gql`
-    query SimpleProjectList($first: Int, $offset: Int) {
-  projectsConnection(first: $first, offset: $offset) {
+export const ProjectListingDocument = /*#__PURE__*/ gql`
+    query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
+  projects: projectsConnection(
+    first: $first
+    last: $last
+    after: $after
+    before: $before
+    orderBy: NAME_ASC
+  ) {
+    edges {
+      cursor
+      node {
+        ...ProjectListItem
+      }
+    }
+    totalCount
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      endCursor
+      startCursor
+    }
+  }
+  featuredProjects: projectsConnection(condition: {isFeatured: true}) {
     nodes {
-      id
-      name
-      slug
-      description
-      url
+      ...ProjectListItem
     }
   }
 }
-    `;
+    ${ProjectListItemFragmentDoc}`;
 export const SketchClassFormDocument = /*#__PURE__*/ gql`
     query SketchClassForm($id: Int!) {
   form(id: $id) {
@@ -22057,7 +22110,7 @@ export const namedOperations = {
     GetProjectBySlug: 'GetProjectBySlug',
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
-    SimpleProjectList: 'SimpleProjectList',
+    ProjectListing: 'ProjectListing',
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
@@ -22262,6 +22315,7 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
