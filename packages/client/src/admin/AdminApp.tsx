@@ -343,7 +343,7 @@ export default function AdminApp() {
       Container = ({ children }: { children?: ReactNode }) => <>{children}</>;
     }
     return Container;
-  }, [isFullscreenRoute, data?.project?.name, data?.project?.isOfflineEnabled]);
+  }, [isFullscreenRoute, data?.project?.slug, data?.project?.isOfflineEnabled]);
 
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
