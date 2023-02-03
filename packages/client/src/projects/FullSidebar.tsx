@@ -277,11 +277,13 @@ export default function FullSidebar({
               onClick={() => {
                 cache?.logout();
                 logout({
-                  returnTo:
-                    window.location.protocol +
-                    "//" +
-                    window.location.host +
-                    "/",
+                  logoutParams: {
+                    returnTo:
+                      window.location.protocol +
+                      "//" +
+                      window.location.host +
+                      "/",
+                  },
                 });
               }}
             />
@@ -318,7 +320,9 @@ export default function FullSidebar({
                     : window.location.pathname + "?pj",
                 promptToJoin: true,
               },
-              redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+              authorizationParams: {
+                redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+              },
             });
           }}
         />

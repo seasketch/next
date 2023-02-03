@@ -266,12 +266,13 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
         projectInvite: state.claims,
         tokenString: state.tokenString,
       },
-      screen_hint: screenHint,
-      login_hint: ignoreCurrentEmail ? undefined : state.claims.email,
-      // @ts-ignore
-      // eslint-disable-next-line i18next/no-literal-string
-      redirectUri: `${window.location.protocol}//${window.location.host}/auth/projectInvite/confirm?token=${tokenString}`,
-      max_age: 0,
+      authorizationParams: {
+        screen_hint: screenHint,
+        login_hint: ignoreCurrentEmail ? undefined : state.claims.email,
+        // eslint-disable-next-line i18next/no-literal-string
+        redirect_uri: `${window.location.protocol}//${window.location.host}/auth/projectInvite/confirm?token=${tokenString}`,
+        max_age: 0,
+      },
     });
   };
 

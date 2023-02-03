@@ -117,9 +117,11 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
             <Button
               onClick={() =>
                 auth0.loginWithRedirect({
-                  prompt: "login",
                   appState: {
                     returnTo: window.location.pathname,
+                  },
+                  authorizationParams: {
+                    prompt: "login",
                   },
                 })
               }
@@ -314,7 +316,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
             <Button
               onClick={() =>
                 auth0.loginWithRedirect({
-                  prompt: "login",
+                  authorizationParams: {
+                    prompt: "login",
+                  },
                   appState: {
                     returnTo: window.location.pathname,
                   },
@@ -333,7 +337,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               <Button
                 onClick={() =>
                   auth0.loginWithRedirect({
-                    screen_hint: "signup",
+                    authorizationParams: {
+                      screen_hint: "signup",
+                    },
                     appState: {
                       returnTo: window.location.pathname,
                     },

@@ -6,8 +6,10 @@ export default function useAccessToken() {
   const [state, setState] = useState<string | null>();
   useEffect(() => {
     const opts = {
-      audience: process.env.REACT_APP_AUTH0_AUDIENCE,
-      scope: process.env.REACT_APP_AUTH0_SCOPE,
+      authorizationParams: {
+        audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+        scope: process.env.REACT_APP_AUTH0_SCOPE,
+      },
     };
     let token: string | null = null;
     if ("Cypress" in window) {
@@ -30,8 +32,11 @@ export default function useAccessToken() {
             });
           } else if (e.error === "login_required") {
             setState(null);
+          } else if (e.error === "missing_refresh_token") {
+            setState(null);
           } else {
             console.error(e.error);
+            setState(null);
             // Don't throw an uncaught error here as it might upset offline use
             // throw e;
           }

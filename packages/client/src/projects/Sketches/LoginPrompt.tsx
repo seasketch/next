@@ -25,7 +25,9 @@ export default function LoginPrompt({ hidden }: { hidden?: boolean }) {
                       : window.location.pathname + "?pj",
                   promptToJoin: true,
                 },
-                redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                authorizationParams: {
+                  redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                },
               });
             }}
           >
@@ -39,7 +41,6 @@ export default function LoginPrompt({ hidden }: { hidden?: boolean }) {
                 HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY
               );
               loginWithRedirect({
-                screen_hint: "signup",
                 appState: {
                   returnTo:
                     hasSkippedJoinPrompt === "true"
@@ -47,7 +48,10 @@ export default function LoginPrompt({ hidden }: { hidden?: boolean }) {
                       : window.location.pathname + "?pj",
                   promptToJoin: true,
                 },
-                redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                authorizationParams: {
+                  screen_hint: "signup",
+                  redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                },
               });
             }}
           >

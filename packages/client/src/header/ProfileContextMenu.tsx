@@ -61,8 +61,10 @@ export default function ProfileContextMenu(props?: { itemClassName?: string }) {
           onClick={() => {
             cache?.logout();
             logout({
-              returnTo:
-                window.location.protocol + "//" + window.location.host + "/",
+              logoutParams: {
+                returnTo:
+                  window.location.protocol + "//" + window.location.host + "/",
+              },
             });
           }}
         >

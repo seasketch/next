@@ -33,7 +33,9 @@ export default function CacheSettingsPage() {
                         : window.location.pathname + "?pj",
                     promptToJoin: true,
                   },
-                  redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                  authorizationParams: {
+                    redirect_uri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                  },
                 });
               }}
             >

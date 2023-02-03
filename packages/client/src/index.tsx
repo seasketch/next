@@ -72,7 +72,6 @@ function Auth0ProviderWithRouter(props: any) {
   const history = useHistory();
   return (
     <Auth0Provider
-      {...props}
       onRedirectCallback={(appState) => {
         if (appState?.returnTo) {
           history.replace(appState.returnTo);
@@ -82,10 +81,16 @@ function Auth0ProviderWithRouter(props: any) {
           }
         }
       }}
-      scope={process.env.REACT_APP_AUTH0_SCOPE}
-      audience={process.env.REACT_APP_AUTH0_AUDIENCE}
+      domain={process.env.REACT_APP_AUTH0_DOMAIN!}
+      clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
+      authorizationParams={{
+        audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+        redirect_uri: `${window.location.origin}/authenticate`,
+        scope: process.env.REACT_APP_AUTH0_SCOPE,
+      }}
       cacheLocation="localstorage"
       children={props.children}
+      useRefreshTokens={true}
     />
   );
 }
@@ -108,10 +113,12 @@ function ApolloProviderWithToken(props: any) {
   });
 
   const getToken = async () => {
-    let token: string | null;
+    let token: string | null | undefined;
     const opts = {
-      audience: process.env.REACT_APP_AUTH0_AUDIENCE,
-      scope: process.env.REACT_APP_AUTH0_SCOPE,
+      authorizationParams: {
+        audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+        scope: process.env.REACT_APP_AUTH0_SCOPE,
+      },
     };
     if ("Cypress" in window) {
       token = window.localStorage.getItem(
@@ -129,9 +136,11 @@ function ApolloProviderWithToken(props: any) {
           token = await getAccessTokenWithPopup(opts);
         } else if (e.error === "login_required") {
           token = null;
+        } else if (e.error === "missing_refresh_token") {
+          token = null;
         } else {
           console.error(e.error);
-          throw e;
+          token = null;
         }
       }
     }
@@ -143,8 +152,10 @@ function ApolloProviderWithToken(props: any) {
     return {
       headers: {
         ...headers,
-        // eslint-disable-next-line i18next/no-literal-string
-        ...(token && token.length ? { authorization: `Bearer ${token}` } : {}),
+        ...(token && token.length
+          ? // eslint-disable-next-line i18next/no-literal-string
+            { authorization: `Bearer ${token}` }
+          : {}),
         "x-ss-slug": window.location.pathname.split("/")[1],
       },
     };
@@ -157,8 +168,10 @@ function ApolloProviderWithToken(props: any) {
       lazy: true,
       connectionParams: async () => {
         const token = await getAccessTokenSilently({
-          audience: process.env.REACT_APP_AUTH0_AUDIENCE,
-          scope: process.env.REACT_APP_AUTH0_SCOPE,
+          authorizationParams: {
+            audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+            scope: process.env.REACT_APP_AUTH0_SCOPE,
+          },
         });
         return {
           // eslint-disable-next-line i18next/no-literal-string
@@ -254,12 +267,7 @@ ReactDOM.render(
     >
       <OfflineStateDetector graphqlErrorTarget={errorTarget}>
         <Router history={history}>
-          <Auth0ProviderWithRouter
-            domain={process.env.REACT_APP_AUTH0_DOMAIN!}
-            clientId={process.env.REACT_APP_AUTH0_CLIENT_ID!}
-            redirectUri={`${window.location.origin}/authenticate`}
-            cacheLocation="localstorage"
-          >
+          <Auth0ProviderWithRouter>
             <ApolloProviderWithToken>
               <DialogProvider>
                 <App />

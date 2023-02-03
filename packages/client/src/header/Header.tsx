@@ -184,7 +184,9 @@ export default function Header() {
                   appState: {
                     returnTo: window.location.pathname,
                   },
-                  redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                  authorizationParams: {
+                    redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                  },
                 })
               }
             >

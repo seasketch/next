@@ -156,7 +156,9 @@ function PleaseSignIn() {
               appState: {
                 returnTo: "/new-project",
               },
-              screen_hint: "signup",
+              authorizationParams: {
+                screen_hint: "signup",
+              },
             })
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent text-md font-medium rounded-md text-white bg-primary-500 focus:outline-none focus:shadow-outline-indigo hover:bg-primary-600 transition duration-150 ease-in-out"

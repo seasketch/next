@@ -35,7 +35,9 @@ export default function ProfileControl() {
                       appState: {
                         returnTo: window.location.pathname,
                       },
-                      redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                      authorizationParams: {
+                        redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
+                      },
                     })
                   }
                   className={`

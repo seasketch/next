@@ -173,11 +173,13 @@ export default function SubmitOfflineResponsesPage() {
                       className="underline"
                       onClick={() =>
                         logout({
-                          returnTo:
-                            window.location.protocol +
-                            "//" +
-                            window.location.host +
-                            "/",
+                          logoutParams: {
+                            returnTo:
+                              window.location.protocol +
+                              "//" +
+                              window.location.host +
+                              "/",
+                          },
                         })
                       }
                     >
@@ -218,7 +220,9 @@ export default function SubmitOfflineResponsesPage() {
                   <SignedInAs
                     onClick={() => {
                       loginWithRedirect({
-                        prompt: "login",
+                        authorizationParams: {
+                          prompt: "login",
+                        },
                         appState: {
                           returnTo: window.location.pathname,
                         },
@@ -230,7 +234,9 @@ export default function SubmitOfflineResponsesPage() {
                     <Button
                       onClick={() => {
                         loginWithRedirect({
-                          prompt: "login",
+                          authorizationParams: {
+                            prompt: "login",
+                          },
                           appState: {
                             returnTo: window.location.pathname,
                           },
