@@ -18,7 +18,6 @@ import OfflineToastNotification from "../offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 import UserProfileModal from "./UserProfileModal";
 import SketchUIStateContextProvider from "./Sketches/SketchUIStateContextProvider";
-import BestOnChromeModal from "../BestOnChromeModal";
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
@@ -98,7 +97,6 @@ export default function ProjectApp() {
                 history.replace(`/${slug}/app`);
               }}
             />
-            <BestOnChromeModal />
 
             <Route path={`/${slug}/profile`}>
               <UserProfileModal
