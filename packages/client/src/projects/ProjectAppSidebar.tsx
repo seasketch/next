@@ -68,6 +68,7 @@ const ProjectAppSidebar: React.FunctionComponent<{
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            className="w-full h-full"
           >
             <path
               strokeLinecap="round"
