@@ -310,7 +310,9 @@ describe("Ingress initial scenarios", () => {
         // login should be called with redirect to confirmation page
         expect(loginWithRedirect).toBeCalledWith(
           expect.objectContaining({
-            redirectUri: `http://localhost/auth/projectInvite/confirm?token=${token}`,
+            authorizationParams: expect.objectContaining({
+              redirect_uri: `http://localhost/auth/projectInvite/confirm?token=${token}`,
+            }),
             appState: expect.objectContaining({
               projectInvite: expect.objectContaining({
                 email: "test@example.com",
@@ -488,8 +490,10 @@ describe("Ingress initial scenarios", () => {
           expect(loginWithRedirect).toBeCalledTimes(1);
           expect(loginWithRedirect).toBeCalledWith(
             expect.objectContaining({
-              max_age: 0,
-              redirectUri: `http://localhost/auth/projectInvite/confirm?token=${token}`,
+              authorizationParams: expect.objectContaining({
+                max_age: 0,
+                redirect_uri: `http://localhost/auth/projectInvite/confirm?token=${token}`,
+              }),
             })
           );
         });
