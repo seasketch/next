@@ -16275,10 +16275,10 @@ export type SketchingQuery = (
   { __typename?: 'Query' }
   & { me?: Maybe<(
     { __typename?: 'User' }
-    & Pick<User, 'id' | 'participationStatus'>
+    & Pick<User, 'id'>
   )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'sketchGeometryToken'>
+    & Pick<Project, 'sessionParticipationStatus' | 'id' | 'sketchGeometryToken'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
@@ -20919,9 +20919,9 @@ export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
     id
-    participationStatus
   }
   projectBySlug(slug: $slug) {
+    sessionParticipationStatus
     id
     sketchClasses {
       ...SketchingDetails

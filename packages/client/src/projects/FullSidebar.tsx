@@ -32,7 +32,7 @@ export default function FullSidebar({
   const { t } = useTranslation("sidebar");
   const { slug } = useParams<{ slug: string }>();
   const { loginWithRedirect } = useAuth0();
-  const { data } = useCurrentProjectMetadata();
+  const { data, loading } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
   const cache = useContext(GraphqlQueryCacheContext);
   const sketchingContext = useSketchUIState();
@@ -290,7 +290,7 @@ export default function FullSidebar({
           </nav>
         </>
       )}
-      {!user && (
+      {(!user || (!loading && !data?.me)) && (
         <NavItem
           icon={
             <svg
