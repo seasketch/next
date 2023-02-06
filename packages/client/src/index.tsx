@@ -134,6 +134,8 @@ function ApolloProviderWithToken(props: any) {
         token = await getAccessTokenSilently(opts);
       } catch (e) {
         console.error(e);
+        // eslint-disable-next-line no-console
+        console.log(e.error, user);
         if (e.error === "missing_refresh_token") {
           token = null;
           if (user) {
