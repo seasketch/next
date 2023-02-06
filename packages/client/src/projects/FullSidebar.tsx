@@ -225,7 +225,7 @@ export default function FullSidebar({
         </a>
       </nav>
 
-      {user && (
+      {user && data?.me && (
         <>
           <nav className="mt-4">
             <SignedInAs className="mb-1" />

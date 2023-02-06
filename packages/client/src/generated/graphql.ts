@@ -16088,14 +16088,7 @@ export type SketchFormElementFragment = (
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
   & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize'>
-  & { acl?: Maybe<(
-    { __typename?: 'Acl' }
-    & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
-    & { groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )>> }
-  )>, validChildren?: Maybe<Array<(
+  & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
   )>>, form?: Maybe<(
@@ -16106,6 +16099,19 @@ export type SketchingDetailsFragment = (
       & SketchFormElementFragment
     )>> }
   )> }
+);
+
+export type AdminSketchingDetailsFragment = (
+  { __typename?: 'SketchClass' }
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )> }
+  & SketchingDetailsFragment
 );
 
 export type SketchClassFormQueryVariables = Exact<{
@@ -16137,7 +16143,7 @@ export type CreateSketchClassMutation = (
     { __typename?: 'CreateSketchClassFromTemplatePayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16170,7 +16176,7 @@ export type SketchClassesQuery = (
     & Pick<Project, 'id'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16188,7 +16194,7 @@ export type UpdateSketchClassMutation = (
     { __typename?: 'UpdateSketchClassPayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16204,7 +16210,7 @@ export type DeleteSketchClassMutation = (
     { __typename?: 'DeleteSketchClassPayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16269,7 +16275,10 @@ export type SketchingQueryVariables = Exact<{
 
 export type SketchingQuery = (
   { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
+  & { me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'participationStatus'>
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'sketchGeometryToken'>
     & { sketchClasses: Array<(
@@ -18643,6 +18652,74 @@ export const ProjectListItemFragmentDoc = gql`
   isFeatured
 }
     `;
+export const SketchFormElementFragmentDoc = gql`
+    fragment SketchFormElement on FormElement {
+  id
+  componentSettings
+  alternateLanguageSettings
+  body
+  isRequired
+  isInput
+  position
+  typeId
+  exportId
+  generatedExportId
+  generatedLabel
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+    isHidden
+  }
+}
+    `;
+export const SketchingDetailsFragmentDoc = gql`
+    fragment SketchingDetails on SketchClass {
+  id
+  name
+  isArchived
+  isTemplate
+  mapboxGlStyle
+  projectId
+  sketchCount
+  validChildren {
+    id
+    name
+  }
+  allowMulti
+  form {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+  }
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  formElementId
+  preprocessingEndpoint
+  preprocessingProjectUrl
+  canDigitize
+}
+    ${SketchFormElementFragmentDoc}`;
+export const AdminSketchingDetailsFragmentDoc = gql`
+    fragment AdminSketchingDetails on SketchClass {
+  ...SketchingDetails
+  acl {
+    nodeId
+    type
+    id
+    sketchClassId
+    groups {
+      id
+      name
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
 export const TemplateSketchClassFragmentDoc = gql`
     fragment TemplateSketchClass on SketchClass {
   id
@@ -18679,69 +18756,6 @@ export const SketchTocDetailsFragmentDoc = gql`
   }
 }
     `;
-export const SketchFormElementFragmentDoc = gql`
-    fragment SketchFormElement on FormElement {
-  id
-  componentSettings
-  alternateLanguageSettings
-  body
-  isRequired
-  isInput
-  position
-  typeId
-  exportId
-  generatedExportId
-  generatedLabel
-  type {
-    componentName
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    isHidden
-  }
-}
-    `;
-export const SketchingDetailsFragmentDoc = gql`
-    fragment SketchingDetails on SketchClass {
-  id
-  name
-  acl {
-    nodeId
-    type
-    id
-    sketchClassId
-    groups {
-      id
-      name
-    }
-  }
-  isArchived
-  isTemplate
-  mapboxGlStyle
-  projectId
-  sketchCount
-  validChildren {
-    id
-    name
-  }
-  allowMulti
-  form {
-    id
-    formElements {
-      ...SketchFormElement
-    }
-  }
-  geometryType
-  geoprocessingClientName
-  geoprocessingClientUrl
-  geoprocessingProjectUrl
-  formElementId
-  preprocessingEndpoint
-  preprocessingProjectUrl
-  canDigitize
-}
-    ${SketchFormElementFragmentDoc}`;
 export const SketchEditorModalDetailsFragmentDoc = gql`
     fragment SketchEditorModalDetails on Sketch {
   ...SketchTocDetails
@@ -24069,11 +24083,11 @@ export const CreateSketchClassDocument = gql`
     input: {projectId: $projectId, templateSketchClassId: $templateId}
   ) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 export type CreateSketchClassMutationFn = Apollo.MutationFunction<CreateSketchClassMutation, CreateSketchClassMutationVariables>;
 
 /**
@@ -24140,11 +24154,11 @@ export const SketchClassesDocument = gql`
   projectBySlug(slug: $slug) {
     id
     sketchClasses {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 
 /**
  * __useSketchClassesQuery__
@@ -24179,11 +24193,11 @@ export const UpdateSketchClassDocument = gql`
     input: {id: $id, patch: {name: $name, isArchived: $isArchived}}
   ) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 export type UpdateSketchClassMutationFn = Apollo.MutationFunction<UpdateSketchClassMutation, UpdateSketchClassMutationVariables>;
 
 /**
@@ -24216,11 +24230,11 @@ export const DeleteSketchClassDocument = gql`
     mutation DeleteSketchClass($id: Int!) {
   deleteSketchClass(input: {id: $id}) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 export type DeleteSketchClassMutationFn = Apollo.MutationFunction<DeleteSketchClassMutation, DeleteSketchClassMutationVariables>;
 
 /**
@@ -24337,6 +24351,10 @@ export type UpdateSketchFormElementMutationResult = Apollo.MutationResult<Update
 export type UpdateSketchFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
+  me {
+    id
+    participationStatus
+  }
   projectBySlug(slug: $slug) {
     id
     sketchClasses {
@@ -27928,6 +27946,7 @@ export const namedOperations = {
     ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',
+    AdminSketchingDetails: 'AdminSketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',

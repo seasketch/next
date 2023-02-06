@@ -16086,14 +16086,7 @@ export type SketchFormElementFragment = (
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
   & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize'>
-  & { acl?: Maybe<(
-    { __typename?: 'Acl' }
-    & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
-    & { groups?: Maybe<Array<(
-      { __typename?: 'Group' }
-      & Pick<Group, 'id' | 'name'>
-    )>> }
-  )>, validChildren?: Maybe<Array<(
+  & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
   )>>, form?: Maybe<(
@@ -16104,6 +16097,19 @@ export type SketchingDetailsFragment = (
       & SketchFormElementFragment
     )>> }
   )> }
+);
+
+export type AdminSketchingDetailsFragment = (
+  { __typename?: 'SketchClass' }
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'nodeId' | 'type' | 'id' | 'sketchClassId'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )> }
+  & SketchingDetailsFragment
 );
 
 export type SketchClassFormQueryVariables = Exact<{
@@ -16135,7 +16141,7 @@ export type CreateSketchClassMutation = (
     { __typename?: 'CreateSketchClassFromTemplatePayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16168,7 +16174,7 @@ export type SketchClassesQuery = (
     & Pick<Project, 'id'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16186,7 +16192,7 @@ export type UpdateSketchClassMutation = (
     { __typename?: 'UpdateSketchClassPayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16202,7 +16208,7 @@ export type DeleteSketchClassMutation = (
     { __typename?: 'DeleteSketchClassPayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & SketchingDetailsFragment
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -16267,7 +16273,10 @@ export type SketchingQueryVariables = Exact<{
 
 export type SketchingQuery = (
   { __typename?: 'Query' }
-  & { projectBySlug?: Maybe<(
+  & { me?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id' | 'participationStatus'>
+  )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'sketchGeometryToken'>
     & { sketchClasses: Array<(
@@ -18641,6 +18650,74 @@ export const ProjectListItemFragmentDoc = /*#__PURE__*/ gql`
   isFeatured
 }
     `;
+export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchFormElement on FormElement {
+  id
+  componentSettings
+  alternateLanguageSettings
+  body
+  isRequired
+  isInput
+  position
+  typeId
+  exportId
+  generatedExportId
+  generatedLabel
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+    isHidden
+  }
+}
+    `;
+export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchingDetails on SketchClass {
+  id
+  name
+  isArchived
+  isTemplate
+  mapboxGlStyle
+  projectId
+  sketchCount
+  validChildren {
+    id
+    name
+  }
+  allowMulti
+  form {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+  }
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  formElementId
+  preprocessingEndpoint
+  preprocessingProjectUrl
+  canDigitize
+}
+    ${SketchFormElementFragmentDoc}`;
+export const AdminSketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment AdminSketchingDetails on SketchClass {
+  ...SketchingDetails
+  acl {
+    nodeId
+    type
+    id
+    sketchClassId
+    groups {
+      id
+      name
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
 export const TemplateSketchClassFragmentDoc = /*#__PURE__*/ gql`
     fragment TemplateSketchClass on SketchClass {
   id
@@ -18677,69 +18754,6 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
-export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
-    fragment SketchFormElement on FormElement {
-  id
-  componentSettings
-  alternateLanguageSettings
-  body
-  isRequired
-  isInput
-  position
-  typeId
-  exportId
-  generatedExportId
-  generatedLabel
-  type {
-    componentName
-    isInput
-    isSingleUseOnly
-    isSurveysOnly
-    label
-    isHidden
-  }
-}
-    `;
-export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment SketchingDetails on SketchClass {
-  id
-  name
-  acl {
-    nodeId
-    type
-    id
-    sketchClassId
-    groups {
-      id
-      name
-    }
-  }
-  isArchived
-  isTemplate
-  mapboxGlStyle
-  projectId
-  sketchCount
-  validChildren {
-    id
-    name
-  }
-  allowMulti
-  form {
-    id
-    formElements {
-      ...SketchFormElement
-    }
-  }
-  geometryType
-  geoprocessingClientName
-  geoprocessingClientUrl
-  geoprocessingProjectUrl
-  formElementId
-  preprocessingEndpoint
-  preprocessingProjectUrl
-  canDigitize
-}
-    ${SketchFormElementFragmentDoc}`;
 export const SketchEditorModalDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchEditorModalDetails on Sketch {
   ...SketchTocDetails
@@ -20830,11 +20844,11 @@ export const CreateSketchClassDocument = /*#__PURE__*/ gql`
     input: {projectId: $projectId, templateSketchClassId: $templateId}
   ) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 export const TemplateSketchClassesDocument = /*#__PURE__*/ gql`
     query TemplateSketchClasses {
   templateSketchClasses {
@@ -20847,31 +20861,31 @@ export const SketchClassesDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     sketchClasses {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 export const UpdateSketchClassDocument = /*#__PURE__*/ gql`
     mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
   updateSketchClass(
     input: {id: $id, patch: {name: $name, isArchived: $isArchived}}
   ) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 export const DeleteSketchClassDocument = /*#__PURE__*/ gql`
     mutation DeleteSketchClass($id: Int!) {
   deleteSketchClass(input: {id: $id}) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${AdminSketchingDetailsFragmentDoc}`;
 export const UpdateGeoprocessingServicesDocument = /*#__PURE__*/ gql`
     mutation UpdateGeoprocessingServices($id: Int!, $preprocessingEndpoint: String, $preprocessingProjectUrl: String, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
   updateSketchClass(
@@ -20903,6 +20917,10 @@ export const UpdateSketchFormElementDocument = /*#__PURE__*/ gql`
     `;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
+  me {
+    id
+    participationStatus
+  }
   projectBySlug(slug: $slug) {
     id
     sketchClasses {
@@ -22318,6 +22336,7 @@ export const namedOperations = {
     ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',
+    AdminSketchingDetails: 'AdminSketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',

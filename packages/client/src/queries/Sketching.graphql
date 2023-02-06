@@ -25,6 +25,10 @@ fragment SketchFolderDetails on SketchFolder {
 }
 
 query Sketching($slug: String!) {
+  me {
+    id
+    participationStatus
+  }
   projectBySlug(slug: $slug) {
     id
     sketchClasses {

@@ -23,16 +23,6 @@ fragment SketchFormElement on FormElement {
 fragment SketchingDetails on SketchClass {
   id
   name
-  acl {
-    nodeId
-    type
-    id
-    sketchClassId
-    groups {
-      id
-      name
-    }
-  }
   isArchived
   isTemplate
   mapboxGlStyle
@@ -59,6 +49,20 @@ fragment SketchingDetails on SketchClass {
   canDigitize
 }
 
+fragment AdminSketchingDetails on SketchClass {
+  ...SketchingDetails
+  acl {
+    nodeId
+    type
+    id
+    sketchClassId
+    groups {
+      id
+      name
+    }
+  }
+}
+
 query SketchClassForm($id: Int!) {
   form(id: $id) {
     id
@@ -73,7 +77,7 @@ mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
     input: { projectId: $projectId, templateSketchClassId: $templateId }
   ) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
@@ -95,7 +99,7 @@ query SketchClasses($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     sketchClasses {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
@@ -105,7 +109,7 @@ mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
     input: { id: $id, patch: { name: $name, isArchived: $isArchived } }
   ) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }
@@ -113,7 +117,7 @@ mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
 mutation DeleteSketchClass($id: Int!) {
   deleteSketchClass(input: { id: $id }) {
     sketchClass {
-      ...SketchingDetails
+      ...AdminSketchingDetails
     }
   }
 }

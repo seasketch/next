@@ -6,6 +6,7 @@ import {
   SketchClassesQuery,
   SketchClassesDocument,
   SketchGeometryType,
+  AdminSketchingDetailsFragment,
 } from "../../generated/graphql";
 import { Trans as I18n, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -31,7 +32,7 @@ export default function SketchClassForm({
   sketchClass,
   onDelete,
 }: {
-  sketchClass: SketchingDetailsFragment;
+  sketchClass: AdminSketchingDetailsFragment;
   onDelete?: (id: number) => void;
 }) {
   const onError = useGlobalErrorHandler();

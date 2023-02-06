@@ -171,7 +171,7 @@ export default function Header() {
 
           {<div className="border-t border-gray-100 mt-2"></div>}
 
-          {isAuthenticated ? (
+          {isAuthenticated && currentProjectQuery.data?.me?.id ? (
             <ProfileContextMenu itemClassName="text-base" />
           ) : (
             <button

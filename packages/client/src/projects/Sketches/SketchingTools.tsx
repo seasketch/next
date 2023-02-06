@@ -193,7 +193,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     []
   );
 
-  if (!user) {
+  if (!user || (!loading && !data?.me)) {
     return <LoginPrompt hidden={hidden} />;
   }
 
