@@ -133,6 +133,7 @@ function ApolloProviderWithToken(props: any) {
       try {
         token = await getAccessTokenSilently(opts);
       } catch (e) {
+        console.error(e);
         if (e.error === "missing_refresh_token") {
           token = null;
           if (user) {
