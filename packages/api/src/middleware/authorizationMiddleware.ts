@@ -25,6 +25,7 @@ const jwtCheck = jwt({
     } else {
       // normal post or get request
       return (
+        // @ts-ignore
         req.query["token"] || req.header("authorization")?.split("Bearer ")[1]
       );
     }

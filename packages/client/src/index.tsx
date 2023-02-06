@@ -96,7 +96,8 @@ function Auth0ProviderWithRouter(props: any) {
 }
 
 function ApolloProviderWithToken(props: any) {
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup, logout, user } =
+    useAuth0();
   const [client, setClient] =
     useState<ApolloClient<NormalizedCacheObject> | null>(null);
   const [graphqlQueryCache, setGraphqlQueryCache] =
@@ -132,7 +133,16 @@ function ApolloProviderWithToken(props: any) {
       try {
         token = await getAccessTokenSilently(opts);
       } catch (e) {
-        if (e.error === "consent_required") {
+        if (e.error === "missing_refresh_token") {
+          token = null;
+          if (user) {
+            logout({
+              logoutParams: {
+                returnTo: window.location.origin,
+              },
+            });
+          }
+        } else if (e.error === "consent_required") {
           token = await getAccessTokenWithPopup(opts);
         } else if (e.error === "login_required") {
           token = null;
