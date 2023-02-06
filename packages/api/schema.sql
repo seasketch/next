@@ -21758,6 +21758,7 @@ GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answe
 
 REVOKE ALL ON FUNCTION public.my_folders("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_folders("projectId" integer) TO seasketch_user;
+GRANT ALL ON FUNCTION public.my_folders("projectId" integer) TO anon;
 
 
 --
@@ -21766,6 +21767,7 @@ GRANT ALL ON FUNCTION public.my_folders("projectId" integer) TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.my_sketches("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_sketches("projectId" integer) TO seasketch_user;
+GRANT ALL ON FUNCTION public.my_sketches("projectId" integer) TO anon;
 
 
 --
@@ -22666,6 +22668,7 @@ GRANT ALL ON FUNCTION public.projects_mapbox_secret_key(p public.projects) TO an
 
 REVOKE ALL ON FUNCTION public.projects_my_folders(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO anon;
 
 
 --
@@ -22674,6 +22677,7 @@ GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO sea
 
 REVOKE ALL ON FUNCTION public.projects_my_sketches(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO anon;
 
 
 --

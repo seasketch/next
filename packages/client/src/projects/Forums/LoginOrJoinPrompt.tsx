@@ -19,7 +19,7 @@ export default function LoginOrJoinPrompt({
   canPost?: boolean;
 }) {
   const { user } = useAuth0();
-  const { data } = useProjectMetadataQuery({
+  const { data, loading } = useProjectMetadataQuery({
     variables: {
       slug: getSlug(),
     },
@@ -30,7 +30,7 @@ export default function LoginOrJoinPrompt({
   if (canPost) {
     return null;
   } else {
-    if (user) {
+    if (user && (data?.me || loading)) {
       if (!data?.project?.sessionParticipationStatus) {
         return null;
       } else {
