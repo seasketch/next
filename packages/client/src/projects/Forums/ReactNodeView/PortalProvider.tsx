@@ -6,18 +6,36 @@ import React, {
   useState,
 } from "react";
 
-const ReactNodeViewPortalsContext = React.createContext<{
+export const ReactNodeViewPortalsContext = React.createContext<{
   createPortal: (key: string, portal: ReactPortal) => void;
   removePortal: (key: string) => void;
   state: { [key: string]: ReactPortal };
+  setSelection: (
+    selection: { anchorPos: number; headPos: number } | null
+  ) => void;
+  selection: { anchorPos: number; headPos: number } | null;
 }>({
   createPortal: () => {},
   removePortal: () => {},
   state: {},
+  setSelection: () => {},
+  selection: null,
 });
 
 function ReactNodeViewPortalsProvider({ children }: { children?: ReactNode }) {
   const [state, setState] = useState<{ [key: string]: ReactPortal }>({});
+  const [selection, _setSelection] = useState<{
+    anchorPos: number;
+    headPos: number;
+  } | null>(null);
+
+  const setSelection = useCallback(
+    (selection: { anchorPos: number; headPos: number } | null) => {
+      _setSelection(selection);
+    },
+    [_setSelection]
+  );
+
   const createPortal = useCallback(
     (key: string, portal: ReactPortal) => {
       setState((prev) => ({
@@ -42,6 +60,8 @@ function ReactNodeViewPortalsProvider({ children }: { children?: ReactNode }) {
         createPortal,
         removePortal,
         state,
+        setSelection,
+        selection,
       }}
     >
       {children}

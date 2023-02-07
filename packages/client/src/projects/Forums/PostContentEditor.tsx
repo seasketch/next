@@ -26,7 +26,8 @@ export default function PostContentEditor({
   const viewRef = useRef<EditorView>();
   const { schema, plugins } = editorConfig;
   const editable = useRef(!disabled);
-  const { createPortal, removePortal } = useReactNodeViewPortals();
+  const { createPortal, removePortal, setSelection } =
+    useReactNodeViewPortals();
 
   useEffect(() => {
     editable.current = !disabled;
@@ -73,6 +74,14 @@ export default function PostContentEditor({
         const newState = view.state.apply(transaction);
         view.updateState(newState);
         setState(newState);
+        if (newState.selection) {
+          setSelection({
+            anchorPos: newState.selection.$anchor.pos,
+            headPos: newState.selection.$head.pos,
+          });
+        } else {
+          setSelection(null);
+        }
         if (transaction.docChanged) {
           onChange(newState.doc.toJSON());
         }

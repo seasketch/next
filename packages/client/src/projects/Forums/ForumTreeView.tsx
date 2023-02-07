@@ -124,14 +124,14 @@ export default function ForumTreeView(props: {
       } else if (isSketchNode(node)) {
         return <SketchItem {...props} node={node} />;
       } else {
-        return <div>Unimplemented</div>;
+        return <div style={{}}>Unimplemented</div>;
       }
     },
     []
   );
 
   return (
-    <div className="text-sm -ml-6">
+    <div className={`text-sm -ml-6`}>
       {contextMenu?.target && Boolean(menuOptions?.contextMenu?.length) && (
         <ContextMenuDropdown
           options={menuOptions?.contextMenu || []}

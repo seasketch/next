@@ -1,8 +1,15 @@
 import { Node } from "prosemirror-model";
 import { Decoration, EditorView, NodeView } from "prosemirror-view";
-import React, { ReactPortal, useContext, useEffect, useRef } from "react";
+import React, {
+  ReactPortal,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
 import ReactDOM from "react-dom";
 import { nanoid } from "nanoid";
+import { ReactNodeViewPortalsContext } from "./ReactNodeView/PortalProvider";
 
 interface IReactNodeViewContext {
   node: Node;
@@ -89,6 +96,30 @@ class ReactNodeView implements NodeView {
         }
       }, [componentRef]);
 
+      const portalContext = useContext(ReactNodeViewPortalsContext);
+      useEffect(() => {
+        if (portalContext.selection && typeof this.getPos === "function") {
+          const pos = this.getPos();
+          if (
+            pos <=
+              Math.max(
+                portalContext.selection.anchorPos,
+                portalContext.selection.headPos
+              ) &&
+            pos >=
+              Math.min(
+                portalContext.selection.anchorPos,
+                portalContext.selection.headPos
+              )
+          ) {
+            this.dom?.classList.add("ProseMirror-selectednode");
+            return;
+            // return true;
+          }
+        }
+        this.dom?.classList.remove("ProseMirror-selectednode");
+      }, [this.getPos, portalContext.selection]);
+
       return (
         <div ref={componentRef} className="ProseMirror__reactComponent">
           <ReactNodeViewContext.Provider
@@ -111,20 +142,6 @@ class ReactNodeView implements NodeView {
       portal: ReactDOM.createPortal(<Component />, container, key),
     };
   }
-
-  // setSelection(anchor: number, head: number, root: Document | ShadowRoot) {
-  //   // console.log({ anchor, head, root });
-  //   return;
-  // }
-
-  // setSelection⁠(
-  //   anchor: number,
-  //   head: number,
-  //   root: Document | ShadowRoot
-  // ) {
-  //     console.log({anchor, head, root})
-  //     return;
-  //   }
 
   update(node: Node) {
     // see for reason: https://discuss.prosemirror.net/t/why-is-nodeview-update-called-with-different-node-types/4805
