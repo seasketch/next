@@ -2,30 +2,34 @@ import { MouseEventHandler, useCallback } from "react";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import { useDrag, useDrop } from "react-dnd";
 import { TreeItemI, TreeNodeProps } from "../../components/TreeView";
-import Collection from "@heroicons/react/solid/CollectionIcon";
+import CollectionIcon from "@heroicons/react/solid/CollectionIcon";
 import ArrowIcon from "./ArrowIcon";
-import { DragItemProps, FolderNodeDataProps } from "./FolderItem";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 import { motion } from "framer-motion";
+import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
 
-export interface SketchNodeDataProps {
+export interface TreeNodeDataProps {
   id: number;
   name: string;
   isCollection?: boolean;
   folderId?: number | null;
   collectionId?: number | null;
-  type: "Sketch";
-  timestamp: string;
+  type: "Sketch" | "SketchFolder";
+  timestamp?: string;
 }
+
+export type DragItemProps = {
+  nodeId: string;
+  parents: string[];
+} & TreeNodeDataProps;
 
 export function isSketchNode(
   node: TreeItemI<any>
-): node is TreeItemI<SketchNodeDataProps> {
+): node is TreeItemI<TreeNodeDataProps> {
   return node.data.type === "Sketch";
 }
 
 export default function SketchItem({
-  level,
   isSelected,
   onSelect,
   isExpanded,
@@ -45,13 +49,12 @@ export default function SketchItem({
   disableEditing,
   hideCheckboxes,
   highlighted,
-}: TreeNodeProps<SketchNodeDataProps>) {
-  const isDisabled = false;
+}: TreeNodeProps<TreeNodeDataProps>) {
   const data = node.data;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
     canDrag: !disableEditing,
-    type: "Sketch",
+    type: data.type,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -61,7 +64,7 @@ export default function SketchItem({
       type: data.type,
       folderId: data.folderId,
       collectionId: data.collectionId,
-    } as SketchNodeDataProps,
+    } as TreeNodeDataProps,
     end(draggedItem, monitor) {
       if (onDragEnd) {
         onDragEnd([draggedItem]);
@@ -100,12 +103,12 @@ export default function SketchItem({
 
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
     accept: ["SketchFolder", "Sketch"],
-    canDrop: (item: DragItemProps<FolderNodeDataProps>, monitor) => {
+    canDrop: (item: DragItemProps, monitor) => {
       if (disableEditing) {
         return false;
       }
       if (
-        !data.isCollection ||
+        (data.type === "Sketch" && !data.isCollection) ||
         item.id === data.id ||
         node.parents.indexOf(item.nodeId) !== -1
       ) {
@@ -123,10 +126,18 @@ export default function SketchItem({
       if (monitor.didDrop()) {
         return;
       }
-      (item.type === "SketchFolder" ? dropFolder : dropSketch)(item.id, {
-        collectionId: data.id,
-        folderId: null,
-      });
+      (item.type === "SketchFolder" ? dropFolder : dropSketch)(
+        item.id,
+        data.type === "Sketch"
+          ? {
+              collectionId: data.id,
+              folderId: null,
+            }
+          : {
+              collectionId: null,
+              folderId: data.id,
+            }
+      );
       if (onDropEnd) {
         onDropEnd(data);
       }
@@ -164,13 +175,14 @@ export default function SketchItem({
         }
       }}
       style={
-        data.isCollection
+        data.isCollection || data.type === "SketchFolder"
           ? {
               marginLeft: -15,
-              opacity: isDisabled ? 0.5 : 1,
+              opacity: 1,
             }
           : {
-              opacity: isDisabled ? 0.5 : 1,
+              opacity: 1,
+              marginLeft: 3,
             }
       }
       className={`rounded relative ${
@@ -189,7 +201,7 @@ export default function SketchItem({
           paddingLeft: data.isCollection ? 0 : 3,
         }}
       >
-        {data.isCollection && (
+        {(data.isCollection || data.type === "SketchFolder") && (
           <button
             title={numChildren === 0 ? "Empty" : "Expand"}
             className={!numChildren || numChildren < 1 ? "opacity-50" : ""}
@@ -216,8 +228,22 @@ export default function SketchItem({
             visibility={isChecked ? true : hasCheckedChildren ? "mixed" : false}
           />
         )}
-        {data.isCollection && (
-          <Collection
+        {data.type === "SketchFolder" &&
+          (isExpanded ? (
+            <FolderOpenIcon
+              onContextMenu={contextMenuHandler}
+              onClick={updateSelectionOnClick}
+              className="w-6 h-6 text-primary-500"
+            />
+          ) : (
+            <FolderIcon
+              onContextMenu={contextMenuHandler}
+              onClick={updateSelectionOnClick}
+              className="w-6 h-6 text-primary-500"
+            />
+          ))}
+        {data.type === "Sketch" && data.isCollection && (
+          <CollectionIcon
             onContextMenu={contextMenuHandler}
             onClick={updateSelectionOnClick}
             style={{ height: 22 }}

@@ -13,13 +13,9 @@ import {
 import getSlug from "../../getSlug";
 import { useCallback, useMemo, useState } from "react";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
-import FolderItem, {
-  FolderNodeDataProps,
-  isFolderNode,
-} from "../Sketches/FolderItem";
 import SketchItem, {
   isSketchNode,
-  SketchNodeDataProps,
+  TreeNodeDataProps,
 } from "../Sketches/SketchItem";
 import { TreeItemType } from "../Sketches/SketchingTools";
 import { useSketchUIState } from "../Sketches/SketchUIStateContextProvider";
@@ -76,14 +72,7 @@ export default function ShareSketchesModal({
 
   const treeRenderFn = useCallback(
     ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      if (isFolderNode(node) && props.children) {
-        return <FolderItem {...props} node={node} />;
-      } else if (isSketchNode(node)) {
-        return <SketchItem {...props} node={node} />;
-      } else {
-        // eslint-disable-next-line i18next/no-literal-string
-        return <div>Unimplemented</div>;
-      }
+      return <SketchItem {...props} node={node} />;
     },
     []
   );
@@ -153,7 +142,7 @@ export default function ShareSketchesModal({
 
 function getCopiedSketchesRecursive(
   parentId: number,
-  items: TreeItemI<FolderNodeDataProps | SketchNodeDataProps>[]
+  items: TreeItemI<TreeNodeDataProps>[]
 ) {
   const ids: number[] = [];
   for (const item of items) {

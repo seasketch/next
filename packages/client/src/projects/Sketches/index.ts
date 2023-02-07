@@ -5,16 +5,16 @@ import {
   SketchGeometryType,
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
-import { FolderNodeDataProps } from "./FolderItem";
-import { SketchNodeDataProps } from "./SketchItem";
+import { TreeNodeDataProps } from "./SketchItem";
 
 export function myPlansFragmentsToTreeItems(
   fragments: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[]
 ) {
-  const items: TreeItemI<FolderNodeDataProps | SketchNodeDataProps>[] = [];
+  const items: TreeItemI<TreeNodeDataProps>[] = [];
   for (const fragment of fragments) {
     items.push({
       id: treeItemIdForFragment(fragment),
+      parents: [],
       isLeaf:
         fragment.__typename === "SketchFolder"
           ? false
@@ -52,5 +52,5 @@ export function treeItemIdForFragment(
 }
 
 export function treeItemId(id: number, typeName: string) {
-  return typeName === "SketchFolder" ? `SketchFolder:${id}` : `Sketch:${id}`;
+  return `${typeName}:${id}`;
 }

@@ -1,7 +1,6 @@
 import Button from "../../components/Button";
 import DropdownButton from "../../components/DropdownButton";
 import {
-  currentSidebarState,
   ProjectAppSidebarContext,
   ProjectAppSidebarToolbar,
 } from "../ProjectAppSidebar";
@@ -16,19 +15,17 @@ import { DropTargetMonitor, useDrop } from "react-dnd";
 import ContextMenuDropdown from "../../components/ContextMenuDropdown";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 import TreeView, { TreeNodeProps } from "../../components/TreeView";
-import FolderItem, { FolderNodeDataProps, isFolderNode } from "./FolderItem";
-import SketchItem, { isSketchNode, SketchNodeDataProps } from "./SketchItem";
+import SketchItem, { TreeNodeDataProps } from "./SketchItem";
 import { myPlansFragmentsToTreeItems, treeItemId } from ".";
 import Skeleton from "../../components/Skeleton";
 import LoginPrompt from "./LoginPrompt";
 import { MapContext } from "../../dataLayers/MapContextManager";
-import mapboxgl from "mapbox-gl";
 import decode from "jwt-decode";
 import { SketchUIStateContext } from "./SketchUIStateContextProvider";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
-export type TreeItemType = FolderNodeDataProps | SketchNodeDataProps;
+export type TreeItemType = TreeNodeDataProps;
 
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const { isSmall } = useContext(ProjectAppSidebarContext);
@@ -181,14 +178,14 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
 
   const treeRenderFn = useCallback(
     ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      if (isFolderNode(node) && props.children) {
-        return <FolderItem {...props} node={node} />;
-      } else if (isSketchNode(node)) {
-        return <SketchItem {...props} node={node} />;
-      } else {
-        // eslint-disable-next-line i18next/no-literal-string
-        return <div>Unimplemented</div>;
-      }
+      // if (isFolderNode(node) && props.children) {
+      //   return <FolderItem {...props} node={node} />;
+      // } else if (isSketchNode(node)) {
+      return <SketchItem {...props} node={node} />;
+      // } else {
+      //   // eslint-disable-next-line i18next/no-literal-string
+      //   return <div>Unimplemented</div>;
+      // }
     },
     []
   );

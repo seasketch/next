@@ -3,9 +3,10 @@ import { useMemo, FC, useCallback, SetStateAction } from "react";
 export interface TreeItemI<T> {
   id: string;
   parentId?: string | null;
-  parents: string[];
   data: T;
   isLeaf: boolean;
+  /** Assigned by treeview. Supply an empty array */
+  parents: string[];
 }
 
 interface TreeViewProps<T> {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext, useCallback } from "react";
 import TableOfContents, {
   ClientTableOfContentsItem,
   createBoundsRecursive,
@@ -10,6 +10,8 @@ import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataM
 import { TableOfContentsItem } from "../generated/graphql";
 import useLocalStorage from "../useLocalStorage";
 import { MapContext } from "../dataLayers/MapContextManager";
+import TreeView, { TreeNodeProps } from "../components/TreeView";
+import { TreeItemType } from "./Sketches/SketchingTools";
 
 export default function OverlayLayers({
   items,
@@ -26,6 +28,11 @@ export default function OverlayLayers({
     setNodes(nestItems(items, expansionState));
   }, [items, expansionState]);
 
+  const treeRenderFn = useCallback(({ node, ...props }: TreeNodeProps<any>) => {
+    // eslint-disable-next-line i18next/no-literal-string
+    return <div>Unimplemented</div>;
+  }, []);
+
   return (
     <div className="mt-3">
       {openMetadataViewerId && (
@@ -34,7 +41,8 @@ export default function OverlayLayers({
           onRequestClose={() => setOpenMetadataViewerId(undefined)}
         />
       )}
-      <TableOfContents
+      <TreeView ariaLabel="Overlay Layers" items={[]} render={treeRenderFn} />
+      {/* <TableOfContents
         nodes={nodes}
         onChange={(n) => setNodes(n)}
         onVisibilityToggle={(data) => {
@@ -88,7 +96,7 @@ export default function OverlayLayers({
             Metadata
           </Item>,
         ]}
-      />
+      /> */}
     </div>
   );
 }

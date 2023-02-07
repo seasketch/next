@@ -8,7 +8,6 @@ import {
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
-import FolderItem, { isFolderNode } from "../Sketches/FolderItem";
 import { TreeItemType } from "../Sketches/SketchingTools";
 import SketchItem, { isSketchNode } from "../Sketches/SketchItem";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
@@ -119,13 +118,7 @@ export default function ForumTreeView(props: {
 
   const treeRenderFn = useCallback(
     ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      if (isFolderNode(node) && props.children) {
-        return <FolderItem {...props} node={node} />;
-      } else if (isSketchNode(node)) {
-        return <SketchItem {...props} node={node} />;
-      } else {
-        return <div style={{}}>Unimplemented</div>;
-      }
+      return <SketchItem {...props} node={node} />;
     },
     []
   );
