@@ -19265,6 +19265,7 @@ GRANT ALL ON FUNCTION public.copy_sketch(sketch_id integer) TO seasketch_user;
 --
 
 GRANT ALL ON TABLE public.sketch_folders TO seasketch_user;
+GRANT SELECT ON TABLE public.sketch_folders TO anon;
 
 
 --
