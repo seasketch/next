@@ -15,7 +15,7 @@ import { DropTargetMonitor, useDrop } from "react-dnd";
 import ContextMenuDropdown from "../../components/ContextMenuDropdown";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 import TreeView, { TreeNodeProps } from "../../components/TreeView";
-import SketchItem, { TreeNodeDataProps } from "./SketchItem";
+import TreeItemComponent, { TreeNodeDataProps } from "./TreeItemComponent";
 import { myPlansFragmentsToTreeItems, treeItemId } from ".";
 import Skeleton from "../../components/Skeleton";
 import LoginPrompt from "./LoginPrompt";
@@ -47,6 +47,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     setOpenReports,
     editorIsOpen,
     menuOptions,
+    errors,
+    loading: loadingSketches,
   } = useContext(SketchUIStateContext);
 
   const { data, loading, refetch } = useSketchingQuery({
@@ -121,7 +123,9 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const onDragEnd = useCallback(
     (items: TreeItemType[]) => {
       for (const item of items) {
-        focusOnTableOfContentsItem(item.type, item.id);
+        if (item.type === "Sketch" || item.type === "SketchFolder") {
+          focusOnTableOfContentsItem(item.type, item.id);
+        }
       }
     },
     [focusOnTableOfContentsItem]
@@ -181,7 +185,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       // if (isFolderNode(node) && props.children) {
       //   return <FolderItem {...props} node={node} />;
       // } else if (isSketchNode(node)) {
-      return <SketchItem {...props} node={node} />;
+      return <TreeItemComponent {...props} node={node} />;
       // } else {
       //   // eslint-disable-next-line i18next/no-literal-string
       //   return <div>Unimplemented</div>;
@@ -284,6 +288,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               checkedItems={visibleSketches}
               onChecked={onChecked}
               temporarilyHighlightedIds={temporarilyHighlightedIds}
+              errors={errors}
+              loadingItems={loadingSketches}
             />
           )}
         </div>

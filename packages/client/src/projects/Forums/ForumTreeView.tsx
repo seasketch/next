@@ -9,7 +9,7 @@ import {
 } from "../../generated/graphql";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
 import { TreeItemType } from "../Sketches/SketchingTools";
-import SketchItem, { isSketchNode } from "../Sketches/SketchItem";
+import TreeItemComponent, { isSketchNode } from "../Sketches/TreeItemComponent";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 
 export default function ForumTreeView(props: {
@@ -118,7 +118,7 @@ export default function ForumTreeView(props: {
 
   const treeRenderFn = useCallback(
     ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      return <SketchItem {...props} node={node} />;
+      return <TreeItemComponent {...props} node={node} />;
     },
     []
   );

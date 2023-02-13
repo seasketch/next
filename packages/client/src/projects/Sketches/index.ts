@@ -5,7 +5,7 @@ import {
   SketchGeometryType,
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
-import { TreeNodeDataProps } from "./SketchItem";
+import { TreeNodeDataProps } from "./TreeItemComponent";
 
 export function myPlansFragmentsToTreeItems(
   fragments: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[]
@@ -29,6 +29,7 @@ export function myPlansFragmentsToTreeItems(
         id: fragment.id,
         name: fragment.name,
         type: fragment.__typename === "Sketch" ? "Sketch" : "SketchFolder",
+        dropAcceptsTypes: ["Sketch", "SketchFolder"],
         folderId: fragment.folderId,
         collectionId: fragment.collectionId,
         ...(fragment.__typename === "Sketch"
@@ -45,12 +46,13 @@ export function myPlansFragmentsToTreeItems(
   return items;
 }
 
-export function treeItemIdForFragment(
-  fragment: SketchTocDetailsFragment | SketchFolderDetailsFragment
-) {
+export function treeItemIdForFragment(fragment: {
+  id: number;
+  __typename?: string;
+}) {
   return treeItemId(fragment.id, fragment.__typename!);
 }
 
-export function treeItemId(id: number, typeName: string) {
+export function treeItemId(id: number, typeName?: string) {
   return `${typeName}:${id}`;
 }

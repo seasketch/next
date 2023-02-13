@@ -9480,7 +9480,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           metadata,
           bounds,
           data_layer_id,
-          sort_index
+          sort_index,
+          hide_children
         ) values (
           false,
           "projectId",
@@ -9494,7 +9495,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           item.metadata,
           item.bounds,
           lid,
-          item.sort_index
+          item.sort_index,
+          item.hide_children
         ) returning id into new_toc_id;
         select 
           type, id into acl_type, orig_acl_id 

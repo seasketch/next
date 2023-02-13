@@ -1,12 +1,27 @@
-import { MouseEventHandler, useCallback } from "react";
-import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
+import {
+  MouseEventHandler,
+  ReactNode,
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
 import { useDrag, useDrop } from "react-dnd";
-import { TreeItemI, TreeNodeProps } from "../../components/TreeView";
-import CollectionIcon from "@heroicons/react/solid/CollectionIcon";
+import {
+  CheckState,
+  TreeItemI,
+  TreeNodeProps,
+} from "../../components/TreeView";
+import CollectionIcon from "@heroicons/react/outline/CollectionIcon";
 import ArrowIcon from "./ArrowIcon";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 import { motion } from "framer-motion";
-import { FolderIcon, FolderOpenIcon } from "@heroicons/react/solid";
+import { FolderIcon, FolderOpenIcon } from "@heroicons/react/outline";
+import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../components/Tooltip";
 
 export interface TreeNodeDataProps {
   id: number;
@@ -14,8 +29,9 @@ export interface TreeNodeDataProps {
   isCollection?: boolean;
   folderId?: number | null;
   collectionId?: number | null;
-  type: "Sketch" | "SketchFolder";
+  type: "Sketch" | "SketchFolder" | "TableOfContentsItem";
   timestamp?: string;
+  dropAcceptsTypes?: string[];
 }
 
 export type DragItemProps = {
@@ -29,7 +45,7 @@ export function isSketchNode(
   return node.data.type === "Sketch";
 }
 
-export default function SketchItem({
+export default function TreeItemComponent({
   isSelected,
   onSelect,
   isExpanded,
@@ -39,9 +55,8 @@ export default function SketchItem({
   isContextMenuTarget,
   updateContextMenuTargetRef,
   onDragEnd,
-  isChecked,
+  checked,
   onChecked,
-  hasCheckedChildren,
   ChildGroup,
   children,
   numChildren,
@@ -49,8 +64,14 @@ export default function SketchItem({
   disableEditing,
   hideCheckboxes,
   highlighted,
+  isLoading,
+  parentIsRadioFolder,
+  error,
 }: TreeNodeProps<TreeNodeDataProps>) {
   const data = node.data;
+  const isChecked = checked !== CheckState.UNCHECKED;
+  const hasCheckedChildren = checked !== CheckState.UNCHECKED;
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
     canDrag: !disableEditing,
@@ -74,17 +95,6 @@ export default function SketchItem({
 
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
 
-  const updateSelectionOnClick: MouseEventHandler<any> = useCallback(
-    (e) => {
-      if (onSelect) {
-        onSelect(e.metaKey, node, !isSelected);
-      }
-      e.preventDefault();
-      e.stopPropagation();
-    },
-    [onSelect, node, isSelected]
-  );
-
   const contextMenuHandler: MouseEventHandler<any> = useCallback(
     (e) => {
       if (onContextMenu) {
@@ -102,13 +112,13 @@ export default function SketchItem({
   );
 
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
-    accept: ["SketchFolder", "Sketch"],
+    accept: data.dropAcceptsTypes || [],
     canDrop: (item: DragItemProps, monitor) => {
       if (disableEditing) {
         return false;
       }
       if (
-        (data.type === "Sketch" && !data.isCollection) ||
+        node.isLeaf ||
         item.id === data.id ||
         node.parents.indexOf(item.nodeId) !== -1
       ) {
@@ -163,6 +173,35 @@ export default function SketchItem({
     className = "bg-blue-300";
   }
 
+  const [ref, setRef] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (ref && isContextMenuTarget) {
+      updateContextMenuTargetRef(ref);
+    }
+  }, [ref, updateContextMenuTargetRef, isContextMenuTarget]);
+
+  const onVisibilityClick = useCallback(() => {
+    if (onChecked) {
+      onChecked(node, !isChecked && !hasCheckedChildren, children);
+    }
+  }, [onChecked, node, isChecked, hasCheckedChildren, children]);
+
+  const updateSelectionOnClick: MouseEventHandler<any> = useCallback(
+    (e) => {
+      if (onSelect) {
+        onSelect(e.metaKey, node, !isSelected);
+        e.preventDefault();
+        e.stopPropagation();
+      } else {
+        if (!isContextMenuTarget) {
+          onVisibilityClick();
+        }
+      }
+    },
+    [onSelect, node, isSelected, isContextMenuTarget, onVisibilityClick]
+  );
+
   return (
     <div
       data-node-id={node.id}
@@ -175,17 +214,19 @@ export default function SketchItem({
         }
       }}
       style={
-        data.isCollection || data.type === "SketchFolder"
+        node.isLeaf || node.hideChildren
           ? {
-              marginLeft: -15,
-              opacity: 1,
-            }
-          : {
               opacity: 1,
               marginLeft: 3,
             }
+          : {
+              marginLeft: -15,
+              opacity: 1,
+            }
       }
-      className={`rounded relative ${
+      className={`${
+        isContextMenuTarget && !onSelect ? "bg-blue-500 bg-opacity-10" : ""
+      } my-1 rounded relative ${
         isOverCurrent && !isDragging && canDrop
           ? "bg-blue-100 border-blue-400 border"
           : isSelected && !isDragging
@@ -194,14 +235,14 @@ export default function SketchItem({
       }`}
     >
       <span
-        className={`flex items-center text-sm space-x-0.5 ${className}`}
+        className={`flex items-start text-sm space-x-0.5 ${className}`}
         style={{
           paddingTop: 2,
           paddingBottom: 2,
           paddingLeft: data.isCollection ? 0 : 3,
         }}
       >
-        {(data.isCollection || data.type === "SketchFolder") && (
+        {!node.isLeaf && !node.hideChildren && (
           <button
             title={numChildren === 0 ? "Empty" : "Expand"}
             className={!numChildren || numChildren < 1 ? "opacity-50" : ""}
@@ -217,49 +258,73 @@ export default function SketchItem({
           </button>
         )}
         {!hideCheckboxes && (
-          <VisibilityCheckbox
-            onClick={() => {
-              if (onChecked) {
-                onChecked(node, !isChecked && !hasCheckedChildren, children);
+          <WrapWithErrorTooltip error={error}>
+            <VisibilityCheckboxAnimated
+              className="flex-none"
+              loading={isLoading}
+              onClick={onVisibilityClick}
+              disabled={Boolean(node.checkOffOnly && !hasCheckedChildren)}
+              id={data.id}
+              error={error || undefined}
+              visibility={
+                checked === CheckState.CHECKED
+                  ? true
+                  : checked === CheckState.PARTIAL
+                  ? "mixed"
+                  : false
               }
-            }}
-            disabled={false}
-            id={data.id}
-            visibility={isChecked ? true : hasCheckedChildren ? "mixed" : false}
-          />
+              ariaLabelledBy={`${node.id}-label`}
+              radio={parentIsRadioFolder}
+            />
+          </WrapWithErrorTooltip>
         )}
-        {data.type === "SketchFolder" &&
+        {!node.hideChildren &&
+          !node.isLeaf &&
+          data.type !== "Sketch" &&
           (isExpanded ? (
             <FolderOpenIcon
+              fill="currentColor"
+              fillOpacity={0.2}
+              strokeWidth={1}
               onContextMenu={contextMenuHandler}
               onClick={updateSelectionOnClick}
-              className="w-6 h-6 text-primary-500"
+              className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
             />
           ) : (
             <FolderIcon
+              fill="currentColor"
+              fillOpacity={0.2}
+              strokeWidth={1}
               onContextMenu={contextMenuHandler}
               onClick={updateSelectionOnClick}
-              className="w-6 h-6 text-primary-500"
+              className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
             />
           ))}
         {data.type === "Sketch" && data.isCollection && (
           <CollectionIcon
+            stroke="currentColor"
+            fill="currentColor"
+            fillOpacity={0.2}
+            strokeWidth={1}
             onContextMenu={contextMenuHandler}
             onClick={updateSelectionOnClick}
             style={{ height: 22 }}
-            className="w-6 text-primary-500"
+            className="-mt-1 w-6 text-primary-700"
           />
         )}
-        <span
-          ref={isContextMenuTarget ? updateContextMenuTargetRef : undefined}
-          className="px-1 py-0.5 cursor-pointer select-none"
+        <label
+          id={`${node.id}-label`}
+          ref={isContextMenuTarget ? setRef : undefined}
+          className={`px-1 cursor-pointer select-none -mt-0.5 ${
+            error ? "text-red-600" : ""
+          }`}
           onClick={updateSelectionOnClick}
           onContextMenu={contextMenuHandler}
         >
           {data.name}
-        </span>
+        </label>
       </span>
-      {children && children.length > 0 && isExpanded && (
+      {children && children.length > 0 && isExpanded && !node.hideChildren && (
         <ChildGroup items={children} />
       )}
       <motion.div
@@ -282,4 +347,23 @@ export default function SketchItem({
       ></motion.div>
     </div>
   );
+}
+
+function WrapWithErrorTooltip({
+  error,
+  children,
+}: {
+  error: string | null | undefined;
+  children?: ReactNode;
+}) {
+  if (error) {
+    return (
+      <Tooltip>
+        <TooltipTrigger>{children}</TooltipTrigger>
+        <TooltipContent className="Tooltip">{error}</TooltipContent>
+      </Tooltip>
+    );
+  } else {
+    return <>{children}</>;
+  }
 }

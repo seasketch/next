@@ -13,10 +13,10 @@ import {
 import getSlug from "../../getSlug";
 import { useCallback, useMemo, useState } from "react";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
-import SketchItem, {
+import TreeItemComponent, {
   isSketchNode,
   TreeNodeDataProps,
-} from "../Sketches/SketchItem";
+} from "../Sketches/TreeItemComponent";
 import { TreeItemType } from "../Sketches/SketchingTools";
 import { useSketchUIState } from "../Sketches/SketchUIStateContextProvider";
 
@@ -72,7 +72,7 @@ export default function ShareSketchesModal({
 
   const treeRenderFn = useCallback(
     ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      return <SketchItem {...props} node={node} />;
+      return <TreeItemComponent {...props} node={node} />;
     },
     []
   );

@@ -5,8 +5,11 @@ export interface TreeItemI<T> {
   parentId?: string | null;
   data: T;
   isLeaf: boolean;
-  /** Assigned by treeview. Supply an empty array */
+  /** Assigned by treeview. Supply an empty */
   parents: string[];
+  checkOffOnly?: boolean;
+  radioFolder?: boolean;
+  hideChildren?: boolean;
 }
 
 interface TreeViewProps<T> {
@@ -21,6 +24,10 @@ interface TreeViewProps<T> {
   expanded?: string[];
   /** Items that should be checked. Mostly for map viewers */
   checkedItems?: string[];
+  /** Items that are loading. Mostly for map viewers */
+  loadingItems?: string[];
+  /** Errors to display for items, keyed by id */
+  errors?: { [id: string]: string };
   /* Should update selection prop */
   onSelect?: (
     metaKey: boolean,
@@ -84,11 +91,13 @@ export interface TreeNodeProps<T> {
     isChecked: boolean,
     children?: TreeNode<T>[]
   ) => void;
-  isChecked: boolean;
-  hasCheckedChildren: boolean;
+  checked: CheckState;
+  isLoading: boolean;
   disableEditing: boolean;
   hideCheckboxes: boolean;
   highlighted: boolean;
+  parentIsRadioFolder: boolean;
+  error: string | null;
 }
 export enum CheckState {
   CHECKED,
@@ -104,8 +113,12 @@ interface TreeNode<T> {
   children: TreeNode<T>[];
   isContextMenuTarget: boolean;
   checked: CheckState;
+  loading: boolean;
   isLeaf: boolean;
   highlighted: boolean;
+  parentIsRadioFolder: boolean;
+  radioFolder: boolean;
+  error?: string;
 }
 
 export default function TreeView<T>({
@@ -118,6 +131,7 @@ export default function TreeView<T>({
   onDropEnd,
   childGroupPadding,
   checkedItems,
+  loadingItems,
   onChecked,
   disableEditing,
   hideCheckboxes,
@@ -142,11 +156,18 @@ export default function TreeView<T>({
         )
           ? CheckState.CHECKED
           : CheckState.UNCHECKED,
-        hasCheckedChildren: false,
+        loading:
+          Boolean(loadingItems?.length) &&
+          loadingItems?.indexOf(item.id) !== -1,
         isLeaf: item.isLeaf,
+        checkOffOnly: item.checkOffOnly,
+        radioFolder: item.radioFolder,
+        hideChildren: item.hideChildren,
+        error: props.errors ? props.errors[item.id] : undefined,
         highlighted: props.temporarilyHighlightedIds
           ? props.temporarilyHighlightedIds.indexOf(item.id) !== -1
           : false,
+        parentIsRadioFolder: false,
       } as TreeNode<T>;
       map.set(item.id, node);
       return map;
@@ -163,12 +184,13 @@ export default function TreeView<T>({
           if (parent) {
             parent.children.push(node);
             node.level = parent.level + 1;
+            node.parentIsRadioFolder = parent.radioFolder;
           }
         }
       }
     }
 
-    // recursively set node.parents and hasCheckedChildren
+    // recursively set node.parents, hasCheckedChildren, and parentIsRadioFolder
     function addParentsAndGetVisibility(
       node: TreeNode<any>,
       parents: string[]
@@ -212,9 +234,11 @@ export default function TreeView<T>({
     props.items,
     props.expanded,
     props.selection,
+    props.temporarilyHighlightedIds,
     contextMenuItemId,
     checkedItems,
-    props.temporarilyHighlightedIds,
+    loadingItems,
+    props.errors,
   ]);
 
   const handleChecked = useCallback(
@@ -224,28 +248,76 @@ export default function TreeView<T>({
           if (item.isLeaf) {
             ids.push(item.node.id);
           }
-          if (item.children) {
-            for (const child of item.children) {
-              getIds(child, ids);
+          if (item.children && item.children.length > 0) {
+            if (item.radioFolder && isChecked) {
+              const toggledChild = item.children.find(
+                (child) => child.checked !== CheckState.UNCHECKED
+              );
+              if (toggledChild) {
+                // if any children are checked,
+                // do nothing
+              } else {
+                // else, toggle the first child and it's children
+                getIds(item.children[0], ids);
+              }
+            } else {
+              for (const child of item.children) {
+                getIds(child, ids);
+              }
             }
           }
           return ids;
         }
         const ids = item.isLeaf ? [item.id] : [];
-        if (children) {
-          for (const child of children) {
-            getIds(child, ids);
+        if (children && children.length > 0) {
+          if (item.radioFolder && isChecked) {
+            const toggledChild = children.find(
+              (child) => child.checked !== CheckState.UNCHECKED
+            );
+            if (toggledChild) {
+              // if any children are checked,
+              // do nothing
+            } else {
+              // else, toggle the first child and it's children
+              getIds(children[0], ids);
+            }
+          } else {
+            for (const child of children) {
+              getIds(child, ids);
+            }
           }
         }
         onChecked(ids, isChecked);
+        if (isChecked && item.parentId) {
+          const parent = data.find((i) => i.node.id === item.parentId);
+          if (parent?.radioFolder) {
+            // Find and hide any visible siblings and their children
+            const siblings = parent.children.filter(
+              (i) => i.node.id !== item.id
+            );
+            const idsToHide: string[] = [];
+            for (const sibling of siblings) {
+              if (sibling.checked !== CheckState.UNCHECKED) {
+                if (sibling.isLeaf) {
+                  idsToHide.push(sibling.node.id);
+                } else if (sibling.children) {
+                  for (const child of sibling.children) {
+                    getIds(child, idsToHide);
+                  }
+                }
+              }
+            }
+            onChecked(idsToHide, false);
+          }
+        }
       }
     },
-    [onChecked]
+    [onChecked, data]
   );
 
   const updateContextMenuTargetRef = useCallback(
-    (el: HTMLElement) => {
-      if (setContextMenu) {
+    (el: HTMLElement | null) => {
+      if (setContextMenu && el) {
         setContextMenu((prev) => {
           if (prev) {
             return {
@@ -306,9 +378,10 @@ export default function TreeView<T>({
               onChecked={handleChecked}
               disableEditing={disableEditing || false}
               hideCheckboxes={hideCheckboxes || false}
-              isChecked={item.checked === CheckState.CHECKED}
-              hasCheckedChildren={item.checked === CheckState.PARTIAL}
+              checked={item.checked}
               highlighted={item.highlighted}
+              isLoading={item.loading}
+              error={item.error || null}
             />
           ))}
         </ul>
@@ -354,9 +427,10 @@ export default function TreeView<T>({
           onChecked={handleChecked}
           disableEditing={disableEditing || false}
           hideCheckboxes={hideCheckboxes || false}
-          isChecked={item.checked === CheckState.CHECKED}
-          hasCheckedChildren={item.checked === CheckState.PARTIAL}
+          checked={item.checked}
           highlighted={item.highlighted}
+          isLoading={item.loading}
+          error={item.error || null}
         />
       ))}
     </ul>

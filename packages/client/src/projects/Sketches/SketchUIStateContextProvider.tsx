@@ -121,6 +121,8 @@ interface SketchUIStateContextValue {
     read: DropdownOption[];
     update: DropdownOption[];
   };
+  errors: { [id: string]: string };
+  loading: string[];
 }
 
 const NotImplemented = () => {
@@ -146,6 +148,8 @@ const defaultValue: SketchUIStateContextValue = {
   setOpenReports: NotImplemented,
   editSketch: NotImplemented,
   editorIsOpen: false,
+  errors: {},
+  loading: [],
 };
 
 export const SketchUIStateContext =
@@ -260,6 +264,22 @@ export default function SketchUIStateContextProvider({
       mapContext.manager.setVisibleSketches(sketches);
     }
   }, [visibleSketches, mapContext.manager, cacheState, client]);
+
+  const { loading, errors } = useMemo(() => {
+    const loading: string[] = [];
+    const errors: { [id: string]: string } = {};
+    for (const key in mapContext.sketchLayerStates) {
+      const state = mapContext.sketchLayerStates[key];
+      if (state.error) {
+        errors[`Sketch:${key}`] = state.error.toString();
+      }
+      if (state.loading) {
+        // eslint-disable-next-line i18next/no-literal-string
+        loading.push(`Sketch:${key}`);
+      }
+    }
+    return { loading, errors };
+  }, [mapContext.sketchLayerStates]);
 
   // # Sketch and SketchFolder Selection
   // TODO: garbage collect missing ids
@@ -1289,6 +1309,8 @@ export default function SketchUIStateContextProvider({
         menuOptions,
         showSketches,
         hideSketches,
+        loading,
+        errors,
       }}
     >
       {children}

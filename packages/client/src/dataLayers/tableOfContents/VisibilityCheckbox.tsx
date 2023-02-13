@@ -6,6 +6,7 @@ export default function VisibilityCheckbox(props: {
   error?: boolean;
   radio?: boolean;
   className?: string;
+  loading?: boolean;
 }) {
   return (
     <>
@@ -22,7 +23,7 @@ export default function VisibilityCheckbox(props: {
           props.disabled
             ? "pointer-events-none border-gray-200 bg-gray-100"
             : "border-gray-300"
-        } ${props.className}`}
+        } ${props.className} ${props.loading ? "transform rotate-45" : ""}`}
         style={{
           ...(props.error === true
             ? { color: "#c54141" }

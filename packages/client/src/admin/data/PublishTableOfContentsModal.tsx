@@ -20,6 +20,7 @@ export default function PublishTableOfContentsModal(props: {
       onRequestClose={props.onRequestClose}
       footer={[
         {
+          autoFocus: true,
           label: t("Publish"),
           disabled: publishState.loading,
           loading: publishState.loading,

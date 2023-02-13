@@ -47,6 +47,7 @@ import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 import md5 from "md5";
 import useAccessToken from "../useAccessToken";
 import LRU from "lru-cache";
+import debounce from "lodash.debounce";
 
 const graphqlURL = new URL(
   process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
@@ -196,7 +197,7 @@ class MapContextManager {
           item.error = error;
           delete item.bytes;
           delete item.value;
-          this.debouncedUpdateLayerState(1);
+          this.debouncedUpdateLayerState();
           this.debouncedUpdateStyle();
           return item;
         }
@@ -703,7 +704,7 @@ class MapContextManager {
         this.showLayerId(id);
       }
     }
-    this.debouncedUpdateLayerState(1);
+    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
@@ -765,11 +766,13 @@ class MapContextManager {
     }
     // add new sketches to internal state
     for (const id of sketchIds) {
-      this.internalState.sketchLayerStates[id] = {
-        loading: true,
-        visible: true,
-        staticId: this.layers[id]?.staticId,
-      };
+      if (!this.internalState.sketchLayerStates[id]?.visible) {
+        this.internalState.sketchLayerStates[id] = {
+          loading: true,
+          visible: true,
+          staticId: this.layers[id]?.staticId,
+        };
+      }
     }
     // update public state
     this.setState((prev) => ({
@@ -1317,13 +1320,18 @@ class MapContextManager {
       // ignore
       return;
     }
+
     // Filter out events that are related to styles, or about turning geojson
     // or image data into tiles. We don't care about stuff that isn't related to
     // network activity
     if (
-      event.dataType === "source" &&
-      ((event.source.type !== "geojson" && event.source.type !== "image") ||
-        !event.tile)
+      event.dataType === "source"
+      // this filtering might not be necessary, since we are debouncing updates
+      // anyways. It looked to be skipping important events related to sketch
+      // geojson loading
+      //  &&
+      // ((event.source.type !== "geojson" && event.source.type !== "image") ||
+      //   !event.tile)
     ) {
       this.debouncedUpdateSourceStates();
     }
@@ -1332,11 +1340,22 @@ class MapContextManager {
   private onMapError = (event: ErrorEvent & { sourceId?: string }) => {
     if (event.sourceId && event.sourceId !== "composite") {
       let anySet = false;
-      for (const layerId of Object.keys(this.visibleLayers)) {
-        if (event.sourceId === this.layers[layerId]?.dataSourceId.toString()) {
-          this.visibleLayers[layerId].error = event.error;
-          this.visibleLayers[layerId].loading = false;
+      if (/sketch-\d+$/.test(event.sourceId)) {
+        const id = parseInt(event.sourceId.split("-")[1]);
+        const state = this.internalState.sketchLayerStates[id];
+        if (state) {
           anySet = true;
+          state.error = event.error;
+          state.loading = false;
+        }
+      } else {
+        for (const layerId of Object.keys(this.visibleLayers)) {
+          const sourceId = this.layers[layerId]?.dataSourceId.toString();
+          if (event.sourceId === sourceId) {
+            this.visibleLayers[layerId].error = event.error;
+            this.visibleLayers[layerId].loading = false;
+            anySet = true;
+          }
         }
       }
       if (anySet) {
@@ -1360,16 +1379,6 @@ class MapContextManager {
         this.getSelectedBasemap()!
       );
     }
-  }
-
-  private debouncedUpdateSourceStates(backoff = 10) {
-    if (this.updateSourcesStateDebouncerReference) {
-      clearTimeout(this.updateSourcesStateDebouncerReference);
-    }
-    this.updateSourcesStateDebouncerReference = setTimeout(() => {
-      delete this.updateSourcesStateDebouncerReference;
-      this.updateSourceStates();
-    }, backoff);
   }
 
   private updateSourceStates() {
@@ -1404,6 +1413,25 @@ class MapContextManager {
         }
       }
     }
+    // update states of sketch layers
+    for (const id in this.internalState.sketchLayerStates) {
+      const state = this.internalState.sketchLayerStates[id];
+      if (state.visible) {
+        // eslint-disable-next-line i18next/no-literal-string
+        const loading = !this.map!.isSourceLoaded(`sketch-${id}`);
+        if (loading) {
+          anyLoading = true;
+        }
+        if (state.loading !== loading) {
+          this.internalState.sketchLayerStates[id].loading = loading;
+          anyChanges = true;
+        }
+        if (state.error && loading) {
+          delete this.internalState.sketchLayerStates[id].error;
+          anyChanges = true;
+        }
+      }
+    }
     if (anyChanges) {
       this.debouncedUpdateLayerState();
     }
@@ -1414,6 +1442,22 @@ class MapContextManager {
       }, 100);
     }
   }
+
+  private debouncedUpdateSourceStates = debounce(this.updateSourceStates, 10, {
+    leading: true,
+    trailing: true,
+    maxWait: 100,
+  });
+
+  // private debouncedUpdateSourceStates(backoff = 10) {
+  //   if (this.updateSourcesStateDebouncerReference) {
+  //     clearTimeout(this.updateSourcesStateDebouncerReference);
+  //   }
+  //   this.updateSourcesStateDebouncerReference = setTimeout(() => {
+  //     delete this.updateSourcesStateDebouncerReference;
+  //     this.updateSourceStates();
+  //   }, backoff);
+  // }
 
   highlightLayer(layerId: string) {}
 
@@ -1477,7 +1521,7 @@ class MapContextManager {
     for (const id of layerIds) {
       this.hideLayerId(id);
     }
-    this.debouncedUpdateLayerState(1);
+    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
@@ -1485,7 +1529,7 @@ class MapContextManager {
     for (const id of layerIds) {
       this.showLayerId(id);
     }
-    this.debouncedUpdateLayerState(1);
+    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
@@ -1541,25 +1585,31 @@ class MapContextManager {
     }
   }
 
-  private debouncedUpdateLayerState(backoff = 5) {
-    if (this.updateStateDebouncerReference) {
-      clearTimeout(this.updateStateDebouncerReference);
-    }
-    this.updateStateDebouncerReference = setTimeout(
-      this.updateLayerState,
-      backoff
-    );
-  }
+  // private debouncedUpdateLayerState(backoff = 5) {
+  //   if (this.updateStateDebouncerReference) {
+  //     clearTimeout(this.updateStateDebouncerReference);
+  //   }
+  //   this.updateStateDebouncerReference = setTimeout(
+  //     this.updateLayerState,
+  //     backoff
+  //   );
+  // }
 
   private updateLayerState = () => {
     delete this.updateStateDebouncerReference;
     this.setState((oldState) => ({
       ...oldState,
       layerStates: { ...this.visibleLayers },
+      sketchLayerStates: { ...this.internalState.sketchLayerStates },
     }));
     this.updatePreferences();
     this.updateInteractivitySettings();
   };
+
+  private debouncedUpdateLayerState = debounce(this.updateLayerState, 5, {
+    maxWait: 100,
+    trailing: true,
+  });
 
   updateOptionalBasemapSetting(
     layer: Pick<OptionalBasemapLayer, "id" | "options" | "groupType" | "name">,
