@@ -47,7 +47,7 @@ export default function SurveyInputButton({
             }
       }
     >
-      <span>{label}</span>
+      <span className="text-left">{label}</span>
       {Icon && (
         <Icon
           className={`w-5 h-5 absolute ${
