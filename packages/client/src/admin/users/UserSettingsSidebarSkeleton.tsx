@@ -3,7 +3,7 @@ import Skeleton from "../../components/Skeleton";
 
 export default function UserSettingsSidebarSkeleton() {
   return (
-    <div className="bg-white h-full max-h-full overflow-y-scroll">
+    <div className="bg-white h-full max-h-full overflow-y-auto">
       <div className="flex-shrink-0 w-96 max-w-full min-h-full bg-white border-r border-blue-gray-200 flex flex-col">
         <NavItemSkeleton />
         <NavItemSkeleton />

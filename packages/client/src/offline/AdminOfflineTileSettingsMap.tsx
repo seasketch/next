@@ -153,7 +153,7 @@ export default function AdminOfflineTileSettingsMap({
           </div>
         ) : (
           <div
-            className="w-full h-full overflow-y-scroll px-4 pb-4 max-w-xl"
+            className="w-full h-full overflow-y-auto px-4 pb-4 max-w-xl"
             style={{ gridArea: "sidebar" }}
           >
             {!createOptionOpen && (

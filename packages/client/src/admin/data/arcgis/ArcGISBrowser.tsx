@@ -68,9 +68,8 @@ export default function ArcGISBrowser() {
     cacheSize: bytes("500mb"),
   });
   const [treeData, setTreeData] = useState<ClientTableOfContentsItem[]>([]);
-  const [serviceSettings, setServiceSettings] = useArcGISServiceSettings(
-    selectedMapServer
-  );
+  const [serviceSettings, setServiceSettings] =
+    useArcGISServiceSettings(selectedMapServer);
   const { slug } = useParams<{ slug: string }>();
   const { t } = useTranslation("admin");
   const basemapsData = useGetBasemapsQuery({
@@ -352,7 +351,7 @@ export default function ArcGISBrowser() {
               {selectedMapServer && serviceData && serviceSettings && (
                 <div
                   ref={serviceColumnRef}
-                  className="p-2 overflow-y-scroll bg-white max-w-full md:w-128 lg:w-144 flex-grow-0 flex-shrink-0"
+                  className="p-2 overflow-y-auto bg-white max-w-full md:w-128 lg:w-144 flex-grow-0 flex-shrink-0"
                 >
                   <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
                     <h3 className="text-lg leading-6 font-medium text-gray-900">

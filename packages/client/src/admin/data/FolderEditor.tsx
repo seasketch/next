@@ -89,7 +89,7 @@ export default function FolderEditor({
       </div>
       {!folder && <Spinner />}
       {folder && (
-        <div className="flex-1 overflow-y-scroll px-4 pb-4">
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput
               // autofocus

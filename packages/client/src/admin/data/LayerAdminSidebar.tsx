@@ -28,7 +28,7 @@ export default function LayerAdminSidebar() {
           />
         </div>
       </header>
-      <div className="flex-1 overflow-y-scroll">
+      <div className="flex-1 overflow-y-auto">
         <div className={selectedTab === "Overlay Layers" ? "block" : "hidden"}>
           <TableOfContentsEditor />
         </div>
@@ -36,7 +36,7 @@ export default function LayerAdminSidebar() {
           <BaseMapEditor />
         </div>
       </div>
-      <DataUploadTaskList className="flex-none max-h-96 xl:max-h-127 overflow-y-scroll" />
+      <DataUploadTaskList className="flex-none max-h-96 xl:max-h-127 overflow-y-auto" />
     </div>
   );
 }

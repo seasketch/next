@@ -35,7 +35,7 @@ export function ArcGISBrowserColumn(props: ArcGISBrowserColumnProps) {
   }
   return (
     <div
-      className="border-r min-w-min-content bg-white overflow-y-scroll w-40"
+      className="border-r min-w-min-content bg-white overflow-y-auto w-40"
       style={{ minWidth: 240 }}
     >
       <ul>

@@ -155,7 +155,7 @@ function NavSkeleton({
   header?: string | ReactNode;
 }) {
   return (
-    <div className="bg-white h-full max-h-full overflow-y-scroll min-h-screen">
+    <div className="bg-white h-full max-h-full overflow-y-auto min-h-screen">
       <div className="flex-shrink-0 w-96 max-w-full min-h-full bg-white border-r border-blue-gray-200 flex flex-col">
         {header && (
           <div className="hidden md:flex flex-shrink-0 h-16 px-6 border-b border-blue-gray-200 items-center">

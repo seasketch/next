@@ -163,7 +163,7 @@ export default function TableOfContentsEditor() {
         </div>
       </header>
       <div
-        className="flex-1 overflow-y-scroll p-4 pt-16"
+        className="flex-1 overflow-y-auto p-4 pt-16"
         onContextMenu={(e) => e.preventDefault()}
       >
         {tocQuery.loading && <Spinner />}

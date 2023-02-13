@@ -163,7 +163,7 @@ export function FeatureLayerSettings(props: {
   return (
     <div
       ref={rootElRef}
-      className="p-2 overflow-y-scroll bg-white border-l max-h-full border-gray-300 max-w-full md:w-128 lg:w-144 flex-grow-0 flex-shrink-0"
+      className="p-2 overflow-y-auto bg-white border-l max-h-full border-gray-300 max-w-full md:w-128 lg:w-144 flex-grow-0 flex-shrink-0"
       style={{ minWidth: 340 }}
     >
       <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
@@ -455,7 +455,7 @@ export function FeatureLayerSettings(props: {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="max-h-1/2 overflow-y-scroll">
+                    <tbody className="max-h-1/2 overflow-y-auto">
                       {layer.fields
                         .filter((f) => f.alias !== "Shape")
                         .map((field, index) => {

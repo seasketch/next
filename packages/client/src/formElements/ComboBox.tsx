@@ -195,7 +195,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
       </div>
       <ul
         {...getMenuProps()}
-        className={`max-h-72 overflow-y-scroll max-w-full absolute bg-white text-gray-800 w-96 shadow-xl mt-2 z-10 rounded`}
+        className={`max-h-72 overflow-y-auto max-w-full absolute bg-white text-gray-800 w-96 shadow-xl mt-2 z-10 rounded`}
       >
         {isOpen &&
           choices.map((item, index) => (
