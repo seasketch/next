@@ -1,8 +1,7 @@
 /* eslint-disable i18next/no-literal-string */
 import { gql, useApolloClient } from "@apollo/client";
-import { useContext, useEffect, useMemo, useState } from "react";
-import ContextMenuDropdown from "../../components/ContextMenuDropdown";
-import TreeView from "../../components/TreeView";
+import { useCallback, useContext, useEffect, useMemo } from "react";
+import TreeView, { TreeItem } from "../../components/TreeView";
 import {
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
@@ -25,29 +24,8 @@ export default function ForumTreeView(props: {
     visibleSketches,
     onChecked,
     updateFromCache,
-    menuOptions,
+    getMenuOptions,
   } = useContext(SketchUIStateContext);
-
-  const [contextMenu, setContextMenu] = useState<
-    | {
-        id: string;
-        // options: (DropdownOption | DropdownDividerProps)[];
-        target: HTMLElement;
-        offsetX: number;
-      }
-    | undefined
-  >();
-
-  // Clear the context menu if selection changes
-  useEffect(() => {
-    setContextMenu((prev) => {
-      if (prev && selectedIds.indexOf(prev.id) !== -1) {
-        return prev;
-      } else {
-        return undefined;
-      }
-    });
-  }, [selectedIds]);
 
   const treeItems = useMemo(() => {
     const items = myPlansFragmentsToTreeItems(props.items);
@@ -114,18 +92,24 @@ export default function ForumTreeView(props: {
     // They also need to be removed when the component is removed.
   }, [treeItems, client.cache, updateFromCache, props.items, props.timestamp]);
 
+  const getContextMenuItems = useCallback(
+    (item: TreeItem) => {
+      if (item) {
+        return getMenuOptions(
+          [item.id],
+          item.type === "Sketch"
+            ? { sketch: true, folder: false, collection: !item.isLeaf }
+            : { sketch: false, folder: true, collection: false }
+        ).contextMenu;
+      } else {
+        return [];
+      }
+    },
+    [getMenuOptions]
+  );
+
   return (
     <div className={`text-sm -ml-6`}>
-      {contextMenu?.target && Boolean(menuOptions?.contextMenu?.length) && (
-        <ContextMenuDropdown
-          options={menuOptions?.contextMenu || []}
-          target={contextMenu.target}
-          offsetX={contextMenu.offsetX}
-          onClick={() => {
-            setContextMenu(undefined);
-          }}
-        />
-      )}
       <TreeView
         items={treeItems}
         ariaLabel="Table of Contents"
@@ -137,8 +121,7 @@ export default function ForumTreeView(props: {
         selection={selectedIds}
         onSelect={onSelect}
         clearSelection={clearSelection}
-        setContextMenu={setContextMenu}
-        contextMenuItemId={contextMenu?.id}
+        getContextMenuItems={getContextMenuItems}
       />
     </div>
   );

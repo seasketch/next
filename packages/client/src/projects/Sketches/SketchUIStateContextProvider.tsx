@@ -123,6 +123,23 @@ interface SketchUIStateContextValue {
   };
   errors: { [id: string]: string };
   loading: string[];
+  getMenuOptions: (
+    selectedIds: string[],
+    selectionType?: {
+      /* collection geometryType */
+      collection: boolean;
+      /* SketchFolder selected */
+      folder: boolean;
+      /** only sketches with geometryType != collection */
+      sketch: boolean;
+    }
+  ) => {
+    contextMenu: (DropdownOption | DropdownDividerProps)[];
+    viewReports?: DropdownOption;
+    create: DropdownOption[];
+    read: DropdownOption[];
+    update: DropdownOption[];
+  };
 }
 
 const NotImplemented = () => {
@@ -150,6 +167,7 @@ const defaultValue: SketchUIStateContextValue = {
   editorIsOpen: false,
   errors: {},
   loading: [],
+  getMenuOptions: NotImplemented,
 };
 
 export const SketchUIStateContext =
@@ -177,7 +195,6 @@ export default function SketchUIStateContextProvider({
   }, [setCacheState]);
 
   // # Table of Contents Item Expansion State
-  // TODO: garbage collect
   const [expandedIds, setExpandedIds] = useLocalStorage<string[]>(
     `expanded-sketches-${slug}`,
     []
@@ -282,7 +299,6 @@ export default function SketchUIStateContextProvider({
   }, [mapContext.sketchLayerStates]);
 
   // # Sketch and SketchFolder Selection
-  // TODO: garbage collect missing ids
   const [selectedIds, _setSelectedIds] = useState<string[]>([]);
 
   const setSelectedIds = useCallback(
@@ -521,7 +537,7 @@ export default function SketchUIStateContextProvider({
         ]);
       }
     },
-    [expandItem, setVisibleSketches, client.cache]
+    [client.cache, setSelectedIds, expandItem, setVisibleSketches]
   );
 
   useEffect(() => {
@@ -841,397 +857,393 @@ export default function SketchUIStateContextProvider({
   }, [setVisibleSketches, setExpandedIds, client]);
 
   const token = useAccessToken();
-  const menuOptions = useMemo(() => {
-    const multiple = selectedIds.length > 1;
-    let selectionIsSharedContent = false;
-    if (selectedIds.length === 1) {
-      selectionIsSharedContent = Boolean(
-        // @ts-ignore private api
-        client.cache.data.get(selectedIds[0], "sharedInForum")
-      );
-    }
-    function isValidChild(parentId: number, child: SketchingDetailsFragment) {
-      return true;
-      // const parent = sketchClasses?.find((sc) => sc.id === parentId);
-      // if (parent) {
-      //   return Boolean(
-      //     parent.validChildren?.find((validChild) => validChild.id === child.id)
-      //   );
-      // } else {
-      //   return false;
-      // }
-    }
-    function getSelectedSketchClasses() {
-      const sketchClasses: SketchingDetailsFragment[] = [];
-      for (const id of selectedIds) {
-        if (/Sketch:/.test(id)) {
-          // @ts-ignore private api
-          const sketchClassId = client.cache.data.get(id, "sketchClassId");
-          if (
-            sketchClassId &&
-            !sketchClasses.find((sc) => sc.id === sketchClassId)
-          ) {
-            const sketchClass =
-              client.cache.readFragment<SketchingDetailsFragment>({
-                id: sketchClassId,
-                fragment: SketchingDetailsFragmentDoc,
-                fragmentName: "SketchingDetails",
-              });
-            if (sketchClass) {
-              sketchClasses.push(sketchClass);
-            }
-          }
-        }
+
+  const getMenuOptions = useCallback(
+    (
+      selectedIds: string[],
+      selectionType?: {
+        /* collection geometryType */
+        collection: boolean;
+        /* SketchFolder selected */
+        folder: boolean;
+        /** only sketches with geometryType != collection */
+        sketch: boolean;
       }
-      return sketchClasses;
-    }
+    ) => {
+      const multiple = selectedIds.length > 1;
+      let selectionIsSharedContent = false;
+      if (selectedIds.length === 1) {
+        selectionIsSharedContent = Boolean(
+          // @ts-ignore private api
+          client.cache.data.get(selectedIds[0], "sharedInForum")
+        );
+      }
+      function isValidChild(parentId: number, child: SketchingDetailsFragment) {
+        return true;
+        // const parent = sketchClasses?.find((sc) => sc.id === parentId);
+        // if (parent) {
+        //   return Boolean(
+        //     parent.validChildren?.find((validChild) => validChild.id === child.id)
+        //   );
+        // } else {
+        //   return false;
+        // }
+      }
 
-    const selectedId = selectedIds.length
-      ? parseInt(selectedIds[0].split(":")[1])
-      : undefined;
-    const contextMenu: (DropdownOption | DropdownDividerProps)[] = [];
-    const sketchClasses = projectMetadata.data?.project?.sketchClasses || [];
+      const selectedId = selectedIds.length
+        ? parseInt(selectedIds[0].split(":")[1])
+        : undefined;
+      const contextMenu: (DropdownOption | DropdownDividerProps)[] = [];
+      const sketchClasses = projectMetadata.data?.project?.sketchClasses || [];
 
-    const create: DropdownOption[] = [
-      ...(!selectionIsSharedContent && (!selectionType || !selectionType.sketch)
-        ? sketchClasses || []
-        : []
-      )
-        .filter((sc) => !sc.formElementId && !sc.isArchived && sc.canDigitize)
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((sc) => ({
-          // eslint-disable-next-line i18next/no-literal-string
-          id: `create-${sc.id}`,
-          label: sc.name,
-          onClick: async () => {
-            history.replace(`/${getSlug()}/app`);
-            const sketchClass: SketchingDetailsFragment | null =
-              client.cache.readFragment({
+      const create: DropdownOption[] = [
+        ...(!selectionIsSharedContent &&
+        (!selectionType || !selectionType.sketch)
+          ? sketchClasses || []
+          : []
+        )
+          .filter((sc) => !sc.formElementId && !sc.isArchived && sc.canDigitize)
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((sc) => ({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `create-${sc.id}`,
+            label: sc.name,
+            onClick: async () => {
+              history.replace(`/${getSlug()}/app`);
+              const sketchClass: SketchingDetailsFragment | null =
+                client.cache.readFragment({
+                  // eslint-disable-next-line i18next/no-literal-string
+                  id: `SketchClass:${sc.id}`,
+                  fragment: SketchingDetailsFragmentDoc,
+                  fragmentName: "SketchingDetails",
+                });
+              if (sketchClass) {
+                setEditor({
+                  sketchClass,
+                  folderId:
+                    selectedIds.length === 1 &&
+                    /SketchFolder:/.test(selectedIds[0])
+                      ? selectedId
+                      : undefined,
+                  collectionId:
+                    selectedIds.length === 1 && selectionType?.collection
+                      ? selectedId
+                      : undefined,
+                });
+              }
+            },
+          })),
+        ...(!selectionIsSharedContent &&
+        (!selectionType || !selectionType.sketch)
+          ? [
+              {
                 // eslint-disable-next-line i18next/no-literal-string
-                id: `SketchClass:${sc.id}`,
-                fragment: SketchingDetailsFragmentDoc,
-                fragmentName: "SketchingDetails",
-              });
-            if (sketchClass) {
-              setEditor({
-                sketchClass,
-                folderId:
-                  selectedIds.length === 1 &&
-                  /SketchFolder:/.test(selectedIds[0])
-                    ? selectedId
-                    : undefined,
-                collectionId:
-                  selectedIds.length === 1 && selectionType?.collection
-                    ? selectedId
-                    : undefined,
-              });
-            }
-          },
-        })),
-      ...(!selectionIsSharedContent && (!selectionType || !selectionType.sketch)
-        ? [
-            {
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `create-folder`,
-              label: t("Folder"),
-              onClick: async () => {
-                prompt({
-                  message: t(`What would you like to name your folder?`),
-                  onSubmit: async (name) => {
-                    if (!name.length) {
-                      return;
-                    }
-                    await createFolder({
-                      variables: {
-                        name,
-                        slug: getSlug(),
-                        ...(selectionType?.folder
-                          ? { folderId: selectedId }
-                          : {}),
-                      },
-                      update: async (cache, { data }) => {
-                        if (data?.createSketchFolder?.sketchFolder) {
-                          const folder = data.createSketchFolder.sketchFolder;
-                          const results = cache.readQuery<SketchingQuery>({
-                            query: SketchingDocument,
-                            variables: {
-                              slug: getSlug(),
-                            },
-                          });
-                          if (results?.projectBySlug?.myFolders) {
-                            await cache.writeQuery({
+                id: `create-folder`,
+                label: t("Folder"),
+                onClick: async () => {
+                  prompt({
+                    message: t(`What would you like to name your folder?`),
+                    onSubmit: async (name) => {
+                      if (!name.length) {
+                        return;
+                      }
+                      await createFolder({
+                        variables: {
+                          name,
+                          slug: getSlug(),
+                          ...(selectionType?.folder
+                            ? { folderId: selectedId }
+                            : {}),
+                        },
+                        update: async (cache, { data }) => {
+                          if (data?.createSketchFolder?.sketchFolder) {
+                            const folder = data.createSketchFolder.sketchFolder;
+                            const results = cache.readQuery<SketchingQuery>({
                               query: SketchingDocument,
-                              variables: { slug: getSlug() },
-                              data: {
-                                ...results,
-                                projectBySlug: {
-                                  ...results.projectBySlug,
-                                  myFolders: [
-                                    ...results.projectBySlug.myFolders,
-                                    folder,
-                                  ],
-                                },
+                              variables: {
+                                slug: getSlug(),
                               },
                             });
-                            focusOnTableOfContentsItem(
-                              "SketchFolder",
-                              folder.id
-                            );
+                            if (results?.projectBySlug?.myFolders) {
+                              await cache.writeQuery({
+                                query: SketchingDocument,
+                                variables: { slug: getSlug() },
+                                data: {
+                                  ...results,
+                                  projectBySlug: {
+                                    ...results.projectBySlug,
+                                    myFolders: [
+                                      ...results.projectBySlug.myFolders,
+                                      folder,
+                                    ],
+                                  },
+                                },
+                              });
+                              focusOnTableOfContentsItem(
+                                "SketchFolder",
+                                folder.id
+                              );
+                            }
                           }
-                        }
+                        },
+                      });
+                    },
+                  });
+                },
+              },
+            ]
+          : []),
+      ];
+      const update: DropdownOption[] = [];
+      const read: DropdownOption[] = [];
+      const viewReports: DropdownOption | undefined =
+        selectionType?.collection || selectionType?.sketch
+          ? {
+              id: "view-reports",
+              label: t("View Reports"),
+              keycode: "v",
+              onClick: () => {
+                openSketchReport(selectedId!);
+              },
+            }
+          : undefined;
+      if (viewReports) {
+        contextMenu.push(viewReports);
+      }
+      if (selectionBBox) {
+        read.push({
+          label: t("Zoom to"),
+          id: "bbox-zoom",
+          onClick: () => {
+            const sidebar = currentSidebarState();
+            if (visibleSketches.indexOf(selectedIds[0]) === -1) {
+              onChecked(selectedIds, true);
+            }
+            if (mapContext.manager?.map) {
+              mapContext.manager.map.fitBounds(
+                selectionBBox as mapboxgl.LngLatBoundsLike,
+                {
+                  animate: true,
+                  padding: {
+                    bottom: 100,
+                    top: 100,
+                    left: sidebar.open ? sidebar.width + 100 : 100,
+                    right: 100,
+                  },
+                }
+              );
+            }
+          },
+        });
+      }
+
+      if (selectedId && selectionType && !selectionIsSharedContent) {
+        update.push({
+          label: selectionType.folder ? t("Rename Folder") : t("Edit"),
+          id: "edit",
+          keycode: "e",
+          onClick: async () => {
+            if (selectionType.folder) {
+              const folder = client.cache.readFragment<{
+                id: number;
+                name: string;
+              }>({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `SketchFolder:${selectedId}`,
+                // eslint-disable-next-line i18next/no-literal-string
+                fragment: gql`
+                  fragment data on SketchFolder {
+                    id
+                    name
+                  }
+                `,
+              });
+              if (folder) {
+                await prompt({
+                  message: t("Rename {{folder.name}}", { folder }),
+                  defaultValue: folder.name,
+                  onSubmit: async (name) => {
+                    if (name.length) {
+                      await renameFolder({
+                        variables: {
+                          id: folder.id,
+                          name,
+                        },
+                      });
+                    }
+                  },
+                });
+              } else {
+                throw new Error("Folder not found in cache");
+              }
+            } else {
+              editSketch(selectedId);
+            }
+          },
+        });
+        update.push({
+          id: "delete",
+          label: t("Delete"),
+          keycode: "Backspace",
+          onClick: async () => {
+            // TODO: implement multiple-delete
+            // TODO: warn of child deletes
+            if (multiple) {
+              throw new Error("Multiple delete not implemented");
+            }
+            // @ts-ignore private api
+            const name: string = client.cache.data.get(selectedIds[0], "name");
+            confirmDelete({
+              message: t(`Are you sure you want to delete "{{name}}"?`, {
+                name,
+              }),
+              onDelete: async () => {
+                clearSelection();
+                if (selectionType.folder) {
+                  collapseItem({ id: selectedIds[0] });
+                }
+                await deleteSketchTocItem({
+                  variables: {
+                    items: [
+                      {
+                        type: selectionType?.sketch
+                          ? SketchChildType.Sketch
+                          : SketchChildType.SketchFolder,
+                        id: selectedId,
                       },
-                    });
+                    ],
                   },
                 });
               },
-            },
-          ]
-        : []),
-    ];
-    const update: DropdownOption[] = [];
-    const read: DropdownOption[] = [];
-    const viewReports: DropdownOption | undefined =
-      selectionType?.collection || selectionType?.sketch
-        ? {
-            id: "view-reports",
-            label: t("View Reports"),
-            keycode: "v",
-            onClick: () => {
-              openSketchReport(selectedId!);
-            },
-          }
-        : undefined;
-    if (viewReports) {
-      contextMenu.push(viewReports);
-    }
-    if (selectionBBox) {
-      read.push({
-        label: t("Zoom to"),
-        id: "bbox-zoom",
-        onClick: () => {
-          const sidebar = currentSidebarState();
-          if (visibleSketches.indexOf(selectedIds[0]) === -1) {
-            onChecked(selectedIds, true);
-          }
-          if (mapContext.manager?.map) {
-            mapContext.manager.map.fitBounds(
-              selectionBBox as mapboxgl.LngLatBoundsLike,
-              {
-                animate: true,
-                padding: {
-                  bottom: 100,
-                  top: 100,
-                  left: sidebar.open ? sidebar.width + 100 : 100,
-                  right: 100,
-                },
-              }
-            );
-          }
-        },
-      });
-    }
-
-    if (selectedId && selectionType && !selectionIsSharedContent) {
-      update.push({
-        label: selectionType.folder ? t("Rename Folder") : t("Edit"),
-        id: "edit",
-        keycode: "e",
-        onClick: async () => {
-          if (selectionType.folder) {
-            const folder = client.cache.readFragment<{
-              id: number;
-              name: string;
-            }>({
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `SketchFolder:${selectedId}`,
-              // eslint-disable-next-line i18next/no-literal-string
-              fragment: gql`
-                fragment data on SketchFolder {
-                  id
-                  name
-                }
-              `,
             });
-            if (folder) {
-              await prompt({
-                message: t("Rename {{folder.name}}", { folder }),
-                defaultValue: folder.name,
-                onSubmit: async (name) => {
-                  if (name.length) {
-                    await renameFolder({
-                      variables: {
-                        id: folder.id,
-                        name,
-                      },
-                    });
-                  }
-                },
-              });
-            } else {
-              throw new Error("Folder not found in cache");
-            }
-          } else {
-            editSketch(selectedId);
-          }
-        },
-      });
-      update.push({
-        id: "delete",
-        label: t("Delete"),
-        keycode: "Backspace",
-        onClick: async () => {
-          // TODO: implement multiple-delete
-          // TODO: warn of child deletes
-          if (multiple) {
-            throw new Error("Multiple delete not implemented");
-          }
-          // @ts-ignore private api
-          const name: string = client.cache.data.get(selectedIds[0], "name");
-          confirmDelete({
-            message: t(`Are you sure you want to delete "{{name}}"?`, { name }),
-            onDelete: async () => {
+          },
+        });
+        update.push({
+          id: "copy",
+          label: t("Copy"),
+          onClick: async () => {
+            const type = selectionType.sketch
+              ? SketchChildType.Sketch
+              : SketchChildType.SketchFolder;
+            const response = await copy({
+              variables: {
+                id: selectedId,
+                type,
+              },
+            });
+            const parentId = response.data?.copySketchTocItem?.parentId;
+            const sketches = response.data?.copySketchTocItem?.sketches || [];
+            if (parentId) {
               clearSelection();
-              if (selectionType.folder) {
-                collapseItem({ id: selectedIds[0] });
-              }
-              await deleteSketchTocItem({
-                variables: {
-                  items: [
-                    {
-                      type: selectionType?.sketch
-                        ? SketchChildType.Sketch
-                        : SketchChildType.SketchFolder,
-                      id: selectedId,
-                    },
-                  ],
-                },
-              });
-            },
-          });
-        },
-      });
-      update.push({
-        id: "copy",
-        label: t("Copy"),
-        onClick: async () => {
-          const type = selectionType.sketch
-            ? SketchChildType.Sketch
-            : SketchChildType.SketchFolder;
-          const response = await copy({
-            variables: {
-              id: selectedId,
-              type,
-            },
-          });
-          const parentId = response.data?.copySketchTocItem?.parentId;
-          const sketches = response.data?.copySketchTocItem?.sketches || [];
-          if (parentId) {
-            clearSelection();
-            setTimeout(() => {
-              focusOnTableOfContentsItem(
-                type === SketchChildType.Sketch ? "Sketch" : "SketchFolder",
-                parentId
-              );
-              showSketches(sketches.map((s) => treeItemId(s.id, "Sketch")));
-            }, 100);
-          }
-        },
-      });
-    }
+              setTimeout(() => {
+                focusOnTableOfContentsItem(
+                  type === SketchChildType.Sketch ? "Sketch" : "SketchFolder",
+                  parentId
+                );
+                showSketches(sketches.map((s) => treeItemId(s.id, "Sketch")));
+              }, 100);
+            }
+          },
+        });
+      }
 
-    if (selectionType && selectedId && selectionIsSharedContent) {
-      update.push({
-        id: "copy-from-shared",
-        label: t("Copy"),
-        onClick: async () => {
-          const type = selectionType.sketch
-            ? SketchChildType.Sketch
-            : SketchChildType.SketchFolder;
-          const response = await copy({
-            variables: {
-              id: selectedId,
-              type,
-            },
-          });
-          const parentId = response.data?.copySketchTocItem?.parentId;
-          const sketches = response.data?.copySketchTocItem?.sketches || [];
-          if (parentId) {
-            clearSelection();
-            // eslint-disable-next-line i18next/no-literal-string
-            history.push(`/${slug}/app/sketches`);
-            setTimeout(() => {
-              focusOnTableOfContentsItem(
-                type === SketchChildType.Sketch ? "Sketch" : "SketchFolder",
-                parentId
-              );
-              showSketches(sketches.map((s) => treeItemId(s.id, "Sketch")));
-            }, 100);
-          }
-        },
-      });
-    }
+      if (selectionType && selectedId && selectionIsSharedContent) {
+        update.push({
+          id: "copy-from-shared",
+          label: t("Copy"),
+          onClick: async () => {
+            const type = selectionType.sketch
+              ? SketchChildType.Sketch
+              : SketchChildType.SketchFolder;
+            const response = await copy({
+              variables: {
+                id: selectedId,
+                type,
+              },
+            });
+            const parentId = response.data?.copySketchTocItem?.parentId;
+            const sketches = response.data?.copySketchTocItem?.sketches || [];
+            if (parentId) {
+              clearSelection();
+              // eslint-disable-next-line i18next/no-literal-string
+              history.push(`/${slug}/app/sketches`);
+              setTimeout(() => {
+                focusOnTableOfContentsItem(
+                  type === SketchChildType.Sketch ? "Sketch" : "SketchFolder",
+                  parentId
+                );
+                showSketches(sketches.map((s) => treeItemId(s.id, "Sketch")));
+              }, 100);
+            }
+          },
+        });
+      }
 
-    if (selectedId && !selectionType?.folder) {
-      read.push({
-        id: "export",
-        label: t("Export as GeoJSON"),
-        disabled: multiple,
-        onClick: async () => {
-          // TODO: support multiple
-          download(
-            // eslint-disable-next-line i18next/no-literal-string
-            `${BASE_SERVER_ENDPOINT}/sketches/${
-              selectedIds[0].split(":")[1]
-            }.geojson.json?token=${token}`,
-            // eslint-disable-next-line i18next/no-literal-string
-            `${selectedIds[0].replace(":", "-")}.geojson.json`
-          );
-        },
-      });
-    }
+      if (selectedId && !selectionType?.folder) {
+        read.push({
+          id: "export",
+          label: t("Export as GeoJSON"),
+          disabled: multiple,
+          onClick: async () => {
+            // TODO: support multiple
+            download(
+              // eslint-disable-next-line i18next/no-literal-string
+              `${BASE_SERVER_ENDPOINT}/sketches/${
+                selectedIds[0].split(":")[1]
+              }.geojson.json?token=${token}`,
+              // eslint-disable-next-line i18next/no-literal-string
+              `${selectedIds[0].replace(":", "-")}.geojson.json`
+            );
+          },
+        });
+      }
 
-    contextMenu.push(...update);
-    contextMenu.push(...read);
-    if (create.length) {
-      contextMenu.push({
-        label: t("Create"),
-      } as DropdownDividerProps);
-      contextMenu.push(...create);
-    }
+      contextMenu.push(...update);
+      contextMenu.push(...read);
+      if (create.length) {
+        contextMenu.push({
+          label: t("Create"),
+        } as DropdownDividerProps);
+        contextMenu.push(...create);
+      }
 
-    return {
-      contextMenu,
-      create,
-      update,
-      read,
-      viewReports,
-    };
-  }, [
-    selectedIds,
-    projectMetadata.data?.project?.sketchClasses,
-    selectionType,
-    t,
-    selectionBBox,
-    client.cache,
-    history,
-    prompt,
-    createFolder,
-    focusOnTableOfContentsItem,
-    openSketchReport,
-    visibleSketches,
-    mapContext.manager?.map,
-    onChecked,
-    renameFolder,
-    editSketch,
-    confirmDelete,
-    clearSelection,
-    deleteSketchTocItem,
-    slug,
-    collapseItem,
-    copy,
-    showSketches,
-    token,
-  ]);
+      return {
+        contextMenu,
+        create,
+        update,
+        read,
+        viewReports,
+      };
+    },
+    [
+      projectMetadata.data?.project?.sketchClasses,
+      t,
+      selectionBBox,
+      client.cache,
+      history,
+      prompt,
+      createFolder,
+      focusOnTableOfContentsItem,
+      openSketchReport,
+      visibleSketches,
+      mapContext.manager?.map,
+      onChecked,
+      renameFolder,
+      editSketch,
+      confirmDelete,
+      clearSelection,
+      deleteSketchTocItem,
+      slug,
+      collapseItem,
+      copy,
+      showSketches,
+      token,
+    ]
+  );
+
+  const menuOptions = useMemo(() => {
+    return getMenuOptions(selectedIds, selectionType);
+  }, [selectedIds, getMenuOptions, selectionType]);
 
   // Keyboard shortcut handling
   useEffect(() => {
@@ -1307,6 +1319,7 @@ export default function SketchUIStateContextProvider({
         editorIsOpen: editor !== false,
         editSketch,
         menuOptions,
+        getMenuOptions,
         showSketches,
         hideSketches,
         loading,

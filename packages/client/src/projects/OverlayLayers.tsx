@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback, useMemo } from "react";
+import { useState, useContext, useCallback, useMemo } from "react";
 import {
   ClientTableOfContentsItem,
   combineBounds,
@@ -8,9 +8,7 @@ import { TableOfContentsItem } from "../generated/graphql";
 import useLocalStorage from "../useLocalStorage";
 import { MapContext } from "../dataLayers/MapContextManager";
 import TreeView, { TreeItem } from "../components/TreeView";
-import ContextMenuDropdown, {
-  DropdownDividerProps,
-} from "../components/ContextMenuDropdown";
+import { DropdownDividerProps } from "../components/ContextMenuDropdown";
 import { DropdownOption } from "../components/DropdownButton";
 import { useTranslation } from "react-i18next";
 import { currentSidebarState } from "./ProjectAppSidebar";
@@ -36,13 +34,9 @@ export default function OverlayLayers({
     | undefined
   >();
 
-  const [contextMenuOptions, setContextMenuOptions] = useState<
-    (DropdownOption | DropdownDividerProps)[]
-  >([]);
-
-  useEffect(() => {
-    if (contextMenu?.id) {
-      const item = items.find((item) => item.stableId === contextMenu.id);
+  const getContextMenuItems = useCallback(
+    (treeItem: TreeItem) => {
+      const item = items.find((item) => item.stableId === treeItem.id);
       if (item) {
         const sidebar = currentSidebarState();
         const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] = [
@@ -86,28 +80,13 @@ export default function OverlayLayers({
             },
           });
         }
-        setContextMenuOptions(contextMenuOptions);
+        return contextMenuOptions;
       } else {
-        setContextMenuOptions([]);
+        return [];
       }
-    } else {
-      setContextMenuOptions([]);
-    }
-  }, [
-    contextMenu?.id,
-    items,
-    mapContext.manager?.map,
-    setContextMenuOptions,
-    t,
-  ]);
-
-  useEffect(() => {
-    const onClick = () => setContextMenu(undefined);
-    if (contextMenu) {
-      document.addEventListener("click", onClick);
-      return () => document.removeEventListener("click", onClick);
-    }
-  }, [setContextMenu, contextMenu]);
+    },
+    [items, mapContext.manager?.map, t]
+  );
 
   const treeNodes = useMemo(() => {
     return overlayLayerFragmentsToTreeItems(
@@ -179,16 +158,6 @@ export default function OverlayLayers({
           onRequestClose={() => setOpenMetadataViewerId(undefined)}
         />
       )}
-      {contextMenu?.target && (
-        <ContextMenuDropdown
-          options={contextMenuOptions}
-          target={contextMenu.target}
-          offsetX={contextMenu.offsetX}
-          onClick={() => {
-            setContextMenu(undefined);
-          }}
-        />
-      )}
       <TreeView
         loadingItems={loadingItems}
         errors={overlayErrors}
@@ -201,6 +170,7 @@ export default function OverlayLayers({
         items={treeNodes}
         setContextMenu={setContextMenu}
         contextMenuItemId={contextMenu?.id}
+        getContextMenuItems={getContextMenuItems}
       />
     </div>
   );

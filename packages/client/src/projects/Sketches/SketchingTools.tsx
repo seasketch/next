@@ -12,7 +12,6 @@ import { memo } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useAuth0 } from "@auth0/auth0-react";
 import { DropTargetMonitor, useDrop } from "react-dnd";
-import ContextMenuDropdown from "../../components/ContextMenuDropdown";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
 import TreeView, { parseTreeItemId, TreeItem } from "../../components/TreeView";
 import { myPlansFragmentsToTreeItems } from ".";
@@ -40,9 +39,26 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     updateFromCache,
     editorIsOpen,
     menuOptions,
+    getMenuOptions,
     errors,
     loading: loadingSketches,
   } = useContext(SketchUIStateContext);
+
+  const getContextMenuItems = useCallback(
+    (item: TreeItem) => {
+      if (item) {
+        return getMenuOptions(
+          [item.id],
+          item.type === "Sketch"
+            ? { sketch: true, folder: false, collection: !item.isLeaf }
+            : { sketch: false, folder: true, collection: false }
+        ).contextMenu;
+      } else {
+        return [];
+      }
+    },
+    [getMenuOptions]
+  );
 
   const { data, loading, refetch } = useSketchingQuery({
     variables: {
@@ -80,27 +96,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   }, [data?.projectBySlug?.sketchGeometryToken, refetch]);
 
   const { dropFolder, dropSketch } = useUpdateSketchTableOfContentsDraggable();
-
-  const [contextMenu, setContextMenu] = useState<
-    | {
-        id: string;
-        // options: (DropdownOption | DropdownDividerProps)[];
-        target: HTMLElement;
-        offsetX: number;
-      }
-    | undefined
-  >();
-
-  // Clear the context menu if selection changes
-  useEffect(() => {
-    setContextMenu((prev) => {
-      if (prev && selectedIds.indexOf(prev.id) !== -1) {
-        return prev;
-      } else {
-        return undefined;
-      }
-    });
-  }, [selectedIds]);
 
   /**
    * Convert GraphQL fragment data into a flat list of TreeItemI elements for
@@ -226,16 +221,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
           isOver && canDrop ? " bg-blue-100 border-blue-500" : ""
         }`}
       >
-        {contextMenu?.target && menuOptions && (
-          <ContextMenuDropdown
-            options={menuOptions.contextMenu}
-            target={contextMenu.target}
-            offsetX={contextMenu.offsetX}
-            onClick={() => {
-              setContextMenu(undefined);
-            }}
-          />
-        )}
         <div>
           {!data && loading && (
             <div className="pt-2 space-y-2">
@@ -255,8 +240,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               expanded={expandedIds}
               onSelect={onSelect}
               selection={selectedIds}
-              setContextMenu={setContextMenu}
-              contextMenuItemId={contextMenu?.id}
               items={treeItems}
               ariaLabel="My Sketches"
               clearSelection={clearSelection}
@@ -267,6 +250,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               temporarilyHighlightedIds={temporarilyHighlightedIds}
               errors={errors}
               loadingItems={loadingSketches}
+              getContextMenuItems={getContextMenuItems}
             />
           )}
         </div>

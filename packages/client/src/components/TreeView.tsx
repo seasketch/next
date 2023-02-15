@@ -4,8 +4,14 @@ import {
   useCallback,
   SetStateAction,
   FunctionComponent,
+  useState,
+  useEffect,
 } from "react";
 import TreeItemComponent from "../projects/Sketches/TreeItemComponent";
+import ContextMenuDropdown, {
+  DropdownDividerProps,
+} from "./ContextMenuDropdown";
+import { DropdownOption } from "./DropdownButton";
 
 export interface TreeItem {
   id: string;
@@ -67,6 +73,9 @@ interface TreeViewProps {
   disableEditing?: boolean;
   hideCheckboxes?: boolean;
   temporarilyHighlightedIds?: string[];
+  getContextMenuItems?: (
+    item: TreeItem
+  ) => (DropdownOption | DropdownDividerProps)[];
 }
 
 export interface TreeNodeProps {
@@ -126,11 +135,9 @@ export interface TreeNode {
   parents: string[];
 }
 
-export default function TreeView<T>({
+export default function TreeView({
   onSelect,
   onExpand,
-  setContextMenu,
-  contextMenuItemId,
   clearSelection,
   onDragEnd,
   onDropEnd,
@@ -140,8 +147,30 @@ export default function TreeView<T>({
   onChecked,
   disableEditing,
   hideCheckboxes,
+  getContextMenuItems,
   ...props
 }: TreeViewProps) {
+  const [contextMenu, setContextMenu] = useState<
+    | {
+        id: string;
+        target: HTMLElement;
+        offsetX: number;
+      }
+    | undefined
+  >();
+
+  const [contextMenuOptions, setContextMenuOptions] = useState<
+    (DropdownOption | DropdownDividerProps)[]
+  >([]);
+
+  useEffect(() => {
+    const onClick = () => setContextMenu(undefined);
+    if (contextMenu) {
+      document.addEventListener("click", onClick);
+      return () => document.removeEventListener("click", onClick);
+    }
+  }, [setContextMenu, contextMenu]);
+
   const data = useMemo(() => {
     const nodesById = props.items.reduce((map, item) => {
       const node = {
@@ -154,7 +183,7 @@ export default function TreeView<T>({
         node: item,
         level: 1,
         children: [],
-        isContextMenuTarget: contextMenuItemId === item.id,
+        isContextMenuTarget: contextMenu?.id === item.id,
         checked: Boolean(
           item.isLeaf && checkedItems && checkedItems?.indexOf(item.id) !== -1
         )
@@ -237,7 +266,7 @@ export default function TreeView<T>({
     props.expanded,
     props.selection,
     props.temporarilyHighlightedIds,
-    contextMenuItemId,
+    contextMenu?.id,
     checkedItems,
     loadingItems,
     props.errors,
@@ -337,16 +366,27 @@ export default function TreeView<T>({
 
   const onContextMenu = useCallback(
     (node: TreeItem, target: HTMLElement, offsetX: number) => {
-      if (setContextMenu) {
+      if (getContextMenuItems) {
         setContextMenu({
           id: node.id,
           offsetX,
           target,
         });
+        setContextMenuOptions(getContextMenuItems(node));
       }
     },
-    [setContextMenu]
+    [setContextMenu, getContextMenuItems]
   );
+
+  useEffect(() => {
+    setContextMenu((prev) => {
+      if (prev && props.selection && props.selection.indexOf(prev.id) !== -1) {
+        return prev;
+      } else {
+        return undefined;
+      }
+    });
+  }, [props.selection]);
 
   return (
     <ul
@@ -354,6 +394,17 @@ export default function TreeView<T>({
       role="tree"
       aria-label={props.ariaLabel}
     >
+      {contextMenu?.target && contextMenuOptions?.length > 0 && (
+        <ContextMenuDropdown
+          options={contextMenuOptions}
+          target={contextMenu.target}
+          offsetX={contextMenu.offsetX}
+          onClick={() => {
+            setContextMenu(undefined);
+          }}
+        />
+      )}
+
       {data.map((item) => (
         <TreeItemComponent
           clearSelection={clearSelection}
