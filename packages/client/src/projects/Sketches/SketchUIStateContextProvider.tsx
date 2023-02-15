@@ -19,10 +19,10 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
-import { treeItemId } from ".";
 import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 import { DropdownOption } from "../../components/DropdownButton";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { treeItemId } from "../../components/TreeView";
 import useDialog from "../../components/useDialog";
 import {
   BASE_SERVER_ENDPOINT,

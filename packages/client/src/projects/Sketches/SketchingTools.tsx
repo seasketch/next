@@ -14,26 +14,20 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { DropTargetMonitor, useDrop } from "react-dnd";
 import ContextMenuDropdown from "../../components/ContextMenuDropdown";
 import useUpdateSketchTableOfContentsDraggable from "./useUpdateSketchTableOfContentsItem";
-import TreeView, { TreeNodeProps } from "../../components/TreeView";
-import TreeItemComponent, { TreeNodeDataProps } from "./TreeItemComponent";
-import { myPlansFragmentsToTreeItems, treeItemId } from ".";
+import TreeView, { parseTreeItemId, TreeItem } from "../../components/TreeView";
+import { myPlansFragmentsToTreeItems } from ".";
 import Skeleton from "../../components/Skeleton";
 import LoginPrompt from "./LoginPrompt";
-import { MapContext } from "../../dataLayers/MapContextManager";
 import decode from "jwt-decode";
 import { SketchUIStateContext } from "./SketchUIStateContextProvider";
 
 const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
-export type TreeItemType = TreeNodeDataProps;
-
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const { isSmall } = useContext(ProjectAppSidebarContext);
   const { user } = useAuth0();
   const onError = useGlobalErrorHandler();
-  const mapContext = useContext(MapContext);
   const {
-    expandItem,
     expandedIds,
     onExpand,
     selectedIds,
@@ -44,7 +38,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     visibleSketches,
     onChecked,
     updateFromCache,
-    setOpenReports,
     editorIsOpen,
     menuOptions,
     errors,
@@ -117,14 +110,14 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     const sketches = data?.projectBySlug?.mySketches || [];
     const folders = data?.projectBySlug?.myFolders || [];
     const items = myPlansFragmentsToTreeItems([...sketches, ...folders]);
-    return items.sort((a, b) => a.data.name.localeCompare(b.data.name));
+    return items.sort((a, b) => a.title.localeCompare(b.title));
   }, [data?.projectBySlug?.mySketches, data?.projectBySlug?.myFolders]);
 
   const onDragEnd = useCallback(
-    (items: TreeItemType[]) => {
+    (items: TreeItem[]) => {
       for (const item of items) {
         if (item.type === "Sketch" || item.type === "SketchFolder") {
-          focusOnTableOfContentsItem(item.type, item.id);
+          focusOnTableOfContentsItem(item.type, parseTreeItemId(item.id).id);
         }
       }
     },
@@ -138,11 +131,12 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   // Disabled auto-expansion of folders as requested in
   // https://github.com/seasketch/next/issues/544
   const onDropEnd = useCallback(
-    (item: TreeItemType) => {
-      const id = treeItemId(item.id, item.type);
-      setTemporarilyHighlightedIds((prev) => [...prev, id]);
+    (item: TreeItem) => {
+      setTemporarilyHighlightedIds((prev) => [...prev, item.id]);
       setTimeout(() => {
-        setTemporarilyHighlightedIds((prev) => prev.filter((i) => i !== id));
+        setTemporarilyHighlightedIds((prev) =>
+          prev.filter((i) => i !== item.id)
+        );
       }, 100);
     },
     [setTemporarilyHighlightedIds]
@@ -163,36 +157,20 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       canDrop: monitor.canDrop(),
     }),
     drop: (
-      item: {
-        id: number;
-        type: string;
-        folderId?: number | null;
-        collectionId?: number | null;
-      },
+      item: TreeItem,
       monitor: DropTargetMonitor<{ id: number; type: string }>
     ) => {
       if (!monitor.didDrop()) {
-        (item.type === "SketchFolder" ? dropFolder : dropSketch)(item.id, {
-          folderId: null,
-          collectionId: null,
-        });
+        (item.type === "SketchFolder" ? dropFolder : dropSketch)(
+          parseTreeItemId(item.id).id,
+          {
+            folderId: null,
+            collectionId: null,
+          }
+        );
       }
     },
   }));
-
-  const treeRenderFn = useCallback(
-    ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      // if (isFolderNode(node) && props.children) {
-      //   return <FolderItem {...props} node={node} />;
-      // } else if (isSketchNode(node)) {
-      return <TreeItemComponent {...props} node={node} />;
-      // } else {
-      //   // eslint-disable-next-line i18next/no-literal-string
-      //   return <div>Unimplemented</div>;
-      // }
-    },
-    []
-  );
 
   if (!user || (!loading && !data?.me)) {
     return <LoginPrompt hidden={hidden} />;
@@ -280,7 +258,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               setContextMenu={setContextMenu}
               contextMenuItemId={contextMenu?.id}
               items={treeItems}
-              render={treeRenderFn}
               ariaLabel="My Sketches"
               clearSelection={clearSelection}
               onDragEnd={onDragEnd}

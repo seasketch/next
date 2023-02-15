@@ -8,7 +8,8 @@ import {
 import { useDrag, useDrop } from "react-dnd";
 import {
   CheckState,
-  TreeItemI,
+  parseTreeItemId,
+  TreeItem,
   TreeNodeProps,
 } from "../../components/TreeView";
 import CollectionIcon from "@heroicons/react/outline/CollectionIcon";
@@ -30,7 +31,6 @@ export interface TreeNodeDataProps {
   folderId?: number | null;
   collectionId?: number | null;
   type: "Sketch" | "SketchFolder" | "TableOfContentsItem";
-  timestamp?: string;
   dropAcceptsTypes?: string[];
 }
 
@@ -39,10 +39,8 @@ export type DragItemProps = {
   parents: string[];
 } & TreeNodeDataProps;
 
-export function isSketchNode(
-  node: TreeItemI<any>
-): node is TreeItemI<TreeNodeDataProps> {
-  return node.data.type === "Sketch";
+export function isSketchNode(node: TreeItem): node is TreeItem {
+  return node.type === "Sketch";
 }
 
 export default function TreeItemComponent({
@@ -57,7 +55,6 @@ export default function TreeItemComponent({
   onDragEnd,
   checked,
   onChecked,
-  ChildGroup,
   children,
   numChildren,
   onDropEnd,
@@ -67,25 +64,21 @@ export default function TreeItemComponent({
   isLoading,
   parentIsRadioFolder,
   error,
-}: TreeNodeProps<TreeNodeDataProps>) {
-  const data = node.data;
+  clearSelection,
+  childGroupPadding,
+  parents,
+}: TreeNodeProps) {
   const isChecked = checked !== CheckState.UNCHECKED;
   const hasCheckedChildren = checked !== CheckState.UNCHECKED;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
     canDrag: !disableEditing,
-    type: data.type,
+    type: node.type,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-    item: {
-      id: data.id,
-      name: data.name,
-      type: data.type,
-      folderId: data.folderId,
-      collectionId: data.collectionId,
-    } as TreeNodeDataProps,
+    item: node,
     end(draggedItem, monitor) {
       if (onDragEnd) {
         onDragEnd([draggedItem]);
@@ -112,15 +105,15 @@ export default function TreeItemComponent({
   );
 
   const [{ canDrop, isOverCurrent }, drop] = useDrop(() => ({
-    accept: data.dropAcceptsTypes || [],
-    canDrop: (item: DragItemProps, monitor) => {
+    accept: node.dropAcceptsTypes || [],
+    canDrop: (item: TreeItem, monitor) => {
       if (disableEditing) {
         return false;
       }
       if (
         node.isLeaf ||
-        item.id === data.id ||
-        node.parents.indexOf(item.nodeId) !== -1
+        item.id === node.id ||
+        parents.indexOf(item.id) !== -1
       ) {
         return false;
       }
@@ -136,20 +129,22 @@ export default function TreeItemComponent({
       if (monitor.didDrop()) {
         return;
       }
+      const { id: itemId } = parseTreeItemId(item.id);
+      const { id: nodeId } = parseTreeItemId(node.id);
       (item.type === "SketchFolder" ? dropFolder : dropSketch)(
-        item.id,
-        data.type === "Sketch"
+        itemId,
+        node.type === "Sketch"
           ? {
-              collectionId: data.id,
+              collectionId: nodeId,
               folderId: null,
             }
           : {
               collectionId: null,
-              folderId: data.id,
+              folderId: nodeId,
             }
       );
       if (onDropEnd) {
-        onDropEnd(data);
+        onDropEnd(node);
       }
     },
   }));
@@ -239,7 +234,7 @@ export default function TreeItemComponent({
         style={{
           paddingTop: 2,
           paddingBottom: 2,
-          paddingLeft: data.isCollection ? 0 : 3,
+          paddingLeft: !node.isLeaf ? 0 : 3,
         }}
       >
         {!node.isLeaf && !node.hideChildren && (
@@ -264,7 +259,7 @@ export default function TreeItemComponent({
               loading={isLoading}
               onClick={onVisibilityClick}
               disabled={Boolean(node.checkOffOnly && !hasCheckedChildren)}
-              id={data.id}
+              id={node.id}
               error={error || undefined}
               visibility={
                 checked === CheckState.CHECKED
@@ -280,7 +275,7 @@ export default function TreeItemComponent({
         )}
         {!node.hideChildren &&
           !node.isLeaf &&
-          data.type !== "Sketch" &&
+          node.type !== "Sketch" &&
           (isExpanded ? (
             <FolderOpenIcon
               fill="currentColor"
@@ -300,7 +295,7 @@ export default function TreeItemComponent({
               className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
             />
           ))}
-        {data.type === "Sketch" && data.isCollection && (
+        {node.type === "Sketch" && !node.isLeaf && (
           <CollectionIcon
             stroke="currentColor"
             fill="currentColor"
@@ -321,11 +316,46 @@ export default function TreeItemComponent({
           onClick={updateSelectionOnClick}
           onContextMenu={contextMenuHandler}
         >
-          {data.name}
+          {node.title}
         </label>
       </span>
       {children && children.length > 0 && isExpanded && !node.hideChildren && (
-        <ChildGroup items={children} />
+        <ul
+          role="group"
+          onClick={(e) => {
+            if (clearSelection) {
+              clearSelection();
+            }
+          }}
+          style={{
+            paddingLeft: childGroupPadding || 35,
+          }}
+        >
+          {children.map((item) => (
+            <TreeItemComponent
+              key={item.node.id}
+              {...item}
+              numChildren={item.children.length}
+              onExpand={onExpand}
+              onSelect={onSelect}
+              onContextMenu={onContextMenu}
+              level={1}
+              children={item.children}
+              isContextMenuTarget={item.isContextMenuTarget}
+              updateContextMenuTargetRef={updateContextMenuTargetRef}
+              onDragEnd={onDragEnd}
+              onDropEnd={onDropEnd}
+              onChecked={onChecked}
+              disableEditing={disableEditing || false}
+              hideCheckboxes={hideCheckboxes || false}
+              checked={item.checked}
+              highlighted={item.highlighted}
+              isLoading={item.loading}
+              error={item.error || null}
+              clearSelection={clearSelection}
+            />
+          ))}
+        </ul>
       )}
       <motion.div
         variants={{

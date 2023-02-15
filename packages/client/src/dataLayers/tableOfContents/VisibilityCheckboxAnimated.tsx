@@ -1,17 +1,12 @@
 import { XIcon } from "@heroicons/react/outline";
 import { AnimatePresence, motion } from "framer-motion";
 import { memo, useEffect, useRef, useState } from "react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../../components/Tooltip";
 import "./TableOfContents.css";
 
 const DEBUG_SLOW = false;
 
 function VisibilityCheckboxAnimated(props: {
-  id: number;
+  id: number | string;
   onClick?: () => void;
   disabled: boolean;
   visibility: boolean | "mixed";

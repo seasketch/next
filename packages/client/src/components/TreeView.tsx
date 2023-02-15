@@ -1,20 +1,35 @@
-import { useMemo, FC, useCallback, SetStateAction } from "react";
+import {
+  useMemo,
+  FC,
+  useCallback,
+  SetStateAction,
+  FunctionComponent,
+} from "react";
+import TreeItemComponent from "../projects/Sketches/TreeItemComponent";
 
-export interface TreeItemI<T> {
+export interface TreeItem {
   id: string;
+  /** label shown in tree */
+  title: string;
   parentId?: string | null;
-  data: T;
+  /** If false, will be treated as a folder or collection */
   isLeaf: boolean;
-  /** Assigned by treeview. Supply an empty */
-  parents: string[];
+  /** If enabled, cannot be used to turn on checkbox for children */
   checkOffOnly?: boolean;
+  /** Only allow one child to be selected at a time */
   radioFolder?: boolean;
+  /** Will appear as a leaf node */
   hideChildren?: boolean;
+  /** Used for drag & drop */
+  type: string;
+  /** References TreeItem.type */
+  dropAcceptsTypes?: string[];
+  icon?: FunctionComponent;
 }
 
-interface TreeViewProps<T> {
+interface TreeViewProps {
   /** Items to display in the tree */
-  items: TreeItemI<T>[];
+  items: TreeItem[];
   /** Defaults to false */
   multipleSelect?: boolean;
   ariaLabel: string;
@@ -29,13 +44,9 @@ interface TreeViewProps<T> {
   /** Errors to display for items, keyed by id */
   errors?: { [id: string]: string };
   /* Should update selection prop */
-  onSelect?: (
-    metaKey: boolean,
-    node: TreeItemI<T>,
-    isSelected: boolean
-  ) => void;
+  onSelect?: (metaKey: boolean, node: TreeItem, isSelected: boolean) => void;
   /* Should update expanded prop */
-  onExpand?: (node: TreeItemI<T>, isExpanded: boolean) => void;
+  onExpand?: (node: TreeItem, isExpanded: boolean) => void;
   onChecked?: (ids: string[], isChecked: boolean) => void;
   contextMenuItemId?: string;
   setContextMenu?: (
@@ -48,10 +59,9 @@ interface TreeViewProps<T> {
       | undefined
     >
   ) => void;
-  render: FC<TreeNodeProps<T>>;
   clearSelection?: () => void;
-  onDragEnd?: (items: T[]) => void;
-  onDropEnd?: (item: T) => void;
+  onDragEnd?: (items: TreeItem[]) => void;
+  onDropEnd?: (item: TreeItem) => void;
   /** Amount of padding to give child lists. Defaults to 35px */
   childGroupPadding?: number;
   disableEditing?: boolean;
@@ -59,37 +69,28 @@ interface TreeViewProps<T> {
   temporarilyHighlightedIds?: string[];
 }
 
-type ChildGroupRenderer<T> = FC<{
-  items: TreeNode<T>[];
-}>;
-
-export interface TreeNodeProps<T> {
-  node: TreeItemI<T>;
+export interface TreeNodeProps {
+  node: TreeItem;
   numChildren: number;
-  onSelect?: (
-    metaKey: boolean,
-    node: TreeItemI<T>,
-    isSelected: boolean
-  ) => void;
-  onExpand?: (node: TreeItemI<T>, isExpanded: boolean) => void;
-  ChildGroup: ChildGroupRenderer<any>;
-  children?: TreeNode<any>[];
+  onSelect?: (metaKey: boolean, node: TreeItem, isSelected: boolean) => void;
+  onExpand?: (node: TreeItem, isExpanded: boolean) => void;
+  children?: TreeNode[];
   isSelected: boolean;
   isExpanded: boolean;
   level: number;
   isContextMenuTarget: boolean;
   onContextMenu?: (
-    node: TreeItemI<T>,
+    node: TreeItem,
     target: HTMLElement,
     offsetX: number
   ) => void;
   updateContextMenuTargetRef: (el: HTMLElement) => void;
-  onDragEnd?: (items: T[]) => void;
-  onDropEnd?: (item: T) => void;
+  onDragEnd?: (items: TreeItem[]) => void;
+  onDropEnd?: (item: TreeItem) => void;
   onChecked?: (
-    node: TreeItemI<T>,
+    node: TreeItem,
     isChecked: boolean,
-    children?: TreeNode<T>[]
+    children?: TreeNode[]
   ) => void;
   checked: CheckState;
   isLoading: boolean;
@@ -98,6 +99,9 @@ export interface TreeNodeProps<T> {
   highlighted: boolean;
   parentIsRadioFolder: boolean;
   error: string | null;
+  clearSelection?: () => void;
+  childGroupPadding?: number;
+  parents: string[];
 }
 export enum CheckState {
   CHECKED,
@@ -105,12 +109,12 @@ export enum CheckState {
   UNCHECKED,
 }
 
-interface TreeNode<T> {
+export interface TreeNode {
   isSelected: boolean;
   isExpanded: boolean;
-  node: TreeItemI<T>;
+  node: TreeItem;
   level: number;
-  children: TreeNode<T>[];
+  children: TreeNode[];
   isContextMenuTarget: boolean;
   checked: CheckState;
   loading: boolean;
@@ -119,6 +123,7 @@ interface TreeNode<T> {
   parentIsRadioFolder: boolean;
   radioFolder: boolean;
   error?: string;
+  parents: string[];
 }
 
 export default function TreeView<T>({
@@ -136,8 +141,7 @@ export default function TreeView<T>({
   disableEditing,
   hideCheckboxes,
   ...props
-}: TreeViewProps<T>) {
-  const Render = props.render;
+}: TreeViewProps) {
   const data = useMemo(() => {
     const nodesById = props.items.reduce((map, item) => {
       const node = {
@@ -147,7 +151,7 @@ export default function TreeView<T>({
         isSelected: props.selection
           ? props.selection.indexOf(item.id) !== -1
           : false,
-        node: { ...item, parents: [] },
+        node: item,
         level: 1,
         children: [],
         isContextMenuTarget: contextMenuItemId === item.id,
@@ -168,12 +172,13 @@ export default function TreeView<T>({
           ? props.temporarilyHighlightedIds.indexOf(item.id) !== -1
           : false,
         parentIsRadioFolder: false,
-      } as TreeNode<T>;
+        parents: [],
+      } as TreeNode;
       map.set(item.id, node);
       return map;
-    }, new Map<string, TreeNode<T>>());
+    }, new Map<string, TreeNode>());
 
-    const nodes: TreeNode<T>[] = [];
+    const nodes: TreeNode[] = [];
     for (const item of props.items) {
       const node = nodesById.get(item.id);
       if (node) {
@@ -191,15 +196,12 @@ export default function TreeView<T>({
     }
 
     // recursively set node.parents, hasCheckedChildren, and parentIsRadioFolder
-    function addParentsAndGetVisibility(
-      node: TreeNode<any>,
-      parents: string[]
-    ) {
-      node.node.parents.push(...parents);
+    function addParentsAndGetVisibility(node: TreeNode, parents: string[]) {
+      node.parents.push(...parents);
       let anyVisibleChildren = false;
       let anyHiddenChildren = false;
       for (const child of node.children) {
-        addParentsAndGetVisibility(child, [...node.node.parents, node.node.id]);
+        addParentsAndGetVisibility(child, [...node.parents, node.node.id]);
         if (child.isLeaf) {
           if (child.checked === CheckState.CHECKED) {
             anyVisibleChildren = true;
@@ -242,9 +244,9 @@ export default function TreeView<T>({
   ]);
 
   const handleChecked = useCallback(
-    (item: TreeItemI<T>, isChecked: boolean, children?: TreeNode<T>[]) => {
+    (item: TreeItem, isChecked: boolean, children?: TreeNode[]) => {
       if (onChecked) {
-        function getIds(item: TreeNode<T>, ids: string[]) {
+        function getIds(item: TreeNode, ids: string[]) {
           if (item.isLeaf) {
             ids.push(item.node.id);
           }
@@ -334,7 +336,7 @@ export default function TreeView<T>({
   );
 
   const onContextMenu = useCallback(
-    (node: TreeItemI<T>, target: HTMLElement, offsetX: number) => {
+    (node: TreeItem, target: HTMLElement, offsetX: number) => {
       if (setContextMenu) {
         setContextMenu({
           id: node.id,
@@ -346,63 +348,6 @@ export default function TreeView<T>({
     [setContextMenu]
   );
 
-  const ChildGroup: ChildGroupRenderer<any> = useCallback(
-    (props: { items: TreeNode<any>[] }) => {
-      return (
-        <ul
-          role="group"
-          onClick={(e) => {
-            if (clearSelection) {
-              clearSelection();
-            }
-          }}
-          style={{
-            paddingLeft: childGroupPadding || 35,
-          }}
-        >
-          {props.items.map((item) => (
-            <Render
-              key={item.node.id}
-              {...item}
-              numChildren={item.children.length}
-              onExpand={onExpand}
-              onSelect={onSelect}
-              onContextMenu={onContextMenu}
-              level={item.level}
-              ChildGroup={ChildGroup}
-              children={item.children}
-              isContextMenuTarget={item.isContextMenuTarget}
-              updateContextMenuTargetRef={updateContextMenuTargetRef}
-              onDragEnd={onDragEnd}
-              onDropEnd={onDropEnd}
-              onChecked={handleChecked}
-              disableEditing={disableEditing || false}
-              hideCheckboxes={hideCheckboxes || false}
-              checked={item.checked}
-              highlighted={item.highlighted}
-              isLoading={item.loading}
-              error={item.error || null}
-            />
-          ))}
-        </ul>
-      );
-    },
-    [
-      childGroupPadding,
-      clearSelection,
-      Render,
-      onExpand,
-      onSelect,
-      onContextMenu,
-      updateContextMenuTargetRef,
-      onDragEnd,
-      onDropEnd,
-      handleChecked,
-      disableEditing,
-      hideCheckboxes,
-    ]
-  );
-
   return (
     <ul
       aria-multiselectable={Boolean(props.multipleSelect)}
@@ -410,7 +355,8 @@ export default function TreeView<T>({
       aria-label={props.ariaLabel}
     >
       {data.map((item) => (
-        <Render
+        <TreeItemComponent
+          clearSelection={clearSelection}
           key={item.node.id}
           {...item}
           numChildren={item.children.length}
@@ -419,7 +365,6 @@ export default function TreeView<T>({
           onContextMenu={onContextMenu}
           level={1}
           children={item.children}
-          ChildGroup={ChildGroup}
           isContextMenuTarget={item.isContextMenuTarget}
           updateContextMenuTargetRef={updateContextMenuTargetRef}
           onDragEnd={onDragEnd}
@@ -435,4 +380,26 @@ export default function TreeView<T>({
       ))}
     </ul>
   );
+}
+
+export function treeItemIdForFragment(fragment: {
+  id: number;
+  __typename?: string;
+}) {
+  return treeItemId(fragment.id, fragment.__typename!);
+}
+
+export function treeItemId(id: number, typeName?: string) {
+  return `${typeName}:${id}`;
+}
+
+export function parseTreeItemId(id: string) {
+  if (!/\w+:\d+/.test(id)) {
+    throw new Error("Does not appear to be a tree item ID");
+  }
+  const [__fragment, _id] = id.split(":");
+  return {
+    __fragment,
+    id: parseInt(_id),
+  };
 }

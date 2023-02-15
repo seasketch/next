@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
-import TreeView, { TreeItemI, TreeNodeProps } from "../../components/TreeView";
+import TreeView, { parseTreeItemId, TreeItem } from "../../components/TreeView";
 import {
   SketchChildType,
   SketchFolderDetailsFragment,
@@ -11,13 +11,8 @@ import {
   useSketchingQuery,
 } from "../../generated/graphql";
 import getSlug from "../../getSlug";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
-import TreeItemComponent, {
-  isSketchNode,
-  TreeNodeDataProps,
-} from "../Sketches/TreeItemComponent";
-import { TreeItemType } from "../Sketches/SketchingTools";
 import { useSketchUIState } from "../Sketches/SketchUIStateContextProvider";
 
 export default function ShareSketchesModal({
@@ -67,15 +62,8 @@ export default function ShareSketchesModal({
     const sketches = data?.projectBySlug?.mySketches || [];
     const folders = data?.projectBySlug?.myFolders || [];
     const items = myPlansFragmentsToTreeItems([...sketches, ...folders]);
-    return items.sort((a, b) => a.data.name.localeCompare(b.data.name));
+    return items.sort((a, b) => a.title.localeCompare(b.title));
   }, [data?.projectBySlug?.mySketches, data?.projectBySlug?.myFolders]);
-
-  const treeRenderFn = useCallback(
-    ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      return <TreeItemComponent {...props} node={node} />;
-    },
-    []
-  );
 
   const { expandedIds, onExpand } = useSketchUIState();
 
@@ -119,7 +107,6 @@ export default function ShareSketchesModal({
           <>
             <TreeView
               items={treeItems}
-              render={treeRenderFn}
               ariaLabel={"Sketch List"}
               disableEditing={true}
               expanded={expandedIds}
@@ -140,20 +127,18 @@ export default function ShareSketchesModal({
   );
 }
 
-function getCopiedSketchesRecursive(
-  parentId: number,
-  items: TreeItemI<TreeNodeDataProps>[]
-) {
+function getCopiedSketchesRecursive(parentId: number, items: TreeItem[]) {
   const ids: number[] = [];
   for (const item of items) {
-    if (
-      item.data.collectionId === parentId ||
-      item.data.folderId === parentId
-    ) {
-      if (item.data.type === "Sketch") {
-        ids.push(item.data.id);
+    const itemParentId = item.parentId
+      ? parseTreeItemId(item.id).id
+      : undefined;
+    if (itemParentId === parentId) {
+      const id = parseTreeItemId(item.id).id;
+      if (item.type === "Sketch") {
+        ids.push(id);
       }
-      const children = getCopiedSketchesRecursive(item.data.id, items);
+      const children = getCopiedSketchesRecursive(id, items);
       if (children && children.length) {
         ids.push(...children);
       }

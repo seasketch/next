@@ -3,15 +3,11 @@ import {
   ClientTableOfContentsItem,
   combineBounds,
 } from "../dataLayers/tableOfContents/TableOfContents";
-
 import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
 import { TableOfContentsItem } from "../generated/graphql";
 import useLocalStorage from "../useLocalStorage";
 import { MapContext } from "../dataLayers/MapContextManager";
-import TreeView, { TreeItemI, TreeNodeProps } from "../components/TreeView";
-import TreeItemComponent, {
-  TreeNodeDataProps,
-} from "./Sketches/TreeItemComponent";
+import TreeView, { TreeItem } from "../components/TreeView";
 import ContextMenuDropdown, {
   DropdownDividerProps,
 } from "../components/ContextMenuDropdown";
@@ -119,13 +115,6 @@ export default function OverlayLayers({
     );
   }, [items]);
 
-  const treeRenderFn = useCallback(
-    ({ node, ...props }: TreeNodeProps<TreeNodeDataProps>) => {
-      return <TreeItemComponent node={node} {...props} />;
-    },
-    []
-  );
-
   const { checkedItems, loadingItems, overlayErrors } = useMemo(() => {
     const checkedItems: string[] = [];
     const loadingItems: string[] = [];
@@ -155,7 +144,7 @@ export default function OverlayLayers({
   }, [items, mapContext.layerStates]);
 
   const onExpand = useCallback(
-    (node: TreeItemI<TreeNodeDataProps>, isExpanded: boolean) => {
+    (node: TreeItem, isExpanded: boolean) => {
       if (isExpanded) {
         setExpandedIds((prev) => [
           ...prev.filter((id) => id !== node.id),
@@ -210,7 +199,6 @@ export default function OverlayLayers({
         onChecked={onChecked}
         ariaLabel="Overlay Layers"
         items={treeNodes}
-        render={treeRenderFn}
         setContextMenu={setContextMenu}
         contextMenuItemId={contextMenu?.id}
       />
@@ -219,22 +207,17 @@ export default function OverlayLayers({
 }
 
 function overlayLayerFragmentsToTreeItems(fragments: TableOfContentsItem[]) {
-  const items: TreeItemI<TreeNodeDataProps>[] = [];
+  const items: TreeItem[] = [];
   for (const fragment of fragments) {
     items.push({
       id: fragment.stableId,
-      parents: [],
       isLeaf: !fragment.isFolder,
       parentId: fragment.parentStableId || null,
-      data: {
-        ...fragment,
-        id: fragment.id,
-        name: fragment.title,
-        type: "TableOfContentsItem",
-      },
       checkOffOnly: fragment.isClickOffOnly,
       radioFolder: fragment.showRadioChildren,
       hideChildren: fragment.hideChildren,
+      title: fragment.title,
+      type: fragment.__typename!,
     });
   }
   return items;

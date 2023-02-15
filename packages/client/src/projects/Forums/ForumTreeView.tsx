@@ -1,15 +1,13 @@
 /* eslint-disable i18next/no-literal-string */
 import { gql, useApolloClient } from "@apollo/client";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import ContextMenuDropdown from "../../components/ContextMenuDropdown";
-import TreeView, { TreeNodeProps } from "../../components/TreeView";
+import TreeView from "../../components/TreeView";
 import {
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
 import { myPlansFragmentsToTreeItems } from "../Sketches";
-import { TreeItemType } from "../Sketches/SketchingTools";
-import TreeItemComponent, { isSketchNode } from "../Sketches/TreeItemComponent";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 
 export default function ForumTreeView(props: {
@@ -53,7 +51,7 @@ export default function ForumTreeView(props: {
 
   const treeItems = useMemo(() => {
     const items = myPlansFragmentsToTreeItems(props.items);
-    return items.sort((a, b) => a.data.name.localeCompare(b.data.name));
+    return items.sort((a, b) => a.title.localeCompare(b.title));
   }, [props.items]);
 
   useEffect(() => {
@@ -104,7 +102,7 @@ export default function ForumTreeView(props: {
       updateFromCache();
       return () => {
         for (const item of treeItems) {
-          if (item.data.type === "Sketch") {
+          if (item.type === "Sketch") {
             client.cache.evict({
               id: item.id,
             });
@@ -114,14 +112,7 @@ export default function ForumTreeView(props: {
       };
     }
     // They also need to be removed when the component is removed.
-  }, [treeItems, client.cache, updateFromCache, props.items]);
-
-  const treeRenderFn = useCallback(
-    ({ node, ...props }: TreeNodeProps<TreeItemType>) => {
-      return <TreeItemComponent {...props} node={node} />;
-    },
-    []
-  );
+  }, [treeItems, client.cache, updateFromCache, props.items, props.timestamp]);
 
   return (
     <div className={`text-sm -ml-6`}>
@@ -138,7 +129,6 @@ export default function ForumTreeView(props: {
       <TreeView
         items={treeItems}
         ariaLabel="Table of Contents"
-        render={treeRenderFn}
         expanded={expandedIds}
         onExpand={onExpand}
         checkedItems={visibleSketches}
