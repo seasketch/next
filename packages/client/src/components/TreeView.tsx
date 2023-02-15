@@ -1,9 +1,7 @@
 import {
   useMemo,
-  FC,
   useCallback,
   SetStateAction,
-  FunctionComponent,
   useState,
   useEffect,
 } from "react";
@@ -30,7 +28,6 @@ export interface TreeItem {
   type: string;
   /** References TreeItem.type */
   dropAcceptsTypes?: string[];
-  icon?: FunctionComponent;
 }
 
 interface TreeViewProps {

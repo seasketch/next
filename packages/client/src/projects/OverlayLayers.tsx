@@ -151,7 +151,7 @@ export default function OverlayLayers({
     [items, mapContext.manager]
   );
   return (
-    <div className="mt-3 pl-1">
+    <div className="mt-3 pl-3">
       {openMetadataViewerId && (
         <TableOfContentsMetadataModal
           id={openMetadataViewerId}

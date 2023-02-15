@@ -212,7 +212,7 @@ export default function TreeItemComponent({
         node.isLeaf || node.hideChildren
           ? {
               opacity: 1,
-              marginLeft: 3,
+              marginLeft: 0,
             }
           : {
               marginLeft: -15,
@@ -234,13 +234,15 @@ export default function TreeItemComponent({
         style={{
           paddingTop: 2,
           paddingBottom: 2,
-          paddingLeft: !node.isLeaf ? 0 : 3,
+          paddingLeft: node.isLeaf || node.hideChildren ? 3 : 0,
         }}
       >
         {!node.isLeaf && !node.hideChildren && (
           <button
             title={numChildren === 0 ? "Empty" : "Expand"}
-            className={!numChildren || numChildren < 1 ? "opacity-50" : ""}
+            className={`pr-0.5 ${
+              !numChildren || numChildren < 1 ? "opacity-50" : ""
+            }`}
             onClick={(e) => {
               if (onExpand) {
                 onExpand(node, !isExpanded);
