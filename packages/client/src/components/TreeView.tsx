@@ -28,6 +28,7 @@ export interface TreeItem {
   type: string;
   /** References TreeItem.type */
   dropAcceptsTypes?: string[];
+  bbox?: number[];
 }
 
 interface TreeViewProps {

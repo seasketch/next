@@ -99,7 +99,8 @@ export default function ForumTreeView(props: {
           [item.id],
           item.type === "Sketch"
             ? { sketch: true, folder: false, collection: !item.isLeaf }
-            : { sketch: false, folder: true, collection: false }
+            : { sketch: false, folder: true, collection: false },
+          item.bbox
         ).contextMenu;
       } else {
         return [];

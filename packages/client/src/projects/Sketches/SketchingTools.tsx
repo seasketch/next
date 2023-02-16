@@ -51,7 +51,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
           [item.id],
           item.type === "Sketch"
             ? { sketch: true, folder: false, collection: !item.isLeaf }
-            : { sketch: false, folder: true, collection: false }
+            : { sketch: false, folder: true, collection: false },
+          item.bbox
         ).contextMenu;
       } else {
         return [];

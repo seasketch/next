@@ -132,7 +132,8 @@ interface SketchUIStateContextValue {
       folder: boolean;
       /** only sketches with geometryType != collection */
       sketch: boolean;
-    }
+    },
+    selectionBBox?: number[]
   ) => {
     contextMenu: (DropdownOption | DropdownDividerProps)[];
     viewReports?: DropdownOption;
@@ -868,7 +869,8 @@ export default function SketchUIStateContextProvider({
         folder: boolean;
         /** only sketches with geometryType != collection */
         sketch: boolean;
-      }
+      },
+      selectionBBox?: number[]
     ) => {
       const multiple = selectedIds.length > 1;
       let selectionIsSharedContent = false;
@@ -1218,7 +1220,6 @@ export default function SketchUIStateContextProvider({
     [
       projectMetadata.data?.project?.sketchClasses,
       t,
-      selectionBBox,
       client.cache,
       history,
       prompt,
@@ -1242,8 +1243,8 @@ export default function SketchUIStateContextProvider({
   );
 
   const menuOptions = useMemo(() => {
-    return getMenuOptions(selectedIds, selectionType);
-  }, [selectedIds, getMenuOptions, selectionType]);
+    return getMenuOptions(selectedIds, selectionType, selectionBBox);
+  }, [selectedIds, getMenuOptions, selectionType, selectionBBox]);
 
   // Keyboard shortcut handling
   useEffect(() => {

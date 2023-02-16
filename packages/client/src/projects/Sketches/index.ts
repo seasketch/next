@@ -29,6 +29,10 @@ export function myPlansFragmentsToTreeItems(
       title: fragment.name,
       type: fragment.__typename!,
       dropAcceptsTypes: isLeaf ? [] : ["SketchFolder", "Sketch"],
+      bbox:
+        fragment.__typename === "Sketch"
+          ? ((fragment.bbox || undefined) as number[])
+          : undefined,
     });
   }
   return items;
