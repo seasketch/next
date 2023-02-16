@@ -141,7 +141,7 @@ export const TooltipContent = React.forwardRef<
 >(function TooltipContent(props, propRef) {
   const context = useTooltipContext();
   const ref = useMergeRefs([context.refs.setFloating, propRef]);
-
+  const className = props.className ? "Tooltip" + props.className : "Tooltip";
   return (
     <FloatingPortal>
       {context.open && (
@@ -155,6 +155,7 @@ export const TooltipContent = React.forwardRef<
             ...props.style,
           }}
           {...context.getFloatingProps(props)}
+          className={className}
         />
       )}
     </FloatingPortal>

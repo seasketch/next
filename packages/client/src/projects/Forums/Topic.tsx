@@ -142,6 +142,7 @@ export default function Topic({ id }: { id: number }) {
                   isFirstPostInTopic={i === 0}
                   post={post}
                   onProfileClick={onProfileClick}
+                  forumId={data?.topic?.forumId || 0}
                 />
               ))}
             </AnimatePresence>

@@ -1,4 +1,4 @@
-import { useEffect, MouseEvent, useState } from "react";
+import { useEffect, MouseEvent, useState, useMemo } from "react";
 import {
   AuthorProfileFragment,
   ForumPostFragment,
@@ -9,6 +9,9 @@ import InlineAuthorDetails from "./InlineAuthorDetails";
 import { motion } from "framer-motion";
 import { createPortal } from "react-dom";
 import ForumTreeView from "./ForumTreeView";
+import { LinkIcon } from "@heroicons/react/outline";
+import getSlug from "../../getSlug";
+import { useLocation } from "react-router-dom";
 
 type SketchPortal = {
   items: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[];
@@ -20,8 +23,10 @@ export default function ForumPost({
   post,
   isFirstPostInTopic,
   onProfileClick,
+  forumId,
 }: {
   post: ForumPostFragment;
+  forumId: number;
   isFirstPostInTopic: boolean;
   onProfileClick?: (
     e: MouseEvent<HTMLElement>,
@@ -30,6 +35,14 @@ export default function ForumPost({
 }) {
   const [bodyRef, setBodyRef] = useState<HTMLDivElement | null>(null);
   const [sketchPortals, setSketchPortals] = useState<SketchPortal[]>([]);
+  const location = useLocation();
+
+  const isFocused = useMemo(() => {
+    if (location?.hash && /#post-\d+/.test(location.hash)) {
+      const postId = parseInt(location.hash.split("-")[1]);
+      return postId === post.id;
+    }
+  }, [location?.hash, post.id]);
 
   useEffect(() => {
     if (bodyRef) {
@@ -80,10 +93,16 @@ export default function ForumPost({
       <div className="mb-3 text-gray-600">
         {post.authorProfile && (
           <InlineAuthorDetails
+            isFocused={isFocused}
             onProfileClick={onProfileClick}
             profile={post.authorProfile}
             dateString={post.createdAt}
             firstPostInTopic={isFirstPostInTopic}
+            link={`${
+              window.location.origin
+            }/${getSlug()}/app/forums/${forumId}/${post.topicId}#post-${
+              post.id
+            }`}
           />
         )}
       </div>
