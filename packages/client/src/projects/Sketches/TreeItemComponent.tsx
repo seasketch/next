@@ -215,7 +215,7 @@ export default function TreeItemComponent({
               marginLeft: 0,
             }
           : {
-              marginLeft: -15,
+              marginLeft: -17,
               opacity: 1,
             }
       }
