@@ -2,22 +2,7 @@ query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     draftTableOfContentsItems {
-      id
-      dataLayerId
-      title
-      acl {
-        id
-        type
-      }
-      isClickOffOnly
-      isFolder
-      stableId
-      parentStableId
-      showRadioChildren
-      bounds
-      sortIndex
-      hideChildren
-      enableDownload
+      ...Overlay
     }
   }
 }

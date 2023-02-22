@@ -4,10 +4,9 @@ import {
   combineBounds,
 } from "../dataLayers/tableOfContents/TableOfContents";
 import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
-import { TableOfContentsItem } from "../generated/graphql";
-import useLocalStorage from "../useLocalStorage";
+import { OverlayFragment, TableOfContentsItem } from "../generated/graphql";
 import { MapContext } from "../dataLayers/MapContextManager";
-import TreeView, { TreeItem } from "../components/TreeView";
+import TreeView, { TreeItem, useOverlayState } from "../components/TreeView";
 import { DropdownDividerProps } from "../components/ContextMenuDropdown";
 import { DropdownOption } from "../components/DropdownButton";
 import { useTranslation } from "react-i18next";
@@ -21,18 +20,16 @@ export default function OverlayLayers({
   const { t } = useTranslation("homepage");
   const mapContext = useContext(MapContext);
   const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
-  const [expandedIds, setExpandedIds] = useLocalStorage<string[]>(
-    "overlays-expanded-ids",
-    []
-  );
-  const [contextMenu, setContextMenu] = useState<
-    | {
-        id: string;
-        target: HTMLElement;
-        offsetX: number;
-      }
-    | undefined
-  >();
+
+  const {
+    expandedIds,
+    onExpand,
+    checkedItems,
+    onChecked,
+    loadingItems,
+    overlayErrors,
+    treeItems,
+  } = useOverlayState(items);
 
   const getContextMenuItems = useCallback(
     (treeItem: TreeItem) => {
@@ -88,68 +85,6 @@ export default function OverlayLayers({
     [items, mapContext.manager?.map, t]
   );
 
-  const treeNodes = useMemo(() => {
-    return overlayLayerFragmentsToTreeItems(
-      [...items].sort((a, b) => a.sortIndex - b.sortIndex)
-    );
-  }, [items]);
-
-  const { checkedItems, loadingItems, overlayErrors } = useMemo(() => {
-    const checkedItems: string[] = [];
-    const loadingItems: string[] = [];
-    const overlayErrors: { [id: string]: string } = {};
-    for (const item of items) {
-      if (item.dataLayerId) {
-        const id = item.dataLayerId.toString();
-        const record = mapContext.layerStates[id];
-        if (record) {
-          if (record.visible) {
-            checkedItems.push(item.stableId);
-          }
-          if (record.loading) {
-            loadingItems.push(item.stableId);
-          }
-          if (record.error) {
-            overlayErrors[item.stableId] = record.error.toString();
-          }
-        }
-      }
-    }
-    return {
-      checkedItems,
-      loadingItems,
-      overlayErrors,
-    };
-  }, [items, mapContext.layerStates]);
-
-  const onExpand = useCallback(
-    (node: TreeItem, isExpanded: boolean) => {
-      if (isExpanded) {
-        setExpandedIds((prev) => [
-          ...prev.filter((id) => id !== node.id),
-          node.id,
-        ]);
-      } else {
-        setExpandedIds((prev) => [...prev.filter((id) => id !== node.id)]);
-      }
-    },
-    [setExpandedIds]
-  );
-
-  const onChecked = useCallback(
-    (ids: string[], isChecked: boolean) => {
-      const dataLayerIds = items
-        .filter((item) => ids.indexOf(item.stableId) !== -1)
-        .filter((item) => Boolean(item.dataLayerId))
-        .map((item) => item.dataLayerId!.toString());
-      if (isChecked) {
-        mapContext.manager?.showLayers(dataLayerIds);
-      } else {
-        mapContext.manager?.hideLayers(dataLayerIds);
-      }
-    },
-    [items, mapContext.manager]
-  );
   return (
     <div className="mt-3 pl-3">
       {openMetadataViewerId && (
@@ -167,35 +102,16 @@ export default function OverlayLayers({
         checkedItems={checkedItems}
         onChecked={onChecked}
         ariaLabel="Overlay Layers"
-        items={treeNodes}
-        setContextMenu={setContextMenu}
-        contextMenuItemId={contextMenu?.id}
+        items={treeItems}
         getContextMenuItems={getContextMenuItems}
       />
     </div>
   );
 }
 
-function overlayLayerFragmentsToTreeItems(fragments: TableOfContentsItem[]) {
-  const items: TreeItem[] = [];
-  for (const fragment of fragments) {
-    items.push({
-      id: fragment.stableId,
-      isLeaf: !fragment.isFolder,
-      parentId: fragment.parentStableId || null,
-      checkOffOnly: fragment.isClickOffOnly,
-      radioFolder: fragment.showRadioChildren,
-      hideChildren: fragment.hideChildren,
-      title: fragment.title,
-      type: fragment.__typename!,
-    });
-  }
-  return items;
-}
-
 export function createBoundsRecursive(
-  item: ClientTableOfContentsItem,
-  items: TableOfContentsItem[],
+  item: OverlayFragment,
+  items: OverlayFragment[],
   bounds?: [number, number, number, number]
 ): [number, number, number, number] {
   if (item.bounds) {

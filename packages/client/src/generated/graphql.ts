@@ -14711,11 +14711,7 @@ export type DraftTableOfContentsQuery = (
     & Pick<Project, 'id'>
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
+      & OverlayFragment
     )>> }
   )> }
 );
@@ -16017,6 +16013,15 @@ export type ProjectSlugExistsQuery = (
   )> }
 );
 
+export type OverlayFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'type'>
+  )> }
+);
+
 export type PublishedTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -16029,11 +16034,7 @@ export type PublishedTableOfContentsQuery = (
     & Pick<Project, 'id'>
     & { tableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
+      & OverlayFragment
     )>> }
   )> }
 );
@@ -18639,6 +18640,27 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
     picture
     affiliations
   }
+}
+    `;
+export const OverlayFragmentDoc = gql`
+    fragment Overlay on TableOfContentsItem {
+  id
+  acl {
+    id
+    type
+  }
+  bounds
+  dataLayerId
+  enableDownload
+  hideChildren
+  isClickOffOnly
+  isFolder
+  parentStableId
+  showRadioChildren
+  sortIndex
+  stableId
+  title
+  stableId
 }
     `;
 export const ProjectListItemFragmentDoc = gql`
@@ -21336,26 +21358,11 @@ export const DraftTableOfContentsDocument = gql`
   projectBySlug(slug: $slug) {
     id
     draftTableOfContentsItems {
-      id
-      dataLayerId
-      title
-      acl {
-        id
-        type
-      }
-      isClickOffOnly
-      isFolder
-      stableId
-      parentStableId
-      showRadioChildren
-      bounds
-      sortIndex
-      hideChildren
-      enableDownload
+      ...Overlay
     }
   }
 }
-    `;
+    ${OverlayFragmentDoc}`;
 
 /**
  * __useDraftTableOfContentsQuery__
@@ -23930,26 +23937,11 @@ export const PublishedTableOfContentsDocument = gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsItems {
-      id
-      acl {
-        id
-        type
-      }
-      bounds
-      dataLayerId
-      enableDownload
-      hideChildren
-      isClickOffOnly
-      isFolder
-      parentStableId
-      showRadioChildren
-      sortIndex
-      stableId
-      title
+      ...Overlay
     }
   }
 }
-    `;
+    ${OverlayFragmentDoc}`;
 
 /**
  * __usePublishedTableOfContentsQuery__
@@ -27943,6 +27935,7 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    Overlay: 'Overlay',
     ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',

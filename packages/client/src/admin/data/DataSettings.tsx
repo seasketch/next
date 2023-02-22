@@ -14,6 +14,8 @@ import bbox from "@turf/bbox";
 import { MapContext, useMapContext } from "../../dataLayers/MapContextManager";
 import { useTranslation } from "react-i18next";
 import DataUploadDropzone from "../uploads/DataUploadDropzone";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 const LazyArcGISBrowser = React.lazy(
   () =>
@@ -35,63 +37,68 @@ export default function DataSettings() {
 
   return (
     <>
-      <MapContext.Provider value={mapContext}>
-        <Switch>
-          <Route exact path={`${path}`}>
-            <DataUploadDropzone slug={slug} className="flex flex-row h-screen">
-              <div className="h-full w-128">
-                <LayerAdminSidebar />
-              </div>
-              <div className="flex-1 h-full">
-                {data?.projectBySlug && (
-                  <MapboxMap
-                    bounds={
-                      data?.projectBySlug
-                        ? (bbox(data.projectBySlug.region.geojson) as [
-                            number,
-                            number,
-                            number,
-                            number
-                          ])
-                        : undefined
-                    }
-                    className="h-full"
-                  />
-                )}
-              </div>
-            </DataUploadDropzone>
-          </Route>
-          <Route exact path={`${path}/add-data`}>
-            <div className="pt-2 pb-6 md:py-6">
-              <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
-                <div className="mt-5 md:mt-0 md:col-span-2">
-                  <div className="shadow sm:rounded-md sm:overflow-hidden">
-                    <div className="px-4 py-5 bg-white sm:p-6">
-                      <Link
-                        to={`./add-data/arcgis`}
-                        className="mx-2"
-                        component={Button}
-                      >
-                        {t("ArcGIS Server")}
-                      </Link>
-                      <Link
-                        to={`./add-data/esri`}
-                        className="mx-2"
-                        component={Button}
-                      >
-                        {t("WCS (WMS or WMTS)")}
-                      </Link>
+      <DndProvider backend={HTML5Backend}>
+        <MapContext.Provider value={mapContext}>
+          <Switch>
+            <Route exact path={`${path}`}>
+              <DataUploadDropzone
+                slug={slug}
+                className="flex flex-row h-screen"
+              >
+                <div className="h-full w-128">
+                  <LayerAdminSidebar />
+                </div>
+                <div className="flex-1 h-full">
+                  {data?.projectBySlug && (
+                    <MapboxMap
+                      bounds={
+                        data?.projectBySlug
+                          ? (bbox(data.projectBySlug.region.geojson) as [
+                              number,
+                              number,
+                              number,
+                              number
+                            ])
+                          : undefined
+                      }
+                      className="h-full"
+                    />
+                  )}
+                </div>
+              </DataUploadDropzone>
+            </Route>
+            <Route exact path={`${path}/add-data`}>
+              <div className="pt-2 pb-6 md:py-6">
+                <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+                  <div className="mt-5 md:mt-0 md:col-span-2">
+                    <div className="shadow sm:rounded-md sm:overflow-hidden">
+                      <div className="px-4 py-5 bg-white sm:p-6">
+                        <Link
+                          to={`./add-data/arcgis`}
+                          className="mx-2"
+                          component={Button}
+                        >
+                          {t("ArcGIS Server")}
+                        </Link>
+                        <Link
+                          to={`./add-data/esri`}
+                          className="mx-2"
+                          component={Button}
+                        >
+                          {t("WCS (WMS or WMTS)")}
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Route>
-          <Route exact path={`${path}/add-data/arcgis`}>
-            <LazyArcGISBrowser />
-          </Route>
-        </Switch>
-      </MapContext.Provider>
+            </Route>
+            <Route exact path={`${path}/add-data/arcgis`}>
+              <LazyArcGISBrowser />
+            </Route>
+          </Switch>
+        </MapContext.Provider>
+      </DndProvider>
     </>
   );
 }

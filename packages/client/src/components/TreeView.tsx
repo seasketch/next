@@ -1,11 +1,10 @@
-import {
-  useMemo,
-  useCallback,
-  SetStateAction,
-  useState,
-  useEffect,
-} from "react";
-import TreeItemComponent from "../projects/Sketches/TreeItemComponent";
+import { useMemo, useCallback, useState, useEffect, useContext } from "react";
+import { MapContext } from "../dataLayers/MapContextManager";
+import { OverlayFragment } from "../generated/graphql";
+import TreeItemComponent, {
+  SortingState,
+} from "../projects/Sketches/TreeItemComponent";
+import useLocalStorage from "../useLocalStorage";
 import ContextMenuDropdown, {
   DropdownDividerProps,
 } from "./ContextMenuDropdown";
@@ -52,20 +51,10 @@ interface TreeViewProps {
   /* Should update expanded prop */
   onExpand?: (node: TreeItem, isExpanded: boolean) => void;
   onChecked?: (ids: string[], isChecked: boolean) => void;
-  contextMenuItemId?: string;
-  setContextMenu?: (
-    value: SetStateAction<
-      | {
-          id: string;
-          target: HTMLElement;
-          offsetX: number;
-        }
-      | undefined
-    >
-  ) => void;
   clearSelection?: () => void;
   onDragEnd?: (items: TreeItem[]) => void;
   onDropEnd?: (item: TreeItem) => void;
+  onDrop?: (item: TreeItem, target: TreeItem) => void;
   /** Amount of padding to give child lists. Defaults to 35px */
   childGroupPadding?: number;
   disableEditing?: boolean;
@@ -74,9 +63,15 @@ interface TreeViewProps {
   getContextMenuItems?: (
     item: TreeItem
   ) => (DropdownOption | DropdownDividerProps)[];
+  sortable?: boolean;
+  onSortEnd?: (
+    draggable: TreeItem,
+    target: TreeItem,
+    state: SortingState
+  ) => void;
 }
 
-export interface TreeNodeProps {
+export interface TreeNodeComponentProps {
   node: TreeItem;
   numChildren: number;
   onSelect?: (metaKey: boolean, node: TreeItem, isSelected: boolean) => void;
@@ -109,6 +104,16 @@ export interface TreeNodeProps {
   clearSelection?: () => void;
   childGroupPadding?: number;
   parents: string[];
+  onDrop?: (item: TreeItem, target: TreeItem) => void;
+  sortable: boolean;
+  index: number;
+  nextSiblingId?: string;
+  previousSiblingId?: string;
+  onSortEnd?: (
+    draggable: TreeItem,
+    target: TreeItem,
+    state: SortingState
+  ) => void;
 }
 export enum CheckState {
   CHECKED,
@@ -146,6 +151,9 @@ export default function TreeView({
   disableEditing,
   hideCheckboxes,
   getContextMenuItems,
+  onDrop,
+  sortable,
+  onSortEnd,
   ...props
 }: TreeViewProps) {
   const [contextMenu, setContextMenu] = useState<
@@ -403,8 +411,9 @@ export default function TreeView({
         />
       )}
 
-      {data.map((item) => (
+      {data.map((item, index) => (
         <TreeItemComponent
+          index={index}
           clearSelection={clearSelection}
           key={item.node.id}
           {...item}
@@ -425,6 +434,11 @@ export default function TreeView({
           highlighted={item.highlighted}
           isLoading={item.loading}
           error={item.error || null}
+          onDrop={onDrop}
+          sortable={Boolean(sortable)}
+          nextSiblingId={data[index + 1]?.node.id}
+          previousSiblingId={data[index - 1]?.node.id}
+          onSortEnd={onSortEnd}
         />
       ))}
     </ul>
@@ -444,11 +458,122 @@ export function treeItemId(id: number, typeName?: string) {
 
 export function parseTreeItemId(id: string) {
   if (!/\w+:\d+/.test(id)) {
-    throw new Error("Does not appear to be a tree item ID");
+    return {
+      __typename: "TableOfContentsItem",
+      id,
+    };
+    // throw new Error("Does not appear to be a tree item ID");
+  } else {
+    const [__typename, _id] = id.split(":");
+    return {
+      __typename,
+      id: parseInt(_id),
+    };
   }
-  const [__fragment, _id] = id.split(":");
+}
+
+export function useOverlayState(
+  items: OverlayFragment[],
+  editable?: boolean,
+  localStoragePrefix?: string
+) {
+  const mapContext = useContext(MapContext);
+  const [expandedIds, setExpandedIds] = useLocalStorage<string[]>(
+    `${localStoragePrefix}-overlays-expanded-ids`,
+    []
+  );
+  const treeItems = useMemo(() => {
+    return overlayLayerFragmentsToTreeItems(
+      [...items].sort((a, b) => a.sortIndex - b.sortIndex),
+      editable
+    );
+  }, [items, editable]);
+
+  const { checkedItems, loadingItems, overlayErrors } = useMemo(() => {
+    const checkedItems: string[] = [];
+    const loadingItems: string[] = [];
+    const overlayErrors: { [id: string]: string } = {};
+    for (const item of items) {
+      if (item.dataLayerId) {
+        const id = item.dataLayerId.toString();
+        const record = mapContext.layerStates[id];
+        if (record) {
+          if (record.visible) {
+            checkedItems.push(item.stableId);
+          }
+          if (record.loading) {
+            loadingItems.push(item.stableId);
+          }
+          if (record.error) {
+            overlayErrors[item.stableId] = record.error.toString();
+          }
+        }
+      }
+    }
+    return {
+      checkedItems,
+      loadingItems,
+      overlayErrors,
+    };
+  }, [items, mapContext.layerStates]);
+
+  const onExpand = useCallback(
+    (node: TreeItem, isExpanded: boolean) => {
+      if (isExpanded) {
+        setExpandedIds((prev) => [
+          ...prev.filter((id) => id !== node.id),
+          node.id,
+        ]);
+      } else {
+        setExpandedIds((prev) => [...prev.filter((id) => id !== node.id)]);
+      }
+    },
+    [setExpandedIds]
+  );
+
+  const onChecked = useCallback(
+    (ids: string[], isChecked: boolean) => {
+      const dataLayerIds = items
+        .filter((item) => ids.indexOf(item.stableId) !== -1)
+        .filter((item) => Boolean(item.dataLayerId))
+        .map((item) => item.dataLayerId!.toString());
+      if (isChecked) {
+        mapContext.manager?.showLayers(dataLayerIds);
+      } else {
+        mapContext.manager?.hideLayers(dataLayerIds);
+      }
+    },
+    [items, mapContext.manager]
+  );
+
   return {
-    __fragment,
-    id: parseInt(_id),
+    expandedIds,
+    onExpand,
+    checkedItems,
+    onChecked,
+    treeItems,
+    loadingItems,
+    overlayErrors,
   };
+}
+
+export function overlayLayerFragmentsToTreeItems(
+  fragments: OverlayFragment[],
+  editable?: boolean
+) {
+  const items: TreeItem[] = [];
+  for (const fragment of fragments) {
+    items.push({
+      id: fragment.stableId,
+      isLeaf: !fragment.isFolder,
+      parentId: fragment.parentStableId || null,
+      checkOffOnly: fragment.isClickOffOnly,
+      radioFolder: fragment.showRadioChildren,
+      hideChildren: fragment.hideChildren,
+      title: fragment.title,
+      type: fragment.__typename!,
+      dropAcceptsTypes: editable ? ["TableOfContentsItem"] : [],
+    });
+  }
+  return items;
 }

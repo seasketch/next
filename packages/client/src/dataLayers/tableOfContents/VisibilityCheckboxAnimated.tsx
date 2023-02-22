@@ -87,7 +87,7 @@ function VisibilityCheckboxAnimated(props: {
             ? "loading"
             : "loaded"
         }
-        className={`absolute top-0 left-0 z-20 ${
+        className={`absolute top-0 left-0 z-10 ${
           (props.loading || DEBUG_SLOW) && props.visibility !== false
             ? "checkbox-loading-animation"
             : ""
@@ -95,7 +95,7 @@ function VisibilityCheckboxAnimated(props: {
       />
 
       <AnimatePresence initial={false}>
-        <svg className="w-5 h-4 z-30 absolute" key="svg">
+        <svg className="w-5 h-4 z-20 absolute" key="svg">
           {!Boolean(props.error) &&
             !Boolean(props.radio) &&
             props.visibility === true &&

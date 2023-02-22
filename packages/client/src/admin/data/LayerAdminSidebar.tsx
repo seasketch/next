@@ -17,8 +17,9 @@ export default function LayerAdminSidebar() {
     storageKey: "data-admin-tabs",
   });
   // const [selectedTab, setSelectedTab] = useState<Segment>("Basemaps");
+  const containerClassName = "flex flex-col h-full overflow-hidden";
   return (
-    <div className="flex flex-col max-h-full min-h-full bg-white">
+    <div className="flex flex-col h-full bg-white">
       <header className="flex-shrink-0">
         <div className="max-w-sm m-auto mt-4">
           <SegmentControl
@@ -29,10 +30,14 @@ export default function LayerAdminSidebar() {
         </div>
       </header>
       <div className="flex-1 overflow-y-auto">
-        <div className={selectedTab === "Overlay Layers" ? "block" : "hidden"}>
+        <div
+          className={
+            selectedTab === "Overlay Layers" ? containerClassName : "hidden"
+          }
+        >
           <TableOfContentsEditor />
         </div>
-        <div className={selectedTab === "Maps" ? "block" : "hidden"}>
+        <div className={selectedTab === "Maps" ? containerClassName : "hidden"}>
           <BaseMapEditor />
         </div>
       </div>

@@ -1,23 +1,16 @@
-import { useContext, useEffect, useState } from "react";
-import { Item } from "react-contexify";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import Button from "../../components/Button";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
-import TableOfContents, {
-  ClientTableOfContentsItem,
-  createBoundsRecursive,
-  nestItems,
-} from "../../dataLayers/tableOfContents/TableOfContents";
 import {
   useDeleteBranchMutation,
   useDraftTableOfContentsQuery,
   useLayersAndSourcesForItemsQuery,
   useUpdateTableOfContentsItemChildrenMutation,
 } from "../../generated/graphql";
-import useLocalStorage from "../../useLocalStorage";
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
@@ -25,6 +18,14 @@ import ZIndexEditor from "./ZIndexEditor";
 import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
 import useDialog from "../../components/useDialog";
 import FolderEditor from "./FolderEditor";
+import TreeView, { TreeItem } from "../../components/TreeView";
+import { useOverlayState } from "../../components/TreeView";
+import { currentSidebarState } from "../../projects/ProjectAppSidebar";
+import { DropdownOption } from "../../components/DropdownButton";
+import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
+import { createBoundsRecursive } from "../../projects/OverlayLayers";
+import { SortingState } from "../../projects/Sketches/TreeItemComponent";
+import { OverlayFragment } from "../../generated/queries";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -35,35 +36,17 @@ export default function TableOfContentsEditor() {
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });
-  const [treeItems, setTreeItems] = useState<ClientTableOfContentsItem[]>([]);
   const [openLayerItemId, setOpenLayerItemId] = useState<number>();
   const [createNewFolderModalOpen, setCreateNewFolderModalOpen] =
     useState<boolean>(false);
-  const [itemForDeletion, setItemForDeletion] =
-    useState<ClientTableOfContentsItem>();
   const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
-  const [expansionState, setExpansionState] = useLocalStorage<{
-    [id: number]: boolean;
-  }>("toc-editor-expansion-state", {});
   const [folderId, setFolderId] = useState<number>();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteItem] = useDeleteBranchMutation();
-
-  useEffect(() => {
-    if (tocQuery.data?.projectBySlug?.draftTableOfContentsItems) {
-      setTreeItems(
-        nestItems(
-          tocQuery.data.projectBySlug.draftTableOfContentsItems,
-          expansionState
-        )
-      );
-    } else {
-      setTreeItems([]);
-    }
-  }, [tocQuery.data?.projectBySlug?.draftTableOfContentsItems]);
+  const mapContext = useContext(MapContext);
 
   const layersAndSources = useLayersAndSourcesForItemsQuery({
     variables: {
@@ -88,10 +71,261 @@ export default function TableOfContentsEditor() {
     tocQuery.refetch();
   }, [slug]);
 
+  const {
+    expandedIds,
+    onExpand,
+    checkedItems,
+    onChecked,
+    loadingItems,
+    overlayErrors,
+    treeItems: treeNodes,
+  } = useOverlayState(
+    tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [],
+    true,
+    "admin"
+  );
+
   const { confirmDelete } = useDialog();
 
+  const getContextMenuItems = useCallback(
+    (treeItem: TreeItem) => {
+      const items =
+        tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [];
+      const item = items.find((item) => item.stableId === treeItem.id);
+      if (item) {
+        const sidebar = currentSidebarState();
+        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] = [
+          {
+            id: "zoom-to",
+            label: t("Zoom to bounds"),
+            onClick: () => {
+              let bounds: [number, number, number, number] | undefined;
+              if (item.isFolder) {
+                bounds = createBoundsRecursive(item, items);
+              } else {
+                if (item.bounds) {
+                  bounds = item.bounds.map((coord: string) =>
+                    parseFloat(coord)
+                  ) as [number, number, number, number];
+                }
+              }
+              if (
+                bounds &&
+                [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
+              ) {
+                mapContext.manager?.map?.fitBounds(bounds, {
+                  animate: true,
+                  padding: {
+                    bottom: 100,
+                    top: 100,
+                    left: sidebar.open ? sidebar.width + 100 : 100,
+                    right: 100,
+                  },
+                });
+              }
+            },
+          },
+          {
+            id: "edit",
+            label: t("Edit"),
+            onClick: () => {
+              if (item?.isFolder) {
+                setFolderId(item.id);
+              } else {
+                if (item.dataLayerId) {
+                  manager?.showLayers([item.dataLayerId.toString()]);
+                }
+                setOpenLayerItemId(item.id);
+              }
+            },
+          },
+        ];
+        if (!item.isFolder) {
+          contextMenuOptions.push({
+            id: "metadata",
+            label: t("Metadata"),
+            onClick: () => {
+              setOpenMetadataViewerId(item.id);
+            },
+          });
+          contextMenuOptions.push({
+            id: "edit-metadata",
+            label: t("Edit metadata"),
+            onClick: () => {
+              setOpenMetadataItemId(item.id);
+            },
+          });
+        }
+        contextMenuOptions.push({
+          id: "delete",
+          label: t("Delete"),
+          onClick: async () => {
+            if (item) {
+              await confirmDelete({
+                message: t("Delete Item"),
+                description: t("Are you sure you want to delete {{name}}?", {
+                  name: item.title.replace(/\.$/, ""),
+                }),
+                onDelete: async () => {
+                  await deleteItem({
+                    variables: {
+                      id: item.id as number,
+                    },
+                  }).then(async () => {
+                    await tocQuery.refetch();
+                  });
+                },
+              });
+            }
+          },
+        });
+        return contextMenuOptions;
+      } else {
+        return [];
+      }
+    },
+    [confirmDelete, deleteItem, manager, mapContext.manager?.map, t, tocQuery]
+  );
+
+  const onSortEnd: (
+    draggedTreeItem: TreeItem,
+    target: TreeItem,
+    state: SortingState
+  ) => void = useCallback(
+    (draggable, targetTreeItem, state) => {
+      const items =
+        tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [];
+      if (
+        state === SortingState.OVER_EXISTING_POSITION ||
+        state === SortingState.NONE
+      ) {
+        return;
+      }
+      if (state === SortingState.DIRECTLY_OVER_FOLDER) {
+        // Stick item at the end of the list of this folder's children
+        const folder = items.find(
+          (item) => item.stableId === targetTreeItem.id
+        );
+        const draggedItem = items.find(
+          (item) => item.stableId === draggable.id
+        );
+        if (!folder) {
+          throw new Error("Folder not found");
+        }
+        if (!draggedItem) {
+          throw new Error("Dragged item not found");
+        }
+        const siblings = items
+          .filter((item) => item.parentStableId === folder.stableId)
+          .sort((a, b) => a.sortIndex - b.sortIndex)
+          .map((item) => item.id);
+        updateChildrenMutation({
+          variables: {
+            id: folder.id,
+            childIds: [...siblings, draggedItem.id],
+          },
+          optimisticResponse: (data) => {
+            return {
+              __typename: "Mutation",
+              updateTableOfContentsItemChildren: {
+                __typename: "UpdateTableOfContentsItemChildrenPayload",
+                tableOfContentsItems: ((data.childIds || []) as number[]).map(
+                  (id, sortIndex) => {
+                    return {
+                      __typename: "TableOfContentsItem",
+                      id,
+                      sortIndex,
+                      parentStableId: folder.stableId || null,
+                    };
+                  }
+                ),
+              },
+            };
+          },
+        });
+      } else {
+        // Position item before or after target sibling, based on LEADING or TRAILING state
+        const target = items.find(
+          (item) => item.stableId === targetTreeItem.id
+        );
+        if (!target) {
+          throw new Error("Could not find target item");
+        }
+        const draggedItem = items.find(
+          (item) => item.stableId === draggable.id
+        );
+        if (!draggedItem) {
+          throw new Error("Dragged item not found");
+        }
+        let siblings: OverlayFragment[] = [];
+        let parent: OverlayFragment | undefined = undefined;
+        if (target.parentStableId) {
+          parent = items.find(
+            (item) => item.stableId === target.parentStableId
+          );
+          if (!parent) {
+            throw new Error("Could not find parent");
+          }
+          siblings = items.filter(
+            (item) => item.parentStableId === parent!.stableId
+          );
+        } else {
+          siblings = items.filter((item) => !item.parentStableId);
+        }
+        siblings = siblings
+          .filter((item) => item.stableId !== draggedItem.stableId)
+          .sort((a, b) => a.sortIndex - b.sortIndex);
+
+        const targetIdx = siblings.findIndex(
+          (item) => item.stableId === target.stableId
+        );
+        if (targetIdx === -1) {
+          throw new Error("Could not find index of drag target");
+        }
+        const children = [
+          ...siblings.slice(
+            0,
+            state === SortingState.TRAILING_EDGE ? targetIdx + 1 : targetIdx
+          ),
+          draggedItem,
+          ...siblings.slice(
+            state === SortingState.TRAILING_EDGE ? targetIdx + 1 : targetIdx
+          ),
+        ];
+        updateChildrenMutation({
+          variables: {
+            id: parent?.id || undefined,
+            childIds: children.map((item) => item.id),
+          },
+          optimisticResponse: (data) => {
+            return {
+              __typename: "Mutation",
+              updateTableOfContentsItemChildren: {
+                __typename: "UpdateTableOfContentsItemChildrenPayload",
+                tableOfContentsItems: ((data.childIds || []) as number[]).map(
+                  (id, sortIndex) => {
+                    return {
+                      __typename: "TableOfContentsItem",
+                      id,
+                      sortIndex,
+                      parentStableId: parent?.stableId || null,
+                    };
+                  }
+                ),
+              },
+            };
+          },
+        });
+      }
+    },
+    [
+      tocQuery.data?.projectBySlug?.draftTableOfContentsItems,
+      updateChildrenMutation,
+    ]
+  );
+
   return (
-    <div className="">
+    <>
       {createNewFolderModalOpen && (
         <EditFolderModal
           className="z-30"
@@ -119,9 +353,9 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setPublishOpen(false)}
         />
       )}
-      <header className="fixed bg-white h-16 w-128 z-20">
-        <div className="max-w-md m-auto mt-4">
-          <div className="bg-cool-gray-200 w-auto inline-block p-0.5 rounded text-sm">
+      <header className="bg-white h-14 w-128 z-20 flex-none border-b shadow-sm">
+        <div className="mx-auto mt-4 w-auto text-center">
+          <div className="bg-cool-gray-200 w-auto inline-block p-0.5 rounded text-sm text-center">
             <span className="px-2">{t("view")}</span>
             <select
               value={selectedView}
@@ -163,159 +397,23 @@ export default function TableOfContentsEditor() {
         </div>
       </header>
       <div
-        className="flex-1 overflow-y-auto p-4 pt-16"
+        className="flex-1 overflow-y-auto p-2 px-8"
         onContextMenu={(e) => e.preventDefault()}
       >
         {tocQuery.loading && <Spinner />}
         {selectedView === "tree" && (
-          <TableOfContents
-            hideExpandAll={true}
-            onMoveNode={async (data) => {
-              // let
-              const newParentId = data.nextParentNode?.id;
-              let children: number[];
-              if (
-                data.nextParentNode &&
-                data.nextParentNode.children &&
-                Array.isArray(data.nextParentNode.children)
-              ) {
-                children = data.nextParentNode.children.map((item) => item.id);
-              } else {
-                children = data.treeData.map((item) => item.id);
-              }
-              if (newParentId && !expansionState[newParentId]) {
-                setExpansionState((prev) => ({
-                  ...prev,
-                  [newParentId]: true,
-                }));
-              }
-              await updateChildrenMutation({
-                variables: {
-                  id: newParentId,
-                  childIds: children,
-                },
-              });
-            }}
-            canDrag={true}
-            onChange={(e) => setTreeItems(e)}
-            nodes={treeItems}
-            contextMenuId="layers-toc-editor"
-            contextMenuItems={[
-              <Item
-                key="zoom-to"
-                hidden={(args) => {
-                  return !args.props.item.isFolder && !args.props.item.bounds;
-                }}
-                className="text-sm hover:bg-primary-500"
-                onClick={(args) => {
-                  let bounds: [number, number, number, number] | undefined;
-                  if (args.props.item.isFolder) {
-                    // bounds = null;
-                    bounds = createBoundsRecursive(args.props.item);
-                  } else {
-                    if (args.props.item.bounds) {
-                      bounds = args.props.item.bounds.map((coord: string) =>
-                        parseFloat(coord)
-                      );
-                    }
-                  }
-                  if (
-                    bounds &&
-                    [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
-                  ) {
-                    manager?.map?.fitBounds(bounds, {
-                      padding: 40,
-                    });
-                  }
-                }}
-              >
-                Zoom To
-              </Item>,
-              <Item
-                key="1"
-                className="text-sm"
-                onClick={(args) => {
-                  if (args.props?.item?.isFolder) {
-                    setFolderId(args.props.item.id);
-                  } else {
-                    if (args.props.item.bounds) {
-                      let bounds = args.props.item.bounds.map((coord: string) =>
-                        parseFloat(coord)
-                      );
-                      if (
-                        bounds &&
-                        [180.0, 90.0, -180.0, -90.0].join(",") !==
-                          bounds.join(",")
-                      ) {
-                        manager?.map?.fitBounds(bounds, {
-                          padding: 40,
-                        });
-                      }
-                    }
-                    manager?.showLayers([args.props.item.dataLayerId]);
-                    setOpenLayerItemId(args.props.item.id);
-                  }
-                }}
-              >
-                Edit
-              </Item>,
-              <Item
-                key="2"
-                hidden={(args) => args.props?.item?.isFolder}
-                className="text-sm"
-                onClick={(args) => {
-                  setOpenMetadataViewerId(args.props.item.id);
-                }}
-              >
-                Metadata
-              </Item>,
-              <Item
-                key="3"
-                hidden={(args) => args.props?.item?.isFolder}
-                className="text-sm"
-                onClick={(args) => {
-                  setOpenMetadataItemId(args.props.item.id);
-                }}
-              >
-                Edit Metadata
-              </Item>,
-              <Item
-                key="4"
-                className="text-sm"
-                onClick={async (args) => {
-                  if (args.props?.item) {
-                    await confirmDelete({
-                      message: t("Delete Item"),
-                      description: t(
-                        "Are you sure you want to delete {{name}}?",
-                        {
-                          name: args.props.item.title.replace(/\.$/, ""),
-                        }
-                      ),
-                      onDelete: async () => {
-                        await deleteItem({
-                          variables: {
-                            id: args.props.item.id as number,
-                          },
-                        }).then(async () => {
-                          await tocQuery.refetch();
-                        });
-                      },
-                    });
-                  }
-                }}
-              >
-                Delete
-              </Item>,
-            ]}
-            onVisibilityToggle={(data) => {
-              setExpansionState((prev) => {
-                return {
-                  ...prev,
-                  [data.node.id]: data.expanded,
-                };
-              });
-            }}
+          <TreeView
+            loadingItems={loadingItems}
+            errors={overlayErrors}
+            expanded={expandedIds}
+            onExpand={onExpand}
+            checkedItems={checkedItems}
+            onChecked={onChecked}
+            items={treeNodes}
+            ariaLabel="Draft overlays"
+            sortable
+            getContextMenuItems={getContextMenuItems}
+            onSortEnd={onSortEnd}
           />
         )}
         {selectedView === "order" && (
@@ -353,6 +451,6 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setOpenMetadataViewerId(undefined)}
         />
       )}
-    </div>
+    </>
   );
 }

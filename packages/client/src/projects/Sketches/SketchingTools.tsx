@@ -113,7 +113,10 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     (items: TreeItem[]) => {
       for (const item of items) {
         if (item.type === "Sketch" || item.type === "SketchFolder") {
-          focusOnTableOfContentsItem(item.type, parseTreeItemId(item.id).id);
+          focusOnTableOfContentsItem(
+            item.type,
+            parseTreeItemId(item.id).id as number
+          );
         }
       }
     },
@@ -158,7 +161,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     ) => {
       if (!monitor.didDrop()) {
         (item.type === "SketchFolder" ? dropFolder : dropSketch)(
-          parseTreeItemId(item.id).id,
+          parseTreeItemId(item.id).id as number,
           {
             folderId: null,
             collectionId: null,
@@ -167,6 +170,26 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       }
     },
   }));
+
+  const onDrop = useCallback(
+    (item: TreeItem, target: TreeItem) => {
+      const { id: itemId } = parseTreeItemId(item.id);
+      const { id: targetId } = parseTreeItemId(target.id);
+      (item.type === "SketchFolder" ? dropFolder : dropSketch)(
+        itemId as number,
+        target.type === "Sketch"
+          ? {
+              collectionId: targetId as number,
+              folderId: null,
+            }
+          : {
+              collectionId: null,
+              folderId: targetId as number,
+            }
+      );
+    },
+    [dropFolder, dropSketch]
+  );
 
   if (!user || (!loading && !data?.me)) {
     return <LoginPrompt hidden={hidden} />;
@@ -252,6 +275,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               errors={errors}
               loadingItems={loadingSketches}
               getContextMenuItems={getContextMenuItems}
+              onDrop={onDrop}
             />
           )}
         </div>

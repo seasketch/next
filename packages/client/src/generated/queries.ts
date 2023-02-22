@@ -14709,11 +14709,7 @@ export type DraftTableOfContentsQuery = (
     & Pick<Project, 'id'>
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'dataLayerId' | 'title' | 'isClickOffOnly' | 'isFolder' | 'stableId' | 'parentStableId' | 'showRadioChildren' | 'bounds' | 'sortIndex' | 'hideChildren' | 'enableDownload'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
+      & OverlayFragment
     )>> }
   )> }
 );
@@ -16015,6 +16011,15 @@ export type ProjectSlugExistsQuery = (
   )> }
 );
 
+export type OverlayFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'type'>
+  )> }
+);
+
 export type PublishedTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -16027,11 +16032,7 @@ export type PublishedTableOfContentsQuery = (
     & Pick<Project, 'id'>
     & { tableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
-      & { acl?: Maybe<(
-        { __typename?: 'Acl' }
-        & Pick<Acl, 'id' | 'type'>
-      )> }
+      & OverlayFragment
     )>> }
   )> }
 );
@@ -18639,6 +18640,27 @@ export const ProjectMetadataMeFragFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const OverlayFragmentDoc = /*#__PURE__*/ gql`
+    fragment Overlay on TableOfContentsItem {
+  id
+  acl {
+    id
+    type
+  }
+  bounds
+  dataLayerId
+  enableDownload
+  hideChildren
+  isClickOffOnly
+  isFolder
+  parentStableId
+  showRadioChildren
+  sortIndex
+  stableId
+  title
+  stableId
+}
+    `;
 export const ProjectListItemFragmentDoc = /*#__PURE__*/ gql`
     fragment ProjectListItem on Project {
   id
@@ -19796,26 +19818,11 @@ export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     draftTableOfContentsItems {
-      id
-      dataLayerId
-      title
-      acl {
-        id
-        type
-      }
-      isClickOffOnly
-      isFolder
-      stableId
-      parentStableId
-      showRadioChildren
-      bounds
-      sortIndex
-      hideChildren
-      enableDownload
+      ...Overlay
     }
   }
 }
-    `;
+    ${OverlayFragmentDoc}`;
 export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
     query layersAndSourcesForItems($slug: String!, $tableOfContentsItemIds: [Int]!) {
   projectBySlug(slug: $slug) {
@@ -20778,26 +20785,11 @@ export const PublishedTableOfContentsDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsItems {
-      id
-      acl {
-        id
-        type
-      }
-      bounds
-      dataLayerId
-      enableDownload
-      hideChildren
-      isClickOffOnly
-      isFolder
-      parentStableId
-      showRadioChildren
-      sortIndex
-      stableId
-      title
+      ...Overlay
     }
   }
 }
-    `;
+    ${OverlayFragmentDoc}`;
 export const ProjectListingDocument = /*#__PURE__*/ gql`
     query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
   projects: projectsConnection(
@@ -22333,6 +22325,7 @@ export const namedOperations = {
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
+    Overlay: 'Overlay',
     ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',

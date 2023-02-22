@@ -136,9 +136,9 @@ function getCopiedSketchesRecursive(parentId: number, items: TreeItem[]) {
     if (itemParentId === parentId) {
       const id = parseTreeItemId(item.id).id;
       if (item.type === "Sketch") {
-        ids.push(id);
+        ids.push(id as number);
       }
-      const children = getCopiedSketchesRecursive(id, items);
+      const children = getCopiedSketchesRecursive(id as number, items);
       if (children && children.length) {
         ids.push(...children);
       }
