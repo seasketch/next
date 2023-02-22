@@ -100,11 +100,6 @@ class ReactNodeView implements NodeView {
       useEffect(() => {
         if (portalContext.selection && typeof this.getPos === "function") {
           const pos = this.getPos();
-          console.log(
-            pos,
-            portalContext.selection.anchorPos,
-            portalContext.selection.headPos
-          );
           if (
             pos <
               Math.max(
