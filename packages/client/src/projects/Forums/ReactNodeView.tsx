@@ -100,8 +100,13 @@ class ReactNodeView implements NodeView {
       useEffect(() => {
         if (portalContext.selection && typeof this.getPos === "function") {
           const pos = this.getPos();
+          console.log(
+            pos,
+            portalContext.selection.anchorPos,
+            portalContext.selection.headPos
+          );
           if (
-            pos <=
+            pos <
               Math.max(
                 portalContext.selection.anchorPos,
                 portalContext.selection.headPos
@@ -118,7 +123,7 @@ class ReactNodeView implements NodeView {
           }
         }
         this.dom?.classList.remove("ProseMirror-selectednode");
-      }, [this.getPos, portalContext.selection]);
+      }, [portalContext.selection]);
 
       return (
         <div ref={componentRef} className="ProseMirror__reactComponent">
