@@ -26,6 +26,7 @@ import {
   DataSource as GeneratedDataSource,
   DataSourceTypes,
   InteractivitySetting,
+  MapBookmarkDetailsFragment,
   OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
   RenderUnderType,
@@ -1754,6 +1755,57 @@ class MapContextManager {
     }));
     this.updateStyle();
   }
+
+  getMapBookmarkData() {
+    if (!this.map) {
+      throw new Error("Map not ready to create bookmark data");
+    }
+    const visibleDataLayers: string[] = [];
+    for (const key in this.visibleLayers) {
+      if (this.visibleLayers[key].visible) {
+        visibleDataLayers.push(key);
+      }
+    }
+    const canvas = this.map.getCanvas();
+    return {
+      cameraOptions: {
+        center: this.map.getCenter().toArray(),
+        zoom: this.map.getZoom(),
+        bearing: this.map.getBearing(),
+        pitch: this.map.getPitch(),
+      },
+      basemapOptionalLayerStates:
+        this.internalState.basemapOptionalLayerStates || {},
+      visibleDataLayers,
+      selectedBasemap: parseInt(this.internalState.selectedBasemap!),
+      style: this.map.getStyle(),
+      mapDimensions: [canvas.width, canvas.height],
+    };
+  }
+
+  showMapBookmark(
+    bookmark: Pick<
+      MapBookmarkDetailsFragment,
+      | "cameraOptions"
+      | "basemapOptionalLayerStates"
+      | "visibleDataLayers"
+      | "selectedBasemap"
+    >
+  ) {
+    // TODO: support basemapOptionalLayerStates
+    if (!this.map) {
+      throw new Error("Map not ready to show bookmark");
+    }
+    console.log("showMapBookmark", bookmark);
+    this.setSelectedBasemap(bookmark.selectedBasemap.toString());
+    this.setVisibleLayers((bookmark.visibleDataLayers || []) as string[]);
+    // this.map.setCenter(bookmark.cameraOptions.center);
+    // this.map.panTo(bookmark.cameraOptions.center, { animate: true });
+    this.map.flyTo({
+      ...bookmark.cameraOptions,
+      animate: true,
+    });
+  }
 }
 
 export default MapContextManager;
@@ -1785,7 +1837,6 @@ export interface MapContextInterface {
   styleHash: string;
   containerPortal: HTMLDivElement | null;
 }
-
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
   preferencesKey?: string;

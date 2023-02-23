@@ -204,3 +204,44 @@ subscription NewPosts($slug: String!) {
     }
   }
 }
+
+fragment MapBookmarkDetails on MapBookmark {
+  id
+  thumbnailUrl
+  screenshotUrl
+  basemapOptionalLayerStates
+  cameraOptions
+  projectId
+  selectedBasemap
+  visibleDataLayers
+  mapDimensions
+  blurhash
+}
+
+mutation CreateMapBookmark(
+  $slug: String!
+  $isPublic: Boolean!
+  $basemapOptionalLayerStates: JSON
+  $visibleDataLayers: [String!]!
+  $cameraOptions: JSON!
+  $selectedBasemap: Int!
+  $style: JSON!
+  $mapDimensions: [Int!]!
+) {
+  createMapBookmark(
+    input: {
+      isPublic: $isPublic
+      slug: $slug
+      basemapOptionalLayerStates: $basemapOptionalLayerStates
+      visibleDataLayers: $visibleDataLayers
+      cameraOptions: $cameraOptions
+      selectedBasemap: $selectedBasemap
+      style: $style
+      mapDimensions: $mapDimensions
+    }
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}

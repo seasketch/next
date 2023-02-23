@@ -83,11 +83,32 @@ const nodes = addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
   // .remove("image")
   .remove("code_block")
   .remove("blockquote");
+
 const forumPostSchema = new Schema({
   // @ts-ignore
   nodes,
   // @ts-ignore
-  marks: baseMarks,
+  marks: baseMarks.addBefore("link", "mapBookmark", {
+    attrs: {
+      "data-bookmark-id": {},
+    },
+    // @ts-ignore
+    toDOM: (node: Node) => {
+      const id = node.attrs["data-bookmark-id"];
+      return ["button", { "data-bookmark-id": id }, 0];
+    },
+    parseDOM: [
+      {
+        tag: "button[data-bookmark-id]",
+        // @ts-ignore
+        getAttrs: (dom: { getAttribute: (arg0: string) => any }) => {
+          return {
+            "data-bookmark-id": dom.getAttribute("data-bookmark-id"),
+          };
+        },
+      },
+    ],
+  }),
 });
 
 export const metadata = {

@@ -11,6 +11,10 @@ module.exports = {
   darkMode: "media",
   theme: {
     extend: {
+      width: {
+        26: "6.5rem",
+        27: "6.75rem",
+      },
       maxWidth: {
         "1/4": "25%",
         "1/3": "33.33%",

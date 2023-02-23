@@ -1,12 +1,28 @@
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  KeyboardEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Node } from "prosemirror-model";
 import { forumPosts as editorConfig } from "../../editor/config";
 import { createReactNodeView } from "./ReactNodeView";
 import { useReactNodeViewPortals } from "./ReactNodeView/PortalProvider";
 import SketchNodeView from "./SketchNodeView";
 import EditorMenuBar from "../../editor/EditorMenuBar";
+import {
+  MapBookmarkDetailsFragment,
+  useCreateMapBookmarkMutation,
+} from "../../generated/graphql";
+import { Trans } from "react-i18next";
+import { MapContext } from "../../dataLayers/MapContextManager";
+import getSlug from "../../getSlug";
+import cloneDeep from "lodash.clonedeep";
+import BookmarksList from "./BookmarksList";
 
 export default function PostContentEditor({
   initialContent,
@@ -29,6 +45,10 @@ export default function PostContentEditor({
   const { createPortal, removePortal, setSelection } =
     useReactNodeViewPortals();
 
+  const [attachments, setAttachments] = useState<MapBookmarkAttachment[]>(
+    initialContent?.attachments || []
+  );
+  const [createBookmark, createBookmarkState] = useCreateMapBookmarkMutation();
   useEffect(() => {
     editable.current = !disabled;
     if (viewRef.current && state) {
@@ -36,6 +56,72 @@ export default function PostContentEditor({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
+
+  const [hoveredBookmarkId, setHoveredBookmarkId] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (state) {
+      onChange({ ...state.doc.toJSON(), attachments });
+    }
+  }, [attachments, onChange]);
+
+  useEffect(() => {
+    const el = root.current;
+    if (el) {
+      const mouseoverListener = (e: MouseEvent) => {
+        if (e.target instanceof Element && e.target.tagName === "BUTTON") {
+          const id = e.target.getAttribute("data-bookmark-id");
+          if (id) {
+            setHoveredBookmarkId(id);
+          }
+        }
+      };
+      el.addEventListener("mouseover", mouseoverListener);
+      const mouseoutListener = (e: MouseEvent) => {
+        if (e.target instanceof Element && e.target.tagName === "BUTTON") {
+          const id = e.target.getAttribute("data-bookmark-id");
+          if (id) {
+            setHoveredBookmarkId(null);
+          }
+        }
+      };
+      el.addEventListener("mouseout", mouseoutListener);
+
+      return () => {
+        el.removeEventListener("mouseover", mouseoverListener);
+        el.removeEventListener("mouseout", mouseoutListener);
+      };
+    }
+  }, [root]);
+
+  useEffect(() => {
+    console.log("hovered over", hoveredBookmarkId);
+  }, [hoveredBookmarkId]);
+
+  const mapContext = useContext(MapContext);
+  const onRequestMapBookmark = useCallback(async () => {
+    if (mapContext.manager) {
+      const bookmark = mapContext.manager.getMapBookmarkData();
+      const data = await createBookmark({
+        variables: {
+          slug: getSlug(),
+          ...bookmark,
+          isPublic: false,
+        },
+      });
+      if (data.data?.createMapBookmark?.mapBookmark?.id) {
+        const fragment = data.data.createMapBookmark.mapBookmark;
+        const bookmarkId = fragment.id;
+        console.log("bookmark data", fragment);
+        setAttachments((prev) => [...prev, bookmarkToAttachment(fragment)]);
+        return bookmarkId;
+      }
+    } else {
+      throw new Error("MapContext not ready to create map bookmarks");
+    }
+  }, [createBookmark, mapContext.manager]);
 
   useEffect(() => {
     let doc: Node | undefined;
@@ -83,7 +169,10 @@ export default function PostContentEditor({
           setSelection(null);
         }
         if (transaction.docChanged) {
-          onChange(newState.doc.toJSON());
+          onChange({
+            ...newState.doc.toJSON(),
+            attachments,
+          });
         }
       },
     });
@@ -102,13 +191,16 @@ export default function PostContentEditor({
     (e: KeyboardEvent<any>) => {
       if (onSubmit && state) {
         if (e.metaKey && e.key === "Enter") {
-          onSubmit(state.doc.toJSON());
+          onSubmit({
+            ...state.doc.toJSON(),
+            attachments,
+          });
           e.preventDefault();
           e.stopPropagation();
         }
       }
     },
-    [state, onSubmit]
+    [state, onSubmit, attachments]
   );
 
   return (
@@ -120,7 +212,15 @@ export default function PostContentEditor({
         onKeyDown={onKeyDown}
         ref={root}
       ></div>
+      <BookmarksList
+        bookmarks={attachments.filter((a) => a.type === "MapBookmark")}
+      />
+      {/* <div>
+        {attachments.filter((a) => a.type === "MapBookmark").length}{" "}
+        <Trans>Bookmarks</Trans>
+      </div> */}
       <EditorMenuBar
+        onRequestMapBookmark={onRequestMapBookmark}
         view={viewRef.current}
         className=" border-t"
         style={{
@@ -155,4 +255,14 @@ function placeCaretAtEnd(el: HTMLElement) {
     textRange.collapse(false);
     textRange.select();
   }
+}
+
+export type MapBookmarkAttachment = MapBookmarkDetailsFragment & {
+  type: "MapBookmark";
+};
+
+function bookmarkToAttachment(
+  bookmark: MapBookmarkDetailsFragment
+): MapBookmarkAttachment {
+  return { ...cloneDeep(bookmark), type: "MapBookmark" };
 }

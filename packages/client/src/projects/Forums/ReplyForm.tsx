@@ -36,6 +36,14 @@ export default function ReplyForm({
   );
   const [modalOpen, setModalOpen] = useState(false);
 
+  const onChange = useCallback(
+    (content: any) => {
+      console.log("onChange", content);
+      setContent(content);
+    },
+    [setContent]
+  );
+
   const openProfileModal = useCallback(() => {
     setModalOpen(true);
   }, [setModalOpen]);
@@ -101,6 +109,7 @@ export default function ReplyForm({
         variables: {
           topicId,
           content: message,
+          // bookmarks: bookmarks
         },
       });
       clearContent();
@@ -139,7 +148,7 @@ export default function ReplyForm({
             disabled={replyState.loading}
             onSubmit={onSubmit}
             initialContent={content}
-            onChange={setContent}
+            onChange={onChange}
           />
         </ReactNodeViewPortalsProvider>
       </div>

@@ -129,6 +129,7 @@ export default function NewTopicForm({
         </div>
         <ReactNodeViewPortalsProvider>
           <PostContentEditor
+            // TODO: use bookmark data
             disabled={mutationState.loading}
             autofocus={Boolean(title && title.length)}
             initialContent={content}

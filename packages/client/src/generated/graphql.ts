@@ -254,6 +254,8 @@ export type Basemap = Node & {
   isDisabled: Scalars['Boolean'];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `MapBookmark`. */
+  mapBookmarksBySelectedBasemapConnection: MapBookmarksConnection;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -300,6 +302,17 @@ export type Basemap = Node & {
    */
   url: Scalars['String'];
   useDefaultOfflineTileSettings: Scalars['Boolean'];
+};
+
+
+export type BasemapMapBookmarksBySelectedBasemapConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<MapBookmarkCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
 };
 
 
@@ -1202,6 +1215,46 @@ export type CreateInteractivitySettingPayload = {
   interactivitySetting?: Maybe<InteractivitySetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `createMapBookmark` mutation. */
+export type CreateMapBookmarkInput = {
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  cameraOptions?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  isPublic?: Maybe<Scalars['Boolean']>;
+  mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  selectedBasemap?: Maybe<Scalars['Int']>;
+  slug?: Maybe<Scalars['String']>;
+  style?: Maybe<Scalars['JSON']>;
+  visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
+};
+
+/** The output of our `createMapBookmark` mutation. */
+export type CreateMapBookmarkPayload = {
+  __typename?: 'CreateMapBookmarkPayload';
+  /** Reads a single `Basemap` that is related to this `MapBookmark`. */
+  basemapBySelectedBasemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  mapBookmark?: Maybe<MapBookmark>;
+  /** An edge for our `MapBookmark`. May be used by Relay 1. */
+  mapBookmarkEdge?: Maybe<MapBookmarksEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createMapBookmark` mutation. */
+export type CreateMapBookmarkPayloadMapBookmarkEdgeArgs = {
+  orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
 };
 
 /** All input for the create `OfflineTileSetting` mutation. */
@@ -5639,6 +5692,71 @@ export type MakeSurveyPayload = {
   survey?: Maybe<Survey>;
 };
 
+export type MapBookmark = {
+  __typename?: 'MapBookmark';
+  /** Reads a single `Basemap` that is related to this `MapBookmark`. */
+  basemapBySelectedBasemap?: Maybe<Basemap>;
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  blurhash?: Maybe<Scalars['JSON']>;
+  cameraOptions: Scalars['JSON'];
+  id: Scalars['UUID'];
+  isPublic: Scalars['Boolean'];
+  mapDimensions: Array<Maybe<Scalars['Int']>>;
+  postId?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  screenshotUrl?: Maybe<Scalars['String']>;
+  selectedBasemap: Scalars['Int'];
+  style: Scalars['JSON'];
+  thumbnailUrl?: Maybe<Scalars['String']>;
+  visibleDataLayers: Array<Maybe<Scalars['String']>>;
+};
+
+/**
+ * A condition to be used against `MapBookmark` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type MapBookmarkCondition = {
+  /** Checks for equality with the object’s `postId` field. */
+  postId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `selectedBasemap` field. */
+  selectedBasemap?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `visibleDataLayers` field. */
+  visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
+};
+
+/** A connection to a list of `MapBookmark` values. */
+export type MapBookmarksConnection = {
+  __typename?: 'MapBookmarksConnection';
+  /** A list of edges which contains the `MapBookmark` and cursor to aid in pagination. */
+  edges: Array<MapBookmarksEdge>;
+  /** A list of `MapBookmark` objects. */
+  nodes: Array<MapBookmark>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `MapBookmark` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `MapBookmark` edge in the connection. */
+export type MapBookmarksEdge = {
+  __typename?: 'MapBookmarksEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `MapBookmark` at the end of the edge. */
+  node: MapBookmark;
+};
+
+/** Methods to use when ordering `MapBookmark`. */
+export enum MapBookmarksOrderBy {
+  Natural = 'NATURAL',
+  PostIdAsc = 'POST_ID_ASC',
+  PostIdDesc = 'POST_ID_DESC',
+  SelectedBasemapAsc = 'SELECTED_BASEMAP_ASC',
+  SelectedBasemapDesc = 'SELECTED_BASEMAP_DESC',
+  VisibleDataLayersAsc = 'VISIBLE_DATA_LAYERS_ASC',
+  VisibleDataLayersDesc = 'VISIBLE_DATA_LAYERS_DESC'
+}
+
 /** All input for the `markTopicAsRead` mutation. */
 export type MarkTopicAsReadInput = {
   /**
@@ -5763,6 +5881,7 @@ export type Mutation = {
   createGroup?: Maybe<CreateGroupPayload>;
   /** Creates a single `InteractivitySetting`. */
   createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
+  createMapBookmark?: Maybe<CreateMapBookmarkPayload>;
   /** Creates a single `OfflineTileSetting`. */
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
@@ -6414,6 +6533,12 @@ export type MutationCreateGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateInteractivitySettingArgs = {
   input: CreateInteractivitySettingInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateMapBookmarkArgs = {
+  input: CreateMapBookmarkInput;
 };
 
 
@@ -7897,6 +8022,8 @@ export type Post = Node & {
   hiddenByModerator: Scalars['Boolean'];
   html: Scalars['String'];
   id: Scalars['Int'];
+  /** Reads and enables pagination through a set of `MapBookmark`. */
+  mapBookmarks?: Maybe<Array<MapBookmark>>;
   /**
    * Message contents of the post as JSON for use with DraftJS.
    *
@@ -7912,6 +8039,12 @@ export type Post = Node & {
   /** Reads a single `Topic` that is related to this `Post`. */
   topic?: Maybe<Topic>;
   topicId: Scalars['Int'];
+};
+
+
+export type PostMapBookmarksArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 /** A condition to be used against `Post` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -9025,6 +9158,8 @@ export type Query = Node & {
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
   lcfirst?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `MapBookmark`. */
+  mapBookmarksConnection?: Maybe<MapBookmarksConnection>;
   /** Access the current session's User. The user is determined by the access token embedded in the `Authorization` header. */
   me?: Maybe<User>;
   /** Fetches an object given its globally unique `ID`. */
@@ -9506,6 +9641,18 @@ export type QueryInviteEmailByNodeIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryLcfirstArgs = {
   word?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryMapBookmarksConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<MapBookmarkCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
 };
 
 
@@ -15463,6 +15610,34 @@ export type NewPostsSubscription = (
   )> }
 );
 
+export type MapBookmarkDetailsFragment = (
+  { __typename?: 'MapBookmark' }
+  & Pick<MapBookmark, 'id' | 'thumbnailUrl' | 'screenshotUrl' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash'>
+);
+
+export type CreateMapBookmarkMutationVariables = Exact<{
+  slug: Scalars['String'];
+  isPublic: Scalars['Boolean'];
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  visibleDataLayers: Array<Scalars['String']> | Scalars['String'];
+  cameraOptions: Scalars['JSON'];
+  selectedBasemap: Scalars['Int'];
+  style: Scalars['JSON'];
+  mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type CreateMapBookmarkMutation = (
+  { __typename?: 'Mutation' }
+  & { createMapBookmark?: Maybe<(
+    { __typename?: 'CreateMapBookmarkPayload' }
+    & { mapBookmark?: Maybe<(
+      { __typename?: 'MapBookmark' }
+      & MapBookmarkDetailsFragment
+    )> }
+  )> }
+);
+
 export type SpriteDetailsFragment = (
   { __typename?: 'Sprite' }
   & Pick<Sprite, 'id' | 'type' | 'category' | 'projectId'>
@@ -18448,6 +18623,20 @@ export const ForumTopicFragmentDoc = gql`
   }
 }
     ${AuthorProfileFragmentDoc}`;
+export const MapBookmarkDetailsFragmentDoc = gql`
+    fragment MapBookmarkDetails on MapBookmark {
+  id
+  thumbnailUrl
+  screenshotUrl
+  basemapOptionalLayerStates
+  cameraOptions
+  projectId
+  selectedBasemap
+  visibleDataLayers
+  mapDimensions
+  blurhash
+}
+    `;
 export const SpriteDetailsFragmentDoc = gql`
     fragment SpriteDetails on Sprite {
   id
@@ -22999,6 +23188,50 @@ export function useNewPostsSubscription(baseOptions: Apollo.SubscriptionHookOpti
       }
 export type NewPostsSubscriptionHookResult = ReturnType<typeof useNewPostsSubscription>;
 export type NewPostsSubscriptionResult = Apollo.SubscriptionResult<NewPostsSubscription>;
+export const CreateMapBookmarkDocument = gql`
+    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!) {
+  createMapBookmark(
+    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions}
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
+export type CreateMapBookmarkMutationFn = Apollo.MutationFunction<CreateMapBookmarkMutation, CreateMapBookmarkMutationVariables>;
+
+/**
+ * __useCreateMapBookmarkMutation__
+ *
+ * To run a mutation, you first call `useCreateMapBookmarkMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateMapBookmarkMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createMapBookmarkMutation, { data, loading, error }] = useCreateMapBookmarkMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      isPublic: // value for 'isPublic'
+ *      basemapOptionalLayerStates: // value for 'basemapOptionalLayerStates'
+ *      visibleDataLayers: // value for 'visibleDataLayers'
+ *      cameraOptions: // value for 'cameraOptions'
+ *      selectedBasemap: // value for 'selectedBasemap'
+ *      style: // value for 'style'
+ *      mapDimensions: // value for 'mapDimensions'
+ *   },
+ * });
+ */
+export function useCreateMapBookmarkMutation(baseOptions?: Apollo.MutationHookOptions<CreateMapBookmarkMutation, CreateMapBookmarkMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateMapBookmarkMutation, CreateMapBookmarkMutationVariables>(CreateMapBookmarkDocument, options);
+      }
+export type CreateMapBookmarkMutationHookResult = ReturnType<typeof useCreateMapBookmarkMutation>;
+export type CreateMapBookmarkMutationResult = Apollo.MutationResult<CreateMapBookmarkMutation>;
+export type CreateMapBookmarkMutationOptions = Apollo.BaseMutationOptions<CreateMapBookmarkMutation, CreateMapBookmarkMutationVariables>;
 export const SpritesDocument = gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -27819,6 +28052,7 @@ export const namedOperations = {
     CreateTopic: 'CreateTopic',
     CreateReply: 'CreateReply',
     CopyTocItemForForumPost: 'CopyTocItemForForumPost',
+    CreateMapBookmark: 'CreateMapBookmark',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
@@ -27925,6 +28159,7 @@ export const namedOperations = {
     RecentPost: 'RecentPost',
     ForumDetails: 'ForumDetails',
     ForumTopic: 'ForumTopic',
+    MapBookmarkDetails: 'MapBookmarkDetails',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',

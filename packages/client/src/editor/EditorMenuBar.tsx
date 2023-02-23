@@ -17,6 +17,7 @@ import {
 import { sketchType } from "./config";
 import { ProjectAppSidebarContext } from "../projects/ProjectAppSidebar";
 import { MapContext } from "../dataLayers/MapContextManager";
+import { BookmarkIcon } from "@heroicons/react/outline";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -24,6 +25,7 @@ interface EditorMenuBarProps {
   className?: string;
   style?: any;
   schema: Schema;
+  onRequestMapBookmark?: () => Promise<string>;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -53,7 +55,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           h1: !setBlockType(schema.nodes.heading, { level: 1 })(props.state),
           h2: !setBlockType(schema.nodes.heading, { level: 2 })(props.state),
           h3: !setBlockType(schema.nodes.heading, { level: 3 })(props.state),
-          link: !toggleMark(schema.marks.link)(props.state), // ||
+          link: !toggleMark(schema.marks.link)(props.state),
+          mapBookmark: !toggleMark(schema.marks.mapBookmark)(props.state),
+          // ||
           // (props.state!.selection.empty &&
           //   !schema.marks.link.isInSet(
           //     props.state!.storedMarks || props.state!.selection.$from.marks()
@@ -64,6 +68,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             schema.marks.strong,
             schema.marks.em,
             schema.marks.link,
+            schema.marks.mapBookmark,
           ]),
         },
       });
@@ -376,6 +381,27 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           }}
         >
           {isSmall ? t("Share...") : t("Share sketch...")}
+        </button>
+      )}
+      {schema.marks.mapBookmark && props.onRequestMapBookmark && (
+        <button
+          title={t("Map Bookmark")}
+          className={"px-2 hover:text-black text-gray-600"}
+          onClick={async (e) => {
+            if (props.onRequestMapBookmark) {
+              e.preventDefault();
+              const id = await props.onRequestMapBookmark();
+              if (id) {
+                props.view!.focus();
+                toggleMark(schema.marks.mapBookmark, {
+                  "data-bookmark-id": id,
+                })(props.view!.state, props.view?.dispatch);
+                return false;
+              }
+            }
+          }}
+        >
+          <BookmarkIcon className="w-5 h-5" />
         </button>
       )}
       {chooseSketchesOpen && (
