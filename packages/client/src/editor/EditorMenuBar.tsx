@@ -1,7 +1,7 @@
 import { EditorView } from "prosemirror-view";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
-import { MarkType, Schema } from "prosemirror-model";
+import { Mark, MarkType, Node, ResolvedPos, Schema } from "prosemirror-model";
 // import { schema } from "./config";
 import { EditorState } from "prosemirror-state";
 import { markActive } from "./utils";
@@ -11,6 +11,7 @@ import Modal from "../components/Modal";
 import { wrapInList } from "prosemirror-schema-list";
 import ShareSketchesModal from "../projects/Forums/ShareSketchesModal";
 import {
+  MapBookmarkDetailsFragment,
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
 } from "../generated/graphql";
@@ -18,6 +19,7 @@ import { sketchType } from "./config";
 import { ProjectAppSidebarContext } from "../projects/ProjectAppSidebar";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { BookmarkIcon } from "@heroicons/react/outline";
+import { Transform } from "prosemirror-transform";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -25,7 +27,7 @@ interface EditorMenuBarProps {
   className?: string;
   style?: any;
   schema: Schema;
-  onRequestMapBookmark?: () => Promise<string>;
+  createMapBookmark?: () => Promise<MapBookmarkDetailsFragment>;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -56,7 +58,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           h2: !setBlockType(schema.nodes.heading, { level: 2 })(props.state),
           h3: !setBlockType(schema.nodes.heading, { level: 3 })(props.state),
           link: !toggleMark(schema.marks.link)(props.state),
-          mapBookmark: !toggleMark(schema.marks.mapBookmark)(props.state),
           // ||
           // (props.state!.selection.empty &&
           //   !schema.marks.link.isInSet(
@@ -68,7 +69,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             schema.marks.strong,
             schema.marks.em,
             schema.marks.link,
-            schema.marks.mapBookmark,
           ]),
         },
       });
@@ -383,19 +383,52 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           {isSmall ? t("Share...") : t("Share sketch...")}
         </button>
       )}
-      {schema.marks.mapBookmark && props.onRequestMapBookmark && (
+      {schema.marks.attachmentLink && props.createMapBookmark && (
         <button
           title={t("Map Bookmark")}
           className={"px-2 hover:text-black text-gray-600"}
           onClick={async (e) => {
-            if (props.onRequestMapBookmark) {
+            if (props.createMapBookmark && props.view) {
               e.preventDefault();
-              const id = await props.onRequestMapBookmark();
-              if (id) {
+              const bookmark = await props.createMapBookmark();
+              if (bookmark) {
                 props.view!.focus();
-                toggleMark(schema.marks.mapBookmark, {
-                  "data-bookmark-id": id,
-                })(props.view!.state, props.view?.dispatch);
+                let tr = props.view.state.tr;
+                let attachments: Node | null = null;
+                props.view.state.doc.content.forEach((node) => {
+                  if (node.type === schema.nodes.attachments) {
+                    attachments = node;
+                  }
+                });
+                if (attachments) {
+                  const pos = (attachments as Node).resolve(0);
+                  if (pos) {
+                    tr = tr.insert(
+                      props.view.state.doc.content.size - 1,
+                      schema.nodes.attachment.create({
+                        type: "MapBookmark",
+                        id: bookmark.id,
+                        attachment: bookmark,
+                      })
+                    );
+                    if (
+                      props.view.state.selection &&
+                      props.view.state.selection.$from <
+                        props.view.state.selection.$to
+                    ) {
+                      const selection = props.view.state.selection;
+                      tr.addMark(
+                        selection.from,
+                        selection.to,
+                        schema.marks.attachmentLink.create({
+                          "data-attachment-id": bookmark.id,
+                          "data-type": "MapBookmark",
+                        })
+                      );
+                    }
+                  }
+                  props.view.dispatch(tr);
+                }
                 return false;
               }
             }

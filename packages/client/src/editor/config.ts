@@ -86,24 +86,83 @@ const nodes = addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
 
 const forumPostSchema = new Schema({
   // @ts-ignore
-  nodes,
+  nodes: nodes
+    .update("doc", {
+      content: "block* attachments",
+    })
+    .append({
+      attachment: {
+        attrs: {
+          id: {},
+          type: {},
+          attachment: {},
+        },
+        content: "text*",
+        group: "block",
+        defining: true,
+        parseDOM: [
+          {
+            tag: "data[data-attachment-id]",
+            // @ts-ignore
+            getAttrs: (dom: { getAttribute: (arg0: string) => any }) => {
+              return {
+                id: dom.getAttribute("data-attachment-id"),
+                type: dom.getAttribute("data-type"),
+                attachment: JSON.parse(dom.getAttribute("data-attachment")),
+              };
+            },
+          },
+        ],
+        toDOM: (node: Node) => {
+          const id = node.attrs.id;
+          const type = node.attrs.type;
+          const data = node.attrs.attachment;
+          return [
+            "div",
+            {
+              "data-attachment-id": id,
+              "data-type": type,
+              "data-attachment": JSON.stringify(data),
+            },
+            `${type}:${id}`,
+          ];
+        },
+      },
+      attachments: {
+        content: "attachment*",
+        group: "block",
+        defining: true,
+        parseDOM: [{ tag: "div[attachments]" }],
+        toDOM: function (node: any) {
+          return [
+            "div",
+            { attachments: "forumAttachments" },
+            // eslint-disable-next-line i18next/no-literal-string
+            node.childCount ? 0 : 0,
+          ];
+        },
+      },
+    }),
   // @ts-ignore
-  marks: baseMarks.addBefore("link", "mapBookmark", {
+  marks: baseMarks.addBefore("link", "attachmentLink", {
     attrs: {
-      "data-bookmark-id": {},
+      "data-attachment-id": {},
+      "data-type": {},
     },
     // @ts-ignore
     toDOM: (node: Node) => {
-      const id = node.attrs["data-bookmark-id"];
-      return ["button", { "data-bookmark-id": id }, 0];
+      const id = node.attrs["data-attachment-id"];
+      const type = node.attrs["data-type"];
+      return ["button", { "data-attachment-id": id, "data-type": type }, 0];
     },
     parseDOM: [
       {
-        tag: "button[data-bookmark-id]",
+        tag: "button[data-attachment-id]",
         // @ts-ignore
         getAttrs: (dom: { getAttribute: (arg0: string) => any }) => {
           return {
-            "data-bookmark-id": dom.getAttribute("data-bookmark-id"),
+            "data-attachment-id": dom.getAttribute("data-attachment-id"),
+            "data-type": dom.getAttribute("data-type"),
           };
         },
       },
