@@ -14,19 +14,14 @@ import { forumPosts as editorConfig, forumPosts } from "../../editor/config";
 import { createReactNodeView } from "./ReactNodeView";
 import { useReactNodeViewPortals } from "./ReactNodeView/PortalProvider";
 import SketchNodeView from "./SketchNodeView";
-import EditorMenuBar from "../../editor/EditorMenuBar";
+import EditorMenuBar, { deleteBookmark } from "../../editor/EditorMenuBar";
 import {
   MapBookmarkDetailsFragment,
   useCreateMapBookmarkMutation,
 } from "../../generated/graphql";
-import { Trans } from "react-i18next";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import getSlug from "../../getSlug";
-import cloneDeep from "lodash.clonedeep";
 import BookmarksList from "./BookmarksList";
-import { toggleMark } from "prosemirror-commands";
-import { Transform } from "prosemirror-transform";
-import { m } from "framer-motion";
 
 export default function PostContentEditor({
   initialContent,
@@ -49,6 +44,7 @@ export default function PostContentEditor({
   const { createPortal, removePortal, setSelection } =
     useReactNodeViewPortals();
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [createBookmark, createBookmarkState] = useCreateMapBookmarkMutation();
   useEffect(() => {
     editable.current = !disabled;
@@ -68,6 +64,18 @@ export default function PostContentEditor({
       onChange({ ...viewRef.current.state.doc.toJSON() });
     }
   }, [onChange]);
+
+  const bookmarkAttachments = useMemo(() => {
+    if (state?.doc) {
+      return attachmentsFromState(state?.doc).filter(
+        (a) => a.type === "MapBookmark"
+      );
+    } else {
+      return [];
+    }
+  }, [state]);
+
+  const mapContext = useContext(MapContext);
 
   useEffect(() => {
     const el = root.current;
@@ -92,29 +100,27 @@ export default function PostContentEditor({
         }
       };
       el.addEventListener("mouseout", mouseoutListener);
-
+      const onClickListener = (e: MouseEvent) => {
+        if (e.target instanceof Element && e.target.tagName === "BUTTON") {
+          const id = e.target.getAttribute("data-attachment-id");
+          const type = e.target.getAttribute("data-type");
+          if (id && type === "MapBookmark") {
+            const attachment = bookmarkAttachments.find((b) => b.id === id);
+            if (attachment && mapContext.manager) {
+              mapContext.manager.showMapBookmark(attachment.attachment);
+            }
+          }
+        }
+      };
+      el.addEventListener("click", onClickListener);
       return () => {
         el.removeEventListener("mouseover", mouseoverListener);
         el.removeEventListener("mouseout", mouseoutListener);
+        el.removeEventListener("click", onClickListener);
       };
     }
-  }, [root]);
+  }, [root, bookmarkAttachments, mapContext?.manager]);
 
-  useEffect(() => {
-    console.log("hovered over", hoveredBookmarkId);
-  }, [hoveredBookmarkId]);
-
-  const bookmarkAttachments = useMemo(() => {
-    if (state?.doc) {
-      return attachmentsFromState(state?.doc).filter(
-        (a) => a.type === "MapBookmark"
-      );
-    } else {
-      return [];
-    }
-  }, [state]);
-
-  const mapContext = useContext(MapContext);
   const createMapBookmark = useCallback(async () => {
     if (mapContext.manager) {
       const bookmark = mapContext.manager.getMapBookmarkData();
@@ -128,10 +134,6 @@ export default function PostContentEditor({
       if (data.data?.createMapBookmark?.mapBookmark?.id) {
         const fragment = data.data.createMapBookmark.mapBookmark;
         return fragment;
-        // const bookmarkId = fragment.id;
-        // console.log("bookmark data", fragment);
-        // setAttachments((prev) => [...prev, bookmarkToAttachment(fragment)]);
-        // return bookmarkId;
       } else {
         throw new Error("Failed to create bookmark");
       }
@@ -234,50 +236,13 @@ export default function PostContentEditor({
           if (!viewRef.current) {
             throw new Error("viewRef not set");
           } // remove attachment from state
-          const transform = new Transform(viewRef.current.state.doc);
-          console.log(viewRef.current.state.doc.toString());
-          const marks = collectMarks(
-            viewRef.current.state.doc,
-            schema.marks.attachmentLink
-          );
-          console.log("all makrs", marks);
-          const matchingId = collectMarks(
-            viewRef.current.state.doc,
-            schema.marks.attachmentLink,
-            { "data-attachment-id": id }
-          );
-          console.log(matchingId);
-          for (const mark of matchingId) {
-            console.log(
-              transform
-                .removeMark(0, viewRef.current.state.doc.content.size, mark)
-                .toString()
-            );
-          }
-          // transform.removeMatchingMarks(
-          //   0,
-          //   viewRef.current.state.doc.content.size,
-          //   schema.marks.attachmentLink,
-          //   {
-          //     "data-id": id,
-          //   }
-          // );
-
-          console.log(transform.doc.toString());
-          // setAttachments((prev) => prev.filter((b) => b.id !== id));
-          // // Remove any references in content via attachment links
-          // const cmd = toggleMark(schema.marks.attachmentLink, {
-          //   "data-attachment-id": id,
-          //   "data-type": "MapBookmark",
-          // });
-          // cmd(viewRef.current?.state, viewRef.current?.dispatch);
+          viewRef.current.focus();
+          deleteBookmark(id, viewRef.current.state, viewRef.current.dispatch);
         }}
+        highlightedBookmarkId={hoveredBookmarkId}
+        onHover={(id) => setHoveredBookmarkId(id || null)}
         bookmarks={bookmarkAttachments}
       />
-      {/* <div>
-        {attachments.filter((a) => a.type === "MapBookmark").length}{" "}
-        <Trans>Bookmarks</Trans>
-      </div> */}
       <EditorMenuBar
         createMapBookmark={createMapBookmark}
         view={viewRef.current}
@@ -322,16 +287,6 @@ export type MapBookmarkAttachment = {
   id: string;
 };
 
-function bookmarkToAttachment(
-  bookmark: MapBookmarkDetailsFragment
-): MapBookmarkAttachment {
-  return {
-    attachment: cloneDeep(bookmark),
-    type: "MapBookmark",
-    id: bookmark.id,
-  };
-}
-
 function collectMarks(
   doc: Node,
   type: MarkType,
@@ -353,6 +308,7 @@ function collectMarks(
     }
   }
   doc.forEach((node) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     collectMarks(node, type, attrs, marks);
   });
   return marks;

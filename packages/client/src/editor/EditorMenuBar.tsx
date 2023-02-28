@@ -1,9 +1,16 @@
 import { EditorView } from "prosemirror-view";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
-import { Mark, MarkType, Node, ResolvedPos, Schema } from "prosemirror-model";
-// import { schema } from "./config";
-import { EditorState } from "prosemirror-state";
+import {
+  Fragment,
+  Mark,
+  MarkType,
+  Node,
+  ResolvedPos,
+  Schema,
+} from "prosemirror-model";
+import { forumPosts } from "./config";
+import { EditorState, Transaction } from "prosemirror-state";
 import { markActive } from "./utils";
 import TextInput from "../components/TextInput";
 import { useTranslation } from "react-i18next";
@@ -101,10 +108,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         const parent = items.find(
           (item) => !item.folderId && !item.collectionId
         );
-        // if (!$from.parent.canReplaceWith(index, index, sketchType)) {
-        //   console.log("cant replace", index, sketchType);
-        //   return false;
-        // }
         dispatch(
           state.tr.replaceSelectionWith(
             sketchType.create({
@@ -393,42 +396,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
               const bookmark = await props.createMapBookmark();
               if (bookmark) {
                 props.view!.focus();
-                let tr = props.view.state.tr;
-                let attachments: Node | null = null;
-                props.view.state.doc.content.forEach((node) => {
-                  if (node.type === schema.nodes.attachments) {
-                    attachments = node;
-                  }
-                });
-                if (attachments) {
-                  const pos = (attachments as Node).resolve(0);
-                  if (pos) {
-                    tr = tr.insert(
-                      props.view.state.doc.content.size - 1,
-                      schema.nodes.attachment.create({
-                        type: "MapBookmark",
-                        id: bookmark.id,
-                        attachment: bookmark,
-                      })
-                    );
-                    if (
-                      props.view.state.selection &&
-                      props.view.state.selection.$from <
-                        props.view.state.selection.$to
-                    ) {
-                      const selection = props.view.state.selection;
-                      tr.addMark(
-                        selection.from,
-                        selection.to,
-                        schema.marks.attachmentLink.create({
-                          "data-attachment-id": bookmark.id,
-                          "data-type": "MapBookmark",
-                        })
-                      );
-                    }
-                  }
-                  props.view.dispatch(tr);
-                }
+                attachBookmark(bookmark, props.view.state, props.view.dispatch);
                 return false;
               }
             }
@@ -510,5 +478,106 @@ export function getActiveMarks(state: EditorState, markTypes: MarkType[]) {
   for (const mark of markTypes) {
     marks[mark.name] = markActive(state, mark);
   }
+  return marks;
+}
+
+export function attachBookmark(
+  bookmark: MapBookmarkDetailsFragment,
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) {
+  let tr = state.tr;
+  tr = tr.insert(
+    state.doc.content.size - 1,
+    forumPosts.schema.nodes.attachment.create({
+      type: "MapBookmark",
+      id: bookmark.id,
+      attachment: bookmark,
+    })
+  );
+  const selection = state.selection;
+  if (selection && selection.$from < selection.$to) {
+    tr.addMark(
+      selection.from,
+      selection.to,
+      forumPosts.schema.marks.attachmentLink.create({
+        "data-attachment-id": bookmark.id,
+        "data-type": "MapBookmark",
+      })
+    );
+  }
+  dispatch(tr);
+}
+
+function getAttachmentsNode(state: EditorState) {
+  let attachments: Node | null = null;
+  state.doc.content.forEach((node) => {
+    if (node.type === forumPosts.schema.nodes.attachments) {
+      attachments = node;
+    }
+  });
+  if (attachments) {
+    return attachments as Node;
+  } else {
+    throw new Error("Attachments node not found in prosemirror state");
+  }
+}
+
+export function deleteBookmark(
+  id: string,
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) {
+  let tr = state.tr;
+  // remove matching marks
+  const matchingMarks = collectMarks(
+    state.doc,
+    forumPosts.schema.marks.attachmentLink,
+    { "data-attachment-id": id }
+  );
+  for (const mark of matchingMarks) {
+    tr = tr.removeMark(0, state.doc.content.size, mark);
+  }
+
+  // Remove bookmark from attachments
+  const attachments = getAttachmentsNode(state);
+  const children: Node[] = [];
+  attachments.forEach((node, offset, index) => {
+    if (node.attrs["id"] !== id) {
+      children.push(node);
+    }
+  });
+  const newAttachments = attachments.copy(Fragment.from(children));
+  tr = tr.replaceWith(
+    state.doc.content.size - attachments.content.size,
+    state.doc.content.size,
+    newAttachments
+  );
+  dispatch(tr);
+}
+
+function collectMarks(
+  doc: Node,
+  type: MarkType,
+  attrs: { [key: string]: number | string } = {},
+  marks: Mark[] = []
+) {
+  for (const mark of doc.marks) {
+    if (mark.type === type) {
+      let matches = true;
+      for (const key in attrs) {
+        if (!(key in mark.attrs) || mark.attrs[key] !== attrs[key]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        marks.push(mark);
+      }
+    }
+  }
+  doc.forEach((node) => {
+    collectMarks(node, type, attrs, marks);
+  });
   return marks;
 }
