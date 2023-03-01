@@ -38,7 +38,7 @@ export default function ShareSketchesModal({
   const [selection, setSelected] = useState<string[]>([]);
 
   const [copy, mutationState] = useCopyTocItemForForumPostMutation({
-    onError,
+    // onError,
     onCompleted: (d) => {
       if (d.copySketchTocItem?.folders && d.copySketchTocItem?.sketches) {
         const copiedSketches = getCopiedSketchesRecursive(
@@ -131,7 +131,7 @@ function getCopiedSketchesRecursive(parentId: number, items: TreeItem[]) {
   const ids: number[] = [];
   for (const item of items) {
     const itemParentId = item.parentId
-      ? parseTreeItemId(item.id).id
+      ? parseTreeItemId(item.parentId).id
       : undefined;
     if (itemParentId === parentId) {
       const id = parseTreeItemId(item.id).id;
