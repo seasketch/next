@@ -1,14 +1,7 @@
 import { EditorView } from "prosemirror-view";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
-import {
-  Fragment,
-  Mark,
-  MarkType,
-  Node,
-  ResolvedPos,
-  Schema,
-} from "prosemirror-model";
+import { Fragment, Mark, MarkType, Node, Schema } from "prosemirror-model";
 import { forumPosts } from "./config";
 import { EditorState, Transaction } from "prosemirror-state";
 import { markActive } from "./utils";
@@ -23,10 +16,10 @@ import {
   SketchTocDetailsFragment,
 } from "../generated/graphql";
 import { sketchType } from "./config";
-import { ProjectAppSidebarContext } from "../projects/ProjectAppSidebar";
 import { MapContext } from "../dataLayers/MapContextManager";
-import { BookmarkIcon } from "@heroicons/react/outline";
-import { Transform } from "prosemirror-transform";
+import { ChevronDownIcon } from "@heroicons/react/outline";
+import ContextMenuDropdown from "../components/ContextMenuDropdown";
+import { DropdownOption } from "../components/DropdownButton";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -51,7 +44,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   >(null);
 
   const mapContext = useContext(MapContext);
-  const { isSmall } = useContext(ProjectAppSidebarContext);
 
   useEffect(() => {
     if (props.state) {
@@ -80,7 +72,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         },
       });
     }
-  }, [props.state, setMenuState]);
+  }, [props.state, setMenuState, schema]);
 
   const buttonClass = useCallback((active: boolean, className?: string) => {
     // eslint-disable-next-line i18next/no-literal-string
@@ -101,8 +93,8 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
       if (dispatch && state) {
         let index = copySketchIndexPlaceholder;
         if (index === null) {
-          let { $from } = state.selection,
-            index = $from.index();
+          let { $from } = state.selection;
+          index = $from.index();
         }
         const items = [...sketches, ...folders];
         const parent = items.find(
@@ -129,6 +121,54 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
       mapContext?.manager,
     ]
   );
+
+  const [contextMenuTarget, setContextMenuTarget] =
+    useState<HTMLButtonElement | null>(null);
+
+  const contextMenuOptions = useMemo(() => {
+    const options: DropdownOption[] = [];
+    if (schema.nodes.sketch) {
+      options.push({
+        label: t("Sketches"),
+        onClick: () => {
+          if (props.view) {
+            const { $from } = props.view.state.selection;
+            setCopySketchIndexPlaceholder($from.index());
+          } else {
+            setCopySketchIndexPlaceholder(null);
+          }
+          setChooseSketchesOpen(true);
+        },
+      });
+    }
+    if (schema.marks.attachmentLink && props.createMapBookmark) {
+      options.push({
+        label: t("Map Bookmark"),
+        onClick: async () => {
+          if (props.createMapBookmark && props.view) {
+            const bookmark = await props.createMapBookmark();
+            if (bookmark) {
+              props.view!.focus();
+              attachBookmark(bookmark, props.view.state, props.view.dispatch);
+              return false;
+            }
+          }
+        },
+      });
+    }
+    return options;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.createMapBookmark, props.view, schema, t]);
+
+  useEffect(() => {
+    if (contextMenuTarget) {
+      const clickHandler = () => setContextMenuTarget(null);
+      document.body.addEventListener("click", clickHandler);
+      return () => {
+        document.body.removeEventListener("click", clickHandler);
+      };
+    }
+  }, [contextMenuTarget]);
 
   return (
     <div
@@ -370,45 +410,34 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           />
         </svg>
       </button>
-      {schema.nodes.sketch && (
+      {(schema.nodes.sketches || schema.marks.attachmentLink) && (
         <button
-          className="px-2 hover:underline text-primary-500"
-          onClick={() => {
-            if (props.view) {
-              const { $from } = props.view.state.selection;
-              setCopySketchIndexPlaceholder($from.index());
-            } else {
-              setCopySketchIndexPlaceholder(null);
-            }
-            setChooseSketchesOpen(true);
+          className="border rounded px-1 py-0.5 flex items-center border-gray-300 ml-1.5"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenuTarget(e.currentTarget as HTMLButtonElement);
           }}
         >
-          {isSmall ? t("Share...") : t("Share sketch...")}
+          {t("Share content")} <ChevronDownIcon className="w-4 h-4 ml-1" />
         </button>
       )}
-      {schema.marks.attachmentLink && props.createMapBookmark && (
-        <button
-          title={t("Map Bookmark")}
-          className={"px-2 hover:text-black text-gray-600"}
-          onClick={async (e) => {
-            if (props.createMapBookmark && props.view) {
-              e.preventDefault();
-              const bookmark = await props.createMapBookmark();
-              if (bookmark) {
-                props.view!.focus();
-                attachBookmark(bookmark, props.view.state, props.view.dispatch);
-                return false;
-              }
-            }
-          }}
-        >
-          <BookmarkIcon className="w-5 h-5" />
-        </button>
-      )}
+
       {chooseSketchesOpen && (
         <ShareSketchesModal
           cancel={() => setChooseSketchesOpen(false)}
           onSubmit={onSubmitCopiedTocItems}
+        />
+      )}
+      {contextMenuTarget && contextMenuOptions.length > 0 && (
+        <ContextMenuDropdown
+          placement="top-start"
+          offsetY={2}
+          options={contextMenuOptions}
+          target={contextMenuTarget}
+          onClick={() => {
+            setContextMenuTarget(null);
+          }}
         />
       )}
       {!!linkModalState && (

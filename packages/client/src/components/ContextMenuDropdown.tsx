@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { Placement } from "@floating-ui/react";
 
 function classNames(...classes: (string | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -23,6 +24,8 @@ export default function ContextMenuDropdown({
   target: HTMLElement;
   offsetX?: number;
   onClick?: (item: DropdownOption) => void;
+  placement?: Placement;
+  offsetY?: number;
 }) {
   const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(
     null
@@ -33,14 +36,14 @@ export default function ContextMenuDropdown({
       name: "offset",
       options: {
         offset: () => {
-          return [offsetX, 0];
+          return [offsetX, props.offsetY || 0];
         },
       },
     }),
-    [offsetX]
+    [offsetX, props.offsetY]
   );
   const { styles, attributes } = usePopper(target, popperElement, {
-    placement: "bottom-start",
+    placement: props.placement || "bottom-start",
     modifiers: [customModifier],
   });
 

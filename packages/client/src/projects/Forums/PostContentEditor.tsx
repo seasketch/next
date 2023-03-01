@@ -224,25 +224,27 @@ export default function PostContentEditor({
 
   return (
     <>
-      <div
-        className={`prosemirror-body forum-post new-forum-post ${
-          disabled === true ? "opacity-50" : "opacity-100"
-        }`}
-        onKeyDown={onKeyDown}
-        ref={root}
-      ></div>
-      <BookmarksList
-        removeBookmark={(id: string) => {
-          if (!viewRef.current) {
-            throw new Error("viewRef not set");
-          } // remove attachment from state
-          viewRef.current.focus();
-          deleteBookmark(id, viewRef.current.state, viewRef.current.dispatch);
-        }}
-        highlightedBookmarkId={hoveredBookmarkId}
-        onHover={(id) => setHoveredBookmarkId(id || null)}
-        bookmarks={bookmarkAttachments}
-      />
+      <div className="flex flex-col" style={{ minHeight: 300 }}>
+        <div
+          className={`flex-1 prosemirror-body forum-post new-forum-post ${
+            disabled === true ? "opacity-50" : "opacity-100"
+          }`}
+          onKeyDown={onKeyDown}
+          ref={root}
+        ></div>
+        <BookmarksList
+          removeBookmark={(id: string) => {
+            if (!viewRef.current) {
+              throw new Error("viewRef not set");
+            } // remove attachment from state
+            viewRef.current.focus();
+            deleteBookmark(id, viewRef.current.state, viewRef.current.dispatch);
+          }}
+          highlightedBookmarkId={hoveredBookmarkId}
+          onHover={(id) => setHoveredBookmarkId(id || null)}
+          bookmarks={bookmarkAttachments}
+        />
+      </div>
       <EditorMenuBar
         createMapBookmark={createMapBookmark}
         view={viewRef.current}

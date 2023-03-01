@@ -25,7 +25,7 @@
 }
 
 .prosemirror-body.forum-post div[contenteditable].ProseMirror {
-  min-height: 300px;
+  /* min-height: 300px; */
   padding-left: 16px;
   padding-right: 16px;
   padding-top: 16px;

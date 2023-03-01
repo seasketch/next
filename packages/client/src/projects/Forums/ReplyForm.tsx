@@ -38,7 +38,6 @@ export default function ReplyForm({
 
   const onChange = useCallback(
     (content: any) => {
-      console.log("onChange", content);
       setContent(content);
     },
     [setContent]
