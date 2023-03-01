@@ -229,9 +229,7 @@ export default function SketchUIStateContextProvider({
   // # Sketch Visibility
   const [visibleSketches, setVisibleSketches] = useLocalStorage<string[]>(
     `sketch-visibility-${getSlug()}`,
-    mapContext?.sketchLayerStates
-      ? layerStatesToIds(mapContext.sketchLayerStates)
-      : []
+    []
   );
 
   const onChecked = useCallback(

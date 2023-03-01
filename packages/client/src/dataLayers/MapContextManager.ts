@@ -791,36 +791,6 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
-  hideSketches(ids: number[]) {
-    for (const id of ids) {
-      if (this.internalState.sketchLayerStates[id]) {
-        delete this.internalState.sketchLayerStates[id];
-      }
-    }
-    this.setState((prev) => ({
-      ...prev,
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-    }));
-    // request a redraw
-    this.debouncedUpdateStyle();
-  }
-
-  showSketches(ids: number[]) {
-    for (const id of ids) {
-      this.internalState.sketchLayerStates[id] = {
-        loading: true,
-        visible: true,
-        staticId: this.layers[id]?.staticId,
-      };
-    }
-    this.setState((prev) => ({
-      ...prev,
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-    }));
-    // request a redraw
-    this.debouncedUpdateStyle();
-  }
-
   setSelectedSketches(sketchIds: number[]) {
     this.selectedSketches = sketchIds;
     // request a redraw
@@ -1585,16 +1555,6 @@ class MapContextManager {
       throw new Error(`Sprite id=${sprite.id} missing both dataUri and url`);
     }
   }
-
-  // private debouncedUpdateLayerState(backoff = 5) {
-  //   if (this.updateStateDebouncerReference) {
-  //     clearTimeout(this.updateStateDebouncerReference);
-  //   }
-  //   this.updateStateDebouncerReference = setTimeout(
-  //     this.updateLayerState,
-  //     backoff
-  //   );
-  // }
 
   private updateLayerState = () => {
     delete this.updateStateDebouncerReference;

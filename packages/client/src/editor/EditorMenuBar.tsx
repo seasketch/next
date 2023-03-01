@@ -16,10 +16,10 @@ import {
   SketchTocDetailsFragment,
 } from "../generated/graphql";
 import { sketchType } from "./config";
-import { MapContext } from "../dataLayers/MapContextManager";
 import { ChevronDownIcon } from "@heroicons/react/outline";
 import ContextMenuDropdown from "../components/ContextMenuDropdown";
 import { DropdownOption } from "../components/DropdownButton";
+import { SketchUIStateContext } from "../projects/Sketches/SketchUIStateContextProvider";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -42,8 +42,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const [copySketchIndexPlaceholder, setCopySketchIndexPlaceholder] = useState<
     number | null
   >(null);
-
-  const mapContext = useContext(MapContext);
 
   useEffect(() => {
     if (props.state) {
@@ -81,6 +79,8 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
     }`;
   }, []);
 
+  const sketchingContext = useContext(SketchUIStateContext);
+
   const onSubmitCopiedTocItems = useCallback(
     (
       sketches: SketchTocDetailsFragment[],
@@ -108,9 +108,15 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             })
           )
         );
-        if (mapContext.manager && parent) {
-          mapContext.manager.hideSketches(copiedSketches);
-          mapContext.manager.showSketches(sketches.map((s) => s.id));
+        if (sketchingContext && parent) {
+          sketchingContext.hideSketches(
+            // eslint-disable-next-line i18next/no-literal-string
+            copiedSketches.map((id) => `Sketch:${id}`)
+          );
+          sketchingContext.showSketches(
+            // eslint-disable-next-line i18next/no-literal-string
+            sketches.map(({ id }) => `Sketch:${id}`)
+          );
         }
       }
     },
@@ -118,7 +124,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
       props.view?.dispatch,
       props.view?.state,
       copySketchIndexPlaceholder,
-      mapContext?.manager,
+      sketchingContext,
     ]
   );
 
