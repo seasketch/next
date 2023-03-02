@@ -11,6 +11,7 @@ import mapboxgl, {
   AnySourceImpl,
   AnySourceData,
   AnyLayer,
+  Sources,
 } from "mapbox-gl";
 import {
   createContext,
@@ -237,6 +238,51 @@ class MapContextManager {
 
   setToken(token: string | null | undefined) {
     this.userAccessToken = token;
+  }
+
+  setLoadingOverlay(loadingOverlay: string | null) {
+    this.setState((prev) => {
+      if (loadingOverlay !== null) {
+        return {
+          ...prev,
+          loadingOverlay,
+          showLoadingOverlay: true,
+        };
+      } else {
+        return {
+          ...prev,
+          showLoadingOverlay: false,
+        };
+      }
+    });
+  }
+
+  /**
+   * Queries sketch layers to identify ids of sketches visible in the current
+   * map viewport
+   */
+  getVisibleSketchIds() {
+    if (!this.map) {
+      throw new Error("Map not initialized");
+    }
+    const { layers } = this.computeSketchLayers();
+    const features = this.map.queryRenderedFeatures({
+      // @ts-ignore
+      layers: layers.map((l) => l.id),
+    });
+    const ids: { id: number; sharedInForum: boolean }[] = [];
+    for (const feature of features) {
+      if (feature.properties?.id) {
+        const id = parseInt(feature.properties.id);
+        if (!ids.find((r) => r.id === id)) {
+          ids.push({
+            id,
+            sharedInForum: Boolean(feature.properties.sharedInForum),
+          });
+        }
+      }
+    }
+    return ids;
   }
 
   /**
@@ -1187,12 +1233,28 @@ class MapContextManager {
 
     // Add sketches
     const sketchLayerIds: string[] = [];
+    const sketchData = this.computeSketchLayers();
+    baseStyle.layers.push(...sketchData.layers);
+    sketchLayerIds.push(...sketchData.layers.map((l) => l.id));
+    for (const sourceId in sketchData.sources) {
+      baseStyle.sources[sourceId] = sketchData.sources[sourceId];
+    }
+    if (this.interactivityManager) {
+      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
+    }
+
+    return { style: baseStyle, sprites };
+  }
+
+  computeSketchLayers() {
+    const allLayers: AnyLayer[] = [];
+    const sources: Sources = {};
     for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
       const id = parseInt(stringId);
       if (id !== this.hideEditableSketchId) {
         const timestamp = this.sketchTimestamps.get(id);
         const cache = LocalSketchGeometryCache.get(id);
-        baseStyle.sources[`sketch-${id}`] = {
+        sources[`sketch-${id}`] = {
           type: "geojson",
           data:
             cache && cache.timestamp === timestamp
@@ -1206,15 +1268,10 @@ class MapContextManager {
         if (this.editableSketchId && id !== this.editableSketchId) {
           reduceOpacity(layers);
         }
-        baseStyle.layers.push(...layers);
-        sketchLayerIds.push(...layers.map((l) => l.id));
+        allLayers.push(...layers);
       }
     }
-    if (this.interactivityManager) {
-      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
-    }
-
-    return { style: baseStyle, sprites };
+    return { layers: allLayers, sources };
   }
 
   getLayersForSketch(id: number, focusOfEditing?: boolean): AnyLayer[] {
@@ -1726,6 +1783,12 @@ class MapContextManager {
         visibleDataLayers.push(key);
       }
     }
+    const visibleSketches: number[] = [];
+    for (const key in this.internalState.sketchLayerStates) {
+      if (this.internalState.sketchLayerStates[key].visible) {
+        visibleSketches.push(parseInt(key));
+      }
+    }
     const canvas = this.map.getCanvas();
     return {
       cameraOptions: {
@@ -1740,6 +1803,7 @@ class MapContextManager {
       selectedBasemap: parseInt(this.internalState.selectedBasemap!),
       style: this.map.getStyle(),
       mapDimensions: [canvas.width, canvas.height],
+      visibleSketches,
     };
   }
 
@@ -1793,6 +1857,8 @@ export interface MapContextInterface {
   offlineTileSimulatorActive?: boolean;
   styleHash: string;
   containerPortal: HTMLDivElement | null;
+  loadingOverlay?: string | null;
+  showLoadingOverlay?: boolean;
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */

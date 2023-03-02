@@ -4,6 +4,7 @@ import Spinner from "../../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
 import { useContext } from "react";
 import { MapContext } from "../../dataLayers/MapContextManager";
+import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 
 export default function BookmarksList({
   bookmarks,
@@ -17,6 +18,7 @@ export default function BookmarksList({
   onHover: (id?: string) => void;
 }) {
   const mapContext = useContext(MapContext);
+  const sketchUIContext = useContext(SketchUIStateContext);
 
   return (
     <div className={bookmarks.length > 0 ? `border-t border-gray-50 pb-2` : ""}>
@@ -31,6 +33,11 @@ export default function BookmarksList({
               onClick={(e) => {
                 if (mapContext.manager) {
                   mapContext.manager.showMapBookmark(bookmark);
+                  if (bookmark.visibleSketches) {
+                    sketchUIContext.setVisibleSketches(
+                      bookmark.visibleSketches.map((id) => `Sketch:${id}`)
+                    );
+                  }
                 }
               }}
               initial={{ opacity: 0, translateX: 200 }}

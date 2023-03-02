@@ -1232,6 +1232,7 @@ export type CreateMapBookmarkInput = {
   slug?: Maybe<Scalars['String']>;
   style?: Maybe<Scalars['JSON']>;
   visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
 /** The output of our `createMapBookmark` mutation. */
@@ -5709,6 +5710,7 @@ export type MapBookmark = {
   style: Scalars['JSON'];
   thumbnailUrl?: Maybe<Scalars['String']>;
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
+  visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
 /**
@@ -15612,7 +15614,7 @@ export type NewPostsSubscription = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'thumbnailUrl' | 'screenshotUrl' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash'>
+  & Pick<MapBookmark, 'id' | 'thumbnailUrl' | 'screenshotUrl' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches'>
 );
 
 export type CreateMapBookmarkMutationVariables = Exact<{
@@ -15624,6 +15626,7 @@ export type CreateMapBookmarkMutationVariables = Exact<{
   selectedBasemap: Scalars['Int'];
   style: Scalars['JSON'];
   mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
+  visibleSketches: Array<Scalars['Int']> | Scalars['Int'];
 }>;
 
 
@@ -18635,6 +18638,7 @@ export const MapBookmarkDetailsFragmentDoc = gql`
   visibleDataLayers
   mapDimensions
   blurhash
+  visibleSketches
 }
     `;
 export const SpriteDetailsFragmentDoc = gql`
@@ -23189,9 +23193,9 @@ export function useNewPostsSubscription(baseOptions: Apollo.SubscriptionHookOpti
 export type NewPostsSubscriptionHookResult = ReturnType<typeof useNewPostsSubscription>;
 export type NewPostsSubscriptionResult = Apollo.SubscriptionResult<NewPostsSubscription>;
 export const CreateMapBookmarkDocument = gql`
-    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!) {
+    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!) {
   createMapBookmark(
-    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions}
+    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches}
   ) {
     mapBookmark {
       ...MapBookmarkDetails
@@ -23222,6 +23226,7 @@ export type CreateMapBookmarkMutationFn = Apollo.MutationFunction<CreateMapBookm
  *      selectedBasemap: // value for 'selectedBasemap'
  *      style: // value for 'style'
  *      mapDimensions: // value for 'mapDimensions'
+ *      visibleSketches: // value for 'visibleSketches'
  *   },
  * });
  */

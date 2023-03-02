@@ -88,6 +88,17 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       ref={mapContainer}
       onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
+      <div
+        className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
+          mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"
+        }`}
+        style={{ backdropFilter: "blur(12px)" }}
+      >
+        <div className="bg-gray-100 bg-opacity-30 text-blue-800 border-blue-800 border-opacity-20 shadow-inner border text-base p-4 rounded-full flex items-center">
+          <span>{mapContext.loadingOverlay}</span>
+          <Spinner color="white" className="ml-2" />
+        </div>
+      </div>
       {showSpinner && (
         <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
       )}

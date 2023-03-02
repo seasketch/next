@@ -10,6 +10,7 @@ create table map_bookmarks (
   user_id integer not null references users (id) on delete cascade,
   style jsonb not null,
   visible_data_layers text[] not null default '{}',
+  visible_sketches int[],
   selected_basemap integer not null references basemaps (id) on delete set null,
   basemap_optional_layer_states jsonb,
   camera_options jsonb not null,
@@ -24,7 +25,7 @@ create index on map_bookmarks(selected_basemap);
 create index on map_bookmarks(post_id);
 create index on map_bookmarks(visible_data_layers);
 
-grant select(id, project_id, post_id, visible_data_layers, selected_basemap, basemap_optional_layer_states, camera_options, thumbnail_url, screenshot_url, is_public, style, map_dimensions, blurhash) on map_bookmarks to anon;
+grant select(id, project_id, post_id, visible_data_layers, selected_basemap, basemap_optional_layer_states, camera_options, thumbnail_url, screenshot_url, is_public, style, map_dimensions, blurhash, visible_sketches) on map_bookmarks to anon;
 
 alter table map_bookmarks enable row level security;
 
@@ -46,7 +47,7 @@ comment on constraint map_bookmarks_post_id_fkey on map_bookmarks is
 
 comment on function posts_map_bookmarks is '@simpleCollections only';
 
-create or replace function create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" int, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" int[])
+create or replace function create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" int, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" int[], "visibleSketches" int[])
   returns map_bookmarks
   security definer
   language plpgsql
@@ -66,7 +67,8 @@ create or replace function create_map_bookmark(slug text, "isPublic" boolean, st
           selected_basemap, 
           basemap_optional_layer_states, 
           camera_options,
-          map_dimensions
+          map_dimensions,
+          visible_sketches
         ) values (
           pid,
           nullif(current_setting('session.user_id', TRUE), '')::int,
@@ -76,7 +78,8 @@ create or replace function create_map_bookmark(slug text, "isPublic" boolean, st
           "selectedBasemap",
           "basemapOptionalLayerStates",
           "cameraOptions",
-          "mapDimensions"
+          "mapDimensions",
+          "visibleSketches"
         ) returning * into bookmark;
         return bookmark;
       else

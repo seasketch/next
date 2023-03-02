@@ -216,6 +216,7 @@ fragment MapBookmarkDetails on MapBookmark {
   visibleDataLayers
   mapDimensions
   blurhash
+  visibleSketches
 }
 
 mutation CreateMapBookmark(
@@ -227,6 +228,7 @@ mutation CreateMapBookmark(
   $selectedBasemap: Int!
   $style: JSON!
   $mapDimensions: [Int!]!
+  $visibleSketches: [Int!]!
 ) {
   createMapBookmark(
     input: {
@@ -238,6 +240,7 @@ mutation CreateMapBookmark(
       selectedBasemap: $selectedBasemap
       style: $style
       mapDimensions: $mapDimensions
+      visibleSketches: $visibleSketches
     }
   ) {
     mapBookmark {

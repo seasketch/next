@@ -1230,6 +1230,7 @@ export type CreateMapBookmarkInput = {
   slug?: Maybe<Scalars['String']>;
   style?: Maybe<Scalars['JSON']>;
   visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
+  visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
 /** The output of our `createMapBookmark` mutation. */
@@ -5707,6 +5708,7 @@ export type MapBookmark = {
   style: Scalars['JSON'];
   thumbnailUrl?: Maybe<Scalars['String']>;
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
+  visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
 /**
@@ -15610,7 +15612,7 @@ export type NewPostsSubscription = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'thumbnailUrl' | 'screenshotUrl' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash'>
+  & Pick<MapBookmark, 'id' | 'thumbnailUrl' | 'screenshotUrl' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches'>
 );
 
 export type CreateMapBookmarkMutationVariables = Exact<{
@@ -15622,6 +15624,7 @@ export type CreateMapBookmarkMutationVariables = Exact<{
   selectedBasemap: Scalars['Int'];
   style: Scalars['JSON'];
   mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
+  visibleSketches: Array<Scalars['Int']> | Scalars['Int'];
 }>;
 
 
@@ -18633,6 +18636,7 @@ export const MapBookmarkDetailsFragmentDoc = /*#__PURE__*/ gql`
   visibleDataLayers
   mapDimensions
   blurhash
+  visibleSketches
 }
     `;
 export const SpriteDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -20650,9 +20654,9 @@ export const NewPostsDocument = /*#__PURE__*/ gql`
 ${ForumTopicFragmentDoc}
 ${ForumDetailsFragmentDoc}`;
 export const CreateMapBookmarkDocument = /*#__PURE__*/ gql`
-    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!) {
+    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!) {
   createMapBookmark(
-    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions}
+    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches}
   ) {
     mapBookmark {
       ...MapBookmarkDetails

@@ -49,8 +49,9 @@ export default function useDialog() {
         options?: {
           description?: string;
           icon?: "alert" | "delete";
+          primaryButtonText?: string;
         }
-      ) => {
+      ): Promise<boolean> => {
         return new Promise((resolve, reject) => {
           context.setState({
             type: "confirm",
@@ -60,6 +61,7 @@ export default function useDialog() {
             onSubmit: () => resolve(true),
             onCancel: () => resolve(false),
             submitting: false,
+            primaryButtonText: options?.primaryButtonText,
           });
         });
       },

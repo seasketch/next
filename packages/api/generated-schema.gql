@@ -1398,6 +1398,7 @@ input CreateMapBookmarkInput {
   slug: String
   style: JSON
   visibleDataLayers: [String]
+  visibleSketches: [Int]
 }
 
 """The output of our `createMapBookmark` mutation."""
@@ -6654,6 +6655,7 @@ type MapBookmark {
   style: JSON!
   thumbnailUrl: String
   visibleDataLayers: [String]!
+  visibleSketches: [Int]
 }
 
 """
