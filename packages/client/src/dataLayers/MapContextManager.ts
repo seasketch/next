@@ -1629,6 +1629,28 @@ class MapContextManager {
     trailing: true,
   });
 
+  updateOptionalBasemapSettings(settings: { [layerName: string]: any }) {
+    this.setState((prev) => {
+      const newState = {
+        ...prev,
+        basemapOptionalLayerStatePreferences: {
+          ...prev.basemapOptionalLayerStatePreferences,
+          ...settings,
+        },
+        basemapOptionalLayerStates: {
+          ...this.computeBasemapOptionalLayerStates(this.getSelectedBasemap(), {
+            ...this.internalState.basemapOptionalLayerStatePreferences,
+          }),
+          ...settings,
+        },
+      };
+      return newState;
+    });
+
+    this.updatePreferences();
+    this.debouncedUpdateStyle();
+  }
+
   updateOptionalBasemapSetting(
     layer: Pick<OptionalBasemapLayer, "id" | "options" | "groupType" | "name">,
     value: any
@@ -1816,11 +1838,13 @@ class MapContextManager {
       | "selectedBasemap"
     >
   ) {
-    // TODO: support basemapOptionalLayerStates
     if (!this.map) {
       throw new Error("Map not ready to show bookmark");
     }
     this.setSelectedBasemap(bookmark.selectedBasemap.toString());
+    if (bookmark.basemapOptionalLayerStates) {
+      this.updateOptionalBasemapSettings(bookmark.basemapOptionalLayerStates);
+    }
     this.setVisibleLayers((bookmark.visibleDataLayers || []) as string[]);
     this.map.flyTo({
       ...bookmark.cameraOptions,
@@ -1960,6 +1984,7 @@ export function useMapContext(options?: MapContextOptions) {
       state.manager.setProjectBounds(data.projectBySlug.region.geojson);
     }
   }, [data?.projectBySlug, error, state.manager]);
+
   return state;
 }
 

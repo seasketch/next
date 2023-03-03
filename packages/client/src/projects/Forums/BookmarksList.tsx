@@ -11,11 +11,13 @@ export default function BookmarksList({
   removeBookmark,
   highlightedBookmarkId,
   onHover,
+  errors,
 }: {
   bookmarks: MapBookmarkAttachment[];
   removeBookmark: (id: string) => void;
   highlightedBookmarkId?: string | null;
   onHover: (id?: string) => void;
+  errors?: { id: string; error: string }[];
 }) {
   const mapContext = useContext(MapContext);
   const sketchUIContext = useContext(SketchUIStateContext);
@@ -25,6 +27,7 @@ export default function BookmarksList({
       <AnimatePresence initial={false}>
         {bookmarks.map((attachment) => {
           const bookmark = attachment.attachment;
+          const hasErrors = Boolean(errors?.find((e) => e.id === bookmark.id));
           return (
             <motion.button
               onMouseOver={() => onHover(bookmark.id)}
@@ -42,11 +45,20 @@ export default function BookmarksList({
               }}
               initial={{ opacity: 0, translateX: 200 }}
               animate={{ opacity: 1, translateX: 0 }}
+              title={
+                hasErrors
+                  ? "Bookmark refers to sketches that are no longer posted"
+                  : undefined
+              }
               exit={{ opacity: 0, scale: 0.25 }}
               className={`group transform float-left border ml-3.5 mt-2.5 rounded w-24 2xl:w-27 h-14 2xl:h-16 2xl:ml-2 2xl:mt-2 shadow-sm relative ${
                 !bookmark.thumbnailUrl ? "bg-gray-50" : ""
               } ${
-                highlightedBookmarkId === bookmark.id ? "border-blue-200" : ""
+                hasErrors
+                  ? "border-red-200"
+                  : highlightedBookmarkId === bookmark.id
+                  ? "border-blue-200"
+                  : ""
               }`}
             >
               <button

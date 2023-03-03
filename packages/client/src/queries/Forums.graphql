@@ -16,6 +16,7 @@ fragment ForumPost on Post {
   hiddenByModerator
   topicId
   html
+  sketchIds
 }
 
 fragment RecentPost on Post {

@@ -75,6 +75,15 @@ export default function Topic({ id }: { id: number }) {
     }
   }, [data?.topic, client.cache, id]);
 
+  const accessibleSketchIds = useMemo(() => {
+    const ids: number[] = [];
+    const posts = data?.topic?.postsConnection.nodes || [];
+    for (const post of posts) {
+      ids.push(...((post.sketchIds as number[]) || []));
+    }
+    return ids;
+  }, [data?.topic?.postsConnection]);
+
   const lastPostID = useMemo(() => {
     if (data?.topic?.postsConnection?.nodes) {
       const nodes = data.topic.postsConnection.nodes;
@@ -160,6 +169,7 @@ export default function Topic({ id }: { id: number }) {
           data.topic.forum.project?.sessionParticipationStatus ===
             ParticipationStatus.ParticipantSharedProfile && (
             <ReplyForm
+              accessibleSketchIds={accessibleSketchIds}
               key={`reply-to-${lastPostID}`}
               profile={data.me.profile}
               topicId={data.topic.id}

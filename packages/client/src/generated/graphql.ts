@@ -8038,6 +8038,7 @@ export type Post = Node & {
   message?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  sketchIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** Reads a single `Topic` that is related to this `Post`. */
   topic?: Maybe<Topic>;
   topicId: Scalars['Int'];
@@ -15380,7 +15381,7 @@ export type AuthorProfileFragment = (
 
 export type ForumPostFragment = (
   { __typename?: 'Post' }
-  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'topicId' | 'html'>
+  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'topicId' | 'html' | 'sketchIds'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
@@ -18563,6 +18564,7 @@ export const ForumPostFragmentDoc = gql`
   hiddenByModerator
   topicId
   html
+  sketchIds
 }
     ${AuthorProfileFragmentDoc}`;
 export const RecentPostFragmentDoc = gql`

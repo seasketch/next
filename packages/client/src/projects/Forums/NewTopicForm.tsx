@@ -18,6 +18,7 @@ import PostContentEditor from "./PostContentEditor";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 import { nameForProfile } from "./TopicListItem";
 
+const accessibleSketchIds: number[] = [];
 export default function NewTopicForm({
   profile,
   forumId,
@@ -134,6 +135,7 @@ export default function NewTopicForm({
             autofocus={Boolean(title && title.length)}
             initialContent={content}
             onChange={setContent}
+            accessibleSketchIds={accessibleSketchIds}
           />
         </ReactNodeViewPortalsProvider>
       </div>

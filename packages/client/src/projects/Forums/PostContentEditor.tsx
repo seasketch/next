@@ -9,8 +9,12 @@ import {
   useRef,
   useState,
 } from "react";
-import { Mark, MarkType, Node } from "prosemirror-model";
-import { forumPosts as editorConfig, forumPosts } from "../../editor/config";
+import { Mark, MarkType, Node, NodeType } from "prosemirror-model";
+import {
+  forumPosts as editorConfig,
+  forumPosts,
+  sketchType,
+} from "../../editor/config";
 import { createReactNodeView } from "./ReactNodeView";
 import { useReactNodeViewPortals } from "./ReactNodeView/PortalProvider";
 import SketchNodeView from "./SketchNodeView";
@@ -29,12 +33,14 @@ export default function PostContentEditor({
   autofocus,
   onSubmit,
   disabled,
+  accessibleSketchIds,
 }: {
   initialContent: any;
-  onChange: (content: any) => void;
+  onChange: (content: any, errors: boolean) => void;
   autofocus?: boolean;
-  onSubmit?: (content: any) => void;
+  onSubmit?: (content: any, errors: boolean) => void;
   disabled?: boolean;
+  accessibleSketchIds: number[];
 }) {
   const root = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<EditorState>();
@@ -44,12 +50,20 @@ export default function PostContentEditor({
   const { createPortal, removePortal, setSelection } =
     useReactNodeViewPortals();
 
+  const [bookmarkErrors, setBookmarkErrors] = useState<
+    { id: string; error: string }[]
+  >([]);
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [createBookmark, createBookmarkState] = useCreateMapBookmarkMutation();
   useEffect(() => {
     editable.current = !disabled;
     if (viewRef.current && state) {
-      viewRef.current.updateState(state!);
+      try {
+        viewRef.current.updateState(state!);
+      } catch (e) {
+        console.error(e);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
@@ -61,9 +75,14 @@ export default function PostContentEditor({
   // fire onChange when attachments change
   useEffect(() => {
     if (viewRef.current?.state) {
-      onChange({ ...viewRef.current.state.doc.toJSON() });
+      const errors = getBookmarkErrors(
+        viewRef.current.state,
+        accessibleSketchIds
+      );
+      setBookmarkErrors(errors);
+      onChange({ ...viewRef.current.state.doc.toJSON() }, errors.length > 0);
     }
-  }, [onChange]);
+  }, [onChange, accessibleSketchIds]);
 
   const bookmarkAttachments = useMemo(() => {
     if (state?.doc) {
@@ -190,9 +209,14 @@ export default function PostContentEditor({
           setSelection(null);
         }
         if (transaction.docChanged) {
-          onChange({
-            ...newState.doc.toJSON(),
-          });
+          const errors = getBookmarkErrors(newState, accessibleSketchIds);
+          setBookmarkErrors(errors);
+          onChange(
+            {
+              ...newState.doc.toJSON(),
+            },
+            errors.length > 0
+          );
         }
       },
     });
@@ -211,22 +235,25 @@ export default function PostContentEditor({
     (e: KeyboardEvent<any>) => {
       if (onSubmit && state) {
         if (e.metaKey && e.key === "Enter") {
-          onSubmit({
-            ...state.doc.toJSON(),
-          });
+          onSubmit(
+            {
+              ...state.doc.toJSON(),
+            },
+            getBookmarkErrors(state, accessibleSketchIds).length > 0
+          );
           e.preventDefault();
           e.stopPropagation();
         }
       }
     },
-    [state, onSubmit]
+    [state, onSubmit, accessibleSketchIds]
   );
 
   return (
     <>
       <div className="flex flex-col" style={{ minHeight: 300 }}>
         <div
-          className={`flex-1 prosemirror-body forum-post new-forum-post ${
+          className={`flex-1 flex flex-col prosemirror-body forum-post new-forum-post ${
             disabled === true ? "opacity-50" : "opacity-100"
           }`}
           onKeyDown={onKeyDown}
@@ -243,6 +270,7 @@ export default function PostContentEditor({
           highlightedBookmarkId={hoveredBookmarkId}
           onHover={(id) => setHoveredBookmarkId(id || null)}
           bookmarks={bookmarkAttachments}
+          errors={bookmarkErrors}
         />
       </div>
       <EditorMenuBar
@@ -338,4 +366,49 @@ function attachmentsFromState(state: Node): MapBookmarkAttachment[] {
   } else {
     return [];
   }
+}
+
+export function collectNodes(doc: Node, type: NodeType, nodes: Node[] = []) {
+  doc.forEach((node) => {
+    if (node.type === type) {
+      nodes.push(node);
+    } else if (!node.isLeaf) {
+      collectNodes(node, type, nodes);
+    }
+  });
+  return nodes;
+}
+
+function getBookmarkErrors(state: EditorState, accessibleSketchIds: number[]) {
+  const bookmarkErrors: { id: string; error: string }[] = [];
+  if (state?.doc) {
+    const existingSketchIds: number[] = [];
+    const sketchNodes = collectNodes(state.doc, sketchType);
+    for (const node of sketchNodes) {
+      const items = node.attrs.items;
+      existingSketchIds.push(...items.map((i: { id: number }) => i.id));
+    }
+    const attachments = state.doc.content.lastChild!.content;
+    const bookmarks: Node[] = [];
+    attachments.forEach((node) => {
+      if (node.attrs.type === "MapBookmark") {
+        bookmarks.push(node);
+      }
+    });
+    for (const node of bookmarks) {
+      const data = node.attrs.attachment;
+      for (const id of data.visibleSketches) {
+        if (
+          existingSketchIds.indexOf(id) === -1 &&
+          accessibleSketchIds.indexOf(id) === -1
+        ) {
+          bookmarkErrors.push({
+            id: node.attrs.id,
+            error: "Sketch missing from post or topic.",
+          });
+        }
+      }
+    }
+  }
+  return bookmarkErrors;
 }

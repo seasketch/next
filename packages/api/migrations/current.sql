@@ -89,3 +89,14 @@ create or replace function create_map_bookmark(slug text, "isPublic" boolean, st
   $$;
 
 grant execute on function create_map_bookmark to seasketch_user;
+
+create or replace function posts_sketch_ids(post posts)
+  returns int[]
+  security definer
+  stable
+  language sql
+  as $$
+    select array_agg(id) from sketches where post_id = post.id;
+  $$;
+
+grant execute on function posts_sketch_ids to anon;
