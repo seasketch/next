@@ -1,19 +1,20 @@
 {
-  "By creating a project, you agree to our <2>Terms</2>, <5>Data Policy</5> and <9>Cookies Policy</9>.": "By creating a project, you agree to our <2>Terms</2>, <5>Data Policy</5> and <9>Cookies Policy</9>.",
-  "Close": "Close",
+  "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.",
+  "Copy Link": "Copy Link",
   "Create an account": "Create an account",
   "Create your own SeaSketch project.": "Create your own SeaSketch project.",
   "Get started": "Get started",
   "Latest Discussions": "Latest Discussions",
   "Latest activity": "Latest activity",
   "Learn more": "Learn more",
+  "Link Copied!": "Link Copied!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Logging into your account is the first step to creating a new SeaSketch project.",
+  "Metadata": "Metadata",
   "NumPosts": "{{count}} posts",
   "NumPosts_plural": "NumPosts_plural",
   "NumTopics": "{{count}} topics",
   "NumTopics_plural": "NumTopics_plural",
   "Or": "Or",
-  "Please use Google Chrome": "Please use Google Chrome",
   "Posted in <1></1>": "Posted in <1></1>",
   "Ready to dive in?": "Ready to dive in?",
   "ReplyCount": "{{count}} replies",
@@ -21,7 +22,6 @@
   "SeaSketch Supports Collaborative Planning for our Oceans": "SeaSketch Supports Collaborative Planning for our Oceans",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.",
   "Sign In": "Sign In",
-  "This is a little embarrasing, but our newest version of SeaSketch isn't ready for use in your preferred browser. Please <2>download Google Chrome</2> for use with SeaSketch.": "This is a little embarrasing, but our newest version of SeaSketch isn't ready for use in your preferred browser. Please <2>download Google Chrome</2> for use with SeaSketch.",
   "Trusted by": "Trusted by",
-  "We'll be adding support for this browser in the coming weeks.": "We'll be adding support for this browser in the coming weeks."
+  "Zoom to bounds": "Zoom to bounds"
 }
