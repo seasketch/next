@@ -2174,6 +2174,37 @@ $$;
 
 
 --
+-- Name: assign_map_bookmark_node_post_ids(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_map_bookmark_node_post_ids() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  perform assign_post_id_to_attached_map_bookmarks(NEW.message_contents, NEW.id);
+	RETURN NEW;
+END;
+$$;
+
+
+--
+-- Name: assign_post_id_to_attached_map_bookmarks(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_post_id_to_attached_map_bookmarks(body jsonb, post_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      map_bookmark_ids text[];
+    begin
+      select collect_map_bookmark_ids_from_prosemirror_body(body) into map_bookmark_ids;
+      update map_bookmarks set post_id = assign_post_id_to_attached_map_bookmarks.post_id where id::text = any(map_bookmark_ids);
+      return true;
+    end;
+  $$;
+
+
+--
 -- Name: assign_post_id_to_attached_sketch_nodes(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3473,6 +3504,43 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
 
 
 --
+-- Name: collect_map_bookmark_ids_from_prosemirror_body(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_map_bookmark_ids_from_prosemirror_body(body jsonb) RETURNS text[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output text[];
+      i jsonb;
+      attachment jsonb;
+    begin
+      output = '{}';
+      if body ? 'attrs' and (body -> 'attrs') ->> 'type' = 'MapBookmark' then
+        select body ->> 'attrs' into attachment;
+        if attachment is not null and attachment->>'id' is not null then
+          output = (attachment->>'id')::text || output;
+        end if;
+      end if;
+      if body ? 'content' and (body ->> 'type' = 'attachments' or body ->> 'type' = 'doc') then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          output = output || collect_map_bookmark_ids_from_prosemirror_body(i);
+        end loop;
+      end if;
+      return output;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION collect_map_bookmark_ids_from_prosemirror_body(body jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.collect_map_bookmark_ids_from_prosemirror_body(body jsonb) IS '@omit';
+
+
+--
 -- Name: collect_sketch_folder_ids_from_prosemirror_body(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4635,6 +4703,74 @@ begin
   return new;
 end;
 $$;
+
+
+--
+-- Name: map_bookmarks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.map_bookmarks (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    project_id integer,
+    post_id integer,
+    user_id integer NOT NULL,
+    style jsonb NOT NULL,
+    visible_data_layers text[] DEFAULT '{}'::text[] NOT NULL,
+    visible_sketches integer[],
+    selected_basemap integer NOT NULL,
+    basemap_optional_layer_states jsonb,
+    camera_options jsonb NOT NULL,
+    thumbnail_url text,
+    screenshot_url text,
+    is_public boolean DEFAULT false NOT NULL,
+    map_dimensions integer[] NOT NULL,
+    blurhash jsonb
+);
+
+
+--
+-- Name: create_map_bookmark(text, boolean, jsonb, text[], integer, jsonb, jsonb, integer[], integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]) RETURNS public.map_bookmarks
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      bookmark map_bookmarks;
+      pid int;
+    begin
+      select id into pid from projects where projects.slug = create_map_bookmark.slug;
+      if session_has_project_access(pid) then
+        insert into map_bookmarks (
+          project_id, 
+          user_id, 
+          is_public, 
+          style, 
+          visible_data_layers, 
+          selected_basemap, 
+          basemap_optional_layer_states, 
+          camera_options,
+          map_dimensions,
+          visible_sketches
+        ) values (
+          pid,
+          nullif(current_setting('session.user_id', TRUE), '')::int,
+          "isPublic",
+          create_map_bookmark.style,
+          "visibleDataLayers",
+          "selectedBasemap",
+          "basemapOptionalLayerStates",
+          "cameraOptions",
+          "mapDimensions",
+          "visibleSketches"
+        ) returning * into bookmark;
+        return bookmark;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -7886,6 +8022,24 @@ CREATE FUNCTION public.posts_blurb(post public.posts) RETURNS text
 
 
 --
+-- Name: posts_map_bookmarks(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.posts_map_bookmarks(post public.posts) RETURNS SETOF public.map_bookmarks
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from map_bookmarks where post_id = post.id;
+  $$;
+
+
+--
+-- Name: FUNCTION posts_map_bookmarks(post public.posts); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.posts_map_bookmarks(post public.posts) IS '@simpleCollections only';
+
+
+--
 -- Name: posts_message(public.posts); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7929,6 +8083,17 @@ case the client should explain such.
 Message could also be null if `hiddenByModerator` is set. In that case the 
 client should explain that the post violated the `CommunityGuidelines`, if set.
 ';
+
+
+--
+-- Name: posts_sketch_ids(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.posts_sketch_ids(post public.posts) RETURNS integer[]
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select array_agg(id) from sketches where post_id = post.id;
+  $$;
 
 
 --
@@ -14265,6 +14430,27 @@ CREATE INDEX invite_emails_token_idx ON public.invite_emails USING btree (token)
 
 
 --
+-- Name: map_bookmarks_post_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX map_bookmarks_post_id_idx ON public.map_bookmarks USING btree (post_id);
+
+
+--
+-- Name: map_bookmarks_selected_basemap_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX map_bookmarks_selected_basemap_idx ON public.map_bookmarks USING btree (selected_basemap);
+
+
+--
+-- Name: map_bookmarks_visible_data_layers_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX map_bookmarks_visible_data_layers_idx ON public.map_bookmarks USING btree (visible_data_layers);
+
+
+--
 -- Name: offline_tile_packages_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -15147,6 +15333,13 @@ CREATE TRIGGER after_response_submission AFTER INSERT OR UPDATE ON public.survey
 
 
 --
+-- Name: posts assign_map_bookmark_attachment_post_ids_from_message_contents; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER assign_map_bookmark_attachment_post_ids_from_message_contents AFTER INSERT OR UPDATE ON public.posts FOR EACH ROW EXECUTE FUNCTION public.assign_map_bookmark_node_post_ids();
+
+
+--
 -- Name: posts assign_sketch_node_post_ids_from_message_contents; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -15775,6 +15968,45 @@ ALTER TABLE ONLY public.invite_emails
 COMMENT ON CONSTRAINT invite_emails_survey_invite_id_fkey ON public.invite_emails IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: map_bookmarks map_bookmarks_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.map_bookmarks
+    ADD CONSTRAINT map_bookmarks_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT map_bookmarks_post_id_fkey ON map_bookmarks; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT map_bookmarks_post_id_fkey ON public.map_bookmarks IS '@omit';
+
+
+--
+-- Name: map_bookmarks map_bookmarks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.map_bookmarks
+    ADD CONSTRAINT map_bookmarks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: map_bookmarks map_bookmarks_selected_basemap_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.map_bookmarks
+    ADD CONSTRAINT map_bookmarks_selected_basemap_fkey FOREIGN KEY (selected_basemap) REFERENCES public.basemaps(id) ON DELETE SET NULL;
+
+
+--
+-- Name: map_bookmarks map_bookmarks_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.map_bookmarks
+    ADD CONSTRAINT map_bookmarks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -16734,6 +16966,19 @@ CREATE POLICY invite_emails_admin ON public.invite_emails FOR SELECT TO seasketc
    FROM (public.survey_invites
      JOIN public.surveys ON ((surveys.id = survey_invites.survey_id)))
   WHERE (survey_invites.id = invite_emails.survey_invite_id)))));
+
+
+--
+-- Name: map_bookmarks; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.map_bookmarks ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: map_bookmarks map_bookmarks_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY map_bookmarks_select ON public.map_bookmarks TO anon USING ((public.it_me(user_id) OR is_public));
 
 
 --
@@ -18459,6 +18704,20 @@ GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boo
 
 
 --
+-- Name: FUNCTION assign_map_bookmark_node_post_ids(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_map_bookmark_node_post_ids() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION assign_post_id_to_attached_map_bookmarks(body jsonb, post_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_post_id_to_attached_map_bookmarks(body jsonb, post_id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION assign_post_id_to_attached_sketch_nodes(body jsonb, post_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19066,6 +19325,14 @@ GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) T
 
 
 --
+-- Name: FUNCTION collect_map_bookmark_ids_from_prosemirror_body(body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_map_bookmark_ids_from_prosemirror_body(body jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.collect_map_bookmark_ids_from_prosemirror_body(body jsonb) TO anon;
+
+
+--
 -- Name: FUNCTION collect_sketch_folder_ids_from_prosemirror_body(body jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19426,6 +19693,112 @@ GRANT ALL ON FUNCTION public.create_form_template_from_survey("surveyId" integer
 --
 
 REVOKE ALL ON FUNCTION public.create_forum_acl() FROM PUBLIC;
+
+
+--
+-- Name: COLUMN map_bookmarks.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(project_id) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.post_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(post_id) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.style; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(style) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.visible_data_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(visible_data_layers) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.visible_sketches; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(visible_sketches) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.selected_basemap; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(selected_basemap) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.basemap_optional_layer_states; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(basemap_optional_layer_states) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.camera_options; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(camera_options) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.thumbnail_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(thumbnail_url) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.screenshot_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(screenshot_url) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.is_public; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_public) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.map_dimensions; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(map_dimensions) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.blurhash; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(blurhash) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: FUNCTION create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]) TO seasketch_user;
 
 
 --
@@ -22320,11 +22693,27 @@ GRANT ALL ON FUNCTION public.posts_blurb(post public.posts) TO anon;
 
 
 --
+-- Name: FUNCTION posts_map_bookmarks(post public.posts); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.posts_map_bookmarks(post public.posts) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.posts_map_bookmarks(post public.posts) TO anon;
+
+
+--
 -- Name: FUNCTION posts_message(post public.posts); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.posts_message(post public.posts) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.posts_message(post public.posts) TO anon;
+
+
+--
+-- Name: FUNCTION posts_sketch_ids(post public.posts); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.posts_sketch_ids(post public.posts) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.posts_sketch_ids(post public.posts) TO anon;
 
 
 --

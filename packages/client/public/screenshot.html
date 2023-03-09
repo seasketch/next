@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" style="width:100vw;height:100vh;">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SeaSketch screenshot tool</title>
+  <script src='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js'></script>
+  <link href='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css' rel='stylesheet' />
+</head>
+
+<body style="width:100%;height:100%;padding:0px;margin:0px;">
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div style="width:100%;height:100%;" id="map"></div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("mt")) {
+      throw new Error("No mapbox token (?mt) specified");
+    }
+    if (!params.get("host")) {
+      throw new Error("No host (?host) specified");
+    }
+    if (!params.get("auth")) {
+      throw new Error("No auth token (?auth) specified");
+    }
+    if (!params.get("bookmark")) {
+      throw new Error("No bookmark id (?bookmark) specified");
+    }
+    const token = params.get("auth");
+    fetch(`${params.get("host")}/bookmarks/${params.get("bookmark")}`).then(async (res) => {
+      const data = await res.json();
+      console.log(data);
+      mapboxgl.accessToken = params.get("mt");
+      const map = new mapboxgl.Map({
+        container: 'map', // container ID
+        style: data.style, // style URL
+        center: [-74.5, 40], // starting position [lng, lat]
+        zoom: 9, // starting zoom
+        ...data.cameraOptions,
+        transformRequest: (url, resourceType, etc) => {
+          const Url = new URL(url);
+          const graphqlURL = new URL(params.get("host"));
+          if (
+            token &&
+            Url.host === graphqlURL.host &&
+            /\/sketches\/\d+\.geojson.json/.test(url)
+          ) {
+            Url.searchParams.set("reporting_access_token", token)
+            return {
+              url: Url.toString(),
+            };
+          } else {
+            return { url }
+          }
+        }
+      });
+
+    });
+  </script>
+</body>
+
+</html>

@@ -3,12 +3,11 @@
  * This file must be manually made up-to-date with the contents of the client
  * schema.
  */
-import { Schema, Node } from "prosemirror-model";
+import { Schema, Node, NodeSpec } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
-import sketchNodeSpec from "./SketchTocAttachmentSpec";
 
 let spec = baseSchema.spec;
 
@@ -76,17 +75,47 @@ const contentSchema = new Schema({
   marks: baseMarks,
 });
 
-const nodes = addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
-  .addBefore("paragraph", "sketch", sketchNodeSpec)
-  // TODO: these should be added back in as styles and menu option support is added
-  .remove("horizontal_rule")
-  // .remove("image")
-  .remove("code_block")
-  .remove("blockquote");
-
 const forumPostSchema = new Schema({
   // @ts-ignore
-  nodes: nodes
+  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
+    .addBefore("paragraph", "sketch", {
+      attrs: {
+        title: {},
+        items: { default: [] },
+      },
+      inline: false,
+      group: "block",
+      draggable: false,
+      toDOM: (node) => {
+        return [
+          "div",
+          {
+            "data-sketch-toc-attachment": true,
+            title: node.attrs.title,
+            "data-items": JSON.stringify(node.attrs.items),
+          },
+          ["span", node.attrs.title],
+        ];
+      },
+      parseDOM: [
+        {
+          tag: "div[data-sketch-toc-attachment]",
+          getAttrs: (dom) => {
+            let title = (dom as HTMLElement).getAttribute("title");
+            const items = (dom as HTMLElement).getAttribute("data-items");
+            return {
+              title,
+              items: JSON.parse(items || "[]"),
+            };
+          },
+        },
+      ],
+    })
+    // TODO: these should be added back in as styles and menu option support is added
+    .remove("horizontal_rule")
+    // .remove("image")
+    .remove("code_block")
+    .remove("blockquote")
     .update("doc", {
       content: "block* attachments",
     })
@@ -143,14 +172,12 @@ const forumPostSchema = new Schema({
         },
       },
     }),
-  // @ts-ignore
   marks: baseMarks.addBefore("link", "attachmentLink", {
     attrs: {
       "data-attachment-id": {},
       "data-type": {},
     },
-    // @ts-ignore
-    toDOM: (node: Node) => {
+    toDOM: (node) => {
       const id = node.attrs["data-attachment-id"];
       const type = node.attrs["data-type"];
       return ["button", { "data-attachment-id": id, "data-type": type }, 0];
@@ -158,12 +185,15 @@ const forumPostSchema = new Schema({
     parseDOM: [
       {
         tag: "button[data-attachment-id]",
-        // @ts-ignore
-        getAttrs: (dom: { getAttribute: (arg0: string) => any }) => {
-          return {
-            "data-attachment-id": dom.getAttribute("data-attachment-id"),
-            "data-type": dom.getAttribute("data-type"),
-          };
+        getAttrs: (dom) => {
+          if (dom instanceof HTMLElement) {
+            return {
+              "data-attachment-id": dom.getAttribute("data-attachment-id"),
+              "data-type": dom.getAttribute("data-type"),
+            };
+          } else {
+            throw new Error("String instead of HTMLElement passed to getAttrs");
+          }
         },
       },
     ],

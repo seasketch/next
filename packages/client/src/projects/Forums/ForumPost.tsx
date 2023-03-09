@@ -1,4 +1,4 @@
-import { useEffect, MouseEvent, useState, useMemo } from "react";
+import { useEffect, MouseEvent, useState, useMemo, useContext } from "react";
 import {
   AuthorProfileFragment,
   ForumPostFragment,
@@ -12,6 +12,9 @@ import ForumTreeView from "./ForumTreeView";
 import { LinkIcon } from "@heroicons/react/outline";
 import getSlug from "../../getSlug";
 import { useLocation } from "react-router-dom";
+import { MapBookmarkAttachment } from "./PostContentEditor";
+import BookmarksList from "./BookmarksList";
+import { MapContext } from "../../dataLayers/MapContextManager";
 
 type SketchPortal = {
   items: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[];
@@ -35,6 +38,7 @@ export default function ForumPost({
 }) {
   const [bodyRef, setBodyRef] = useState<HTMLDivElement | null>(null);
   const [sketchPortals, setSketchPortals] = useState<SketchPortal[]>([]);
+  const [bookmarks, setBookmarks] = useState<MapBookmarkAttachment[]>([]);
   const location = useLocation();
 
   const isFocused = useMemo(() => {
@@ -43,6 +47,11 @@ export default function ForumPost({
       return postId === post.id;
     }
   }, [location?.hash, post.id]);
+
+  const mapContext = useContext(MapContext);
+  const [hoveredBookmarkId, setHoveredBookmarkId] = useState<
+    string | null | undefined
+  >(null);
 
   useEffect(() => {
     if (bodyRef) {
@@ -70,10 +79,89 @@ export default function ForumPost({
         }
       }
       setSketchPortals(portals);
+      const attachments: MapBookmarkAttachment[] = [];
+      for (const el of bodyRef.querySelectorAll(
+        "[attachments] [data-attachment-id]"
+      )) {
+        const str = el.getAttribute("data-attachment");
+        if (str) {
+          try {
+            const data = JSON.parse(str);
+            if (el.getAttribute("data-type") === "MapBookmark") {
+              attachments.push({
+                id: data.id,
+                type: "MapBookmark",
+                attachment: data,
+              });
+            }
+          } catch (e) {}
+        }
+      }
+      setBookmarks(attachments);
+      const clickHandler = (e: Event) => {
+        if (e.target instanceof Element && e.target.tagName === "BUTTON") {
+          const id = e.target.getAttribute("data-attachment-id");
+          const type = e.target.getAttribute("data-type");
+          if (id && type === "MapBookmark") {
+            const attachment = attachments.find((b) => b.id === id);
+            if (attachment && mapContext.manager) {
+              mapContext.manager.showMapBookmark(attachment.attachment);
+            }
+          }
+        }
+      };
+      bodyRef.addEventListener("click", clickHandler);
+      const mouseoverListener = (e: Event) => {
+        if (e.target instanceof Element && e.target.tagName === "BUTTON") {
+          const id = e.target.getAttribute("data-attachment-id");
+          const type = e.target.getAttribute("data-type");
+          if (id && type === "MapBookmark") {
+            setHoveredBookmarkId(id);
+          }
+        }
+      };
+      bodyRef.addEventListener("mouseover", mouseoverListener);
+      const mouseoutListener = (e: Event) => {
+        if (e.target instanceof Element && e.target.tagName === "BUTTON") {
+          const id = e.target.getAttribute("data-attachment-id");
+          const type = e.target.getAttribute("data-type");
+          if (id && type === "MapBookmark") {
+            setHoveredBookmarkId(null);
+          }
+        }
+      };
+      bodyRef.addEventListener("mouseout", mouseoutListener);
+      return () => {
+        bodyRef.removeEventListener("mouseover", mouseoverListener);
+        bodyRef.removeEventListener("mouseout", mouseoutListener);
+        bodyRef.removeEventListener("click", clickHandler);
+      };
     } else {
       setSketchPortals([]);
+      setBookmarks([]);
     }
-  }, [bodyRef]);
+  }, [bodyRef, mapContext?.manager]);
+
+  useEffect(() => {
+    if (bodyRef) {
+      bodyRef
+        .querySelectorAll(
+          `[data-attachment-id]:not([data-attachment-id="${hoveredBookmarkId}"])`
+        )
+        .forEach((el) => {
+          el.classList.remove("highlighted");
+        });
+      if (hoveredBookmarkId) {
+        const el = bodyRef.querySelector(
+          // eslint-disable-next-line i18next/no-literal-string
+          `[data-attachment-id="${hoveredBookmarkId}"]`
+        );
+        if (el) {
+          el.classList.add("highlighted");
+        }
+      }
+    }
+  }, [bodyRef, hoveredBookmarkId]);
 
   return (
     <motion.div
@@ -87,10 +175,10 @@ export default function ForumPost({
       transition={{
         duration: 0.25,
       }}
-      className="p-4 pt-3 border bg-white"
+      className="pt-3 border bg-white"
       id={`post-${post.id}`}
     >
-      <div className="mb-3 text-gray-600">
+      <div className="px-4 mb-3 text-gray-600">
         {post.authorProfile && (
           <InlineAuthorDetails
             isFocused={isFocused}
@@ -107,9 +195,15 @@ export default function ForumPost({
         )}
       </div>
       <div
-        className="prosemirror-body forum-post"
+        className="px-4 pb-4 prosemirror-body forum-post"
         ref={setBodyRef}
         dangerouslySetInnerHTML={{ __html: post.html }}
+      />
+      <BookmarksList
+        highlightedBookmarkId={hoveredBookmarkId}
+        onHover={setHoveredBookmarkId}
+        className="p-2 pt-1"
+        bookmarks={bookmarks}
       />
       {sketchPortals.map((portal) => {
         return createPortal(

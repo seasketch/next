@@ -232,6 +232,35 @@ type Basemap implements Node {
   """
   labelsLayerId: String
 
+  """Reads and enables pagination through a set of `MapBookmark`."""
+  mapBookmarksBySelectedBasemapConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: MapBookmarkCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `MapBookmark`."""
+    orderBy: [MapBookmarksOrderBy!] = [NATURAL]
+  ): MapBookmarksConnection!
+
   """Label shown in the basemap picker interface"""
   name: String!
 
@@ -1346,6 +1375,49 @@ type CreateInteractivitySettingPayload {
 
   """The `InteractivitySetting` that was created by this mutation."""
   interactivitySetting: InteractivitySetting
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createMapBookmark` mutation."""
+input CreateMapBookmarkInput {
+  basemapOptionalLayerStates: JSON
+  cameraOptions: JSON
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  isPublic: Boolean
+  mapDimensions: [Int]
+  selectedBasemap: Int
+  slug: String
+  style: JSON
+  visibleDataLayers: [String]
+  visibleSketches: [Int]
+}
+
+"""The output of our `createMapBookmark` mutation."""
+type CreateMapBookmarkPayload {
+  """Reads a single `Basemap` that is related to this `MapBookmark`."""
+  basemapBySelectedBasemap: Basemap
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  mapBookmark: MapBookmark
+
+  """An edge for our `MapBookmark`. May be used by Relay 1."""
+  mapBookmarkEdge(
+    """The method to use when ordering `MapBookmark`."""
+    orderBy: [MapBookmarksOrderBy!] = [NATURAL]
+  ): MapBookmarksEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -6567,6 +6639,77 @@ type MakeSurveyPayload {
   survey: Survey
 }
 
+type MapBookmark {
+  """Reads a single `Basemap` that is related to this `MapBookmark`."""
+  basemapBySelectedBasemap: Basemap
+  basemapOptionalLayerStates: JSON
+  blurhash: JSON
+  cameraOptions: JSON!
+  id: UUID!
+  isPublic: Boolean!
+  mapDimensions: [Int]!
+  postId: Int
+  projectId: Int
+  screenshotUrl: String
+  selectedBasemap: Int!
+  style: JSON!
+  thumbnailUrl: String
+  visibleDataLayers: [String]!
+  visibleSketches: [Int]
+}
+
+"""
+A condition to be used against `MapBookmark` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input MapBookmarkCondition {
+  """Checks for equality with the object’s `postId` field."""
+  postId: Int
+
+  """Checks for equality with the object’s `selectedBasemap` field."""
+  selectedBasemap: Int
+
+  """Checks for equality with the object’s `visibleDataLayers` field."""
+  visibleDataLayers: [String]
+}
+
+"""A connection to a list of `MapBookmark` values."""
+type MapBookmarksConnection {
+  """
+  A list of edges which contains the `MapBookmark` and cursor to aid in pagination.
+  """
+  edges: [MapBookmarksEdge!]!
+
+  """A list of `MapBookmark` objects."""
+  nodes: [MapBookmark!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `MapBookmark` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `MapBookmark` edge in the connection."""
+type MapBookmarksEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `MapBookmark` at the end of the edge."""
+  node: MapBookmark!
+}
+
+"""Methods to use when ordering `MapBookmark`."""
+enum MapBookmarksOrderBy {
+  NATURAL
+  POST_ID_ASC
+  POST_ID_DESC
+  SELECTED_BASEMAP_ASC
+  SELECTED_BASEMAP_DESC
+  VISIBLE_DATA_LAYERS_ASC
+  VISIBLE_DATA_LAYERS_DESC
+}
+
 """All input for the `markTopicAsRead` mutation."""
 input MarkTopicAsReadInput {
   """
@@ -6858,6 +7001,12 @@ type Mutation {
     """
     input: CreateInteractivitySettingInput!
   ): CreateInteractivitySettingPayload
+  createMapBookmark(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateMapBookmarkInput!
+  ): CreateMapBookmarkPayload
 
   """Creates a single `OfflineTileSetting`."""
   createOfflineTileSetting(
@@ -8868,6 +9017,15 @@ type Post implements Node {
   html: String!
   id: Int!
 
+  """Reads and enables pagination through a set of `MapBookmark`."""
+  mapBookmarks(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [MapBookmark!]
+
   """
   Message contents of the post as JSON for use with DraftJS. 
   
@@ -8884,6 +9042,7 @@ type Post implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  sketchIds: [Int]
 
   """Reads a single `Topic` that is related to this `Post`."""
   topic: Topic
@@ -10339,6 +10498,35 @@ type Query implements Node {
     nodeId: ID!
   ): InviteEmail
   lcfirst(word: String): String
+
+  """Reads and enables pagination through a set of `MapBookmark`."""
+  mapBookmarksConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: MapBookmarkCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `MapBookmark`."""
+    orderBy: [MapBookmarksOrderBy!] = [NATURAL]
+  ): MapBookmarksConnection
 
   """
   Access the current session's User. The user is determined by the access token embedded in the `Authorization` header.

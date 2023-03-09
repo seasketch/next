@@ -204,6 +204,7 @@ run({
 
 const tilesetPool = createPool();
 const geoPool = createPool();
+const bookmarksPool = createPool();
 const loadersPool = createPool({}, "admin");
 
 app.use(
@@ -311,7 +312,67 @@ app.use(
     } catch (e: any) {
       client.query("COMMIT");
       client.release();
-      res.status(500).send(`Problem generating tiles.\n${e.toString()}`);
+      res.status(500).send(`Problem generating geojson.\n${e.toString()}`);
+      return;
+    }
+  }
+);
+
+app.use(
+  "/bookmarks/:id",
+  authorizationMiddleware,
+  currentProjectMiddlware,
+  userAccountMiddlware,
+  async function (req, res, next) {
+    const client = await bookmarksPool.connect();
+    try {
+      await client.query("BEGIN");
+      let token: string | undefined = req.query.token;
+      let claims:
+        | { userId?: number; projectId?: number; canonicalEmail?: string }
+        | undefined;
+      if (token) {
+        claims = await verify(
+          loadersPool,
+          token,
+          process.env.HOST || "seasketch.org"
+        );
+      }
+      const pgSettings = getPgSettings(req);
+      if (
+        claims &&
+        claims.canonicalEmail &&
+        claims.userId &&
+        pgSettings.role === "anon"
+      ) {
+        pgSettings.role = "seasketch_user";
+        pgSettings["session.user_id"] = claims.userId;
+        pgSettings["session.email_verified"] = true;
+        pgSettings["session.canonical_email"] = claims.canonicalEmail;
+      }
+      if (claims && claims.projectId) {
+        pgSettings["session.project_id"] = claims.projectId;
+      }
+      await setTransactionSessionVariables(pgSettings, client);
+      const id = req.params.id;
+      const { rows } = await client.query(
+        `
+        SELECT bookmark_data($1) as bookmark
+          `,
+        [id]
+      );
+      const bookmark = rows[0].bookmark;
+      await client.query("COMMIT");
+      await client.release();
+      res.setHeader("Content-Type", "application/json");
+      if (bookmark === null) {
+        res.status(404);
+      }
+      res.send(bookmark);
+    } catch (e: any) {
+      client.query("COMMIT");
+      client.release();
+      res.status(500).send(`Problem generating bookmark.\n${e.toString()}`);
       return;
     }
   }

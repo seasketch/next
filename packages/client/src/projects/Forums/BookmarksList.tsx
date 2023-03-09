@@ -2,7 +2,7 @@ import { MapBookmarkAttachment } from "./PostContentEditor";
 import { motion, AnimatePresence } from "framer-motion";
 import Spinner from "../../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 
@@ -12,26 +12,33 @@ export default function BookmarksList({
   highlightedBookmarkId,
   onHover,
   errors,
+  className,
 }: {
   bookmarks: MapBookmarkAttachment[];
-  removeBookmark: (id: string) => void;
+  removeBookmark?: (id: string) => void;
   highlightedBookmarkId?: string | null;
-  onHover: (id?: string) => void;
+  onHover?: (id?: string) => void;
   errors?: { id: string; error: string }[];
+  className?: string;
 }) {
   const mapContext = useContext(MapContext);
   const sketchUIContext = useContext(SketchUIStateContext);
 
   return (
-    <div className={bookmarks.length > 0 ? `border-t border-gray-50 pb-2` : ""}>
+    <div
+      className={
+        (className || "") +
+        (bookmarks.length > 0 ? ` border-t border-gray-50 pb-2` : "")
+      }
+    >
       <AnimatePresence initial={false}>
         {bookmarks.map((attachment) => {
           const bookmark = attachment.attachment;
           const hasErrors = Boolean(errors?.find((e) => e.id === bookmark.id));
           return (
             <motion.button
-              onMouseOver={() => onHover(bookmark.id)}
-              onMouseOut={() => onHover()}
+              onMouseOver={onHover ? () => onHover(bookmark.id) : undefined}
+              onMouseOut={onHover ? () => onHover() : undefined}
               key={bookmark.id}
               onClick={(e) => {
                 if (mapContext.manager) {
@@ -61,16 +68,22 @@ export default function BookmarksList({
                   : ""
               }`}
             >
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  removeBookmark(bookmark.id);
-                }}
-                className="group-hover:opacity-100 opacity-0 w-5 h-5 absolute -right-2 -top-2"
-              >
-                <XCircleIcon />
-              </button>
+              {removeBookmark && (
+                <button
+                  onClick={
+                    removeBookmark
+                      ? (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          removeBookmark(bookmark.id);
+                        }
+                      : undefined
+                  }
+                  className="group-hover:opacity-100 opacity-0 w-5 h-5 absolute -right-2 -top-2"
+                >
+                  <XCircleIcon />
+                </button>
+              )}
               {!bookmark.thumbnailUrl && (
                 <div className="flex flex-col items-center justify-center w-full h-full">
                   <Spinner />
