@@ -1227,6 +1227,7 @@ export type CreateMapBookmarkInput = {
   isPublic?: Maybe<Scalars['Boolean']>;
   mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
   selectedBasemap?: Maybe<Scalars['Int']>;
+  sidebarState?: Maybe<Scalars['JSON']>;
   slug?: Maybe<Scalars['String']>;
   style?: Maybe<Scalars['JSON']>;
   visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -5705,6 +5706,7 @@ export type MapBookmark = {
   projectId?: Maybe<Scalars['Int']>;
   screenshotUrl?: Maybe<Scalars['String']>;
   selectedBasemap: Scalars['Int'];
+  sidebarState?: Maybe<Scalars['JSON']>;
   style: Scalars['JSON'];
   thumbnailUrl?: Maybe<Scalars['String']>;
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
@@ -15626,6 +15628,7 @@ export type CreateMapBookmarkMutationVariables = Exact<{
   style: Scalars['JSON'];
   mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
   visibleSketches: Array<Scalars['Int']> | Scalars['Int'];
+  sidebarState?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -20656,9 +20659,9 @@ export const NewPostsDocument = /*#__PURE__*/ gql`
 ${ForumTopicFragmentDoc}
 ${ForumDetailsFragmentDoc}`;
 export const CreateMapBookmarkDocument = /*#__PURE__*/ gql`
-    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!) {
+    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!, $sidebarState: JSON) {
   createMapBookmark(
-    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches}
+    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches, sidebarState: $sidebarState}
   ) {
     mapBookmark {
       ...MapBookmarkDetails

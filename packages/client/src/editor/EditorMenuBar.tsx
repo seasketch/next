@@ -30,6 +30,7 @@ import { SketchUIStateContext } from "../projects/Sketches/SketchUIStateContextP
 import { MapContext } from "../dataLayers/MapContextManager";
 import useDialog from "../components/useDialog";
 import { treeItemId } from "../components/TreeView";
+import { currentSidebarState } from "../projects/ProjectAppSidebar";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -52,6 +53,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const mapContext = useContext(MapContext);
   const [disableSharing, setDisableSharing] = useState(false);
   const dialog = useDialog();
+  const { isSmall } = currentSidebarState();
 
   useEffect(() => {
     if (props.state) {
@@ -443,7 +445,8 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             setContextMenuTarget(e.currentTarget as HTMLButtonElement);
           }}
         >
-          {t("Share content")} <ChevronDownIcon className="w-4 h-4 ml-1" />
+          {isSmall ? t("Share") : t("Share content")}{" "}
+          <ChevronDownIcon className="w-4 h-4 ml-1" />
         </button>
       )}
 

@@ -1395,6 +1395,7 @@ input CreateMapBookmarkInput {
   isPublic: Boolean
   mapDimensions: [Int]
   selectedBasemap: Int
+  sidebarState: JSON
   slug: String
   style: JSON
   visibleDataLayers: [String]
@@ -6652,6 +6653,7 @@ type MapBookmark {
   projectId: Int
   screenshotUrl: String
   selectedBasemap: Int!
+  sidebarState: JSON
   style: JSON!
   thumbnailUrl: String
   visibleDataLayers: [String]!

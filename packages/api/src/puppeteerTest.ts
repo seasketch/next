@@ -1,32 +1,82 @@
-import puppeteer from "puppeteer";
+import puppeteer, { ScreenshotOptions } from "puppeteer";
+import sharp from "sharp";
+
+const CLOUDFLARE_IMAGES_TOKEN = "HWe82wdftsTepnuGc56ZGlc7zPMt6mXPbAaRr2SA";
+const CLOUDFLARE_IMAGES_ACCOUNT = "3f258747d0cb255bef8e96e3ae2b3fac";
+const bookmark = "de553f50-0dc1-4d1c-bd79-2e7c8646ba54";
+const url = `http://localhost:3000/screenshot.html?auth=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjMwMDYwNzBjLTEyNWMtNDE2Zi1iOThmLTU4ZDU3NzUzYjAwZiIsImprdSI6Imh0dHBzOi8vc2Vhc2tldGNoLm9yZy8ud2VsbC1rbm93bi9qd2tzLmpzb24ifQ.eyJ0eXBlIjoic2tldGNoLWdlb21ldHJ5LWFjY2VzcyIsInVzZXJJZCI6MywicHJvamVjdElkIjoyLCJjYW5vbmljYWxFbWFpbCI6InVuZGVyYmx1ZXdhdGVyc0BnbWFpbC5jb20iLCJpYXQiOjE2NzgzOTUwNDQsImV4cCI6MTY3ODQ4MTQ0NCwiaXNzIjoiaHR0cHM6Ly9zZWFza2V0Y2gub3JnIn0.UvdaDeLQSTu-53tuXjlYsRJTcisWv9wpQO6cgoDSon6NC2a3pyDmTYoteqiPp14DSg24rKUXOpMnf8lRwSYCFa61TKv_rLF2ESdHv2RqJog3jmuGL3IdGu4xJFU2t3vNspvZhYn9JJNoJJMNZhENE-Wo-u9jXxgl5pMMr_Gorn7GDTmqptByZSnH0pGZwU8M6y-E_j70EZnsjFJANHOZiz0BXYODTZlr7MiiChXyu6KlZV3WU7195L9WMJHVFxsBzDw0t5kgRxU0h2AfxKGMvyg7JN9BTnUDk-seMG2CU3zajZd1FecXYH7nJSj6NxrRRzKcBqniF5fJZiVaUKZpEd8bMzEE2c4XQQR-4fF-B3EaaHW3jDNnCH8ogGZtEdlKI6Ick18juTXMKRUbuW79J9Hf2h6YucEdl6Krl9xwt36NArI5xID8q55MvgU4q4Ub0r7-nGQYG__448mrWvJ_iZ_ULBGdf9PHePu1rM4_aYqhd7pZos5QK6oIonkdBox0ulb_FbsNnbnm2hN1B-PcNQNxrtrj9SXExCpEx7SW871rYLSvrdCOFbO_ygAv93fVWw4RzYU-HiQevXgHkMP1L-ig962wbMMuq4Qx96E1dRWZ_lFyOMBHsqBC_FbchSjJBTLlRzEe3QhjQkof8bJzQ88eHe-ee63KcmdXHsjI-_I&mt=pk.eyJ1Ijoic2Vhc2tldGNoIiwiYSI6ImNremN6bnF1YzJudHYycG8wZGJnaDk1cjUifQ.lXZs4Zm0LDrbob_DUzgIyg&bookmarkUrl=http://localhost:3857/bookmarks/${bookmark}`;
+
+const screen = [2125, 1023];
+const sidebarState = {
+  open: true,
+  width: 512,
+  isSmall: false,
+};
+
+let clip: undefined | ScreenshotOptions["clip"] = undefined;
+
+if (sidebarState.open) {
+  clip = {
+    x: sidebarState.width,
+    y: 0,
+    width: screen[0] - sidebarState.width,
+    height: screen[1],
+  };
+}
 
 (async () => {
   const browser = await puppeteer.launch({
     headless: true,
     defaultViewport: {
       deviceScaleFactor: 2,
-      width: 1280,
-      height: 1024,
+      width: screen[0],
+      height: screen[1],
     },
   });
   const page = await browser.newPage();
 
-  await page.goto(
-    "http://localhost:3000/screenshot.html?mt=pk.eyJ1Ijoic2Vhc2tldGNoIiwiYSI6ImNrbjZicDVlczBjbnYzMXA3MHoxbXduNHQifQ.YaQRyflC6yWt6BrSVKO83g&bookmark=17f70e65-c46e-4068-8c78-f9f834ba990e&host=http://localhost:3857&auth=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6IjhkOGJjN2FlLWEzNjMtNDQ4OC04MjNjLWU4MDNjNmI5M2VmNSIsImprdSI6Imh0dHBzOi8vc2Vhc2tldGNoLm9yZy8ud2VsbC1rbm93bi9qd2tzLmpzb24ifQ.eyJ0eXBlIjoic2tldGNoLWdlb21ldHJ5LWFjY2VzcyIsInVzZXJJZCI6MiwicHJvamVjdElkIjoyLCJjYW5vbmljYWxFbWFpbCI6InVuZGVyYmx1ZXdhdGVyc0BnbWFpbC5jb20iLCJpYXQiOjE2Nzc4ODc1MDYsImV4cCI6MTY3Nzk3MzkwNiwiaXNzIjoiaHR0cHM6Ly9zZWFza2V0Y2gub3JnIn0.kvrVUCyvKKHutujKfvzqlEnIF7GYAnTPc1WEXcId6y_Cf7K2RF-XOPgStxtdE6Na_VJOEeqN0Wb6iKCWqQPquwh5RkKQOTZ1xHoCjmc_S2oXofIZf_W6rkB1i7jLPw3dGtw8DoTzBn9LaXTmSHh8FXxcINyNMLKMIjF3p0x2zX21Fcs4PmndRBjdCnadfHV5c8RNg_4VVAg4Gc2Q5SYtWYx6SKVajYU8IMCa3bo4_GjVxNXRjJcXeXjQgZEsnKgvZ5rEx9bQCsVqEsVM6PBfhTBycMMxylfNYGqn9C5Tbd_bJR3Q4VX2VOFaO_hMHyiRDW4ybX3H1cL7uc7DKUecoLyS2QBu3AeTsj8aTmRoaZksirJUiu9M0uePmEmw-wEUZ9a86OYKFMXs4lE4YGZoyj4Wpyt2E5-vAvvIv9l369L1yO-8c5SBYR6siVB8i6y_jXNwcywHu14y57WbhxxB5YMIPCUORwXZzosLUBQy_FccwSWG89MnAhS9khCcjUa7rnDCifYc-_JajrDqy0iXXUPu821ucNSsBuJ-GFU4_V3-TofNWsWwKajAgmM4-90K_8SeXupAhEr1mOsLPqTdgclYbUHUwbQnyK7Wz1PKD4T5wo9iBZOv0dkvYaLDZ8nAKezb74ulig49jq0p-zdIlNCnWlHbUDbcucCtgKtBGfc"
+  await page.goto(url);
+
+  await page.waitForSelector("#loaded", {
+    timeout: 10000,
+  });
+  const buffer = await page.screenshot({
+    captureBeyondViewport: false,
+    clip,
+    path: "/Users/cburt/Downloads/puppeteer3.png",
+  });
+
+  const form = new FormData();
+  const resized = await sharp(buffer).withMetadata({ density: 144 });
+  console.log(await resized.metadata());
+  form.append(
+    "file",
+    new Blob([await resized.withMetadata({ density: 144 }).toBuffer()]),
+    `${bookmark}.png`
   );
 
-  // Set screen size
-  await page.setViewport({ width: 1821, height: 1304, deviceScaleFactor: 2 });
+  const options: RequestInit = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${CLOUDFLARE_IMAGES_TOKEN}`,
+    },
+  };
 
-  await page.waitForTimeout(500);
-  await page.waitForNetworkIdle({ timeout: 10000 });
-  await page.waitForTimeout(500);
-  await page.waitForNetworkIdle({ timeout: 10000 });
-  await page.waitForTimeout(500);
-  await page.screenshot({
-    captureBeyondViewport: false,
-    path: "/Users/cburt/Downloads/puppeteer.png",
-  });
-  await browser.close();
-  process.exit();
+  options.body = form;
+
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_IMAGES_ACCOUNT}/images/v1`,
+    options
+  );
+  try {
+    const data = await response.json();
+    console.log(data);
+    await browser.close();
+    process.exit();
+  } catch (e) {
+    console.error(e);
+    const text = await response.text();
+    console.log(text);
+    process.exit(-1);
+  }
 })();

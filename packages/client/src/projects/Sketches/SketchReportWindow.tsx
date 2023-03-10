@@ -39,6 +39,7 @@ export default function SketchReportWindow({
     fetchPolicy: "cache-first",
   });
 
+  console.log({ reportingAccessToken });
   // eslint-disable-next-line i18next/no-literal-string
   const frameId = `${sketchId}-report-iframe`;
   const [iframeLoading, setIframeLoading] = useState(true);

@@ -230,6 +230,7 @@ mutation CreateMapBookmark(
   $style: JSON!
   $mapDimensions: [Int!]!
   $visibleSketches: [Int!]!
+  $sidebarState: JSON
 ) {
   createMapBookmark(
     input: {
@@ -242,6 +243,7 @@ mutation CreateMapBookmark(
       style: $style
       mapDimensions: $mapDimensions
       visibleSketches: $visibleSketches
+      sidebarState: $sidebarState
     }
   ) {
     mapBookmark {

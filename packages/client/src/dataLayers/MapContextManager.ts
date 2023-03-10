@@ -50,6 +50,7 @@ import md5 from "md5";
 import useAccessToken from "../useAccessToken";
 import LRU from "lru-cache";
 import debounce from "lodash.debounce";
+import { currentSidebarState } from "../projects/ProjectAppSidebar";
 
 const graphqlURL = new URL(
   process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
@@ -1812,6 +1813,8 @@ class MapContextManager {
       }
     }
     const canvas = this.map.getCanvas();
+    const sidebarState = currentSidebarState();
+    console.log({ sidebarState });
     return {
       cameraOptions: {
         center: this.map.getCenter().toArray(),
@@ -1824,7 +1827,8 @@ class MapContextManager {
       visibleDataLayers,
       selectedBasemap: parseInt(this.internalState.selectedBasemap!),
       style: this.map.getStyle(),
-      mapDimensions: [canvas.width, canvas.height],
+      mapDimensions: [canvas.clientWidth, canvas.clientHeight],
+      sidebarState,
       visibleSketches,
     };
   }
