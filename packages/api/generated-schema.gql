@@ -6647,15 +6647,14 @@ type MapBookmark {
   blurhash: JSON
   cameraOptions: JSON!
   id: UUID!
+  imageId: String
   isPublic: Boolean!
   mapDimensions: [Int]!
   postId: Int
   projectId: Int
-  screenshotUrl: String
   selectedBasemap: Int!
   sidebarState: JSON
   style: JSON!
-  thumbnailUrl: String
   visibleDataLayers: [String]!
   visibleSketches: [Int]
 }

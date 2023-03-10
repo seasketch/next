@@ -58,3 +58,7 @@ create or replace function bookmark_data(id text)
 
 grant execute on function bookmark_data to anon;
 comment on function bookmark_data is '@omit';
+alter table map_bookmarks drop column if exists screenshot_url;
+alter table map_bookmarks drop column if exists thumbnail_url;
+alter table map_bookmarks add column if not exists image_id text;
+grant select(image_id) on map_bookmarks to anon;
