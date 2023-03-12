@@ -26,6 +26,8 @@ import {
 import { MapContext } from "../../dataLayers/MapContextManager";
 import getSlug from "../../getSlug";
 import BookmarksList from "./BookmarksList";
+import { AnimatePresence } from "framer-motion";
+import BookmarkItem from "./BookmarkItem";
 
 export default function PostContentEditor({
   initialContent,
@@ -126,7 +128,7 @@ export default function PostContentEditor({
           if (id && type === "MapBookmark") {
             const attachment = bookmarkAttachments.find((b) => b.id === id);
             if (attachment && mapContext.manager) {
-              mapContext.manager.showMapBookmark(attachment.attachment);
+              mapContext.manager.showMapBookmark(attachment.data);
             }
           }
         }
@@ -249,6 +251,17 @@ export default function PostContentEditor({
     [state, onSubmit, accessibleSketchIds]
   );
 
+  const removeBookmark = useCallback(
+    (id: string) => {
+      if (!viewRef.current) {
+        throw new Error("viewRef not set");
+      } // remove attachment from state
+      viewRef.current.focus();
+      deleteBookmark(id, viewRef.current.state, viewRef.current.dispatch);
+    },
+    [viewRef, deleteBookmark]
+  );
+
   return (
     <>
       <div className="flex flex-col" style={{ minHeight: 300 }}>
@@ -259,19 +272,29 @@ export default function PostContentEditor({
           onKeyDown={onKeyDown}
           ref={root}
         ></div>
-        <BookmarksList
-          removeBookmark={(id: string) => {
-            if (!viewRef.current) {
-              throw new Error("viewRef not set");
-            } // remove attachment from state
-            viewRef.current.focus();
-            deleteBookmark(id, viewRef.current.state, viewRef.current.dispatch);
-          }}
-          highlightedBookmarkId={hoveredBookmarkId}
-          onHover={(id) => setHoveredBookmarkId(id || null)}
-          bookmarks={bookmarkAttachments}
-          errors={bookmarkErrors}
-        />
+
+        <div
+          className={
+            bookmarkAttachments.length > 0
+              ? ` border-t border-gray-50 pb-2`
+              : ""
+          }
+        >
+          <AnimatePresence initial={false}>
+            {bookmarkAttachments.map((attachment) => (
+              <BookmarkItem
+                key={attachment.data.id}
+                bookmark={attachment.data}
+                removeBookmark={removeBookmark}
+                highlighted={Boolean(hoveredBookmarkId === attachment.data.id)}
+                onHover={(id) => setHoveredBookmarkId(id || null)}
+                hasErrors={Boolean(
+                  bookmarkErrors.find((e) => e.id === attachment.data.id)
+                )}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
       <EditorMenuBar
         createMapBookmark={createMapBookmark}
@@ -313,7 +336,7 @@ function placeCaretAtEnd(el: HTMLElement) {
 
 export type MapBookmarkAttachment = {
   type: "MapBookmark";
-  attachment: MapBookmarkDetailsFragment;
+  data: MapBookmarkDetailsFragment;
   id: string;
 };
 
@@ -355,7 +378,7 @@ function attachmentsFromState(state: Node): MapBookmarkAttachment[] {
     if (node !== null) {
       const attachments: MapBookmarkAttachment[] = [];
       (node as Node).forEach((n) => {
-        if (n.attrs?.attachment) {
+        if (n.attrs?.data) {
           attachments.push(n.attrs as MapBookmarkAttachment);
         }
       });
@@ -396,7 +419,7 @@ function getBookmarkErrors(state: EditorState, accessibleSketchIds: number[]) {
       }
     });
     for (const node of bookmarks) {
-      const data = node.attrs.attachment;
+      const data = node.attrs.data;
       for (const id of data.visibleSketches) {
         if (
           existingSketchIds.indexOf(id) === -1 &&

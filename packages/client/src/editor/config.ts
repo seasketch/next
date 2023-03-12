@@ -124,7 +124,7 @@ const forumPostSchema = new Schema({
         attrs: {
           id: {},
           type: {},
-          attachment: {},
+          data: {},
         },
         content: "text*",
         group: "block",
@@ -137,7 +137,7 @@ const forumPostSchema = new Schema({
               return {
                 id: dom.getAttribute("data-attachment-id"),
                 type: dom.getAttribute("data-type"),
-                attachment: JSON.parse(dom.getAttribute("data-attachment")),
+                data: JSON.parse(dom.getAttribute("data-attachment")),
               };
             },
           },
@@ -145,7 +145,7 @@ const forumPostSchema = new Schema({
         toDOM: (node: Node) => {
           const id = node.attrs.id;
           const type = node.attrs.type;
-          const data = node.attrs.attachment;
+          const data = node.attrs.data;
           return [
             "div",
             {

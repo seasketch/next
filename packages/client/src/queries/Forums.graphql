@@ -17,6 +17,9 @@ fragment ForumPost on Post {
   topicId
   html
   sketchIds
+  mapBookmarks {
+    ...MapBookmarkDetails
+  }
 }
 
 fragment RecentPost on Post {
@@ -208,8 +211,7 @@ subscription NewPosts($slug: String!) {
 
 fragment MapBookmarkDetails on MapBookmark {
   id
-  thumbnailUrl
-  screenshotUrl
+  imageId
   basemapOptionalLayerStates
   cameraOptions
   projectId
@@ -218,6 +220,12 @@ fragment MapBookmarkDetails on MapBookmark {
   mapDimensions
   blurhash
   visibleSketches
+}
+
+query GetBookmark($id: UUID!) {
+  bookmarkById(id: $id) {
+    ...MapBookmarkDetails
+  }
 }
 
 mutation CreateMapBookmark(

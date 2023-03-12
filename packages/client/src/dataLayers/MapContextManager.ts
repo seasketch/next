@@ -1814,7 +1814,6 @@ class MapContextManager {
     }
     const canvas = this.map.getCanvas();
     const sidebarState = currentSidebarState();
-    console.log({ sidebarState });
     return {
       cameraOptions: {
         center: this.map.getCenter().toArray(),
@@ -1833,7 +1832,7 @@ class MapContextManager {
     };
   }
 
-  showMapBookmark(
+  async showMapBookmark(
     bookmark: Pick<
       MapBookmarkDetailsFragment,
       | "cameraOptions"

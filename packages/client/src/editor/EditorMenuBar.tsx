@@ -548,7 +548,7 @@ export function attachBookmark(
     forumPosts.schema.nodes.attachment.create({
       type: "MapBookmark",
       id: bookmark.id,
-      attachment: bookmark,
+      data: bookmark,
     })
   );
   const selection = state.selection;

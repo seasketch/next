@@ -6644,7 +6644,7 @@ type MapBookmark {
   """Reads a single `Basemap` that is related to this `MapBookmark`."""
   basemapBySelectedBasemap: Basemap
   basemapOptionalLayerStates: JSON
-  blurhash: JSON
+  blurhash: String
   cameraOptions: JSON!
   id: UUID!
   imageId: String
@@ -9007,6 +9007,7 @@ type Post implements Node {
   """
   authorProfile: Profile
   blurb: String
+  bookmarkAttachmentIds: [UUID]!
   createdAt: Datetime!
 
   """
@@ -10239,6 +10240,7 @@ type Query implements Node {
     """The method to use when ordering `Basemap`."""
     orderBy: [BasemapsOrderBy!] = [PRIMARY_KEY_ASC]
   ): BasemapsConnection
+  bookmarkById(id: UUID): MapBookmark
 
   """
   GraphQL server software build identifier. During a deployment, if changes are

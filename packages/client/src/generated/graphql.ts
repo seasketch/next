@@ -5699,18 +5699,17 @@ export type MapBookmark = {
   /** Reads a single `Basemap` that is related to this `MapBookmark`. */
   basemapBySelectedBasemap?: Maybe<Basemap>;
   basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
-  blurhash?: Maybe<Scalars['JSON']>;
+  blurhash?: Maybe<Scalars['String']>;
   cameraOptions: Scalars['JSON'];
   id: Scalars['UUID'];
+  imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
   mapDimensions: Array<Maybe<Scalars['Int']>>;
   postId?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
-  screenshotUrl?: Maybe<Scalars['String']>;
   selectedBasemap: Scalars['Int'];
   sidebarState?: Maybe<Scalars['JSON']>;
   style: Scalars['JSON'];
-  thumbnailUrl?: Maybe<Scalars['String']>;
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
   visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
@@ -8017,6 +8016,7 @@ export type Post = Node & {
   /** User Profile of the author. If a user has not shared their profile the post message will be hidden. */
   authorProfile?: Maybe<Profile>;
   blurb?: Maybe<Scalars['String']>;
+  bookmarkAttachmentIds: Array<Maybe<Scalars['UUID']>>;
   createdAt: Scalars['Datetime'];
   /**
    * If set, the post has been hidden by a project admin. Contents of the post will
@@ -9084,6 +9084,7 @@ export type Query = Node & {
   basemapByNodeId?: Maybe<Basemap>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection?: Maybe<BasemapsConnection>;
+  bookmarkById?: Maybe<MapBookmark>;
   /**
    * GraphQL server software build identifier. During a deployment, if changes are
    * not detected in software modules some may be skipped. So, client and server
@@ -9343,6 +9344,12 @@ export type QueryBasemapsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryBookmarkByIdArgs = {
+  id?: Maybe<Scalars['UUID']>;
 };
 
 
@@ -15387,7 +15394,10 @@ export type ForumPostFragment = (
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
-  )> }
+  )>, mapBookmarks?: Maybe<Array<(
+    { __typename?: 'MapBookmark' }
+    & MapBookmarkDetailsFragment
+  )>> }
 );
 
 export type RecentPostFragment = (
@@ -15617,7 +15627,20 @@ export type NewPostsSubscription = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'thumbnailUrl' | 'screenshotUrl' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches'>
+  & Pick<MapBookmark, 'id' | 'imageId' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches'>
+);
+
+export type GetBookmarkQueryVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type GetBookmarkQuery = (
+  { __typename?: 'Query' }
+  & { bookmarkById?: Maybe<(
+    { __typename?: 'MapBookmark' }
+    & MapBookmarkDetailsFragment
+  )> }
 );
 
 export type CreateMapBookmarkMutationVariables = Exact<{
@@ -18557,6 +18580,20 @@ export const AuthorProfileFragmentDoc = gql`
   userId
 }
     `;
+export const MapBookmarkDetailsFragmentDoc = gql`
+    fragment MapBookmarkDetails on MapBookmark {
+  id
+  imageId
+  basemapOptionalLayerStates
+  cameraOptions
+  projectId
+  selectedBasemap
+  visibleDataLayers
+  mapDimensions
+  blurhash
+  visibleSketches
+}
+    `;
 export const ForumPostFragmentDoc = gql`
     fragment ForumPost on Post {
   id
@@ -18568,8 +18605,12 @@ export const ForumPostFragmentDoc = gql`
   topicId
   html
   sketchIds
+  mapBookmarks {
+    ...MapBookmarkDetails
+  }
 }
-    ${AuthorProfileFragmentDoc}`;
+    ${AuthorProfileFragmentDoc}
+${MapBookmarkDetailsFragmentDoc}`;
 export const RecentPostFragmentDoc = gql`
     fragment RecentPost on Post {
   ...ForumPost
@@ -18631,21 +18672,6 @@ export const ForumTopicFragmentDoc = gql`
   }
 }
     ${AuthorProfileFragmentDoc}`;
-export const MapBookmarkDetailsFragmentDoc = gql`
-    fragment MapBookmarkDetails on MapBookmark {
-  id
-  thumbnailUrl
-  screenshotUrl
-  basemapOptionalLayerStates
-  cameraOptions
-  projectId
-  selectedBasemap
-  visibleDataLayers
-  mapDimensions
-  blurhash
-  visibleSketches
-}
-    `;
 export const SpriteDetailsFragmentDoc = gql`
     fragment SpriteDetails on Sprite {
   id
@@ -23197,6 +23223,41 @@ export function useNewPostsSubscription(baseOptions: Apollo.SubscriptionHookOpti
       }
 export type NewPostsSubscriptionHookResult = ReturnType<typeof useNewPostsSubscription>;
 export type NewPostsSubscriptionResult = Apollo.SubscriptionResult<NewPostsSubscription>;
+export const GetBookmarkDocument = gql`
+    query GetBookmark($id: UUID!) {
+  bookmarkById(id: $id) {
+    ...MapBookmarkDetails
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
+
+/**
+ * __useGetBookmarkQuery__
+ *
+ * To run a query within a React component, call `useGetBookmarkQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetBookmarkQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetBookmarkQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetBookmarkQuery(baseOptions: Apollo.QueryHookOptions<GetBookmarkQuery, GetBookmarkQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GetBookmarkQuery, GetBookmarkQueryVariables>(GetBookmarkDocument, options);
+      }
+export function useGetBookmarkLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GetBookmarkQuery, GetBookmarkQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GetBookmarkQuery, GetBookmarkQueryVariables>(GetBookmarkDocument, options);
+        }
+export type GetBookmarkQueryHookResult = ReturnType<typeof useGetBookmarkQuery>;
+export type GetBookmarkLazyQueryHookResult = ReturnType<typeof useGetBookmarkLazyQuery>;
+export type GetBookmarkQueryResult = Apollo.QueryResult<GetBookmarkQuery, GetBookmarkQueryVariables>;
 export const CreateMapBookmarkDocument = gql`
     mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!, $sidebarState: JSON) {
   createMapBookmark(
@@ -27959,6 +28020,7 @@ export const namedOperations = {
     TopicList: 'TopicList',
     BreadcrumbTopic: 'BreadcrumbTopic',
     TopicDetail: 'TopicDetail',
+    GetBookmark: 'GetBookmark',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',

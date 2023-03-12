@@ -15,6 +15,7 @@ import { useLocation } from "react-router-dom";
 import { MapBookmarkAttachment } from "./PostContentEditor";
 import BookmarksList from "./BookmarksList";
 import { MapContext } from "../../dataLayers/MapContextManager";
+import BookmarkItem from "./BookmarkItem";
 
 type SketchPortal = {
   items: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[];
@@ -79,24 +80,13 @@ export default function ForumPost({
         }
       }
       setSketchPortals(portals);
-      const attachments: MapBookmarkAttachment[] = [];
-      for (const el of bodyRef.querySelectorAll(
-        "[attachments] [data-attachment-id]"
-      )) {
-        const str = el.getAttribute("data-attachment");
-        if (str) {
-          try {
-            const data = JSON.parse(str);
-            if (el.getAttribute("data-type") === "MapBookmark") {
-              attachments.push({
-                id: data.id,
-                type: "MapBookmark",
-                attachment: data,
-              });
-            }
-          } catch (e) {}
-        }
-      }
+      const attachments: MapBookmarkAttachment[] = (
+        post.mapBookmarks || []
+      ).map((b) => ({
+        id: b.id,
+        type: "MapBookmark",
+        data: b,
+      }));
       setBookmarks(attachments);
       const clickHandler = (e: Event) => {
         if (e.target instanceof Element && e.target.tagName === "BUTTON") {
@@ -105,7 +95,7 @@ export default function ForumPost({
           if (id && type === "MapBookmark") {
             const attachment = attachments.find((b) => b.id === id);
             if (attachment && mapContext.manager) {
-              mapContext.manager.showMapBookmark(attachment.attachment);
+              mapContext.manager.showMapBookmark(attachment.data);
             }
           }
         }
@@ -199,12 +189,22 @@ export default function ForumPost({
         ref={setBodyRef}
         dangerouslySetInnerHTML={{ __html: post.html }}
       />
-      <BookmarksList
-        highlightedBookmarkId={hoveredBookmarkId}
-        onHover={setHoveredBookmarkId}
-        className="p-2 pt-1"
-        bookmarks={bookmarks}
-      />
+      <div
+        className={
+          bookmarks.length > 0 ? ` border-t border-gray-50 -mt-1 p-2 pt-1` : ""
+        }
+      >
+        {bookmarks.map((attachment) => (
+          <BookmarkItem
+            key={attachment.data.id}
+            bookmark={attachment.data}
+            highlighted={Boolean(hoveredBookmarkId === attachment.data.id)}
+            onHover={setHoveredBookmarkId}
+            hasErrors={false}
+          />
+        ))}
+        <div className="clear-both"></div>
+      </div>
       {sketchPortals.map((portal) => {
         return createPortal(
           <ForumTreeView
