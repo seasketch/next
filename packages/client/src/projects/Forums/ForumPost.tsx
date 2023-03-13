@@ -194,7 +194,7 @@ export default function ForumPost({
           bookmarks.length > 0 ? ` border-t border-gray-50 -mt-1 p-2 pt-1` : ""
         }
       >
-        {bookmarks.map((attachment) => (
+        {/* {bookmarks.map((attachment) => (
           <BookmarkItem
             key={attachment.data.id}
             bookmark={attachment.data}
@@ -202,7 +202,7 @@ export default function ForumPost({
             onHover={setHoveredBookmarkId}
             hasErrors={false}
           />
-        ))}
+        ))} */}
         <div className="clear-both"></div>
       </div>
       {sketchPortals.map((portal) => {

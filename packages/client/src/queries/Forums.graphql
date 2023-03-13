@@ -259,3 +259,12 @@ mutation CreateMapBookmark(
     }
   }
 }
+
+subscription MapBookmark($id: UUID!) {
+  updatedMapBookmark(id: $id) {
+    bookmarkId
+    bookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}

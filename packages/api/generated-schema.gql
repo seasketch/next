@@ -598,6 +598,11 @@ strings and not numbers.
 """
 scalar BigInt
 
+type BookmarkPayload {
+  bookmark: MapBookmark
+  bookmarkId: UUID!
+}
+
 type CacheableOfflineAsset {
   """
   If provided, is a "bare" url with query strings such as access_token
@@ -12058,6 +12063,9 @@ type Subscription {
   x-ss-slug to determine appropriate project.
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
+
+  """Triggered when a map bookmark is updated"""
+  updatedMapBookmark(id: UUID!): BookmarkPayload
 }
 
 type Survey implements Node {

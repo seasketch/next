@@ -502,6 +502,12 @@ export enum BasemapsOrderBy {
 
 
 
+export type BookmarkPayload = {
+  __typename?: 'BookmarkPayload';
+  bookmark?: Maybe<MapBookmark>;
+  bookmarkId: Scalars['UUID'];
+};
+
 export type CacheableOfflineAsset = {
   __typename?: 'CacheableOfflineAsset';
   /**
@@ -11007,12 +11013,20 @@ export type Subscription = {
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+  /** Triggered when a map bookmark is updated */
+  updatedMapBookmark?: Maybe<BookmarkPayload>;
 };
 
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
   slug: Scalars['String'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionUpdatedMapBookmarkArgs = {
+  id: Scalars['UUID'];
 };
 
 export type Survey = Node & {
@@ -15660,6 +15674,23 @@ export type CreateMapBookmarkMutation = (
   & { createMapBookmark?: Maybe<(
     { __typename?: 'CreateMapBookmarkPayload' }
     & { mapBookmark?: Maybe<(
+      { __typename?: 'MapBookmark' }
+      & MapBookmarkDetailsFragment
+    )> }
+  )> }
+);
+
+export type MapBookmarkSubscriptionVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type MapBookmarkSubscription = (
+  { __typename?: 'Subscription' }
+  & { updatedMapBookmark?: Maybe<(
+    { __typename?: 'BookmarkPayload' }
+    & Pick<BookmarkPayload, 'bookmarkId'>
+    & { bookmark?: Maybe<(
       { __typename?: 'MapBookmark' }
       & MapBookmarkDetailsFragment
     )> }
@@ -20702,6 +20733,16 @@ export const CreateMapBookmarkDocument = /*#__PURE__*/ gql`
   }
 }
     ${MapBookmarkDetailsFragmentDoc}`;
+export const MapBookmarkDocument = /*#__PURE__*/ gql`
+    subscription MapBookmark($id: UUID!) {
+  updatedMapBookmark(id: $id) {
+    bookmarkId
+    bookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -22522,6 +22563,7 @@ export const namedOperations = {
   },
   Subscription: {
     NewPosts: 'NewPosts',
+    MapBookmark: 'MapBookmark',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {

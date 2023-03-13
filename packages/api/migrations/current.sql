@@ -154,3 +154,22 @@ alter table map_bookmarks drop column if exists blurhash;
 alter table map_bookmarks add column if not exists blurhash text;
 
 grant select(blurhash) on map_bookmarks to anon;
+
+
+
+create or replace function on_map_bookmark_update() 
+  returns trigger 
+  security definer
+  language plpgsql
+  as $$
+    begin
+      raise notice 'rtu=%', concat('graphql:mapBookmark:', NEW.id, ':update');
+      perform pg_notify(concat('graphql:mapBookmark:', NEW.id, ':update'), json_build_object('bookmarkId', NEW.id)::text);
+      return new;
+    end;
+  $$;
+
+DROP TRIGGER IF EXISTS on_map_bookmark_update_trigger ON map_bookmarks;
+CREATE TRIGGER on_map_bookmark_update_trigger
+    AFTER UPDATE ON map_bookmarks
+    FOR EACH ROW EXECUTE PROCEDURE on_map_bookmark_update();

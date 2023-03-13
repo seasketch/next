@@ -504,6 +504,12 @@ export enum BasemapsOrderBy {
 
 
 
+export type BookmarkPayload = {
+  __typename?: 'BookmarkPayload';
+  bookmark?: Maybe<MapBookmark>;
+  bookmarkId: Scalars['UUID'];
+};
+
 export type CacheableOfflineAsset = {
   __typename?: 'CacheableOfflineAsset';
   /**
@@ -11009,12 +11015,20 @@ export type Subscription = {
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+  /** Triggered when a map bookmark is updated */
+  updatedMapBookmark?: Maybe<BookmarkPayload>;
 };
 
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
   slug: Scalars['String'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionUpdatedMapBookmarkArgs = {
+  id: Scalars['UUID'];
 };
 
 export type Survey = Node & {
@@ -15662,6 +15676,23 @@ export type CreateMapBookmarkMutation = (
   & { createMapBookmark?: Maybe<(
     { __typename?: 'CreateMapBookmarkPayload' }
     & { mapBookmark?: Maybe<(
+      { __typename?: 'MapBookmark' }
+      & MapBookmarkDetailsFragment
+    )> }
+  )> }
+);
+
+export type MapBookmarkSubscriptionVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type MapBookmarkSubscription = (
+  { __typename?: 'Subscription' }
+  & { updatedMapBookmark?: Maybe<(
+    { __typename?: 'BookmarkPayload' }
+    & Pick<BookmarkPayload, 'bookmarkId'>
+    & { bookmark?: Maybe<(
       { __typename?: 'MapBookmark' }
       & MapBookmarkDetailsFragment
     )> }
@@ -23304,6 +23335,39 @@ export function useCreateMapBookmarkMutation(baseOptions?: Apollo.MutationHookOp
 export type CreateMapBookmarkMutationHookResult = ReturnType<typeof useCreateMapBookmarkMutation>;
 export type CreateMapBookmarkMutationResult = Apollo.MutationResult<CreateMapBookmarkMutation>;
 export type CreateMapBookmarkMutationOptions = Apollo.BaseMutationOptions<CreateMapBookmarkMutation, CreateMapBookmarkMutationVariables>;
+export const MapBookmarkDocument = gql`
+    subscription MapBookmark($id: UUID!) {
+  updatedMapBookmark(id: $id) {
+    bookmarkId
+    bookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
+
+/**
+ * __useMapBookmarkSubscription__
+ *
+ * To run a query within a React component, call `useMapBookmarkSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMapBookmarkSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMapBookmarkSubscription({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useMapBookmarkSubscription(baseOptions: Apollo.SubscriptionHookOptions<MapBookmarkSubscription, MapBookmarkSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<MapBookmarkSubscription, MapBookmarkSubscriptionVariables>(MapBookmarkDocument, options);
+      }
+export type MapBookmarkSubscriptionHookResult = ReturnType<typeof useMapBookmarkSubscription>;
+export type MapBookmarkSubscriptionResult = Apollo.SubscriptionResult<MapBookmarkSubscription>;
 export const SpritesDocument = gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -28195,6 +28259,7 @@ export const namedOperations = {
   },
   Subscription: {
     NewPosts: 'NewPosts',
+    MapBookmark: 'MapBookmark',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {

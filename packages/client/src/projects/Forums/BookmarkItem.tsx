@@ -1,18 +1,17 @@
-import { MapBookmarkAttachment } from "./PostContentEditor";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Spinner from "../../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 import {
   MapBookmarkDetailsFragment,
-  useGetBookmarkLazyQuery,
   useGetBookmarkQuery,
+  useMapBookmarkSubscription,
 } from "../../generated/graphql";
 import { useEffect, useState } from "react";
-import { decode } from "blurhash";
 import { Blurhash } from "react-blurhash";
+import { Trans } from "react-i18next";
 
 export default function BookmarkItem({
   bookmark,
@@ -30,31 +29,23 @@ export default function BookmarkItem({
   const mapContext = useContext(MapContext);
   const sketchUIContext = useContext(SketchUIStateContext);
 
-  const { data, loading, error, refetch, stopPolling, startPolling } =
-    useGetBookmarkQuery({
-      variables: {
-        id: bookmark.id,
-      },
-      skip: Boolean(bookmark.imageId),
-      // pollInterval: 800,
-    });
+  const { data } = useGetBookmarkQuery({
+    variables: {
+      id: bookmark.id,
+    },
+    fetchPolicy: "cache-first",
+    skip: Boolean(bookmark.imageId),
+  });
+
+  useMapBookmarkSubscription({
+    variables: {
+      id: bookmark.id,
+    },
+    shouldResubscribe: true,
+    skip: Boolean(bookmark.imageId),
+  });
 
   const [imageLoaded, setImageLoaded] = useState(false);
-
-  useEffect(() => {
-    if (bookmark.imageId || data?.bookmarkById?.imageId) {
-      stopPolling();
-    } else {
-      startPolling(200);
-    }
-  }, [
-    data?.bookmarkById?.imageId,
-    bookmark.imageId,
-    stopPolling,
-    bookmark.id,
-    startPolling,
-    data,
-  ]);
 
   return (
     <motion.button
@@ -71,15 +62,15 @@ export default function BookmarkItem({
           }
         }
       }}
-      initial={{ opacity: 0, translateX: 200 }}
-      animate={{ opacity: 1, translateX: 0 }}
+      initial={{ opacity: 0.2, scale: 0.25 }}
+      animate={{ opacity: 1, scale: 1 }}
       title={
         hasErrors
           ? "Bookmark refers to sketches that are no longer posted"
           : undefined
       }
       exit={{ opacity: 0, scale: 0.25 }}
-      className={`group box-content transform float-left ml-3.5 mt-2.5 rounded w-24 2xl:w-27 h-14 2xl:h-16 2xl:ml-2 2xl:mt-2 shadow-sm relative ${
+      className={`group overflow-hidden box-content transform float-left ml-3.5 mt-2.5 rounded w-24 2xl:w-27 h-14 2xl:h-16 2xl:ml-2 2xl:mt-2 shadow-sm relative ${
         !bookmark.imageId && !bookmark.blurhash ? "bg-gray-50" : ""
       } ${
         hasErrors
@@ -108,15 +99,12 @@ export default function BookmarkItem({
       {!data?.bookmarkById?.blurhash && (
         <div className="flex flex-col items-center justify-center w-full h-full">
           <Spinner />
+          <span className="text-xs mt-1 text-gray-300">
+            <Trans>creating preview</Trans>
+          </span>
         </div>
       )}
       {(bookmark.blurhash || data?.bookmarkById?.blurhash) && (
-        // <motion.div
-        //   initial={{ opacity: 0 }}
-        //   animate={{ opacity: 1 }}
-        //   exit={{ opacity: 0 }}
-        //   className="w-full h-full"
-        // >
         <div className="absolute top-0 left-0 w-full h-full">
           <Blurhash
             hash={bookmark.blurhash || data?.bookmarkById?.blurhash!}
@@ -132,7 +120,6 @@ export default function BookmarkItem({
             </div>
           )}
         </div>
-        // </motion.div>
       )}
       {(bookmark.imageId || data?.bookmarkById?.imageId) && (
         <motion.img
@@ -147,24 +134,6 @@ export default function BookmarkItem({
             bookmark.imageId || data?.bookmarkById?.imageId
           }/thumbnail`}
         />
-        // <motion.div
-        //   initial={{ opacity: 0 }}
-        //   animate={{ opacity: 1 }}
-        //   exit={{ opacity: 0 }}
-        //   className="absolute top-0 left-0 w-full h-full"
-        //   style={
-        //     bookmark.imageId || data?.bookmarkById?.imageId
-        //       ? {
-        //           backgroundImage: `url(https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/${
-        //             bookmark.imageId || data?.bookmarkById?.imageId
-        //           }/thumbnail)`,
-        //           backgroundSize: "cover",
-        //           filter: "contrast(110%)",
-        //           backgroundPosition: "center",
-        //         }
-        //       : {}
-        //   }
-        // ></motion.div>
       )}
     </motion.button>
   );

@@ -1,16 +1,36 @@
 import { Helpers } from "graphile-worker";
-import puppeteer, { ScreenshotOptions } from "puppeteer";
+import puppeteer, { Browser, ScreenshotOptions } from "puppeteer";
 import sharp from "sharp";
 import { encode } from "blurhash";
-import { sign, verify } from "../src/auth/jwks";
+import { sign } from "../src/auth/jwks";
 const HOST = process.env.HOST || "seasketch.org";
 
 const CLOUDFLARE_IMAGES_TOKEN = process.env.CLOUDFLARE_IMAGES_TOKEN;
+
+const _browser = puppeteer.launch({
+  headless: true,
+  defaultViewport: {
+    deviceScaleFactor: 2,
+    width: 1280,
+    height: 1024,
+  },
+});
+
+function getBrowser() {
+  return _browser;
+}
+
+// TODO: Limit queue to 3 at one time
+// TODO: Rate-limit create bookmark mutation by client
+// TODO: Handle errors better
+// TODO: assign proper dpi
+// TODO: error handling (attemp a couple times, then report error to the user)
 
 async function createBookmarkScreenshot(
   payload: { id: string },
   helpers: Helpers
 ) {
+  console.time("setup");
   await helpers.withPgClient(async (client) => {
     const { rows } = await client.query(
       `
@@ -67,15 +87,15 @@ async function createBookmarkScreenshot(
       };
     }
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      defaultViewport: {
-        deviceScaleFactor: 2,
-        width,
-        height,
-      },
-    });
+    console.timeEnd("setup");
+    console.time("take screenshot");
+    const browser = await getBrowser();
     const page = await browser.newPage();
+    page.setViewport({
+      width,
+      height,
+      deviceScaleFactor: 2,
+    });
 
     await page.goto(url);
 
@@ -85,33 +105,36 @@ async function createBookmarkScreenshot(
     const buffer = await page.screenshot({
       captureBeyondViewport: false,
       clip,
-      path: "/Users/cburt/Downloads/puppeteer4.png",
     });
 
+    console.timeEnd("take screenshot");
+    console.time("resize");
     const form = new FormData();
-    const resized = await sharp(buffer).withMetadata({ density: 144 });
-    const resizedBuffer = await resized
+    const { data: resizedBuffer, info: resizedMetadata } = await sharp(buffer)
       .withMetadata({ density: 144 })
-      .toBuffer();
+      .toBuffer({ resolveWithObject: true });
 
     const { data: pixels, info: metadata } = await sharp(buffer)
-      .resize(Math.round(width / 8), Math.round(height / 8))
+      .resize(Math.round(clip!.width / 10), Math.round(clip!.height / 10))
       .raw()
       .toBuffer({ resolveWithObject: true });
+    console.timeEnd("resize");
+    console.time("blurhash");
     const blurhash = encode(
       new Uint8ClampedArray(pixels),
-      metadata.width!,
-      metadata.height!,
-      4,
-      4
+      metadata.width,
+      metadata.height,
+      3,
+      3
     );
-    console.log(blurhash);
+    console.timeEnd("blurhash");
     await client.query(`update map_bookmarks set blurhash = $1 where id = $2`, [
       blurhash,
       bookmark.id,
     ]);
 
-    form.append("file", new Blob([resizedBuffer]), `${bookmark.id}.png`);
+    console.time("upload");
+    form.append("file", new Blob([buffer]), `${bookmark.id}.png`);
 
     const options: RequestInit = {
       method: "POST",
@@ -127,11 +150,11 @@ async function createBookmarkScreenshot(
       options
     );
     const data = await response.json();
+    console.timeEnd("upload");
     await client.query(
       `update map_bookmarks set image_id = $2, blurhash = $3 where id = $1`,
       [bookmark.id, data.result.id, blurhash]
     );
-    // await browser.close();
   });
 }
 export default createBookmarkScreenshot;
