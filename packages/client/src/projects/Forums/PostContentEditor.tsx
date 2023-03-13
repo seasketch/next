@@ -25,9 +25,9 @@ import {
 } from "../../generated/graphql";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import getSlug from "../../getSlug";
-import BookmarksList from "./BookmarksList";
 import { AnimatePresence } from "framer-motion";
 import BookmarkItem from "./BookmarkItem";
+import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 
 export default function PostContentEditor({
   initialContent,
@@ -262,6 +262,23 @@ export default function PostContentEditor({
     [viewRef, deleteBookmark]
   );
 
+  const sketchUIContext = useContext(SketchUIStateContext);
+
+  const onMapBookmarkClick = useCallback(
+    (bookmark: MapBookmarkDetailsFragment) => {
+      if (mapContext.manager) {
+        mapContext.manager.showMapBookmark(bookmark);
+        if (bookmark.visibleSketches) {
+          sketchUIContext.setVisibleSketches(
+            // eslint-disable-next-line i18next/no-literal-string
+            bookmark.visibleSketches.map((id) => `Sketch:${id}`)
+          );
+        }
+      }
+    },
+    [mapContext.manager, sketchUIContext]
+  );
+
   return (
     <>
       <div className="flex flex-col" style={{ minHeight: 300 }}>
@@ -283,6 +300,7 @@ export default function PostContentEditor({
           <AnimatePresence initial={false}>
             {bookmarkAttachments.map((attachment) => (
               <BookmarkItem
+                onClick={onMapBookmarkClick}
                 key={attachment.data.id}
                 bookmark={attachment.data}
                 removeBookmark={removeBookmark}

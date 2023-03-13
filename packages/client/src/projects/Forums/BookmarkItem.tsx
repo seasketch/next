@@ -9,7 +9,7 @@ import {
   useGetBookmarkQuery,
   useMapBookmarkSubscription,
 } from "../../generated/graphql";
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import { Blurhash } from "react-blurhash";
 import { Trans } from "react-i18next";
 
@@ -19,16 +19,15 @@ export default function BookmarkItem({
   onHover,
   hasErrors,
   highlighted,
+  onClick,
 }: {
   removeBookmark?: (id: string) => void;
   bookmark: MapBookmarkDetailsFragment;
   onHover?: (id?: string) => void;
   hasErrors: Boolean;
   highlighted?: Boolean;
+  onClick: (bookmark: MapBookmarkDetailsFragment) => void;
 }) {
-  const mapContext = useContext(MapContext);
-  const sketchUIContext = useContext(SketchUIStateContext);
-
   const { data } = useGetBookmarkQuery({
     variables: {
       id: bookmark.id,
@@ -47,21 +46,15 @@ export default function BookmarkItem({
 
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  const onBookmarkClick = useCallback(() => {
+    onClick(bookmark);
+  }, [onClick, bookmark]);
   return (
     <motion.button
       onMouseOver={onHover ? () => onHover(bookmark.id) : undefined}
       onMouseOut={onHover ? () => onHover() : undefined}
       key={bookmark.id}
-      onClick={(e) => {
-        if (mapContext.manager) {
-          mapContext.manager.showMapBookmark(bookmark);
-          if (bookmark.visibleSketches) {
-            sketchUIContext.setVisibleSketches(
-              bookmark.visibleSketches.map((id) => `Sketch:${id}`)
-            );
-          }
-        }
-      }}
+      onClick={onBookmarkClick}
       initial={{ opacity: 0.2, scale: 0.25 }}
       animate={{ opacity: 1, scale: 1 }}
       title={
@@ -69,7 +62,7 @@ export default function BookmarkItem({
           ? "Bookmark refers to sketches that are no longer posted"
           : undefined
       }
-      exit={{ opacity: 0, scale: 0.25 }}
+      // exit={{ opacity: 0, scale: 0.25 }}
       className={`group overflow-hidden box-content transform float-left ml-3.5 mt-2.5 rounded w-24 2xl:w-27 h-14 2xl:h-16 2xl:ml-2 2xl:mt-2 shadow-sm relative ${
         !bookmark.imageId && !bookmark.blurhash ? "bg-gray-50" : ""
       } ${
@@ -96,7 +89,7 @@ export default function BookmarkItem({
           <XCircleIcon />
         </button>
       )}
-      {!data?.bookmarkById?.blurhash && (
+      {!bookmark.imageId && !data?.bookmarkById?.blurhash && (
         <div className="flex flex-col items-center justify-center w-full h-full">
           <Spinner />
           <span className="text-xs mt-1 text-gray-300">

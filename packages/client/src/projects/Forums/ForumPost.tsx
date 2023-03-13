@@ -1,7 +1,15 @@
-import { useEffect, MouseEvent, useState, useMemo, useContext } from "react";
+import {
+  useEffect,
+  MouseEvent,
+  useState,
+  useMemo,
+  useContext,
+  useCallback,
+} from "react";
 import {
   AuthorProfileFragment,
   ForumPostFragment,
+  MapBookmarkDetailsFragment,
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
@@ -9,13 +17,12 @@ import InlineAuthorDetails from "./InlineAuthorDetails";
 import { motion } from "framer-motion";
 import { createPortal } from "react-dom";
 import ForumTreeView from "./ForumTreeView";
-import { LinkIcon } from "@heroicons/react/outline";
 import getSlug from "../../getSlug";
 import { useLocation } from "react-router-dom";
 import { MapBookmarkAttachment } from "./PostContentEditor";
-import BookmarksList from "./BookmarksList";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import BookmarkItem from "./BookmarkItem";
+import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 
 type SketchPortal = {
   items: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[];
@@ -152,6 +159,22 @@ export default function ForumPost({
       }
     }
   }, [bodyRef, hoveredBookmarkId]);
+  const sketchUIContext = useContext(SketchUIStateContext);
+
+  const onMapBookmarkClick = useCallback(
+    (bookmark: MapBookmarkDetailsFragment) => {
+      if (mapContext.manager) {
+        mapContext.manager.showMapBookmark(bookmark);
+        if (bookmark.visibleSketches) {
+          sketchUIContext.setVisibleSketches(
+            // eslint-disable-next-line i18next/no-literal-string
+            bookmark.visibleSketches.map((id) => `Sketch:${id}`)
+          );
+        }
+      }
+    },
+    [mapContext.manager, sketchUIContext]
+  );
 
   return (
     <motion.div
@@ -194,15 +217,16 @@ export default function ForumPost({
           bookmarks.length > 0 ? ` border-t border-gray-50 -mt-1 p-2 pt-1` : ""
         }
       >
-        {/* {bookmarks.map((attachment) => (
+        {bookmarks.map((attachment) => (
           <BookmarkItem
             key={attachment.data.id}
             bookmark={attachment.data}
             highlighted={Boolean(hoveredBookmarkId === attachment.data.id)}
             onHover={setHoveredBookmarkId}
             hasErrors={false}
+            onClick={onMapBookmarkClick}
           />
-        ))} */}
+        ))}
         <div className="clear-both"></div>
       </div>
       {sketchPortals.map((portal) => {

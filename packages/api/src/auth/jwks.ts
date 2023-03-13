@@ -170,8 +170,7 @@ export async function verify<Claims>(
         const publicKey = await getPublicKey(client, header.kid);
         callback(null, publicKey);
       } catch (e: any) {
-        console.log("error getting public key", client, header.kid);
-        callback(e, "");
+        callback(e, "Error retrieving public key");
       }
     } else {
       callback(new Error(`Token must indicate key id (kid)`), "");
