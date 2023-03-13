@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import Spinner from "../../components/Spinner";
-import { XCircleIcon } from "@heroicons/react/solid";
+import { TrashIcon } from "@heroicons/react/solid";
 import { useContext } from "react";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
@@ -62,7 +62,7 @@ export default function BookmarkItem({
           ? "Bookmark refers to sketches that are no longer posted"
           : undefined
       }
-      // exit={{ opacity: 0, scale: 0.25 }}
+      exit={{ opacity: 0, scale: 0.25 }}
       className={`group overflow-hidden box-content transform float-left ml-3.5 mt-2.5 rounded w-24 2xl:w-27 h-14 2xl:h-16 2xl:ml-2 2xl:mt-2 shadow-sm relative ${
         !bookmark.imageId && !bookmark.blurhash ? "bg-gray-50" : ""
       } ${
@@ -84,15 +84,15 @@ export default function BookmarkItem({
                 }
               : undefined
           }
-          className="group-hover:opacity-100 opacity-0 w-5 h-5 absolute -right-2 -top-2 z-10"
+          className="group-hover:opacity-100 opacity-0 w-5 text-red-500 h-5 absolute right-2 top-2 z-10"
         >
-          <XCircleIcon />
+          <TrashIcon />
         </button>
       )}
       {!bookmark.imageId && !data?.bookmarkById?.blurhash && (
         <div className="flex flex-col items-center justify-center w-full h-full">
           <Spinner />
-          <span className="text-xs mt-1 text-gray-300">
+          <span className="text-xs mt-1 text-gray-400">
             <Trans>creating preview</Trans>
           </span>
         </div>

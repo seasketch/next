@@ -173,3 +173,6 @@ DROP TRIGGER IF EXISTS on_map_bookmark_update_trigger ON map_bookmarks;
 CREATE TRIGGER on_map_bookmark_update_trigger
     AFTER UPDATE ON map_bookmarks
     FOR EACH ROW EXECUTE PROCEDURE on_map_bookmark_update();
+
+DROP POlicy if exists map_bookmarks_select on map_bookmarks;
+CREATE POLICY map_bookmarks_select ON public.map_bookmarks TO anon USING ((public.it_me(user_id) OR is_public OR true));

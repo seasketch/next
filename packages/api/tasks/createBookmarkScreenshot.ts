@@ -30,7 +30,6 @@ async function createBookmarkScreenshot(
   payload: { id: string },
   helpers: Helpers
 ) {
-  console.time("setup");
   await helpers.withPgClient(async (client) => {
     const { rows } = await client.query(
       `
@@ -87,8 +86,6 @@ async function createBookmarkScreenshot(
       };
     }
 
-    console.timeEnd("setup");
-    console.time("take screenshot");
     const browser = await getBrowser();
     const page = await browser.newPage();
     page.setViewport({
@@ -107,8 +104,6 @@ async function createBookmarkScreenshot(
       clip,
     });
 
-    console.timeEnd("take screenshot");
-    console.time("resize");
     const form = new FormData();
     const { data: resizedBuffer, info: resizedMetadata } = await sharp(buffer)
       .withMetadata({ density: 144 })
@@ -118,8 +113,6 @@ async function createBookmarkScreenshot(
       .resize(Math.round(clip!.width / 10), Math.round(clip!.height / 10))
       .raw()
       .toBuffer({ resolveWithObject: true });
-    console.timeEnd("resize");
-    console.time("blurhash");
     const blurhash = encode(
       new Uint8ClampedArray(pixels),
       metadata.width,
@@ -127,13 +120,11 @@ async function createBookmarkScreenshot(
       3,
       3
     );
-    console.timeEnd("blurhash");
     await client.query(`update map_bookmarks set blurhash = $1 where id = $2`, [
       blurhash,
       bookmark.id,
     ]);
 
-    console.time("upload");
     form.append("file", new Blob([buffer]), `${bookmark.id}.png`);
 
     const options: RequestInit = {
@@ -150,7 +141,6 @@ async function createBookmarkScreenshot(
       options
     );
     const data = await response.json();
-    console.timeEnd("upload");
     await client.query(
       `update map_bookmarks set image_id = $2, blurhash = $3 where id = $1`,
       [bookmark.id, data.result.id, blurhash]

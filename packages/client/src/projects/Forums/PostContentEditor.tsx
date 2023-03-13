@@ -259,7 +259,7 @@ export default function PostContentEditor({
       viewRef.current.focus();
       deleteBookmark(id, viewRef.current.state, viewRef.current.dispatch);
     },
-    [viewRef, deleteBookmark]
+    [viewRef]
   );
 
   const sketchUIContext = useContext(SketchUIStateContext);
