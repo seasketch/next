@@ -69,7 +69,7 @@ const forums = new Schema({
     .remove("code_block")
     .remove("blockquote")
     .update("doc", {
-      content: "block* attachments",
+      content: "block+ attachments",
     })
     .append({
       attachment: {

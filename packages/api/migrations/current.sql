@@ -84,7 +84,7 @@ create or replace function extract_post_bookmark_attachments(doc jsonb)
   immutable
   as $$
     declare
-      attachments uuid[];
+      attachments uuid[] := '{}'::uuid[];
       i jsonb;
       node jsonb;
     begin

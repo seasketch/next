@@ -42,6 +42,16 @@ export default function ReplyForm({
 
   const onChange = useCallback(
     (content: any, errors: boolean) => {
+      const attachments: any[] = [];
+      for (const node of content.content) {
+        if (node.type === "attachments") {
+          attachments.push(node);
+        }
+      }
+      if (attachments.length > 1) {
+        console.error("More that 1 attachment block");
+        console.log(attachments, content);
+      }
       setContent(content);
       setHasErrors(errors);
     },
@@ -123,6 +133,7 @@ export default function ReplyForm({
           ? content
           : currentOrEvent;
       clearContent();
+      console.log("onSubmit", message);
       await reply({
         variables: {
           topicId,
@@ -132,7 +143,7 @@ export default function ReplyForm({
       });
       clearContent();
     },
-    [clearContent, reply, topicId, content, hasErrors]
+    [clearContent, reply, topicId, content, hasErrors, dialog, t]
   );
 
   return (
