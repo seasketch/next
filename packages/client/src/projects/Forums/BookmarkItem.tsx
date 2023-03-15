@@ -81,7 +81,7 @@ export default function BookmarkItem({
         !bookmark.imageId && !bookmark.blurhash ? "bg-gray-50" : ""
       } ${
         hasErrors
-          ? "border-red-200 border"
+          ? "border-red-500 border"
           : highlighted
           ? "border-blue-500 border"
           : "border "
