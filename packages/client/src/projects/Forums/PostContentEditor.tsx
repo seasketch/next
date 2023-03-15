@@ -145,6 +145,38 @@ export default function PostContentEditor({
   const createMapBookmark = useCallback(async () => {
     if (mapContext.manager) {
       const bookmark = mapContext.manager.getMapBookmarkData();
+      // TODO: Filter out non-accessible sketches
+      if (state?.doc) {
+        const sketchIds = [
+          ...collectExistingSketchIds(state),
+          ...accessibleSketchIds,
+        ];
+        bookmark.visibleSketches = bookmark.visibleSketches.filter(
+          (id) => sketchIds.indexOf(id) !== -1
+        );
+        // Remove from style
+        // Remove sources first and collect source ids
+        const removedSources: string[] = [];
+        for (const source in bookmark.style.sources) {
+          if (/sketch-\d+$/.test(source)) {
+            const id = parseInt(source.split("-")[1]);
+            if (sketchIds.indexOf(id) === -1) {
+              // remove this source
+              removedSources.push(source);
+              delete bookmark.style.sources[source];
+            }
+          }
+        }
+        // Then remove related layers
+        bookmark.style.layers = bookmark.style.layers.filter(
+          (l) =>
+            !(
+              "source" in l &&
+              typeof l.source === "string" &&
+              removedSources.indexOf(l.source) !== -1
+            )
+        );
+      }
       const data = await createBookmark({
         variables: {
           slug: getSlug(),
@@ -161,7 +193,7 @@ export default function PostContentEditor({
     } else {
       throw new Error("MapContext not ready to create map bookmarks");
     }
-  }, [createBookmark, mapContext.manager]);
+  }, [createBookmark, mapContext.manager, state?.doc, accessibleSketchIds]);
 
   useEffect(() => {
     let doc: Node | undefined;
@@ -423,12 +455,7 @@ export function collectNodes(doc: Node, type: NodeType, nodes: Node[] = []) {
 function getBookmarkErrors(state: EditorState, accessibleSketchIds: number[]) {
   const bookmarkErrors: { id: string; error: string }[] = [];
   if (state?.doc) {
-    const existingSketchIds: number[] = [];
-    const sketchNodes = collectNodes(state.doc, sketchType);
-    for (const node of sketchNodes) {
-      const items = node.attrs.items;
-      existingSketchIds.push(...items.map((i: { id: number }) => i.id));
-    }
+    const existingSketchIds = collectExistingSketchIds(state);
     const attachments = state.doc.content.lastChild!.content;
     const bookmarks: Node[] = [];
     attachments.forEach((node) => {
@@ -452,4 +479,16 @@ function getBookmarkErrors(state: EditorState, accessibleSketchIds: number[]) {
     }
   }
   return bookmarkErrors;
+}
+
+function collectExistingSketchIds(state: EditorState) {
+  const existingSketchIds: number[] = [];
+  if (state?.doc) {
+    const sketchNodes = collectNodes(state.doc, sketchType);
+    for (const node of sketchNodes) {
+      const items = node.attrs.items;
+      existingSketchIds.push(...items.map((i: { id: number }) => i.id));
+    }
+  }
+  return existingSketchIds;
 }
