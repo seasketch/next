@@ -12,7 +12,7 @@ import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
 import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
 import { graphqlUploadExpress } from "graphql-upload";
 import bytes from "bytes";
-import { run } from "graphile-worker";
+import { Job, run } from "graphile-worker";
 import cors from "cors";
 import https from "https";
 import fs from "fs";
@@ -23,6 +23,7 @@ import * as Tracing from "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
 import slugify from "slugify";
+import { Pool } from "pg";
 
 interface SSNRequest extends Request {
   user?: { id: number; canonicalEmail: string };
@@ -187,6 +188,41 @@ app.use(function (req: SSNRequest, res, next) {
   next();
 });
 
+type JobStatusUpdateConfig = {
+  table: string;
+  column: string;
+  task_identifier: string;
+};
+
+const jobStatusPropsToUpdate: JobStatusUpdateConfig[] = [
+  {
+    table: "map_bookmarks",
+    column: "screenshot_job_status",
+    task_identifier: "createBookmarkScreenshot",
+  },
+];
+
+async function updateMatchingTables(
+  job: Job,
+  status: "queued" | "started" | "finished" | "error" | "failed",
+  pool: Pool
+) {
+  const configs = jobStatusPropsToUpdate.filter(
+    (c) => c.task_identifier === job.task_identifier
+  );
+  if (job.payload && "id" in (job.payload as any)) {
+    for (const { table, column } of configs) {
+      // This query looks weird because error and failed events can come in out
+      // of order somehow. This makes sure failure is the final status and
+      // related error events don't clobber that status.
+      await pool.query(
+        `update ${table} set ${column} = $2 where id = $1 and (${column} != 'failed'::worker_job_status or $2 != 'error'::worker_job_status)`,
+        [(job.payload as any).id, status]
+      );
+    }
+  }
+}
+
 run({
   pgPool: workerPool,
   concurrency: parseInt(process.env.GRAPHILE_WORKER_CONCURRENCY || "0"),
@@ -200,6 +236,21 @@ run({
     * * * * * cleanupDataUploads
     * * * * * cleanupDeletedOverlayRecords
   `,
+}).then((runner) => {
+  runner.events.on("job:start", ({ worker, job }) => {
+    updateMatchingTables(job, "started", workerPool);
+  });
+  runner.events.on("job:success", ({ worker, job }) => {
+    updateMatchingTables(job, "finished", workerPool);
+  });
+  runner.events.on("job:error", ({ worker, job }) => {
+    console.log("job error", job.key);
+    updateMatchingTables(job, "error", workerPool);
+  });
+  runner.events.on("job:failed", ({ worker, job }) => {
+    console.log("job failed", job.key);
+    updateMatchingTables(job, "failed", workerPool);
+  });
 });
 
 const tilesetPool = createPool();

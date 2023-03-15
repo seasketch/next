@@ -50,7 +50,6 @@ export default function ReplyForm({
       }
       if (attachments.length > 1) {
         console.error("More that 1 attachment block");
-        console.log(attachments, content);
       }
       setContent(content);
       setHasErrors(errors);
@@ -133,7 +132,6 @@ export default function ReplyForm({
           ? content
           : currentOrEvent;
       clearContent();
-      console.log("onSubmit", message);
       await reply({
         variables: {
           topicId,

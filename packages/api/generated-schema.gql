@@ -6651,15 +6651,19 @@ type MapBookmark {
   basemapOptionalLayerStates: JSON
   blurhash: String
   cameraOptions: JSON!
+  createdAt: Datetime!
   id: UUID!
   imageId: String
   isPublic: Boolean!
+  job: WorkerJob
   mapDimensions: [Int]!
   postId: Int
   projectId: Int
+  screenshotJobStatus: WorkerJobStatus!
   selectedBasemap: Int!
   sidebarState: JSON
   style: JSON!
+  userId: Int!
   visibleDataLayers: [String]!
   visibleSketches: [Int]
 }
@@ -15336,3 +15340,22 @@ enum UsersOrderBy {
 A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122).
 """
 scalar UUID
+
+type WorkerJob {
+  attempts: Int
+  createdAt: Datetime
+  key: String
+  lastError: String
+  lockedAt: Datetime
+  maxAttempts: Int
+  runAt: Datetime
+  taskIdentifier: String
+}
+
+enum WorkerJobStatus {
+  ERROR
+  FAILED
+  FINISHED
+  QUEUED
+  STARTED
+}

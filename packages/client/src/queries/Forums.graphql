@@ -209,6 +209,17 @@ subscription NewPosts($slug: String!) {
   }
 }
 
+fragment Job on WorkerJob {
+  attempts
+  createdAt
+  key
+  lockedAt
+  maxAttempts
+  runAt
+  taskIdentifier
+  lastError
+}
+
 fragment MapBookmarkDetails on MapBookmark {
   id
   imageId
@@ -220,6 +231,10 @@ fragment MapBookmarkDetails on MapBookmark {
   mapDimensions
   blurhash
   visibleSketches
+  screenshotJobStatus
+  job {
+    ...Job
+  }
 }
 
 query GetBookmark($id: UUID!) {

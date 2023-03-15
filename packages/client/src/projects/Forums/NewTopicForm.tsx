@@ -56,10 +56,12 @@ export default function NewTopicForm({
     },
     onError,
     refetchQueries: [ForumsDocument],
-    onCompleted: () => {
+    onCompleted: (data) => {
       clearTitle();
       clearContent();
-      history.replace(`/${getSlug()}/app/forums/${forumId}`);
+      history.replace(
+        `/${getSlug()}/app/forums/${forumId}/${data.createTopic.id}/`
+      );
     },
     update: async (cache, result) => {
       const topic = result.data?.createTopic;

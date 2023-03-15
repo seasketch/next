@@ -605,7 +605,7 @@ export function deleteBookmark(
   });
   const newAttachments = attachments.copy(Fragment.from(children));
   tr = tr.replaceWith(
-    state.doc.content.size - attachments.content.size,
+    state.doc.content.size - attachments.nodeSize,
     state.doc.content.size,
     newAttachments
   );

@@ -598,6 +598,11 @@ strings and not numbers.
 """
 scalar BigInt
 
+type BookmarkPayload {
+  bookmark: MapBookmark
+  bookmarkId: UUID!
+}
+
 type CacheableOfflineAsset {
   """
   If provided, is a "bare" url with query strings such as access_token
@@ -1395,6 +1400,7 @@ input CreateMapBookmarkInput {
   isPublic: Boolean
   mapDimensions: [Int]
   selectedBasemap: Int
+  sidebarState: JSON
   slug: String
   style: JSON
   visibleDataLayers: [String]
@@ -6643,17 +6649,21 @@ type MapBookmark {
   """Reads a single `Basemap` that is related to this `MapBookmark`."""
   basemapBySelectedBasemap: Basemap
   basemapOptionalLayerStates: JSON
-  blurhash: JSON
+  blurhash: String
   cameraOptions: JSON!
+  createdAt: Datetime!
   id: UUID!
+  imageId: String
   isPublic: Boolean!
+  job: WorkerJob
   mapDimensions: [Int]!
   postId: Int
   projectId: Int
-  screenshotUrl: String
+  screenshotJobStatus: WorkerJobStatus!
   selectedBasemap: Int!
+  sidebarState: JSON
   style: JSON!
-  thumbnailUrl: String
+  userId: Int!
   visibleDataLayers: [String]!
   visibleSketches: [Int]
 }
@@ -9006,6 +9016,7 @@ type Post implements Node {
   """
   authorProfile: Profile
   blurb: String
+  bookmarkAttachmentIds: [UUID]!
   createdAt: Datetime!
 
   """
@@ -10238,6 +10249,7 @@ type Query implements Node {
     """The method to use when ordering `Basemap`."""
     orderBy: [BasemapsOrderBy!] = [PRIMARY_KEY_ASC]
   ): BasemapsConnection
+  bookmarkById(id: UUID): MapBookmark
 
   """
   GraphQL server software build identifier. During a deployment, if changes are
@@ -12055,6 +12067,9 @@ type Subscription {
   x-ss-slug to determine appropriate project.
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
+
+  """Triggered when a map bookmark is updated"""
+  updatedMapBookmark(id: UUID!): BookmarkPayload
 }
 
 type Survey implements Node {
@@ -15325,3 +15340,22 @@ enum UsersOrderBy {
 A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122).
 """
 scalar UUID
+
+type WorkerJob {
+  attempts: Int
+  createdAt: Datetime
+  key: String
+  lastError: String
+  lockedAt: Datetime
+  maxAttempts: Int
+  runAt: Datetime
+  taskIdentifier: String
+}
+
+enum WorkerJobStatus {
+  ERROR
+  FAILED
+  FINISHED
+  QUEUED
+  STARTED
+}

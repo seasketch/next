@@ -5705,15 +5705,19 @@ export type MapBookmark = {
   basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
   blurhash?: Maybe<Scalars['String']>;
   cameraOptions: Scalars['JSON'];
+  createdAt: Scalars['Datetime'];
   id: Scalars['UUID'];
   imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
+  job?: Maybe<WorkerJob>;
   mapDimensions: Array<Maybe<Scalars['Int']>>;
   postId?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
+  screenshotJobStatus: WorkerJobStatus;
   selectedBasemap: Scalars['Int'];
   sidebarState?: Maybe<Scalars['JSON']>;
   style: Scalars['JSON'];
+  userId: Scalars['Int'];
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
   visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
@@ -13709,6 +13713,26 @@ export enum UsersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+export type WorkerJob = {
+  __typename?: 'WorkerJob';
+  attempts?: Maybe<Scalars['Int']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  key?: Maybe<Scalars['String']>;
+  lastError?: Maybe<Scalars['String']>;
+  lockedAt?: Maybe<Scalars['Datetime']>;
+  maxAttempts?: Maybe<Scalars['Int']>;
+  runAt?: Maybe<Scalars['Datetime']>;
+  taskIdentifier?: Maybe<Scalars['String']>;
+};
+
+export enum WorkerJobStatus {
+  Error = 'ERROR',
+  Failed = 'FAILED',
+  Finished = 'FINISHED',
+  Queued = 'QUEUED',
+  Started = 'STARTED'
+}
+
 export type UpdateTerrainExaggerationFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'terrainExaggeration'>
@@ -15637,9 +15661,18 @@ export type NewPostsSubscription = (
   )> }
 );
 
+export type JobFragment = (
+  { __typename?: 'WorkerJob' }
+  & Pick<WorkerJob, 'attempts' | 'createdAt' | 'key' | 'lockedAt' | 'maxAttempts' | 'runAt' | 'taskIdentifier' | 'lastError'>
+);
+
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'imageId' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches'>
+  & Pick<MapBookmark, 'id' | 'imageId' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches' | 'screenshotJobStatus'>
+  & { job?: Maybe<(
+    { __typename?: 'WorkerJob' }
+    & JobFragment
+  )> }
 );
 
 export type GetBookmarkQueryVariables = Exact<{
@@ -18609,6 +18642,18 @@ export const AuthorProfileFragmentDoc = /*#__PURE__*/ gql`
   userId
 }
     `;
+export const JobFragmentDoc = /*#__PURE__*/ gql`
+    fragment Job on WorkerJob {
+  attempts
+  createdAt
+  key
+  lockedAt
+  maxAttempts
+  runAt
+  taskIdentifier
+  lastError
+}
+    `;
 export const MapBookmarkDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment MapBookmarkDetails on MapBookmark {
   id
@@ -18621,8 +18666,12 @@ export const MapBookmarkDetailsFragmentDoc = /*#__PURE__*/ gql`
   mapDimensions
   blurhash
   visibleSketches
+  screenshotJobStatus
+  job {
+    ...Job
+  }
 }
-    `;
+    ${JobFragmentDoc}`;
 export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumPost on Post {
   id
@@ -22601,6 +22650,7 @@ export const namedOperations = {
     RecentPost: 'RecentPost',
     ForumDetails: 'ForumDetails',
     ForumTopic: 'ForumTopic',
+    Job: 'Job',
     MapBookmarkDetails: 'MapBookmarkDetails',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',

@@ -126,6 +126,16 @@ CREATE TYPE public.access_control_list_type AS ENUM (
 
 
 --
+-- Name: attachment_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.attachment_type AS ENUM (
+    'MapBookmark',
+    'FileUpload'
+);
+
+
+--
 -- Name: basemap_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -437,6 +447,17 @@ CREATE TYPE public.participation_status AS ENUM (
 
 
 --
+-- Name: post_attachment; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.post_attachment AS (
+	id uuid,
+	type public.attachment_type,
+	data jsonb
+);
+
+
+--
 -- Name: project_access_control_setting; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -610,6 +631,35 @@ CREATE TYPE public.survey_validation_info_composite AS (
 CREATE TYPE public.tile_scheme AS ENUM (
     'xyz',
     'tms'
+);
+
+
+--
+-- Name: worker_job; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.worker_job AS (
+	key text,
+	task_identifier text,
+	run_at timestamp with time zone,
+	attempts integer,
+	max_attempts integer,
+	created_at timestamp with time zone,
+	locked_at timestamp with time zone,
+	last_error text
+);
+
+
+--
+-- Name: worker_job_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.worker_job_status AS ENUM (
+    'queued',
+    'started',
+    'finished',
+    'error',
+    'failed'
 );
 
 
@@ -1879,6 +1929,20 @@ CREATE FUNCTION public.after_insert_or_update_or_delete_project_invite_email() R
 
 
 --
+-- Name: after_map_bookmark_insert_screenshot_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_map_bookmark_insert_screenshot_trigger() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      perform graphile_worker.add_job('createBookmarkScreenshot', json_build_object('id', NEW.id), job_key := 'createBookmarkScreenshot:' || NEW.id, max_attempts := 6);
+      return new;
+    end;
+  $$;
+
+
+--
 -- Name: after_post_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2664,39 +2728,6 @@ CREATE FUNCTION public.before_delete_sketch_class_check_form_element_id() RETURN
 
 
 --
--- Name: before_deleted__data_layers(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.before_deleted__data_layers() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-  BEGIN
-    insert into deleted_data_layers (
-      data_source_id,
-      data_layer_id,
-      project_id,
-      data_upload_task_id,
-      bucket_id,
-      object_key,
-      outputs
-    ) select 
-        OLD.data_source_id,
-        data_layers.id, 
-        data_layers.project_id, 
-        data_sources.upload_task_id, 
-        data_sources.bucket_id, 
-        data_sources.object_key, 
-        data_upload_tasks.outputs
-      from data_layers 
-      inner join data_sources on data_sources.id = OLD.data_source_id 
-      inner join data_upload_tasks on data_upload_tasks.id = data_sources.upload_task_id 
-      where data_layers.id = OLD.id;
-      return OLD;
-    END;
-  $$;
-
-
---
 -- Name: before_insert_form_elements_func(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3325,6 +3356,60 @@ CREATE FUNCTION public.before_valid_children_insert_or_update() RETURNS trigger
       end if;
     end
   $$;
+
+
+--
+-- Name: map_bookmarks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.map_bookmarks (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    project_id integer,
+    post_id integer,
+    user_id integer NOT NULL,
+    style jsonb NOT NULL,
+    visible_data_layers text[] DEFAULT '{}'::text[] NOT NULL,
+    visible_sketches integer[],
+    selected_basemap integer NOT NULL,
+    basemap_optional_layer_states jsonb,
+    camera_options jsonb NOT NULL,
+    is_public boolean DEFAULT false NOT NULL,
+    map_dimensions integer[] NOT NULL,
+    sidebar_state jsonb,
+    image_id text,
+    blurhash text,
+    screenshot_job_status public.worker_job_status DEFAULT 'queued'::public.worker_job_status NOT NULL
+);
+
+
+--
+-- Name: bookmark_by_id(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bookmark_by_id(id uuid) RETURNS public.map_bookmarks
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from map_bookmarks where map_bookmarks.id = bookmark_by_id.id;
+  $$;
+
+
+--
+-- Name: bookmark_data(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.bookmark_data(id text) RETURNS jsonb
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    SELECT jsonb_build_object('id', id, 'style', style, 'basemapUrl', (select url from basemaps where basemaps.id = map_bookmarks.selected_basemap), 'mapDimensions', map_dimensions, 'cameraOptions', camera_options, 'sidebarState', sidebar_state) as bookmark from map_bookmarks where map_bookmarks.id = bookmark_data.id::uuid;
+  $$;
+
+
+--
+-- Name: FUNCTION bookmark_data(id text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.bookmark_data(id text) IS '@omit';
 
 
 --
@@ -3993,8 +4078,8 @@ CREATE TABLE public.sketches (
     mercator_geometry public.geometry(Geometry,3857) GENERATED ALWAYS AS (public.st_transform(COALESCE(geom, user_geom), 3857)) STORED,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    shared_in_forum boolean DEFAULT false NOT NULL,
     post_id integer,
+    shared_in_forum boolean DEFAULT false NOT NULL,
     bbox real[] GENERATED ALWAYS AS (public.create_bbox(COALESCE(geom, user_geom), id)) STORED,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
@@ -4125,8 +4210,8 @@ CREATE TABLE public.sketch_folders (
     project_id integer NOT NULL,
     folder_id integer,
     collection_id integer,
-    shared_in_forum boolean DEFAULT false NOT NULL,
     post_id integer,
+    shared_in_forum boolean DEFAULT false NOT NULL,
     CONSTRAINT has_single_or_no_parent_folder_or_collection CHECK (((folder_id = NULL::integer) OR (collection_id = NULL::integer)))
 );
 
@@ -4341,18 +4426,9 @@ $$;
 --
 
 CREATE FUNCTION public.create_bbox(geom public.geometry) RETURNS real[]
-    LANGUAGE plpgsql IMMUTABLE SECURITY DEFINER
+    LANGUAGE sql IMMUTABLE SECURITY DEFINER
     AS $$
-    declare
-      child_ids int[];
-      bbox real[];
-    begin
-      if geom is null then
-        return null;
-      end if;
-      select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real] into bbox;
-      return bbox;
-    end;
+    select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real];
   $$;
 
 
@@ -4706,34 +4782,10 @@ $$;
 
 
 --
--- Name: map_bookmarks; Type: TABLE; Schema: public; Owner: -
+-- Name: create_map_bookmark(text, boolean, jsonb, text[], integer, jsonb, jsonb, integer[], integer[], jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE TABLE public.map_bookmarks (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    project_id integer,
-    post_id integer,
-    user_id integer NOT NULL,
-    style jsonb NOT NULL,
-    visible_data_layers text[] DEFAULT '{}'::text[] NOT NULL,
-    visible_sketches integer[],
-    selected_basemap integer NOT NULL,
-    basemap_optional_layer_states jsonb,
-    camera_options jsonb NOT NULL,
-    thumbnail_url text,
-    screenshot_url text,
-    is_public boolean DEFAULT false NOT NULL,
-    map_dimensions integer[] NOT NULL,
-    blurhash jsonb
-);
-
-
---
--- Name: create_map_bookmark(text, boolean, jsonb, text[], integer, jsonb, jsonb, integer[], integer[]); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]) RETURNS public.map_bookmarks
+CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb) RETURNS public.map_bookmarks
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -4752,7 +4804,8 @@ CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style 
           basemap_optional_layer_states, 
           camera_options,
           map_dimensions,
-          visible_sketches
+          visible_sketches,
+          sidebar_state
         ) values (
           pid,
           nullif(current_setting('session.user_id', TRUE), '')::int,
@@ -4763,13 +4816,50 @@ CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style 
           "basemapOptionalLayerStates",
           "cameraOptions",
           "mapDimensions",
-          "visibleSketches"
+          "visibleSketches",
+          "sidebarState"
         ) returning * into bookmark;
         return bookmark;
       else
         raise exception 'Permission denied';
       end if;
     end;
+  $$;
+
+
+--
+-- Name: extract_post_bookmark_attachments(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_post_bookmark_attachments(doc jsonb) RETURNS uuid[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      attachments uuid[] := '{}'::uuid[];
+      i jsonb;
+      node jsonb;
+    begin
+      if doc ? 'content' and doc ->> 'type' = 'doc' then
+        raise notice 'In doc %', doc;
+        for i in (select * from jsonb_array_elements((doc->'content')))
+        loop
+          if i ->> 'type' = 'attachments' then
+            raise notice 'Found! %', i;
+            if i ? 'content' then
+              for node in (select * from jsonb_array_elements((i->'content')))
+              loop
+                if node ? 'attrs' and (node->'attrs')->>'type' = 'MapBookmark' then
+                  attachments = array_append(
+                    attachments,
+                    ((node->'attrs')->>'id')::uuid);
+                end if;
+              end loop;
+            end if;
+          end if;
+        end loop;
+      end if;
+      return attachments;
+    end
   $$;
 
 
@@ -4784,7 +4874,8 @@ CREATE TABLE public.posts (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
     message_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     hidden_by_moderator boolean DEFAULT false NOT NULL,
-    html text NOT NULL
+    html text NOT NULL,
+    bookmark_attachment_ids uuid[] GENERATED ALWAYS AS (public.extract_post_bookmark_attachments(message_contents)) STORED NOT NULL
 );
 
 
@@ -6824,7 +6915,7 @@ CREATE FUNCTION public.forums_last_post_date(forum public.forums) RETURNS timest
 CREATE FUNCTION public.forums_post_count(forum public.forums) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(*) from posts where topic_id in ((select id from topics where forum_id = forum.id));
+    select count(*)::int from posts where topic_id in ((select id from topics where forum_id = forum.id));
   $$;
 
 
@@ -7138,6 +7229,36 @@ CREATE FUNCTION public.get_children_of_folder("folderId" integer) RETURNS TABLE(
 --
 
 COMMENT ON FUNCTION public.get_children_of_folder("folderId" integer) IS '@omit';
+
+
+--
+-- Name: get_job_details(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_job_details(key text) RETURNS public.worker_job
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      details worker_job;
+    begin
+    select
+      get_job_details.key,
+      graphile_worker.jobs.task_identifier,
+      graphile_worker.jobs.run_at,
+      graphile_worker.jobs.attempts,
+      graphile_worker.jobs.max_attempts,
+      graphile_worker.jobs.created_at,
+      graphile_worker.jobs.locked_at,
+      graphile_worker.jobs.last_error
+    into
+      details
+    from
+      graphile_worker.jobs
+    where
+      graphile_worker.jobs.key = get_job_details.key;
+    return details;
+    end;
+  $$;
 
 
 --
@@ -7726,6 +7847,17 @@ $$;
 
 
 --
+-- Name: map_bookmarks_job(public.map_bookmarks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.map_bookmarks_job(bookmark public.map_bookmarks) RETURNS public.worker_job
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select get_job_details('createBookmarkScreenshot:' || bookmark.id);
+  $$;
+
+
+--
 -- Name: mark_topic_as_read(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7910,6 +8042,20 @@ CREATE FUNCTION public.offline_tile_packages_job_status(pkg public.offline_tile_
 
 
 --
+-- Name: on_map_bookmark_update(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.on_map_bookmark_update() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      perform pg_notify(concat('graphql:mapBookmark:', NEW.id, ':update'), json_build_object('bookmarkId', NEW.id)::text);
+      return new;
+    end;
+  $$;
+
+
+--
 -- Name: on_user_insert_create_notification_preferences(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8028,7 +8174,7 @@ CREATE FUNCTION public.posts_blurb(post public.posts) RETURNS text
 CREATE FUNCTION public.posts_map_bookmarks(post public.posts) RETURNS SETOF public.map_bookmarks
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select * from map_bookmarks where post_id = post.id;
+    select * from map_bookmarks where id = any(post.bookmark_attachment_ids);
   $$;
 
 
@@ -10273,18 +10419,18 @@ COMMENT ON FUNCTION public.session_is_admin("projectId" integer) IS '@omit';
 CREATE FUNCTION public.session_is_approved_participant(pid integer) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-  select has_session() and EXISTS (
-    SELECT 
-      1
-    FROM
-      project_participants
-    WHERE (
-      it_me(project_participants.user_id) and
-      project_participants.project_id = pid
-    ) AND project_participants.approved = TRUE AND
-    current_setting('session.email_verified', true) = 'true'
-  )
-$$;
+    select has_session() and EXISTS (
+      SELECT 
+        1
+      FROM
+        project_participants
+      WHERE (
+        it_me(project_participants.user_id) and
+        project_participants.project_id = pid
+      ) AND project_participants.approved = TRUE AND
+      current_setting('session.email_verified', true) = 'true'
+    )
+  $$;
 
 
 --
@@ -11645,7 +11791,7 @@ CREATE FUNCTION public.topics_last_post_date(topic public.topics) RETURNS timest
 CREATE FUNCTION public.topics_participant_count(topic public.topics) RETURNS integer
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select count(*) from ((select distinct(author_id) from posts where topic_id = topic.id)) as foo;
+    select count(*)::int from ((select distinct(author_id) from posts where topic_id = topic.id)) as foo;
   $$;
 
 
@@ -11681,7 +11827,7 @@ CREATE FUNCTION public.topics_participants(topic public.topics) RETURNS SETOF pu
 CREATE FUNCTION public.topics_posts_count(topic public.topics) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(*) from posts where topic_id = topic.id;
+    select count(*)::int from posts where topic_id = topic.id;
   $$;
 
 
@@ -11900,6 +12046,22 @@ CREATE FUNCTION public.update_post("postId" integer, message jsonb) RETURNS publ
 COMMENT ON FUNCTION public.update_post("postId" integer, message jsonb) IS '
 Updates the contents of the post. Can only be used by the author for 5 minutes after posting.
 ';
+
+
+--
+-- Name: update_post_attachments_for_bookmark(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_post_attachments_for_bookmark() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    begin
+      if NEW.post_id is not null then
+
+      end if;
+      return NEW;
+    end;
+  $$;
 
 
 --
@@ -12565,15 +12727,6 @@ ALTER TABLE public.basemaps ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 
 
 --
--- Name: bbox; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.bbox (
-    st_extent public.box2d
-);
-
-
---
 -- Name: community_guidelines; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -12769,6 +12922,15 @@ COMMENT ON COLUMN public.email_notification_preferences.notify_on_reply IS '
 If set, users should receive realtime notifications of responses to discussion
 forum threads for which they are a participant.
 ';
+
+
+--
+-- Name: foo; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.foo (
+    get_children_recursive integer[]
+);
 
 
 --
@@ -13324,60 +13486,6 @@ COMMENT ON COLUMN public.sprite_images.url IS 'Supports multipart Upload operati
 
 ALTER TABLE public.sprites ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.sprites_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: style_template_groups; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.style_template_groups (
-    id integer NOT NULL,
-    name text NOT NULL,
-    CONSTRAINT style_template_groups_name_check CHECK (((char_length(name) <= 32) AND (char_length(name) >= 0)))
-);
-
-
---
--- Name: style_template_groups_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.style_template_groups ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.style_template_groups_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: style_templates; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.style_templates (
-    id integer NOT NULL,
-    project_id integer,
-    group_id integer,
-    mapbox_gl_styles jsonb NOT NULL,
-    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_styles)::text)) STORED,
-    render_under public.render_under_type DEFAULT 'labels'::public.render_under_type NOT NULL,
-    keywords text DEFAULT ''::text NOT NULL
-);
-
-
---
--- Name: style_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.style_templates ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.style_templates_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -14062,22 +14170,6 @@ ALTER TABLE ONLY public.sprites
 
 
 --
--- Name: style_template_groups style_template_groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_template_groups
-    ADD CONSTRAINT style_template_groups_pkey PRIMARY KEY (id);
-
-
---
--- Name: style_templates style_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_templates
-    ADD CONSTRAINT style_templates_pkey PRIMARY KEY (id);
-
-
---
 -- Name: survey_consent_documents survey_consent_documents_form_element_id_version_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14465,416 +14557,10 @@ CREATE INDEX offline_tile_settings_basemap_id_idx ON public.offline_tile_setting
 
 
 --
--- Name: offline_tile_settings_basemap_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx1 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx10; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx10 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx11; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx11 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx12; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx12 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx13; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx13 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx14; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx14 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx15; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx15 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx16; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx16 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx17; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx17 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx18; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx18 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx19; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx19 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx2 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx20; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx20 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx21; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx21 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx22; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx22 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx23; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx23 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx24; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx24 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx25; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx25 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx26; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx26 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx27; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx27 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx28; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx28 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx29; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx29 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx3 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx4 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx5 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx6; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx6 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx7; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx7 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx8; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx8 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
--- Name: offline_tile_settings_basemap_id_idx9; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_basemap_id_idx9 ON public.offline_tile_settings USING btree (basemap_id);
-
-
---
 -- Name: offline_tile_settings_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX offline_tile_settings_project_id_idx ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx1 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx10; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx10 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx11; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx11 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx12; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx12 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx13; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx13 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx14; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx14 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx15; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx15 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx16; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx16 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx17; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx17 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx18; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx18 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx19; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx19 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx2 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx20; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx20 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx21; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx21 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx22; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx22 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx23; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx23 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx24; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx24 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx25; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx25 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx26; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx26 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx27; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx27 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx28; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx28 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx29; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx29 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx3 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx4; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx4 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx5; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx5 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx6; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx6 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx7; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx7 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx8; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx8 ON public.offline_tile_settings USING btree (project_id);
-
-
---
--- Name: offline_tile_settings_project_id_idx9; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX offline_tile_settings_project_id_idx9 ON public.offline_tile_settings USING btree (project_id);
 
 
 --
@@ -14959,13 +14645,6 @@ CREATE INDEX project_invites_project_id_idx ON public.project_invites USING btre
 --
 
 CREATE INDEX project_invites_user_id_idx ON public.project_invites USING btree (user_id);
-
-
---
--- Name: project_invites_user_id_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX project_invites_user_id_idx1 ON public.project_invites USING btree (user_id);
 
 
 --
@@ -15312,6 +14991,13 @@ CREATE TRIGGER after_add_user_to_group_update_survey_invites AFTER INSERT ON pub
 
 
 --
+-- Name: map_bookmarks after_map_bookmark_insert_screenshot_map; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_map_bookmark_insert_screenshot_map AFTER INSERT ON public.map_bookmarks FOR EACH ROW EXECUTE FUNCTION public.after_map_bookmark_insert_screenshot_trigger();
+
+
+--
 -- Name: posts after_post_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -15512,6 +15198,20 @@ CREATE TRIGGER offline_tile_packages_on_insert_1 AFTER INSERT ON public.offline_
 --
 
 CREATE TRIGGER on_delete_offline_tile_package_001 AFTER DELETE ON public.offline_tile_packages FOR EACH ROW EXECUTE FUNCTION public.cleanup_tile_package();
+
+
+--
+-- Name: map_bookmarks on_map_bookmark_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER on_map_bookmark_update AFTER UPDATE ON public.map_bookmarks FOR EACH ROW EXECUTE FUNCTION public.on_map_bookmark_update();
+
+
+--
+-- Name: map_bookmarks on_map_bookmark_update_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER on_map_bookmark_update_trigger AFTER UPDATE ON public.map_bookmarks FOR EACH ROW EXECUTE FUNCTION public.on_map_bookmark_update();
 
 
 --
@@ -16364,7 +16064,7 @@ ALTER TABLE ONLY public.sketches
 --
 
 ALTER TABLE ONLY public.sketches
-    ADD CONSTRAINT sketches_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+    ADD CONSTRAINT sketches_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id);
 
 
 --
@@ -16419,22 +16119,6 @@ ALTER TABLE ONLY public.sprites
 --
 
 COMMENT ON CONSTRAINT sprites_project_id_fkey ON public.sprites IS '@omit';
-
-
---
--- Name: style_templates style_templates_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_templates
-    ADD CONSTRAINT style_templates_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.style_template_groups(id) ON DELETE SET NULL;
-
-
---
--- Name: style_templates style_templates_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.style_templates
-    ADD CONSTRAINT style_templates_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -16978,7 +16662,7 @@ ALTER TABLE public.map_bookmarks ENABLE ROW LEVEL SECURITY;
 -- Name: map_bookmarks map_bookmarks_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY map_bookmarks_select ON public.map_bookmarks TO anon USING ((public.it_me(user_id) OR is_public));
+CREATE POLICY map_bookmarks_select ON public.map_bookmarks TO anon USING (true);
 
 
 --
@@ -18511,7 +18195,6 @@ GRANT ALL ON TABLE public.project_groups TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.access_control_lists_groups(acl public.access_control_lists) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.access_control_lists_groups(acl public.access_control_lists) TO seasketch_user;
-GRANT ALL ON FUNCTION public.access_control_lists_groups(acl public.access_control_lists) TO anon;
 
 
 --
@@ -18611,6 +18294,13 @@ REVOKE ALL ON FUNCTION public.after_insert_or_update_or_delete_project_invite_em
 
 
 --
+-- Name: FUNCTION after_map_bookmark_insert_screenshot_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_map_bookmark_insert_screenshot_trigger() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION after_post_insert(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -18701,6 +18391,20 @@ GRANT UPDATE(archived) ON TABLE public.survey_responses TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION armor(bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.armor(bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION armor(bytea, text[], text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.armor(bytea, text[], text[]) FROM PUBLIC;
 
 
 --
@@ -18905,13 +18609,6 @@ REVOKE ALL ON FUNCTION public.before_delete_sketch_class_check_form_element_id()
 
 
 --
--- Name: FUNCTION before_deleted__data_layers(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.before_deleted__data_layers() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION before_insert_form_elements_func(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19035,6 +18732,135 @@ REVOKE ALL ON FUNCTION public.before_update_sketch_class_trigger() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.before_valid_children_insert_or_update() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION uuid_generate_v4(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.uuid_generate_v4() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
+
+
+--
+-- Name: TABLE map_bookmarks; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(project_id) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.post_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(post_id) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.style; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(style) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.visible_data_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(visible_data_layers) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.visible_sketches; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(visible_sketches) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.selected_basemap; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(selected_basemap) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.basemap_optional_layer_states; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(basemap_optional_layer_states) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.camera_options; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(camera_options) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.is_public; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_public) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.map_dimensions; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(map_dimensions) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.sidebar_state; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(sidebar_state) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.image_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(image_id) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: COLUMN map_bookmarks.blurhash; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(blurhash) ON TABLE public.map_bookmarks TO anon;
+
+
+--
+-- Name: FUNCTION bookmark_by_id(id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.bookmark_by_id(id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.bookmark_by_id(id uuid) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION bookmark_data(id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.bookmark_data(id text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.bookmark_data(id text) TO anon;
 
 
 --
@@ -19585,14 +19411,6 @@ GRANT ALL ON FUNCTION public.create_consent_document(fid integer, version intege
 
 
 --
--- Name: FUNCTION uuid_generate_v4(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.uuid_generate_v4() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
-
-
---
 -- Name: COLUMN data_upload_tasks.id; Type: ACL; Schema: public; Owner: -
 --
 
@@ -19696,109 +19514,18 @@ REVOKE ALL ON FUNCTION public.create_forum_acl() FROM PUBLIC;
 
 
 --
--- Name: COLUMN map_bookmarks.id; Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(id) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.project_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(project_id) ON TABLE public.map_bookmarks TO anon;
+REVOKE ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb) TO seasketch_user;
 
 
 --
--- Name: COLUMN map_bookmarks.post_id; Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION extract_post_bookmark_attachments(doc jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(post_id) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.style; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(style) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.visible_data_layers; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(visible_data_layers) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.visible_sketches; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(visible_sketches) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.selected_basemap; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(selected_basemap) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.basemap_optional_layer_states; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(basemap_optional_layer_states) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.camera_options; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(camera_options) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.thumbnail_url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(thumbnail_url) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.screenshot_url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(screenshot_url) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.is_public; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_public) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.map_dimensions; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(map_dimensions) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: COLUMN map_bookmarks.blurhash; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(blurhash) ON TABLE public.map_bookmarks TO anon;
-
-
---
--- Name: FUNCTION create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[]) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.extract_post_bookmark_attachments(doc jsonb) FROM PUBLIC;
 
 
 --
@@ -19841,19 +19568,11 @@ GRANT SELECT ON TABLE public.projects TO anon;
 
 
 --
--- Name: COLUMN projects.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.projects TO anon;
-
-
---
 -- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(name) ON TABLE public.projects TO anon;
 
 
 --
@@ -19862,21 +19581,6 @@ GRANT SELECT(name) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(description) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.legacy_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(legacy_id) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.slug; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 
 --
@@ -19885,7 +19589,6 @@ GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 
 
 --
@@ -19894,7 +19597,6 @@ GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 
 
 --
@@ -19903,7 +19605,6 @@ GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 
 
 --
@@ -19912,7 +19613,6 @@ GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 
 
 --
@@ -19920,21 +19620,6 @@ GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 --
 
 GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
-GRANT SELECT(is_featured) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.is_deleted; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_deleted) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.deleted_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 
 --
@@ -19943,7 +19628,6 @@ GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(region) ON TABLE public.projects TO anon;
 
 
 --
@@ -19952,7 +19636,6 @@ GRANT SELECT(region) ON TABLE public.projects TO anon;
 
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 
 
 --
@@ -19960,7 +19643,6 @@ GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 --
 
 GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(invite_email_subject) ON TABLE public.projects TO anon;
 
 
 --
@@ -19978,13 +19660,6 @@ GRANT SELECT(created_at) ON TABLE public.projects TO anon;
 
 
 --
--- Name: COLUMN projects.creator_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(creator_id) ON TABLE public.projects TO anon;
-
-
---
 -- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
 --
 
@@ -19996,7 +19671,6 @@ GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projec
 --
 
 GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
-GRANT SELECT(mapbox_public_key) ON TABLE public.projects TO anon;
 
 
 --
@@ -20169,6 +19843,13 @@ GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message
 --
 
 REVOKE ALL ON FUNCTION public.create_upload_task_job() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION crypt(text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.crypt(text, text) FROM PUBLIC;
 
 
 --
@@ -20398,13 +20079,6 @@ GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE p
 
 
 --
--- Name: COLUMN data_sources.uploaded_source_filename; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(uploaded_source_filename) ON TABLE public.data_sources TO seasketch_user;
-
-
---
 -- Name: FUNCTION data_sources_uploaded_by(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20418,6 +20092,27 @@ GRANT ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_so
 
 REVOKE ALL ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION dearmor(text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.dearmor(text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.decrypt(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION decrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.decrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
 
 
 --
@@ -20457,6 +20152,20 @@ GRANT ALL ON FUNCTION public.delete_table_of_contents_branch("tableOfContentsIte
 
 REVOKE ALL ON FUNCTION public.deny_participant("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.deny_participant("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION digest(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.digest(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION digest(text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.digest(text, text) FROM PUBLIC;
 
 
 --
@@ -20553,6 +20262,20 @@ GRANT ALL ON FUNCTION public.enable_offline_support(project_id integer, enable b
 --
 
 REVOKE ALL ON FUNCTION public.enablelongtransactions() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION encrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.encrypt(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION encrypt_iv(bytea, bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.encrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
 
 
 --
@@ -20730,6 +20453,34 @@ GRANT ALL ON FUNCTION public.forums_topic_count(forum public.forums) TO anon;
 
 REVOKE ALL ON FUNCTION public.forums_write_acl(forum public.forums) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.forums_write_acl(forum public.forums) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION gen_random_bytes(integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_random_bytes(integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION gen_random_uuid(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_random_uuid() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION gen_salt(text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_salt(text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION gen_salt(text, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.gen_salt(text, integer) FROM PUBLIC;
 
 
 --
@@ -21538,6 +21289,13 @@ GRANT ALL ON FUNCTION public.get_children_of_folder("folderId" integer) TO anon;
 
 
 --
+-- Name: FUNCTION get_job_details(key text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_job_details(key text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION get_or_create_user_by_sub(_sub text, OUT user_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21641,6 +21399,20 @@ REVOKE ALL ON FUNCTION public.gserialized_gist_sel_nd(internal, oid, internal, i
 
 REVOKE ALL ON FUNCTION public.has_session() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.has_session() TO anon;
+
+
+--
+-- Name: FUNCTION hmac(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION hmac(text, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
 
 
 --
@@ -22105,6 +21877,14 @@ GRANT ALL ON FUNCTION public.make_survey(name text, project_id integer, template
 
 
 --
+-- Name: FUNCTION map_bookmarks_job(bookmark public.map_bookmarks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.map_bookmarks_job(bookmark public.map_bookmarks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.map_bookmarks_job(bookmark public.map_bookmarks) TO anon;
+
+
+--
 -- Name: FUNCTION mark_topic_as_read("topicId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22174,6 +21954,13 @@ GRANT ALL ON FUNCTION public.offline_tile_packages_job_errors(pkg public.offline
 
 REVOKE ALL ON FUNCTION public.offline_tile_packages_job_status(pkg public.offline_tile_packages) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.offline_tile_packages_job_status(pkg public.offline_tile_packages) TO anon;
+
+
+--
+-- Name: FUNCTION on_map_bookmark_update(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.on_map_bookmark_update() FROM PUBLIC;
 
 
 --
@@ -22406,6 +22193,146 @@ REVOKE ALL ON FUNCTION public.pgis_geometry_polygonize_finalfn(internal) FROM PU
 --
 
 REVOKE ALL ON FUNCTION public.pgis_geometry_union_finalfn(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_armor_headers(text, OUT key text, OUT value text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_armor_headers(text, OUT key text, OUT value text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_key_id(bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_key_id(bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt(bytea, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt(bytea, bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_decrypt_bytea(bytea, bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt(text, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt(text, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt(text, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_pub_encrypt_bytea(bytea, bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt(bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt(bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_decrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_decrypt_bytea(bytea, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt(text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt(text, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt(text, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pgp_sym_encrypt_bytea(bytea, text, text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pgp_sym_encrypt_bytea(bytea, text, text) FROM PUBLIC;
 
 
 --
@@ -23144,7 +23071,6 @@ GRANT ALL ON FUNCTION public.projects_sprites(p public.projects) TO seasketch_us
 --
 
 REVOKE ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_survey_basemaps(project public.projects) TO anon;
 
 
@@ -26916,6 +26842,13 @@ GRANT ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret
 
 REVOKE ALL ON FUNCTION public.update_post("postId" integer, message jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_post("postId" integer, message jsonb) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_post_attachments_for_bookmark(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_post_attachments_for_bookmark() FROM PUBLIC;
 
 
 --

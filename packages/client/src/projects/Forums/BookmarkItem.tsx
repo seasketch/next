@@ -5,13 +5,16 @@ import { useContext } from "react";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 import {
+  JobFragment,
   MapBookmarkDetailsFragment,
   useGetBookmarkQuery,
   useMapBookmarkSubscription,
+  WorkerJobStatus,
 } from "../../generated/graphql";
 import { useState, useCallback } from "react";
 import { Blurhash } from "react-blurhash";
 import { Trans } from "react-i18next";
+import WorkerJobDetails from "../../components/WorkerJobDetails";
 
 export default function BookmarkItem({
   bookmark,
@@ -33,7 +36,9 @@ export default function BookmarkItem({
       id: bookmark.id,
     },
     fetchPolicy: "cache-first",
-    skip: Boolean(bookmark.imageId),
+    skip:
+      Boolean(bookmark.imageId) ||
+      bookmark.screenshotJobStatus === WorkerJobStatus.Failed,
   });
 
   useMapBookmarkSubscription({
@@ -41,14 +46,23 @@ export default function BookmarkItem({
       id: bookmark.id,
     },
     shouldResubscribe: true,
-    skip: Boolean(bookmark.imageId),
+    skip:
+      Boolean(bookmark.imageId) ||
+      bookmark.screenshotJobStatus === WorkerJobStatus.Failed,
   });
 
+  const [jobDetailsOpen, setJobDetailsOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  const job = data?.bookmarkById?.job || bookmark.job;
+
+  const status =
+    data?.bookmarkById?.screenshotJobStatus || bookmark.screenshotJobStatus;
   const onBookmarkClick = useCallback(() => {
     onClick(bookmark);
   }, [onClick, bookmark]);
+
+  const editable = Boolean(removeBookmark);
   return (
     <motion.button
       onMouseOver={onHover ? () => onHover(bookmark.id) : undefined}
@@ -89,14 +103,55 @@ export default function BookmarkItem({
           <TrashIcon />
         </button>
       )}
-      {!bookmark.imageId && !data?.bookmarkById?.blurhash && (
-        <div className="flex flex-col items-center justify-center w-full h-full">
-          <Spinner />
-          <span className="text-xs mt-1 text-gray-400">
-            <Trans>creating preview</Trans>
+      {!editable && status === WorkerJobStatus.Failed && (
+        <div className="text-xs text-gray-600 flex-col flex">
+          <span className="font-bold">
+            <Trans>Map Bookmark</Trans>
+          </span>
+          <span style={{ fontSize: 10 }}>
+            <Trans>preview unavailable</Trans>
           </span>
         </div>
       )}
+      {!bookmark.imageId &&
+        !data?.bookmarkById?.blurhash &&
+        (status !== WorkerJobStatus.Failed || editable) && (
+          <div className="flex flex-col items-center justify-center w-full h-full">
+            {status !== WorkerJobStatus.Failed && <Spinner />}
+            <span className="text-xs mt-1 text-gray-400">
+              {job?.lastError ? (
+                status === WorkerJobStatus.Failed ? (
+                  <Trans>screenshot failed</Trans>
+                ) : (
+                  <Trans>screenshot error</Trans>
+                )
+              ) : (
+                <Trans>creating preview</Trans>
+              )}
+            </span>
+            {job?.lastError && (
+              <button
+                className="underline text-xs text-gray-400"
+                onClick={(e) => {
+                  setJobDetailsOpen(true);
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                {job?.attempts &&
+                job?.maxAttempts &&
+                status !== WorkerJobStatus.Failed ? (
+                  <Trans>
+                    attempt {{ attempt: job.attempts }}/
+                    {{ of: job.maxAttempts }}
+                  </Trans>
+                ) : (
+                  <Trans>show details</Trans>
+                )}
+              </button>
+            )}
+          </div>
+        )}
       {(bookmark.blurhash || data?.bookmarkById?.blurhash) && (
         <div className="absolute top-0 left-0 w-full h-full">
           <Blurhash
@@ -126,6 +181,12 @@ export default function BookmarkItem({
           src={`https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/${
             bookmark.imageId || data?.bookmarkById?.imageId
           }/thumbnail`}
+        />
+      )}
+      {jobDetailsOpen && (data?.bookmarkById?.job || bookmark.job) && (
+        <WorkerJobDetails
+          job={(data?.bookmarkById?.job || bookmark.job) as JobFragment}
+          onRequestClose={() => setJobDetailsOpen(false)}
         />
       )}
     </motion.button>

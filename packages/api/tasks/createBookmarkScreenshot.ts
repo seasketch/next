@@ -3,28 +3,31 @@ import puppeteer, { Browser, ScreenshotOptions } from "puppeteer";
 import sharp from "sharp";
 import { encode } from "blurhash";
 import { sign } from "../src/auth/jwks";
+import { withTimeout } from "../src/withTimeout";
 const HOST = process.env.HOST || "seasketch.org";
 
 const CLOUDFLARE_IMAGES_TOKEN = process.env.CLOUDFLARE_IMAGES_TOKEN;
 
-const _browser = puppeteer.launch({
-  headless: true,
-  defaultViewport: {
-    deviceScaleFactor: 2,
-    width: 1280,
-    height: 1024,
-  },
-});
+// const _browser = puppeteer.launch({
+//   headless: true,
+//   defaultViewport: {
+//     deviceScaleFactor: 2,
+//     width: 1280,
+//     height: 1024,
+//   },
+// });
 
 function getBrowser() {
-  return _browser;
+  // return _browser;
+  return puppeteer.launch({
+    headless: true,
+    defaultViewport: {
+      deviceScaleFactor: 2,
+      width: 1280,
+      height: 1024,
+    },
+  });
 }
-
-// TODO: Limit queue to 3 at one time
-// TODO: Rate-limit create bookmark mutation by client
-// TODO: Handle errors better
-// TODO: assign proper dpi
-// TODO: error handling (attemp a couple times, then report error to the user)
 
 async function createBookmarkScreenshot(
   payload: { id: string },
@@ -147,4 +150,4 @@ async function createBookmarkScreenshot(
     );
   });
 }
-export default createBookmarkScreenshot;
+export default withTimeout(20000, createBookmarkScreenshot);
