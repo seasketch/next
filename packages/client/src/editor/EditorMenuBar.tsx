@@ -552,7 +552,7 @@ export function attachBookmark(
     })
   );
   const selection = state.selection;
-  if (selection && selection.$from < selection.$to) {
+  if (selection && selection.$from.pos < selection.$to.pos) {
     tr.addMark(
       selection.from,
       selection.to,
