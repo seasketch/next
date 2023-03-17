@@ -1225,6 +1225,7 @@ export type CreateInteractivitySettingPayload = {
 
 /** All input for the `createMapBookmark` mutation. */
 export type CreateMapBookmarkInput = {
+  basemapName?: Maybe<Scalars['String']>;
   basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
   cameraOptions?: Maybe<Scalars['JSON']>;
   /**
@@ -1233,6 +1234,7 @@ export type CreateMapBookmarkInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   isPublic?: Maybe<Scalars['Boolean']>;
+  layerNames?: Maybe<Scalars['JSON']>;
   mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
   selectedBasemap?: Maybe<Scalars['Int']>;
   sidebarState?: Maybe<Scalars['JSON']>;
@@ -1729,14 +1731,7 @@ export type DataLayer = Node & {
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
-  /**
-   * Used as a stable reference identifier for the layer. In the event that the
-   * layer is completely replaced, this ID can be assigned to the new one.
-   * Geoprocessing Clients (reports) are an important use case for these IDs, which
-   * they use to toggle layers on and off. Map Bookmarks will also use this
-   * identifier if present. In both cases, the numeric ID of DataLayers can be used
-   * but this is more likely to change.
-   */
+  /** @deprecated Use TableOfContentsItem.geoprocessingReferenceId instead */
   staticId?: Maybe<Scalars['String']>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
@@ -1820,14 +1815,6 @@ export type DataLayerInput = {
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  /**
-   * Used as a stable reference identifier for the layer. In the event that the
-   * layer is completely replaced, this ID can be assigned to the new one.
-   * Geoprocessing Clients (reports) are an important use case for these IDs, which
-   * they use to toggle layers on and off. Map Bookmarks will also use this
-   * identifier if present. In both cases, the numeric ID of DataLayers can be used
-   * but this is more likely to change.
-   */
   staticId?: Maybe<Scalars['String']>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
@@ -1857,14 +1844,6 @@ export type DataLayerPatch = {
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  /**
-   * Used as a stable reference identifier for the layer. In the event that the
-   * layer is completely replaced, this ID can be assigned to the new one.
-   * Geoprocessing Clients (reports) are an important use case for these IDs, which
-   * they use to toggle layers on and off. Map Bookmarks will also use this
-   * identifier if present. In both cases, the numeric ID of DataLayers can be used
-   * but this is more likely to change.
-   */
   staticId?: Maybe<Scalars['String']>;
   /**
    * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
@@ -5704,6 +5683,7 @@ export type MapBookmark = {
   __typename?: 'MapBookmark';
   /** Reads a single `Basemap` that is related to this `MapBookmark`. */
   basemapBySelectedBasemap?: Maybe<Basemap>;
+  basemapName?: Maybe<Scalars['String']>;
   basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
   blurhash?: Maybe<Scalars['String']>;
   cameraOptions: Scalars['JSON'];
@@ -5712,6 +5692,7 @@ export type MapBookmark = {
   imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
   job?: Maybe<WorkerJob>;
+  layerNames?: Maybe<Scalars['JSON']>;
   mapDimensions: Array<Maybe<Scalars['Int']>>;
   postId?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
@@ -11523,6 +11504,7 @@ export type TableOfContentsItem = Node & {
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
   enableDownload: Scalars['Boolean'];
+  geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
@@ -11627,6 +11609,7 @@ export type TableOfContentsItemPatch = {
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
   enableDownload?: Maybe<Scalars['Boolean']>;
+  geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
@@ -14356,7 +14339,7 @@ export type UploadBasemapMutation = (
 
 export type BasemapAdminDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url'>
+  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -14720,7 +14703,7 @@ export type DataUploadDetailsFragment = (
     & Pick<DataLayer, 'id'>
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'nodeId' | 'id'>
+      & Pick<TableOfContentsItem, 'nodeId' | 'id' | 'stableId'>
     )> }
   )>> }
 );
@@ -14938,7 +14921,7 @@ export type LayersAndSourcesForItemsQuery = (
         & Pick<Sprite, 'id' | 'type'>
         & { spriteImages: Array<(
           { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
+          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url' | 'spriteId'>
         )> }
       )>> }
     )>> }
@@ -15044,7 +15027,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload'>
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId'>
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -15075,6 +15058,7 @@ export type UpdateTableOfContentsItemMutationVariables = Exact<{
   title?: Maybe<Scalars['String']>;
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
   metadata?: Maybe<Scalars['JSON']>;
+  geoprocessingReferenceId?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -15084,7 +15068,7 @@ export type UpdateTableOfContentsItemMutation = (
     { __typename?: 'UpdateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'metadata' | 'title'>
+      & Pick<TableOfContentsItem, 'id' | 'bounds' | 'metadata' | 'title' | 'geoprocessingReferenceId' | 'stableId'>
     )> }
   )> }
 );
@@ -15670,7 +15654,7 @@ export type JobFragment = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'imageId' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches' | 'screenshotJobStatus'>
+  & Pick<MapBookmark, 'id' | 'imageId' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames'>
   & { job?: Maybe<(
     { __typename?: 'WorkerJob' }
     & JobFragment
@@ -15701,6 +15685,8 @@ export type CreateMapBookmarkMutationVariables = Exact<{
   mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
   visibleSketches: Array<Scalars['Int']> | Scalars['Int'];
   sidebarState?: Maybe<Scalars['JSON']>;
+  basemapName: Scalars['String'];
+  layerNames: Scalars['JSON'];
 }>;
 
 
@@ -16284,7 +16270,7 @@ export type ProjectSlugExistsQuery = (
 
 export type OverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
@@ -16305,6 +16291,32 @@ export type PublishedTableOfContentsQuery = (
       { __typename?: 'TableOfContentsItem' }
       & OverlayFragment
     )>> }
+  )> }
+);
+
+export type DataSourceDetailsFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
+);
+
+export type ClientSpriteFragment = (
+  { __typename?: 'Sprite' }
+  & Pick<Sprite, 'id' | 'type'>
+  & { spriteImages: Array<(
+    { __typename?: 'SpriteImage' }
+    & Pick<SpriteImage, 'url' | 'height' | 'width' | 'pixelRatio' | 'spriteId'>
+  )> }
+);
+
+export type DataLayerDetailsFragment = (
+  { __typename?: 'DataLayer' }
+  & Pick<DataLayer, 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'zIndex' | 'staticId' | 'dataSourceId'>
+  & { sprites?: Maybe<Array<(
+    { __typename?: 'Sprite' }
+    & ClientSpriteFragment
+  )>>, interactivitySettings?: Maybe<(
+    { __typename?: 'InteractivitySetting' }
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
   )> }
 );
 
@@ -18595,6 +18607,7 @@ export const BasemapAdminDetailsFragmentDoc = gql`
   tileSize
   type
   url
+  surveysOnly
 }
     `;
 export const DataUploadDetailsFragmentDoc = gql`
@@ -18610,6 +18623,7 @@ export const DataUploadDetailsFragmentDoc = gql`
     tableOfContentsItem {
       nodeId
       id
+      stableId
     }
   }
 }
@@ -18669,9 +18683,12 @@ export const MapBookmarkDetailsFragmentDoc = gql`
   blurhash
   visibleSketches
   screenshotJobStatus
+  basemapName
+  layerNames
   job {
     ...Job
   }
+  basemapName
 }
     ${JobFragmentDoc}`;
 export const ForumPostFragmentDoc = gql`
@@ -18964,9 +18981,77 @@ export const OverlayFragmentDoc = gql`
   sortIndex
   stableId
   title
-  stableId
+  geoprocessingReferenceId
 }
     `;
+export const DataSourceDetailsFragmentDoc = gql`
+    fragment DataSourceDetails on DataSource {
+  id
+  attribution
+  bounds
+  bucketId
+  buffer
+  byteLength
+  cluster
+  clusterMaxZoom
+  clusterProperties
+  clusterRadius
+  coordinates
+  encoding
+  enhancedSecurity
+  importType
+  lineMetrics
+  maxzoom
+  minzoom
+  objectKey
+  originalSourceUrl
+  queryParameters
+  scheme
+  tiles
+  tileSize
+  tolerance
+  type
+  url
+  urls
+  useDevicePixelRatio
+  supportsDynamicLayers
+}
+    `;
+export const ClientSpriteFragmentDoc = gql`
+    fragment ClientSprite on Sprite {
+  id
+  type
+  spriteImages {
+    url
+    height
+    width
+    pixelRatio
+    spriteId
+  }
+}
+    `;
+export const DataLayerDetailsFragmentDoc = gql`
+    fragment DataLayerDetails on DataLayer {
+  id
+  mapboxGlStyles
+  renderUnder
+  sourceLayer
+  sublayer
+  zIndex
+  staticId
+  dataSourceId
+  sprites {
+    ...ClientSprite
+  }
+  interactivitySettings {
+    cursor
+    id
+    longTemplate
+    shortTemplate
+    type
+  }
+}
+    ${ClientSpriteFragmentDoc}`;
 export const ProjectListItemFragmentDoc = gql`
     fragment ProjectListItem on Project {
   id
@@ -21748,6 +21833,7 @@ export const LayersAndSourcesForItemsDocument = gql`
           height
           width
           url
+          spriteId
         }
         type
       }
@@ -22029,6 +22115,7 @@ export const GetLayerItemDocument = gql`
     stableId
     title
     enableDownload
+    geoprocessingReferenceId
     dataLayer {
       id
       zIndex
@@ -22119,15 +22206,17 @@ export type GetLayerItemQueryHookResult = ReturnType<typeof useGetLayerItemQuery
 export type GetLayerItemLazyQueryHookResult = ReturnType<typeof useGetLayerItemLazyQuery>;
 export type GetLayerItemQueryResult = Apollo.QueryResult<GetLayerItemQuery, GetLayerItemQueryVariables>;
 export const UpdateTableOfContentsItemDocument = gql`
-    mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON) {
+    mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON, $geoprocessingReferenceId: String) {
   updateTableOfContentsItem(
-    input: {id: $id, patch: {title: $title, bounds: $bounds, metadata: $metadata}}
+    input: {id: $id, patch: {title: $title, bounds: $bounds, metadata: $metadata, geoprocessingReferenceId: $geoprocessingReferenceId}}
   ) {
     tableOfContentsItem {
       id
       bounds
       metadata
       title
+      geoprocessingReferenceId
+      stableId
     }
   }
 }
@@ -22151,6 +22240,7 @@ export type UpdateTableOfContentsItemMutationFn = Apollo.MutationFunction<Update
  *      title: // value for 'title'
  *      bounds: // value for 'bounds'
  *      metadata: // value for 'metadata'
+ *      geoprocessingReferenceId: // value for 'geoprocessingReferenceId'
  *   },
  * });
  */
@@ -23339,9 +23429,9 @@ export type GetBookmarkQueryHookResult = ReturnType<typeof useGetBookmarkQuery>;
 export type GetBookmarkLazyQueryHookResult = ReturnType<typeof useGetBookmarkLazyQuery>;
 export type GetBookmarkQueryResult = Apollo.QueryResult<GetBookmarkQuery, GetBookmarkQueryVariables>;
 export const CreateMapBookmarkDocument = gql`
-    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!, $sidebarState: JSON) {
+    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!, $sidebarState: JSON, $basemapName: String!, $layerNames: JSON!) {
   createMapBookmark(
-    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches, sidebarState: $sidebarState}
+    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches, sidebarState: $sidebarState, basemapName: $basemapName, layerNames: $layerNames}
   ) {
     mapBookmark {
       ...MapBookmarkDetails
@@ -23374,6 +23464,8 @@ export type CreateMapBookmarkMutationFn = Apollo.MutationFunction<CreateMapBookm
  *      mapDimensions: // value for 'mapDimensions'
  *      visibleSketches: // value for 'visibleSketches'
  *      sidebarState: // value for 'sidebarState'
+ *      basemapName: // value for 'basemapName'
+ *      layerNames: // value for 'layerNames'
  *   },
  * });
  */
@@ -28359,6 +28451,9 @@ export const namedOperations = {
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',
     Overlay: 'Overlay',
+    DataSourceDetails: 'DataSourceDetails',
+    ClientSprite: 'ClientSprite',
+    DataLayerDetails: 'DataLayerDetails',
     ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',

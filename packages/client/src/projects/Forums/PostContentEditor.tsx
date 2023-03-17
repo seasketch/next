@@ -22,6 +22,7 @@ import EditorMenuBar, { deleteBookmark } from "../../editor/EditorMenuBar";
 import {
   MapBookmarkDetailsFragment,
   useCreateMapBookmarkMutation,
+  usePublishedTableOfContentsQuery,
 } from "../../generated/graphql";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import getSlug from "../../getSlug";
@@ -55,6 +56,13 @@ export default function PostContentEditor({
   const [bookmarkErrors, setBookmarkErrors] = useState<
     { id: string; error: string }[]
   >([]);
+
+  const tableOfContentsData = usePublishedTableOfContentsQuery({
+    variables: {
+      slug: getSlug(),
+    },
+    fetchPolicy: "cache-only",
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [createBookmark, createBookmarkState] = useCreateMapBookmarkMutation();
@@ -177,11 +185,21 @@ export default function PostContentEditor({
             )
         );
       }
+      const layerNames: { [id: string]: string } = {};
+      for (const id of bookmark.visibleDataLayers) {
+        const items =
+          tableOfContentsData.data?.projectBySlug?.tableOfContentsItems || [];
+        const item = items.find((i) => i.stableId === id);
+        if (item) {
+          layerNames[id] = item.title;
+        }
+      }
       const data = await createBookmark({
         variables: {
           slug: getSlug(),
           ...bookmark,
           isPublic: false,
+          layerNames,
         },
       });
       if (data.data?.createMapBookmark?.mapBookmark?.id) {
@@ -193,7 +211,13 @@ export default function PostContentEditor({
     } else {
       throw new Error("MapContext not ready to create map bookmarks");
     }
-  }, [createBookmark, mapContext.manager, state?.doc, accessibleSketchIds]);
+  }, [
+    createBookmark,
+    mapContext.manager,
+    state?.doc,
+    accessibleSketchIds,
+    tableOfContentsData.data?.projectBySlug?.tableOfContentsItems,
+  ]);
 
   useEffect(() => {
     let doc: Node | undefined;

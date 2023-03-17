@@ -17,12 +17,12 @@ import DataUploadDropzone from "../uploads/DataUploadDropzone";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
-const LazyArcGISBrowser = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISBrowser"
-    )
-);
+// const LazyArcGISBrowser = React.lazy(
+//   () =>
+//     import(
+//       /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISBrowser"
+//     )
+// );
 
 export default function DataSettings() {
   const { path } = useRouteMatch();
@@ -73,29 +73,36 @@ export default function DataSettings() {
                   <div className="mt-5 md:mt-0 md:col-span-2">
                     <div className="shadow sm:rounded-md sm:overflow-hidden">
                       <div className="px-4 py-5 bg-white sm:p-6">
-                        <Link
-                          to={`./add-data/arcgis`}
-                          className="mx-2"
-                          component={Button}
-                        >
-                          {t("ArcGIS Server")}
-                        </Link>
-                        <Link
-                          to={`./add-data/esri`}
-                          className="mx-2"
-                          component={Button}
-                        >
-                          {t("WCS (WMS or WMTS)")}
-                        </Link>
+                        {t(
+                          "Area temporarily disabled. Drag and drop spatial data to the overlays list to upload."
+                        )}
+                        <div className="opacity-20 pointer-events-none mt-5">
+                          <Link
+                            to={`./add-data/arcgis`}
+                            className="mx-2"
+                            aria-disabled
+                            component={Button}
+                          >
+                            {t("ArcGIS Server")}
+                          </Link>
+                          <Link
+                            aria-disabled
+                            to={`./add-data/esri`}
+                            className="mx-2"
+                            component={Button}
+                          >
+                            {t("WCS (WMS or WMTS)")}
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </Route>
-            <Route exact path={`${path}/add-data/arcgis`}>
+            {/* <Route exact path={`${path}/add-data/arcgis`}>
               <LazyArcGISBrowser />
-            </Route>
+            </Route> */}
           </Switch>
         </MapContext.Provider>
       </DndProvider>

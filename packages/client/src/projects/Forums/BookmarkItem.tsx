@@ -15,6 +15,8 @@ import { useState, useCallback } from "react";
 import { Blurhash } from "react-blurhash";
 import { Trans } from "react-i18next";
 import WorkerJobDetails from "../../components/WorkerJobDetails";
+import { InformationCircleIcon } from "@heroicons/react/outline";
+import MapBookmarkDetailsOverlay from "../../components/MapBookmarkDetailsOverlay";
 
 export default function BookmarkItem({
   bookmark,
@@ -40,6 +42,9 @@ export default function BookmarkItem({
       Boolean(bookmark.imageId) ||
       bookmark.screenshotJobStatus === WorkerJobStatus.Failed,
   });
+  const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
+    string | null
+  >(null);
 
   useMapBookmarkSubscription({
     variables: {
@@ -58,9 +63,15 @@ export default function BookmarkItem({
 
   const status =
     data?.bookmarkById?.screenshotJobStatus || bookmark.screenshotJobStatus;
-  const onBookmarkClick = useCallback(() => {
-    onClick(bookmark);
-  }, [onClick, bookmark]);
+  const onBookmarkClick = useCallback(
+    (e) => {
+      if (e.target instanceof HTMLElement && e.target.tagName === "BUTTON") {
+        return;
+      }
+      onClick(bookmark);
+    },
+    [onClick, bookmark]
+  );
 
   const editable = Boolean(removeBookmark);
   return (
@@ -178,7 +189,7 @@ export default function BookmarkItem({
           alt="Bookmark preview thumbnail"
           className="absolute top-0 left-0 w-full h-full"
           style={{ objectFit: "cover" }}
-          src={`https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/${
+          src={`${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${
             bookmark.imageId || data?.bookmarkById?.imageId
           }/thumbnail`}
         />
@@ -187,6 +198,24 @@ export default function BookmarkItem({
         <WorkerJobDetails
           job={(data?.bookmarkById?.job || bookmark.job) as JobFragment}
           onRequestClose={() => setJobDetailsOpen(false)}
+        />
+      )}
+      {bookmark.imageId && (
+        <button
+          className="absolute right-1 bottom-1 bg-white bg-opacity-20 rounded-full group hover:bg-blue-700"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowBookmarkOverlayId(bookmark.id);
+          }}
+        >
+          <InformationCircleIcon className="w-4 h-4 text-white" />
+        </button>
+      )}
+      {showBookmarkOverlayId && (
+        <MapBookmarkDetailsOverlay
+          bookmarkId={showBookmarkOverlayId}
+          onRequestClose={() => setShowBookmarkOverlayId(null)}
         />
       )}
     </motion.button>

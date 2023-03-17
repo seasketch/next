@@ -38,5 +38,7 @@
   "ReplyCount_plural": "{{count}} replies",
   "ReplyCount": "{{count}} reply",
   "AreaCount": "{{count}} area",
-  "AreaCount_plural": "{{count}} areas"
+  "AreaCount_plural": "{{count}} areas",
+  "missingLayerCount": "Map bookmark shown ({{count}} error)",
+  "missingLayerCount_plural": "Map bookmark shown ({{count}} errors)"
 }

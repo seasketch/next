@@ -49,13 +49,15 @@ export default function SketchReportWindow({
     if (iframe.current?.contentWindow) {
       const message = {
         type: "SeaSketchReportingVisibleLayersChangeEvent",
-        visibleLayers: Object.keys(mapContext.layerStates)
-          .filter((id) => mapContext.layerStates[id].visible)
-          .map((id) => mapContext.layerStates[id].staticId || id),
+        visibleLayers: mapContext.manager?.getVisibleLayerReferenceIds() || [],
       };
       iframe.current.contentWindow.postMessage(message, "*");
     }
-  }, [mapContext.layerStates, iframe.current?.contentWindow]);
+  }, [
+    mapContext.layerStatesByTocStaticId,
+    iframe.current?.contentWindow,
+    mapContext.manager,
+  ]);
 
   useEffect(() => {
     const handler = async (e: MessageEvent<any>) => {
@@ -75,9 +77,9 @@ export default function SketchReportWindow({
           type: "SeaSketchReportingMessageEventType",
           client: data?.sketchClass?.geoprocessingClientName,
           geometryUri,
-          visibleLayers: Object.keys(mapContext.layerStates)
-            .filter((id) => mapContext.layerStates[id].visible)
-            .map((id) => mapContext.layerStates[id].staticId || id),
+          visibleLayers: Object.keys(
+            mapContext.layerStatesByTocStaticId
+          ).filter((id) => mapContext.layerStatesByTocStaticId[id].visible),
           sketchProperties: {
             id: sketchId,
             name: data?.sketch?.name,
@@ -117,9 +119,9 @@ export default function SketchReportWindow({
         const { layerId, on } = e.data as { layerId: string; on: boolean };
         if (mapContext.manager) {
           if (on) {
-            mapContext.manager.showLayers([layerId]);
+            mapContext.manager.showTocItems([layerId]);
           } else {
-            mapContext.manager.hideLayers([layerId]);
+            mapContext.manager.hideTocItems([layerId]);
           }
         }
       } else if (
@@ -145,7 +147,7 @@ export default function SketchReportWindow({
     data?.sketch?.childProperties,
     sketchClassId,
     reportingAccessToken,
-    mapContext?.layerStates,
+    mapContext?.layerStatesByTocStaticId,
     mapContext?.manager,
     onRequestClose,
   ]);

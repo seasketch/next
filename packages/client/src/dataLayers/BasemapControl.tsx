@@ -1,12 +1,13 @@
 import React, { useContext } from "react";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import { ClientBasemap, MapContext } from "../dataLayers/MapContextManager";
+import { MapContext } from "../dataLayers/MapContextManager";
 import { useTranslation, Trans } from "react-i18next";
 import OptionalBasemapLayerControl from "../dataLayers/OptionalBasemapLayerControl";
+import { BasemapDetailsFragment } from "../generated/graphql";
 
 interface BasemapControlProps {
-  basemaps?: ClientBasemap[];
+  basemaps?: BasemapDetailsFragment[];
 }
 
 export default function BasemapControl(props: BasemapControlProps) {

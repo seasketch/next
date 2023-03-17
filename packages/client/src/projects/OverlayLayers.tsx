@@ -1,8 +1,4 @@
-import { useState, useContext, useCallback, useMemo } from "react";
-import {
-  ClientTableOfContentsItem,
-  combineBounds,
-} from "../dataLayers/tableOfContents/TableOfContents";
+import { useState, useContext, useCallback } from "react";
 import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
 import { OverlayFragment, TableOfContentsItem } from "../generated/graphql";
 import { MapContext } from "../dataLayers/MapContextManager";
@@ -142,4 +138,16 @@ export function createBoundsRecursive(
     bounds = createBoundsRecursive(child, items, bounds);
   }
   return bounds;
+}
+
+export function combineBounds(
+  a: [number, number, number, number],
+  b: [number, number, number, number]
+): [number, number, number, number] {
+  return [
+    a[0] < b[0] ? a[0] : b[0],
+    a[1] < b[1] ? a[1] : b[1],
+    a[2] > b[2] ? a[2] : b[2],
+    a[3] > b[3] ? a[3] : b[3],
+  ];
 }

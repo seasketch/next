@@ -2,14 +2,17 @@
   "": "",
   "Cancel": "Cancel",
   "Forums": "Forums",
+  "Map Bookmark Errors": "Map Bookmark Errors",
   "New Topic": "New Topic",
   "New Topic Title...": "New Topic Title...",
   "No forums have been configured for this project.": "No forums have been configured for this project.",
   "Post New Topic": "Post New Topic",
   "Post Reply": "Post Reply",
   "Post a topic": "Post a topic",
+  "Post anyways": "Post anyways",
   "This forum has no discussion topics yet.": "This forum has no discussion topics yet.",
   "This forum has no discussion topics yet. Be the first to create one!": "This forum has no discussion topics yet. Be the first to create one!",
+  "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting.": "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting.",
   "posted on": "posted on",
   "replied on": "replied on"
 }

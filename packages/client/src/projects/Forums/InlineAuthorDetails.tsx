@@ -155,7 +155,7 @@ function fallbackCopyTextToClipboard(text: string) {
 
   document.body.removeChild(textArea);
 }
-function copyTextToClipboard(text: string) {
+export function copyTextToClipboard(text: string) {
   if (!navigator.clipboard) {
     fallbackCopyTextToClipboard(text);
     return;

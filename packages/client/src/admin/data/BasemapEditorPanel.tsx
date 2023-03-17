@@ -23,7 +23,6 @@ import CreateOptionalLayerModal from "./CreateOptionalLayerModal";
 import OptionalBasemapLayerEditor from "../../dataLayers/OptionalBasemapLayerEditor";
 import useDebounce from "../../useDebounce";
 import InteractivitySettings from "./InteractivitySettings";
-import { ClientBasemap } from "../../dataLayers/MapContextManager";
 import BasemapEditorPanelMap from "./BasemapEditorMap";
 import { useMediaQuery } from "beautiful-react-hooks";
 import { Link } from "react-router-dom";
@@ -417,7 +416,7 @@ export default function BasemapEditorPanel({
           {basemap.type === BasemapType.Mapbox && (
             <div className="mt-5">
               <InteractivitySettings
-                basemap={basemap as ClientBasemap}
+                basemap={basemap}
                 id={basemap.interactivitySettings!.id}
               />
             </div>
@@ -427,7 +426,7 @@ export default function BasemapEditorPanel({
       {showMap && basemap && (
         <div className="flex-1 bg-gray-50" style={{ gridArea: "map" }}>
           <BasemapEditorPanelMap
-            basemap={basemap as BasemapDetailsFragment}
+            basemap={basemap}
             cameraOptions={cameraOptions}
           />
         </div>

@@ -7,7 +7,7 @@ export default function MutableAutosaveInput(props: {
   propName: string;
   value: string;
   label: string | ReactNode;
-  description?: string;
+  description?: string | ReactNode;
   placeholder?: string;
   mutation: (options: any) => Promise<any>;
   mutationStatus: MutationResult<any>;

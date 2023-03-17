@@ -62,10 +62,17 @@ export default function TableOfContentsEditor() {
     const layers = layersAndSources?.data?.projectBySlug?.dataLayersForItems;
     const sources = layersAndSources?.data?.projectBySlug?.dataSourcesForItems;
     if (layers && sources && manager) {
-      // @ts-ignore
-      manager.reset(sources, layers);
+      manager.reset(
+        sources,
+        layers,
+        tocQuery.data?.projectBySlug?.draftTableOfContentsItems || []
+      );
     }
-  }, [layersAndSources.data, manager]);
+  }, [
+    layersAndSources.data,
+    manager,
+    tocQuery.data?.projectBySlug?.draftTableOfContentsItems,
+  ]);
 
   useEffect(() => {
     tocQuery.refetch();
@@ -133,7 +140,7 @@ export default function TableOfContentsEditor() {
                 setFolderId(item.id);
               } else {
                 if (item.dataLayerId) {
-                  manager?.showLayers([item.dataLayerId.toString()]);
+                  manager?.showTocItems([item.stableId]);
                 }
                 setOpenLayerItemId(item.id);
               }

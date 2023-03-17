@@ -232,9 +232,12 @@ fragment MapBookmarkDetails on MapBookmark {
   blurhash
   visibleSketches
   screenshotJobStatus
+  basemapName
+  layerNames
   job {
     ...Job
   }
+  basemapName
 }
 
 query GetBookmark($id: UUID!) {
@@ -254,6 +257,8 @@ mutation CreateMapBookmark(
   $mapDimensions: [Int!]!
   $visibleSketches: [Int!]!
   $sidebarState: JSON
+  $basemapName: String!
+  $layerNames: JSON!
 ) {
   createMapBookmark(
     input: {
@@ -267,6 +272,8 @@ mutation CreateMapBookmark(
       mapDimensions: $mapDimensions
       visibleSketches: $visibleSketches
       sidebarState: $sidebarState
+      basemapName: $basemapName
+      layerNames: $layerNames
     }
   ) {
     mapBookmark {

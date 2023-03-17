@@ -85,7 +85,7 @@ export default function DataUploadDropzone({
         slug,
         projectId,
         showLayer: mapManager
-          ? (layerId: string) => mapManager.showLayers([layerId])
+          ? (layerId: string) => mapManager.showTocItems([layerId])
           : (id: string) => {},
         onError,
         onQuotaError: () => {
@@ -223,7 +223,7 @@ class UploadManager extends EventEmitter<{
     slug: string;
     projectId: number;
     onError?: (error: Error) => void;
-    showLayer?: (nodeId: string) => void;
+    showLayer?: (tocStableId: string) => void;
     onQuotaError?: (e: Error) => void;
   }) {
     super();
@@ -509,7 +509,7 @@ class UploadManager extends EventEmitter<{
                     for (const layer of complete.layers || []) {
                       if (layer.tableOfContentsItem) {
                         if (this.showLayer) {
-                          this.showLayer(layer.id.toString());
+                          this.showLayer(layer.tableOfContentsItem.stableId);
                         }
                       }
                     }

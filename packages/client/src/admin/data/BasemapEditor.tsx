@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import Button from "../../components/Button";
-import { ClientBasemap, MapContext } from "../../dataLayers/MapContextManager";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import {
   useGetBasemapsQuery,
   useDeleteBasemapMutation,
@@ -31,9 +31,7 @@ export default function BaseMapEditor() {
   const client = useApolloClient();
   useEffect(() => {
     if (data?.projectBySlug?.basemaps && mapContext.manager) {
-      mapContext.manager.setBasemaps(
-        data.projectBySlug.basemaps as ClientBasemap[]
-      );
+      mapContext.manager.setBasemaps(data.projectBySlug.basemaps);
     }
   }, [data?.projectBySlug?.basemaps, mapContext.manager]);
 
@@ -120,9 +118,7 @@ export default function BaseMapEditor() {
               }}
             />
           )}
-          <BasemapControl
-            basemaps={(data?.projectBySlug?.basemaps || []) as ClientBasemap[]}
-          />
+          <BasemapControl basemaps={data?.projectBySlug?.basemaps || []} />
         </div>
         {editModalOpen && mapContext.selectedBasemap && (
           <BasemapEditorPanel
