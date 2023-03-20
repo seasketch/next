@@ -1403,6 +1403,7 @@ input CreateMapBookmarkInput {
   mapDimensions: [Int]
   selectedBasemap: Int
   sidebarState: JSON
+  sketchNames: JSON
   slug: String
   style: JSON
   visibleDataLayers: [String]
@@ -6639,6 +6640,7 @@ type MapBookmark {
   screenshotJobStatus: WorkerJobStatus!
   selectedBasemap: Int!
   sidebarState: JSON
+  sketchNames: JSON
   style: JSON!
   userId: Int!
   visibleDataLayers: [String]!

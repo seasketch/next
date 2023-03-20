@@ -21,6 +21,7 @@ import SketchNodeView from "./SketchNodeView";
 import EditorMenuBar, { deleteBookmark } from "../../editor/EditorMenuBar";
 import {
   MapBookmarkDetailsFragment,
+  SketchPresentFragmentDoc,
   useCreateMapBookmarkMutation,
   usePublishedTableOfContentsQuery,
 } from "../../generated/graphql";
@@ -29,6 +30,11 @@ import getSlug from "../../getSlug";
 import { AnimatePresence } from "framer-motion";
 import BookmarkItem from "./BookmarkItem";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
+import {
+  useApolloClient,
+  NormalizedCacheObject,
+  ApolloClient,
+} from "@apollo/client";
 
 export default function PostContentEditor({
   initialContent,
@@ -56,6 +62,8 @@ export default function PostContentEditor({
   const [bookmarkErrors, setBookmarkErrors] = useState<
     { id: string; error: string }[]
   >([]);
+
+  const apolloClient = useApolloClient() as ApolloClient<NormalizedCacheObject>;
 
   const tableOfContentsData = usePublishedTableOfContentsQuery({
     variables: {
@@ -136,7 +144,11 @@ export default function PostContentEditor({
           if (id && type === "MapBookmark") {
             const attachment = bookmarkAttachments.find((b) => b.id === id);
             if (attachment && mapContext.manager) {
-              mapContext.manager.showMapBookmark(attachment.data);
+              mapContext.manager.showMapBookmark(
+                attachment.data,
+                true,
+                apolloClient
+              );
             }
           }
         }
@@ -148,7 +160,7 @@ export default function PostContentEditor({
         el.removeEventListener("click", onClickListener);
       };
     }
-  }, [root, bookmarkAttachments, mapContext?.manager]);
+  }, [root, bookmarkAttachments, mapContext?.manager, apolloClient]);
 
   const createMapBookmark = useCallback(async () => {
     if (mapContext.manager) {
@@ -185,6 +197,7 @@ export default function PostContentEditor({
             )
         );
       }
+
       const layerNames: { [id: string]: string } = {};
       for (const id of bookmark.visibleDataLayers) {
         const items =
@@ -194,12 +207,26 @@ export default function PostContentEditor({
           layerNames[id] = item.title;
         }
       }
+
+      const sketchNames: { [id: number]: string } = {};
+
+      for (const id of bookmark.visibleSketches) {
+        const data = apolloClient.readFragment({
+          fragment: SketchPresentFragmentDoc,
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `Sketch:${id}`,
+        });
+        if (data?.name) {
+          sketchNames[id] = data.name;
+        }
+      }
       const data = await createBookmark({
         variables: {
           slug: getSlug(),
           ...bookmark,
           isPublic: false,
           layerNames,
+          sketchNames,
         },
       });
       if (data.data?.createMapBookmark?.mapBookmark?.id) {
@@ -323,7 +350,7 @@ export default function PostContentEditor({
   const onMapBookmarkClick = useCallback(
     (bookmark: MapBookmarkDetailsFragment) => {
       if (mapContext.manager) {
-        mapContext.manager.showMapBookmark(bookmark);
+        mapContext.manager.showMapBookmark(bookmark, true, apolloClient);
         if (bookmark.visibleSketches) {
           sketchUIContext.setVisibleSketches(
             // eslint-disable-next-line i18next/no-literal-string
@@ -332,7 +359,7 @@ export default function PostContentEditor({
         }
       }
     },
-    [mapContext.manager, sketchUIContext]
+    [mapContext.manager, sketchUIContext, apolloClient]
   );
 
   return (

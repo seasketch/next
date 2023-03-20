@@ -30,6 +30,7 @@ import {
   OptionalBasemapLayersGroupType,
   OverlayFragment,
   RenderUnderType,
+  SketchPresentFragmentDoc,
   SpriteDetailsFragment,
   useProjectRegionQuery,
 } from "../generated/graphql";
@@ -45,6 +46,7 @@ import useAccessToken from "../useAccessToken";
 import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
+import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 
 const graphqlURL = new URL(
   process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
@@ -1827,7 +1829,8 @@ class MapContextManager {
       | "visibleDataLayers"
       | "selectedBasemap"
     > & { id?: string },
-    savePreviousState = true
+    savePreviousState = true,
+    client?: ApolloClient<NormalizedCacheObject>
   ) {
     if (savePreviousState) {
       this.previousMapState = this.getMapBookmarkData();
@@ -1849,14 +1852,42 @@ class MapContextManager {
         ...prev,
         displayedMapBookmark: {
           id: bookmark.id!,
-          missingLayers: this.getMissingLayers(
-            (bookmark.visibleDataLayers || []) as string[]
-          ).length,
+          errors: this.getErrorsForBookmark(bookmark, client),
           supportsUndo: true,
         },
       }));
       this.hideBookmarkBanner(6000);
     }
+  }
+
+  getErrorsForBookmark(
+    bookmark: Pick<
+      MapBookmarkDetailsFragment,
+      "selectedBasemap" | "visibleSketches" | "visibleDataLayers"
+    >,
+    client?: ApolloClient<NormalizedCacheObject>
+  ) {
+    const missingSketches: number[] = [];
+    for (const id of bookmark.visibleSketches || []) {
+      if (
+        id &&
+        client &&
+        !client.readFragment({
+          fragment: SketchPresentFragmentDoc,
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `Sketch:${id}`,
+        })
+      ) {
+        missingSketches.push(id);
+      }
+    }
+    return {
+      missingLayers: this.getMissingLayers(
+        (bookmark.visibleDataLayers || []) as string[]
+      ),
+      missingBasemap: this.basemaps[bookmark.selectedBasemap] ? false : true,
+      missingSketches,
+    };
   }
 
   async undoMapBookmark() {
@@ -1957,7 +1988,11 @@ export interface MapContextInterface {
   showLoadingOverlay?: boolean;
   displayedMapBookmark?: {
     id: string;
-    missingLayers: number;
+    errors: {
+      missingLayers: string[];
+      missingBasemap: boolean;
+      missingSketches: number[];
+    };
     supportsUndo: boolean;
   };
 }

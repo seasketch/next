@@ -23,6 +23,11 @@ import { MapBookmarkAttachment } from "./PostContentEditor";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import BookmarkItem from "./BookmarkItem";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
+import {
+  useApolloClient,
+  NormalizedCacheObject,
+  ApolloClient,
+} from "@apollo/client";
 
 type SketchPortal = {
   items: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[];
@@ -48,6 +53,7 @@ export default function ForumPost({
   const [sketchPortals, setSketchPortals] = useState<SketchPortal[]>([]);
   const [bookmarks, setBookmarks] = useState<MapBookmarkAttachment[]>([]);
   const location = useLocation();
+  const apolloClient = useApolloClient() as ApolloClient<NormalizedCacheObject>;
 
   const isFocused = useMemo(() => {
     if (location?.hash && /#post-\d+/.test(location.hash)) {
@@ -102,7 +108,11 @@ export default function ForumPost({
           if (id && type === "MapBookmark") {
             const attachment = attachments.find((b) => b.id === id);
             if (attachment && mapContext.manager) {
-              mapContext.manager.showMapBookmark(attachment.data);
+              mapContext.manager.showMapBookmark(
+                attachment.data,
+                true,
+                apolloClient
+              );
             }
           }
         }
@@ -137,7 +147,7 @@ export default function ForumPost({
       setSketchPortals([]);
       setBookmarks([]);
     }
-  }, [bodyRef, mapContext?.manager]);
+  }, [bodyRef, mapContext?.manager, apolloClient]);
 
   useEffect(() => {
     if (bodyRef) {
@@ -164,7 +174,7 @@ export default function ForumPost({
   const onMapBookmarkClick = useCallback(
     (bookmark: MapBookmarkDetailsFragment) => {
       if (mapContext.manager) {
-        mapContext.manager.showMapBookmark(bookmark);
+        mapContext.manager.showMapBookmark(bookmark, true, apolloClient);
         if (bookmark.visibleSketches) {
           sketchUIContext.setVisibleSketches(
             // eslint-disable-next-line i18next/no-literal-string
@@ -173,7 +183,7 @@ export default function ForumPost({
         }
       }
     },
-    [mapContext.manager, sketchUIContext]
+    [mapContext.manager, sketchUIContext, apolloClient]
   );
 
   return (

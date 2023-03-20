@@ -1,9 +1,6 @@
 import { motion } from "framer-motion";
 import Spinner from "../../components/Spinner";
 import { TrashIcon } from "@heroicons/react/solid";
-import { useContext } from "react";
-import { MapContext } from "../../dataLayers/MapContextManager";
-import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 import {
   JobFragment,
   MapBookmarkDetailsFragment,
@@ -58,6 +55,7 @@ export default function BookmarkItem({
 
   const [jobDetailsOpen, setJobDetailsOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageShown, setImageShown] = useState(false);
 
   const job = data?.bookmarkById?.job || bookmark.job;
 
@@ -163,7 +161,7 @@ export default function BookmarkItem({
             )}
           </div>
         )}
-      {(bookmark.blurhash || data?.bookmarkById?.blurhash) && (
+      {(bookmark.blurhash || data?.bookmarkById?.blurhash) && !imageShown && (
         <div className="absolute top-0 left-0 w-full h-full">
           <Blurhash
             hash={bookmark.blurhash || data?.bookmarkById?.blurhash!}
@@ -192,6 +190,11 @@ export default function BookmarkItem({
           src={`${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${
             bookmark.imageId || data?.bookmarkById?.imageId
           }/thumbnail`}
+          onAnimationComplete={() => {
+            if (imageLoaded) {
+              setImageShown(true);
+            }
+          }}
         />
       )}
       {jobDetailsOpen && (data?.bookmarkById?.job || bookmark.job) && (

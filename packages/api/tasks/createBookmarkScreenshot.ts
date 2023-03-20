@@ -87,6 +87,10 @@ async function createBookmarkScreenshot(
         width: width - sidebar.width,
         height,
       };
+      await client.query(
+        `update map_bookmarks set map_dimensions = $1 where id = $2`,
+        [[width - sidebar.width, height], bookmark.id]
+      );
     }
 
     const browser = await getBrowser();

@@ -440,8 +440,34 @@ alter table map_bookmarks add column if not exists basemap_name text;
 
 alter table map_bookmarks add column if not exists layer_names jsonb;
 
-drop function if exists create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb);
-CREATE OR REPLACE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb) RETURNS public.map_bookmarks
+alter table map_bookmarks add column if not exists sketch_names jsonb;
+
+
+CREATE OR REPLACE FUNCTION f_delfunc(_name text, OUT functions_dropped int)
+   LANGUAGE plpgsql AS
+$func$
+-- drop all functions with given _name in the current search_path, regardless of function parameters
+DECLARE
+   _sql text;
+BEGIN
+   SELECT count(*)::int
+        , 'DROP FUNCTION ' || string_agg(oid::regprocedure::text, '; DROP FUNCTION ')
+   FROM   pg_catalog.pg_proc
+   WHERE  proname = _name
+   AND    pg_function_is_visible(oid)  -- restrict to current search_path
+   INTO   functions_dropped, _sql;     -- count only returned if subsequent DROPs succeed
+
+   IF functions_dropped > 0 THEN       -- only if function(s) found
+     EXECUTE _sql;
+   END IF;
+END
+$func$;
+
+select f_delfunc('create_map_bookmark');
+
+drop function if exists f_delfunc;
+
+CREATE OR REPLACE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb) RETURNS public.map_bookmarks
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -463,7 +489,8 @@ CREATE OR REPLACE FUNCTION public.create_map_bookmark(slug text, "isPublic" bool
           visible_sketches,
           sidebar_state,
           basemap_name,
-          layer_names
+          layer_names,
+          sketch_names
         ) values (
           pid,
           nullif(current_setting('session.user_id', TRUE), '')::int,
@@ -477,7 +504,8 @@ CREATE OR REPLACE FUNCTION public.create_map_bookmark(slug text, "isPublic" bool
           "visibleSketches",
           "sidebarState",
           "basemapName",
-          "layerNames"
+          "layerNames",
+          "sketchNames"
         ) returning * into bookmark;
         return bookmark;
       else
@@ -487,3 +515,5 @@ CREATE OR REPLACE FUNCTION public.create_map_bookmark(slug text, "isPublic" bool
   $$;
 
 grant execute on function create_map_bookmark to seasketch_user;
+
+grant select(sketch_names) on map_bookmarks to anon;

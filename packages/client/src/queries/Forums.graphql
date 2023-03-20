@@ -223,6 +223,7 @@ fragment Job on WorkerJob {
 fragment MapBookmarkDetails on MapBookmark {
   id
   imageId
+  createdAt
   basemapOptionalLayerStates
   cameraOptions
   projectId
@@ -238,6 +239,7 @@ fragment MapBookmarkDetails on MapBookmark {
     ...Job
   }
   basemapName
+  sketchNames
 }
 
 query GetBookmark($id: UUID!) {
@@ -259,6 +261,7 @@ mutation CreateMapBookmark(
   $sidebarState: JSON
   $basemapName: String!
   $layerNames: JSON!
+  $sketchNames: JSON!
 ) {
   createMapBookmark(
     input: {
@@ -274,6 +277,7 @@ mutation CreateMapBookmark(
       sidebarState: $sidebarState
       basemapName: $basemapName
       layerNames: $layerNames
+      sketchNames: $sketchNames
     }
   ) {
     mapBookmark {
@@ -289,4 +293,9 @@ subscription MapBookmark($id: UUID!) {
       ...MapBookmarkDetails
     }
   }
+}
+
+fragment SketchPresent on Sketch {
+  id
+  name
 }

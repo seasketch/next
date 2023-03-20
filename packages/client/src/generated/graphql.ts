@@ -1238,6 +1238,7 @@ export type CreateMapBookmarkInput = {
   mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
   selectedBasemap?: Maybe<Scalars['Int']>;
   sidebarState?: Maybe<Scalars['JSON']>;
+  sketchNames?: Maybe<Scalars['JSON']>;
   slug?: Maybe<Scalars['String']>;
   style?: Maybe<Scalars['JSON']>;
   visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -5699,6 +5700,7 @@ export type MapBookmark = {
   screenshotJobStatus: WorkerJobStatus;
   selectedBasemap: Scalars['Int'];
   sidebarState?: Maybe<Scalars['JSON']>;
+  sketchNames?: Maybe<Scalars['JSON']>;
   style: Scalars['JSON'];
   userId: Scalars['Int'];
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
@@ -15654,7 +15656,7 @@ export type JobFragment = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'imageId' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames'>
+  & Pick<MapBookmark, 'id' | 'imageId' | 'createdAt' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'blurhash' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames' | 'sketchNames'>
   & { job?: Maybe<(
     { __typename?: 'WorkerJob' }
     & JobFragment
@@ -15687,6 +15689,7 @@ export type CreateMapBookmarkMutationVariables = Exact<{
   sidebarState?: Maybe<Scalars['JSON']>;
   basemapName: Scalars['String'];
   layerNames: Scalars['JSON'];
+  sketchNames: Scalars['JSON'];
 }>;
 
 
@@ -15716,6 +15719,11 @@ export type MapBookmarkSubscription = (
       & MapBookmarkDetailsFragment
     )> }
   )> }
+);
+
+export type SketchPresentFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'name'>
 );
 
 export type SpriteDetailsFragment = (
@@ -18674,6 +18682,7 @@ export const MapBookmarkDetailsFragmentDoc = gql`
     fragment MapBookmarkDetails on MapBookmark {
   id
   imageId
+  createdAt
   basemapOptionalLayerStates
   cameraOptions
   projectId
@@ -18689,6 +18698,7 @@ export const MapBookmarkDetailsFragmentDoc = gql`
     ...Job
   }
   basemapName
+  sketchNames
 }
     ${JobFragmentDoc}`;
 export const ForumPostFragmentDoc = gql`
@@ -18769,6 +18779,12 @@ export const ForumTopicFragmentDoc = gql`
   }
 }
     ${AuthorProfileFragmentDoc}`;
+export const SketchPresentFragmentDoc = gql`
+    fragment SketchPresent on Sketch {
+  id
+  name
+}
+    `;
 export const SpriteDetailsFragmentDoc = gql`
     fragment SpriteDetails on Sprite {
   id
@@ -23429,9 +23445,9 @@ export type GetBookmarkQueryHookResult = ReturnType<typeof useGetBookmarkQuery>;
 export type GetBookmarkLazyQueryHookResult = ReturnType<typeof useGetBookmarkLazyQuery>;
 export type GetBookmarkQueryResult = Apollo.QueryResult<GetBookmarkQuery, GetBookmarkQueryVariables>;
 export const CreateMapBookmarkDocument = gql`
-    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!, $sidebarState: JSON, $basemapName: String!, $layerNames: JSON!) {
+    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!, $sidebarState: JSON, $basemapName: String!, $layerNames: JSON!, $sketchNames: JSON!) {
   createMapBookmark(
-    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches, sidebarState: $sidebarState, basemapName: $basemapName, layerNames: $layerNames}
+    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches, sidebarState: $sidebarState, basemapName: $basemapName, layerNames: $layerNames, sketchNames: $sketchNames}
   ) {
     mapBookmark {
       ...MapBookmarkDetails
@@ -23466,6 +23482,7 @@ export type CreateMapBookmarkMutationFn = Apollo.MutationFunction<CreateMapBookm
  *      sidebarState: // value for 'sidebarState'
  *      basemapName: // value for 'basemapName'
  *      layerNames: // value for 'layerNames'
+ *      sketchNames: // value for 'sketchNames'
  *   },
  * });
  */
@@ -28440,6 +28457,7 @@ export const namedOperations = {
     ForumTopic: 'ForumTopic',
     Job: 'Job',
     MapBookmarkDetails: 'MapBookmarkDetails',
+    SketchPresent: 'SketchPresent',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',

@@ -18,6 +18,8 @@ import OfflineToastNotification from "../offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastNotification";
 import UserProfileModal from "./UserProfileModal";
 import SketchUIStateContextProvider from "./Sketches/SketchUIStateContextProvider";
+import { useApolloClient } from "@apollo/client";
+
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
 );
@@ -37,6 +39,7 @@ const LazyCacheSettingsPage = React.lazy(
 export default function ProjectApp() {
   const [mapContainerPortal, setMapContainerPortal] =
     useState<null | HTMLDivElement>(null);
+
   const mapContext = useMapContext({
     preferencesKey: "homepage",
     cacheSize: bytes("200mb"),

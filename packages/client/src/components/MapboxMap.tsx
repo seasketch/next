@@ -179,10 +179,21 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                 mapContext?.manager?.hideBookmarkBanner(1000);
               }}
             >
-              {mapContext.displayedMapBookmark.missingLayers > 0 ? (
+              {mapContext.displayedMapBookmark.errors.missingBasemap ||
+              mapContext.displayedMapBookmark.errors.missingLayers.length > 0 ||
+              mapContext.displayedMapBookmark.errors.missingSketches.length >
+                0 ? (
                 <Trans
                   i18nKey="missingLayerCount"
-                  count={mapContext.displayedMapBookmark.missingLayers}
+                  count={
+                    (mapContext.displayedMapBookmark.errors.missingBasemap
+                      ? 1
+                      : 0) +
+                    mapContext.displayedMapBookmark.errors.missingLayers
+                      .length +
+                    mapContext.displayedMapBookmark.errors.missingSketches
+                      .length
+                  }
                 />
               ) : (
                 <Trans>Map bookmark shown</Trans>
