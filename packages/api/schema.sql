@@ -3379,7 +3379,10 @@ CREATE TABLE public.map_bookmarks (
     sidebar_state jsonb,
     image_id text,
     blurhash text,
-    screenshot_job_status public.worker_job_status DEFAULT 'queued'::public.worker_job_status NOT NULL
+    screenshot_job_status public.worker_job_status DEFAULT 'queued'::public.worker_job_status NOT NULL,
+    basemap_name text,
+    layer_names jsonb,
+    sketch_names jsonb
 );
 
 
@@ -4782,10 +4785,10 @@ $$;
 
 
 --
--- Name: create_map_bookmark(text, boolean, jsonb, text[], integer, jsonb, jsonb, integer[], integer[], jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_map_bookmark(text, boolean, jsonb, text[], integer, jsonb, jsonb, integer[], integer[], jsonb, text, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb) RETURNS public.map_bookmarks
+CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb) RETURNS public.map_bookmarks
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -4805,7 +4808,10 @@ CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style 
           camera_options,
           map_dimensions,
           visible_sketches,
-          sidebar_state
+          sidebar_state,
+          basemap_name,
+          layer_names,
+          sketch_names
         ) values (
           pid,
           nullif(current_setting('session.user_id', TRUE), '')::int,
@@ -4817,7 +4823,10 @@ CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style 
           "cameraOptions",
           "mapDimensions",
           "visibleSketches",
-          "sidebarState"
+          "sidebarState",
+          "basemapName",
+          "layerNames",
+          "sketchNames"
         ) returning * into bookmark;
         return bookmark;
       else
@@ -5909,7 +5918,7 @@ COMMENT ON COLUMN public.data_layers.interactivity_settings_id IS '@omit create'
 -- Name: COLUMN data_layers.static_id; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.data_layers.static_id IS 'Used as a stable reference identifier for the layer. In the event that the layer is completely replaced, this ID can be assigned to the new one. Geoprocessing Clients (reports) are an important use case for these IDs, which they use to toggle layers on and off. Map Bookmarks will also use this identifier if present. In both cases, the numeric ID of DataLayers can be used but this is more likely to change.';
+COMMENT ON COLUMN public.data_layers.static_id IS '@deprecated Use TableOfContentsItem.geoprocessingReferenceId instead';
 
 
 --
@@ -7400,6 +7409,41 @@ COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
 
 
 --
+-- Name: get_sprite_data_for_screenshot(public.map_bookmarks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) RETURNS jsonb[]
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select
+      array_agg(json_build_object(
+        'spriteId', 'seasketch://sprites/' || sprite_images.sprite_id,
+        'pixelRatio', sprite_images.pixel_ratio,
+        'width', sprite_images.width,
+        'height', sprite_images.height,
+        'url', sprite_images.url))
+    from 
+      sprite_images 
+    where sprite_id = any(
+      select 
+        id 
+      from 
+        sprites 
+      where id = any(
+        select 
+          unnest(
+            regexp_matches(style::text, 'seasketch://sprites/(\d+)', 'g')::int[]
+          ) 
+        from 
+          map_bookmarks 
+        where 
+          id = bookmark.id
+      )
+    );
+  $$;
+
+
+--
 -- Name: get_surveys(integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7854,6 +7898,17 @@ CREATE FUNCTION public.map_bookmarks_job(bookmark public.map_bookmarks) RETURNS 
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select get_job_details('createBookmarkScreenshot:' || bookmark.id);
+  $$;
+
+
+--
+-- Name: map_bookmarks_sprites(public.map_bookmarks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.map_bookmarks_sprites(bookmark public.map_bookmarks) RETURNS public.sprites
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from sprites where id = any(select unnest(regexp_matches(style::text, 'seasketch://sprites/(\d+)', 'g')::int[]) from map_bookmarks where id = bookmark.id);
   $$;
 
 
@@ -8864,6 +8919,7 @@ CREATE TABLE public.table_of_contents_items (
     sort_index integer NOT NULL,
     hide_children boolean DEFAULT false NOT NULL,
     enable_download boolean DEFAULT true NOT NULL,
+    geoprocessing_reference_id text,
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
 );
@@ -9758,8 +9814,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer,
             render_under,
             mapbox_gl_styles,
-            interactivity_settings_id,
-            static_id
+            interactivity_settings_id
           )
           select "projectId", 
             data_source_id, 
@@ -9767,8 +9822,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer, 
             render_under, 
             mapbox_gl_styles,
-            new_interactivity_settings_id,
-            static_id
+            new_interactivity_settings_id
           from 
             data_layers
           where 
@@ -9792,7 +9846,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           bounds,
           data_layer_id,
           sort_index,
-          hide_children
+          hide_children,
+          geoprocessing_reference_id
         ) values (
           false,
           "projectId",
@@ -9807,7 +9862,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           item.bounds,
           lid,
           item.sort_index,
-          item.hide_children
+          item.hide_children,
+          item.geoprocessing_reference_id
         ) returning id into new_toc_id;
         select 
           type, id into acl_type, orig_acl_id 
@@ -18848,6 +18904,13 @@ GRANT SELECT(blurhash) ON TABLE public.map_bookmarks TO anon;
 
 
 --
+-- Name: COLUMN map_bookmarks.sketch_names; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(sketch_names) ON TABLE public.map_bookmarks TO anon;
+
+
+--
 -- Name: FUNCTION bookmark_by_id(id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19514,11 +19577,11 @@ REVOKE ALL ON FUNCTION public.create_forum_acl() FROM PUBLIC;
 
 
 --
--- Name: FUNCTION create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb) TO seasketch_user;
 
 
 --
@@ -21343,6 +21406,14 @@ GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
 
 
 --
+-- Name: FUNCTION get_sprite_data_for_screenshot(bookmark public.map_bookmarks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) TO anon;
+
+
+--
 -- Name: FUNCTION get_surveys(ids integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21882,6 +21953,14 @@ GRANT ALL ON FUNCTION public.make_survey(name text, project_id integer, template
 
 REVOKE ALL ON FUNCTION public.map_bookmarks_job(bookmark public.map_bookmarks) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.map_bookmarks_job(bookmark public.map_bookmarks) TO anon;
+
+
+--
+-- Name: FUNCTION map_bookmarks_sprites(bookmark public.map_bookmarks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.map_bookmarks_sprites(bookmark public.map_bookmarks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.map_bookmarks_sprites(bookmark public.map_bookmarks) TO anon;
 
 
 --
@@ -22923,6 +23002,14 @@ GRANT SELECT(hide_children),INSERT(hide_children),UPDATE(hide_children) ON TABLE
 
 GRANT SELECT(enable_download) ON TABLE public.table_of_contents_items TO anon;
 GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: COLUMN table_of_contents_items.geoprocessing_reference_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO anon;
 
 
 --

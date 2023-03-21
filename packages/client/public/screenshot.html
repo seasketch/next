@@ -30,6 +30,23 @@
         const data = await res.json();
         console.log(data);
         mapboxgl.accessToken = params.get("mt");
+        const spriteImages = data.spriteImages;
+        const bestImages = {};
+        for (const image of spriteImages) {
+          if (!(image.spriteId in bestImages)) {
+            bestImages[image.spriteId] = image;
+          } else {
+            const existing = bestImages[image.spriteId];
+            if (
+              image.pixelRatio === 2 ||
+              (existing.pixelRatio !== 2 &&
+                image.pixelRatio > existing.pixelRatio)
+            ) {
+              bestImages[image.spriteId] = image;
+            }
+          }
+        }
+
         const map = new mapboxgl.Map({
           container: "map", // container ID
           style: data.style, // style URL
@@ -48,6 +65,19 @@
             }
           },
         });
+        for (const spriteImage of Object.values(bestImages)) {
+          const el = document.getElementById(spriteImage.spriteId);
+          try {
+            await loadImage(
+              spriteImage.spriteId,
+              spriteImage.url,
+              spriteImage.pixelRatio,
+              map
+            );
+          } catch (e) {
+            console.error(e);
+          }
+        }
         map.on("load", () => {
           const div = document.createElement("div");
           div.attributes.id = "loaded";
@@ -59,6 +89,23 @@
           document.body.appendChild(div);
         });
       });
+
+      async function loadImage(id, url, pixelRatio, map) {
+        return new Promise((resolve, reject) => {
+          map.loadImage(url, (error, image) => {
+            if (error) {
+              reject(error);
+            } else {
+              if (!map.hasImage(id)) {
+                map.addImage(id, image, {
+                  pixelRatio,
+                });
+              }
+              resolve(image);
+            }
+          });
+        });
+      }
     </script>
   </body>
 </html>

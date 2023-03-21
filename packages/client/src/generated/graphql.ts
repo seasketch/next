@@ -5701,6 +5701,7 @@ export type MapBookmark = {
   selectedBasemap: Scalars['Int'];
   sidebarState?: Maybe<Scalars['JSON']>;
   sketchNames?: Maybe<Scalars['JSON']>;
+  sprites?: Maybe<Sprite>;
   style: Scalars['JSON'];
   userId: Scalars['Int'];
   visibleDataLayers: Array<Maybe<Scalars['String']>>;

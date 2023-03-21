@@ -1389,6 +1389,7 @@ type CreateInteractivitySettingPayload {
 
 """All input for the `createMapBookmark` mutation."""
 input CreateMapBookmarkInput {
+  basemapName: String
   basemapOptionalLayerStates: JSON
   cameraOptions: JSON
 
@@ -1398,9 +1399,11 @@ input CreateMapBookmarkInput {
   """
   clientMutationId: String
   isPublic: Boolean
+  layerNames: JSON
   mapDimensions: [Int]
   selectedBasemap: Int
   sidebarState: JSON
+  sketchNames: JSON
   slug: String
   style: JSON
   visibleDataLayers: [String]
@@ -1960,16 +1963,7 @@ type DataLayer implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Sprite!]
-
-  """
-  Used as a stable reference identifier for the layer. In the event that the
-  layer is completely replaced, this ID can be assigned to the new one.
-  Geoprocessing Clients (reports) are an important use case for these IDs, which
-  they use to toggle layers on and off. Map Bookmarks will also use this
-  identifier if present. In both cases, the numeric ID of DataLayers can be used
-  but this is more likely to change.
-  """
-  staticId: String
+  staticId: String @deprecated(reason: "Use TableOfContentsItem.geoprocessingReferenceId instead")
 
   """
   For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
@@ -2056,15 +2050,6 @@ input DataLayerInput {
   """
   sourceLayer: String
   spriteIds: [Int]
-
-  """
-  Used as a stable reference identifier for the layer. In the event that the
-  layer is completely replaced, this ID can be assigned to the new one.
-  Geoprocessing Clients (reports) are an important use case for these IDs, which
-  they use to toggle layers on and off. Map Bookmarks will also use this
-  identifier if present. In both cases, the numeric ID of DataLayers can be used
-  but this is more likely to change.
-  """
   staticId: String
 
   """
@@ -2103,15 +2088,6 @@ input DataLayerPatch {
   """
   sourceLayer: String
   spriteIds: [Int]
-
-  """
-  Used as a stable reference identifier for the layer. In the event that the
-  layer is completely replaced, this ID can be assigned to the new one.
-  Geoprocessing Clients (reports) are an important use case for these IDs, which
-  they use to toggle layers on and off. Map Bookmarks will also use this
-  identifier if present. In both cases, the numeric ID of DataLayers can be used
-  but this is more likely to change.
-  """
   staticId: String
 
   """
@@ -6648,6 +6624,7 @@ type MakeSurveyPayload {
 type MapBookmark {
   """Reads a single `Basemap` that is related to this `MapBookmark`."""
   basemapBySelectedBasemap: Basemap
+  basemapName: String
   basemapOptionalLayerStates: JSON
   blurhash: String
   cameraOptions: JSON!
@@ -6656,12 +6633,15 @@ type MapBookmark {
   imageId: String
   isPublic: Boolean!
   job: WorkerJob
+  layerNames: JSON
   mapDimensions: [Int]!
   postId: Int
   projectId: Int
   screenshotJobStatus: WorkerJobStatus!
   selectedBasemap: Int!
   sidebarState: JSON
+  sketchNames: JSON
+  sprites: Sprite
   style: JSON!
   userId: Int!
   visibleDataLayers: [String]!
@@ -12706,6 +12686,7 @@ type TableOfContentsItem implements Node {
   """
   dataLayerId: Int
   enableDownload: Boolean!
+  geoprocessingReferenceId: String
   hideChildren: Boolean!
   id: Int!
 
@@ -12860,6 +12841,7 @@ input TableOfContentsItemPatch {
   """
   dataLayerId: Int
   enableDownload: Boolean
+  geoprocessingReferenceId: String
   hideChildren: Boolean
 
   """

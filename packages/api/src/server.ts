@@ -413,12 +413,20 @@ app.use(
         [id]
       );
       const bookmark = rows[0].bookmark;
+      const { rows: spriteRows } = await client.query(
+        `
+        SELECT get_sprite_data_for_screenshot(map_bookmarks.*) as sprite_images from map_bookmarks where id = $1
+          `,
+        [id]
+      );
+      const spriteImages = spriteRows[0].sprite_images;
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");
       if (bookmark === null) {
         res.status(404);
       }
+      bookmark.spriteImages = spriteImages;
       res.send(bookmark);
     } catch (e: any) {
       client.query("COMMIT");

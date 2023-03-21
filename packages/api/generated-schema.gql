@@ -6641,6 +6641,7 @@ type MapBookmark {
   selectedBasemap: Int!
   sidebarState: JSON
   sketchNames: JSON
+  sprites: Sprite
   style: JSON!
   userId: Int!
   visibleDataLayers: [String]!
