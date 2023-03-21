@@ -78,7 +78,6 @@ async function createBookmarkScreenshot(
       process.env.MAPBOX_ACCESS_TOKEN
     }&auth=${token}&bookmarkUrl=http://localhost:3857/bookmarks/${bookmark.id}`;
 
-    console.log(url);
     let clip: undefined | ScreenshotOptions["clip"] = undefined;
 
     if (sidebar.open && width >= 1080) {
