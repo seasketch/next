@@ -31,6 +31,7 @@ import { MapContext } from "../dataLayers/MapContextManager";
 import useDialog from "../components/useDialog";
 import { treeItemId } from "../components/TreeView";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -54,6 +55,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const [disableSharing, setDisableSharing] = useState(false);
   const dialog = useDialog();
   const { isSmall } = currentSidebarState();
+  const onError = useGlobalErrorHandler();
 
   useEffect(() => {
     if (props.state) {
@@ -165,15 +167,29 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
             if (mapContext?.manager) {
               mapContext.manager.setLoadingOverlay(t("Saving map bookmark"));
             }
-            const bookmark = await props.createMapBookmark();
-            if (mapContext?.manager) {
-              mapContext.manager.setLoadingOverlay(null);
-            }
-            setDisableSharing(false);
-            if (bookmark) {
-              props.view!.focus();
-              attachBookmark(bookmark, props.view.state, props.view.dispatch);
-              return false;
+            try {
+              const bookmark = await props.createMapBookmark();
+              if (mapContext?.manager) {
+                mapContext.manager.setLoadingOverlay(null);
+              }
+              setDisableSharing(false);
+              if (bookmark) {
+                props.view!.focus();
+                attachBookmark(bookmark, props.view.state, props.view.dispatch);
+                return false;
+              }
+            } catch (e) {
+              if (/Rate limit/.test(e.message)) {
+                onError(
+                  new Error("Rate limited. Please try again in a few seconds.")
+                );
+                setDisableSharing(false);
+                if (mapContext?.manager) {
+                  mapContext.manager.setLoadingOverlay(null);
+                }
+              } else {
+                throw e;
+              }
             }
           }
         },

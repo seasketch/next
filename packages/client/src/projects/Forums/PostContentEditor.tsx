@@ -35,6 +35,7 @@ import {
   NormalizedCacheObject,
   ApolloClient,
 } from "@apollo/client";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function PostContentEditor({
   initialContent,
@@ -72,8 +73,12 @@ export default function PostContentEditor({
     fetchPolicy: "cache-only",
   });
 
+  const onError = useGlobalErrorHandler();
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [createBookmark, createBookmarkState] = useCreateMapBookmarkMutation();
+  const [createBookmark, createBookmarkState] = useCreateMapBookmarkMutation(
+    {}
+  );
   useEffect(() => {
     editable.current = !disabled;
     if (viewRef.current && state) {
@@ -163,87 +168,104 @@ export default function PostContentEditor({
   }, [root, bookmarkAttachments, mapContext?.manager, apolloClient]);
 
   const createMapBookmark = useCallback(async () => {
-    if (mapContext.manager) {
-      const bookmark = mapContext.manager.getMapBookmarkData();
-      // TODO: Filter out non-accessible sketches
-      if (state?.doc) {
-        const sketchIds = [
-          ...collectExistingSketchIds(state),
-          ...accessibleSketchIds,
-        ];
-        bookmark.visibleSketches = bookmark.visibleSketches.filter(
-          (id) => sketchIds.indexOf(id) !== -1
-        );
-        // Remove from style
-        // Remove sources first and collect source ids
-        const removedSources: string[] = [];
-        for (const source in bookmark.style.sources) {
-          if (/sketch-\d+$/.test(source)) {
-            const id = parseInt(source.split("-")[1]);
-            if (sketchIds.indexOf(id) === -1) {
-              // remove this source
-              removedSources.push(source);
-              delete bookmark.style.sources[source];
+    try {
+      if (mapContext.manager) {
+        const bookmark = mapContext.manager.getMapBookmarkData();
+        if (state?.doc) {
+          const sketchIds = [
+            ...collectExistingSketchIds(state),
+            ...accessibleSketchIds,
+          ];
+          bookmark.visibleSketches = bookmark.visibleSketches.filter(
+            (id) => sketchIds.indexOf(id) !== -1
+          );
+          // Remove from style
+          // Remove sources first and collect source ids
+          const removedSources: string[] = [];
+          for (const source in bookmark.style.sources) {
+            if (/sketch-\d+$/.test(source)) {
+              const id = parseInt(source.split("-")[1]);
+              if (sketchIds.indexOf(id) === -1) {
+                // remove this source
+                removedSources.push(source);
+                delete bookmark.style.sources[source];
+              }
             }
           }
+          // Then remove related layers
+          bookmark.style.layers = bookmark.style.layers.filter(
+            (l) =>
+              !(
+                "source" in l &&
+                typeof l.source === "string" &&
+                removedSources.indexOf(l.source) !== -1
+              )
+          );
         }
-        // Then remove related layers
-        bookmark.style.layers = bookmark.style.layers.filter(
-          (l) =>
-            !(
-              "source" in l &&
-              typeof l.source === "string" &&
-              removedSources.indexOf(l.source) !== -1
-            )
-        );
-      }
 
-      const layerNames: { [id: string]: string } = {};
-      for (const id of bookmark.visibleDataLayers) {
-        const items =
-          tableOfContentsData.data?.projectBySlug?.tableOfContentsItems || [];
-        const item = items.find((i) => i.stableId === id);
-        if (item) {
-          layerNames[id] = item.title;
+        const layerNames: { [id: string]: string } = {};
+        for (const id of bookmark.visibleDataLayers) {
+          const items =
+            tableOfContentsData.data?.projectBySlug?.tableOfContentsItems || [];
+          const item = items.find((i) => i.stableId === id);
+          if (item) {
+            layerNames[id] = item.title;
+          }
         }
-      }
 
-      const sketchNames: { [id: number]: string } = {};
+        const sketchNames: { [id: number]: string } = {};
 
-      for (const id of bookmark.visibleSketches) {
-        const data = apolloClient.readFragment({
-          fragment: SketchPresentFragmentDoc,
-          // eslint-disable-next-line i18next/no-literal-string
-          id: `Sketch:${id}`,
+        for (const id of bookmark.visibleSketches) {
+          const data = apolloClient.readFragment({
+            fragment: SketchPresentFragmentDoc,
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `Sketch:${id}`,
+          });
+          if (data?.name) {
+            sketchNames[id] = data.name;
+          }
+        }
+        const data = await createBookmark({
+          variables: {
+            slug: getSlug(),
+            ...bookmark,
+            isPublic: false,
+            layerNames,
+            sketchNames,
+          },
         });
-        if (data?.name) {
-          sketchNames[id] = data.name;
+        if (data.data?.createMapBookmark?.mapBookmark?.id) {
+          const fragment = data.data.createMapBookmark.mapBookmark;
+          return fragment;
+        } else {
+          if (
+            data.errors &&
+            typeof data.errors === "string" &&
+            /Rate limit/.test(data.errors)
+          ) {
+            throw new Error(
+              "Rate limit exceeded. Please try again in a few seconds"
+            );
+          } else {
+            throw new Error("Failed to create map bookmark");
+          }
         }
-      }
-      const data = await createBookmark({
-        variables: {
-          slug: getSlug(),
-          ...bookmark,
-          isPublic: false,
-          layerNames,
-          sketchNames,
-        },
-      });
-      if (data.data?.createMapBookmark?.mapBookmark?.id) {
-        const fragment = data.data.createMapBookmark.mapBookmark;
-        return fragment;
       } else {
-        throw new Error("Failed to create bookmark");
+        throw new Error("MapContext not ready to create map bookmarks");
       }
-    } else {
-      throw new Error("MapContext not ready to create map bookmarks");
+    } catch (e) {
+      onError(e);
+      throw e;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     createBookmark,
     mapContext.manager,
     state?.doc,
     accessibleSketchIds,
     tableOfContentsData.data?.projectBySlug?.tableOfContentsItems,
+    onError,
+    apolloClient,
   ]);
 
   useEffect(() => {

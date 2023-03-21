@@ -29,6 +29,7 @@ import SketchingPlugin from "./plugins/sketchingPlugin";
 import ForumPostsPlugin from "./plugins/forumPostsPlugin";
 import ForumSubscriptionsPlugin from "./plugins/forumSubscriptionsPlugin";
 import MapBookmarkSubscriptionsPlugin from "./plugins/mapBookmarkSubscriptionsPlugin";
+import MapBookmarkRateLimiterPlugin from "./plugins/mapBookmarkRateLimiterPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -70,6 +71,7 @@ export default function graphileOptions(): PostGraphileOptions {
       ForumPostsPlugin,
       ForumSubscriptionsPlugin,
       MapBookmarkSubscriptionsPlugin,
+      MapBookmarkRateLimiterPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

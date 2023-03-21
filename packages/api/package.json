@@ -91,6 +91,7 @@
     "prosemirror-model": "^1.13.1",
     "prosemirror-schema-list": "^1.1.4",
     "puppeteer": "^19.7.2",
+    "rate-limiter-flexible": "^2.4.1",
     "s3-upload-stream": "^1.0.7",
     "sanitize-html": "^2.3.0",
     "sharp": "^0.31.3",
