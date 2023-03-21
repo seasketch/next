@@ -41,15 +41,21 @@ export default function ShareSketchesModal({
     // onError,
     onCompleted: (d) => {
       if (d.copySketchTocItem?.folders && d.copySketchTocItem?.sketches) {
-        const copiedSketches = getCopiedSketchesRecursive(
-          parseInt(selection[0].split(":")[1]),
-          treeItems
-        );
-        onSubmit(
-          d.copySketchTocItem.sketches,
-          d.copySketchTocItem.folders,
-          copiedSketches
-        );
+        const treeItem = treeItems.find((item) => item.id === selection[0]);
+        if (treeItem?.isLeaf === true) {
+          onSubmit(d.copySketchTocItem.sketches, d.copySketchTocItem.folders, [
+            parseInt(selection[0].split(":")[1]),
+          ]);
+        } else {
+          onSubmit(
+            d.copySketchTocItem.sketches,
+            d.copySketchTocItem.folders,
+            getCopiedSketchesRecursive(
+              parseInt(selection[0].split(":")[1]),
+              treeItems
+            )
+          );
+        }
       }
     },
   });
