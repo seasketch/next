@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { encode } from "blurhash";
 import { sign } from "../src/auth/jwks";
 import { withTimeout } from "../src/withTimeout";
+import * as Sentry from "@sentry/node";
 const HOST = process.env.HOST || "seasketch.org";
 
 const CLOUDFLARE_IMAGES_TOKEN = process.env.CLOUDFLARE_IMAGES_TOKEN;
@@ -33,7 +34,11 @@ async function createBookmarkScreenshot(
   payload: { id: string },
   helpers: Helpers
 ) {
+  const transaction = Sentry.startTransaction({
+    name: "createBookmarkScreenshot",
+  });
   await helpers.withPgClient(async (client) => {
+    let span = transaction.startChild({ op: "query bookmark" });
     const { rows } = await client.query(
       `
       select 
@@ -51,6 +56,8 @@ async function createBookmarkScreenshot(
     `,
       [payload.id]
     );
+    span.finish();
+    span = transaction.startChild({ op: "setup and sign auth token" });
     const bookmark = rows[0];
     const [width, height] = bookmark.map_dimensions as [number, number];
     const sidebar = bookmark.sidebar_state as {
@@ -80,6 +87,8 @@ async function createBookmarkScreenshot(
 
     let clip: undefined | ScreenshotOptions["clip"] = undefined;
 
+    span.finish();
+    span = transaction.startChild({ op: "update bookmark dimensions in db" });
     if (sidebar.open && width >= 1080) {
       clip = {
         x: sidebar.width,
@@ -92,7 +101,8 @@ async function createBookmarkScreenshot(
         [[width - sidebar.width, height], bookmark.id]
       );
     }
-
+    span.finish();
+    span = transaction.startChild({ op: "open page in browser" });
     const browser = await getBrowser();
     const page = await browser.newPage();
     page.setViewport({
@@ -106,11 +116,14 @@ async function createBookmarkScreenshot(
     await page.waitForSelector("#loaded", {
       timeout: 10000,
     });
+    span.finish();
+    span = transaction.startChild({ op: "take screenshot" });
     const buffer = await page.screenshot({
       captureBeyondViewport: false,
       clip,
     });
-
+    span.finish();
+    span = transaction.startChild({ op: "resize screenshot" });
     const form = new FormData();
     const { data: resizedBuffer, info: resizedMetadata } = await sharp(buffer)
       .withMetadata({ density: 144 })
@@ -131,7 +144,8 @@ async function createBookmarkScreenshot(
       blurhash,
       bookmark.id,
     ]);
-
+    span.finish();
+    span = transaction.startChild({ op: "send to cloudflare" });
     form.append("file", new Blob([buffer]), `${bookmark.id}.png`);
 
     const options: RequestInit = {
@@ -148,10 +162,14 @@ async function createBookmarkScreenshot(
       options
     );
     const data = await response.json();
+    span.finish();
+    span = transaction.startChild({ op: "update image id in db" });
     await client.query(
       `update map_bookmarks set image_id = $2, blurhash = $3 where id = $1`,
       [bookmark.id, data.result.id, blurhash]
     );
+    span.finish();
+    transaction.finish();
   });
 }
 export default withTimeout(20000, createBookmarkScreenshot);
