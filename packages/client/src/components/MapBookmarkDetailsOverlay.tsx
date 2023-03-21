@@ -155,8 +155,8 @@ export default function MapBookmarkDetailsOverlay({
               />
             )}
           </div>
-          <div className="flex-1 p-4 text-white font-bold h-full bg-gray-700 bg-opacity-50">
-            <div className="mx-auto  p-4 overflow-y-auto max-h-full">
+          <div className="flex-1 p-0 lg:p-4 text-white font-bold h-full bg-gray-700 bg-opacity-50 max-w-lg lg:max-w-xl">
+            <div className="mx-auto  p-0 lg:p-4 overflow-y-auto max-h-full">
               <div className="flex items-center mb-2">
                 <h1 className="flex-1">
                   <Trans ns="mapBookmarks">Map Bookmark Details</Trans>
@@ -175,7 +175,7 @@ export default function MapBookmarkDetailsOverlay({
               {bookmark && (
                 <div className="">
                   <dl>
-                    <div className=" px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
                       <dt className="text-sm font-medium text-white">
                         {t("Created")}
                       </dt>
@@ -183,7 +183,7 @@ export default function MapBookmarkDetailsOverlay({
                         {new Date(bookmark.createdAt).toLocaleString()}
                       </dd>
                     </div>
-                    <div className=" px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
                       <dt className="text-sm font-medium text-white">
                         {t("Dimensions")}
                       </dt>
@@ -196,7 +196,7 @@ export default function MapBookmarkDetailsOverlay({
                         {bookmark?.mapDimensions[1]}
                       </dd>
                     </div>
-                    <div className=" px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="  py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
                       <dt className="text-sm font-medium text-white">
                         {t("Zoom Level")}
                       </dt>
@@ -204,7 +204,7 @@ export default function MapBookmarkDetailsOverlay({
                         {Math.round(bookmark?.cameraOptions.zoom * 10) / 10}
                       </dd>
                     </div>{" "}
-                    <div className=" px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="  py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
                       <dt className="text-sm font-medium text-white">
                         {t("Center")}
                       </dt>
@@ -218,7 +218,7 @@ export default function MapBookmarkDetailsOverlay({
                         )}
                       </dd>
                     </div>
-                    <div className="px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
                       <dt className="text-sm font-medium text-white">
                         {t("Downloads")}
                       </dt>
@@ -287,7 +287,7 @@ export default function MapBookmarkDetailsOverlay({
                         )}
                       </Warning>
                     )}
-                    <div className=" px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                    <div className="  py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
                       <dt className="text-sm font-medium text-white">
                         {t("Basemap")}
                       </dt>
@@ -296,44 +296,46 @@ export default function MapBookmarkDetailsOverlay({
                           "Basemap:" + bookmark.selectedBasemap}
                       </dd>
                     </div>
-                    <div className="px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                      <dt className="text-sm font-medium text-white">
-                        {t("Visible Layers")}
-                      </dt>
-                      <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                        <ul className="divide-y divide-gray-600 rounded-md border border-gray-600">
-                          {bookmark.visibleDataLayers.map((lyr) => {
-                            const name =
-                              lyr &&
-                              bookmark.layerNames &&
-                              bookmark.layerNames[lyr]
-                                ? bookmark.layerNames[lyr]
-                                : lyr;
-                            return (
-                              <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
-                                <div className="flex w-0 flex-1 items-center">
-                                  <span className="ml-2 w-0 flex-1 truncate">
-                                    {name}
-                                  </span>
-                                  {lyr &&
-                                    errors &&
-                                    errors.missingLayers.indexOf(lyr) !==
-                                      -1 && (
-                                      <div className="flex-none text-red-500 font-thin">
-                                        <XCircleIcon className="w-5 h-5  inline mr-1" />
-                                        {t("missing")}
-                                      </div>
-                                    )}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </dd>
-                    </div>
+                    {Boolean(bookmark.visibleDataLayers.length) && (
+                      <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
+                        <dt className="text-sm font-medium text-white">
+                          {t("Visible Layers")}
+                        </dt>
+                        <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
+                          <ul className="divide-y divide-gray-600 rounded-md border border-gray-600">
+                            {bookmark.visibleDataLayers.map((lyr) => {
+                              const name =
+                                lyr &&
+                                bookmark.layerNames &&
+                                bookmark.layerNames[lyr]
+                                  ? bookmark.layerNames[lyr]
+                                  : lyr;
+                              return (
+                                <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
+                                  <div className="flex w-0 flex-1 items-center">
+                                    <span className="ml-2 w-0 flex-1 truncate">
+                                      {name}
+                                    </span>
+                                    {lyr &&
+                                      errors &&
+                                      errors.missingLayers.indexOf(lyr) !==
+                                        -1 && (
+                                        <div className="flex-none text-red-500 font-thin">
+                                          <XCircleIcon className="w-5 h-5  inline mr-1" />
+                                          {t("missing")}
+                                        </div>
+                                      )}
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </dd>
+                      </div>
+                    )}
                     {bookmark.visibleSketches &&
                       bookmark.visibleSketches.length > 0 && (
-                        <div className="px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                        <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
                           <dt className="text-sm font-medium text-white">
                             {t("Visible Sketches")}
                           </dt>
