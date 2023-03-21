@@ -19,7 +19,8 @@ import fs from "fs";
 import graphileOptions from "./graphileOptions";
 import { getFeatureCollection, getMVT } from "./exportSurvey";
 import * as Sentry from "@sentry/node";
-import * as Tracing from "@sentry/tracing";
+// Importing @sentry/tracing patches the global hub for tracing to work.
+import "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
 import slugify from "slugify";
@@ -37,8 +38,6 @@ if (process.env.SENTRY_DSN) {
     integrations: [
       // enable HTTP calls tracing
       new Sentry.Integrations.Http({ tracing: true }),
-      // enable Express.js middleware tracing
-      new Tracing.Integrations.Express({ app }),
     ],
 
     // Set tracesSampleRate to 1.0 to capture 100%
@@ -244,11 +243,19 @@ run({
     updateMatchingTables(job, "finished", workerPool);
   });
   runner.events.on("job:error", ({ worker, job }) => {
-    console.log("job error", job.key);
+    Sentry.captureMessage(`Graphile Worker:${job.task_identifier}:error`, {
+      extra: {
+        job: job,
+      },
+    });
     updateMatchingTables(job, "error", workerPool);
   });
   runner.events.on("job:failed", ({ worker, job }) => {
-    console.log("job failed", job.key);
+    Sentry.captureMessage(`Graphile Worker:${job.task_identifier}:failed`, {
+      extra: {
+        job: job,
+      },
+    });
     updateMatchingTables(job, "failed", workerPool);
   });
 });
