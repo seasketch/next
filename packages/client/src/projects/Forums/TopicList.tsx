@@ -54,7 +54,7 @@ export default function TopicList({ forumId }: { forumId: number }) {
 
   return (
     <>
-      <div className="space-y-3 p-4">
+      <div className="space-y-3 p-4 overflow-y-auto">
         {data?.forum?.topicsConnection.nodes.map((topic) => (
           <TopicListItem key={topic.id} topic={topic} />
         ))}
