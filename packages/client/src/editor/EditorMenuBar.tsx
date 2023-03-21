@@ -32,6 +32,7 @@ import useDialog from "../components/useDialog";
 import { treeItemId } from "../components/TreeView";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import useIsSuperuser from "../useIsSuperuser";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -56,6 +57,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const dialog = useDialog();
   const { isSmall } = currentSidebarState();
   const onError = useGlobalErrorHandler();
+  const isSuperuser = useIsSuperuser();
 
   useEffect(() => {
     if (props.state) {
@@ -138,7 +140,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         },
       });
     }
-    if (schema.marks.attachmentLink && props.createMapBookmark) {
+    if (schema.marks.attachmentLink && props.createMapBookmark && isSuperuser) {
       options.push({
         label: t("Map Bookmark"),
         onClick: async () => {
