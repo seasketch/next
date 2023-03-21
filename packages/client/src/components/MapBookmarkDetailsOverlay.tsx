@@ -132,7 +132,7 @@ export default function MapBookmarkDetailsOverlay({
                 </div>
               </div>
             )}
-            {bookmark && (
+            {bookmark && bookmark.imageId && (
               <motion.img
                 variants={{
                   hidden: { opacity: 0.01 },
@@ -153,6 +153,21 @@ export default function MapBookmarkDetailsOverlay({
                   bookmark.imageId || data?.bookmarkById?.imageId
                 }/public`}
               />
+            )}
+            {bookmark && !bookmark.imageId && (
+              <>
+                <div className="w-full text-center">
+                  <span className="text-white text-center w-full font-bold text-lg">
+                    <Trans ns="mapBookmarks">Screenshot not available</Trans>
+                  </span>
+                  <div className="text-white text-center w-full">
+                    <Trans ns="mapBookmarks">
+                      An unknown error prevented this map from being captured
+                      when the bookmark was created.
+                    </Trans>
+                  </div>
+                </div>
+              </>
             )}
           </div>
           <div className="flex-1 p-0 lg:p-4 text-white font-bold h-full bg-gray-700 bg-opacity-50 max-w-lg lg:max-w-xl">
@@ -183,19 +198,21 @@ export default function MapBookmarkDetailsOverlay({
                         {new Date(bookmark.createdAt).toLocaleString()}
                       </dd>
                     </div>
-                    <div className="py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                      <dt className="text-sm font-medium text-white">
-                        {t("Dimensions")}
-                      </dt>
-                      <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                        {bookmark?.mapDimensions[0]}
-                        {
-                          // eslint-disable-next-line i18next/no-literal-string
-                          " x "
-                        }
-                        {bookmark?.mapDimensions[1]}
-                      </dd>
-                    </div>
+                    {bookmark.imageId && (
+                      <div className="py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
+                        <dt className="text-sm font-medium text-white">
+                          {t("Dimensions")}
+                        </dt>
+                        <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
+                          {bookmark?.mapDimensions[0]}
+                          {
+                            // eslint-disable-next-line i18next/no-literal-string
+                            " x "
+                          }
+                          {bookmark?.mapDimensions[1]}
+                        </dd>
+                      </div>
+                    )}
                     <div className="  py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
                       <dt className="text-sm font-medium text-white">
                         {t("Zoom Level")}
@@ -218,61 +235,63 @@ export default function MapBookmarkDetailsOverlay({
                         )}
                       </dd>
                     </div>
-                    <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                      <dt className="text-sm font-medium text-white">
-                        {t("Downloads")}
-                      </dt>
-                      <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                        <ul className="divide-y divide-gray-600 rounded-md border border-gray-600">
-                          <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
-                            <div className="flex w-0 flex-1 items-center">
-                              <span className="ml-2 w-0 flex-1 truncate">
-                                {
-                                  // eslint-disable-next-line i18next/no-literal-string
-                                  "fullsize.png"
-                                }
-                              </span>
-                            </div>
-                            <div className="ml-4 flex-shrink-0">
-                              <button
-                                onClick={() => {
-                                  downloadImage(
-                                    `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${data?.bookmarkById?.imageId}/public`,
+                    {bookmark.imageId && (
+                      <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
+                        <dt className="text-sm font-medium text-white">
+                          {t("Downloads")}
+                        </dt>
+                        <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
+                          <ul className="divide-y divide-gray-600 rounded-md border border-gray-600">
+                            <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
+                              <div className="flex w-0 flex-1 items-center">
+                                <span className="ml-2 w-0 flex-1 truncate">
+                                  {
+                                    // eslint-disable-next-line i18next/no-literal-string
                                     "fullsize.png"
-                                  );
-                                }}
-                                className="font-medium text-indigo-300 hover:text-indigo-400"
-                              >
-                                {t("Download")}
-                              </button>
-                            </div>
-                          </li>
-                          <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
-                            <div className="flex w-0 flex-1 items-center">
-                              <span className="ml-2 w-0 flex-1 truncate">
-                                {
-                                  // eslint-disable-next-line i18next/no-literal-string
-                                  "thumbnail.png"
-                                }
-                              </span>
-                            </div>
-                            <div className="ml-4 flex-shrink-0">
-                              <button
-                                onClick={() => {
-                                  downloadImage(
-                                    `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${data?.bookmarkById?.imageId}/thumbnail`,
+                                  }
+                                </span>
+                              </div>
+                              <div className="ml-4 flex-shrink-0">
+                                <button
+                                  onClick={() => {
+                                    downloadImage(
+                                      `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${data?.bookmarkById?.imageId}/public`,
+                                      "fullsize.png"
+                                    );
+                                  }}
+                                  className="font-medium text-indigo-300 hover:text-indigo-400"
+                                >
+                                  {t("Download")}
+                                </button>
+                              </div>
+                            </li>
+                            <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
+                              <div className="flex w-0 flex-1 items-center">
+                                <span className="ml-2 w-0 flex-1 truncate">
+                                  {
+                                    // eslint-disable-next-line i18next/no-literal-string
                                     "thumbnail.png"
-                                  );
-                                }}
-                                className="font-medium text-indigo-300 hover:text-indigo-400"
-                              >
-                                {t("Download")}
-                              </button>
-                            </div>
-                          </li>
-                        </ul>
-                      </dd>
-                    </div>
+                                  }
+                                </span>
+                              </div>
+                              <div className="ml-4 flex-shrink-0">
+                                <button
+                                  onClick={() => {
+                                    downloadImage(
+                                      `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${data?.bookmarkById?.imageId}/thumbnail`,
+                                      "thumbnail.png"
+                                    );
+                                  }}
+                                  className="font-medium text-indigo-300 hover:text-indigo-400"
+                                >
+                                  {t("Download")}
+                                </button>
+                              </div>
+                            </li>
+                          </ul>
+                        </dd>
+                      </div>
+                    )}
                     {hasErrors && (
                       <Warning level="error">
                         <Trans ns="mapBookmarks">
