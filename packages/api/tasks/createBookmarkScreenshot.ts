@@ -110,6 +110,7 @@ async function createBookmarkScreenshot(
     span.finish();
     span = transaction.startChild({ op: "open page in browser" });
     const browser = await getBrowser();
+    console.log("got browser");
     const page = await browser.newPage();
     page.setViewport({
       width,
@@ -118,22 +119,26 @@ async function createBookmarkScreenshot(
     });
 
     await page.goto(url);
+    console.log("went to url");
 
     try {
       await page.waitForSelector("#loaded", {
         timeout: 20000,
       });
     } catch (e) {
+      console.log("timeout waiting for #loaded. Taking screenshot anyways.");
       console.error(e);
     }
     span.finish();
     span = transaction.startChild({ op: "take screenshot" });
+    console.log("take screenshot");
     const buffer = await page.screenshot({
       captureBeyondViewport: false,
       clip,
     });
     span.finish();
     span = transaction.startChild({ op: "resize screenshot" });
+    console.log("resize screenshot");
     const form = new FormData();
     const { data: resizedBuffer, info: resizedMetadata } = await sharp(buffer)
       .withMetadata({ density: 144 })
@@ -143,6 +148,7 @@ async function createBookmarkScreenshot(
       .resize(Math.round(clip!.width / 10), Math.round(clip!.height / 10))
       .raw()
       .toBuffer({ resolveWithObject: true });
+    console.log("create blurhash");
     const blurhash = encode(
       new Uint8ClampedArray(pixels),
       metadata.width,
@@ -154,6 +160,7 @@ async function createBookmarkScreenshot(
       blurhash,
       bookmark.id,
     ]);
+    console.log("saved blurhash");
     span.finish();
     span = transaction.startChild({ op: "send to cloudflare" });
     form.append("file", new Blob([buffer]), `${bookmark.id}.png`);
@@ -167,6 +174,11 @@ async function createBookmarkScreenshot(
 
     options.body = form;
 
+    console.log(
+      "sendiing to cloudlare",
+      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_IMAGES_ACCOUNT}/images/v1`,
+      options
+    );
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_IMAGES_ACCOUNT}/images/v1`,
       options
@@ -174,6 +186,7 @@ async function createBookmarkScreenshot(
     const data = await response.json();
     span.finish();
     span = transaction.startChild({ op: "update image id in db" });
+    console.log("update map bookmarks with id");
     await client.query(
       `update map_bookmarks set image_id = $2, blurhash = $3 where id = $1`,
       [bookmark.id, data.result.id, blurhash]
@@ -182,4 +195,4 @@ async function createBookmarkScreenshot(
     transaction.finish();
   });
 }
-export default withTimeout(20000, createBookmarkScreenshot);
+export default withTimeout(30000, createBookmarkScreenshot);
