@@ -1,4 +1,5 @@
 FROM node:18-alpine as builder
+RUN apk --no-cache add git openssh 
 RUN npm install -g lerna
 ARG commit
 RUN git clone https://github.com/seasketch/next.git /var/seasketch && cd /var/seasketch && git checkout $commit
@@ -18,5 +19,4 @@ RUN apk --no-cache add \
 COPY --from=builder /var/seasketch /var/seasketch
 WORKDIR /var/seasketch/packages/api
 EXPOSE 3857
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 CMD ["npm", "run", "start"]
