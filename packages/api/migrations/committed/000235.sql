@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:b44789a85197b14ca5dd14c9731d184c4458b8ee
 --! Hash: sha1:173fa4631e9a2e65fca53cc0d2c40dc89e0d28d2
 
@@ -542,7 +543,7 @@ create or replace function get_sprite_data_for_screenshot(bookmark map_bookmarks
   security definer
   as $$
     select
-      array_agg(json_build_object(
+      array_agg(jsonb_build_object(
         'spriteId', 'seasketch://sprites/' || sprite_images.sprite_id,
         'pixelRatio', sprite_images.pixel_ratio,
         'width', sprite_images.width,
