@@ -7,7 +7,14 @@ RUN apk --no-cache add \
   freetype \
   harfbuzz \
   ca-certificates \
-  ttf-freefont
+  ttf-freefont \
+  # for webgl support
+  xorg \
+  xserver-xorg \
+  xvfb \ 
+  libx11-dev \ 
+  libxext-dev
+  
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 RUN npm install -g lerna
 ARG commit

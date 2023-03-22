@@ -136,14 +136,9 @@ async function createBookmarkScreenshot(
     await page.goto(url);
     console.log("went to url");
 
-    try {
-      await page.waitForSelector("#loaded", {
-        timeout: 20000,
-      });
-    } catch (e) {
-      console.log("timeout waiting for #loaded. Taking screenshot anyways.");
-      console.error(e);
-    }
+    await page.waitForSelector("#loaded", {
+      timeout: 20000,
+    });
     span.finish();
     span = transaction.startChild({ op: "take screenshot" });
     console.log("take screenshot");
@@ -217,4 +212,4 @@ async function createBookmarkScreenshot(
     transaction.finish();
   });
 }
-export default withTimeout(60000, createBookmarkScreenshot);
+export default withTimeout(30000, createBookmarkScreenshot);
