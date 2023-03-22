@@ -30,7 +30,7 @@
         const data = await res.json();
         console.log(data);
         mapboxgl.accessToken = params.get("mt");
-        const spriteImages = data.spriteImages;
+        const spriteImages = data.spriteImages || [];
         const bestImages = {};
         for (const image of spriteImages) {
           if (!(image.spriteId in bestImages)) {
