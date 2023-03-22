@@ -1,6 +1,14 @@
 FROM node:18-alpine as builder
-RUN apk --no-cache add git openssh 
-RUN npm install -g lerna
+RUN apk --no-cache add \
+  git \
+  openssh \
+  chromium \
+  nss \
+  freetype \
+  harfbuzz \
+  ca-certificates \
+  ttf-freefont
+RUN npm install -g lerna puppeteer
 ARG commit
 RUN git clone https://github.com/seasketch/next.git /var/seasketch && cd /var/seasketch && git checkout $commit
 WORKDIR /var/seasketch/packages/api
@@ -10,4 +18,5 @@ FROM node:18-alpine
 COPY --from=builder /var/seasketch /var/seasketch
 WORKDIR /var/seasketch/packages/api
 EXPOSE 3857
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 CMD ["npm", "run", "start"]
