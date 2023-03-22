@@ -120,7 +120,7 @@ async function createBookmarkScreenshot(
           `${message.type().substr(0, 3).toUpperCase()} ${message.text()}`
         )
       )
-      .on("pageerror", ({ message }) => console.log(message))
+      .on("pageerror", (error) => console.log(error.toString()))
       .on("response", (response) =>
         console.log(`${response.status()} ${response.url()}`)
       )
