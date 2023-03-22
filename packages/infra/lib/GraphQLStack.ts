@@ -81,8 +81,8 @@ export class GraphQLStack extends cdk.Stack {
       "GraphQLServer",
       {
         // cluster,
-        cpu: 512,
-        memoryLimitMiB: 1024,
+        cpu: 1024,
+        memoryLimitMiB: 1024 * 4,
         taskImageOptions: {
           logDriver: new AwsLogDriver({
             streamPrefix: "SeaSketchGraphQLServer",
