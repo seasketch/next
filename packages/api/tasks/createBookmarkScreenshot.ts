@@ -70,6 +70,7 @@ async function createBookmarkScreenshot(
       isSmall: boolean;
     };
 
+    Sentry.setExtra("bookmark", bookmark);
     const { project_id, user_id, canonical_email } = bookmark;
     const token = await sign(
       client,
@@ -90,6 +91,7 @@ async function createBookmarkScreenshot(
     }&auth=${token}&bookmarkUrl=${HOST}/bookmarks/${bookmark.id}`;
 
     console.log(`Loading page: ${url}`);
+    Sentry.setExtra("url", url);
 
     let clip: undefined | ScreenshotOptions["clip"] = undefined;
 
@@ -146,7 +148,10 @@ async function createBookmarkScreenshot(
       .toBuffer({ resolveWithObject: true });
 
     const { data: pixels, info: metadata } = await sharp(buffer)
-      .resize(Math.round(clip!.width / 10), Math.round(clip!.height / 10))
+      .resize(
+        Math.round(clip ? clip.width / 10 : width / 10),
+        Math.round(clip ? clip.height / 10 : height / 10)
+      )
       .raw()
       .toBuffer({ resolveWithObject: true });
     console.log("create blurhash");
