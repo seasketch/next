@@ -77,9 +77,8 @@ export default function SketchReportWindow({
           type: "SeaSketchReportingMessageEventType",
           client: data?.sketchClass?.geoprocessingClientName,
           geometryUri,
-          visibleLayers: Object.keys(
-            mapContext.layerStatesByTocStaticId
-          ).filter((id) => mapContext.layerStatesByTocStaticId[id].visible),
+          visibleLayers:
+            mapContext.manager?.getVisibleLayerReferenceIds() || [],
           sketchProperties: {
             id: sketchId,
             name: data?.sketch?.name,
