@@ -7,7 +7,7 @@ import { withTimeout } from "../src/withTimeout";
 import * as Sentry from "@sentry/node";
 const HOST =
   process.env.HOST || process.env.NODE_ENV === "production"
-    ? "https://seasketch.org"
+    ? "https://api.seasket.ch"
     : "http://localhost:3857";
 
 const CLOUDFLARE_IMAGES_TOKEN = process.env.CLOUDFLARE_IMAGES_TOKEN;
