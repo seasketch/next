@@ -5,7 +5,10 @@ import { encode } from "blurhash";
 import { sign } from "../src/auth/jwks";
 import { withTimeout } from "../src/withTimeout";
 import * as Sentry from "@sentry/node";
-const HOST = process.env.HOST || "seasketch.org";
+const HOST =
+  process.env.HOST || process.env.NODE_ENV === "production"
+    ? "https://seasketch.org"
+    : "http://localhost:3857";
 
 const CLOUDFLARE_IMAGES_TOKEN = process.env.CLOUDFLARE_IMAGES_TOKEN;
 
@@ -84,7 +87,9 @@ async function createBookmarkScreenshot(
       /localhost/.test(process.env.CLIENT_DOMAIN) ? "http" : "https"
     }://${process.env.CLIENT_DOMAIN}/screenshot.html?mt=${
       process.env.MAPBOX_ACCESS_TOKEN
-    }&auth=${token}&bookmarkUrl=http://localhost:3857/bookmarks/${bookmark.id}`;
+    }&auth=${token}&bookmarkUrl=${HOST}/bookmarks/${bookmark.id}`;
+
+    console.log(`Loading page: ${url.replace(token, "***REDACTED***")}`);
 
     let clip: undefined | ScreenshotOptions["clip"] = undefined;
 
