@@ -89,8 +89,7 @@ async function createBookmarkScreenshot(
       process.env.MAPBOX_ACCESS_TOKEN
     }&auth=${token}&bookmarkUrl=${HOST}/bookmarks/${bookmark.id}`;
 
-    Sentry.setExtra("screenShotUrl", url.replace(token, "***REDACTED***"));
-    console.log(`Loading page: ${url.replace(token, "***REDACTED***")}`);
+    console.log(`Loading page: ${url}`);
 
     let clip: undefined | ScreenshotOptions["clip"] = undefined;
 
@@ -120,9 +119,13 @@ async function createBookmarkScreenshot(
 
     await page.goto(url);
 
-    await page.waitForSelector("#loaded", {
-      timeout: 10000,
-    });
+    try {
+      await page.waitForSelector("#loaded", {
+        timeout: 20000,
+      });
+    } catch (e) {
+      console.error(e);
+    }
     span.finish();
     span = transaction.startChild({ op: "take screenshot" });
     const buffer = await page.screenshot({
