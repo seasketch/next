@@ -29,7 +29,13 @@ export default function TopicListItem({
         <div className="flex-1 overflow-hidden">
           <Link to={`./${topic.forumId}/${topic.id}`}>
             <h4 className="text-base font-semibold">
-              <Link to={`./${topic.forumId}/${topic.id}`}>{topic.title}</Link>
+              <Link to={`./${topic.forumId}/${topic.id}`}>
+                {topic.title || (
+                  <span className="text-gray-500">
+                    <Trans>Untitled</Trans>
+                  </span>
+                )}
+              </Link>
             </h4>
             <p className="text-sm truncate overflow-hidden whitespace-nowrap topic-blurb text-gray-500">
               <Link to={`./${topic.forumId}/${topic.id}`}>{topic.blurb}</Link>

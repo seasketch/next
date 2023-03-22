@@ -7,6 +7,7 @@ export interface LangDetails {
 
 const languages: LangDetails[] = [
   { name: "English", localName: "English", code: "EN" },
+  { name: "Spanish", localName: "Español", code: "es" },
   {
     name: "Dhivehi",
     localName: "ދިވެހި,",
