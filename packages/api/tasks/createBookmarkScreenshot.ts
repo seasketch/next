@@ -89,6 +89,7 @@ async function createBookmarkScreenshot(
       process.env.MAPBOX_ACCESS_TOKEN
     }&auth=${token}&bookmarkUrl=${HOST}/bookmarks/${bookmark.id}`;
 
+    Sentry.setExtra("screenShotUrl", url.replace(token, "***REDACTED***"));
     console.log(`Loading page: ${url.replace(token, "***REDACTED***")}`);
 
     let clip: undefined | ScreenshotOptions["clip"] = undefined;
