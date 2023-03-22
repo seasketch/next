@@ -36,7 +36,7 @@ export default function BookmarkItem({
     },
     fetchPolicy: "cache-first",
     skip:
-      Boolean(bookmark.imageId) ||
+      bookmark.screenshotJobStatus === WorkerJobStatus.Finished ||
       bookmark.screenshotJobStatus === WorkerJobStatus.Failed,
   });
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
@@ -49,7 +49,7 @@ export default function BookmarkItem({
     },
     shouldResubscribe: true,
     skip:
-      Boolean(bookmark.imageId) ||
+      bookmark.screenshotJobStatus === WorkerJobStatus.Finished ||
       bookmark.screenshotJobStatus === WorkerJobStatus.Failed,
   });
 
@@ -122,45 +122,42 @@ export default function BookmarkItem({
           </span>
         </div>
       )}
-      {!bookmark.imageId &&
-        !data?.bookmarkById?.blurhash &&
-        (status !== WorkerJobStatus.Failed || editable) && (
-          <div className="flex flex-col items-center justify-center w-full h-full">
-            {status !== WorkerJobStatus.Failed && <Spinner />}
-            <span className="text-xs mt-1 text-gray-400">
-              {job?.lastError ? (
-                status === WorkerJobStatus.Failed ? (
-                  <Trans>screenshot failed</Trans>
-                ) : (
-                  <Trans>screenshot error</Trans>
-                )
+      {!bookmark.imageId && (status !== WorkerJobStatus.Failed || editable) && (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          {status !== WorkerJobStatus.Failed && <Spinner />}
+          <span className="text-xs mt-1 text-gray-400">
+            {job?.lastError ? (
+              status === WorkerJobStatus.Failed ? (
+                <Trans>screenshot failed</Trans>
               ) : (
-                <Trans>creating preview</Trans>
-              )}
-            </span>
-            {job?.lastError && (
-              <button
-                className="underline text-xs text-gray-400"
-                onClick={(e) => {
-                  setJobDetailsOpen(true);
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                {job?.attempts &&
-                job?.maxAttempts &&
-                status !== WorkerJobStatus.Failed ? (
-                  <Trans>
-                    attempt {{ attempt: job.attempts }}/
-                    {{ of: job.maxAttempts }}
-                  </Trans>
-                ) : (
-                  <Trans>show details</Trans>
-                )}
-              </button>
+                <Trans>screenshot error</Trans>
+              )
+            ) : (
+              <Trans>creating preview</Trans>
             )}
-          </div>
-        )}
+          </span>
+          {job?.lastError && (
+            <button
+              className="underline text-xs text-gray-400"
+              onClick={(e) => {
+                setJobDetailsOpen(true);
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              {job?.attempts &&
+              job?.maxAttempts &&
+              status !== WorkerJobStatus.Failed ? (
+                <Trans>
+                  attempt {{ attempt: job.attempts }}/{{ of: job.maxAttempts }}
+                </Trans>
+              ) : (
+                <Trans>show details</Trans>
+              )}
+            </button>
+          )}
+        </div>
+      )}
       {(bookmark.blurhash || data?.bookmarkById?.blurhash) &&
         !imageShown &&
         !data?.bookmarkById?.job?.lastError && (

@@ -75,6 +75,15 @@ export class GraphQLStack extends cdk.Stack {
         `R2_ENDPOINT, R2_SECRET_ACCESS_KEY, and R2_ACCESS_KEY_ID must be set in environment`
       );
     }
+
+    if (
+      !process.env.CLOUDFLARE_IMAGES_TOKEN ||
+      !process.env.CLOUDFLARE_IMAGES_ACCOUNT
+    ) {
+      throw new Error(
+        `CLOUDFLARE_IMAGES_TOKEN & CLOUDFLARE_IMAGES_ACCOUNT must be set in environment`
+      );
+    }
     // The code that defines your stack goes here
     const service = new ecsPatterns.ApplicationLoadBalancedFargateService(
       this,
@@ -125,6 +134,8 @@ export class GraphQLStack extends cdk.Stack {
             R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
             R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
             R2_ENDPOINT: process.env.R2_ENDPOINT,
+            CLOUDFLARE_IMAGES_TOKEN: process.env.CLOUDFLARE_IMAGES_TOKEN,
+            CLOUDFLARE_IMAGES_ACCOUNT: process.env.CLOUDFLARE_IMAGES_ACCOUNT,
           },
           containerPort: 3857,
         },
