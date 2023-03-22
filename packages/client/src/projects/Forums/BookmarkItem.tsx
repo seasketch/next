@@ -34,7 +34,10 @@ export default function BookmarkItem({
     variables: {
       id: bookmark.id,
     },
-    fetchPolicy: "cache-first",
+    fetchPolicy:
+      bookmark.screenshotJobStatus === WorkerJobStatus.Finished
+        ? "cache-first"
+        : "cache-and-network",
     skip:
       bookmark.screenshotJobStatus === WorkerJobStatus.Finished ||
       bookmark.screenshotJobStatus === WorkerJobStatus.Failed,
