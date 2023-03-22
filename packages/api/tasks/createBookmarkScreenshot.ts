@@ -136,6 +136,7 @@ async function createBookmarkScreenshot(
       captureBeyondViewport: false,
       clip,
     });
+    console.log("buffer length", buffer.length);
     span.finish();
     span = transaction.startChild({ op: "resize screenshot" });
     console.log("resize screenshot");
@@ -184,6 +185,9 @@ async function createBookmarkScreenshot(
       options
     );
     const data = await response.json();
+    console.log("response from cloudflare");
+    console.log(data);
+    Sentry.setExtra("cloudflare response", data);
     span.finish();
     span = transaction.startChild({ op: "update image id in db" });
     console.log("update map bookmarks with id");
@@ -195,4 +199,4 @@ async function createBookmarkScreenshot(
     transaction.finish();
   });
 }
-export default withTimeout(30000, createBookmarkScreenshot);
+export default withTimeout(60000, createBookmarkScreenshot);
