@@ -81,6 +81,7 @@
   "Longer text input": "Longer text input",
   "Map Bookmark": "Map Bookmark",
   "Map bookmark shown": "Map bookmark shown",
+  "Map temporarily disabled": "Map temporarily disabled",
   "Map-based": "Map-based",
   "MapBox fees to generate package (w/o free tier)": "MapBox fees to generate package (w/o free tier)",
   "Name": "Name",
@@ -189,7 +190,6 @@
   "screenshot failed": "screenshot failed",
   "seconds ago": "seconds ago",
   "show details": "show details",
-  "toggle all folder expansion": "toggle all folder expansion",
   "undo": "undo",
   "view details": "view details"
 }
