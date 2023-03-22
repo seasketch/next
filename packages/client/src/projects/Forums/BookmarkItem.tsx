@@ -161,23 +161,25 @@ export default function BookmarkItem({
             )}
           </div>
         )}
-      {(bookmark.blurhash || data?.bookmarkById?.blurhash) && !imageShown && (
-        <div className="absolute top-0 left-0 w-full h-full">
-          <Blurhash
-            hash={bookmark.blurhash || data?.bookmarkById?.blurhash!}
-            width="100%"
-            height="100%"
-          />
-          {((!bookmark.imageId && !data?.bookmarkById?.imageId) ||
-            // Show loading spinner while loading image if this map bookmark was
-            // just now created by the user
-            (!imageLoaded && !bookmark.imageId)) && (
-            <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
-              <Spinner />
-            </div>
-          )}
-        </div>
-      )}
+      {(bookmark.blurhash || data?.bookmarkById?.blurhash) &&
+        !imageShown &&
+        !data?.bookmarkById?.job?.lastError && (
+          <div className="absolute top-0 left-0 w-full h-full">
+            <Blurhash
+              hash={bookmark.blurhash || data?.bookmarkById?.blurhash!}
+              width="100%"
+              height="100%"
+            />
+            {((!bookmark.imageId && !data?.bookmarkById?.imageId) ||
+              // Show loading spinner while loading image if this map bookmark was
+              // just now created by the user
+              (!imageLoaded && !bookmark.imageId)) && (
+              <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
+                <Spinner />
+              </div>
+            )}
+          </div>
+        )}
       {(bookmark.imageId || data?.bookmarkById?.imageId) && (
         <motion.img
           variants={{ hidden: { opacity: 0.01 }, visible: { opacity: 1 } }}
