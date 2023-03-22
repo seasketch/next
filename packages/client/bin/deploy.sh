@@ -34,3 +34,10 @@ aws s3 cp build/service-worker.js $S3_BUCKET/service-worker.js \
   --cache-control max-age=300 \
   --content-type text/javascript \
   --acl public-read
+
+echo "Uploading screenshot.html"
+aws s3 cp build/screenshot.html $S3_BUCKET/screenshot.html \
+  --metadata-directive REPLACE \
+  --cache-control max-age=0,no-cache,no-store,must-revalidate \
+  --content-type text/html \
+  --acl public-read
