@@ -137,7 +137,7 @@ async function createBookmarkScreenshot(
     console.log("went to url");
 
     await page.waitForSelector("#loaded", {
-      timeout: 20000,
+      timeout: 30000,
     });
     span.finish();
     span = transaction.startChild({ op: "take screenshot" });
