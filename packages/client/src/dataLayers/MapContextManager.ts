@@ -4,13 +4,13 @@ import mapboxgl, {
   ErrorEvent,
   Source,
   Style,
-  Layer,
   CameraOptions,
   LngLatBoundsLike,
   MapboxOptions,
   AnySourceImpl,
   AnySourceData,
   AnyLayer,
+  Sources,
 } from "mapbox-gl";
 import {
   createContext,
@@ -22,24 +22,21 @@ import {
 import { BBox, Feature, Polygon } from "geojson";
 import {
   BasemapDetailsFragment,
-  DataLayer,
-  DataSource as GeneratedDataSource,
+  DataLayerDetailsFragment,
+  DataSourceDetailsFragment,
   DataSourceTypes,
-  InteractivitySetting,
+  MapBookmarkDetailsFragment,
   OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
+  OverlayFragment,
   RenderUnderType,
-  Sprite,
-  SpriteImage,
+  SketchPresentFragmentDoc,
+  SpriteDetailsFragment,
   useProjectRegionQuery,
 } from "../generated/graphql";
 import { fetchGlStyle } from "../useMapboxStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
-import ArcGISVectorSourceCache, {
-  ArcGISVectorSourceCacheEvent,
-} from "./ArcGISVectorSourceCache";
 import bytes from "bytes";
-import { urlTemplateForArcGISDynamicSource } from "./sourceTypes/ArcGISDynamicMapServiceSource";
 import bbox from "@turf/bbox";
 import { useParams } from "react-router";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
@@ -48,6 +45,8 @@ import md5 from "md5";
 import useAccessToken from "../useAccessToken";
 import LRU from "lru-cache";
 import debounce from "lodash.debounce";
+import { currentSidebarState } from "../projects/ProjectAppSidebar";
+import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 
 const graphqlURL = new URL(
   process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
@@ -68,93 +67,29 @@ mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 export interface LayerState {
   visible: true;
   loading: boolean;
-  staticId?: string | null;
   error?: Error;
 }
-
-export type ClientDataSource = Pick<
-  GeneratedDataSource,
-  | "attribution"
-  | "bounds"
-  | "bucketId"
-  | "buffer"
-  | "byteLength"
-  | "cluster"
-  | "clusterMaxZoom"
-  | "clusterProperties"
-  | "clusterRadius"
-  | "coordinates"
-  | "encoding"
-  | "enhancedSecurity"
-  | "importType"
-  | "lineMetrics"
-  | "maxzoom"
-  | "minzoom"
-  | "objectKey"
-  | "originalSourceUrl"
-  | "queryParameters"
-  | "scheme"
-  | "tiles"
-  | "tileSize"
-  | "tolerance"
-  | "type"
-  | "url"
-  | "urls"
-  | "useDevicePixelRatio"
-  | "supportsDynamicLayers"
-> & {
-  /** IDs from the server are Int. Temporary client IDs are UUID v4 */
-  id: string | number;
-  /** Can be used for arcgis vector services */
-  bytesLimit?: number;
-};
-
-export type ClientSprite = {
-  spriteImages: ({ dataUri?: string; url?: string } & Pick<
-    SpriteImage,
-    "height" | "width" | "pixelRatio"
-  >)[];
-  id: string | number;
-} & Pick<Sprite, "type">;
-
-export type ClientDataLayer = Pick<
-  DataLayer,
-  | "mapboxGlStyles"
-  | "renderUnder"
-  | "sourceLayer"
-  | "sublayer"
-  | "zIndex"
-  | "staticId"
-> & {
-  /** IDs from the server are Int. Temporary client IDs are UUID v4 */
-  id: string | number;
-  /** IDs from the server are Int. Temporary client IDs are UUID v4 */
-  dataSourceId: string | number;
-  sprites?: ClientSprite[];
-  interactivitySettings?: Pick<
-    InteractivitySetting,
-    "cursor" | "id" | "longTemplate" | "shortTemplate" | "type"
-  >;
-};
-
-export type ClientBasemap = BasemapDetailsFragment;
 
 class MapContextManager {
   map?: Map;
   interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
-  private clientDataSources: { [dataSourceId: string]: ClientDataSource } = {};
+  private clientDataSources: {
+    [dataSourceId: string]: DataSourceDetailsFragment;
+  } = {};
   private layersByZIndex: string[] = [];
-  private layers: { [layerId: string]: ClientDataLayer } = {};
+  private layers: {
+    [tocStableId: string]: {
+      tocId: string;
+    } & DataLayerDetailsFragment;
+  } = {};
   private visibleLayers: { [id: string]: LayerState } = {};
-  private basemaps: { [id: string]: ClientBasemap } = {};
+  private basemaps: { [id: string]: BasemapDetailsFragment } = {};
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
   private updateStateDebouncerReference?: NodeJS.Timeout;
-  private updateSourcesStateDebouncerReference?: NodeJS.Timeout;
   private initialCameraOptions?: CameraOptions;
   private initialBounds?: LngLatBoundsLike;
   private internalState: MapContextInterface;
-  arcgisVectorSourceCache: ArcGISVectorSourceCache;
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
   private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
@@ -164,6 +99,25 @@ class MapContextManager {
   private selectedSketches?: number[];
   private sketchTimestamps = new global.Map<number, string>();
   private hideEditableSketchId?: number;
+  // Used to track previous map state before the application of a map bookmark
+  // so that the map state change may be undone.
+  private previousMapState:
+    | undefined
+    | Pick<
+        MapBookmarkDetailsFragment,
+        | "cameraOptions"
+        | "basemapOptionalLayerStates"
+        | "visibleDataLayers"
+        | "selectedBasemap"
+      > = undefined;
+  /**
+   * The manager needs an up-to-date list of geoprocessing reference ids so that
+   * clients can toggle the appropriate TableOfContentsItem. The manager will
+   * keep this list up to date whenever reset() is called, but it should also
+   * be updated by the client using setGeoprocessingReferenceId() if it is
+   * changed.
+   */
+  private geoprocessingReferenceIds: { [referenceId: string]: string } = {};
 
   constructor(
     initialState: MapContextInterface,
@@ -181,48 +135,10 @@ class MapContextManager {
     this.internalState = initialState;
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
-    this.visibleLayers = initialState.layerStates;
-    this.arcgisVectorSourceCache = new ArcGISVectorSourceCache(
-      cacheSize,
-      (key, item) => {
-        const state = this.visibleLayers[key];
-        if (state && state.visible) {
-          /* eslint-disable */
-          const error = new Error(
-            `Active source was evicted from cache due to memory limit. Limit is ${bytes(
-              cacheSize || 0
-            )}, layer is ${bytes(item.bytes || 0)}`
-          ); /* eslint-enable */
-          state.error = error;
-          item.error = error;
-          delete item.bytes;
-          delete item.value;
-          this.debouncedUpdateLayerState();
-          this.debouncedUpdateStyle();
-          return item;
-        }
-      }
-    );
-    this.arcgisVectorSourceCache.on(
-      "error",
-      this.onArcGISVectorSourceCacheError
-    );
+    this.visibleLayers = initialState.layerStatesByTocStaticId;
   }
 
-  private onArcGISVectorSourceCacheError = (
-    event: ArcGISVectorSourceCacheEvent
-  ) => {
-    for (const layerId of Object.keys(this.visibleLayers)) {
-      if (this.layers[layerId]?.dataSourceId?.toString() === event.key) {
-        this.visibleLayers[layerId].error = event.item.error;
-        this.visibleLayers[layerId].loading = false;
-      }
-    }
-    this.debouncedUpdateLayerState();
-  };
-
   private setState = (action: SetStateAction<MapContextInterface>) => {
-    // console.warn("setState", action, this.internalState);
     if (typeof action === "function") {
       this.internalState = action(this.internalState);
     } else {
@@ -239,14 +155,85 @@ class MapContextManager {
   }
 
   /**
+   * Called by reset() and should be called in the client whenever modifying
+   * the geoprocessingReferenceId of a TableOfContentsItem so that the manager
+   * has up to date information.
+   *
+   * @param referenceId TableOfContents.geoprocessingReferenceId
+   * @param stableId TableOfContents.stableId
+   */
+  setGeoprocessingReferenceId(referenceId: string, stableId: string) {
+    this.geoprocessingReferenceIds[referenceId] = stableId;
+  }
+
+  /**
+   * Retrieve a list of visible layers. This "reference id" list can be passed
+   * to reporting tools as it will first provide the geoprocessingReferenceId of
+   * a layer if available, or fall back to the TableOfContents.stableId.
+   */
+  getVisibleLayerReferenceIds() {
+    return Object.keys(this.visibleLayers)
+      .filter((id) => this.visibleLayers[id].visible)
+      .map((id) => {
+        const reference = this.geoprocessingReferenceIds[id];
+        if (reference) {
+          return reference;
+        } else {
+          return id;
+        }
+      });
+  }
+
+  setLoadingOverlay(loadingOverlay: string | null) {
+    this.setState((prev) => {
+      if (loadingOverlay !== null) {
+        return {
+          ...prev,
+          loadingOverlay,
+          showLoadingOverlay: true,
+        };
+      } else {
+        return {
+          ...prev,
+          showLoadingOverlay: false,
+        };
+      }
+    });
+  }
+
+  /**
+   * Queries sketch layers to identify ids of sketches visible in the current
+   * map viewport. Used by map bookmarks to avoid saving views with private
+   * sketches.
+   */
+  getVisibleSketchIds() {
+    if (!this.map) {
+      throw new Error("Map not initialized");
+    }
+    const { layers } = this.computeSketchLayers();
+    const features = this.map.queryRenderedFeatures({
+      // @ts-ignore
+      layers: layers.map((l) => l.id),
+    });
+    const ids: { id: number; sharedInForum: boolean }[] = [];
+    for (const feature of features) {
+      if (feature.properties?.id) {
+        const id = parseInt(feature.properties.id);
+        if (!ids.find((r) => r.id === id)) {
+          ids.push({
+            id,
+            sharedInForum: Boolean(feature.properties.sharedInForum),
+          });
+        }
+      }
+    }
+    return ids;
+  }
+
+  /**
    * Call whenever the context will be replaced or no longer used
    */
-  destroy() {
-    this.arcgisVectorSourceCache.off(
-      "error",
-      this.onArcGISVectorSourceCacheError
-    );
-  }
+  destroy() {}
 
   /**
    * Create a Mapbox GL JS instance. Should be called by <MapBoxMap /> component.
@@ -349,6 +336,7 @@ class MapContextManager {
       this.map,
       this.setState
     );
+
     this.interactivityManager.setVisibleLayers(
       Object.keys(this.visibleLayers)
         .filter((id) => this.visibleLayers[id]?.visible && this.layers[id])
@@ -428,6 +416,9 @@ class MapContextManager {
     }
   }
 
+  /**
+   * @deprecated
+   */
   toggleTerrain() {
     let on = true;
     if (this.internalState.terrainEnabled) {
@@ -467,6 +458,9 @@ class MapContextManager {
     return !!this.internalState.showScale;
   }
 
+  /**
+   * @deprecated
+   */
   private force2dView() {
     if (this.map && this.map.getPitch() > 0) {
       this.map.easeTo({
@@ -529,6 +523,10 @@ class MapContextManager {
     this.updateInteractivitySettings();
   }
 
+  /**
+   * Map will not be rended (state.ready=false) until set.
+   * @param feature Rectangulare box will be created from input polygon
+   */
   setProjectBounds(feature: Feature<Polygon>) {
     const box = bbox(feature);
     this.initialBounds = box.slice(0, 4) as [number, number, number, number];
@@ -541,7 +539,7 @@ class MapContextManager {
   }
 
   private computeBasemapOptionalLayerStates(
-    basemap: ClientBasemap | null,
+    basemap: BasemapDetailsFragment | null,
     preferences?: { [layerName: string]: any }
   ) {
     const states: { [layerName: string]: any } = {};
@@ -564,7 +562,8 @@ class MapContextManager {
   }
 
   /**
-   * Set the basemap that should be displayed on the map. Updates MapContext.selectedBasemap
+   * Set the basemap that should be displayed on the map. Updates
+   * MapContext.selectedBasemap
    * @param id String ID for the basemap to select
    */
   setSelectedBasemap(id: string) {
@@ -572,7 +571,6 @@ class MapContextManager {
       this.internalState.selectedBasemap &&
       this.basemaps[this.internalState.selectedBasemap];
     this.internalState.selectedBasemap = id;
-    const terrainWasEnabled = this.internalState.terrainEnabled;
     const terrainEnabled = this.shouldEnableTerrain();
     const basemap = this.basemaps[id];
     this.setState((prev) => ({
@@ -608,6 +606,9 @@ class MapContextManager {
     this.updatePreferences();
   }
 
+  /**
+   * @deprecated
+   */
   private shouldEnableTerrain() {
     const state = this.internalState;
     if (this.basemaps && state.selectedBasemap) {
@@ -693,48 +694,54 @@ class MapContextManager {
     }
   }
 
-  async setVisibleLayers(layerIds: string[]) {
+  /**
+   * Set the visible overlays associated with TableOfContentsItems
+   * @param ids List of ids. Can be the TableOfContents.stableId or geoprocessingReferenceId
+   */
+  async setVisibleTocItems(ids: string[]) {
+    const stableIds = ids.map((id) =>
+      id in this.geoprocessingReferenceIds
+        ? this.geoprocessingReferenceIds[id]
+        : id
+    );
+
     for (const id in this.visibleLayers) {
-      if (layerIds.indexOf(id) === -1) {
-        this.hideLayerId(id);
+      if (stableIds.indexOf(id) === -1) {
+        this.hideTocItem(id);
       }
     }
-    for (const id of layerIds) {
+    for (const id of stableIds) {
       if (!this.visibleLayers[id]) {
-        this.showLayerId(id);
+        this.showTocItem(id);
       }
     }
     this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
-  private hideLayerId(id: string) {
-    let layer: ClientDataLayer | undefined = this.layers[id];
-    if (!layer) {
-      // Look to see if a staticId is being used
-      layer = Object.values(this.layers).find((l) => l.staticId === id);
-    }
-    if (layer) {
-      id = layer.id.toString();
-    }
-    delete this.visibleLayers[id];
-    const key = this.layers[id]?.dataSourceId?.toString();
-    if (key) {
-      this.arcgisVectorSourceCache.clearErrorsForKey(key);
-    }
+  /**
+   * Hide the overlay associated with a TableOfContentsItem
+   * @param id Can be the TableOfContents.stableId or geoprocessingReferenceId
+   */
+  private hideTocItem(id: string) {
+    const stableId =
+      id in this.geoprocessingReferenceIds
+        ? this.geoprocessingReferenceIds[id]
+        : id;
+    delete this.visibleLayers[stableId];
   }
 
-  private showLayerId(id: string) {
-    let layer: ClientDataLayer | undefined = this.layers[id];
-    if (!layer) {
-      // Look to see if a staticId is being used
-      layer = Object.values(this.layers).find((l) => l.staticId === id);
-    }
-    if (layer) {
-      id = layer.id.toString();
-    }
-    if (this.visibleLayers[id]) {
-      const state = this.visibleLayers[id];
+  /**
+   * Show the overlay associated with a TableOfContentsItem
+   * @param id Can be the TableOfContents.stableId or geoprocessingReferenceId
+   */
+  private showTocItem(id: string) {
+    const stableId =
+      id in this.geoprocessingReferenceIds
+        ? this.geoprocessingReferenceIds[id]
+        : id;
+    if (this.visibleLayers[stableId]) {
+      const state = this.visibleLayers[stableId];
       if (state.error) {
         // do nothing
       } else {
@@ -744,10 +751,9 @@ class MapContextManager {
         }
       }
     } else {
-      this.visibleLayers[id] = {
+      this.visibleLayers[stableId] = {
         loading: true,
         visible: true,
-        staticId: layer?.staticId,
       };
     }
   }
@@ -770,7 +776,6 @@ class MapContextManager {
         this.internalState.sketchLayerStates[id] = {
           loading: true,
           visible: true,
-          staticId: this.layers[id]?.staticId,
         };
       }
     }
@@ -786,36 +791,6 @@ class MapContextManager {
         this.sketchTimestamps.delete(sketch.id);
       }
     }
-    // request a redraw
-    this.debouncedUpdateStyle();
-  }
-
-  hideSketches(ids: number[]) {
-    for (const id of ids) {
-      if (this.internalState.sketchLayerStates[id]) {
-        delete this.internalState.sketchLayerStates[id];
-      }
-    }
-    this.setState((prev) => ({
-      ...prev,
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-    }));
-    // request a redraw
-    this.debouncedUpdateStyle();
-  }
-
-  showSketches(ids: number[]) {
-    for (const id of ids) {
-      this.internalState.sketchLayerStates[id] = {
-        loading: true,
-        visible: true,
-        staticId: this.layers[id]?.staticId,
-      };
-    }
-    this.setState((prev) => ({
-      ...prev,
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-    }));
     // request a redraw
     this.debouncedUpdateStyle();
   }
@@ -853,14 +828,14 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
-  async getComputedStyle(): Promise<{ style: Style; sprites: ClientSprite[] }> {
+  async getComputedStyle(): Promise<{
+    style: Style;
+    sprites: SpriteDetailsFragment[];
+  }> {
     this.resetLayersByZIndex();
-    let sprites: ClientSprite[] = [];
-    // if (!this.internalState.selectedBasemap) {
-    //   throw new Error("Cannot call getComputedStyle before basemaps are set");
-    // }
+    let sprites: SpriteDetailsFragment[] = [];
     const basemap = this.basemaps[this.internalState.selectedBasemap || ""] as
-      | ClientBasemap
+      | BasemapDetailsFragment
       | undefined;
     const labelsID = basemap?.labelsLayerId;
     const url =
@@ -1030,26 +1005,27 @@ class MapContextManager {
                     sourceWasAdded = true;
                     break;
                   case DataSourceTypes.ArcgisVector:
-                    const request = this.arcgisVectorSourceCache.get(source);
-                    if (request.value) {
-                      baseStyle.sources[source.id.toString()] = {
-                        type: "geojson",
-                        data: request.value,
-                        attribution: source.attribution || "",
-                      };
-                      sourceWasAdded = true;
-                    } else if (request.error) {
-                      // User will need to toggle the layer off
-                      // to clear the error and try again.
-                    } else {
-                      request.promise
-                        .then((data) => {
-                          this.debouncedUpdateStyle();
-                        })
-                        .catch((e) => {
-                          // do nothing, this will be handled elsewhere
-                        });
-                    }
+                    throw new Error("not supported");
+                    // const request = this.arcgisVectorSourceCache.get(source);
+                    // if (request.value) {
+                    //   baseStyle.sources[source.id.toString()] = {
+                    //     type: "geojson",
+                    //     data: request.value,
+                    //     attribution: source.attribution || "",
+                    //   };
+                    //   sourceWasAdded = true;
+                    // } else if (request.error) {
+                    //   // User will need to toggle the layer off
+                    //   // to clear the error and try again.
+                    // } else {
+                    //   request.promise
+                    //     .then((data) => {
+                    //       this.debouncedUpdateStyle();
+                    //     })
+                    //     .catch((e) => {
+                    //       // do nothing, this will be handled elsewhere
+                    //     });
+                    // }
                     break;
                   default:
                     break;
@@ -1065,7 +1041,7 @@ class MapContextManager {
                   (source.type === DataSourceTypes.SeasketchVector ||
                     source.type === DataSourceTypes.Geojson ||
                     source.type === DataSourceTypes.Vector ||
-                    source.type === DataSourceTypes.ArcgisVector ||
+                    // source.type === DataSourceTypes.ArcgisVector ||
                     source.type === DataSourceTypes.SeasketchMvt) &&
                   layer.mapboxGlStyles?.length
                 ) {
@@ -1095,54 +1071,54 @@ class MapContextManager {
           }
         } else {
           // Handle image sources with multiple sublayers baked in
-          if (/seasketch\/[\w\d-]+\/image/.test(layerId)) {
-            const sourceId = layerId.match(/seasketch\/([\w\d-]+)\/image/)![1];
-            if (sourceId) {
-              const source = this.clientDataSources[sourceId];
-              if (
-                source &&
-                source.type === DataSourceTypes.ArcgisDynamicMapserver
-              ) {
-                let visibleSublayers: ClientDataLayer[] = [];
-                for (const layerId in this.visibleLayers) {
-                  if (
-                    this.visibleLayers[layerId].visible &&
-                    this.layers[layerId]?.dataSourceId.toString() === sourceId
-                  ) {
-                    visibleSublayers.push(this.layers[layerId]);
-                  }
-                }
-                if (visibleSublayers.length) {
-                  visibleSublayers = visibleSublayers.sort(
-                    (a, b) => a.zIndex - b.zIndex
-                  );
-                  const { url, tileSize } = urlTemplateForArcGISDynamicSource(
-                    source,
-                    visibleSublayers.map((l) => ({ sublayer: l.sublayer! }))
-                  );
-                  baseStyle.sources[source.id.toString()] = {
-                    type: "raster",
-                    tiles: [url],
-                    tileSize: tileSize,
-                    attribution: source.attribution || "",
-                    // Doesn't like these...
-                    // maxzoom: source.maxzoom || undefined,
-                    // minzoom: source.minzoom || undefined,
-                    // bounds: source.bounds || undefined,
-                  };
-                  const styleLayer = {
-                    id: layerId,
-                    type: "raster",
-                    source: source.id.toString(),
-                  } as Layer;
-                  (isUnderLabels ? underLabels : overLabels).push(styleLayer);
-
-                  // sourceWasAdded = true;
-                  // break;
-                }
-              }
-            }
-          }
+          // TODO: Bring back arcgis server dynamic mapservice support with sublayers
+          // if (/seasketch\/[\w\d-]+\/image/.test(layerId)) {
+          //   const sourceId = layerId.match(/seasketch\/([\w\d-]+)\/image/)![1];
+          //   if (sourceId) {
+          //     const source = this.clientDataSources[sourceId];
+          //     if (
+          //       source &&
+          //       source.type === DataSourceTypes.ArcgisDynamicMapserver
+          //     ) {
+          //       let visibleSublayers: ClientDataLayer[] = [];
+          //       for (const layerId in this.visibleLayers) {
+          //         if (
+          //           this.visibleLayers[layerId].visible &&
+          //           this.layers[layerId]?.dataSourceId.toString() === sourceId
+          //         ) {
+          //           visibleSublayers.push(this.layers[layerId]);
+          //         }
+          //       }
+          //       if (visibleSublayers.length) {
+          //         visibleSublayers = visibleSublayers.sort(
+          //           (a, b) => a.zIndex - b.zIndex
+          //         );
+          //         const { url, tileSize } = urlTemplateForArcGISDynamicSource(
+          //           source,
+          //           visibleSublayers.map((l) => ({ sublayer: l.sublayer! }))
+          //         );
+          //         baseStyle.sources[source.id.toString()] = {
+          //           type: "raster",
+          //           tiles: [url],
+          //           tileSize: tileSize,
+          //           attribution: source.attribution || "",
+          //           // Doesn't like these...
+          //           // maxzoom: source.maxzoom || undefined,
+          //           // minzoom: source.minzoom || undefined,
+          //           // bounds: source.bounds || undefined,
+          //         };
+          //         const styleLayer = {
+          //           id: layerId,
+          //           type: "raster",
+          //           source: source.id.toString(),
+          //         } as Layer;
+          //         (isUnderLabels ? underLabels : overLabels).push(styleLayer);
+          //         // sourceWasAdded = true;
+          //         // break;
+          //       }
+          //     }
+          //   }
+          // }
         }
       }
     }
@@ -1216,12 +1192,28 @@ class MapContextManager {
 
     // Add sketches
     const sketchLayerIds: string[] = [];
+    const sketchData = this.computeSketchLayers();
+    baseStyle.layers.push(...sketchData.layers);
+    sketchLayerIds.push(...sketchData.layers.map((l) => l.id));
+    for (const sourceId in sketchData.sources) {
+      baseStyle.sources[sourceId] = sketchData.sources[sourceId];
+    }
+    if (this.interactivityManager) {
+      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
+    }
+
+    return { style: baseStyle, sprites };
+  }
+
+  computeSketchLayers() {
+    const allLayers: AnyLayer[] = [];
+    const sources: Sources = {};
     for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
       const id = parseInt(stringId);
       if (id !== this.hideEditableSketchId) {
         const timestamp = this.sketchTimestamps.get(id);
         const cache = LocalSketchGeometryCache.get(id);
-        baseStyle.sources[`sketch-${id}`] = {
+        sources[`sketch-${id}`] = {
           type: "geojson",
           data:
             cache && cache.timestamp === timestamp
@@ -1235,15 +1227,10 @@ class MapContextManager {
         if (this.editableSketchId && id !== this.editableSketchId) {
           reduceOpacity(layers);
         }
-        baseStyle.layers.push(...layers);
-        sketchLayerIds.push(...layers.map((l) => l.id));
+        allLayers.push(...layers);
       }
     }
-    if (this.interactivityManager) {
-      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
-    }
-
-    return { style: baseStyle, sprites };
+    return { layers: allLayers, sources };
   }
 
   getLayersForSketch(id: number, focusOfEditing?: boolean): AnyLayer[] {
@@ -1349,11 +1336,11 @@ class MapContextManager {
           state.loading = false;
         }
       } else {
-        for (const layerId of Object.keys(this.visibleLayers)) {
-          const sourceId = this.layers[layerId]?.dataSourceId.toString();
+        for (const staticId of Object.keys(this.visibleLayers)) {
+          const sourceId = this.layers[staticId]?.dataSourceId.toString();
           if (event.sourceId === sourceId) {
-            this.visibleLayers[layerId].error = event.error;
-            this.visibleLayers[layerId].loading = false;
+            this.visibleLayers[staticId].error = event.error;
+            this.visibleLayers[staticId].loading = false;
             anySet = true;
           }
         }
@@ -1366,7 +1353,7 @@ class MapContextManager {
 
   async updateInteractivitySettings() {
     if (this.interactivityManager) {
-      const visibleLayers: ClientDataLayer[] = [];
+      const visibleLayers: DataLayerDetailsFragment[] = [];
       for (const id in this.visibleLayers) {
         const state = this.visibleLayers[id];
         if (state.visible) {
@@ -1387,14 +1374,19 @@ class MapContextManager {
     if (!this.map) {
       throw new Error("MapContextManager.map not set");
     }
-    let sources: { [sourceId: string]: ClientDataLayer[] } = {};
-    for (const layerId of Object.keys(this.visibleLayers)) {
-      const layer = this.layers[layerId];
+
+    // For each layer/tocItem, check it's source
+
+    let sources: { [sourceId: string]: string[] } = {};
+    for (const id of Object.keys(this.visibleLayers)) {
+      const layer = this.layers[id];
       if (layer) {
         if (!sources[layer.dataSourceId]) {
           sources[layer.dataSourceId] = [];
         }
-        sources[layer.dataSourceId].push(layer);
+        if (sources[layer.dataSourceId].indexOf(id) === -1) {
+          sources[layer.dataSourceId].push(id);
+        }
       }
     }
     for (const sourceId in sources) {
@@ -1402,13 +1394,13 @@ class MapContextManager {
       if (loading) {
         anyLoading = true;
       }
-      for (const layer of sources[sourceId]) {
-        if (this.visibleLayers[layer.id].loading !== loading) {
-          this.visibleLayers[layer.id].loading = loading;
+      for (const stableId of sources[sourceId]) {
+        if (this.visibleLayers[stableId]?.loading !== loading) {
+          this.visibleLayers[stableId].loading = loading;
           anyChanges = true;
         }
-        if (this.visibleLayers[layer.id].error && loading) {
-          delete this.visibleLayers[layer.id].error;
+        if (this.visibleLayers[stableId]?.error && loading) {
+          delete this.visibleLayers[stableId].error;
           anyChanges = true;
         }
       }
@@ -1449,26 +1441,50 @@ class MapContextManager {
     maxWait: 100,
   });
 
-  // private debouncedUpdateSourceStates(backoff = 10) {
-  //   if (this.updateSourcesStateDebouncerReference) {
-  //     clearTimeout(this.updateSourcesStateDebouncerReference);
-  //   }
-  //   this.updateSourcesStateDebouncerReference = setTimeout(() => {
-  //     delete this.updateSourcesStateDebouncerReference;
-  //     this.updateSourceStates();
-  //   }, backoff);
-  // }
-
   highlightLayer(layerId: string) {}
 
-  reset(sources: ClientDataSource[], layers: ClientDataLayer[]) {
+  reset(
+    sources: DataSourceDetailsFragment[],
+    layers: DataLayerDetailsFragment[],
+    tocItems: Pick<
+      OverlayFragment,
+      "id" | "stableId" | "dataLayerId" | "geoprocessingReferenceId"
+    >[]
+  ) {
     this.clientDataSources = {};
     for (const source of sources) {
       this.clientDataSources[source.id] = source;
     }
-    this.layers = {};
+    const layersById: { [id: number]: DataLayerDetailsFragment } = {};
     for (const layer of layers) {
-      this.layers[layer.id] = layer;
+      layersById[layer.id] = layer;
+      // this.layers[layer.id] = layer;
+    }
+    for (const item of tocItems) {
+      if (item.dataLayerId) {
+        const layer = layersById[item.dataLayerId];
+        if (layer) {
+          this.layers[item.stableId] = {
+            ...layer,
+            tocId: item.stableId,
+          };
+        }
+        if (item.geoprocessingReferenceId) {
+          this.setGeoprocessingReferenceId(
+            item.geoprocessingReferenceId,
+            item.stableId
+          );
+        }
+      }
+    }
+    if (Object.keys(layers).length) {
+      // Cleanup entries in visibleLayers that no longer exist
+      for (const key in this.visibleLayers) {
+        if (!this.layers[key]) {
+          delete this.visibleLayers[key];
+        }
+      }
+      this.updatePreferences();
     }
     this.debouncedUpdateStyle();
     this.updateInteractivitySettings();
@@ -1511,29 +1527,29 @@ class MapContextManager {
           layerIds.push(specialId);
         }
       } else {
-        layerIds.push(layer.id.toString());
+        layerIds.push(layer.tocId);
       }
     }
     this.layersByZIndex = layerIds;
   }
 
-  hideLayers(layerIds: string[]) {
-    for (const id of layerIds) {
-      this.hideLayerId(id);
+  hideTocItems(stableIds: string[]) {
+    for (const id of stableIds) {
+      this.hideTocItem(id);
     }
     this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
-  showLayers(layerIds: string[]) {
-    for (const id of layerIds) {
-      this.showLayerId(id);
+  showTocItems(stableIds: string[]) {
+    for (const id of stableIds) {
+      this.showTocItem(id);
     }
     this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
-  private async addSprites(sprites: ClientSprite[]) {
+  private async addSprites(sprites: SpriteDetailsFragment[]) {
     // get unique sprite ids
     for (const sprite of sprites) {
       const spriteId =
@@ -1547,7 +1563,7 @@ class MapContextManager {
     }
   }
 
-  private async addSprite(sprite: ClientSprite) {
+  private async addSprite(sprite: SpriteDetailsFragment) {
     let spriteImage = sprite.spriteImages.find(
       (i) => window.devicePixelRatio === i.pixelRatio
     );
@@ -1560,46 +1576,37 @@ class MapContextManager {
         : // eslint-disable-next-line
           `seasketch://sprites/${sprite.id}`;
 
-    if (spriteImage.dataUri) {
-      const image = await createImage(
-        spriteImage.width,
-        spriteImage.height,
-        spriteImage.dataUri
-      );
-      this.map?.addImage(spriteId, image, {
-        pixelRatio: spriteImage.pixelRatio,
-      });
-    } else if (spriteImage.url) {
-      const image = await loadImage(
-        spriteImage.width,
-        spriteImage.height,
-        spriteImage.url,
-        this.map!
-      );
-      this.map!.addImage(spriteId, image, {
-        pixelRatio: spriteImage.pixelRatio,
-      });
-    } else {
-      /* eslint-disable-next-line */
-      throw new Error(`Sprite id=${sprite.id} missing both dataUri and url`);
-    }
+    // TODO: Okay to remove?
+    // if (spriteImage.dataUri) {
+    //   const image = await createImage(
+    //     spriteImage.width,
+    //     spriteImage.height,
+    //     spriteImage.dataUri
+    //   );
+    //   this.map?.addImage(spriteId, image, {
+    //     pixelRatio: spriteImage.pixelRatio,
+    //   });
+    // } else if (spriteImage.url) {
+    const image = await loadImage(
+      spriteImage.width,
+      spriteImage.height,
+      spriteImage.url,
+      this.map!
+    );
+    this.map!.addImage(spriteId, image, {
+      pixelRatio: spriteImage.pixelRatio,
+    });
+    // } else {
+    //   /* eslint-disable-next-line */
+    //   throw new Error(`Sprite id=${sprite.id} missing both dataUri and url`);
+    // }
   }
-
-  // private debouncedUpdateLayerState(backoff = 5) {
-  //   if (this.updateStateDebouncerReference) {
-  //     clearTimeout(this.updateStateDebouncerReference);
-  //   }
-  //   this.updateStateDebouncerReference = setTimeout(
-  //     this.updateLayerState,
-  //     backoff
-  //   );
-  // }
 
   private updateLayerState = () => {
     delete this.updateStateDebouncerReference;
     this.setState((oldState) => ({
       ...oldState,
-      layerStates: { ...this.visibleLayers },
+      layerStatesByTocStaticId: { ...this.visibleLayers },
       sketchLayerStates: { ...this.internalState.sketchLayerStates },
     }));
     this.updatePreferences();
@@ -1610,6 +1617,28 @@ class MapContextManager {
     maxWait: 100,
     trailing: true,
   });
+
+  updateOptionalBasemapSettings(settings: { [layerName: string]: any }) {
+    this.setState((prev) => {
+      const newState = {
+        ...prev,
+        basemapOptionalLayerStatePreferences: {
+          ...prev.basemapOptionalLayerStatePreferences,
+          ...settings,
+        },
+        basemapOptionalLayerStates: {
+          ...this.computeBasemapOptionalLayerStates(this.getSelectedBasemap(), {
+            ...this.internalState.basemapOptionalLayerStatePreferences,
+          }),
+          ...settings,
+        },
+      };
+      return newState;
+    });
+
+    this.updatePreferences();
+    this.debouncedUpdateStyle();
+  }
 
   updateOptionalBasemapSetting(
     layer: Pick<OptionalBasemapLayer, "id" | "options" | "groupType" | "name">,
@@ -1754,6 +1783,177 @@ class MapContextManager {
     }));
     this.updateStyle();
   }
+
+  getMapBookmarkData() {
+    if (!this.map) {
+      throw new Error("Map not ready to create bookmark data");
+    }
+    const visibleDataLayers: string[] = [];
+    for (const stableId in this.visibleLayers) {
+      if (this.visibleLayers[stableId]?.visible && this.layers[stableId]) {
+        visibleDataLayers.push(stableId);
+      }
+    }
+    const visibleSketches: number[] = [];
+    for (const key in this.internalState.sketchLayerStates) {
+      if (this.internalState.sketchLayerStates[key].visible) {
+        visibleSketches.push(parseInt(key));
+      }
+    }
+    const canvas = this.map.getCanvas();
+    const sidebarState = currentSidebarState();
+    return {
+      cameraOptions: {
+        center: this.map.getCenter().toArray(),
+        zoom: this.map.getZoom(),
+        bearing: this.map.getBearing(),
+        pitch: this.map.getPitch(),
+      },
+      basemapOptionalLayerStates:
+        this.internalState.basemapOptionalLayerStates || {},
+      visibleDataLayers,
+      selectedBasemap: parseInt(this.internalState.selectedBasemap!),
+      style: this.map.getStyle(),
+      mapDimensions: [canvas.clientWidth, canvas.clientHeight],
+      sidebarState,
+      visibleSketches,
+      basemapName: this.basemaps[this.internalState.selectedBasemap!].name,
+    };
+  }
+
+  async showMapBookmark(
+    bookmark: Pick<
+      MapBookmarkDetailsFragment,
+      | "cameraOptions"
+      | "basemapOptionalLayerStates"
+      | "visibleDataLayers"
+      | "selectedBasemap"
+    > & { id?: string },
+    savePreviousState = true,
+    client?: ApolloClient<NormalizedCacheObject>
+  ) {
+    if (savePreviousState) {
+      this.previousMapState = this.getMapBookmarkData();
+    }
+    if (!this.map) {
+      throw new Error("Map not ready to show bookmark");
+    }
+    this.setSelectedBasemap(bookmark.selectedBasemap.toString());
+    if (bookmark.basemapOptionalLayerStates) {
+      this.updateOptionalBasemapSettings(bookmark.basemapOptionalLayerStates);
+    }
+    this.setVisibleTocItems((bookmark.visibleDataLayers || []) as string[]);
+    this.map.flyTo({
+      ...bookmark.cameraOptions,
+      animate: true,
+    });
+    if (savePreviousState && bookmark.id) {
+      this.setState((prev) => ({
+        ...prev,
+        displayedMapBookmark: {
+          id: bookmark.id!,
+          errors: this.getErrorsForBookmark(bookmark, client),
+          supportsUndo: true,
+        },
+      }));
+      this.hideBookmarkBanner(6000);
+    }
+  }
+
+  getErrorsForBookmark(
+    bookmark: Pick<
+      MapBookmarkDetailsFragment,
+      "selectedBasemap" | "visibleSketches" | "visibleDataLayers"
+    >,
+    client?: ApolloClient<NormalizedCacheObject>
+  ) {
+    const missingSketches: number[] = [];
+    for (const id of bookmark.visibleSketches || []) {
+      if (
+        id &&
+        client &&
+        !client.readFragment({
+          fragment: SketchPresentFragmentDoc,
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `Sketch:${id}`,
+        })
+      ) {
+        missingSketches.push(id);
+      }
+    }
+    return {
+      missingLayers: this.getMissingLayers(
+        (bookmark.visibleDataLayers || []) as string[]
+      ),
+      missingBasemap: this.basemaps[bookmark.selectedBasemap] ? false : true,
+      missingSketches,
+    };
+  }
+
+  async undoMapBookmark() {
+    if (this.previousMapState) {
+      this.showMapBookmark(this.previousMapState, false);
+      this.hideBookmarkBanner();
+      this.previousMapState = undefined;
+    }
+  }
+
+  bookmarkBannerHideTimeout?: NodeJS.Timeout;
+
+  /**
+   *
+   * @param delay in milliseconds
+   */
+  hideBookmarkBanner(delay?: number) {
+    if (this.bookmarkBannerHideTimeout) {
+      clearTimeout(this.bookmarkBannerHideTimeout);
+    }
+    if (delay) {
+      this.bookmarkBannerHideTimeout = setTimeout(() => {
+        this.setState((prev) => ({
+          ...prev,
+          displayedMapBookmark: undefined,
+        }));
+        this.bookmarkBannerHideTimeout = undefined;
+      }, delay);
+    } else {
+      this.setState((prev) => ({
+        ...prev,
+        displayedMapBookmark: undefined,
+      }));
+    }
+  }
+
+  cancelBookmarkBannerHiding() {
+    if (this.bookmarkBannerHideTimeout) {
+      clearTimeout(this.bookmarkBannerHideTimeout);
+    }
+  }
+
+  /**
+   * Given a list of layer ids, return how many are unknown to MapContextManager
+   */
+  getMissingLayers(layerIds: string[]) {
+    const missing: string[] = [];
+    const knownIds = Object.keys(this.layers);
+    const knownStaticIds = Object.keys(this.layers).reduce((prev, key) => {
+      const staticId = this.layers[key].staticId;
+      if (staticId) {
+        prev.push(staticId);
+      }
+      return prev;
+    }, [] as string[]);
+    for (const id of layerIds) {
+      if (knownIds.indexOf(id) === -1 && knownStaticIds.indexOf(id) === -1) {
+        missing.push(id);
+      }
+    }
+    return missing;
+  }
+
+  getMissingSketches() {}
+
+  isBasemapMissing() {}
 }
 
 export default MapContextManager;
@@ -1765,7 +1965,7 @@ export interface Tooltip {
 }
 
 export interface MapContextInterface {
-  layerStates: { [id: string]: LayerState };
+  layerStatesByTocStaticId: { [id: string]: LayerState };
   sketchLayerStates: { [id: number]: LayerState };
   manager?: MapContextManager;
   bannerMessages: string[];
@@ -1784,8 +1984,18 @@ export interface MapContextInterface {
   offlineTileSimulatorActive?: boolean;
   styleHash: string;
   containerPortal: HTMLDivElement | null;
+  loadingOverlay?: string | null;
+  showLoadingOverlay?: boolean;
+  displayedMapBookmark?: {
+    id: string;
+    errors: {
+      missingLayers: string[];
+      missingBasemap: boolean;
+      missingSketches: number[];
+    };
+    supportsUndo: boolean;
+  };
 }
-
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
   preferencesKey?: string;
@@ -1811,7 +2021,7 @@ export function useMapContext(options?: MapContextOptions) {
     options || {};
   let initialState: MapContextInterface = {
     sketchLayerStates: {},
-    layerStates: {},
+    layerStatesByTocStaticId: {},
     bannerMessages: [],
     fixedBlocks: [],
     ready: false,
@@ -1833,7 +2043,7 @@ export function useMapContext(options?: MapContextOptions) {
         initialState.selectedBasemap = prefs.basemap as string;
       }
       if (prefs.layers) {
-        initialState.layerStates = prefs.layers;
+        initialState.layerStatesByTocStaticId = prefs.layers;
       }
       if (prefs.cameraOptions) {
         initialCameraOptions = prefs.cameraOptions;
@@ -1886,16 +2096,17 @@ export function useMapContext(options?: MapContextOptions) {
       state.manager.setProjectBounds(data.projectBySlug.region.geojson);
     }
   }, [data?.projectBySlug, error, state.manager]);
+
   return state;
 }
 
 export const MapContext = createContext<MapContextInterface>({
-  layerStates: {},
+  layerStatesByTocStaticId: {},
   sketchLayerStates: {},
   styleHash: "",
   manager: new MapContextManager(
     {
-      layerStates: {},
+      layerStatesByTocStaticId: {},
       sketchLayerStates: {},
       bannerMessages: [],
       fixedBlocks: [],
@@ -1946,7 +2157,7 @@ async function loadImage(
   });
 }
 
-function idForSublayer(layer: ClientDataLayer) {
+function idForSublayer(layer: DataLayerDetailsFragment) {
   if (layer.sublayer === null || layer.sublayer === undefined) {
     /* eslint-disable-next-line */
     throw new Error(`Layer is not a sublayer. id=${layer.id}`);
@@ -1961,7 +2172,7 @@ function idForSublayer(layer: ClientDataLayer) {
  * @param styleLayerIndex ClientDataLayers' gl style contains multiple layers. You must specify the index of the layer to generate an ID
  */
 export function idForLayer(
-  layer: Pick<ClientDataLayer, "id" | "sublayer" | "dataSourceId">,
+  layer: Pick<DataLayerDetailsFragment, "id" | "sublayer" | "dataSourceId">,
   styleLayerIndex?: number
 ) {
   if (layer.sublayer === null || layer.sublayer === undefined) {

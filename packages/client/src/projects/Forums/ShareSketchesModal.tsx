@@ -38,18 +38,24 @@ export default function ShareSketchesModal({
   const [selection, setSelected] = useState<string[]>([]);
 
   const [copy, mutationState] = useCopyTocItemForForumPostMutation({
-    onError,
+    // onError,
     onCompleted: (d) => {
       if (d.copySketchTocItem?.folders && d.copySketchTocItem?.sketches) {
-        const copiedSketches = getCopiedSketchesRecursive(
-          parseInt(selection[0].split(":")[1]),
-          treeItems
-        );
-        onSubmit(
-          d.copySketchTocItem.sketches,
-          d.copySketchTocItem.folders,
-          copiedSketches
-        );
+        const treeItem = treeItems.find((item) => item.id === selection[0]);
+        if (treeItem?.isLeaf === true) {
+          onSubmit(d.copySketchTocItem.sketches, d.copySketchTocItem.folders, [
+            parseInt(selection[0].split(":")[1]),
+          ]);
+        } else {
+          onSubmit(
+            d.copySketchTocItem.sketches,
+            d.copySketchTocItem.folders,
+            getCopiedSketchesRecursive(
+              parseInt(selection[0].split(":")[1]),
+              treeItems
+            )
+          );
+        }
       }
     },
   });
@@ -131,7 +137,7 @@ function getCopiedSketchesRecursive(parentId: number, items: TreeItem[]) {
   const ids: number[] = [];
   for (const item of items) {
     const itemParentId = item.parentId
-      ? parseTreeItemId(item.id).id
+      ? parseTreeItemId(item.parentId).id
       : undefined;
     if (itemParentId === parentId) {
       const id = parseTreeItemId(item.id).id;

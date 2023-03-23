@@ -7,7 +7,6 @@ import {
 } from "../generated/graphql";
 import { useContext, useState } from "react";
 import { MapContext } from "./MapContextManager";
-import { useTranslation } from "react-i18next";
 import RadioGroup from "../components/RadioGroup";
 import MetadataIcon from "../components/MetadataIcon";
 import MetadataModal from "./MetadataModal";
@@ -29,7 +28,6 @@ export default function OptionalBasemapLayerControl({
   >;
 }) {
   const mapContext = useContext(MapContext);
-  const { t } = useTranslation(["admin"]);
   const [metadataOpen, setMetadataOpen] = useState(false);
 
   let options = layer.options as {

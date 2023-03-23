@@ -17,6 +17,7 @@ import PostContentEditor from "./PostContentEditor";
 import { nameForProfile } from "./TopicListItem";
 import { Trans as I18n } from "react-i18next";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
+import useDialog from "../../components/useDialog";
 
 const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
@@ -24,10 +25,12 @@ export default function ReplyForm({
   profile,
   topicId,
   onReply,
+  accessibleSketchIds,
 }: {
   profile: AuthorProfileFragment;
   topicId: number;
   onReply?: (replyId: number) => void;
+  accessibleSketchIds: number[];
 }) {
   const { t } = useTranslation("forums");
   const [content, setContent, clearContent] = useLocalStorage(
@@ -35,6 +38,24 @@ export default function ReplyForm({
     undefined
   );
   const [modalOpen, setModalOpen] = useState(false);
+  const [hasErrors, setHasErrors] = useState(false);
+
+  const onChange = useCallback(
+    (content: any, errors: boolean) => {
+      const attachments: any[] = [];
+      for (const node of content.content) {
+        if (node.type === "attachments") {
+          attachments.push(node);
+        }
+      }
+      if (attachments.length > 1) {
+        console.error("More that 1 attachment block");
+      }
+      setContent(content);
+      setHasErrors(errors);
+    },
+    [setContent]
+  );
 
   const openProfileModal = useCallback(() => {
     setModalOpen(true);
@@ -90,8 +111,22 @@ export default function ReplyForm({
     },
   });
 
+  const dialog = useDialog();
+
   const onSubmit = useCallback(
-    async (currentOrEvent?: any) => {
+    async (currentOrEvent?: any, errors?: boolean) => {
+      if (errors || hasErrors) {
+        if (
+          !(await dialog.confirm(t("Map Bookmark Errors"), {
+            description: t(
+              "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting."
+            ),
+            primaryButtonText: t("Post anyways"),
+          }))
+        ) {
+          return;
+        }
+      }
       const message =
         currentOrEvent.type && currentOrEvent.type === "click"
           ? content
@@ -101,11 +136,12 @@ export default function ReplyForm({
         variables: {
           topicId,
           content: message,
+          // bookmarks: bookmarks
         },
       });
       clearContent();
     },
-    [clearContent, reply, topicId, content]
+    [clearContent, reply, topicId, content, hasErrors, dialog, t]
   );
 
   return (
@@ -139,7 +175,8 @@ export default function ReplyForm({
             disabled={replyState.loading}
             onSubmit={onSubmit}
             initialContent={content}
-            onChange={setContent}
+            onChange={onChange}
+            accessibleSketchIds={accessibleSketchIds}
           />
         </ReactNodeViewPortalsProvider>
       </div>

@@ -18,6 +18,7 @@ import PostContentEditor from "./PostContentEditor";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 import { nameForProfile } from "./TopicListItem";
 
+const accessibleSketchIds: number[] = [];
 export default function NewTopicForm({
   profile,
   forumId,
@@ -55,10 +56,12 @@ export default function NewTopicForm({
     },
     onError,
     refetchQueries: [ForumsDocument],
-    onCompleted: () => {
+    onCompleted: (data) => {
       clearTitle();
       clearContent();
-      history.replace(`/${getSlug()}/app/forums/${forumId}`);
+      history.replace(
+        `/${getSlug()}/app/forums/${forumId}/${data.createTopic.id}/`
+      );
     },
     update: async (cache, result) => {
       const topic = result.data?.createTopic;
@@ -129,10 +132,12 @@ export default function NewTopicForm({
         </div>
         <ReactNodeViewPortalsProvider>
           <PostContentEditor
+            // TODO: use bookmark data
             disabled={mutationState.loading}
             autofocus={Boolean(title && title.length)}
             initialContent={content}
             onChange={setContent}
+            accessibleSketchIds={accessibleSketchIds}
           />
         </ReactNodeViewPortalsProvider>
       </div>

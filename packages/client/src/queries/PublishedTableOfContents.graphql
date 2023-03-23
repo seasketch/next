@@ -15,7 +15,7 @@ fragment Overlay on TableOfContentsItem {
   sortIndex
   stableId
   title
-  stableId
+  geoprocessingReferenceId
 }
 
 query PublishedTableOfContents($slug: String!) {
@@ -24,5 +24,70 @@ query PublishedTableOfContents($slug: String!) {
     tableOfContentsItems {
       ...Overlay
     }
+  }
+}
+
+fragment DataSourceDetails on DataSource {
+  id
+  attribution
+  bounds
+  bucketId
+  buffer
+  byteLength
+  cluster
+  clusterMaxZoom
+  clusterProperties
+  clusterRadius
+  coordinates
+  encoding
+  enhancedSecurity
+  importType
+  lineMetrics
+  maxzoom
+  minzoom
+  objectKey
+  originalSourceUrl
+  queryParameters
+  scheme
+  tiles
+  tileSize
+  tolerance
+  type
+  url
+  urls
+  useDevicePixelRatio
+  supportsDynamicLayers
+}
+
+fragment ClientSprite on Sprite {
+  id
+  type
+  spriteImages {
+    url
+    height
+    width
+    pixelRatio
+    spriteId
+  }
+}
+
+fragment DataLayerDetails on DataLayer {
+  id
+  mapboxGlStyles
+  renderUnder
+  sourceLayer
+  sublayer
+  zIndex
+  staticId
+  dataSourceId
+  sprites {
+    ...ClientSprite
+  }
+  interactivitySettings {
+    cursor
+    id
+    longTemplate
+    shortTemplate
+    type
   }
 }

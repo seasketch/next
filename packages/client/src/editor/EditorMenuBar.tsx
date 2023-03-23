@@ -1,9 +1,16 @@
 import { EditorView } from "prosemirror-view";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
-import { MarkType, Schema } from "prosemirror-model";
-// import { schema } from "./config";
-import { EditorState } from "prosemirror-state";
+import {
+  Fragment,
+  Mark,
+  MarkType,
+  Node,
+  Schema,
+  Slice,
+} from "prosemirror-model";
+import { forumPosts } from "./config";
+import { EditorState, Transaction } from "prosemirror-state";
 import { markActive } from "./utils";
 import TextInput from "../components/TextInput";
 import { useTranslation } from "react-i18next";
@@ -11,12 +18,21 @@ import Modal from "../components/Modal";
 import { wrapInList } from "prosemirror-schema-list";
 import ShareSketchesModal from "../projects/Forums/ShareSketchesModal";
 import {
+  MapBookmarkDetailsFragment,
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
 } from "../generated/graphql";
 import { sketchType } from "./config";
-import { ProjectAppSidebarContext } from "../projects/ProjectAppSidebar";
+import { ChevronDownIcon } from "@heroicons/react/outline";
+import ContextMenuDropdown from "../components/ContextMenuDropdown";
+import { DropdownOption } from "../components/DropdownButton";
+import { SketchUIStateContext } from "../projects/Sketches/SketchUIStateContextProvider";
 import { MapContext } from "../dataLayers/MapContextManager";
+import useDialog from "../components/useDialog";
+import { treeItemId } from "../components/TreeView";
+import { currentSidebarState } from "../projects/ProjectAppSidebar";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import useIsSuperuser from "../useIsSuperuser";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -24,6 +40,7 @@ interface EditorMenuBarProps {
   className?: string;
   style?: any;
   schema: Schema;
+  createMapBookmark?: () => Promise<MapBookmarkDetailsFragment>;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -35,12 +52,12 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
     title?: string;
   } | null>(null);
   const [chooseSketchesOpen, setChooseSketchesOpen] = useState(false);
-  const [copySketchIndexPlaceholder, setCopySketchIndexPlaceholder] = useState<
-    number | null
-  >(null);
-
   const mapContext = useContext(MapContext);
-  const { isSmall } = useContext(ProjectAppSidebarContext);
+  const [disableSharing, setDisableSharing] = useState(false);
+  const dialog = useDialog();
+  const { isSmall } = currentSidebarState();
+  const onError = useGlobalErrorHandler();
+  const isSuperuser = useIsSuperuser();
 
   useEffect(() => {
     if (props.state) {
@@ -53,7 +70,8 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           h1: !setBlockType(schema.nodes.heading, { level: 1 })(props.state),
           h2: !setBlockType(schema.nodes.heading, { level: 2 })(props.state),
           h3: !setBlockType(schema.nodes.heading, { level: 3 })(props.state),
-          link: !toggleMark(schema.marks.link)(props.state), // ||
+          link: !toggleMark(schema.marks.link)(props.state),
+          // ||
           // (props.state!.selection.empty &&
           //   !schema.marks.link.isInSet(
           //     props.state!.storedMarks || props.state!.selection.$from.marks()
@@ -68,7 +86,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         },
       });
     }
-  }, [props.state, setMenuState]);
+  }, [props.state, setMenuState, schema]);
 
   const buttonClass = useCallback((active: boolean, className?: string) => {
     // eslint-disable-next-line i18next/no-literal-string
@@ -77,50 +95,121 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
     }`;
   }, []);
 
+  const sketchingContext = useContext(SketchUIStateContext);
+
   const onSubmitCopiedTocItems = useCallback(
     (
       sketches: SketchTocDetailsFragment[],
       folders: SketchFolderDetailsFragment[],
       copiedSketches: number[]
     ) => {
-      setChooseSketchesOpen(false);
-      const dispatch = props.view?.dispatch;
-      const state = props.view?.state;
-      if (dispatch && state) {
-        let index = copySketchIndexPlaceholder;
-        if (index === null) {
-          let { $from } = state.selection,
-            index = $from.index();
-        }
-        const items = [...sketches, ...folders];
-        const parent = items.find(
+      if (props.view) {
+        setChooseSketchesOpen(false);
+        insertTocItems(
+          sketches,
+          folders,
+          props.view?.state,
+          props.view?.dispatch
+        );
+        const parent = [...sketches, ...folders].find(
           (item) => !item.folderId && !item.collectionId
         );
-        // if (!$from.parent.canReplaceWith(index, index, sketchType)) {
-        //   console.log("cant replace", index, sketchType);
-        //   return false;
-        // }
-        dispatch(
-          state.tr.replaceSelectionWith(
-            sketchType.create({
-              title: parent!.name,
-              items: [...sketches, ...folders],
-            })
-          )
-        );
-        if (mapContext.manager && parent) {
-          mapContext.manager.hideSketches(copiedSketches);
-          mapContext.manager.showSketches(sketches.map((s) => s.id));
+        if (sketchingContext && parent) {
+          sketchingContext.hideSketches(
+            copiedSketches.map((id) => treeItemId(id, "Sketch"))
+          );
+          sketchingContext.showSketches(
+            sketches.map(({ id }) => treeItemId(id, "Sketch"))
+          );
         }
       }
     },
-    [
-      props.view?.dispatch,
-      props.view?.state,
-      copySketchIndexPlaceholder,
-      mapContext?.manager,
-    ]
+    [props.view, sketchingContext]
   );
+
+  const [contextMenuTarget, setContextMenuTarget] =
+    useState<HTMLButtonElement | null>(null);
+
+  const contextMenuOptions = useMemo(() => {
+    const options: DropdownOption[] = [];
+    if (schema.nodes.sketch) {
+      options.push({
+        label: t("Sketches"),
+        onClick: () => {
+          setChooseSketchesOpen(true);
+        },
+      });
+    }
+    if (schema.marks.attachmentLink && props.createMapBookmark && isSuperuser) {
+      options.push({
+        label: t("Map Bookmark"),
+        onClick: async () => {
+          if (mapContext.manager) {
+            const relatedSketchIds = mapContext.manager
+              .getVisibleSketchIds()
+              .filter(({ sharedInForum }) => !sharedInForum);
+            // TODO: have an option to just share these sketches from here
+            if (relatedSketchIds.length > 0) {
+              const answer = await dialog.confirm(
+                t("Unshared sketches visible on the map"),
+                {
+                  description: t(
+                    "You have one or more sketches visible that have not been shared. Share them first if you would like them to be visible in your bookmark."
+                  ),
+                  primaryButtonText: t("Create Bookmark"),
+                }
+              );
+              if (!answer) {
+                return;
+              }
+            }
+          }
+          if (props.createMapBookmark && props.view) {
+            setDisableSharing(true);
+            if (mapContext?.manager) {
+              mapContext.manager.setLoadingOverlay(t("Saving map bookmark"));
+            }
+            try {
+              const bookmark = await props.createMapBookmark();
+              if (mapContext?.manager) {
+                mapContext.manager.setLoadingOverlay(null);
+              }
+              setDisableSharing(false);
+              if (bookmark) {
+                props.view!.focus();
+                attachBookmark(bookmark, props.view.state, props.view.dispatch);
+                return false;
+              }
+            } catch (e) {
+              if (/Rate limit/.test(e.message)) {
+                onError(
+                  new Error("Rate limited. Please try again in a few seconds.")
+                );
+                setDisableSharing(false);
+                if (mapContext?.manager) {
+                  mapContext.manager.setLoadingOverlay(null);
+                }
+              } else {
+                throw e;
+              }
+            }
+          }
+        },
+      });
+    }
+    return options;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.createMapBookmark, props.view, schema, t, mapContext?.manager]);
+
+  useEffect(() => {
+    if (contextMenuTarget) {
+      const clickHandler = () => setContextMenuTarget(null);
+      document.body.addEventListener("click", clickHandler);
+      return () => {
+        document.body.removeEventListener("click", clickHandler);
+      };
+    }
+  }, [contextMenuTarget]);
 
   return (
     <div
@@ -362,26 +451,38 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           />
         </svg>
       </button>
-      {schema.nodes.sketch && (
+      {(schema.nodes.sketches || schema.marks.attachmentLink) && (
         <button
-          className="px-2 hover:underline text-primary-500"
-          onClick={() => {
-            if (props.view) {
-              const { $from } = props.view.state.selection;
-              setCopySketchIndexPlaceholder($from.index());
-            } else {
-              setCopySketchIndexPlaceholder(null);
-            }
-            setChooseSketchesOpen(true);
+          className={`border rounded px-1 py-0.5 flex items-center border-gray-300 ml-1.5 ${
+            disableSharing ? "opacity-50 pointer-events-none" : ""
+          }`}
+          disabled={disableSharing}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextMenuTarget(e.currentTarget as HTMLButtonElement);
           }}
         >
-          {isSmall ? t("Share...") : t("Share sketch...")}
+          {isSmall ? t("Share") : t("Share content")}{" "}
+          <ChevronDownIcon className="w-4 h-4 ml-1" />
         </button>
       )}
+
       {chooseSketchesOpen && (
         <ShareSketchesModal
           cancel={() => setChooseSketchesOpen(false)}
           onSubmit={onSubmitCopiedTocItems}
+        />
+      )}
+      {contextMenuTarget && contextMenuOptions.length > 0 && (
+        <ContextMenuDropdown
+          placement="top-start"
+          offsetY={2}
+          options={contextMenuOptions}
+          target={contextMenuTarget}
+          onClick={() => {
+            setContextMenuTarget(null);
+          }}
         />
       )}
       {!!linkModalState && (
@@ -452,4 +553,127 @@ export function getActiveMarks(state: EditorState, markTypes: MarkType[]) {
     marks[mark.name] = markActive(state, mark);
   }
   return marks;
+}
+
+export function attachBookmark(
+  bookmark: MapBookmarkDetailsFragment,
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) {
+  let tr = state.tr;
+  tr = tr.insert(
+    state.doc.content.size - 1,
+    forumPosts.schema.nodes.attachment.create({
+      type: "MapBookmark",
+      id: bookmark.id,
+      data: bookmark,
+    })
+  );
+  const selection = state.selection;
+  if (selection && selection.$from.pos < selection.$to.pos) {
+    tr.addMark(
+      selection.from,
+      selection.to,
+      forumPosts.schema.marks.attachmentLink.create({
+        "data-attachment-id": bookmark.id,
+        "data-type": "MapBookmark",
+      })
+    );
+  }
+  dispatch(tr);
+}
+
+function getAttachmentsNode(state: EditorState) {
+  let attachments: Node | null = null;
+  state.doc.content.forEach((node) => {
+    if (node.type === forumPosts.schema.nodes.attachments) {
+      attachments = node;
+    }
+  });
+  if (attachments) {
+    return attachments as Node;
+  } else {
+    throw new Error("Attachments node not found in prosemirror state");
+  }
+}
+
+export function deleteBookmark(
+  id: string,
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) {
+  let tr = state.tr;
+  // remove matching marks
+  const matchingMarks = collectMarks(
+    state.doc,
+    forumPosts.schema.marks.attachmentLink,
+    { "data-attachment-id": id }
+  );
+  for (const mark of matchingMarks) {
+    tr = tr.removeMark(0, state.doc.content.size, mark);
+  }
+
+  // Remove bookmark from attachments
+  const attachments = getAttachmentsNode(state);
+  const children: Node[] = [];
+  attachments.forEach((node, offset, index) => {
+    if (node.attrs["id"] !== id) {
+      children.push(node);
+    }
+  });
+  const newAttachments = attachments.copy(Fragment.from(children));
+  tr = tr.replaceWith(
+    state.doc.content.size - attachments.nodeSize,
+    state.doc.content.size,
+    newAttachments
+  );
+  dispatch(tr);
+}
+
+function collectMarks(
+  doc: Node,
+  type: MarkType,
+  attrs: { [key: string]: number | string } = {},
+  marks: Mark[] = []
+) {
+  for (const mark of doc.marks) {
+    if (mark.type === type) {
+      let matches = true;
+      for (const key in attrs) {
+        if (!(key in mark.attrs) || mark.attrs[key] !== attrs[key]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        marks.push(mark);
+      }
+    }
+  }
+  doc.forEach((node) => {
+    collectMarks(node, type, attrs, marks);
+  });
+  return marks;
+}
+
+export function insertTocItems(
+  sketches: SketchTocDetailsFragment[],
+  folders: SketchFolderDetailsFragment[],
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) {
+  const items = [...sketches, ...folders];
+  const parent = items.find((item) => !item.folderId && !item.collectionId);
+  const slice = new Slice(
+    Fragment.from([
+      sketchType.create({
+        title: parent!.name,
+        items: [...sketches, ...folders],
+      }),
+      forumPosts.schema.nodes.paragraph.create(),
+    ]),
+    0,
+    0
+  );
+  dispatch(state.tr.replaceSelection(slice));
 }

@@ -1,12 +1,13 @@
 import React, { useState, useContext } from "react";
-import { ClientBasemap, MapContext } from "../../dataLayers/MapContextManager";
+import { MapContext } from "../../dataLayers/MapContextManager";
+import { BasemapDetailsFragment } from "../../generated/graphql";
 
 export default function MiniBasemapSelector({
   basemaps,
   className,
   right,
 }: {
-  basemaps: ClientBasemap[];
+  basemaps: BasemapDetailsFragment[];
   className?: string;
   right?: boolean;
 }) {

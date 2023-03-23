@@ -33,5 +33,7 @@ declare namespace NodeJS {
     R2_ACCESS_KEY_ID: string;
     R2_SECRET_ACCESS_KEY: string;
     R2_ENDPOINT: string;
+    CLOUDFLARE_IMAGES_ACCOUNT: string;
+    CLOUDFLARE_IMAGES_TOKEN: string;
   }
 }

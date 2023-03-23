@@ -62,6 +62,7 @@ query layersAndSourcesForItems(
           height
           width
           url
+          spriteId
         }
         type
       }
@@ -201,6 +202,7 @@ query GetLayerItem($id: Int!) {
     stableId
     title
     enableDownload
+    geoprocessingReferenceId
     dataLayer {
       id
       zIndex
@@ -267,11 +269,17 @@ mutation UpdateTableOfContentsItem(
   $title: String
   $bounds: [BigFloat]
   $metadata: JSON
+  $geoprocessingReferenceId: String
 ) {
   updateTableOfContentsItem(
     input: {
       id: $id
-      patch: { title: $title, bounds: $bounds, metadata: $metadata }
+      patch: {
+        title: $title
+        bounds: $bounds
+        metadata: $metadata
+        geoprocessingReferenceId: $geoprocessingReferenceId
+      }
     }
   ) {
     tableOfContentsItem {
@@ -279,6 +287,8 @@ mutation UpdateTableOfContentsItem(
       bounds
       metadata
       title
+      geoprocessingReferenceId
+      stableId
     }
   }
 }

@@ -6,6 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Spinner from "./Spinner";
 import { Trans } from "react-i18next";
+import {
+  currentSidebarState,
+  ProjectAppSidebarContext,
+} from "../projects/ProjectAppSidebar";
+import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -32,9 +37,14 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
   const [showSpinner, setShowSpinner] = useState(true);
+  const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
+    string | null
+  >(null);
 
   const interactive =
     props.interactive === undefined ? true : props.interactive;
+
+  const sidebar = currentSidebarState();
 
   useEffect(() => {
     if (
@@ -88,6 +98,17 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       ref={mapContainer}
       onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
+      <div
+        className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
+          mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"
+        }`}
+        style={{ backdropFilter: "blur(12px)" }}
+      >
+        <div className="bg-gray-100 bg-opacity-30 text-blue-800 border-blue-800 border-opacity-20 shadow-inner border text-base p-4 rounded-full flex items-center">
+          <span>{mapContext.loadingOverlay}</span>
+          <Spinner color="white" className="ml-2" />
+        </div>
+      </div>
       {showSpinner && (
         <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
       )}
@@ -130,6 +151,81 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           ) : null}
         </AnimatePresence>
       </div>
+      <div
+        className="flex justify-center items-center absolute top-0 left-0 text-xs z-10 pointer-events-none w-full"
+        style={
+          sidebar.open
+            ? {
+                paddingLeft: sidebar.width + "px",
+              }
+            : {}
+        }
+      >
+        <AnimatePresence>
+          {mapContext.displayedMapBookmark ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-sm px-4 pointer-events-auto mt-2 p-2 rounded"
+              style={{
+                backgroundColor: "rgba(255,255,255,0.5)",
+              }}
+              onMouseEnter={() => {
+                mapContext?.manager?.cancelBookmarkBannerHiding();
+              }}
+              onMouseLeave={() => {
+                mapContext?.manager?.hideBookmarkBanner(1000);
+              }}
+            >
+              {mapContext.displayedMapBookmark.errors.missingBasemap ||
+              mapContext.displayedMapBookmark.errors.missingLayers.length > 0 ||
+              mapContext.displayedMapBookmark.errors.missingSketches.length >
+                0 ? (
+                <Trans
+                  i18nKey="missingLayerCount"
+                  count={
+                    (mapContext.displayedMapBookmark.errors.missingBasemap
+                      ? 1
+                      : 0) +
+                    mapContext.displayedMapBookmark.errors.missingLayers
+                      .length +
+                    mapContext.displayedMapBookmark.errors.missingSketches
+                      .length
+                  }
+                />
+              ) : (
+                <Trans>Map bookmark shown</Trans>
+              )}
+              <button
+                className="px-1 bg-gray-100 rounded-sm shadow ml-1"
+                onClick={() => {
+                  mapContext.manager?.undoMapBookmark();
+                }}
+              >
+                <Trans>undo</Trans>
+              </button>
+              <button
+                className="px-1 bg-gray-100 rounded-sm shadow ml-1 -mr-1.5"
+                onClick={() =>
+                  setShowBookmarkOverlayId(
+                    mapContext.displayedMapBookmark?.id || null
+                  )
+                }
+              >
+                <Trans>view details</Trans>
+              </button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+      {showBookmarkOverlayId && (
+        <MapBookmarkDetailsOverlay
+          bookmarkId={showBookmarkOverlayId}
+          onRequestClose={() => setShowBookmarkOverlayId(null)}
+        />
+      )}
       {mapContext.basemapError && (
         <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
           <div className=" bg-red-900 text-white p-1 text-sm">

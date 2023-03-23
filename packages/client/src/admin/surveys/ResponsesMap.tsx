@@ -5,12 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { render } from "react-dom";
 import { Trans } from "react-i18next";
 import MapboxMap from "../../components/MapboxMap";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import {
-  ClientDataLayer,
-  ClientDataSource,
-  MapContext,
-} from "../../dataLayers/MapContextManager";
-import {
+  DataLayerDetailsFragment,
+  DataSourceDetailsFragment,
   DataSourceTypes,
   FormElementDetailsFragment,
   RenderUnderType,
@@ -297,34 +295,30 @@ export default function ResponsesMap({
   }, [data?.survey?.form?.formElements]);
 
   useEffect(() => {
-    let dataSources: ClientDataSource[] = [];
-    let layers: ClientDataLayer[] = [];
+    let dataSources: DataSourceDetailsFragment[] = [];
+    let layers: DataLayerDetailsFragment[] = [];
     if (selectedQuestion) {
       const element = spatialQuestions.find(
         (el) => el.exportId === selectedQuestion
       )!;
       // eslint-disable-next-line i18next/no-literal-string
       const dataSourceId = `${selectedQuestion}-source`;
-      dataSources.push({
-        id: dataSourceId,
-        type: DataSourceTypes.Vector,
-        supportsDynamicLayers: false,
-        tiles: [
-          `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
-            "/graphql",
-            // eslint-disable-next-line i18next/no-literal-string
-            `/export-survey/${surveyId}/spatial/${element.id}/tiles/{z}/{x}/{y}.pbf?cacheBuster=${mapTileCacheBuster}`
-          )}`,
-        ],
-      });
-      layers.push({
-        // eslint-disable-next-line i18next/no-literal-string
-        dataSourceId,
-        id: selectedQuestion,
-        renderUnder: RenderUnderType.Labels,
-        zIndex: 1,
-        mapboxGlStyles: [
-          {
+      const manager = essentials.mapContext.manager;
+      if (manager && essentials.mapContext.ready) {
+        setTimeout(() => {
+          manager.addSource(dataSourceId, {
+            id: dataSourceId,
+            type: "vector",
+            tiles: [
+              `${process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
+                "/graphql",
+                // eslint-disable-next-line i18next/no-literal-string
+                `/export-survey/${surveyId}/spatial/${element.id}/tiles/{z}/{x}/{y}.pbf?cacheBuster=${mapTileCacheBuster}`
+              )}`,
+            ],
+          });
+          essentials.mapContext.manager?.addLayer({
+            id: dataSourceId + "-fill",
             type: "fill",
             layout: {},
             "source-layer": "sketches",
@@ -345,58 +339,141 @@ export default function ResponsesMap({
               "fill-antialias": true,
             },
             filter: getFilter(filter),
-          },
-          {
-            type: "line",
-            layout: {},
-            "source-layer": "sketches",
-            paint: {
-              "line-opacity": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                1,
-                0.1,
-              ],
-              "line-color": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                "blue",
-                "red",
-              ],
-            },
-            filter: getFilter(filter),
-          },
-          {
-            type: "circle",
-            "source-layer": "sketches",
-            paint: {
-              // Make circles larger as the user zooms from z12 to z22.
-              "circle-radius": {
-                base: 3,
-                stops: [
-                  [12, 3],
-                  [22, 180],
-                ],
-              },
-              "circle-color": [
-                "case",
-                ["boolean", ["feature-state", "selected"], false],
-                "blue",
-                "red",
-              ],
-            },
-            filter: getFilter(filter),
-          },
-        ],
-      });
+          });
+        }, 5000);
+        return () => {};
+      }
+      //   ,
+      //   {
+      //     type: "line",
+      //     layout: {},
+      //     "source-layer": "sketches",
+      //     paint: {
+      //       "line-opacity": [
+      //         "case",
+      //         ["boolean", ["feature-state", "selected"], false],
+      //         1,
+      //         0.1,
+      //       ],
+      //       "line-color": [
+      //         "case",
+      //         ["boolean", ["feature-state", "selected"], false],
+      //         "blue",
+      //         "red",
+      //       ],
+      //     },
+      //     filter: getFilter(filter),
+      //   },
+      //   {
+      //     type: "circle",
+      //     "source-layer": "sketches",
+      //     paint: {
+      //       // Make circles larger as the user zooms from z12 to z22.
+      //       "circle-radius": {
+      //         base: 3,
+      //         stops: [
+      //           [12, 3],
+      //           [22, 180],
+      //         ],
+      //       },
+      //       "circle-color": [
+      //         "case",
+      //         ["boolean", ["feature-state", "selected"], false],
+      //         "blue",
+      //         "red",
+      //       ],
+      //     },
+      //     filter: getFilter(filter),
+      //   }
+      // );
+      // layers.push({
+      //   // eslint-disable-next-line i18next/no-literal-string
+      //   dataSourceId,
+      //   id: selectedQuestion,
+      //   renderUnder: RenderUnderType.Labels,
+      //   zIndex: 1,
+      //   mapboxGlStyles: [
+      //     {
+      //       type: "fill",
+      //       layout: {},
+      //       "source-layer": "sketches",
+      //       paint: {
+      //         "fill-color": [
+      //           "case",
+      //           ["boolean", ["feature-state", "selected"], false],
+      //           "#111099",
+      //           "#881011",
+      //         ],
+      //         // "fill-opacity": 0.15,
+      //         "fill-opacity": [
+      //           "case",
+      //           ["boolean", ["feature-state", "selected"], false],
+      //           0.5,
+      //           0.15,
+      //         ],
+      //         "fill-antialias": true,
+      //       },
+      //       filter: getFilter(filter),
+      //     },
+      //     {
+      //       type: "line",
+      //       layout: {},
+      //       "source-layer": "sketches",
+      //       paint: {
+      //         "line-opacity": [
+      //           "case",
+      //           ["boolean", ["feature-state", "selected"], false],
+      //           1,
+      //           0.1,
+      //         ],
+      //         "line-color": [
+      //           "case",
+      //           ["boolean", ["feature-state", "selected"], false],
+      //           "blue",
+      //           "red",
+      //         ],
+      //       },
+      //       filter: getFilter(filter),
+      //     },
+      //     {
+      //       type: "circle",
+      //       "source-layer": "sketches",
+      //       paint: {
+      //         // Make circles larger as the user zooms from z12 to z22.
+      //         "circle-radius": {
+      //           base: 3,
+      //           stops: [
+      //             [12, 3],
+      //             [22, 180],
+      //           ],
+      //         },
+      //         "circle-color": [
+      //           "case",
+      //           ["boolean", ["feature-state", "selected"], false],
+      //           "blue",
+      //           "red",
+      //         ],
+      //       },
+      //       filter: getFilter(filter),
+      //     },
+      //   ],
+      // });
     }
-    essentials.mapContext.manager?.reset(dataSources, layers);
-    if (selectedQuestion) {
-      essentials.mapContext.manager?.setVisibleLayers([selectedQuestion!]);
-    } else {
-      essentials.mapContext.manager?.setVisibleLayers([]);
-    }
-  }, [selectedQuestion, mapTileCacheBuster]);
+    // essentials.mapContext.manager?.reset(dataSources, layers);
+    // if (selectedQuestion) {
+    //   essentials.mapContext.manager?.setVisibleLayers([selectedQuestion!]);
+    // } else {
+    //   essentials.mapContext.manager?.setVisibleLayers([]);
+    // }
+  }, [
+    selectedQuestion,
+    mapTileCacheBuster,
+    essentials.mapContext.manager,
+    spatialQuestions,
+    surveyId,
+    filter,
+    essentials.mapContext.ready,
+  ]);
 
   return (
     <MapContext.Provider value={essentials.mapContext}>

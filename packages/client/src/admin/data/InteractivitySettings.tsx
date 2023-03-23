@@ -1,14 +1,13 @@
-import React, { ReactNode, useEffect, useState } from "react";
-import { useTranslation, Trans } from "react-i18next";
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import RadioGroup from "../../components/RadioGroup";
 import Spinner from "../../components/Spinner";
-import TextInput from "../../components/TextInput";
 import {
   InteractivityType,
   useUpdateInteractivitySettingsMutation,
   useInteractivitySettingsByIdQuery,
+  BasemapDetailsFragment,
 } from "../../generated/graphql";
-import MutableAutosaveInput from "../MutableAutosaveInput";
 import * as CodeMirror from "react-codemirror2";
 import "codemirror/lib/codemirror.css";
 import "codemirror/theme/material.css";
@@ -18,10 +17,6 @@ import "codemirror/addon/lint/lint.css";
 import sanitizeHtml from "sanitize-html";
 import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
-import {
-  ClientBasemap,
-  ClientDataLayer,
-} from "../../dataLayers/MapContextManager";
 import SetBasemapInteractivityLayers from "./SetBasemapInteractivityLayers";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
@@ -38,7 +33,7 @@ export default function InteractivitySettings({
   id: number;
   dataSourceId?: number;
   sublayer?: string | null;
-  basemap?: ClientBasemap;
+  basemap?: BasemapDetailsFragment;
 }) {
   const { t } = useTranslation(["admin"]);
   const { data, loading, error } = useInteractivitySettingsByIdQuery({

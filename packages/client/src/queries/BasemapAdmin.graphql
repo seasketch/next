@@ -133,6 +133,7 @@ fragment BasemapAdminDetails on Basemap {
   tileSize
   type
   url
+  surveysOnly
 }
 
 query GetBasemap($id: Int!) {

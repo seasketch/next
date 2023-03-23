@@ -12,17 +12,19 @@ import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
 import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
 import { graphqlUploadExpress } from "graphql-upload";
 import bytes from "bytes";
-import { run } from "graphile-worker";
+import { Job, run } from "graphile-worker";
 import cors from "cors";
 import https from "https";
 import fs from "fs";
 import graphileOptions from "./graphileOptions";
 import { getFeatureCollection, getMVT } from "./exportSurvey";
 import * as Sentry from "@sentry/node";
-import * as Tracing from "@sentry/tracing";
+// Importing @sentry/tracing patches the global hub for tracing to work.
+import "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
 import slugify from "slugify";
+import { Pool } from "pg";
 
 interface SSNRequest extends Request {
   user?: { id: number; canonicalEmail: string };
@@ -36,8 +38,6 @@ if (process.env.SENTRY_DSN) {
     integrations: [
       // enable HTTP calls tracing
       new Sentry.Integrations.Http({ tracing: true }),
-      // enable Express.js middleware tracing
-      new Tracing.Integrations.Express({ app }),
     ],
 
     // Set tracesSampleRate to 1.0 to capture 100%
@@ -187,6 +187,41 @@ app.use(function (req: SSNRequest, res, next) {
   next();
 });
 
+type JobStatusUpdateConfig = {
+  table: string;
+  column: string;
+  task_identifier: string;
+};
+
+const jobStatusPropsToUpdate: JobStatusUpdateConfig[] = [
+  {
+    table: "map_bookmarks",
+    column: "screenshot_job_status",
+    task_identifier: "createBookmarkScreenshot",
+  },
+];
+
+async function updateMatchingTables(
+  job: Job,
+  status: "queued" | "started" | "finished" | "error" | "failed",
+  pool: Pool
+) {
+  const configs = jobStatusPropsToUpdate.filter(
+    (c) => c.task_identifier === job.task_identifier
+  );
+  if (job.payload && "id" in (job.payload as any)) {
+    for (const { table, column } of configs) {
+      // This query looks weird because error and failed events can come in out
+      // of order somehow. This makes sure failure is the final status and
+      // related error events don't clobber that status.
+      await pool.query(
+        `update ${table} set ${column} = $2 where id = $1 and (${column} != 'failed'::worker_job_status or $2 != 'error'::worker_job_status)`,
+        [(job.payload as any).id, status]
+      );
+    }
+  }
+}
+
 run({
   pgPool: workerPool,
   concurrency: parseInt(process.env.GRAPHILE_WORKER_CONCURRENCY || "0"),
@@ -200,10 +235,34 @@ run({
     * * * * * cleanupDataUploads
     * * * * * cleanupDeletedOverlayRecords
   `,
+}).then((runner) => {
+  runner.events.on("job:start", ({ worker, job }) => {
+    updateMatchingTables(job, "started", workerPool);
+  });
+  runner.events.on("job:success", ({ worker, job }) => {
+    updateMatchingTables(job, "finished", workerPool);
+  });
+  runner.events.on("job:error", ({ worker, job }) => {
+    Sentry.captureMessage(`Graphile Worker:${job.task_identifier}:error`, {
+      extra: {
+        job: job,
+      },
+    });
+    updateMatchingTables(job, "error", workerPool);
+  });
+  runner.events.on("job:failed", ({ worker, job }) => {
+    Sentry.captureMessage(`Graphile Worker:${job.task_identifier}:failed`, {
+      extra: {
+        job: job,
+      },
+    });
+    updateMatchingTables(job, "failed", workerPool);
+  });
 });
 
 const tilesetPool = createPool();
 const geoPool = createPool();
+const bookmarksPool = createPool();
 const loadersPool = createPool({}, "admin");
 
 app.use(
@@ -311,7 +370,75 @@ app.use(
     } catch (e: any) {
       client.query("COMMIT");
       client.release();
-      res.status(500).send(`Problem generating tiles.\n${e.toString()}`);
+      res.status(500).send(`Problem generating geojson.\n${e.toString()}`);
+      return;
+    }
+  }
+);
+
+app.use(
+  "/bookmarks/:id",
+  authorizationMiddleware,
+  currentProjectMiddlware,
+  userAccountMiddlware,
+  async function (req, res, next) {
+    const client = await bookmarksPool.connect();
+    try {
+      await client.query("BEGIN");
+      let token: string | undefined = req.query.token;
+      let claims:
+        | { userId?: number; projectId?: number; canonicalEmail?: string }
+        | undefined;
+      if (token) {
+        claims = await verify(
+          loadersPool,
+          token,
+          process.env.HOST || "seasketch.org"
+        );
+      }
+      const pgSettings = getPgSettings(req);
+      if (
+        claims &&
+        claims.canonicalEmail &&
+        claims.userId &&
+        pgSettings.role === "anon"
+      ) {
+        pgSettings.role = "seasketch_user";
+        pgSettings["session.user_id"] = claims.userId;
+        pgSettings["session.email_verified"] = true;
+        pgSettings["session.canonical_email"] = claims.canonicalEmail;
+      }
+      if (claims && claims.projectId) {
+        pgSettings["session.project_id"] = claims.projectId;
+      }
+      await setTransactionSessionVariables(pgSettings, client);
+      const id = req.params.id;
+      const { rows } = await client.query(
+        `
+        SELECT bookmark_data($1) as bookmark
+          `,
+        [id]
+      );
+      const bookmark = rows[0].bookmark;
+      const { rows: spriteRows } = await client.query(
+        `
+        SELECT get_sprite_data_for_screenshot(map_bookmarks.*) as sprite_images from map_bookmarks where id = $1
+          `,
+        [id]
+      );
+      const spriteImages = spriteRows[0].sprite_images;
+      await client.query("COMMIT");
+      await client.release();
+      res.setHeader("Content-Type", "application/json");
+      if (bookmark === null) {
+        res.status(404);
+      }
+      bookmark.spriteImages = spriteImages;
+      res.send(bookmark);
+    } catch (e: any) {
+      client.query("COMMIT");
+      client.release();
+      res.status(500).send(`Problem generating bookmark.\n${e.toString()}`);
       return;
     }
   }

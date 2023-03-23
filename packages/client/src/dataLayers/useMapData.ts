@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
+  BasemapDetailsFragment,
+  DataLayerDetailsFragment,
+  DataSourceDetailsFragment,
+  OverlayFragment,
   useGetBasemapsQuery,
   useLayersAndSourcesForItemsQuery,
   usePublishedTableOfContentsQuery,
 } from "../generated/graphql";
-import {
-  ClientBasemap,
-  ClientDataLayer,
-  ClientDataSource,
-  MapContextInterface,
-} from "./MapContextManager";
-import { ClientTableOfContentsItem } from "./tableOfContents/TableOfContents";
+import { MapContextInterface } from "./MapContextManager";
 
 /**
  * Retrieves published table of contents items, basemaps,
@@ -20,12 +18,14 @@ import { ClientTableOfContentsItem } from "./tableOfContents/TableOfContents";
  */
 export default function useMapData(mapContext: MapContextInterface) {
   const { slug } = useParams<{ slug: string }>();
-  const [basemaps, setBasemaps] = useState<ClientBasemap[]>([]);
+  const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
   const [tableOfContentsItems, setTableOfContentsItems] = useState<
-    ClientTableOfContentsItem[]
+    OverlayFragment[]
   >([]);
-  const [dataLayers, setDataLayers] = useState<ClientDataLayer[]>([]);
-  const [dataSources, setDataSources] = useState<ClientDataSource[]>([]);
+  const [dataLayers, setDataLayers] = useState<DataLayerDetailsFragment[]>([]);
+  const [dataSources, setDataSources] = useState<DataSourceDetailsFragment[]>(
+    []
+  );
 
   const tocQuery = usePublishedTableOfContentsQuery({
     variables: {
@@ -48,7 +48,7 @@ export default function useMapData(mapContext: MapContextInterface) {
   useEffect(() => {
     if (basemapsQuery.data?.projectBySlug?.basemaps) {
       const basemaps = basemapsQuery.data.projectBySlug
-        .basemaps as ClientBasemap[];
+        .basemaps as BasemapDetailsFragment[];
       if (mapContext.manager) {
         mapContext.manager.setBasemaps(basemaps);
       }
@@ -58,10 +58,7 @@ export default function useMapData(mapContext: MapContextInterface) {
 
   useEffect(() => {
     if (tocQuery.data?.projectBySlug?.tableOfContentsItems) {
-      setTableOfContentsItems(
-        tocQuery.data.projectBySlug
-          .tableOfContentsItems as ClientTableOfContentsItem[]
-      );
+      setTableOfContentsItems(tocQuery.data.projectBySlug.tableOfContentsItems);
     }
   }, [tocQuery.data]);
 
@@ -70,16 +67,24 @@ export default function useMapData(mapContext: MapContextInterface) {
       layersAndSourcesQuery.data?.projectBySlug?.dataLayersForItems &&
       layersAndSourcesQuery.data?.projectBySlug?.dataSourcesForItems
     ) {
-      const layers = layersAndSourcesQuery.data.projectBySlug
-        .dataLayersForItems as ClientDataLayer[];
-      const sources = layersAndSourcesQuery.data.projectBySlug
-        .dataSourcesForItems as ClientDataSource[];
+      const layers =
+        layersAndSourcesQuery.data.projectBySlug.dataLayersForItems;
+      const sources =
+        layersAndSourcesQuery.data.projectBySlug.dataSourcesForItems;
       if (mapContext.manager) {
-        mapContext.manager.reset(sources, layers);
+        mapContext.manager.reset(
+          sources,
+          layers,
+          tocQuery.data?.projectBySlug?.tableOfContentsItems || []
+        );
         setDataLayers(layers);
         setDataSources(sources);
       }
     }
-  }, [layersAndSourcesQuery.data, mapContext.manager]);
+  }, [
+    layersAndSourcesQuery.data,
+    mapContext.manager,
+    tocQuery.data?.projectBySlug?.tableOfContentsItems,
+  ]);
   return { basemaps, tableOfContentsItems, dataSources, dataLayers };
 }

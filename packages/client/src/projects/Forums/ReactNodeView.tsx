@@ -184,6 +184,7 @@ export const createReactNodeView = ({
     onDestroy
   );
   const { nodeView, portal, key } = reactNodeView.init();
+
   onCreatePortal(key, portal);
 
   return nodeView;

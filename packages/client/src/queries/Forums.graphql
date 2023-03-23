@@ -16,6 +16,10 @@ fragment ForumPost on Post {
   hiddenByModerator
   topicId
   html
+  sketchIds
+  mapBookmarks {
+    ...MapBookmarkDetails
+  }
 }
 
 fragment RecentPost on Post {
@@ -203,4 +207,95 @@ subscription NewPosts($slug: String!) {
       ...ForumDetails
     }
   }
+}
+
+fragment Job on WorkerJob {
+  attempts
+  createdAt
+  key
+  lockedAt
+  maxAttempts
+  runAt
+  taskIdentifier
+  lastError
+}
+
+fragment MapBookmarkDetails on MapBookmark {
+  id
+  imageId
+  createdAt
+  basemapOptionalLayerStates
+  cameraOptions
+  projectId
+  selectedBasemap
+  visibleDataLayers
+  mapDimensions
+  blurhash
+  visibleSketches
+  screenshotJobStatus
+  basemapName
+  layerNames
+  job {
+    ...Job
+  }
+  basemapName
+  sketchNames
+}
+
+query GetBookmark($id: UUID!) {
+  bookmarkById(id: $id) {
+    ...MapBookmarkDetails
+  }
+}
+
+mutation CreateMapBookmark(
+  $slug: String!
+  $isPublic: Boolean!
+  $basemapOptionalLayerStates: JSON
+  $visibleDataLayers: [String!]!
+  $cameraOptions: JSON!
+  $selectedBasemap: Int!
+  $style: JSON!
+  $mapDimensions: [Int!]!
+  $visibleSketches: [Int!]!
+  $sidebarState: JSON
+  $basemapName: String!
+  $layerNames: JSON!
+  $sketchNames: JSON!
+) {
+  createMapBookmark(
+    input: {
+      isPublic: $isPublic
+      slug: $slug
+      basemapOptionalLayerStates: $basemapOptionalLayerStates
+      visibleDataLayers: $visibleDataLayers
+      cameraOptions: $cameraOptions
+      selectedBasemap: $selectedBasemap
+      style: $style
+      mapDimensions: $mapDimensions
+      visibleSketches: $visibleSketches
+      sidebarState: $sidebarState
+      basemapName: $basemapName
+      layerNames: $layerNames
+      sketchNames: $sketchNames
+    }
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+
+subscription MapBookmark($id: UUID!) {
+  updatedMapBookmark(id: $id) {
+    bookmarkId
+    bookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+
+fragment SketchPresent on Sketch {
+  id
+  name
 }

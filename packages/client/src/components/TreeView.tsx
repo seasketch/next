@@ -495,8 +495,7 @@ export function useOverlayState(
     const overlayErrors: { [id: string]: string } = {};
     for (const item of items) {
       if (item.dataLayerId) {
-        const id = item.dataLayerId.toString();
-        const record = mapContext.layerStates[id];
+        const record = mapContext.layerStatesByTocStaticId[item.stableId];
         if (record) {
           if (record.visible) {
             checkedItems.push(item.stableId);
@@ -515,7 +514,7 @@ export function useOverlayState(
       loadingItems,
       overlayErrors,
     };
-  }, [items, mapContext.layerStates]);
+  }, [items, mapContext.layerStatesByTocStaticId]);
 
   const onExpand = useCallback(
     (node: TreeItem, isExpanded: boolean) => {
@@ -533,14 +532,14 @@ export function useOverlayState(
 
   const onChecked = useCallback(
     (ids: string[], isChecked: boolean) => {
-      const dataLayerIds = items
+      const staticIds = items
         .filter((item) => ids.indexOf(item.stableId) !== -1)
         .filter((item) => Boolean(item.dataLayerId))
-        .map((item) => item.dataLayerId!.toString());
+        .map((item) => item.stableId);
       if (isChecked) {
-        mapContext.manager?.showLayers(dataLayerIds);
+        mapContext.manager?.showTocItems(staticIds);
       } else {
-        mapContext.manager?.hideLayers(dataLayerIds);
+        mapContext.manager?.hideTocItems(staticIds);
       }
     },
     [items, mapContext.manager]

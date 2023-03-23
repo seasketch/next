@@ -6,7 +6,7 @@ import {
   VectorSource,
   Map,
 } from "mapbox-gl";
-import { ClientDataSource } from "../MapContextManager";
+import { DataSourceDetailsFragment } from "../../generated/graphql";
 import { SeaSketchSourceBaseOptions } from "./Base";
 
 export type MapBoxSource = (
@@ -19,8 +19,8 @@ export type MapBoxSource = (
   SeaSketchSourceBaseOptions;
 
 export function updateGeoJSONSource(
-  prev: ClientDataSource,
-  next: ClientDataSource,
+  prev: DataSourceDetailsFragment,
+  next: DataSourceDetailsFragment,
   map: Map
 ) {
   if (prev.attribution !== next.attribution) {

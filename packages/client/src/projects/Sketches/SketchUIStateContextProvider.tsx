@@ -99,6 +99,7 @@ interface SketchUIStateContextValue {
   onChecked: (items: string[], isChecked: boolean) => void;
   showSketches: (ids: string[]) => void;
   hideSketches: (ids: string[]) => void;
+  setVisibleSketches: (ids: string[]) => void;
   // Event handler stuff
   setToolbarRef: (ref: HTMLDivElement | null) => void;
   /**
@@ -155,6 +156,7 @@ const defaultValue: SketchUIStateContextValue = {
   visibleSketches: [],
   showSketches: NotImplemented,
   hideSketches: NotImplemented,
+  setVisibleSketches: NotImplemented,
   onChecked: NotImplemented,
   expandedIds: [],
   onExpand: NotImplemented,
@@ -229,9 +231,7 @@ export default function SketchUIStateContextProvider({
   // # Sketch Visibility
   const [visibleSketches, setVisibleSketches] = useLocalStorage<string[]>(
     `sketch-visibility-${getSlug()}`,
-    mapContext?.sketchLayerStates
-      ? layerStatesToIds(mapContext.sketchLayerStates)
-      : []
+    []
   );
 
   const onChecked = useCallback(
@@ -1323,6 +1323,7 @@ export default function SketchUIStateContextProvider({
         getMenuOptions,
         showSketches,
         hideSketches,
+        setVisibleSketches,
         loading,
         errors,
       }}

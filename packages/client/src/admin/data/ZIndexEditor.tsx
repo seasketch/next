@@ -1,25 +1,23 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import {
-  ClientDataLayer,
-  ClientDataSource,
-  MapContext,
-} from "../../dataLayers/MapContextManager";
-import { ClientTableOfContentsItem } from "../../dataLayers/tableOfContents/TableOfContents";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import "react-sortable-tree/style.css";
 import SortableTree, { TreeItem } from "react-sortable-tree";
 import {
   RenderUnderType,
   useUpdateZIndexesMutation,
   useUpdateRenderUnderTypeMutation,
+  DataLayerDetailsFragment,
+  DataSourceDetailsFragment,
+  OverlayFragment,
 } from "../../generated/graphql";
 import { gql, useApolloClient } from "@apollo/client";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import { useTranslation } from "react-i18next";
 
 interface ZIndexEditorProps {
-  dataLayers?: ClientDataLayer[] | null;
-  dataSources?: ClientDataSource[] | null;
-  tableOfContentsItems?: ClientTableOfContentsItem[];
+  dataLayers?: DataLayerDetailsFragment[] | null;
+  dataSources?: DataSourceDetailsFragment[] | null;
+  tableOfContentsItems?: OverlayFragment[];
 }
 
 export default function ZIndexEditor(props: ZIndexEditorProps) {
@@ -29,8 +27,8 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
   const client = useApolloClient();
   const [updateZIndexes] = useUpdateZIndexesMutation();
   const [updateRenderUnder] = useUpdateRenderUnderTypeMutation();
-  const { manager, layerStates } = useContext(MapContext);
-  let layerLookup = useRef<{ [id: string]: ClientDataLayer }>({});
+  const { manager, layerStatesByTocStaticId } = useContext(MapContext);
+  let layerLookup = useRef<{ [id: string]: DataLayerDetailsFragment }>({});
 
   const lookupRenderUnder = (item: TreeItem) => {
     let setting = RenderUnderType.Labels;
@@ -301,7 +299,8 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
         }
         generateNodeProps={(data) => {
           const visible =
-            layerStates[data.node.id] && layerStates[data.node.id].visible;
+            layerStatesByTocStaticId[data.node.id] &&
+            layerStatesByTocStaticId[data.node.id].visible;
           return {
             className: data.node.isBasemapLayer ? "basemap" : "",
             buttons:
@@ -313,9 +312,9 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
                       disabled={false}
                       onClick={() => {
                         if (visible) {
-                          manager?.hideLayers([data.node.id]);
+                          manager?.hideTocItems([data.node.id]);
                         } else {
-                          manager?.showLayers([data.node.id]);
+                          manager?.showTocItems([data.node.id]);
                         }
                       }}
                     />,

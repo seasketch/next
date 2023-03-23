@@ -6,9 +6,6 @@ import {
   Popup,
 } from "mapbox-gl";
 import {
-  ClientBasemap,
-  ClientDataLayer,
-  ClientDataSource,
   idForLayer,
   isSeaSketchLayerId,
   layerIdFromStyleLayerId,
@@ -17,11 +14,16 @@ import {
 } from "./MapContextManager";
 import Mustache from "mustache";
 import { Dispatch, SetStateAction } from "react";
-import { DataSourceTypes, InteractivityType } from "../generated/graphql";
 import {
-  getDynamicArcGISStyle,
-  identifyLayers,
-} from "../admin/data/arcgis/arcgis";
+  BasemapDetailsFragment,
+  DataLayerDetailsFragment,
+  DataSourceDetailsFragment,
+  DataSourceTypes,
+  InteractivityType,
+} from "../generated/graphql";
+import // getDynamicArcGISStyle,
+// identifyLayers,
+"../admin/data/arcgis/arcgis";
 import { EventEmitter } from "eventemitter3";
 
 /**
@@ -37,18 +39,18 @@ export default class LayerInteractivityManager extends EventEmitter {
   private previousState?: MapContextInterface;
 
   /** List of interactive layers that are currently shown on the map. Update with setVisibleLayers() */
-  private layers: { [layerId: string]: ClientDataLayer } = {};
+  private layers: { [layerId: string]: DataLayerDetailsFragment } = {};
   /**
    * List of image sources related to visible layers. Note only sources that
    * require api requests to display popups need to be stored
    */
-  private imageSources: { [sourceId: string]: ClientDataSource } = {};
+  private imageSources: { [sourceId: string]: DataSourceDetailsFragment } = {};
   private previousInteractionTarget?: string;
   private debouncedMouseMoveListenerReference?: NodeJS.Timeout;
   private popupAbortController: AbortController | undefined;
   private interactiveVectorLayerIds: string[] = [];
   private interactiveImageLayerIds: string[] = [];
-  private basemap: ClientBasemap | undefined;
+  private basemap: BasemapDetailsFragment | undefined;
   private sketchLayerIds: string[] = [];
   private focusedSketchId?: number;
 
@@ -101,12 +103,14 @@ export default class LayerInteractivityManager extends EventEmitter {
    * @param dataLayers
    */
   async setVisibleLayers(
-    dataLayers: ClientDataLayer[],
-    dataSources: { [dataSourceId: string]: ClientDataSource },
-    basemap: ClientBasemap
+    dataLayers: DataLayerDetailsFragment[],
+    dataSources: { [dataSourceId: string]: DataSourceDetailsFragment },
+    basemap: BasemapDetailsFragment
   ) {
-    const newActiveLayers: { [layerId: string]: ClientDataLayer } = {};
-    const newActiveImageSources: { [sourceId: string]: ClientDataSource } = {};
+    const newActiveLayers: { [layerId: string]: DataLayerDetailsFragment } = {};
+    const newActiveImageSources: {
+      [sourceId: string]: DataSourceDetailsFragment;
+    } = {};
     const newInteractiveImageLayerIds: string[] = [];
     let newInteractiveVectorLayerIds: string[] = [];
     for (const layer of dataLayers) {
@@ -127,11 +131,12 @@ export default class LayerInteractivityManager extends EventEmitter {
                 GLStyles = layer.mapboxGlStyles;
               } else {
                 if (source.type === DataSourceTypes.ArcgisVector) {
-                  const { layers } = await getDynamicArcGISStyle(
-                    source.url!,
-                    source.id.toString()
-                  );
-                  GLStyles = layers;
+                  throw new Error("Not Implemented");
+                  // const { layers } = await getDynamicArcGISStyle(
+                  //   source.url!,
+                  //   source.id.toString()
+                  // );
+                  // GLStyles = layers;
                 } else {
                   throw new Error(
                     /* eslint-disable-next-line */
@@ -319,90 +324,91 @@ export default class LayerInteractivityManager extends EventEmitter {
       );
       interactiveImageLayers.sort((a, b) => a.zIndex - b.zIndex);
       if (interactiveImageLayers.length) {
-        this.openImageServicePopups(
-          [e.lngLat.lng, e.lngLat.lat],
-          interactiveImageLayers
-        );
+        throw new Error("Not implemented");
+        // this.openImageServicePopups(
+        //   [e.lngLat.lng, e.lngLat.lat],
+        //   interactiveImageLayers
+        // );
       }
     }
   };
 
-  private async openImageServicePopups(
-    position: [number, number],
-    layers: ClientDataLayer[]
-  ) {
-    if (this.popupAbortController) {
-      this.popupAbortController.abort();
-      delete this.popupAbortController;
-    }
-    this.popupAbortController = new AbortController();
-    const requests: { sublayers: string[]; source: ClientDataSource }[] = [];
-    for (const layer of layers) {
-      let existingRequest = requests.find(
-        (r) => r.source.id === layer.dataSourceId
-      );
-      if (!existingRequest) {
-        const source = this.imageSources[layer.dataSourceId];
-        if (!source) {
-          /* eslint-disable-next-line */
-          throw new Error(`Could not find source id=${layer.dataSourceId}`);
-        }
-        existingRequest = {
-          sublayers: [],
-          source: source,
-        };
-        requests.push(existingRequest);
-      }
-      existingRequest.sublayers.push(layer.sublayer!);
-    }
-    const bounds = this.map!.getBounds();
-    const extent = [
-      bounds.getWest(),
-      bounds.getSouth(),
-      bounds.getEast(),
-      bounds.getNorth(),
-    ] as [number, number, number, number];
-    const width = this.map!.getCanvas().width;
-    const height = this.map!.getCanvas().height;
-    const dpi = window.devicePixelRatio * 96;
-    this.map!.getCanvas().style.cursor = "progress";
-    const data = await Promise.all(
-      requests.map((request) => {
-        return identifyLayers(
-          position,
-          request.source,
-          request.sublayers,
-          extent,
-          width,
-          height,
-          dpi,
-          this.popupAbortController
-        );
-      })
-    );
-    this.map!.getCanvas().style.cursor = "";
-    if (!this.popupAbortController.signal.aborted) {
-      for (const sublayerData of data) {
-        if (sublayerData.length) {
-          const interactivitySetting = layers.find(
-            (l) =>
-              l.sublayer?.toString() === sublayerData[0].sublayer.toString() &&
-              l.dataSourceId === sublayerData[0].sourceId
-          )?.interactivitySettings;
-          new Popup({ closeOnClick: true, closeButton: false })
-            .setLngLat(position)
-            .setHTML(
-              Mustache.render(interactivitySetting!.longTemplate || "", {
-                ...mustacheHelpers,
-                ...sublayerData[0].attributes,
-              })
-            )
-            .addTo(this.map!);
-          break;
-        }
-      }
-    }
-  }
+  // private async openImageServicePopups(
+  //   position: [number, number],
+  //   layers: DataLayerDetailsFragment[]
+  // ) {
+  //   if (this.popupAbortController) {
+  //     this.popupAbortController.abort();
+  //     delete this.popupAbortController;
+  //   }
+  //   this.popupAbortController = new AbortController();
+  //   const requests: { sublayers: string[]; source: DataSourceDetailsFragment }[] = [];
+  //   for (const layer of layers) {
+  //     let existingRequest = requests.find(
+  //       (r) => r.source.id === layer.dataSourceId
+  //     );
+  //     if (!existingRequest) {
+  //       const source = this.imageSources[layer.dataSourceId];
+  //       if (!source) {
+  //         /* eslint-disable-next-line */
+  //         throw new Error(`Could not find source id=${layer.dataSourceId}`);
+  //       }
+  //       existingRequest = {
+  //         sublayers: [],
+  //         source: source,
+  //       };
+  //       requests.push(existingRequest);
+  //     }
+  //     existingRequest.sublayers.push(layer.sublayer!);
+  //   }
+  //   const bounds = this.map!.getBounds();
+  //   const extent = [
+  //     bounds.getWest(),
+  //     bounds.getSouth(),
+  //     bounds.getEast(),
+  //     bounds.getNorth(),
+  //   ] as [number, number, number, number];
+  //   const width = this.map!.getCanvas().width;
+  //   const height = this.map!.getCanvas().height;
+  //   const dpi = window.devicePixelRatio * 96;
+  //   this.map!.getCanvas().style.cursor = "progress";
+  //   const data = await Promise.all(
+  //     requests.map((request) => {
+  //       return identifyLayers(
+  //         position,
+  //         request.source,
+  //         request.sublayers,
+  //         extent,
+  //         width,
+  //         height,
+  //         dpi,
+  //         this.popupAbortController
+  //       );
+  //     })
+  //   );
+  //   this.map!.getCanvas().style.cursor = "";
+  //   if (!this.popupAbortController.signal.aborted) {
+  //     for (const sublayerData of data) {
+  //       if (sublayerData.length) {
+  //         const interactivitySetting = layers.find(
+  //           (l) =>
+  //             l.sublayer?.toString() === sublayerData[0].sublayer.toString() &&
+  //             l.dataSourceId === sublayerData[0].sourceId
+  //         )?.interactivitySettings;
+  //         new Popup({ closeOnClick: true, closeButton: false })
+  //           .setLngLat(position)
+  //           .setHTML(
+  //             Mustache.render(interactivitySetting!.longTemplate || "", {
+  //               ...mustacheHelpers,
+  //               ...sublayerData[0].attributes,
+  //             })
+  //           )
+  //           .addTo(this.map!);
+  //         break;
+  //       }
+  //     }
+  //   }
+  // }
 
   private debouncedMouseMoveListener = (e: MapMouseEvent, backoff = 4) => {
     if (this.moving) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useContext } from "react";
 import {
   useGetLayerItemQuery,
   useUpdateTableOfContentsItemMutation,
@@ -24,8 +24,18 @@ import useDebounce from "../../useDebounce";
 import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
 import GLStyleEditor from "./GLStyleEditor/Editor";
-import { DotsHorizontalIcon } from "@heroicons/react/outline";
+import {
+  ClipboardCopyIcon,
+  DotsHorizontalIcon,
+} from "@heroicons/react/outline";
 import Tabs, { NonLinkTabItem } from "../../components/Tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../components/Tooltip";
+import { copyTextToClipboard } from "../../projects/Forums/InlineAuthorDetails";
+import { MapContext } from "../../dataLayers/MapContextManager";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -41,7 +51,20 @@ export default function LayerTableOfContentsItemEditor(
       id: props.itemId,
     },
   });
-  const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
+
+  const mapContext = useContext(MapContext);
+
+  const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation({
+    onCompleted: (data) => {
+      const item = data.updateTableOfContentsItem?.tableOfContentsItem;
+      if (item?.geoprocessingReferenceId && mapContext.manager) {
+        mapContext.manager.setGeoprocessingReferenceId(
+          item.geoprocessingReferenceId,
+          item.stableId
+        );
+      }
+    },
+  });
   const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation();
   const [updateQueryParameters, updateQueryParametersState] =
     useUpdateQueryParametersMutation();
@@ -121,6 +144,17 @@ export default function LayerTableOfContentsItemEditor(
     ];
   }, [selectedTab]);
 
+  const [referenceCopied, setReferenceCopied] = useState(false);
+
+  const copyReference = useCallback(() => {
+    if (item) {
+      copyTextToClipboard(item.stableId);
+      setReferenceCopied(true);
+      setTimeout(() => {
+        setReferenceCopied(false);
+      }, 2000);
+    }
+  }, [setReferenceCopied, item]);
   return (
     <div
       className="bg-white z-20 absolute bottom-0 w-128 flex flex-col"
@@ -180,18 +214,37 @@ export default function LayerTableOfContentsItemEditor(
           </div>
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput
-              propName="staticId"
-              placeholder={
-                layer?.id ? `None. Layer ID is "${layer.id}"` : undefined
+              propName="geoprocessingReferenceId"
+              mutation={mutateItem}
+              mutationStatus={mutateItemState}
+              value={item.geoprocessingReferenceId || ""}
+              label={t("Geoprocessing Reference ID")}
+              description={
+                <span>
+                  {t(
+                    "Overlays can be assigned a stable id for reference by geoprocessing clients. You can also refer to this overlay using the following ID."
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <button
+                        onClick={copyReference}
+                        className="mx-1 px-1 bg-blue-50 border-blue-300 rounded border font-mono select-text"
+                      >
+                        {item.stableId}
+                        <ClipboardCopyIcon className="w-4 h-4 ml-1 inline -mt-0.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {referenceCopied ? (
+                        <Trans ns="homepage">Copied!</Trans>
+                      ) : (
+                        <Trans ns="homepage">Copy Reference</Trans>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </span>
               }
-              mutation={mutateLayer}
-              mutationStatus={mutateLayerState}
-              value={layer?.staticId || ""}
-              label={t("Static ID")}
-              description={t(
-                "Overlays can be assigned a stable id for reference by geoprocessing clients and map bookmarks."
-              )}
-              variables={{ id: layer?.id }}
+              variables={{ id: item.id }}
             />
           </div>
           <div className="mt-5">
