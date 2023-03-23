@@ -25,7 +25,7 @@ function getBrowser() {
   // return _browser;
   return puppeteer.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--use-gl=egl"],
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
     defaultViewport: {
       deviceScaleFactor: 2,
       width: 1280,
