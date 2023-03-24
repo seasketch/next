@@ -1,7 +1,7 @@
 import { XIcon } from "@heroicons/react/outline";
 import { useEffect, useState, useMemo, useContext } from "react";
 import { createPortal } from "react-dom";
-import { useGetBookmarkQuery } from "../generated/graphql";
+import { useGetBookmarkQuery, WorkerJobStatus } from "../generated/graphql";
 import { Blurhash } from "react-blurhash";
 import Spinner from "./Spinner";
 import { motion } from "framer-motion";
@@ -154,21 +154,39 @@ export default function MapBookmarkDetailsOverlay({
                 }/public`}
               />
             )}
-            {bookmark && !bookmark.imageId && (
-              <>
-                <div className="w-full text-center">
-                  <span className="text-white text-center w-full font-bold text-lg">
-                    <Trans ns="mapBookmarks">Screenshot not available</Trans>
-                  </span>
-                  <div className="text-white text-center w-full">
-                    <Trans ns="mapBookmarks">
-                      An unknown error prevented this map from being captured
-                      when the bookmark was created.
-                    </Trans>
+            {bookmark &&
+              (bookmark.screenshotJobStatus === WorkerJobStatus.Failed ||
+                bookmark.screenshotJobStatus === WorkerJobStatus.Error) && (
+                <>
+                  <div className="w-full text-center">
+                    <span className="text-white text-center w-full font-bold text-lg">
+                      <Trans ns="mapBookmarks">Screenshot not available</Trans>
+                    </span>
+                    <div className="text-white text-center w-full">
+                      <Trans ns="mapBookmarks">
+                        An unknown error prevented this map from being captured
+                        when the bookmark was created.
+                      </Trans>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            {bookmark &&
+              (bookmark.screenshotJobStatus === WorkerJobStatus.Queued ||
+                bookmark.screenshotJobStatus === WorkerJobStatus.Started) && (
+                <>
+                  <div className="w-full text-center">
+                    <span className="text-white text-center w-full font-bold text-lg">
+                      <Trans ns="mapBookmarks">Screenshot not available</Trans>
+                    </span>
+                    <div className="text-white text-center w-full">
+                      <Trans ns="mapBookmarks">
+                        The screenshot is currently being generated.
+                      </Trans>
+                    </div>
+                  </div>
+                </>
+              )}
           </div>
           <div className="flex-1 p-0 lg:p-4 text-white font-bold h-full bg-gray-700 bg-opacity-50 max-w-lg lg:max-w-xl">
             <div className="mx-auto  p-0 lg:p-4 overflow-y-auto max-h-full">
