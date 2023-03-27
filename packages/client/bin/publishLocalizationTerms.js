@@ -15,7 +15,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -36,39 +36,45 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 /* eslint-disable i18next/no-literal-string */
 var request = require("request");
 var fs = require("fs");
 var path = require("path");
 var util = require("util");
-var namespaces = require("../src/lang/namespaces.json");
 var post = util.promisify(request.post);
 (function () { return __awaiter(void 0, void 0, void 0, function () {
-    var res, data, terms, termsToAdd, termsToUpdate, _i, _a, namespace, data_1, _loop_1, key, _b, terms_1, term, updated, data_2, _c, statusCode, body, data_3, translations;
-    return __generator(this, function (_d) {
-        switch (_d.label) {
-            case 0: return [4 /*yield*/, post("https://api.poeditor.com/v2/terms/list", {
-                    form: {
-                        api_token: process.env.POEDITOR_API_TOKEN,
-                        id: process.env.POEDITOR_PROJECT,
-                        language: "en"
+    var namespaces, res, data, terms, termsToAdd, termsToUpdate, _i, namespaces_1, namespace, data_1, _loop_1, key, _a, terms_1, term, updated, data_2, _b, statusCode, body, data_3, translations;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                namespaces = [];
+                fs.readdirSync(path.join(__dirname, "../src/lang/en")).forEach(function (file) {
+                    if (!/admin/.test(path.basename(file, ".json"))) {
+                        namespaces.push(path.basename(file, ".json"));
                     }
-                })];
+                });
+                return [4 /*yield*/, post("https://api.poeditor.com/v2/terms/list", {
+                        form: {
+                            api_token: process.env.POEDITOR_API_TOKEN,
+                            id: process.env.POEDITOR_PROJECT,
+                            language: "en",
+                        },
+                    })];
             case 1:
-                res = _d.sent();
+                res = _c.sent();
                 data = JSON.parse(res.body);
                 if (data.response.status !== "success") {
                     throw new Error("API response was ".concat(data.response.status));
                 }
                 terms = data.result.terms;
-                console.log("Publishing namespaces ".concat(namespaces.include.join(", ")));
+                console.log("Publishing namespaces ".concat(namespaces.join(", ")));
                 termsToAdd = [];
                 termsToUpdate = [];
-                for (_i = 0, _a = namespaces.include; _i < _a.length; _i++) {
-                    namespace = _a[_i];
+                for (_i = 0, namespaces_1 = namespaces; _i < namespaces_1.length; _i++) {
+                    namespace = namespaces_1[_i];
                     data_1 = JSON.parse(fs
-                        .readFileSync(path.join(__dirname, "../src/lang/en/".concat(namespace.replace(":", "/"), ".json")))
+                        .readFileSync(path.join(__dirname, "../src/lang/en/".concat(namespace, ".json")))
                         .toString());
                     _loop_1 = function (key) {
                         var existing = terms.find(function (t) { return t.term === key; });
@@ -83,7 +89,7 @@ var post = util.promisify(request.post);
                             termsToAdd.push({
                                 term: key,
                                 english: data_1[key],
-                                tags: [namespace]
+                                tags: [namespace],
                             });
                         }
                     };
@@ -91,8 +97,8 @@ var post = util.promisify(request.post);
                         _loop_1(key);
                     }
                 }
-                for (_b = 0, terms_1 = terms; _b < terms_1.length; _b++) {
-                    term = terms_1[_b];
+                for (_a = 0, terms_1 = terms; _a < terms_1.length; _a++) {
+                    term = terms_1[_a];
                     if (term.obsolete !== false) {
                         term.tags.push("obsolete");
                         termsToUpdate.push(term);
@@ -108,11 +114,11 @@ var post = util.promisify(request.post);
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            data: JSON.stringify(termsToUpdate)
-                        }
+                            data: JSON.stringify(termsToUpdate),
+                        },
                     })];
             case 2:
-                updated = _d.sent();
+                updated = _c.sent();
                 data_2 = JSON.parse(updated.body);
                 if (data_2.response.status !== "success") {
                     throw new Error("API response was ".concat(data_2.response.status));
@@ -120,21 +126,21 @@ var post = util.promisify(request.post);
                 else {
                     console.log("updated ".concat(data_2.result.terms.updated, " terms"));
                 }
-                _d.label = 3;
+                _c.label = 3;
             case 3:
                 if (!termsToAdd.length) return [3 /*break*/, 6];
                 return [4 /*yield*/, post("https://api.poeditor.com/v2/terms/add", {
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            data: JSON.stringify(termsToAdd)
-                        }
+                            data: JSON.stringify(termsToAdd),
+                        },
                     })];
             case 4:
-                _c = _d.sent(), statusCode = _c.statusCode, body = _c.body;
+                _b = _c.sent(), statusCode = _b.statusCode, body = _b.body;
                 data_3 = JSON.parse(body);
                 if (data_3.response.status !== "success") {
-                    throw new Error("API response was ".concat(data_3.response.status));
+                    throw new Error("API response was ".concat(data_3.response.status, ". ").concat(data_3.response.message));
                 }
                 else {
                     console.log("added ".concat(data_3.result.terms.added, " terms"));
@@ -149,13 +155,13 @@ var post = util.promisify(request.post);
                                 .map(function (t) { return ({
                                 term: t.term,
                                 translation: {
-                                    content: t.english
-                                }
-                            }); }))
-                        }
+                                    content: t.english,
+                                },
+                            }); })),
+                        },
                     })];
             case 5:
-                translations = _d.sent();
+                translations = _c.sent();
                 data_3 = JSON.parse(translations.body);
                 if (data_3.response.status !== "success") {
                     throw new Error("API response was ".concat(data_3.response.status));
@@ -163,7 +169,7 @@ var post = util.promisify(request.post);
                 else {
                     console.log("added default en translations for ".concat(data_3.result.translations.added, " terms"));
                 }
-                _d.label = 6;
+                _c.label = 6;
             case 6:
                 if (termsToAdd.length === 0 && termsToUpdate.length === 0) {
                     console.log("No new or updated terms.");

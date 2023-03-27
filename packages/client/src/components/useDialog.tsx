@@ -232,7 +232,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
               <TextInput
                 name="name"
                 error={error}
-                label={t("")}
+                label={""}
                 value={value}
                 onChange={setValue}
                 autoFocus

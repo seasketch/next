@@ -15,7 +15,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -36,51 +36,57 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 /* eslint-disable i18next/no-literal-string */
 var request = require("request");
 var fs = require("fs");
 var path = require("path");
 var util = require("util");
-var namespaces = require("../src/lang/namespaces.json");
 var post = util.promisify(request.post);
 var get = util.promisify(request.get);
 var INCLUDE_EMPTY_TERMS = false;
 (function () { return __awaiter(void 0, void 0, void 0, function () {
-    var res, data, terms, _a, statusCode, body, languages, _i, _b, lang, basePath, _c, statusCode_1, body_1, translations, translated, _d, _e, namespace, translatedTerms, _f, terms_1, term;
-    return __generator(this, function (_g) {
-        switch (_g.label) {
-            case 0: return [4 /*yield*/, post("https://api.poeditor.com/v2/terms/list", {
-                    form: {
-                        api_token: process.env.POEDITOR_API_TOKEN,
-                        id: process.env.POEDITOR_PROJECT,
-                        language: "en"
+    var namespaces, res, data, terms, _a, statusCode, body, languages, _i, _b, lang, basePath, _c, statusCode_1, body_1, translations, translated, _d, namespaces_1, namespace, translatedTerms, _e, terms_1, term;
+    return __generator(this, function (_f) {
+        switch (_f.label) {
+            case 0:
+                namespaces = [];
+                fs.readdirSync(path.join(__dirname, "../src/lang/en")).forEach(function (file) {
+                    if (!/admin/.test(path.basename(file, ".json"))) {
+                        namespaces.push(path.basename(file, ".json"));
                     }
-                })];
+                });
+                return [4 /*yield*/, post("https://api.poeditor.com/v2/terms/list", {
+                        form: {
+                            api_token: process.env.POEDITOR_API_TOKEN,
+                            id: process.env.POEDITOR_PROJECT,
+                            language: "en",
+                        },
+                    })];
             case 1:
-                res = _g.sent();
+                res = _f.sent();
                 data = JSON.parse(res.body);
                 if (data.response.status !== "success") {
                     throw new Error("API response was ".concat(data.response.status));
                 }
                 terms = data.result.terms;
                 terms.sort(function (a, b) { return a.term.localeCompare(b.term); });
-                console.log("Publishing namespaces ".concat(namespaces.include.join(", ")));
+                console.log("Publishing namespaces ".concat(namespaces.join(", ")));
                 return [4 /*yield*/, post("https://api.poeditor.com/v2/languages/list", {
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
-                            id: process.env.POEDITOR_PROJECT
-                        }
+                            id: process.env.POEDITOR_PROJECT,
+                        },
                     })];
             case 2:
-                _a = _g.sent(), statusCode = _a.statusCode, body = _a.body;
+                _a = _f.sent(), statusCode = _a.statusCode, body = _a.body;
                 data = JSON.parse(body);
                 if (data.response.status !== "success") {
                     throw new Error("API response was ".concat(data.response.status));
                 }
                 languages = data.result.languages;
                 _i = 0, _b = languages.filter(function (l) { return l.code !== "en"; });
-                _g.label = 3;
+                _f.label = 3;
             case 3:
                 if (!(_i < _b.length)) return [3 /*break*/, 8];
                 lang = _b[_i];
@@ -101,35 +107,35 @@ var INCLUDE_EMPTY_TERMS = false;
                             language: lang.code,
                             type: "key_value_json",
                             filters: "translated",
-                            order: "terms"
-                        }
+                            order: "terms",
+                        },
                     })];
             case 5:
-                _c = _g.sent(), statusCode_1 = _c.statusCode, body_1 = _c.body;
+                _c = _f.sent(), statusCode_1 = _c.statusCode, body_1 = _c.body;
                 data = JSON.parse(body_1);
                 if (data.response.status !== "success") {
                     throw new Error("API response was ".concat(data.response.status));
                 }
                 return [4 /*yield*/, get(data.result.url)];
             case 6:
-                translations = _g.sent();
+                translations = _f.sent();
                 translated = JSON.parse(translations.body);
                 fs.mkdirSync(basePath);
-                for (_d = 0, _e = namespaces.include; _d < _e.length; _d++) {
-                    namespace = _e[_d];
+                for (_d = 0, namespaces_1 = namespaces; _d < namespaces_1.length; _d++) {
+                    namespace = namespaces_1[_d];
                     translatedTerms = {};
-                    for (_f = 0, terms_1 = terms; _f < terms_1.length; _f++) {
-                        term = terms_1[_f];
+                    for (_e = 0, terms_1 = terms; _e < terms_1.length; _e++) {
+                        term = terms_1[_e];
                         if ((translated[term.term] || INCLUDE_EMPTY_TERMS) &&
                             term.tags.indexOf(namespace) !== -1) {
                             translatedTerms[term.term] = translated[term.term] || "";
                         }
                     }
                     if (Object.keys(translatedTerms).length) {
-                        fs.writeFileSync(path.join(basePath, "".concat(namespace.replace(":", "/"), ".json")), JSON.stringify(translatedTerms, null, "  "));
+                        fs.writeFileSync(path.join(basePath, "".concat(namespace, ".json")), JSON.stringify(translatedTerms, null, "  "));
                     }
                 }
-                _g.label = 7;
+                _f.label = 7;
             case 7:
                 _i++;
                 return [3 /*break*/, 3];

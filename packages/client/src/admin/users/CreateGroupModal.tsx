@@ -80,7 +80,7 @@ export default function CreateGroupModal({
         <TextInput
           name="name"
           error={error}
-          label={t("")}
+          label={""}
           // required
           value={name}
           onChange={setName}

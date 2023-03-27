@@ -4,10 +4,15 @@ import * as request from "request";
 import * as fs from "fs";
 import * as path from "path";
 const util = require("util");
-const namespaces = require("../src/lang/namespaces.json");
 
 const post = util.promisify(request.post);
 (async () => {
+  const namespaces: string[] = [];
+  fs.readdirSync(path.join(__dirname, `../src/lang/en`)).forEach((file) => {
+    if (!/admin/.test(path.basename(file, ".json"))) {
+      namespaces.push(path.basename(file, ".json"));
+    }
+  });
   const res = await post(`https://api.poeditor.com/v2/terms/list`, {
     form: {
       api_token: process.env.POEDITOR_API_TOKEN,
@@ -35,20 +40,15 @@ const post = util.promisify(request.post);
     comment: string;
     obsolete?: boolean;
   }[] = data.result.terms;
-  console.log(`Publishing namespaces ${namespaces.include.join(", ")}`);
+  console.log(`Publishing namespaces ${namespaces.join(", ")}`);
 
   const termsToAdd: { term: string; tags: string[]; english: string }[] = [];
   const termsToUpdate: { term: string; tags: string[] }[] = [];
 
-  for (const namespace of namespaces.include) {
+  for (const namespace of namespaces) {
     const data = JSON.parse(
       fs
-        .readFileSync(
-          path.join(
-            __dirname,
-            `../src/lang/en/${namespace.replace(":", "/")}.json`
-          )
-        )
+        .readFileSync(path.join(__dirname, `../src/lang/en/${namespace}.json`))
         .toString()
     ) as {
       [key: string]: string;
@@ -115,7 +115,9 @@ const post = util.promisify(request.post);
     );
     let data = JSON.parse(body);
     if (data.response.status !== "success") {
-      throw new Error(`API response was ${data.response.status}`);
+      throw new Error(
+        `API response was ${data.response.status}. ${data.response.message}`
+      );
     } else {
       console.log(`added ${data.result.terms.added} terms`);
     }

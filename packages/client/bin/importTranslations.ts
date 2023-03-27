@@ -4,13 +4,18 @@ import * as request from "request";
 import * as fs from "fs";
 import * as path from "path";
 const util = require("util");
-const namespaces = require("../src/lang/namespaces.json");
 const post = util.promisify(request.post);
 const get = util.promisify(request.get);
 
 const INCLUDE_EMPTY_TERMS = false;
 
 (async () => {
+  const namespaces: string[] = [];
+  fs.readdirSync(path.join(__dirname, `../src/lang/en`)).forEach((file) => {
+    if (!/admin/.test(path.basename(file, ".json"))) {
+      namespaces.push(path.basename(file, ".json"));
+    }
+  });
   const res = await post(`https://api.poeditor.com/v2/terms/list`, {
     form: {
       api_token: process.env.POEDITOR_API_TOKEN,
@@ -39,7 +44,7 @@ const INCLUDE_EMPTY_TERMS = false;
     obsolete?: boolean;
   }[] = data.result.terms;
   terms.sort((a, b) => a.term.localeCompare(b.term));
-  console.log(`Publishing namespaces ${namespaces.include.join(", ")}`);
+  console.log(`Publishing namespaces ${namespaces.join(", ")}`);
   const { statusCode, body } = await post(
     `https://api.poeditor.com/v2/languages/list`,
     {
@@ -90,7 +95,7 @@ const INCLUDE_EMPTY_TERMS = false;
       const translated = JSON.parse(translations.body);
 
       fs.mkdirSync(basePath);
-      for (const namespace of namespaces.include) {
+      for (const namespace of namespaces) {
         const translatedTerms: { [term: string]: string } = {};
         for (const term of terms) {
           if (
@@ -102,7 +107,7 @@ const INCLUDE_EMPTY_TERMS = false;
         }
         if (Object.keys(translatedTerms).length) {
           fs.writeFileSync(
-            path.join(basePath, `${namespace.replace(":", "/")}.json`),
+            path.join(basePath, `${namespace}.json`),
             JSON.stringify(translatedTerms, null, "  ")
           );
         }
