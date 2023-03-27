@@ -33,6 +33,7 @@ import { treeItemId } from "../components/TreeView";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useIsSuperuser from "../useIsSuperuser";
+import { useAuth0 } from "@auth0/auth0-react";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -58,6 +59,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const { isSmall } = currentSidebarState();
   const onError = useGlobalErrorHandler();
   const isSuperuser = useIsSuperuser();
+  const { user } = useAuth0();
 
   useEffect(() => {
     if (props.state) {
@@ -140,7 +142,12 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         },
       });
     }
-    if (schema.marks.attachmentLink && props.createMapBookmark && isSuperuser) {
+    if (
+      schema.marks.attachmentLink &&
+      props.createMapBookmark &&
+      isSuperuser &&
+      user?.email === "underbluewaters@gmail.com"
+    ) {
       options.push({
         label: t("Map Bookmark"),
         onClick: async () => {
