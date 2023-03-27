@@ -194,8 +194,8 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
   );
 };
 
-Name.label = <Trans>Name</Trans>;
-Name.description = <Trans>Name of respondent</Trans>;
+Name.label = <Trans ns="admin:surveys">Name</Trans>;
+Name.description = <Trans ns="admin:surveys">Name of respondent</Trans>;
 Name.defaultBody = questionBodyFromMarkdown(`
 # What is your name?
 `);

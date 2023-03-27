@@ -4,7 +4,7 @@ import {
   ProjectAppSidebarContext,
   ProjectAppSidebarToolbar,
 } from "../ProjectAppSidebar";
-import { Trans as I18n } from "react-i18next";
+import { Trans } from "react-i18next";
 import getSlug from "../../getSlug";
 import { useSketchingQuery } from "../../generated/graphql";
 import { useContext, useMemo, useState, useEffect, useCallback } from "react";
@@ -19,8 +19,6 @@ import Skeleton from "../../components/Skeleton";
 import LoginPrompt from "./LoginPrompt";
 import decode from "jwt-decode";
 import { SketchUIStateContext } from "./SketchUIStateContextProvider";
-
-const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const { isSmall } = useContext(ProjectAppSidebarContext);
@@ -203,7 +201,11 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             small
             alignment="left"
             label={
-              isSmall ? <Trans>Create</Trans> : <Trans>Create New...</Trans>
+              isSmall ? (
+                <Trans ns="sketching">Create</Trans>
+              ) : (
+                <Trans ns="sketching">Create New...</Trans>
+              )
             }
             options={menuOptions?.create || []}
             disabled={
@@ -217,7 +219,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               (menuOptions.update.length === 0 && menuOptions.read.length === 0)
             }
             alignment="left"
-            label={<Trans>Edit</Trans>}
+            label={<Trans ns="sketching">Edit</Trans>}
             options={[
               ...(menuOptions?.update || []),
               ...(menuOptions?.read || []),
@@ -231,9 +233,9 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             onClick={menuOptions?.viewReports?.onClick}
             label={
               isSmall ? (
-                <Trans>View Attributes</Trans>
+                <Trans ns="sketching">View Attributes</Trans>
               ) : (
-                <Trans>View Attributes and Reports</Trans>
+                <Trans ns="sketching">View Attributes and Reports</Trans>
               )
             }
           />

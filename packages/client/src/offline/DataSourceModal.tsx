@@ -162,7 +162,7 @@ export default function DataSourceModal({
       <div className="">
         {tilePackages.length === 0 && (
           <Warning>
-            <Trans>
+            <Trans ns="admin:data">
               No Tile Packages found. Related maps cannot be used offline until
               created.{" "}
               <b>Generating tile packages may incure fees from MapBox</b>
@@ -171,7 +171,7 @@ export default function DataSourceModal({
         )}
         <div className="p-2 rounded bg-gray-50 my-2">
           <h3 className="text-xs mb-2 uppercase font-semibold text-gray-500">
-            <Trans>Used in</Trans>
+            <Trans ns="admin:data">Used in</Trans>
           </h3>
           {matchingMaps!.map((map) => {
             const tileSettings =
@@ -204,17 +204,17 @@ export default function DataSourceModal({
             );
           })}
           <h3 className="text-xs mb-2 mt-4 uppercase font-semibold text-gray-500">
-            <Trans>Required tiling settings</Trans>
+            <Trans ns="admin:data">Required tiling settings</Trans>
           </h3>
           <div className="flex items-center">
             <h4 className="flex-1">
-              <Trans>Zoom levels</Trans>
+              <Trans ns="admin:data">Zoom levels</Trans>
             </h4>
             <span>{tileSettingsLabel(calculatedTilingSettings)}</span>
           </div>
           <div className="flex items-center">
             <h4 className="flex-1">
-              <Trans>Calculated Tile Count</Trans>
+              <Trans ns="admin:data">Calculated Tile Count</Trans>
             </h4>
             <span>
               {stats.calculating ? <Spinner /> : stats.tiles!.toLocaleString()}
@@ -222,13 +222,15 @@ export default function DataSourceModal({
           </div>
           <div className="flex items-center">
             <h4 className="flex-1">
-              <Trans>Estimated tile package size</Trans>
+              <Trans ns="admin:data">Estimated tile package size</Trans>
             </h4>
             <span>{stats.calculating ? <Spinner /> : bytes(stats.bytes!)}</span>
           </div>
           <div className="flex items-center">
             <h4 className="flex-1">
-              <Trans>MapBox fees to generate package (w/o free tier)</Trans>
+              <Trans ns="admin:data">
+                MapBox fees to generate package (w/o free tier)
+              </Trans>
             </h4>
             <span>
               {stats.calculating ? (
@@ -245,10 +247,10 @@ export default function DataSourceModal({
         {tilePackages.length > 0 && (
           <div className="mt-2">
             <h2 className="text-base">
-              <Trans>Tile Packages</Trans>
+              <Trans ns="admin:data">Tile Packages</Trans>
             </h2>
             <p className="text-sm text-gray-500">
-              <Trans>
+              <Trans ns="admin:data">
                 The tile package below will be made available for download to
                 users who need to use these maps offline. Make sure the maximum
                 zoom level supported by the existing tile package meets your

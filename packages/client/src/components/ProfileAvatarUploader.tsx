@@ -16,7 +16,7 @@ export default function ProfileAvatarUploader() {
     onError,
   });
   const [mutate, mutationState] = useUpdateProfileMutation({ onError });
-  const { t } = useTranslation();
+  const { t } = useTranslation("userProfile");
 
   const onDrop = useCallback(
     (acceptedFiles) => {

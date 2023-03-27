@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 export default function NewProjectCTA() {
-  const { t } = useTranslation(["homepage"]);
+  const { t } = useTranslation("homepage");
   return (
     <div className="bg-gray-50">
       <div className="max-w-screen-xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">

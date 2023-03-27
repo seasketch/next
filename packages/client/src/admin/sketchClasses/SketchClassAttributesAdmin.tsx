@@ -1,12 +1,11 @@
 import {
   DeleteFormElementDocument,
-  SketchFormElementFragment,
   useSketchClassFormQuery,
   useUpdateFormElementOrderMutation,
   useUpdateSketchFormElementMutation,
 } from "../../generated/graphql";
-import { Trans as I18n, useTranslation } from "react-i18next";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useEffect, useMemo, useState } from "react";
 import SketchForm from "../../projects/Sketches/SketchForm";
 import AddFormElementButton from "../surveys/AddFormElementButton";
 import { MenuIcon, PencilIcon, TrashIcon } from "@heroicons/react/outline";
@@ -19,8 +18,6 @@ import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
 import { usePopper } from "react-popper";
 import TextInput from "../../components/TextInput";
-
-const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default function SketchClassAttributesAdmin({
   formId,
@@ -35,9 +32,7 @@ export default function SketchClassAttributesAdmin({
   const [formElementEditorContainerRef, setFormElementEditorContainerRef] =
     useState<HTMLDivElement | null>(null);
   const { t } = useTranslation("admin:sketching");
-  const [scrollableRef, setScrollableRef] = useState<HTMLDivElement | null>(
-    null
-  );
+  const [scrollableRef] = useState<HTMLDivElement | null>(null);
 
   const del = useDelete(DeleteFormElementDocument);
   const formElements = useMemo(() => {
@@ -54,7 +49,7 @@ export default function SketchClassAttributesAdmin({
   );
 
   const onError = useGlobalErrorHandler();
-  const [updatePositions, mutationState] = useUpdateFormElementOrderMutation({
+  const [updatePositions] = useUpdateFormElementOrderMutation({
     onError,
     optimisticResponse: (data) => ({
       __typename: "Mutation",
@@ -93,10 +88,9 @@ export default function SketchClassAttributesAdmin({
     }
   }, [editableElementId, popperElement]);
 
-  const [updateElement, updateElementState] =
-    useUpdateSketchFormElementMutation({
-      onError,
-    });
+  const [updateElement] = useUpdateSketchFormElementMutation({
+    onError,
+  });
 
   const { confirmDelete } = useDialog();
 
@@ -107,11 +101,9 @@ export default function SketchClassAttributesAdmin({
   return (
     <div className="flex flex-col h-full flex-1">
       <p className="text-sm  bg-gray-50 p-4 border-b border-black border-opacity-5">
-        <Trans>
-          This form can be customized to collect important information about
-          sketches from your users. The name field is the only form element
-          required by SeaSketch which cannot be modified.
-        </Trans>
+        {t(
+          "This form can be customized to collect important information about sketches from your users. The name field is the only form element required by SeaSketch which cannot be modified."
+        )}
         <span className="block mt-2 -mb-1">
           <AddFormElementButton
             label={t("Add a field")}
@@ -286,14 +278,14 @@ export default function SketchClassAttributesAdmin({
             return (
               <>
                 <h1 className="p-3 border-b font-semibold">
-                  <Trans ns="admin:sketching">Edit</Trans>{" "}
+                  {t("Edit")}
                   {editableElement?.typeId}
                 </h1>
                 <div className="pt-3 px-3 text-sm pb-1 font-medium">
                   <div className="w-72 h-0"></div>
                   {editableElement.isInput && (
                     <InputBlock
-                      title={t("Required")}
+                      title={t("Required", { ns: "admin:surveys" })}
                       input={
                         <Switch
                           isToggled={editableElement?.isRequired}

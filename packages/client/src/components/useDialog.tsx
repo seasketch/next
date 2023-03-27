@@ -120,7 +120,7 @@ const UseDialogContext = createContext<{
 });
 
 export function DialogProvider({ children }: { children?: ReactNode }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("common");
   const [state, setState] = useState<DialogContextState>(ResetState);
   const [value, setValue] = useState<string>("");
   const [error, setError] = useState<string | undefined>(undefined);

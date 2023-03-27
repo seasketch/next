@@ -130,8 +130,10 @@ FeatureName.templatesOnly = true;
 FeatureName.defaultComponentSettings = {
   generatedNamePrefix: "Location",
 };
-FeatureName.label = <Trans>Location Name</Trans>;
-FeatureName.description = <Trans>Name for a spatial feature</Trans>;
+FeatureName.label = <Trans ns="admin:surveys">Location Name</Trans>;
+FeatureName.description = (
+  <Trans ns="admin:surveys">Name for a spatial feature</Trans>
+);
 FeatureName.defaultBody = questionBodyFromMarkdown(`
 # Location Name
 `);

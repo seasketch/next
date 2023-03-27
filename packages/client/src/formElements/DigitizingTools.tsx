@@ -249,7 +249,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             {isSketchingWorkflow &&
             state === DigitizingState.NO_SELECTION &&
             geometryType !== SketchGeometryType.Collection ? (
-              <Trans>Click your sketch to edit geometry</Trans>
+              <Trans ns="digitizing">Click your sketch to edit geometry</Trans>
             ) : (
               <DigitizingInstructions
                 state={state}

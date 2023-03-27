@@ -9,7 +9,7 @@ import {
   SketchCrudResponseFragment,
   SketchGeometryType,
 } from "../../generated/graphql";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { useCallback, useContext, useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
@@ -34,8 +34,6 @@ import area from "@turf/area";
 import bboxPolygon from "@turf/bbox-polygon";
 import { currentSidebarState } from "../ProjectAppSidebar";
 import SketchForm from "./SketchForm";
-
-const Trans = (props: any) => <I18n ns="sketching" {...props} />;
 
 export default function SketchEditorModal({
   sketch,
@@ -479,7 +477,8 @@ export default function SketchEditorModal({
               <h1 className="flex items-center p-4 border-b mb-3">
                 <span className="flex-1">
                   <span className="font-bold">
-                    {!sketch && <Trans>New</Trans>} {sketchClass.name}
+                    {!sketch && <Trans ns="sketching">New</Trans>}{" "}
+                    {sketchClass.name}
                   </span>
                 </span>
                 {!left && (
@@ -528,7 +527,10 @@ export default function SketchEditorModal({
                 )}
               </div>
               <div className="space-x-2 bg-gray-100 p-4 border-t">
-                <Button onClick={handleCancel} label={<Trans>Cancel</Trans>} />
+                <Button
+                  onClick={handleCancel}
+                  label={<Trans ns="sketching">Cancel</Trans>}
+                />
                 <Button
                   loading={
                     createSketchState.loading || updateSketchState.loading
@@ -539,7 +541,7 @@ export default function SketchEditorModal({
                     (hasValidationErrors && submissionAttempted)
                   }
                   onClick={onSubmit}
-                  label={<Trans>Submit</Trans>}
+                  label={<Trans ns="sketching">Submit</Trans>}
                   primary
                 />
               </div>

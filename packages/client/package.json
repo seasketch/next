@@ -193,6 +193,7 @@
     "subscriptions-transport-ws": "^0.9.18",
     "tailwindcss-dir": "^4.0.0",
     "typescript": "^4.1.3",
+    "undefined": "https://github.com/arthurgeron/eslint-plugin-idiomatic-jsx.git",
     "union-subdivided-polygons": "^0.9.1",
     "use-prosemirror": "^1.2.1",
     "use-react-router-breadcrumbs": "^1.0.4",

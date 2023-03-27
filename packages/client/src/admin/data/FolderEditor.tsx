@@ -18,7 +18,7 @@ export default function FolderEditor({
   id: number;
   onRequestClose?: () => void;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const { data, loading } = useGetFolderQuery({
     variables: {
       id,

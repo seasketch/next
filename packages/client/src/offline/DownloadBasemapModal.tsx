@@ -1,4 +1,4 @@
-import { Trans as T, useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { Header } from "../components/CenteredCardListLayout";
 import { useMapDownloadManager } from "./MapDownloadManager";
 import {
@@ -13,8 +13,6 @@ import { ReactNode, useMemo } from "react";
 import Warning from "../components/Warning";
 import useDialog from "../components/useDialog";
 import Modal, { FooterButtonProps } from "../components/Modal";
-
-const Trans = (props: any) => <T {...props} ns="offline"></T>;
 
 export default function DownloadBasemapModal({
   map,
@@ -102,6 +100,8 @@ export default function DownloadBasemapModal({
     downloadState.working,
     onRequestClose,
     populateCache,
+    confirm,
+    t,
   ]);
 
   return (
@@ -120,9 +120,9 @@ export default function DownloadBasemapModal({
               <div className="flex items-center mb-2">
                 <CheckCircleIcon className="text-primary-600 w-6 h-6 mr-2" />
                 <p>
-                  <Trans>
-                    This map has been downloaded and is ready for offline use
-                  </Trans>
+                  {t(
+                    "This map has been downloaded and is ready for offline use"
+                  )}
                 </p>
               </div>
               <div className="flex space-x-2 pt-2">
@@ -134,16 +134,16 @@ export default function DownloadBasemapModal({
                       0
                     )
                   )}
-                  subtitle={<Trans>map tile data</Trans>}
+                  subtitle={t("map tile data")}
                 />
                 <CacheBox
                   title={cacheStatus.status.staticAssets.length.toString()}
-                  subtitle={<Trans>support files</Trans>}
+                  subtitle={t("support files")}
                 />
                 {cacheStatus.status.lastUpdated && (
                   <CacheBox
                     title={cacheStatus.status.lastUpdated.toLocaleDateString()}
-                    subtitle={<Trans>last updated</Trans>}
+                    subtitle={t("last updated")}
                   />
                 )}
               </div>
@@ -152,15 +152,14 @@ export default function DownloadBasemapModal({
           {cacheStatus.status.state === "has-updates" && (
             <>
               <Header>
-                <Trans>Update</Trans> {map.name}
+                {t("Update")} {map.name}
               </Header>
               <div className="flex">
                 <ExclamationCircleIcon className="text-primary-600 w-6 h-6 mr-2" />
                 <p>
-                  <Trans>
-                    This map has been downloaded and can be used offline, but
-                    there are updates available.
-                  </Trans>
+                  {t(
+                    "This map has been downloaded and can be used offline, but there are updates available."
+                  )}
                 </p>
               </div>
               {!hasMapTileUpdates &&
@@ -175,40 +174,36 @@ export default function DownloadBasemapModal({
                             0
                           )
                         )}
-                        subtitle={<Trans>map tile data</Trans>}
+                        subtitle={t("map tile data")}
                       />
                       <CacheBox
                         title={cacheStatus.status.staticAssets.length.toString()}
-                        subtitle={<Trans>support files</Trans>}
+                        subtitle={t("support files")}
                       />
                       {cacheStatus.status.lastUpdated && (
                         <CacheBox
                           title={cacheStatus.status.lastUpdated.toLocaleDateString()}
-                          subtitle={<Trans>last updated</Trans>}
+                          subtitle={t("last updated")}
                         />
                       )}
                     </div>
+
                     <Warning>
-                      {cacheStatus.status.lastUpdated ? (
-                        <Trans>
-                          This map has new cartographic updates as of{" "}
-                          {cacheStatus.status.lastUpdated.toLocaleString()}. You
-                          can update this map without downloading new map tiles.
-                        </Trans>
-                      ) : (
-                        <Trans>
-                          This map has new cartographic updates. You can update
-                          this map without downloading new map tiles.
-                        </Trans>
-                      )}
+                      {cacheStatus.status.lastUpdated
+                        ? t(
+                            "CartographicUpdatesWithTimestamp",
+                            `This map has new cartographic updates as of ${cacheStatus.status.lastUpdated.toLocaleString()}. You can update this map without downloading new map tiles.`
+                          )
+                        : t(
+                            "CartographicUpdates",
+                            "This map has new cartographic updates. You can update this map without downloading new map tiles."
+                          )}
                     </Warning>
                   </>
                 )}
               {hasMapTileUpdates && (
                 <div className="pt-2 space-y-2">
-                  <h4 className="text-base">
-                    <Trans>Map Tile Updates</Trans>
-                  </h4>
+                  <h4 className="text-base">{t("Map Tile Updates")}</h4>
                   {cacheStatus.status.sources
                     .filter((s) => s.hasUpdates && s.downloadedTilePackage)
                     .map((source) => {
@@ -224,10 +219,10 @@ export default function DownloadBasemapModal({
                             <div className="flex-1 border-gray-200 border-t border-r p-2 overflow-hidden">
                               {source.downloadedTilePackage?.downloadedAt && (
                                 <p className="text-sm text-gray-500 truncate">
-                                  <Trans>
-                                    Downloaded{" "}
-                                    {source.downloadedTilePackage!.downloadedAt.toLocaleString()}
-                                  </Trans>
+                                  {t(
+                                    "downloadedAt",
+                                    `Downloaded ${source.downloadedTilePackage!.downloadedAt.toLocaleString()}`
+                                  )}
                                 </p>
                               )}
                               <p className="text-sm text-gray-500 truncate">
@@ -239,10 +234,10 @@ export default function DownloadBasemapModal({
                             </div>
                             <div className="flex-1 border-gray-200 border-t p-2 border-l-0 overflow-hidden">
                               <p className="text-sm text-gray-500 truncate">
-                                <Trans>
-                                  Updated{" "}
-                                  {source.currentTilePackage?.createdAt.toLocaleString()}
-                                </Trans>
+                                {t(
+                                  "updatedAt",
+                                  `Updated ${source.currentTilePackage?.createdAt.toLocaleString()}`
+                                )}
                               </p>
                               <p className="text-sm text-gray-500 truncate">
                                 {bytes(source.currentTilePackage?.bytes || 0)}.{" "}
@@ -260,12 +255,12 @@ export default function DownloadBasemapModal({
           {cacheStatus.status.state === "incomplete" && (
             <>
               <Header>
-                <Trans>Download</Trans> {map.name}
+                {t("Download")} {map.name}
               </Header>
               {!(downloadState.working || downloadState.error) && (
                 <div className="h-11 flex items-center">
                   <div className="text-xl text-primary-600">
-                    <Trans>
+                    <Trans ns="offline">
                       {{
                         bytes: bytes(
                           cacheStatus.status!.sources.reduce(
@@ -284,7 +279,7 @@ export default function DownloadBasemapModal({
                       }}{" "}
                       tile packages,{" "}
                     </Trans>
-                    <Trans>
+                    <Trans ns="offline">
                       {cacheStatus.status!.staticAssets.length.toString()}{" "}
                       support files
                     </Trans>
@@ -309,7 +304,7 @@ export default function DownloadBasemapModal({
                   />
                 ) : (
                   <div className="text-xl text-primary-600">
-                    <Trans>
+                    <Trans ns="offline">
                       {{
                         bytes: bytes(
                           cacheStatus.status!.sources.reduce(
@@ -327,7 +322,7 @@ export default function DownloadBasemapModal({
                       }}{" "}
                       tile packages,{" "}
                     </Trans>
-                    <Trans>
+                    <Trans ns="offline">
                       {cacheStatus.status!.staticAssets.length.toString()}{" "}
                       support files
                     </Trans>
@@ -340,7 +335,7 @@ export default function DownloadBasemapModal({
             cacheStatus.status.state === "incomplete") && (
             <>
               <p className="text-sm">
-                <Trans>
+                <Trans ns="offline">
                   When downloading maps, be sure to leave the browser window
                   open and prevent your computer from going to sleep until after
                   the process is complete. Only one map can be downloaded at a

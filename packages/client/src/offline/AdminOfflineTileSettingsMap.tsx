@@ -36,7 +36,7 @@ export default function AdminOfflineTileSettingsMap({
   returnToUrl?: string;
 }) {
   const [createOptionOpen, setCreateOptionOpen] = useState(false);
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const { data } = useGetBasemapQuery({
     variables: {
       id: basemapId,

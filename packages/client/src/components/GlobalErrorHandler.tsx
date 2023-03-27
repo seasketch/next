@@ -26,7 +26,7 @@ export default function GlobalErrorHandler() {
             <div>
               <Button
                 small
-                label={<Trans>dismiss</Trans>}
+                label={<Trans ns="common">dismiss</Trans>}
                 onClick={() => setError(null)}
               />
             </div>
@@ -42,12 +42,11 @@ interface GlobalErrorHandlerState {
   setError: (error: Error | null) => void;
 }
 
-export const GlobalErrorHandlerContext = React.createContext<
-  GlobalErrorHandlerState
->({
-  error: null,
-  setError: () => null,
-});
+export const GlobalErrorHandlerContext =
+  React.createContext<GlobalErrorHandlerState>({
+    error: null,
+    setError: () => null,
+  });
 
 export function useGlobalErrorHandler() {
   const context = useContext(GlobalErrorHandlerContext);

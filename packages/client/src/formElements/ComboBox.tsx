@@ -314,7 +314,9 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
 };
 
 ComboBox.label = <Trans ns="admin:surveys">Combo Box</Trans>;
-ComboBox.description = <Trans>For large lists of options</Trans>;
+ComboBox.description = (
+  <Trans ns="admin:surveys">For large lists of options</Trans>
+);
 ComboBox.defaultBody = questionBodyFromMarkdown(`
 # Choices, choices
 

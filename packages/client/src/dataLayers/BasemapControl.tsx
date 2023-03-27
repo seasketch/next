@@ -12,7 +12,7 @@ interface BasemapControlProps {
 
 export default function BasemapControl(props: BasemapControlProps) {
   const mapContext = useContext(MapContext);
-  const { t } = useTranslation(["basemaps"]);
+  const { t } = useTranslation("basemaps");
   const selectedBasemap = mapContext.manager?.getSelectedBasemap();
   const terrainOptional =
     selectedBasemap &&
@@ -88,7 +88,7 @@ export default function BasemapControl(props: BasemapControlProps) {
                 }
               }}
             >
-              <Trans>reset to defaults</Trans>
+              <Trans ns="data">reset to defaults</Trans>
             </button>
           </div>
         )}

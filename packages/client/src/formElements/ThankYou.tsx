@@ -72,6 +72,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
               <div className="flex-1">
                 <h2 className="text-lg mb-1 font-semibold">
                   <Trans
+                    ns="offline"
                     i18nKey="offlineResponseCount"
                     count={context.offlineResponseCount}
                   >
@@ -157,7 +158,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
               className="underline"
               to={new URL(context!.projectUrl).pathname}
             >
-              <Trans>Return to {context!.projectName}</Trans>
+              <Trans ns="surveys">Return to {context!.projectName}</Trans>
             </Link>
           )}
         </div>

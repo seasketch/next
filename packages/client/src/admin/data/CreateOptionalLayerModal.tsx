@@ -18,7 +18,7 @@ export default function CreateOptionalLayerModal({
   onRequestClose,
   basemapId,
 }: CreateOptionaLayerProps) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const [state, setState] = useState<{
     name: string;
     firstOptionName?: string;

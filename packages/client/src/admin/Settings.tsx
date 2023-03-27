@@ -96,7 +96,7 @@ function BasicSettingsForm(props: {
   url: string;
   slug: string;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   useEffect(() => {
     if (copiedToClipboard === true) {
@@ -218,7 +218,7 @@ function BasicSettingsForm(props: {
 
 function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
   const [mutate, mutationState] = useUpdateProjectSettingsMutation();
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t, i18n } = useTranslation("admin");
   const onDrop = useCallback((acceptedFiles) => {
     // Do something with the files
     mutate({
@@ -303,7 +303,7 @@ function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
 }
 
 function AccessControlSettings() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t, i18n } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
   const { data, loading, error } = useProjectAccessControlSettingsQuery({
     variables: {
@@ -551,7 +551,7 @@ function AccessControlSettings() {
 }
 
 function MapExtentSettings() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t, i18n } = useTranslation("admin");
   const [map, setMap] = useState<Map | null>(null);
   const [draw, setDraw] = useState<any>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -688,7 +688,7 @@ function MapExtentSettings() {
 }
 
 function SuperUserSettings() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t, i18n } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
   const [isFeatured, setIsFeatured] = useState<boolean | null>(null);
   const { data, loading, error } = useCurrentProjectMetadata();
@@ -787,7 +787,7 @@ function SuperUserSettings() {
 }
 
 function MapboxAPIKeys() {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t, i18n } = useTranslation("admin");
   const onError = useGlobalErrorHandler();
   const { slug } = useParams<{ slug: string }>();
   const { data, loading, error } = useMapboxApiKeysQuery({
@@ -916,16 +916,20 @@ function MapboxAPIKeys() {
               propName="mapboxSecretKey"
               mutation={UpdateSecretKeyDocument}
               description={
-                <Trans ns="admin" key={"mapbox-secret-key"}>
+                // eslint-disable-next-line i18next/no-literal-string
+                <>
                   Provide a secret key if you would like to list and add
                   basemaps directly from your MapBox account. You will need to
                   provide a key with{" "}
                   <code className="bg-gray-100 border  font-mono px-1 rounded">
-                    STYLES:LIST
+                    {
+                      // eslint-disable-next-line i18next/no-literal-string
+                      "STYLES:LIST"
+                    }
                   </code>{" "}
                   scope, and we recommend limiting the key to the SeaSketch
                   domain.
-                </Trans>
+                </>
               }
               label={
                 <div className="flex items-center">

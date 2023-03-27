@@ -82,7 +82,7 @@ const LazyPrivacyPolicy = React.lazy(
 
 function App() {
   const { user } = useAuth0();
-  const { t } = useTranslation(["homepage"]);
+  const { t } = useTranslation("homepage");
   const [error, setError] = useState<Error | null>(null);
   useEffect(() => {
     if (user) {
@@ -156,7 +156,7 @@ function App() {
                 </Route>
                 <Route path="/authenticate">
                   <span>
-                    <Trans>authenticating...</Trans>
+                    <Trans ns="homepage">authenticating...</Trans>
                   </span>
                 </Route>
                 <Route path="/account-settings">

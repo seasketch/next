@@ -34,7 +34,7 @@ export default function Tabs({
     <div>
       <div className="sm:hidden">
         <label htmlFor="tabs" className="sr-only">
-          <Trans>Select a tab</Trans>
+          <Trans ns="common">Select a tab</Trans>
         </label>
         {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
         <select

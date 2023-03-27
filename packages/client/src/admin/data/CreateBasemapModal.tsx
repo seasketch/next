@@ -554,13 +554,20 @@ export default function CreateBasemapModal({
                     description={
                       state.type === BasemapType.Mapbox ? (
                         <>
-                          <Trans ns="admin">
-                            Enter a{" "}
-                            <code className="bg-gray-100 p-0.5 rounded">
-                              mapbox://
-                            </code>{" "}
-                            url or the direct url to a style hosted elsewhere.
-                          </Trans>
+                          {
+                            // eslint-disable-next-line i18next/no-literal-string
+                            "Enter a "
+                          }
+                          <code className="bg-gray-100 p-0.5 rounded">
+                            {
+                              // eslint-disable-next-line i18next/no-literal-string
+                              "mapbox://"
+                            }
+                          </code>
+                          {
+                            // eslint-disable-next-line i18next/no-literal-string
+                            " url or the direct url to a style hosted elsewhere."
+                          }
                         </>
                       ) : (
                         <Trans ns="admin">
@@ -708,7 +715,7 @@ const DIVISIONS: {
 export function formatTimeAgo(date: Date) {
   let duration = (date.getTime() - new Date().getTime()) / 1000;
   if (Math.abs(duration) < 60) {
-    return <Trans>seconds ago</Trans>;
+    return <Trans ns="admin:data">seconds ago</Trans>;
   }
   for (let i = 0; i <= DIVISIONS.length; i++) {
     const division = DIVISIONS[i];

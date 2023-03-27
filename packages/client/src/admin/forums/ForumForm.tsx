@@ -1,23 +1,18 @@
-import TextInput from "../../components/TextInput";
 import {
-  SketchGeometryType,
   ForumListDetailsFragment,
   useUpdateForumMutation,
   DeleteForumDocument,
 } from "../../generated/graphql";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import MutableAutosaveInput from "../MutableAutosaveInput";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import Button from "../../components/Button";
 import useDialog from "../../components/useDialog";
-import getSlug from "../../getSlug";
 import { useDelete } from "../../graphqlHookWrappers";
-
-const Trans = (props: any) => <I18n ns="admin:sketching" {...props} />;
 
 export default function ForumForm({
   forum,
@@ -87,7 +82,7 @@ export default function ForumForm({
             <div className="">
               <MutableAutosaveInput
                 value={forum.name}
-                label={<Trans>Name</Trans>}
+                label={t("Name")}
                 mutation={mutateName}
                 mutationStatus={mutateNameState}
                 propName="name"
@@ -97,7 +92,7 @@ export default function ForumForm({
               <MutableAutosaveInput
                 textArea
                 value={forum.description || ""}
-                label={<Trans>Description</Trans>}
+                label={t("Description")}
                 mutation={mutateDescription}
                 mutationStatus={mutateDescriptionState}
                 propName="description"
@@ -123,21 +118,17 @@ export default function ForumForm({
                     onClick={toggleArchived}
                   />
                 }
-                title={<Trans>Archive</Trans>}
-                description={
-                  <Trans>
-                    Enable if you would like to disable and hide this forum.
-                    Topics and posts will not be deleted but will only be
-                    accessible to adminstrators.
-                  </Trans>
-                }
+                title={t("Archive")}
+                description={t(
+                  "Enable if you would like to disable and hide this forum. Topics and posts will not be deleted but will only be accessible to adminstrators."
+                )}
               />
             </div>
             <InputBlock
               input={
                 <Button
                   disabled={Boolean(forum.postCount && forum.postCount >= 10)}
-                  label={<Trans>Delete</Trans>}
+                  label={t("Delete")}
                   onClick={async () => {
                     if (!forum.postCount || forum.postCount < 10) {
                       confirmDelete({
@@ -151,20 +142,15 @@ export default function ForumForm({
                   }}
                 />
               }
-              title={<Trans>Delete Forum</Trans>}
+              title={t("Delete Forum")}
               description={
-                !forum.postCount || forum.postCount < 10 ? (
-                  <Trans>
-                    This Forum can still be deleted since it has fewer than 10
-                    posts. All related posts will be deleted.
-                  </Trans>
-                ) : (
-                  <Trans>
-                    You can only delete forums if they have not been used to
-                    create more than 10 posts. Archive it instead if you would
-                    like to hide it.
-                  </Trans>
-                )
+                !forum.postCount || forum.postCount < 10
+                  ? t(
+                      "This Forum can still be deleted since it has fewer than 10 posts. All related posts will be deleted."
+                    )
+                  : t(
+                      "You can only delete forums if they have not been used to create more than 10 posts. Archive it instead if you would like to hide it."
+                    )
               }
             />
           </div>

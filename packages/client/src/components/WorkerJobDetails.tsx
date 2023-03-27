@@ -10,10 +10,10 @@ export default function WorkerJobDetails({
   job: JobFragment;
   onRequestClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("common");
   return (
     <Modal
-      title={<Trans>Job Status</Trans>}
+      title={<Trans ns="common">Job Status</Trans>}
       onRequestClose={onRequestClose}
       open={true}
       footer={[

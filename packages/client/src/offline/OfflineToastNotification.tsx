@@ -3,12 +3,10 @@ import { Fragment, useContext, useEffect, useState } from "react";
 import { Transition } from "@headlessui/react";
 import { StatusOfflineIcon } from "@heroicons/react/outline";
 import { XIcon } from "@heroicons/react/solid";
-import { Trans as T } from "react-i18next";
+import { Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import { OfflineStateContext } from "./OfflineStateContext";
 import useOfflineSurveysEnabled from "./useOfflineSurveysEnabled";
-
-const Trans = (props: any) => <T ns="offline">{props.children}</T>;
 
 export default function OfflineToastNotification() {
   const [dismissed, setDismissed] = useState(false);
@@ -54,10 +52,10 @@ export default function OfflineToastNotification() {
                   </div>
                   <div className="ml-3 w-0 flex-1 pt-0.5">
                     <p className="text-sm font-medium text-gray-900">
-                      <Trans>Network Error</Trans>
+                      <Trans ns="offline">Network Error</Trans>
                     </p>
                     <p className="mt-1 text-sm text-gray-500">
-                      <Trans>You appear to be offline.</Trans>
+                      <Trans ns="offline">You appear to be offline.</Trans>
                     </p>
                     <div className="mt-3 flex space-x-7">
                       <Link
@@ -65,7 +63,7 @@ export default function OfflineToastNotification() {
                         type="button"
                         className="bg-white rounded-md text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       >
-                        <Trans>Access Offline Content</Trans>
+                        <Trans ns="offline">Access Offline Content</Trans>
                       </Link>
                       <button
                         type="button"
@@ -74,7 +72,7 @@ export default function OfflineToastNotification() {
                           setDismissed(true);
                         }}
                       >
-                        <Trans>Dismiss</Trans>
+                        <Trans ns="offline">Dismiss</Trans>
                       </button>
                     </div>
                   </div>
@@ -87,7 +85,7 @@ export default function OfflineToastNotification() {
                       }}
                     >
                       <span className="sr-only">
-                        <Trans>Close</Trans>
+                        <Trans ns="offline">Close</Trans>
                       </span>
                       <XIcon className="h-5 w-5" aria-hidden="true" />
                     </button>

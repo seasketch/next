@@ -18,7 +18,7 @@ const LazyProjectApp = React.lazy(
 );
 
 export default function ProjectSimpleNav() {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
   let { path } = useRouteMatch();
   const { data } = useCurrentProjectMetadata();

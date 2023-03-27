@@ -31,7 +31,7 @@ export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
   const { slug } = useParams<{ slug: string }>();
   const { manager } = useContext(MapContext);
-  const { t } = useTranslation(["nav"]);
+  const { t } = useTranslation("nav");
 
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },

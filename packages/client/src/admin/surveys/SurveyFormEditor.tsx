@@ -80,7 +80,7 @@ export default function SurveyFormEditor({
   route: "basic" | "logic" | "formElement";
   formElementId: number | null;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation("admin:surveys");
   let lang: LangDetails = languages.find(
     (l) => l.code === (i18n.language || "EN")
   )!;
@@ -1190,7 +1190,7 @@ export default function SurveyFormEditor({
                       }
                     >
                       <span className={`font-bold text-lg ${dynamicTextClass}`}>
-                        {t("T", { ns: "no-translate" })}
+                        {"T"}
                       </span>
                       <span className="absolute -bottom-5 text-xs">
                         {t("auto")}
@@ -1257,7 +1257,7 @@ export default function SurveyFormEditor({
                           <TrashIcon className="w-4 h-4 ml-2" />
                         </Button>
                         <p className="text-sm text-gray-800 mt-2.5">
-                          <Trans>
+                          <Trans ns="admin:surveys">
                             Removing style settings will mean that this page
                             will share the same appearance as previous pages.
                           </Trans>
@@ -1321,13 +1321,15 @@ export default function SurveyFormEditor({
             auth0.user["https://seasketch.org/superuser"] && (
               <div>
                 <FormEditorHeader className="mt-4">
-                  <Trans ns="superuser">Superuser Settings</Trans>
+                  <Trans ns="admin:superuser">Superuser Settings</Trans>
                 </FormEditorHeader>
                 <div className="p-3 space-y-4">
                   <InputBlock
                     labelType="small"
                     className="text-sm"
-                    title={<Trans ns="superuser">Publish as template</Trans>}
+                    title={
+                      <Trans ns="admin:superuser">Publish as template</Trans>
+                    }
                     input={
                       <Switch
                         isToggled={data?.survey?.form?.isTemplate}
@@ -1348,10 +1350,10 @@ export default function SurveyFormEditor({
                   />
                   <TextInput
                     disabled={!data?.survey?.form?.isTemplate}
-                    label={<Trans ns="superuser">Template name</Trans>}
+                    label={<Trans ns="admin:superuser">Template name</Trans>}
                     name="templateName"
                     description={
-                      <Trans ns="superuser">
+                      <Trans ns="admin:superuser">
                         This is the label SeaSketch admins will see when
                         choosing among templates. For ease of maintenance, it's
                         best to publish templates from a single project like

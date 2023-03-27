@@ -26,7 +26,7 @@ export default function BaseMapEditor() {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteBasemap, deleteMutationState] = useDeleteBasemapMutation();
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const projectData = useGetProjectBySlugQuery({ variables: { slug } });
   const client = useApolloClient();
   useEffect(() => {

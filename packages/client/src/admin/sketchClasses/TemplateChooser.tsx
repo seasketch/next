@@ -8,7 +8,7 @@ import {
   useCreateSketchClassMutation,
   useTemplateSketchClassesQuery,
 } from "../../generated/graphql";
-import { Trans as T } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import {
   LineIcon,
   PointIcon,
@@ -19,13 +19,12 @@ import { useState } from "react";
 import Spinner from "../../components/Spinner";
 import getSlug from "../../getSlug";
 
-const Trans = (props: any) => <T ns="admin:data" {...props} />;
-
 export default function TemplateChooser({
   onCreate,
 }: {
   onCreate?: (sketchClass: SketchingDetailsFragment) => void;
 }) {
+  const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
   const projectId = useProjectId();
   const { data } = useTemplateSketchClassesQuery({
@@ -74,17 +73,12 @@ export default function TemplateChooser({
   return (
     <div className="space-y-2">
       <p className="text-sm">
-        <Trans>
-          Sketch Classes define the feature types your users will be able to
-          draw and share. They define the geometry type, form attributes, and
-          analytical reports associated with them. When used well they closely
-          match regulatory or data collection goals.
-        </Trans>
+        {t(
+          "Sketch Classes define the feature types your users will be able to draw and share. They define the geometry type, form attributes, and analytical reports associated with them. When used well they closely match regulatory or data collection goals."
+        )}
       </p>
       <p className="text-sm mb-2">
-        <Trans>
-          Choose from the templates below to create a new Sketch Class.
-        </Trans>
+        {t("Choose from the templates below to create a new Sketch Class.")}
       </p>
       <br />
       <div

@@ -165,6 +165,7 @@ const WelcomeMessage: FormElementComponent<
               <Trans
                 i18nKey={"WelcomeOfflineResponseCount"}
                 count={context.offlineResponseCount}
+                ns="offline"
               >
                 You have collected {{ count: context.offlineResponseCount }}{" "}
                 responses while offline.
@@ -174,6 +175,7 @@ const WelcomeMessage: FormElementComponent<
               <Trans
                 i18nKey={"WelcomeOfflineResponseCountWhenOffline"}
                 count={context.offlineResponseCount}
+                ns="offline"
               >
                 You are offline and have collected{" "}
                 {{ count: context.offlineResponseCount }} responses so far.

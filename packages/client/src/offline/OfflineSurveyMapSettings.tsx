@@ -5,7 +5,7 @@ import {
 } from "@heroicons/react/solid";
 import { AnySourceData } from "mapbox-gl";
 import { useMemo, useState } from "react";
-import { Trans as T } from "react-i18next";
+import { Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Badge from "../components/Badge";
 import CenteredCardListLayout, {
@@ -24,8 +24,6 @@ import DataSourceModal from "./DataSourceModal";
 import TilePackageListItem from "./TilePackageListItem";
 import useBasemapsBySurvey from "./useBasemapsBySurvey";
 
-const Trans = (props: any) => <T ns="admin:offline" {...props} />;
-
 export default function OfflineSurveyMapSettings() {
   const slug = getSlug();
 
@@ -39,11 +37,10 @@ export default function OfflineSurveyMapSettings() {
     },
   });
 
-  const [sourceModalOpen, setSourceModalOpen] =
-    useState<null | Pick<
-      OfflineSourceDetails,
-      "dataSourceUrl" | "templateUrl" | "type"
-    >>(null);
+  const [sourceModalOpen, setSourceModalOpen] = useState<null | Pick<
+    OfflineSourceDetails,
+    "dataSourceUrl" | "templateUrl" | "type"
+  >>(null);
 
   const { surveyBasemaps } = useBasemapsBySurvey();
 
@@ -75,10 +72,10 @@ export default function OfflineSurveyMapSettings() {
       <CenteredCardListLayout>
         <Card>
           <Header>
-            <Trans>Survey Maps</Trans>
+            <Trans ns="admin:offline">Survey Maps</Trans>
           </Header>
           <p className="text-sm text-gray-500 py-2">
-            <Trans>
+            <Trans ns="admin:offline">
               Map data used in surveys used offline will need to be downloaded
               on each machine to be used in the field. Online maps may consist
               of millions of tiles and hundreds of gigabytes of data. Using the
@@ -96,7 +93,7 @@ export default function OfflineSurveyMapSettings() {
               return (
                 <div key={details.id}>
                   <h4 className="truncate font-semibold text-sm py-4">
-                    <Trans>Used in </Trans>
+                    <Trans ns="admin:offline">Used in </Trans>
                     {details.surveys.join(", ")}
                   </h4>
                   <div className="space-y-4">
@@ -130,10 +127,10 @@ export default function OfflineSurveyMapSettings() {
         {sortedTilePackages.length > 0 && (
           <Card>
             <Header>
-              <Trans>Tile Packages</Trans>
+              <Trans ns="admin:offline">Tile Packages</Trans>
             </Header>
             <p className="text-sm text-gray-500 py-2">
-              <Trans>
+              <Trans ns="admin:offline">
                 Tile packages contain map tiles and can be downloaded by
                 end-users to populate an offline cache. Tile Package generation
                 happens on the SeaSketch servers, so feel free to leave the site
@@ -184,9 +181,9 @@ function MapItem({
           <h4 className="text-base truncate">{map.name}</h4>
           <p className="text-sm text-gray-500">
             {map.useDefaultOfflineTileSettings ? (
-              <Trans>Default tiling settings </Trans>
+              <Trans ns="admin:offline">Default tiling settings </Trans>
             ) : (
-              <Trans>Custom tiling settings </Trans>
+              <Trans ns="admin:offline">Custom tiling settings </Trans>
             )}
             {
               <span className="font-mono">
@@ -205,14 +202,14 @@ function MapItem({
                 window.location.pathname
               }`}
             >
-              <Trans>configure</Trans>
+              <Trans ns="admin:offline">configure</Trans>
             </Link>
           </p>
           <div>
             {map.offlineSupportInformation && isMapboxHosted ? (
               <div className="text-sm">
                 <h5 className="text-sm text-gray-500 pb-0.5">
-                  <Trans>Source types</Trans>
+                  <Trans ns="admin:offline">Source types</Trans>
                 </h5>
                 <div className="text-gray-500 space-x-1 overflow-hidden whitespace-nowrap">
                   {map.offlineSupportInformation.sources.map((source, i) => {
@@ -257,7 +254,7 @@ function MapItem({
               </div>
             ) : (
               <div className="text-sm">
-                <Trans>
+                <Trans ns="admin:offline">
                   Only supported for Mapbox-hosted basemaps currently.
                 </Trans>
               </div>

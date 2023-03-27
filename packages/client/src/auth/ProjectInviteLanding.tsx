@@ -12,7 +12,7 @@ import { useProjectMetadataQuery } from "../generated/graphql";
  * @returns
  */
 export default function ProjectInviteLanding() {
-  const { t } = useTranslation();
+  const { t } = useTranslation("invites");
   let {
     state,
     error,
@@ -29,20 +29,24 @@ export default function ProjectInviteLanding() {
   });
   const auth0 = useAuth0();
   const email = auth0.user?.email || claims?.email;
+
+  const supportEmail = data?.projectPublicDetails?.supportEmail;
   return (
     <div className="bg-white">
       <div className="max-w-7xl mx-auto text-center py-12 px-4 sm:px-6 lg:py-16 lg:px-8">
         <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
           <span className="block">
             {!claims ? (
-              <Trans>Welcome!</Trans>
+              <Trans ns="invites">Welcome!</Trans>
             ) : (
-              <Trans>Welcome, {auth0?.user?.name || claims.fullname}!</Trans>
+              <Trans ns="invites">
+                Welcome, {auth0?.user?.name || claims.fullname}!
+              </Trans>
             )}
           </span>
         </h2>
         <p className="block text-gray-500 md:text-lg mt-2 mb-1">
-          <Trans>
+          <Trans ns="invites">
             You have been invited to participate in a SeaSketch project.
           </Trans>
         </p>
@@ -58,16 +62,13 @@ export default function ProjectInviteLanding() {
                   return (
                     <>
                       <span className="text-red-900">
-                        <Trans>
+                        <Trans ns="invites">
                           Your invitation to this project has expired.
                         </Trans>
                         {data?.projectPublicDetails?.supportEmail && (
-                          <Trans>
-                            {" "}
-                            Contact {
-                              data?.projectPublicDetails?.supportEmail
-                            }{" "}
-                            to request a new invitation.
+                          <Trans ns="invites">
+                            Contact {{ supportEmail }} to request a new
+                            invitation.
                           </Trans>
                         )}
                       </span>
@@ -85,7 +86,7 @@ export default function ProjectInviteLanding() {
                       <div className="flex flex-col items-center">
                         <Spinner style={{ marginLeft: 0, marginBottom: 5 }} />
                         <p className="text-gray-500 text-center">
-                          <Trans>Verifying invitation code</Trans>
+                          <Trans ns="invites">Verifying invitation code</Trans>
                         </p>
                       </div>
                     </>
@@ -94,7 +95,7 @@ export default function ProjectInviteLanding() {
                 case IngressState.AlreadyAccepted:
                   return (
                     <p>
-                      <Trans>
+                      <Trans ns="invites">
                         This invitation has already been accepted.
                         <a
                           className="text-primary-500 font-bold"
@@ -108,8 +109,7 @@ export default function ProjectInviteLanding() {
                           className="text-primary-500 font-bold"
                           href="mailto:support@seasketch.org"
                         >
-                          {" "}
-                          contact support{" "}
+                          contact support
                         </a>
                         if you believe this to be an error.
                       </Trans>
@@ -121,7 +121,7 @@ export default function ProjectInviteLanding() {
                       <div className="flex flex-col items-center">
                         <Spinner style={{ marginLeft: 0, marginBottom: 5 }} />
                         <p className="text-gray-500 text-center">
-                          <Trans>Confirming invite</Trans>
+                          <Trans ns="invites">Confirming invite</Trans>
                         </p>
                       </div>
                     </>
@@ -160,14 +160,20 @@ export default function ProjectInviteLanding() {
                           primary
                           onClick={() => signInAndConfirm(true)}
                           label={
-                            <Trans>Logout and sign in as {claims?.email}</Trans>
+                            <Trans ns="invites">
+                              Logout and sign in as {claims?.email}
+                            </Trans>
                           }
                         />
                       </div>
                       <div className="ml-3 inline-flex">
                         <Button
                           onClick={() => confirmWithCurrentAccount()}
-                          label={<Trans>Accept as {email}</Trans>}
+                          label={
+                            <Trans i18nKey="Accept as" ns="invites">
+                              Accept as {{ email }}
+                            </Trans>
+                          }
                         />
                       </div>
                     </>
@@ -178,7 +184,11 @@ export default function ProjectInviteLanding() {
                         <Button
                           primary
                           onClick={() => confirmWithCurrentAccount()}
-                          label={<Trans>Accept as {email}</Trans>}
+                          label={
+                            <Trans i18nKey="Accept as" ns="invites">
+                              Accept as {{ email }}
+                            </Trans>
+                          }
                         />
                       </div>
                       <div className="ml-3 inline-flex">
@@ -202,7 +212,7 @@ export default function ProjectInviteLanding() {
         </div>
         {state === IngressState.LoggedInWithDifferentEmail && (
           <p className="text-gray-500 mt-4">
-            <Trans>
+            <Trans ns="invites">
               This invitation was originally sent to{" "}
               <span className="font-bold text-primary-500">
                 {claims?.email}
@@ -210,7 +220,9 @@ export default function ProjectInviteLanding() {
               .
             </Trans>{" "}
             {accountExistsWithRecipientEmail && (
-              <Trans>An account with this email address already exists.</Trans>
+              <Trans ns="invites">
+                An account with this email address already exists.
+              </Trans>
             )}
           </p>
         )}

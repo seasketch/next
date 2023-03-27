@@ -154,8 +154,10 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
   );
 };
 
-ShortText.label = <Trans>Short Text</Trans>;
-ShortText.description = <Trans>Single line of text for short answers</Trans>;
+ShortText.label = <Trans ns="admin:surveys">Short Text</Trans>;
+ShortText.description = (
+  <Trans ns="admin:surveys">Single line of text for short answers</Trans>
+);
 ShortText.defaultBody = questionBodyFromMarkdown(`
 # 
 `);
@@ -166,16 +168,20 @@ function validate(
   { minLength, maxLength }: ShortTextProps
 ) {
   if (required && (!text || text.length < 1)) {
-    return <Trans>Required field</Trans>;
+    return <Trans ns="admin:surveys">Required field</Trans>;
   }
   if (text && minLength && text.length < minLength) {
     return (
-      <Trans>Input must be {minLength.toString()} characters or greater</Trans>
+      <Trans ns="admin:surveys">
+        Input must be {minLength.toString()} characters or greater
+      </Trans>
     );
   }
   if (text && maxLength && text.length > maxLength) {
     return (
-      <Trans>Input must be {maxLength.toString()} characters or less</Trans>
+      <Trans ns="admin:surveys">
+        Input must be {maxLength.toString()} characters or less
+      </Trans>
     );
   }
 }

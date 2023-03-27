@@ -1,0 +1,21 @@
+{
+  "Access Requests": "Access Requests",
+  "Admins": "Admins",
+  "Admins have full access to project settings": "Admins have full access to project settings",
+  "Bounces, Complaints, and Errors": "Bounces, Complaints, and Errors",
+  "Create Group": "Create Group",
+  "Draft Invitations": "Draft Invitations",
+  "Groups can be used to organize users and control access to resources like data layers and discussion forums.": "Groups can be used to organize users and control access to resources like data layers and discussion forums.",
+  "Invite Users": "Invite Users",
+  "Invites": "Invites",
+  "Invites can fail due to incorrect addresses, or problems with a destination server, or being marked as spam": "Invites can fail due to incorrect addresses, or problems with a destination server, or being marked as spam",
+  "Monitor the status of invites that have been emailed to users": "Monitor the status of invites that have been emailed to users",
+  "Name is required and must be less than 33 characters": "Name is required and must be less than 33 characters",
+  "Participants": "Participants",
+  "Sent Invitations": "Sent Invitations",
+  "Unsent invites that need to be mailed": "Unsent invites that need to be mailed",
+  "User Groups": "User Groups",
+  "Users and Groups": "Users and Groups",
+  "Users will appear in the list if they have shared their profile": "Users will appear in the list if they have shared their profile",
+  "Your project is set to invite-only. Requests to participate can be approved or denied.": "Your project is set to invite-only. Requests to participate can be approved or denied."
+}

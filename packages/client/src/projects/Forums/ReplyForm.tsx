@@ -15,11 +15,9 @@ import useLocalStorage from "../../useLocalStorage";
 import UserProfileModal from "../UserProfileModal";
 import PostContentEditor from "./PostContentEditor";
 import { nameForProfile } from "./TopicListItem";
-import { Trans as I18n } from "react-i18next";
+import { Trans } from "react-i18next";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 import useDialog from "../../components/useDialog";
-
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function ReplyForm({
   profile,
@@ -163,7 +161,7 @@ export default function ReplyForm({
               onClick={openProfileModal}
               className="text-sm pl-2 hover:text-gray-600"
             >
-              <Trans>
+              <Trans ns="forums">
                 Replying as{" "}
                 <span className="font-semibold">{nameForProfile(profile)}</span>
               </Trans>

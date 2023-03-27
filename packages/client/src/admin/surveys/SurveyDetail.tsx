@@ -1,30 +1,21 @@
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
-import useProjectId from "../../useProjectId";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import {
-  ChevronLeftIcon,
-  LinkIcon,
-  PencilIcon,
-} from "@heroicons/react/outline";
+import { ChevronLeftIcon, PencilIcon } from "@heroicons/react/outline";
 import { Link } from "react-router-dom";
 import { useSurveyByIdQuery } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import SurveyDraftControl from "./SurveyDraftControl";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import ResponseGrid, { ResponseGridTabName } from "./ResponseGrid";
-import ResponsesMap from "./ResponsesMap";
 import { ErrorBoundary } from "@sentry/react";
 import ErrorBoundaryFallback from "../../components/ErrorBoundaryFallback";
 
 export default function SurveyDetail({ surveyId }: { surveyId: number }) {
-  const projectId = useProjectId();
   const [highlighedRows, setHighlightedRows] = useState<number[]>([]);
   const [selection, setSelection] = useState<number[]>([]);
   const [tab, setTab] = useState<ResponseGridTabName>("responses");
   const { t } = useTranslation("admin:surveys");
-  const onError = useGlobalErrorHandler();
-  const { data, loading, error } = useSurveyByIdQuery({
+  const { data, loading } = useSurveyByIdQuery({
     variables: {
       id: surveyId,
     },
@@ -74,7 +65,7 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
         Boolean(data?.survey?.submittedResponseCount) && (
           <div className="h-72 flex-shrink-0 relative flex items-center justify-center">
             <span className="p-5 border-4 border-dashed">
-              <Trans>Map temporarily disabled</Trans>
+              <Trans ns="admin:surveys">Map temporarily disabled</Trans>
             </span>
             {/* <ResponsesMap
               mapTileCacheBuster={mapTileCacheBuster}

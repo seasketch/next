@@ -37,7 +37,7 @@ export default function StaticAssetCacheStatus() {
     }
   }, [context?.cacheSizes?.staticAssets]);
   const [showFiles, setShowFiles] = useState(false);
-  const { t } = useTranslation("superuser");
+  const { t } = useTranslation("admin:superuser");
   const { alert } = useDialog();
 
   return (

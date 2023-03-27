@@ -35,7 +35,7 @@ export default function InteractivitySettings({
   sublayer?: string | null;
   basemap?: BasemapDetailsFragment;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const { data, loading, error } = useInteractivitySettingsByIdQuery({
     variables: {
       id,
@@ -257,7 +257,7 @@ function TemplateEditor(props: {
   basemap?: any;
   onSelectLayers?: () => void;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const onSave = () => props.onSave(props.propName);
   if (props.selectedType === props.type) {
     return (

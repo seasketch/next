@@ -1,16 +1,14 @@
 import Warning from "../../components/Warning";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../../auth/JoinProject";
-
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function SignInPrompt() {
   const { loginWithRedirect } = useAuth0();
 
   return (
     <Warning level="info">
-      <Trans>
+      <Trans ns="forums">
         <button
           className="underline text-primary-500"
           onClick={() => {

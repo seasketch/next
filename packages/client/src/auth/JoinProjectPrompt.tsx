@@ -24,14 +24,14 @@ export default function JoinProjectPrompt(props: { variant?: "forums" }) {
   }
 
   let text = (
-    <Trans>
+    <Trans ns="joinProjectPage">
       Consider sharing a user profile and joining this project so you can gain
       access to additional features and data layers.
     </Trans>
   );
   if (props.variant && props.variant === "forums") {
     text = (
-      <Trans>
+      <Trans ns="joinProjectPage">
         Consider sharing a user profile and joining this project so you can gain
         access to the discussion forums.
       </Trans>
@@ -46,7 +46,7 @@ export default function JoinProjectPrompt(props: { variant?: "forums" }) {
         href={`/${slug}/join?redirectUrl=${window.location.pathname}`}
         small
         className="mt-2"
-        label={<Trans>Join Project</Trans>}
+        label={<Trans ns="joinProjectPage">Join Project</Trans>}
       />
     </Warning>
   );

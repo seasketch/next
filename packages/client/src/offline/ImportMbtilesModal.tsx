@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Trans as T, useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import {
   OfflineSupportInformation,
   OfflineTilePackageDetailsFragment,
@@ -27,7 +27,6 @@ import Warning from "../components/Warning";
 import { maxZLabel } from "./DownloadBasemapModal";
 import bytes from "bytes";
 import Badge from "../components/Badge";
-import Button from "../components/Button";
 import { CacheableOfflineAsset } from "../generated/queries";
 import { CacheProgress } from "./CacheStatus";
 import { MAP_STATIC_ASSETS_CACHE_NAME } from "./MapTileCache";
@@ -36,12 +35,6 @@ import Modal from "../components/Modal";
 // @ts-ignore
 // eslint-disable-next-line import/no-webpack-loader-syntax
 import sqlWasm from "!!file-loader?name=sql-wasm-[contenthash].wasm!sql.js/dist/sql-wasm.wasm";
-
-const Trans = (props: any) => (
-  <T ns="offline" {...props}>
-    {props.children}
-  </T>
-);
 
 function ImportMbtilesModal({
   files,
@@ -394,7 +387,7 @@ function ImportMbtilesModal({
           relatedMaps.length > 0 && (
             <>
               <p className="pb-4 text-sm">
-                <Trans>
+                <Trans ns="offline">
                   Importing data from these tile packages will add the following
                   maps to cache for offline use.
                 </Trans>
@@ -424,9 +417,11 @@ function ImportMbtilesModal({
           <>
             <p className="pb-4 text-sm">
               {importState.progress === 1 ? (
-                <Trans>Data has been imported and is ready for use.</Trans>
+                <Trans ns="offline">
+                  Data has been imported and is ready for use.
+                </Trans>
               ) : (
-                <Trans>
+                <Trans ns="offline">
                   Data is being loaded into your browser's cache. Please keep
                   you browser open and on this page until the process is
                   complete.
@@ -441,7 +436,7 @@ function ImportMbtilesModal({
           </>
         )}
         <h2 className="pt-4">
-          <Trans>Tile Packages</Trans>
+          <Trans ns="offline">Tile Packages</Trans>
         </h2>
         <div className="mt-3 text-base space-y-3 max-h-128 overflow-y-auto">
           {state.map((file) => (
@@ -455,7 +450,7 @@ function ImportMbtilesModal({
                   <div className="space-x-1">
                     <Badge>{bytes(file.details.bytes)}</Badge>
                     <Badge>
-                      <Trans>Created </Trans>
+                      <Trans ns="offline">Created </Trans>
                       {file.details.createdAt.toLocaleDateString()}
                     </Badge>
                     <Badge>{maxZLabel(file.details)}</Badge>

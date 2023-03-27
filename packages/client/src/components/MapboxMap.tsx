@@ -125,7 +125,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                 backgroundColor: "orange",
               }}
             >
-              <Trans ns="basemaps:offline">Offline Tile Simulator Active</Trans>
+              <Trans ns="admin:offline">Offline Tile Simulator Active</Trans>
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -184,6 +184,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
               mapContext.displayedMapBookmark.errors.missingSketches.length >
                 0 ? (
                 <Trans
+                  ns="map"
                   i18nKey="missingLayerCount"
                   count={
                     (mapContext.displayedMapBookmark.errors.missingBasemap
@@ -196,7 +197,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                   }
                 />
               ) : (
-                <Trans>Map bookmark shown</Trans>
+                <Trans ns="map">Map bookmark shown</Trans>
               )}
               <button
                 className="px-1 bg-gray-100 rounded-sm shadow ml-1"
@@ -204,7 +205,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                   mapContext.manager?.undoMapBookmark();
                 }}
               >
-                <Trans>undo</Trans>
+                <Trans ns="map">undo</Trans>
               </button>
               <button
                 className="px-1 bg-gray-100 rounded-sm shadow ml-1 -mr-1.5"
@@ -214,7 +215,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                   )
                 }
               >
-                <Trans>view details</Trans>
+                <Trans ns="map">view details</Trans>
               </button>
             </motion.div>
           ) : null}

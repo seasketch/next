@@ -16,7 +16,7 @@ export default function CacheSettingsPage() {
     <div className="space-y-5">
       {online && !Boolean(user) && (
         <Warning level="info">
-          <Trans>
+          <Trans ns="offline">
             Offline cache settings can only be configured by signed in users.
             Please{" "}
             <button
@@ -47,7 +47,9 @@ export default function CacheSettingsPage() {
       )}
       {!online && Boolean(user) && (
         <Warning>
-          <Trans>These settings cannot be altered when offline.</Trans>
+          <Trans ns="offline">
+            These settings cannot be altered when offline.
+          </Trans>
         </Warning>
       )}
       {Boolean(user) && (

@@ -237,8 +237,8 @@ const Number: FormElementComponent<NumberProps, number | null> = (props) => {
   );
 };
 
-Number.label = <Trans>Number</Trans>;
-Number.description = <Trans>Single integer input</Trans>;
+Number.label = <Trans ns="admin:surveys">Number</Trans>;
+Number.description = <Trans ns="admin:surveys">Single integer input</Trans>;
 // eslint-disable-next-line i18next/no-literal-string
 Number.defaultBody = questionBodyFromMarkdown(`
 # 

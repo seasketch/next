@@ -21,7 +21,7 @@ export default function OptionalBasemapLayerEditor({
 }: {
   layerId: number;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const [mutate, mutationState] = useUpdateOptionalLayerMutation();
   const [del, deleteState] = useDeleteOptionalLayerMutation();
   const layerRequest = useGetOptionalBasemapLayerQuery({
@@ -33,8 +33,9 @@ export default function OptionalBasemapLayerEditor({
   const [layersModalOpen, setLayersModalOpen] = useState(false);
   const [optionalLayerMetadataModalOpen, setOptionalLayerMetadataModalOpen] =
     useState<number | undefined>();
-  const [currentOptionName, setCurrentOptionName] =
-    useState<string | null>(null);
+  const [currentOptionName, setCurrentOptionName] = useState<string | null>(
+    null
+  );
   const client = useApolloClient();
   const [updateOptionsMutation, updateOptionsMutationState] =
     useUpdateOptionalBasemapLayerOptionsMutation();

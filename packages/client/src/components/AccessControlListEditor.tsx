@@ -16,7 +16,7 @@ export default function AccessControlListEditor(props: {
   nodeId: string;
   legend?: string;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
 
   const [selectedGroups, setSelectedGroups] = useState<{

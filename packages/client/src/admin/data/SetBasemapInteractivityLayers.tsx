@@ -16,7 +16,7 @@ export default function SetBasemapInteractivityLayers({
   styleUrl: string;
   id: number;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const [layers, setLayers] = useState<string[]>([...initialLayers]);
   const styleRequest = useMapboxStyle(styleUrl);
   const style = styleRequest.data;

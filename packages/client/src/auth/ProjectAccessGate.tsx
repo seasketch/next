@@ -37,7 +37,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
     onError,
     fetchPolicy: "cache-and-network",
   });
-  const { t } = useTranslation();
+  const { t } = useTranslation("projectLanding");
   const [resendVerification, resendVerificationState] =
     useResendEmailVerificationMutation();
   const [showProfileForm, setShowProfileForm] = useState(false);
@@ -68,7 +68,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
     <Button
       // innerRef={initialFocusRef}
       mailTo={`support@seasketch.org`}
-      label={<Trans>Contact support</Trans>}
+      label={<Trans ns="projectLanding">Contact support</Trans>}
     />
   );
   let status: ProjectAccessStatus | null =
@@ -90,9 +90,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       return <div>{props.children}</div>;
     } else {
       icon = lockedIcon;
-      title = <Trans>Admins Only</Trans>;
+      title = <Trans ns="projectLanding">Admins Only</Trans>;
       body = (
-        <Trans>
+        <Trans ns="projectLanding">
           Access to this area of{" "}
           <b className="font-bold">{data!.projectPublicDetails!.name}</b> is
           limited to project administrators.
@@ -103,7 +103,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
           <Button
             mailTo={data!.projectPublicDetails!.supportEmail!}
             label={
-              <Trans>
+              <Trans ns="projectLanding">
                 Contact{" "}
                 {data!.projectPublicDetails!.supportEmail ||
                   "support@seasketch.org"}
@@ -126,7 +126,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                 })
               }
               primary
-              label={<Trans>Sign in</Trans>}
+              label={<Trans ns="projectLanding">Sign in</Trans>}
               buttonClassName="md:w-full"
               disabled={
                 resendVerificationState.loading ||
@@ -138,18 +138,20 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       }
     }
   } else if (error || !data) {
-    title = <Trans>Error Loading Project</Trans>;
+    title = <Trans ns="projectLanding">Error Loading Project</Trans>;
     body = error ? (
       <p>{error.message}</p>
     ) : (
-      <Trans>The API server returned null data for this project</Trans>
+      <Trans ns="projectLanding">
+        The API server returned null data for this project
+      </Trans>
     );
     buttons = contactSupport;
     icon = errorIcon;
   } else if (!data.projectPublicDetails) {
-    title = <Trans>Error Loading Project</Trans>;
+    title = <Trans ns="projectLanding">Error Loading Project</Trans>;
     body = (
-      <Trans>
+      <Trans ns="projectLanding">
         The API server did not return any public details for this project.
       </Trans>
     );
@@ -161,9 +163,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       case ProjectAccessStatus.ProjectDoesNotExist:
         icon = errorIcon;
         buttons = contactSupport;
-        title = <Trans>Project Not Found</Trans>;
+        title = <Trans ns="projectLanding">Project Not Found</Trans>;
         body = (
-          <Trans>
+          <Trans ns="projectLanding">
             SeaSketch does not have a project located at this url. Try browsing
             our{" "}
             <a className="underline text-primary-500" href="/projects">
@@ -175,9 +177,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         break;
       case ProjectAccessStatus.DeniedAdminsOnly:
         icon = lockedIcon;
-        title = <Trans>Admins Only</Trans>;
+        title = <Trans ns="projectLanding">Admins Only</Trans>;
         body = (
-          <Trans>
+          <Trans ns="projectLanding">
             Access to{" "}
             <b className="font-bold">{data.projectPublicDetails.name}</b> is
             limited to project administrators. You may contact the site support
@@ -188,7 +190,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
           <Button
             mailTo={data.projectPublicDetails.supportEmail!}
             label={
-              <Trans>
+              <Trans ns="projectLanding">
                 Contact{" "}
                 {data.projectPublicDetails.supportEmail ||
                   "support@seasketch.org"}
@@ -201,12 +203,12 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       case ProjectAccessStatus.DeniedNotApproved:
         icon = madeRequest ? sentIcon : lockedIcon;
         title = madeRequest ? (
-          <Trans>Your Request Has Been Sent</Trans>
+          <Trans ns="projectLanding">Your Request Has Been Sent</Trans>
         ) : (
-          <Trans>Request Awaiting Approval</Trans>
+          <Trans ns="projectLanding">Request Awaiting Approval</Trans>
         );
         body = (
-          <Trans>
+          <Trans ns="projectLanding">
             Your request for access to{" "}
             <b className="font-bold">{data.projectPublicDetails.name}</b> has
             been received but has not yet been approved. You may wish to follow
@@ -218,16 +220,18 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
           <Button
             mailTo={data.projectPublicDetails.supportEmail!}
             label={
-              <Trans>Contact {data.projectPublicDetails.supportEmail!}</Trans>
+              <Trans ns="projectLanding">
+                Contact {data.projectPublicDetails.supportEmail!}
+              </Trans>
             }
           />
         );
         break;
       case ProjectAccessStatus.DeniedEmailNotVerified:
         icon = lockedIcon;
-        title = <Trans>Email Not Verified</Trans>;
+        title = <Trans ns="projectLanding">Email Not Verified</Trans>;
         body = (
-          <Trans>
+          <Trans ns="projectLanding">
             You are approved to access{" "}
             <b className="font-bold">{data.projectPublicDetails.name}</b> but
             first you must verify your email address. This is to protect your
@@ -255,7 +259,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                 }
               })
             }
-            label={<Trans>Resend verification email</Trans>}
+            label={<Trans ns="projectLanding">Resend verification email</Trans>}
             disabled={
               resendVerificationState.loading ||
               resendVerificationState.data?.resendVerificationEmail.success
@@ -265,9 +269,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         break;
       case ProjectAccessStatus.DeniedNotRequested:
         icon = lockedIcon;
-        title = <Trans>Private Project</Trans>;
+        title = <Trans ns="projectLanding">Private Project</Trans>;
         body = (
-          <Trans>
+          <Trans ns="projectLanding">
             <b className="font-bold">{data.projectPublicDetails.name}</b> can
             only be accessed with an invitation. To request access, first fill
             out and share your profile with this project.
@@ -280,7 +284,11 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               // setReverseTransition(false);
               setShowProfileForm(true);
             }}
-            label={<Trans>Share Profile and Request Access</Trans>}
+            label={
+              <Trans ns="projectLanding">
+                Share Profile and Request Access
+              </Trans>
+            }
             buttonClassName="md:w-full"
             disabled={
               resendVerificationState.loading ||
@@ -291,9 +299,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         break;
       case ProjectAccessStatus.DeniedAnon:
         icon = lockedIcon;
-        title = <Trans>Private Project</Trans>;
+        title = <Trans ns="projectLanding">Private Project</Trans>;
         body = (
-          <Trans>
+          <Trans ns="projectLanding">
             <b className="font-bold">{data.projectPublicDetails.name}</b> can
             only be accessed with an invitation. Sign in or create a SeaSketch
             account to request access.
@@ -304,7 +312,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
           ProjectAccessControlSetting.AdminsOnly
         ) {
           body = (
-            <Trans>
+            <Trans ns="projectLanding">
               <b className="font-bold">{data.projectPublicDetails.name}</b> can
               only be accessed by project administrators.
             </Trans>
@@ -325,7 +333,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                 })
               }
               primary
-              label={<Trans>Sign in</Trans>}
+              label={<Trans ns="projectLanding">Sign in</Trans>}
               buttonClassName="md:w-full"
               disabled={
                 resendVerificationState.loading ||
@@ -345,7 +353,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                     },
                   })
                 }
-                label={<Trans>Create an account</Trans>}
+                label={<Trans ns="projectLanding">Create an account</Trans>}
                 buttonClassName="md:w-full"
                 disabled={
                   resendVerificationState.loading ||
@@ -495,7 +503,7 @@ export const ProfileForm = ({
   onMadeRequest: () => void;
   skipAnimation?: boolean;
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation("projectLanding");
   const onError = useGlobalErrorHandler();
   const [requestAccess] = useRequestInviteOnlyProjectAccessMutation({
     onError,
@@ -516,11 +524,11 @@ export const ProfileForm = ({
             className="text-lg leading-6 font-medium text-gray-900"
             id="modal-title"
           >
-            <Trans>User Profile</Trans>
+            <Trans ns="projectLanding">User Profile</Trans>
           </h3>
           <div className="mt-4">
             <div className="text-sm text-gray-500 mb-4">
-              <Trans>
+              <Trans ns="projectLanding">
                 Information in the profile will be included with your request
               </Trans>
             </div>
@@ -553,10 +561,12 @@ export const ProfileForm = ({
                   htmlFor="candidates"
                   className="font-medium text-gray-700"
                 >
-                  <Trans>Consent to share this personal information</Trans>
+                  <Trans ns="projectLanding">
+                    Consent to share this personal information
+                  </Trans>
                 </label>
                 <p id="candidates-description" className="text-gray-500">
-                  <Trans>
+                  <Trans ns="projectLanding">
                     I understand that this profile will be shared with project
                     admins and accompany my posts to the discussion forums.
                   </Trans>
@@ -568,7 +578,7 @@ export const ProfileForm = ({
                       className="underline text-primary-500"
                       href="/privacy-policy"
                     >
-                      <Trans>Privacy Policy</Trans>
+                      <Trans ns="projectLanding">Privacy Policy</Trans>
                     </a>
                   </p>
                 )}

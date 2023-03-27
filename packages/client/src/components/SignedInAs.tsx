@@ -10,7 +10,7 @@ export default function SignedInAs({
   className?: string;
   onClick?: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("common");
   const { user, logout } = useAuth0();
   let social: string | false = false;
   if (user?.sub) {

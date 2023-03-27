@@ -102,8 +102,8 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
   );
 };
 
-Email.label = <Trans>Email</Trans>;
-Email.description = <Trans>Validated email input</Trans>;
+Email.label = <Trans ns="admin:surveys">Email</Trans>;
+Email.description = <Trans ns="admin:surveys">Validated email input</Trans>;
 // eslint-disable-next-line i18next/no-literal-string
 Email.defaultBody = questionBodyFromMarkdown(`
 # What is your email address?

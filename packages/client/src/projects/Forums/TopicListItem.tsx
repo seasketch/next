@@ -2,13 +2,12 @@ import {
   AuthorProfileFragment,
   ForumTopicFragment,
 } from "../../generated/graphql";
-import { Trans as I18n } from "react-i18next";
+import { Trans } from "react-i18next";
 import { formatTimeAgo } from "../../admin/data/CreateBasemapModal";
 import { Link } from "react-router-dom";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import { useContext } from "react";
 import { ProjectAppSidebarContext } from "../ProjectAppSidebar";
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function TopicListItem({
   topic,
@@ -32,7 +31,7 @@ export default function TopicListItem({
               <Link to={`./${topic.forumId}/${topic.id}`}>
                 {topic.title || (
                   <span className="text-gray-500">
-                    <Trans>Untitled</Trans>
+                    <Trans ns="forums">Untitled</Trans>
                   </span>
                 )}
               </Link>
@@ -47,12 +46,12 @@ export default function TopicListItem({
               className="text-sm text-primary-800 opacity-90"
             >
               {hasReplies ? (
-                <Trans>
-                  Last reply {timeAgo}. Started by {lastAuthor}
+                <Trans i18nKey="lastReply" ns="forums">
+                  Last reply {{ timeAgo }}. Started by {{ lastAuthor }}
                 </Trans>
               ) : (
-                <Trans>
-                  Posted {timeAgo} by {lastAuthor}
+                <Trans i18nKey="postedAt" ns="forums">
+                  Posted {{ timeAgo }} by {{ lastAuthor }}
                 </Trans>
               )}
             </div>
@@ -68,7 +67,11 @@ export default function TopicListItem({
           />
           {(topic.participantCount || 0) > 1 && (
             <span>
-              <Trans i18nKey="participantCount" count={topic.participantCount}>
+              <Trans
+                i18nKey="participantCount"
+                count={topic.participantCount || 0}
+                ns="forums"
+              >
                 {{ count: topic.participantCount }} people
               </Trans>
             </span>
@@ -103,7 +106,7 @@ export function ParticipantAvatarCollection({
           />
         </div>
         {/* <div className="text-xs">
-          <Trans>1 author</Trans>
+          <Trans ns="forums">1 author</Trans>
         </div> */}
       </div>
     );

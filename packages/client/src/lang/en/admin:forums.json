@@ -1,8 +1,17 @@
 {
-  "": "",
+  "Add": "Add",
+  "Archive": "Archive",
   "Choose a name for your forum": "Choose a name for your forum",
   "Create your first Forum": "Create your first Forum",
+  "Delete": "Delete",
+  "Delete Forum": "Delete Forum",
+  "Description": "Description",
+  "Enable if you would like to disable and hide this forum. Topics and posts will not be deleted but will only be accessible to adminstrators.": "Enable if you would like to disable and hide this forum. Topics and posts will not be deleted but will only be accessible to adminstrators.",
   "Forums": "Forums",
+  "Name": "Name",
   "Permission to post": "Permission to post",
-  "Permission to read": "Permission to read"
+  "Permission to read": "Permission to read",
+  "This Forum can still be deleted since it has fewer than 10 posts. All related posts will be deleted.": "This Forum can still be deleted since it has fewer than 10 posts. All related posts will be deleted.",
+  "You can only delete forums if they have not been used to create more than 10 posts. Archive it instead if you would like to hide it.": "You can only delete forums if they have not been used to create more than 10 posts. Archive it instead if you would like to hide it.",
+  "Your project has no discussion forums configured. Forums can be used by your users to share discuss data layers and sketches.": "Your project has no discussion forums configured. Forums can be used by your users to share discuss data layers and sketches."
 }

@@ -84,7 +84,7 @@ SAPRange.defaultComponentSettings = {
 };
 
 SAPRange.label = <Trans ns="admin:surveys">SAPRange</Trans>;
-SAPRange.description = <Trans>Numeric saprange</Trans>;
+SAPRange.description = <Trans ns="admin:surveys">Numeric saprange</Trans>;
 SAPRange.defaultBody = questionBodyFromMarkdown(`
 # 
 `);

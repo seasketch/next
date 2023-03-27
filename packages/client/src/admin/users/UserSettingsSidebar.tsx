@@ -43,7 +43,7 @@ export default function UserSettingsSidebar({
   projectId?: number;
 }) {
   const { slug } = useParams<{ slug: string }>();
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin:users");
   const [inviteUsersOpen, setInviteUsersOpen] = useState(false);
   const [mutate, mutationState] = useCreateGroupMutation();
   const { prompt } = useDialog();

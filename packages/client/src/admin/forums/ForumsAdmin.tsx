@@ -1,7 +1,6 @@
-import { Trans as T, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import getSlug from "../../getSlug";
 import {
-  SketchingDetailsFragment,
   useTemplateSketchClassesQuery,
   useForumAdminListQuery,
   useCreateForumMutation,
@@ -11,24 +10,21 @@ import {
 import { useCallback, useMemo } from "react";
 import NavSidebar, { NavSidebarItem } from "../../components/NavSidebar";
 import Button from "../../components/Button";
-import { useHistory, useRouteMatch, Switch, Route } from "react-router-dom";
+import { useRouteMatch } from "react-router-dom";
 import { PlusIcon } from "@heroicons/react/outline";
 import useDialog from "../../components/useDialog";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import ForumForm from "./ForumForm";
 
-const Trans = (props: any) => <T ns="admin:forums" {...props} />;
-
 export default function ForumsAdmin() {
   const { t } = useTranslation("admin:forums");
-  const { path, params } = useRouteMatch<{ id?: string }>();
+  const { params } = useRouteMatch<{ id?: string }>();
   const slug = getSlug();
   const { data, loading } = useForumAdminListQuery({
     variables: {
       slug,
     },
   });
-  const history = useHistory();
   const onError = useGlobalErrorHandler();
   const [create] = useCreateForumMutation({
     onError,
@@ -125,7 +121,7 @@ export default function ForumsAdmin() {
             small
             label={
               <>
-                <Trans>Add</Trans>
+                {t("Add")}
                 <PlusIcon className="w-4 h-4 ml-2" />
               </>
             }
@@ -137,11 +133,9 @@ export default function ForumsAdmin() {
         <div className="items-center flex-1 px-2">
           <div className="max-w-xl  rounded mx-auto mt-10 p-4 border-4 border-dashed">
             <h2 className="text-base mb-2">
-              <Trans>
-                Your project has no discussion forums configured. Forums can be
-                used by your users to share and discuss data layers and
-                sketches.
-              </Trans>
+              {t(
+                `Your project has no discussion forums configured. Forums can be used by your users to share discuss data layers and sketches.`
+              )}
             </h2>
             <Button
               label={t("Create your first Forum")}

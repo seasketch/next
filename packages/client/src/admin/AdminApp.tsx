@@ -84,7 +84,7 @@ export default function AdminApp() {
   const { alert } = useDialog();
 
   const history = useHistory();
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
 
   useEffect(() => {
     if (
@@ -441,7 +441,7 @@ function SidebarContents(props: {
   sections: Section[];
 }) {
   const cache = useContext(GraphqlQueryCacheContext);
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const { user, logout } = useAuth0();
   let social: string | false = false;
   if (user && user.sub) {

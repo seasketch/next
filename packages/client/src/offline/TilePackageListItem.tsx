@@ -5,17 +5,13 @@ import {
   OfflineTilePackageDetailsFragment,
   OfflineTilePackageSourceType,
   OfflineTilePackageStatus,
-  useDeleteTilePackageMutation,
   useGetTilePackageLazyQuery,
 } from "../generated/graphql";
-import { Trans as T } from "react-i18next";
-import { useCallback, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { ExclamationCircleIcon } from "@heroicons/react/solid";
-import Button from "../components/Button";
 import { useDelete } from "../graphqlHookWrappers";
 import useDialog from "../components/useDialog";
-
-const Trans = (props: any) => <T ns="admin:offline" {...props} />;
+import { Trans } from "react-i18next";
 
 export default function TilePackageListItem({
   pkg,
@@ -118,7 +114,7 @@ export default function TilePackageListItem({
                   }}
                   className="p-0 border rounded px-1 shadow-sm"
                 >
-                  <Trans>delete</Trans>
+                  <Trans ns="admin:offline">delete</Trans>
                 </button>
               </p>
             }
@@ -187,7 +183,7 @@ function Icon({
         </svg>
       )}
       <span>
-        <Trans>
+        <Trans ns="admin:offline">
           {type === OfflineTilePackageSourceType.RasterDem
             ? "dem"
             : type.toString().toLowerCase()}

@@ -9,7 +9,7 @@ import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 export default function Header() {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
-  const { t } = useTranslation(["nav"]);
+  const { t } = useTranslation("nav");
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const currentProjectQuery = useCurrentProjectMetadata();
 

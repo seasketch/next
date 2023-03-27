@@ -105,7 +105,7 @@ const Rating: FormElementComponent<RatingProps, number> = (props) => {
 };
 
 Rating.label = <Trans ns="admin:surveys">Rating</Trans>;
-Rating.description = <Trans>Numeric rating</Trans>;
+Rating.description = <Trans ns="admin:surveys">Numeric rating</Trans>;
 Rating.defaultBody = questionBodyFromMarkdown(`
 # 
 `);

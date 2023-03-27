@@ -12,7 +12,7 @@ import FeaturedProjectItem from "./FeaturedProjectItem";
 const LIST_SIZE = 12;
 
 export default function ProjectsPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation("frontpage");
 
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);

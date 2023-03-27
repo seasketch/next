@@ -263,7 +263,7 @@ function ClientCacheDetailsModal({
     <Modal
       onRequestClose={onRequestClose}
       loading={loading}
-      title={<Trans>Cache Status</Trans>}
+      title={<Trans ns="cache-settings">Cache Status</Trans>}
     >
       {stats && (
         <div className="space-y-4">

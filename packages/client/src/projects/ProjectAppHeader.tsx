@@ -5,7 +5,7 @@ import ProfileControl from "../header/ProfileControl";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 export default function ProjectAppHeader() {
-  const { t, i18n } = useTranslation(["nav"]);
+  const { t, i18n } = useTranslation("nav");
   const { data, loading, error } = useCurrentProjectMetadata();
 
   let logo: ReactNode | null = null;

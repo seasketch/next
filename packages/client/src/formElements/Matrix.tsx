@@ -24,7 +24,6 @@ export type MatrixValue = {
 };
 
 const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
-  const { t } = useTranslation("surveys");
   const context = useContext(SurveyContext);
   const { isSmall } = useContext(SurveyStyleContext);
   const options = useLocalizedComponentSetting(
@@ -197,7 +196,9 @@ function validate(
 }
 
 Matrix.label = <Trans ns="admin:surveys">Matrix</Trans>;
-Matrix.description = <Trans>Choose values for multiple items</Trans>;
+Matrix.description = (
+  <Trans ns="admin:surveys">Choose values for multiple items</Trans>
+);
 Matrix.defaultBody = questionBodyFromMarkdown(`
 # 
 `);

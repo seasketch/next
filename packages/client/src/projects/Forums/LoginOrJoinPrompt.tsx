@@ -1,5 +1,5 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { Trans as I18n } from "react-i18next";
+import { Trans } from "react-i18next";
 import JoinProjectPrompt from "../../auth/JoinProjectPrompt";
 import Warning from "../../components/Warning";
 import {
@@ -8,8 +8,6 @@ import {
 } from "../../generated/graphql";
 import getSlug from "../../getSlug";
 import SignInPrompt from "./SignInPrompt";
-
-const Trans = (props: any) => <I18n ns="forums" {...props} />;
 
 export default function LoginOrJoinPrompt({
   className,
@@ -47,7 +45,7 @@ export default function LoginOrJoinPrompt({
             return (
               <div className={containerClassName}>
                 <Warning level="info">
-                  <Trans>
+                  <Trans ns="forums">
                     Your participation in the forum is pending admin approval.
                   </Trans>
                 </Warning>

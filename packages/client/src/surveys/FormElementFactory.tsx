@@ -33,7 +33,7 @@ export default function FormElementFactory({
     );
   } else {
     return (
-      <Trans values={{ typeName }} ns="errors">
+      <Trans values={{ typeName }} ns="admin">
         Missing form element type {{ typeName }}
       </Trans>
     );

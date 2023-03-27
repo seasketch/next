@@ -12,7 +12,7 @@ export default function ErrorBoundaryFallback({
     <div className="w-full h-full flex justify-center align-middle">
       <div className="flex justify-center align-middle flex-col items-center p-4 text-red-800 text-center">
         <ExclamationIcon className="w-10 h-10 block " />
-        {title || <Trans>Failed to render component</Trans>}
+        {title || <Trans ns="admin">Failed to render component</Trans>}
       </div>
     </div>
   );

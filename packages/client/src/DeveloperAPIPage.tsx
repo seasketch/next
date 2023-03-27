@@ -14,10 +14,10 @@ export default function DeveloperApiPage() {
           <div className="px-4 sm:px-6 sm:text-center md:max-w-2xl md:mx-auto lg:pl-8 lg:col-span-6 lg:text-left lg:flex lg:items-center">
             <div>
               <h2 className="mt-4 text-4xl tracking-tight leading-10 font-extrabold text-white sm:mt-5 sm:leading-none sm:text-6xl lg:mt-6 lg:text-5xl xl:text-6xl">
-                <Trans>Developer API</Trans>
+                <Trans ns="frontpage">Developer API</Trans>
               </h2>
               <p className="mt-3 text-base text-gray-300 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
-                <Trans>
+                <Trans ns="frontpage">
                   SeaSketch projects can be customized using our open-source{" "}
                   <a
                     target="_blank"

@@ -25,7 +25,7 @@ export const HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY =
 
 export default function JoinProject() {
   const { slug } = useParams<{ slug: string }>();
-  const { t } = useTranslation();
+  const { t } = useTranslation("joinProjectPage");
   const history = useHistory();
   const { data, loading } = useProjectMetadataQuery({
     variables: {
@@ -120,7 +120,7 @@ export default function JoinProject() {
   }
 
   if (!data.projectPublicDetails) {
-    return <Trans>Project not found</Trans>;
+    return <Trans ns="joinProjectPage">Project not found</Trans>;
   }
 
   return (
@@ -138,10 +138,10 @@ export default function JoinProject() {
       <div className="lg:flex lg:space-x-5 justify-center mx-auto px-0 sm:px-8 ">
         <div className="w-full lg:w-144 space-y-2 mb-5 lg:mb-0 px-4 sm:px-0">
           <h1 className="text-xl md:text-2xl font-semibold">
-            <Trans>Join this Project</Trans>
+            <Trans ns="joinProjectPage">Join this Project</Trans>
           </h1>
           <p>
-            <Trans>
+            <Trans ns="joinProjectPage">
               By becoming a participant you will gain access to features such as
               the discussion forums and your account can be given access to
               secure data layers. To join, we need your consent to share a user
@@ -149,13 +149,13 @@ export default function JoinProject() {
             </Trans>
           </p>
           <h3 className="font-semibold text-lg">
-            <Trans>How will my profile be used?</Trans>
+            <Trans ns="joinProjectPage">How will my profile be used?</Trans>
           </h3>
           <ul className="list-decimal">
             <li className="flex space-x-3 py-2">
               <IdentificationIcon className="w-8 h-8 text-gray-600" />
               <span className="flex-1">
-                <Trans>
+                <Trans ns="joinProjectPage">
                   Administrators will see you in a list of participants so that
                   can approve access to discussion groups and protected data
                   layers. They may also see activity summaries about
@@ -169,7 +169,7 @@ export default function JoinProject() {
             <li className="flex space-x-3 py-2">
               <ChatAlt2Icon className="w-8 h-8 text-gray-600" />
               <span className="flex-1">
-                <Trans>
+                <Trans ns="joinProjectPage">
                   If you reply to topics in the discussion forums, your profile
                   will be shared to identify the author.
                 </Trans>
@@ -180,7 +180,7 @@ export default function JoinProject() {
               <li className="flex space-x-3 py-2">
                 <DocumentTextIcon className="w-8 h-8 text-gray-600" />
                 <span className="flex-1">
-                  <Trans>
+                  <Trans ns="joinProjectPage">
                     This project's{" "}
                     <a
                       target="_blank"
@@ -197,7 +197,7 @@ export default function JoinProject() {
             )}
           </ul>
           <p className="pb-2">
-            <Trans>
+            <Trans ns="joinProjectPage">
               By joining this project you are consenting to these uses of your
               personal data. Joining is optional but access to certain features
               and data may be limited otherwise. If you have any questions,
@@ -212,7 +212,7 @@ export default function JoinProject() {
           </p>
           {data.project?.sessionHasPrivilegedAccess && (
             <Warning level="info" className="mx-auto">
-              <Trans>
+              <Trans ns="joinProjectPage">
                 Your account has been granted access to restricted content on
                 this project. These privileges will not be active until you join
                 as a participant.
@@ -222,7 +222,7 @@ export default function JoinProject() {
         </div>
         <div className="bg-white sm:rounded-lg rounded-t-lg shadow-xl w-full sm:mx-auto lg:w-128 p-5 space-y-3">
           <h2 className="text-lg">
-            <Trans>Your Profile</Trans>
+            <Trans ns="joinProjectPage">Your Profile</Trans>
           </h2>
           <UserProfileForm
             showValidationErrors={submissionAttempted}
@@ -251,7 +251,7 @@ export default function JoinProject() {
                 "opacity-50"
               }`}
             >
-              <Trans>Join Project</Trans>
+              <Trans ns="joinProjectPage">Join Project</Trans>
             </button>
             <button
               disabled={
@@ -273,7 +273,7 @@ export default function JoinProject() {
                 }
               }}
             >
-              <Trans>Skip for now</Trans>
+              <Trans ns="joinProjectPage">Skip for now</Trans>
             </button>
           </div>
         </div>

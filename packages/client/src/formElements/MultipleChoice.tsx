@@ -150,7 +150,9 @@ const MultipleChoice: FormElementComponent<
 };
 
 MultipleChoice.label = <Trans ns="admin:surveys">Multiple Choice</Trans>;
-MultipleChoice.description = <Trans>Choose one or more values</Trans>;
+MultipleChoice.description = (
+  <Trans ns="admin:surveys">Choose one or more values</Trans>
+);
 MultipleChoice.defaultBody = questionBodyFromMarkdown(`
 # 
 `);

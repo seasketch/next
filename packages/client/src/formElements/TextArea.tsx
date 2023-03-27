@@ -101,7 +101,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
 };
 
 TextArea.label = <Trans ns="admin:surveys">Text Area</Trans>;
-TextArea.description = <Trans>Longer text input</Trans>;
+TextArea.description = <Trans ns="admin:surveys">Longer text input</Trans>;
 TextArea.defaultBody = questionBodyFromMarkdown(`
 # 
 `);

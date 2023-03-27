@@ -361,8 +361,8 @@ Consent.defaultComponentSettings = {
 Consent.defaultExportId = "consent";
 Consent.defaultIsRequired = true;
 
-Consent.label = <Trans>Consent</Trans>;
-Consent.description = <Trans>Data sharing agreement</Trans>;
+Consent.label = <Trans ns="admin:surveys">Consent</Trans>;
+Consent.description = <Trans ns="admin:surveys">Data sharing agreement</Trans>;
 // eslint-disable-next-line i18next/no-literal-string
 Consent.defaultBody = questionBodyFromMarkdown(`
 # Informed Consent

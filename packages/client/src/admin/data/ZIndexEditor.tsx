@@ -21,7 +21,7 @@ interface ZIndexEditorProps {
 }
 
 export default function ZIndexEditor(props: ZIndexEditorProps) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const [treeState, setTreeState] = useState<TreeItem[]>();
   const [expandedItems, setExpandedItems] = useState<(number | string)[]>([]);
   const client = useApolloClient();

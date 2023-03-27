@@ -25,16 +25,19 @@ interface UserProfileFormProps {
   showValidationErrors: boolean;
 }
 
-function validateProps(state: ProfileProps, t: (s: string) => string) {
+function validateProps(
+  state: ProfileProps,
+  t: (s: string, opts?: { ns: string }) => string
+) {
   let errors: { fullname?: string } = {};
   if (!state.fullname || state.fullname.length < 1) {
-    errors.fullname = t("Required");
+    errors.fullname = t("Required", { ns: "userProfile" });
   }
   return errors;
 }
 
 export default function UserProfileForm(props: UserProfileFormProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("userProfile");
 
   const onChange = useCallback(
     (fn: (prev: ProfileProps) => ProfileProps) => {
@@ -55,15 +58,15 @@ export default function UserProfileForm(props: UserProfileFormProps) {
         onChange={(fullname) => onChange((prev) => ({ ...prev, fullname }))}
         error={props.showValidationErrors ? errors.fullname : undefined}
         value={props.state.fullname || ""}
-        label={<Trans>Full Name</Trans>}
+        label={<Trans ns="userProfile">Full Name</Trans>}
       />
       <TextInput
         name="nickname"
         onChange={(nickname) => onChange((prev) => ({ ...prev, nickname }))}
         value={props.state.nickname || ""}
-        label={<Trans>Nickname</Trans>}
+        label={<Trans ns="userProfile">Nickname</Trans>}
         description={
-          <Trans>
+          <Trans ns="userProfile">
             Shown as your primary username in discussion forums if provided.
           </Trans>
         }
@@ -73,11 +76,11 @@ export default function UserProfileForm(props: UserProfileFormProps) {
         onChange={(email) => onChange((prev) => ({ ...prev, email }))}
         value={props.state.email || ""}
         description={
-          <Trans>
+          <Trans ns="userProfile">
             Also included in your discussion forum profile (optional).
           </Trans>
         }
-        label={<Trans>Email Address</Trans>}
+        label={<Trans ns="userProfile">Email Address</Trans>}
       />
       <ProfileAvatarUploader />
       <TextInput
@@ -88,7 +91,7 @@ export default function UserProfileForm(props: UserProfileFormProps) {
         }
         value={props.state.affiliations || ""}
         placeholder="e.g. University of California Santa Barbara"
-        label={<Trans>Affiliations and Bio</Trans>}
+        label={<Trans ns="userProfile">Affiliations and Bio</Trans>}
       />
     </div>
   );

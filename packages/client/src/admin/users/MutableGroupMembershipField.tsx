@@ -18,7 +18,7 @@ export default function MutableGroupMembershipField({
   allGroups,
   userGroups,
 }: MutableGroupMembershipFieldProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("admin:users");
   const [setUserGroups, setUserGroupsMutationState] = useSetUserGroupsMutation({
     refetchQueries: ["UserAdminCounts", "GroupMembers"],
     update: (cache, result) => {

@@ -10,7 +10,7 @@ import { Feature, Point, FeatureCollection } from "geojson";
 import Spinner from "../../components/Spinner";
 
 function DataBucketSettings(props: { className?: string }) {
-  const { t, i18n } = useTranslation(["admin"]);
+  const { t, i18n } = useTranslation("admin");
   const [map, setMap] = useState<Map | null>(null);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const { slug } = useParams<{ slug: string }>();

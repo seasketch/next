@@ -55,7 +55,7 @@ export default function FullScreenOfflineNavigation() {
             SeaSketch is Offline
           </div>
           <p className="text-gray-800 text-sm mt-5">
-            <Trans>
+            <Trans ns="offline">
               It appears you don't have connection to the internet. SeaSketch
               supports offline use for the collection of survey data which you
               can submit when back online. If you don't see the project or
@@ -88,7 +88,7 @@ export default function FullScreenOfflineNavigation() {
             ))}
           </div>
           <p className="mt-5 mb-2 text-sm text-gray-500">
-            <Trans>
+            <Trans ns="offline">
               If you are online and SeaSketch is incorrect about your network
               connection, you can{" "}
               <button onClick={dismiss} className="underline">

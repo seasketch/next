@@ -118,10 +118,10 @@ export default function BookmarkItem({
       {!editable && status === WorkerJobStatus.Failed && (
         <div className="text-xs text-gray-600 flex-col flex">
           <span className="font-bold">
-            <Trans>Map Bookmark</Trans>
+            <Trans ns="mapBookmarks">Map Bookmark</Trans>
           </span>
           <span style={{ fontSize: 10 }}>
-            <Trans>preview unavailable</Trans>
+            <Trans ns="mapBookmarks">preview unavailable</Trans>
           </span>
         </div>
       )}
@@ -131,12 +131,12 @@ export default function BookmarkItem({
           <span className="text-xs mt-1 text-gray-400">
             {job?.lastError ? (
               status === WorkerJobStatus.Failed ? (
-                <Trans>screenshot failed</Trans>
+                <Trans ns="mapBookmarks">screenshot failed</Trans>
               ) : (
-                <Trans>screenshot error</Trans>
+                <Trans ns="mapBookmarks">screenshot error</Trans>
               )
             ) : (
-              <Trans>creating preview</Trans>
+              <Trans ns="mapBookmarks">creating preview</Trans>
             )}
           </span>
           {job?.lastError && (
@@ -151,11 +151,11 @@ export default function BookmarkItem({
               {job?.attempts &&
               job?.maxAttempts &&
               status !== WorkerJobStatus.Failed ? (
-                <Trans>
+                <Trans ns="mapBookmarks">
                   attempt {{ attempt: job.attempts }}/{{ of: job.maxAttempts }}
                 </Trans>
               ) : (
-                <Trans>show details</Trans>
+                <Trans ns="mapBookmarks">show details</Trans>
               )}
             </button>
           )}

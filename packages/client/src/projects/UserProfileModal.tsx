@@ -7,7 +7,7 @@ export default function UserProfileModal({
 }: {
   onRequestClose: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("userProfile");
   const profile = useUserProfileState();
   return (
     <Modal

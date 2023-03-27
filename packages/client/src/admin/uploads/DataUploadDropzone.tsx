@@ -24,7 +24,7 @@ import {
   ProjectDataQuotaRemainingDocument,
   SubmitDataUploadMutation,
 } from "../../generated/graphql";
-import { Trans as T, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import Spinner from "../../components/Spinner";
 import { ExclamationCircleIcon } from "@heroicons/react/outline";
@@ -38,8 +38,6 @@ import debounce from "lodash.debounce";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useDialog from "../../components/useDialog";
-
-const Trans = (props: any) => <T ns="admin:data" {...props} />;
 
 export const DataUploadDropzoneContext = createContext<{
   uploads: DataUploadDetailsFragment[];
@@ -110,7 +108,7 @@ export default function DataUploadDropzone({
         manager.destroy();
       };
     }
-  }, [client, slug, projectId, mapContext.manager]);
+  }, [client, slug, projectId, mapContext.manager, alert, onError, t]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -165,19 +163,16 @@ export default function DataUploadDropzone({
               <div className="absolute top-0 left-0 w-full h-full z-50 flex items-center justify-center bg-black bg-opacity-20 pointer-events-none">
                 <div className="bg-white rounded p-4 shadow pointer-events-none text-center max-w-lg">
                   <h4 className="font-semibold">
-                    <Trans>Drop Files Here to Upload</Trans>
+                    {t("Drop Files Here to Upload")}
                   </h4>
                   <p className="text-sm">
-                    <Trans>
-                      SeaSketch currently supports vector data in GeoJSON,
-                      Shapefile (zipped), and FlatGeobuf formats.
-                    </Trans>
+                    {t(
+                      "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), and FlatGeobuf formats."
+                    )}
                   </p>
                   {Boolean(state.droppedFiles) && !state.error && (
                     <div className="text-sm flex items-center text-center w-full justify-center space-x-2 mt-2">
-                      <span>
-                        <Trans>Starting upload</Trans>
-                      </span>
+                      <span>{t("Starting upload")}</span>
                       <Spinner />
                     </div>
                   )}

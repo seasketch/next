@@ -509,7 +509,7 @@ export default function LogicRuleEditor({
         </>
       ) : (
         <p className="px-2 text-sm text-gray-500">
-          <Trans ns="surveys:admin">
+          <Trans ns="admin:surveys">
             This form element type does not support conditional logic.
           </Trans>
         </p>

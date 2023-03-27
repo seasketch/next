@@ -156,7 +156,9 @@ export default function PreprocessorInput({
             className="hover:shadow rounded p-4 text-sm border shadow-sm w-full text-left text-gray-500 flex items-center"
           >
             <span className="flex-1">
-              <Trans>Specify a preprocessing service</Trans>
+              <Trans ns="admin:sketching">
+                Specify a preprocessing service
+              </Trans>
             </span>
             <ChevronRightIcon className="w-6 h-6 text-gray-400" />
           </button>
@@ -185,16 +187,20 @@ export default function PreprocessorInput({
           <Modal
             autoWidth
             onRequestClose={onRequestClose}
-            // title={<Trans>Choose a processing function</Trans>}
+            // title={<Trans ns="admin:sketching">Choose a processing function</Trans>}
             footer={[
               {
-                label: <Trans>Cancel</Trans>,
+                label: <Trans ns="admin:sketching">Cancel</Trans>,
                 onClick: onRequestClose,
               },
               ...(sketchClass.preprocessingEndpoint
                 ? [
                     {
-                      label: <Trans>Remove Service Configuration</Trans>,
+                      label: (
+                        <Trans ns="admin:sketching">
+                          Remove Service Configuration
+                        </Trans>
+                      ),
                       loading: mutationState.loading,
                       onClick: async () => {
                         await mutate({

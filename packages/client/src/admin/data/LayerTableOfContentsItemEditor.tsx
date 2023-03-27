@@ -45,7 +45,7 @@ interface LayerTableOfContentsItemEditorProps {
 export default function LayerTableOfContentsItemEditor(
   props: LayerTableOfContentsItemEditorProps
 ) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const { data } = useGetLayerItemQuery({
     variables: {
       id: props.itemId,

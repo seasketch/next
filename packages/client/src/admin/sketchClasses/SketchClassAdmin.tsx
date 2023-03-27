@@ -1,4 +1,4 @@
-import { Trans as T, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import getSlug from "../../getSlug";
 import {
   SketchingDetailsFragment,
@@ -12,8 +12,6 @@ import Button from "../../components/Button";
 import { useHistory, useRouteMatch, Switch, Route } from "react-router-dom";
 import { PlusIcon } from "@heroicons/react/outline";
 import SketchClassForm from "./SketchClassForm";
-
-const Trans = (props: any) => <T ns="admin:sketching" {...props} />;
 
 export default function SketchClassAdmin() {
   const { t } = useTranslation("admin:sketching");
@@ -66,7 +64,7 @@ export default function SketchClassAdmin() {
           <div className="items-center flex-1">
             <div className="max-w-xl  rounded mx-auto mt-10 p-4">
               <h2 className="text-lg font-semibold mb-2">
-                <Trans>Create a new Sketch Class</Trans>
+                {t("Create a new Sketch Class")}
               </h2>
               <TemplateChooser onCreate={onCreate} />
               <Button
@@ -101,7 +99,7 @@ export default function SketchClassAdmin() {
                         href={`/${getSlug()}/admin/sketching/new`}
                         label={
                           <>
-                            <Trans>Add</Trans>
+                            {t("Add")}
                             <PlusIcon className="w-4 h-4 ml-2" />
                           </>
                         }
@@ -115,7 +113,7 @@ export default function SketchClassAdmin() {
                     <div className="items-center flex-1">
                       <div className="max-w-xl  rounded mx-auto mt-10 p-4">
                         <h2 className="text-lg font-semibold mb-2">
-                          <Trans>Create your first Sketch Class</Trans>
+                          {t("Create your first Sketch Class")}
                         </h2>
                         <TemplateChooser onCreate={onCreate} />
                       </div>

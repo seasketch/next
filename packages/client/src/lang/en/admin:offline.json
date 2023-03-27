@@ -1,3 +1,17 @@
 {
-  "": ""
+  "": "",
+  "Custom tiling settings ": "Custom tiling settings ",
+  "Default tiling settings ": "Default tiling settings ",
+  "Map data used in surveys used offline will need to be downloaded on each machine to be used in the field. Online maps may consist of millions of tiles and hundreds of gigabytes of data. Using the setting below, administrators can specify a subset of the map data that is feasible to download for offline use. This feature currently support vector and raster tiles hosted on Mapbox.": "Map data used in surveys used offline will need to be downloaded on each machine to be used in the field. Online maps may consist of millions of tiles and hundreds of gigabytes of data. Using the setting below, administrators can specify a subset of the map data that is feasible to download for offline use. This feature currently support vector and raster tiles hosted on Mapbox.",
+  "Offline Settings": "Offline Settings",
+  "Offline Tile Simulator Active": "Offline Tile Simulator Active",
+  "Only supported for Mapbox-hosted basemaps currently.": "Only supported for Mapbox-hosted basemaps currently.",
+  "Source types": "Source types",
+  "Survey Maps": "Survey Maps",
+  "Surveys": "Surveys",
+  "Tile Packages": "Tile Packages",
+  "Tile packages contain map tiles and can be downloaded by end-users to populate an offline cache. Tile Package generation happens on the SeaSketch servers, so feel free to leave the site and come back to check on this process.": "Tile packages contain map tiles and can be downloaded by end-users to populate an offline cache. Tile Package generation happens on the SeaSketch servers, so feel free to leave the site and come back to check on this process.",
+  "Used in ": "Used in ",
+  "configure": "configure",
+  "delete": "delete"
 }

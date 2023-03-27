@@ -6,7 +6,7 @@ import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphq
 
 export default function ProfileContextMenu(props?: { itemClassName?: string }) {
   const { user, logout } = useAuth0();
-  const { t, i18n } = useTranslation(["nav"]);
+  const { t, i18n } = useTranslation("nav");
   const cache = useContext(GraphqlQueryCacheContext);
   if (!user) {
     return null;

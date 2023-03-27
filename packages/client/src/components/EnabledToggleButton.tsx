@@ -23,7 +23,11 @@ export default function EnabledToggleButton({
             type="checkbox"
             checked={enabled}
           />
-          {enabled ? <Trans>Enabled</Trans> : <Trans>Disabled</Trans>}
+          {enabled ? (
+            <Trans ns="common">Enabled</Trans>
+          ) : (
+            <Trans ns="common">Disabled</Trans>
+          )}
         </span>
       }
     ></Button>

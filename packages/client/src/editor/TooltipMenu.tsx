@@ -125,7 +125,10 @@ const Commands: Command[] = [
       const links = getActiveLinks(state);
       const existingUrl =
         links && links.length ? links[0]?.attrs?.href : "https://";
-      const url = window.prompt(t("Enter a URL"), existingUrl);
+      const url = window.prompt(
+        t("Enter a URL", { ns: "common" }),
+        existingUrl
+      );
       if (url === null || url === existingUrl) {
         return;
       } else {

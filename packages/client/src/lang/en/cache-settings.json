@@ -1,5 +1,6 @@
 {
   "Cache Details": "Cache Details",
+  "Cache Status": "Cache Status",
   "Caches more data and preloads assets for better performance. Supports offline use.": "Caches more data and preloads assets for better performance. Supports offline use.",
   "Data Caching": "Data Caching",
   "Default": "Default",

@@ -2,7 +2,7 @@ import { ExternalLinkIcon } from "@heroicons/react/outline";
 import { CheckCircleIcon, CogIcon } from "@heroicons/react/solid";
 import bytes from "bytes";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Trans as T, useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
@@ -22,12 +22,6 @@ import isGoogleChrome from "./isGoogleChrome";
 import useBasemapsBySurvey, {
   BasemapDetailsAndClientCacheStatus,
 } from "./useBasemapsBySurvey";
-
-const Trans = (props: any) => (
-  <T ns="offline" {...props}>
-    {props.children}
-  </T>
-);
 
 export default function OfflineSurveySelection({
   className,
@@ -81,7 +75,7 @@ export default function OfflineSurveySelection({
       </p>
       {!isGoogleChrome && (
         <Warning>
-          <Trans>
+          <Trans ns="offline">
             Offline functionality is only supported using Google Chrome. Other
             browsers have restrictions that prevent the caching of large amounts
             of map data, and may have other problems.
@@ -241,7 +235,7 @@ export default function OfflineSurveySelection({
           {surveyBasemaps.map(({ surveys, id, basemaps }) => (
             <div key={id}>
               <h4 className="truncate font-semibold text-sm py-4">
-                <Trans>Used in </Trans>
+                <Trans ns="offline">Used in </Trans>
                 {surveys.join(", ")}
               </h4>
               <div className="space-y-2">
@@ -258,7 +252,7 @@ export default function OfflineSurveySelection({
           {surveyBasemaps.length > 0 && (
             <div className="text-sm p-2 rounded bg-gray-100 my-4 flex items-center">
               <div className="px-2">
-                <Trans>
+                <Trans ns="offline">
                   You can also prepare offline maps using mbtiles packages
                   provided by an admin.
                 </Trans>
@@ -291,7 +285,7 @@ export default function OfflineSurveySelection({
                   <path d="M64.603 35.504a2.777 2.777 0 00-2.774-2.72c-.047 0-.091.012-.138.014h-2.039V17.774a1.687 1.687 0 00-1.684-1.684H41.765v.03a1.681 1.681 0 00-1.386 1.654v15.022h-2.052c-.043-.002-.083-.013-.126-.013a2.776 2.776 0 00-2.774 2.72h-.036v45.625h.001a2.782 2.782 0 002.78 2.781l.014-.001h23.643a2.78 2.78 0 002.78-2.779V35.504h-.006zm-9.938-2.706h-9.329v-11.72h9.329v11.72z"></path>
                   <path d="M47.506 27.933h4.988v2.072h-4.988z"></path>
                 </svg>
-                <Trans>Select files</Trans>
+                <Trans ns="offline">Select files</Trans>
               </label>
             </div>
           )}
@@ -338,17 +332,17 @@ function MapItem({
           <>
             {map.cacheState.state === "complete" && (
               <Badge variant="primary">
-                <Trans>Ready for offline use</Trans>
+                <Trans ns="offline">Ready for offline use</Trans>
               </Badge>
             )}
             {map.cacheState.state === "incomplete" && (
               <Badge variant="warning">
-                <Trans>Not cached</Trans>
+                <Trans ns="offline">Not cached</Trans>
               </Badge>
             )}
             {map.cacheState.state === "has-updates" && (
               <Badge variant="warning">
-                <Trans>Update available</Trans>
+                <Trans ns="offline">Update available</Trans>
               </Badge>
             )}
           </>
@@ -390,9 +384,9 @@ function MapItem({
                 small
                 label={
                   map.cacheState.state === "incomplete" ? (
-                    <Trans>Download</Trans>
+                    <Trans ns="offline">Download</Trans>
                   ) : (
-                    <Trans>Update</Trans>
+                    <Trans ns="offline">Update</Trans>
                   )
                 }
                 onClick={() => onDownloadClick(map.id)}

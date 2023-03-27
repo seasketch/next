@@ -3,7 +3,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { CheckIcon } from "@heroicons/react/outline";
 import { CheckCircleIcon } from "@heroicons/react/solid";
 import { useCallback, useContext, useMemo, useState } from "react";
-import { Trans as T } from "react-i18next";
+import { Trans } from "react-i18next";
 import { Link } from "react-router-dom";
 import Button from "../components/Button";
 import CenteredCardListLayout, {
@@ -21,12 +21,6 @@ import {
 import { OfflineStateContext } from "./OfflineStateContext";
 import useOfflineSurveyResponses from "./useOfflineSurveyResponses";
 
-const Trans = (props: any) => (
-  <T ns="offline" {...props}>
-    {props.children}
-  </T>
-);
-
 export default function SubmitOfflineResponsesPage() {
   const { online } = useContext(OfflineStateContext);
   const { responses, removeResponse } = useOfflineSurveyResponses();
@@ -42,12 +36,12 @@ export default function SubmitOfflineResponsesPage() {
     responses: 0,
     projects: [],
   });
-  const { data, loading, error } = useSurveysByIdQuery({
+  const { data, loading } = useSurveysByIdQuery({
     variables: {
       surveyIds: [...responses.map((r) => r.surveyId)],
     },
   });
-  const { user, logout, loginWithRedirect } = useAuth0();
+  const { logout, loginWithRedirect } = useAuth0();
   const [mutate, mutationState] = useCreateResponseMutation();
 
   const responsesByProject = useMemo(() => {
@@ -146,17 +140,21 @@ export default function SubmitOfflineResponsesPage() {
       <Card>
         <Header>
           {responses.length !== 0 ? (
-            <T i18nKey="SubmitResponsesTitle" count={responses.length}>
+            <Trans
+              ns="offline"
+              i18nKey="SubmitResponsesTitle"
+              count={responses.length}
+            >
               Submit {{ count: responses.length }} Offline Survey Response
-            </T>
+            </Trans>
           ) : (
-            <Trans>Submit Offline Survey Responses</Trans>
+            <Trans ns="offline">Submit Offline Survey Responses</Trans>
           )}
         </Header>
         {online && (
           <>
             <p className="text-sm text-gray-500 mt-1">
-              <Trans>
+              <Trans ns="offline">
                 Survey responses collected while offline are stored in your
                 browser cache and can be submitted to the SeaSketch server now
                 that you are online.{" "}
@@ -166,7 +164,7 @@ export default function SubmitOfflineResponsesPage() {
               data?.me &&
               (responses.length > 0 || submissionDetails.responses > 0) && (
                 <p className="text-sm text-gray-500 mt-1">
-                  <Trans>
+                  <Trans ns="offline">
                     Responses you submit will be associated with the account
                     listed below. If this is not correct, please{" "}
                     <button
@@ -193,7 +191,7 @@ export default function SubmitOfflineResponsesPage() {
         )}
         {!online && (
           <Warning>
-            <Trans>
+            <Trans ns="offline">
               You will need to be connected to the internet to submit survey
               responses.
             </Trans>
@@ -208,7 +206,7 @@ export default function SubmitOfflineResponsesPage() {
           <>
             {online && !data?.me && (
               <Warning>
-                <Trans>
+                <Trans ns="offline">
                   You will need to be signed in before submitting survey
                   responses.
                 </Trans>
@@ -243,7 +241,7 @@ export default function SubmitOfflineResponsesPage() {
                         });
                       }}
                       buttonClassName="text-base"
-                      label={<Trans>Sign In</Trans>}
+                      label={<Trans ns="offline">Sign In</Trans>}
                     />
                   )}
                 </div>
@@ -277,7 +275,7 @@ export default function SubmitOfflineResponsesPage() {
                   loading={mutationState.loading}
                   disabled={mutationState.loading}
                   primary
-                  label={<Trans>Submit Responses</Trans>}
+                  label={<Trans ns="offline">Submit Responses</Trans>}
                 />
               </div>
             )}
@@ -289,7 +287,7 @@ export default function SubmitOfflineResponsesPage() {
           <Card>
             <Header>
               <Trans
-                ns={undefined}
+                ns={"offline"}
                 i18nKey="ResponsesSubmitted"
                 count={submissionDetails.responses}
               >
@@ -297,7 +295,7 @@ export default function SubmitOfflineResponsesPage() {
               </Trans>
             </Header>
             <p className="text-sm text-gray-500 mt-1">
-              <Trans>
+              <Trans ns="offline">
                 All your offline work is now saved to the SeaSketch database.
                 You can now close the browser window, or use the links below to
                 navigate back to your surveys and projects.
@@ -330,7 +328,7 @@ export default function SubmitOfflineResponsesPage() {
               disabled={true}
               label={
                 <>
-                  <Trans>All responses submitted</Trans>{" "}
+                  <Trans ns="offline">All responses submitted</Trans>{" "}
                   <CheckIcon className="w-5 h-5 inline ml-2" />
                 </>
               }
@@ -344,7 +342,7 @@ export default function SubmitOfflineResponsesPage() {
             disabled={true}
             label={
               <>
-                <Trans>No offline responses to submit</Trans>{" "}
+                <Trans ns="offline">No offline responses to submit</Trans>{" "}
                 <CheckIcon className="w-5 h-5 inline ml-2" />
               </>
             }

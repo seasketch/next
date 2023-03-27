@@ -29,7 +29,7 @@ export default function OptionalBasemapLayerSetLayersModal({
   onRequestClose?: () => void;
   optionName?: string | null;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   let initialLayers: string[] = Array.isArray(layer.layers)
     ? (layer.layers as string[])
     : [];

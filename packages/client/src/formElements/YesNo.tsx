@@ -56,8 +56,8 @@ const YesNo: FormElementComponent<YesNoProps, boolean> = (props) => {
   );
 };
 
-YesNo.label = <Trans>Yes/No</Trans>;
-YesNo.description = <Trans>Boolean input</Trans>;
+YesNo.label = <Trans ns="admin:surveys">Yes/No</Trans>;
+YesNo.description = <Trans ns="admin:surveys">Boolean input</Trans>;
 // eslint-disable-next-line i18next/no-literal-string
 YesNo.defaultBody = questionBodyFromMarkdown(`
 # 

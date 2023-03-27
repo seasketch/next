@@ -9,7 +9,7 @@ import useProjectId from "../../useProjectId";
 export default function PublishTableOfContentsModal(props: {
   onRequestClose: () => void;
 }) {
-  const { t } = useTranslation(["admin"]);
+  const { t } = useTranslation("admin");
   const [publish, publishState] = usePublishTableOfContentsMutation({
     refetchQueries: [PublishedTableOfContentsDocument],
   });

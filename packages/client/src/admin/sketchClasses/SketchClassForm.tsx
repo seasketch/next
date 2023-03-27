@@ -1,6 +1,4 @@
-import TextInput from "../../components/TextInput";
 import {
-  SketchingDetailsFragment,
   useUpdateSketchClassMutation,
   useDeleteSketchClassMutation,
   SketchClassesQuery,
@@ -8,7 +6,7 @@ import {
   SketchGeometryType,
   AdminSketchingDetailsFragment,
 } from "../../generated/graphql";
-import { Trans as I18n, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import MutableAutosaveInput from "../MutableAutosaveInput";
 import InputBlock from "../../components/InputBlock";
@@ -22,11 +20,7 @@ import { SketchClassTemplateIcon } from "./TemplateChooser";
 import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 import PreprocessorInput from "./PreprocessorInput";
 import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
-import GeoprocessingClientInput, {
-  GeoprocessingClientButton,
-} from "./GeoprocessingClientInput";
-
-const Trans = (props: any) => <I18n ns="admin:sketching" {...props} />;
+import GeoprocessingClientInput from "./GeoprocessingClientInput";
 
 export default function SketchClassForm({
   sketchClass,
@@ -36,6 +30,7 @@ export default function SketchClassForm({
   onDelete?: (id: number) => void;
 }) {
   const onError = useGlobalErrorHandler();
+  const { t } = useTranslation("admin:sketching");
   const [mutate, mutationState] = useUpdateSketchClassMutation({
     variables: {
       id: sketchClass.id,
@@ -159,7 +154,7 @@ export default function SketchClassForm({
             <div className="">
               <MutableAutosaveInput
                 value={sketchClass.name}
-                label={<Trans>Name</Trans>}
+                label={t("Name")}
                 mutation={mutate}
                 mutationStatus={mutationState}
                 propName="name"
@@ -176,21 +171,17 @@ export default function SketchClassForm({
                     onClick={toggleArchived}
                   />
                 }
-                title={<Trans>Archive</Trans>}
-                description={
-                  <Trans>
-                    Enable if you would like to disable and hide this sketch
-                    class. Existing sketches will not be deleted but new ones
-                    cannot be drawn.
-                  </Trans>
-                }
+                title={t("Archived")}
+                description={t(
+                  "Enable if you would like to disable and hide this sketch class. Existing sketches will not be deleted but new ones cannot be drawn."
+                )}
               />
             </div>
             <InputBlock
               input={
                 <Button
                   disabled={sketchClass.sketchCount >= 10}
-                  label={<Trans>Delete</Trans>}
+                  label={t("Delete")}
                   onClick={async () => {
                     if (sketchClass.sketchCount < 10) {
                       confirmDelete({
@@ -204,19 +195,15 @@ export default function SketchClassForm({
                   }}
                 />
               }
-              title={<Trans>Delete Sketch Class</Trans>}
+              title={t("Delete Sketch Class")}
               description={
-                sketchClass.sketchCount < 10 ? (
-                  <Trans>
-                    This Sketch Class can still be deleted since it has fewer
-                    than 10 sketches. All related sketches will be deleted.
-                  </Trans>
-                ) : (
-                  <Trans>
-                    You can only delete sketch classes if they have not been
-                    used to create more than 10 sketches.
-                  </Trans>
-                )
+                sketchClass.sketchCount < 10
+                  ? t(
+                      "This Sketch Class can still be deleted since it has fewer than 10 sketches. All related sketches will be deleted."
+                    )
+                  : t(
+                      "You can only delete sketch classes if they have not been used to create more than 10 sketches."
+                    )
               }
             />
           </div>
