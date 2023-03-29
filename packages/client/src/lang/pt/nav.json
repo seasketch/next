@@ -1,4 +1,17 @@
 {
+  "Default Visibility": "Visibilidade Padrão",
   "Delete": "Excluir",
-  "Edit": "Editar"
+  "Delete Item": "Deletar item",
+  "Edit": "Editar",
+  "Edit metadata": "Editar metadados",
+  "Metadata": "Metadados",
+  "Projects": "Projetos",
+  "Publish": "Publicar",
+  "SeaSketch logo": "Logotipo do SeaSketch",
+  "Sign in": "Entrar",
+  "Sign In": "Entrar",
+  "Sign out": "Sair",
+  "Signed in as": "Inscrito como",
+  "view": "visualizar",
+  "Zoom to bounds": "Aproximar à extensão"
 }

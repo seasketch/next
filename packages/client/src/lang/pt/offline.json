@@ -1,4 +1,18 @@
 {
+  " support files": " arquivos de suporte",
+  "Access Offline Content": "Acessar Conteúdo Offline",
+  "All responses submitted": "Todas as respostas submetidas",
+  "All your offline work is now saved to the SeaSketch database. You can now close the browser window, or use the links below to navigate back to your surveys and projects.": "O seu trabalho offline foi salvo no banco de dados do SeaSketch. Você pode fechar a janela do seu navegador ou usar os links abaixo para navegar de volta para as suas enquetes e projetos.",
+  "Are you sure you want to delete this offline map data?": "Tem certeza de que quer deletar estes dados offline?",
+  "Begin Download": "Iniciar Download",
+  "Cache Status": "Status de cache",
   "Cancel": "Cancelar",
-  "Close": "Fechar"
+  "CartographicUpdates": "Este mapa tem atualizações cartográficas. Você pode atualizar este mapa sem baixar novos map tiles.",
+  "Clear Map Data": "Limpar Dados do Mapa",
+  "Close": "Fechar",
+  "Download": "Download",
+  "Responses you submit will be associated with the account listed below. If this is not correct, please <2>sign out</2> and login from the correct account.": "As respostas que você submeteu serão associadas à conta listada abaixo. Se isto não está correto, por favor <2> faça o logout</2> e login com a conta correta.",
+  "ResponsesSubmitted": "Submeter {{count}} Respostas",
+  "SeaSketch logo": "Logotipo do SeaSketch",
+  "Sign In": "Entrar"
 }
