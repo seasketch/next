@@ -1,3 +1,4 @@
+import { i18n } from "i18next";
 import { ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
@@ -6,10 +7,10 @@ import languages, { LangDetails } from "../lang/supported";
 export default function LanguageSelector(props: {
   options?: string[];
   className?: string;
-  button: (onClick: () => void) => ReactNode;
+  button: (onClick: () => void, language: LangDetails) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const { t, i18n } = useTranslation("surveys");
+  const { i18n } = useTranslation("surveys");
   const filteredLanguages = languages.filter(
     (f) =>
       !props.options ||
@@ -17,16 +18,18 @@ export default function LanguageSelector(props: {
       f.code === "EN"
   );
   const options = filteredLanguages;
-  const matchesAnyTranslation = filteredLanguages.find(
-    (l) => l.code === i18n.language
+  const { matchesAnyTranslation, selectedLang } = getSelectedLanguage(
+    i18n,
+    filteredLanguages
   );
+
   if (options.length <= 1) {
     return null;
   }
 
   return (
     <>
-      {props.button(() => setOpen(true))}
+      {props.button(() => setOpen(true), selectedLang)}
 
       {open && (
         <Modal
@@ -68,13 +71,30 @@ function Option(props: {
       className={`${
         props.selected &&
         "bg-primary-300 hover:bg-opacity-70 hover:bg-primary-300 bg-opacity-50"
-      } flex w-full p-4 hover:bg-gray-100`}
+      } flex w-full p-4 px-6 hover:bg-gray-100 gap-4`}
       onClick={() => props.onClick(props.language)}
     >
-      <span className="flex-1">
+      <span className="flex-1 text-left rtl:text-right">
         {props.language.localName || props.language.name}
       </span>
-      <span className="">{props.language.code.toUpperCase()}</span>
+      <span className="font-mono font-semibold text-gray-500">
+        {props.language.code.toUpperCase()}
+      </span>
     </button>
   );
+}
+
+export function getSelectedLanguage(
+  i18n: i18n,
+  filteredLanguages?: LangDetails[]
+) {
+  const match = (filteredLanguages || languages).find(
+    (l) => l.code === i18n.language
+  );
+  const matchesAnyTranslation = Boolean(match);
+  const selectedLang = match || languages.find((l) => l.code === "EN")!;
+  return {
+    matchesAnyTranslation,
+    selectedLang,
+  };
 }

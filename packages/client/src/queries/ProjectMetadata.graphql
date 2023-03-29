@@ -19,6 +19,7 @@ fragment ProjectMetadata on Project {
     formElementId
     isArchived
   }
+  supportedLanguages
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

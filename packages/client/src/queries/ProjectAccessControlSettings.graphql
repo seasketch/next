@@ -27,3 +27,16 @@ mutation updateProjectAccessControlSettings(
     }
   }
 }
+
+mutation toggleLanguageSupport(
+  $slug: String!
+  $enable: Boolean!
+  $code: String!
+) {
+  toggleLanguageSupport(input: { code: $code, slug: $slug, enable: $enable }) {
+    project {
+      id
+      supportedLanguages
+    }
+  }
+}

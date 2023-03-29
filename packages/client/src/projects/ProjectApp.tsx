@@ -19,6 +19,7 @@ import OfflineResponsesToastNotification from "../offline/OfflineResponsesToastN
 import UserProfileModal from "./UserProfileModal";
 import SketchUIStateContextProvider from "./Sketches/SketchUIStateContextProvider";
 import { useApolloClient } from "@apollo/client";
+import { getSelectedLanguage } from "../surveys/LanguageSelector";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -61,7 +62,7 @@ export default function ProjectApp() {
     `/${slug}/app/:sidebar`
   );
   const [expandSidebar, setExpandSidebar] = useState(!showSidebar);
-  const { t } = useTranslation("sidebar");
+  const { t, i18n } = useTranslation("sidebar");
   const sidebarTitles: { [key: string]: string } = {
     maps: t("Maps"),
     overlays: t("Overlay Layers"),
@@ -70,11 +71,15 @@ export default function ProjectApp() {
     settings: t("Cache Settings"),
   };
   const { basemaps, tableOfContentsItems } = useMapData(mapContext);
+  // Disabling until I can see some Divehi translations -cb 3/29/23
+  // Might need to just enable this for forum content and attribute forms
+  // const { selectedLang } = getSelectedLanguage(i18n);
   const dark = true;
   return (
     <div
       className="h-screen flex flex-col ml-14"
       style={{ width: "calc(100vw - 3.5rem)" }}
+      // dir={selectedLang.rtl ? "rtl" : "ltr"}
     >
       <DndProvider backend={HTML5Backend}>
         {/* <ProjectAppHeader /> */}

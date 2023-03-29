@@ -7,12 +7,14 @@ import {
   SketchingButton,
   ForumsButton,
   AdminButton,
+  LanguageButton,
 } from "./MiniSidebarButtons";
 import { useHistory, useParams } from "react-router-dom";
 import { MenuToggle } from "./MenuToggle";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { getLastFormUrl } from "./Forums/Forums";
+import LanguageSelector from "../surveys/LanguageSelector";
 
 export default function MiniSidebar({
   onExpand,
@@ -103,6 +105,17 @@ export default function MiniSidebar({
       <div className="w-8 my-3" style={{ filter: "grayscale(50%)" }}>
         <ProfileStatusButton onClick={onExpand} />
       </div>
+      <LanguageSelector
+        button={(onClick, lang) => (
+          <LanguageButton
+            tooltip={t("Language")}
+            tabIndex={6}
+            onClick={onClick}
+          />
+        )}
+        options={data?.project?.supportedLanguages as string[]}
+      />
+
       {data?.project?.sessionIsAdmin && (
         <AdminButton
           href={`/${slug}/admin`}

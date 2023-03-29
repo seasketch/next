@@ -6180,6 +6180,7 @@ export type Mutation = {
   toggleAdminAccess?: Maybe<ToggleAdminAccessPayload>;
   /** Ban a user from posting in the discussion forum */
   toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
+  toggleLanguageSupport?: Maybe<ToggleLanguageSupportPayload>;
   toggleResponsesPractice?: Maybe<ToggleResponsesPracticePayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
@@ -7250,6 +7251,12 @@ export type MutationToggleForumPostingBanArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationToggleLanguageSupportArgs = {
+  input: ToggleLanguageSupportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleResponsesPracticeArgs = {
   input: ToggleResponsesPracticeInput;
 };
@@ -8305,6 +8312,7 @@ export type Project = Node & {
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
+  supportedLanguages: Array<Maybe<Scalars['String']>>;
   supportEmail: Scalars['String'];
   /** Reads and enables pagination through a set of `Basemap`. */
   surveyBasemaps?: Maybe<Array<Basemap>>;
@@ -11713,6 +11721,41 @@ export type ToggleForumPostingBanPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `toggleLanguageSupport` mutation. */
+export type ToggleLanguageSupportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  code?: Maybe<Scalars['String']>;
+  enable?: Maybe<Scalars['Boolean']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `toggleLanguageSupport` mutation. */
+export type ToggleLanguageSupportPayload = {
+  __typename?: 'ToggleLanguageSupportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `toggleLanguageSupport` mutation. */
+export type ToggleLanguageSupportPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `toggleResponsesPractice` mutation. */
@@ -16152,9 +16195,27 @@ export type UpdateProjectAccessControlSettingsMutation = (
   )> }
 );
 
+export type ToggleLanguageSupportMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enable: Scalars['Boolean'];
+  code: Scalars['String'];
+}>;
+
+
+export type ToggleLanguageSupportMutation = (
+  { __typename?: 'Mutation' }
+  & { toggleLanguageSupport?: Maybe<(
+    { __typename?: 'ToggleLanguageSupportPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'supportedLanguages'>
+    )> }
+  )> }
+);
+
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived'>
@@ -18952,6 +19013,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     formElementId
     isArchived
   }
+  supportedLanguages
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -21151,6 +21213,16 @@ export const UpdateProjectAccessControlSettingsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ToggleLanguageSupportDocument = /*#__PURE__*/ gql`
+    mutation toggleLanguageSupport($slug: String!, $enable: Boolean!, $code: String!) {
+  toggleLanguageSupport(input: {code: $code, slug: $slug, enable: $enable}) {
+    project {
+      id
+      supportedLanguages
+    }
+  }
+}
+    `;
 export const ProjectMetadataDocument = /*#__PURE__*/ gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
@@ -22656,6 +22728,7 @@ export const namedOperations = {
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
+    toggleLanguageSupport: 'toggleLanguageSupport',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

@@ -42,6 +42,8 @@ import Badge from "../components/Badge";
 import useIsSuperuser from "../useIsSuperuser";
 import InputBlock from "../components/InputBlock";
 import useDialog from "../components/useDialog";
+import SupportedLanguagesSettings from "./SupportedLanguagesSettings";
+import getSlug from "../getSlug";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
@@ -76,6 +78,9 @@ export default function Settings() {
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <DataBucketSettings />
+        </div>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+          <SupportedLanguagesSettings slug={getSlug()} />
         </div>
         {superuser ? (
           <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">

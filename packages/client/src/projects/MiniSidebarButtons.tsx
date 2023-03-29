@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
-import { CogIcon } from "@heroicons/react/solid";
+import { CogIcon, TranslateIcon } from "@heroicons/react/solid";
 
 interface SidebarButtonProps {
   className?: string;
@@ -207,3 +207,5 @@ export const SettingsIcon = (
   </svg>
 );
 export const SettingsButton = curry(SettingsIcon);
+
+export const LanguageButton = curry(<TranslateIcon />);

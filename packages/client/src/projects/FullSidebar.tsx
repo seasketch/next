@@ -1,7 +1,7 @@
 import { ReactNode, useContext, useEffect } from "react";
 import { Link, useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import {
   ForumsIcon,
   LayerIcon,
@@ -15,9 +15,11 @@ import SignedInAs from "../components/SignedInAs";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
 import { ParticipationStatus } from "../generated/graphql";
-import { CogIcon } from "@heroicons/react/solid";
+import { CogIcon, TranslateIcon } from "@heroicons/react/solid";
 import { getLastFormUrl } from "./Forums/Forums";
 import { useSketchUIState } from "./Sketches/SketchUIStateContextProvider";
+import LanguageSelector from "../surveys/LanguageSelector";
+import Button from "../components/Button";
 
 export default function FullSidebar({
   open,
@@ -29,13 +31,14 @@ export default function FullSidebar({
   dark: boolean;
 }) {
   const history = useHistory();
-  const { t } = useTranslation("sidebar");
+  const { t, i18n } = useTranslation("sidebar");
   const { slug } = useParams<{ slug: string }>();
   const { loginWithRedirect } = useAuth0();
   const { data, loading } = useCurrentProjectMetadata();
   const { user, logout } = useAuth0();
   const cache = useContext(GraphqlQueryCacheContext);
   const sketchingContext = useSketchUIState();
+  const lang = (i18n.language || "EN").toUpperCase();
 
   open = open && !sketchingContext.editorIsOpen;
 
@@ -228,7 +231,19 @@ export default function FullSidebar({
       {user && data?.me && (
         <>
           <nav className="mt-4">
-            <SignedInAs className="mb-1" />
+            <SignedInAs className="pb-1" />
+            <LanguageSelector
+              button={(onClick, lang) => (
+                <NavItem
+                  icon={<TranslateIcon className="w-6 h-6 inline mr-1 " />}
+                  onClick={onClick}
+                  label={
+                    <Trans ns="sidebar">{lang.localName || lang.name}</Trans>
+                  }
+                />
+              )}
+              options={data?.project?.supportedLanguages as string[]}
+            />
             <NavItem
               icon={
                 <svg
@@ -396,7 +411,7 @@ function NavItem({
   target,
 }: {
   onClick?: () => void;
-  label: string;
+  label: string | ReactNode;
   icon?: ReactNode;
   target?: string;
 }) {
