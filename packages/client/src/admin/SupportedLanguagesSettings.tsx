@@ -13,7 +13,24 @@ export default function SupportedLanguagesSettings({ slug }: { slug: string }) {
       slug,
     },
   });
-  const [mutate, mutationState] = useToggleLanguageSupportMutation({});
+  const [mutate, mutationState] = useToggleLanguageSupportMutation({
+    optimisticResponse: (vars) => ({
+      __typename: "Mutation",
+      toggleLanguageSupport: {
+        __typename: "ToggleLanguageSupportPayload",
+        project: {
+          __typename: "Project",
+          id: data!.project!.id,
+          supportedLanguages: [
+            ...(data!.project!.supportedLanguages || []).filter(
+              (l) => l !== vars.code
+            ),
+            ...(vars.enable ? [vars.code] : []),
+          ],
+        },
+      },
+    }),
+  });
 
   return (
     <>
