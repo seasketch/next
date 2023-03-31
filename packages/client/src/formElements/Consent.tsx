@@ -13,7 +13,7 @@ import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
 import useDialog from "../components/useDialog";
 import { useUploadConsentDocMutation } from "../generated/graphql";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
@@ -256,7 +256,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                 }
               />
               {props.componentSettings.presentation === "signature" && (
-                <LocalizableTextInput
+                <SurveyLocalizableTextInput
                   label={t("Signature placeholder", { ns: "admin:surveys" })}
                   name="signaturePlaceholder"
                   value={signaturePlaceholder}
@@ -270,7 +270,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
               )}
               {props.componentSettings.presentation === "yesno" && (
                 <>
-                  <LocalizableTextInput
+                  <SurveyLocalizableTextInput
                     label={t("Agree button label", { ns: "admin:surveys" })}
                     name="agreeText"
                     value={agreeText}
@@ -281,7 +281,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                       props.alternateLanguageSettings
                     )}
                   />
-                  <LocalizableTextInput
+                  <SurveyLocalizableTextInput
                     label={t("Disagree button label", { ns: "admin:surveys" })}
                     name="disagreeText"
                     value={disagreeText}
@@ -294,7 +294,7 @@ const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
                   />
                 </>
               )}
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 label={t("Document Label", { ns: "admin:surveys" })}
                 name="documentLabel"
                 value={documentLabel}

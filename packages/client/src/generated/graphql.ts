@@ -5777,6 +5777,31 @@ export type MarkTopicAsReadPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `mergeTranslatedProps` mutation. */
+export type MergeTranslatedPropsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  existing?: Maybe<Scalars['JSON']>;
+  propName?: Maybe<Scalars['String']>;
+  propTranslations?: Maybe<Scalars['JSON']>;
+};
+
+/** The output of our `mergeTranslatedProps` mutation. */
+export type MergeTranslatedPropsPayload = {
+  __typename?: 'MergeTranslatedPropsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  json?: Maybe<Scalars['JSON']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
   answers?: Maybe<Scalars['JSON']>;
@@ -6109,6 +6134,7 @@ export type Mutation = {
    * and whenever new posts are shown.
    */
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
+  mergeTranslatedProps?: Maybe<MergeTranslatedPropsPayload>;
   modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
@@ -6165,6 +6191,7 @@ export type Mutation = {
   setTopicLocked?: Maybe<SetTopicLockedPayload>;
   /** Admins can use this mutation to place topics at the top of the forum listing. */
   setTopicSticky?: Maybe<SetTopicStickyPayload>;
+  setTranslatedProp: Translatable;
   /**
    * Sets the list of groups that the given user belongs to. Will clear all other
    * group memberships in the project. Available only to admins.
@@ -7112,6 +7139,12 @@ export type MutationMarkTopicAsReadArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationMergeTranslatedPropsArgs = {
+  input: MergeTranslatedPropsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationModifySurveyAnswersArgs = {
   input: ModifySurveyAnswersInput;
 };
@@ -7213,6 +7246,15 @@ export type MutationSetTopicLockedArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetTopicStickyArgs = {
   input: SetTopicStickyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetTranslatedPropArgs = {
+  id: Scalars['Int'];
+  propName: Scalars['String'];
+  translations: Array<TranslatedPropInput>;
+  typeName: Scalars['String'];
 };
 
 
@@ -8322,6 +8364,7 @@ export type Project = Node & {
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+  translatedProps: Scalars['JSON'];
   /** Number of users who have outstanding access requests. Only relevant for invite-only projects. */
   unapprovedParticipantCount?: Maybe<Scalars['Int']>;
   /**
@@ -11557,6 +11600,7 @@ export type TableOfContentsItem = Node & {
   stableId: Scalars['String'];
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
+  translatedProps: Scalars['JSON'];
 };
 
 /**
@@ -11899,6 +11943,13 @@ export enum TopicsOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
+
+export type Translatable = Project | TableOfContentsItem;
+
+export type TranslatedPropInput = {
+  languageCode: Scalars['String'];
+  value?: Maybe<Scalars['String']>;
+};
 
 
 export type UnsplashLinks = {
@@ -16215,9 +16266,28 @@ export type ToggleLanguageSupportMutation = (
   )> }
 );
 
+export type SetTranslatedPropsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  typeName: Scalars['String'];
+  propName: Scalars['String'];
+  translations: Array<TranslatedPropInput> | TranslatedPropInput;
+}>;
+
+
+export type SetTranslatedPropsMutation = (
+  { __typename?: 'Mutation' }
+  & { setTranslatedProp: (
+    { __typename: 'Project' }
+    & Pick<Project, 'id' | 'translatedProps'>
+  ) | (
+    { __typename: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'translatedProps'>
+  ) }
+);
+
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived'>
@@ -19016,6 +19086,7 @@ export const ProjectMetadataFragmentDoc = gql`
     isArchived
   }
   supportedLanguages
+  translatedProps
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -24327,6 +24398,55 @@ export function useToggleLanguageSupportMutation(baseOptions?: Apollo.MutationHo
 export type ToggleLanguageSupportMutationHookResult = ReturnType<typeof useToggleLanguageSupportMutation>;
 export type ToggleLanguageSupportMutationResult = Apollo.MutationResult<ToggleLanguageSupportMutation>;
 export type ToggleLanguageSupportMutationOptions = Apollo.BaseMutationOptions<ToggleLanguageSupportMutation, ToggleLanguageSupportMutationVariables>;
+export const SetTranslatedPropsDocument = gql`
+    mutation setTranslatedProps($id: Int!, $typeName: String!, $propName: String!, $translations: [TranslatedPropInput!]!) {
+  setTranslatedProp(
+    id: $id
+    propName: $propName
+    typeName: $typeName
+    translations: $translations
+  ) {
+    __typename
+    ... on Project {
+      id
+      translatedProps
+    }
+    ... on TableOfContentsItem {
+      id
+      translatedProps
+    }
+  }
+}
+    `;
+export type SetTranslatedPropsMutationFn = Apollo.MutationFunction<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>;
+
+/**
+ * __useSetTranslatedPropsMutation__
+ *
+ * To run a mutation, you first call `useSetTranslatedPropsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetTranslatedPropsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setTranslatedPropsMutation, { data, loading, error }] = useSetTranslatedPropsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      typeName: // value for 'typeName'
+ *      propName: // value for 'propName'
+ *      translations: // value for 'translations'
+ *   },
+ * });
+ */
+export function useSetTranslatedPropsMutation(baseOptions?: Apollo.MutationHookOptions<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>(SetTranslatedPropsDocument, options);
+      }
+export type SetTranslatedPropsMutationHookResult = ReturnType<typeof useSetTranslatedPropsMutation>;
+export type SetTranslatedPropsMutationResult = Apollo.MutationResult<SetTranslatedPropsMutation>;
+export type SetTranslatedPropsMutationOptions = Apollo.BaseMutationOptions<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>;
 export const ProjectMetadataDocument = gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
@@ -28457,6 +28577,7 @@ export const namedOperations = {
     deleteTilePackage: 'deleteTilePackage',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
+    setTranslatedProps: 'setTranslatedProps',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

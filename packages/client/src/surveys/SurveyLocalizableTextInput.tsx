@@ -1,7 +1,7 @@
 import TextInput, { TextInputOptions } from "../components/TextInput";
 import EditorLanguageSelector from "./EditorLanguageSelector";
 
-export default function LocalizableTextInput(props: TextInputOptions) {
+export default function SurveyLocalizableTextInput(props: TextInputOptions) {
   return (
     <>
       <div className="relative">

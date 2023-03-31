@@ -25,7 +25,7 @@ import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import useClipboard from "react-use-clipboard";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 
 export interface ThankYouProps {
@@ -216,7 +216,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
                   another response.
                 </Trans>
               </p>
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 disabled={!props.componentSettings.promptToRespondAgain}
                 label={t("Respond Again Button Text")}
                 name="respondAgainMessage"

@@ -86,6 +86,7 @@
     "ms": "^2.1.2",
     "mustache": "^4.2.0",
     "nanoid": "^3.1.17",
+    "pg-format": "^1.0.4",
     "pg-mem": "^1.9.9",
     "pgmock2": "^2.0.6",
     "postgraphile-plugin-upload-field": "^1.0.0-alpha.10",

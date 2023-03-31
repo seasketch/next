@@ -14,7 +14,7 @@ import Modal from "../components/Modal";
 import Switch from "../components/Switch";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import LanguageSelector from "../surveys/LanguageSelector";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
@@ -194,7 +194,7 @@ const WelcomeMessage: FormElementComponent<
         render={(updateBaseSetting, updateComponentSetting) => {
           return (
             <>
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 name="beginButtonText"
                 required
                 value={beginButtonText}

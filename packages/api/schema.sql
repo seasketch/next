@@ -5061,6 +5061,7 @@ CREATE TABLE public.projects (
     is_offline_enabled boolean DEFAULT false,
     data_hosting_quota bigint DEFAULT 524288000 NOT NULL,
     supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -8963,6 +8964,7 @@ CREATE TABLE public.table_of_contents_items (
     hide_children boolean DEFAULT false NOT NULL,
     enable_download boolean DEFAULT true NOT NULL,
     geoprocessing_reference_id text,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
 );
@@ -20329,6 +20331,13 @@ GRANT SELECT(supported_languages) ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -23371,6 +23380,13 @@ GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_c
 
 GRANT UPDATE(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO seasketch_user;
 GRANT SELECT(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.table_of_contents_items TO anon;
 
 
 --

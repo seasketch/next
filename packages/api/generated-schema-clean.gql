@@ -7945,6 +7945,7 @@ type Mutation {
     """
     input: SetTopicStickyInput!
   ): SetTopicStickyPayload
+  setTranslatedProp(id: Int!, language: String!, propName: String!, typeName: String!, value: String): Translatable!
 
   """
   Sets the list of groups that the given user belongs to. Will clear all other
@@ -9691,6 +9692,7 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [TableOfContentsItem!]
+  translatedProps: JSON!
 
   """
   Number of users who have outstanding access requests. Only relevant for invite-only projects.
@@ -12755,6 +12757,7 @@ type TableOfContentsItem implements Node {
 
   """Name used in the table of contents rendering"""
   title: String!
+  translatedProps: JSON!
 }
 
 """
@@ -13205,6 +13208,8 @@ enum TopicsOrderBy {
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
 }
+
+union Translatable = Project | TableOfContentsItem
 
 type UnsplashLinks {
   html: String!

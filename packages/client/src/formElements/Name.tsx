@@ -4,7 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
@@ -175,7 +175,7 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
                   button on the Welcome page.
                 </Trans>
               </p>{" "}
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={placeholder || ""}

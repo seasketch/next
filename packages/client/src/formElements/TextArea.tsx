@@ -6,7 +6,7 @@ import EditableResponseCell, {
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
@@ -81,7 +81,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
                   />
                 }
               />
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={placeholder || ""}

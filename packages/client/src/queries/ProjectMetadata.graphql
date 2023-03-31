@@ -20,6 +20,7 @@ fragment ProjectMetadata on Project {
     isArchived
   }
   supportedLanguages
+  translatedProps
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

@@ -2,7 +2,7 @@ import { MailIcon } from "@heroicons/react/solid";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import TextInput from "../components/TextInput";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
@@ -83,7 +83,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
                   address if available
                 </Trans>
               </p>
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={placeholder}
