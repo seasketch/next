@@ -36,13 +36,13 @@ export default function ForumForm({
     },
     onError,
   });
-  const [mutate, mutationState] = useUpdateForumMutation({
+  const [mutate] = useUpdateForumMutation({
     variables: {
       id: forum.id,
     },
     onError,
   });
-  const [selectedTab, setSelectedTab] = useState("settings");
+  const [selectedTab] = useState("settings");
 
   const { confirmDelete } = useDialog();
 

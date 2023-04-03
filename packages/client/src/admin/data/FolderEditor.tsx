@@ -20,7 +20,7 @@ export default function FolderEditor({
   onRequestClose?: () => void;
 }) {
   const { t } = useTranslation("admin");
-  const { data, loading } = useGetFolderQuery({
+  const { data } = useGetFolderQuery({
     variables: {
       id,
     },

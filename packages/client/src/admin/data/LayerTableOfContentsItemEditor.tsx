@@ -21,7 +21,6 @@ import Switch from "../../components/Switch";
 import InteractivitySettings from "./InteractivitySettings";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
-import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
 import GLStyleEditor from "./GLStyleEditor/Editor";
 import {

@@ -1,5 +1,5 @@
 import { CameraOptions, Layer } from "mapbox-gl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import {
@@ -10,7 +10,6 @@ import {
   useSet3dTerrainMutation,
   useUpdateTerrainExaggerationMutation,
   useUpdateBasemapUrlMutation,
-  BasemapDetailsFragment,
 } from "../../generated/graphql";
 import { gql, useApolloClient } from "@apollo/client";
 
@@ -74,10 +73,12 @@ export default function BasemapEditorPanel({
     }
   }, [basemap, exaggeration]);
 
+  const [updateExaggeration, updateExaggerationMutationState] =
+    useUpdateTerrainExaggerationMutation();
+
   useEffect(() => {
     if (
       basemap &&
-      exaggeration &&
       debouncedExaggeration &&
       parseFloat(basemap.terrainExaggeration) !==
         parseFloat(debouncedExaggeration)
@@ -100,9 +101,7 @@ export default function BasemapEditorPanel({
         },
       });
     }
-  }, [debouncedExaggeration, basemap]);
-  const [updateExaggeration, updateExaggerationMutationState] =
-    useUpdateTerrainExaggerationMutation();
+  }, [debouncedExaggeration, basemap, client, updateExaggeration]);
 
   const mapboxStyle = useMapboxStyle(
     basemap && basemap.type === BasemapType.Mapbox ? basemap.url : undefined

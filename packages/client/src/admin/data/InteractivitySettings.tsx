@@ -36,7 +36,7 @@ export default function InteractivitySettings({
   basemap?: BasemapDetailsFragment;
 }) {
   const { t } = useTranslation("admin");
-  const { data, loading, error } = useInteractivitySettingsByIdQuery({
+  const { data, loading } = useInteractivitySettingsByIdQuery({
     variables: {
       id,
     },
@@ -89,16 +89,6 @@ export default function InteractivitySettings({
     });
     return input;
   }
-
-  const sanitizeShortTemplate = () => {
-    setShortTemplate(sanitizeInput(shortTemplate || ""));
-    save();
-  };
-
-  const sanitizeLongTemplate = () => {
-    setLongTemplate(sanitizeInput(longTemplate || ""));
-    save();
-  };
 
   const sanitizeTemplate = (propName: "longTemplate" | "shortTemplate") => {
     if (propName === "longTemplate") {
