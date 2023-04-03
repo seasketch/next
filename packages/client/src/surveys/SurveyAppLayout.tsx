@@ -20,6 +20,7 @@ import {
   useState,
 } from "react";
 import {
+  FormLanguageContext,
   SurveyContext,
   SurveyMapPortalContext,
 } from "../formElements/FormElement";
@@ -72,6 +73,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
     }
   }, []);
   const surveyContext = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   const windowSize = useWindowSize();
 
   const [layoutContext, setLayoutContext] = useState<LayoutContext>({
@@ -248,7 +250,7 @@ export const SurveyAppLayout: React.FunctionComponent<{
               />
 
               <div
-                dir={surveyContext?.lang?.rtl ? "rtl" : "ltr"}
+                dir={langContext.lang?.rtl ? "rtl" : "ltr"}
                 style={{
                   gridArea: "content",
                 }}

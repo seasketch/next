@@ -18,6 +18,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -61,7 +62,7 @@ function addCss(url: string) {
 
 const Consent: FormElementComponent<ConsentProps, ConsentValue> = (props) => {
   const { t } = useTranslation("surveys");
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   const agreeText = useLocalizedComponentSetting("agreeText", props);
   const disagreeText = useLocalizedComponentSetting("disagreeText", props);
   const documentLabel = useLocalizedComponentSetting("documentLabel", props);

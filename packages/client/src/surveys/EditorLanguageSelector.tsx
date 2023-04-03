@@ -1,5 +1,8 @@
 import { useContext } from "react";
-import { SurveyContext } from "../formElements/FormElement";
+import {
+  FormLanguageContext,
+  SurveyContext,
+} from "../formElements/FormElement";
 import languages from "../lang/supported";
 
 export default function EditorLanguageSelector({
@@ -7,7 +10,7 @@ export default function EditorLanguageSelector({
 }: {
   className?: string;
 }) {
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   if (!context) {
     return null;
   }

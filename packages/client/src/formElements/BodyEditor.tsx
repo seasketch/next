@@ -14,7 +14,7 @@ import gql from "graphql-tag";
 import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
 import TooltipMenu from "../editor/TooltipMenu";
-import { SurveyContext } from "./FormElement";
+import { FormLanguageContext, SurveyContext } from "./FormElement";
 import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
 
 export default function BodyEditor({
@@ -36,7 +36,8 @@ export default function BodyEditor({
     ? editorConfig.questions
     : editorConfig.content;
 
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
+  const surveyContext = useContext(SurveyContext);
   const selectedLanguage = context?.lang.code || "EN";
 
   let body = defaultBody;
@@ -232,7 +233,9 @@ export default function BodyEditor({
     >
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
       <div className="prosemirror-body" ref={root}></div>
-      <EditorLanguageSelector className="text-black rounded text-xs  absolute -top-10 left-0 opacity-50 hover:opacity-100 active:opacity-100" />
+      {surveyContext && (
+        <EditorLanguageSelector className="text-black rounded text-xs  absolute -top-10 left-0 opacity-50 hover:opacity-100 active:opacity-100" />
+      )}
     </div>
   );
 }

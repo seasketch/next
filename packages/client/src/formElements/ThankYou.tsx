@@ -3,6 +3,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -42,6 +43,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
   const { t } = useTranslation("admin:surveys");
   const style = useContext(FormElementLayoutContext).style;
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   const shareUrl = new URL(context!.surveyUrl).toString();
   const shareClassName = "w-8 h-8 rounded shadow cursor-pointer";
   const [isCopied, setCopied] = useClipboard(shareUrl, {
@@ -224,7 +226,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
                 onChange={updateComponentSetting(
                   "respondAgainMessage",
                   props.componentSettings,
-                  context?.lang.code,
+                  langContext.lang.code,
                   props.alternateLanguageSettings
                 )}
               />

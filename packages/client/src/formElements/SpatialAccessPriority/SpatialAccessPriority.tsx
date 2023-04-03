@@ -52,6 +52,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   SurveyMapPortal,
   useLocalizedComponentSetting,
@@ -1307,7 +1308,7 @@ function Admin(props: {
   disableDraw: () => void;
 }) {
   const { t } = useTranslation("admin:surveys");
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   return (
     <FormElementEditorPortal
       render={(

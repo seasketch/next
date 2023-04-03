@@ -34,6 +34,7 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   ChildOptionsFactory,
   FormEditorPortalContext,
+  FormLanguageContext,
   SurveyButtonFooterPortalContext,
   SurveyContext,
   useUpdateFormElement,
@@ -487,14 +488,9 @@ export default function SurveyFormEditor({
             />
           )}
           {route === "formElement" && data?.survey && selectedFormElement && (
-            <SurveyContext.Provider
+            <FormLanguageContext.Provider
               value={{
-                slug: slug,
-                surveyId: data.survey.id,
                 lang: language,
-                practiceMode: false,
-                togglePracticeMode: (enable: boolean) => null,
-                toggleFacilitation: (enable: boolean) => null,
                 setLanguage: (code: string) => {
                   const lang = languages.find((lang) => lang.code === code);
                   if (!lang) {
@@ -505,119 +501,132 @@ export default function SurveyFormEditor({
                 },
                 supportedLanguages:
                   (data?.survey?.supportedLanguages as string[]) || [],
-                isAdmin: true,
-                isFacilitatedResponse: true,
-                surveySupportsFacilitation: data.survey.showFacilitationOption,
-                projectName: data.projectBySlug!.name,
-                projectUrl: data.projectBySlug!.url!,
-                projectId: data.projectBySlug!.id,
-                projectBounds: bbox(data.projectBySlug!.region.geojson),
-                surveyUrl: `${data.projectBySlug!.url!}/surveys/${
-                  data.survey.id
-                }`,
-                clientIsPreppedForOfflineUse: false,
-                offlineResponseCount: 0,
-                saveResponseToOfflineStore: () => Promise.resolve(),
               }}
             >
-              <SurveyAppLayout
-                embeddedInAdmin={true}
-                style={style}
-                progress={
-                  selectedFormElement
-                    ? formElements.indexOf(selectedFormElement) /
-                      formElements.length
-                    : 1 / 3
-                }
-                showProgress={data?.survey?.showProgress}
-                unsplashUserName={
-                  selectedFormElement?.unsplashAuthorName || undefined
-                }
-                unsplashUserUrl={
-                  selectedFormElement?.unsplashAuthorUrl || undefined
-                }
+              <SurveyContext.Provider
+                value={{
+                  slug: slug,
+                  surveyId: data.survey.id,
+                  practiceMode: false,
+                  togglePracticeMode: (enable: boolean) => null,
+                  toggleFacilitation: (enable: boolean) => null,
+
+                  isAdmin: true,
+                  isFacilitatedResponse: true,
+                  surveySupportsFacilitation:
+                    data.survey.showFacilitationOption,
+                  projectName: data.projectBySlug!.name,
+                  projectUrl: data.projectBySlug!.url!,
+                  projectId: data.projectBySlug!.id,
+                  projectBounds: bbox(data.projectBySlug!.region.geojson),
+                  surveyUrl: `${data.projectBySlug!.url!}/surveys/${
+                    data.survey.id
+                  }`,
+                  clientIsPreppedForOfflineUse: false,
+                  offlineResponseCount: 0,
+                  saveResponseToOfflineStore: () => Promise.resolve(),
+                }}
               >
-                <SurveyButtonFooterPortalContext.Provider
-                  value={surveyButtonFooter.current}
+                <SurveyAppLayout
+                  embeddedInAdmin={true}
+                  style={style}
+                  progress={
+                    selectedFormElement
+                      ? formElements.indexOf(selectedFormElement) /
+                        formElements.length
+                      : 1 / 3
+                  }
+                  showProgress={data?.survey?.showProgress}
+                  unsplashUserName={
+                    selectedFormElement?.unsplashAuthorName || undefined
+                  }
+                  unsplashUserUrl={
+                    selectedFormElement?.unsplashAuthorUrl || undefined
+                  }
                 >
-                  <FormEditorPortalContext.Provider
-                    value={{
-                      container: formElementEditorContainerRef.current,
-                      formElementSettings: selectedFormElement!,
-                      surveyId: data.survey.id,
-                    }}
+                  <SurveyButtonFooterPortalContext.Provider
+                    value={surveyButtonFooter.current}
                   >
-                    {selectedFormElement && (
-                      <>
-                        {components[selectedFormElement.typeId].stages && (
-                          <StageSelect
-                            value={stage}
-                            onChange={(n) => setStage(n)}
-                            stages={
-                              components[selectedFormElement.typeId].stages!
+                    <FormEditorPortalContext.Provider
+                      value={{
+                        container: formElementEditorContainerRef.current,
+                        formElementSettings: selectedFormElement!,
+                        surveyId: data.survey.id,
+                      }}
+                    >
+                      {selectedFormElement && (
+                        <>
+                          {components[selectedFormElement.typeId].stages && (
+                            <StageSelect
+                              value={stage}
+                              onChange={(n) => setStage(n)}
+                              stages={
+                                components[selectedFormElement.typeId].stages!
+                              }
+                            />
+                          )}
+                          <FormElementFactory
+                            key={selectedFormElement.id}
+                            stage={stage}
+                            onRequestStageChange={(n) => {
+                              setStage(n);
+                            }}
+                            featureNumber={1}
+                            {...selectedFormElement!}
+                            sketchClass={
+                              selectedParentFormElement?.sketchClass ||
+                              selectedFormElement.sketchClass
                             }
+                            isSpatial={!!selectedFormElement.type?.isSpatial}
+                            onChange={(value) =>
+                              setValues((prev) => ({
+                                ...prev,
+                                [selectedFormElement!.id]: value,
+                              }))
+                            }
+                            onSubmit={() => null}
+                            typeName={selectedFormElement!.typeId}
+                            editable={true}
+                            value={values[selectedFormElement.id]}
+                            onRequestNext={() => null}
+                            onRequestPrevious={() => null}
                           />
-                        )}
-                        <FormElementFactory
-                          key={selectedFormElement.id}
-                          stage={stage}
-                          onRequestStageChange={(n) => {
-                            setStage(n);
-                          }}
-                          featureNumber={1}
-                          {...selectedFormElement!}
-                          sketchClass={
-                            selectedParentFormElement?.sketchClass ||
-                            selectedFormElement.sketchClass
+                          <div className="flex items-center mb-10 space-x-4">
+                            {selectedFormElement.typeId !== "WelcomeMessage" &&
+                              selectedFormElement.typeId !== "ThankYou" &&
+                              !advancesAutomatically(selectedFormElement) &&
+                              !components[selectedFormElement.typeId].stages &&
+                              !components[selectedFormElement.typeId]
+                                .hideNav && (
+                                <Button
+                                  label={t("Next")}
+                                  backgroundColor={style.secondaryColor}
+                                />
+                              )}
+                            <div ref={surveyButtonFooter}></div>
+                          </div>
+                        </>
+                      )}
+                    </FormEditorPortalContext.Provider>
+                  </SurveyButtonFooterPortalContext.Provider>
+                  {(layout === FormElementLayout.MapSidebarLeft ||
+                    layout === FormElementLayout.MapSidebarRight) &&
+                    !selectedFormElement.type?.isSpatial && (
+                      <>
+                        <SurveyContextualMap
+                          isSmall={style.isSmall}
+                          admin={!!selectedFormElement.backgroundColor}
+                          formElementId={selectedFormElement.id}
+                          basemaps={
+                            (style.mapBasemaps as number[] | undefined) || []
                           }
-                          isSpatial={!!selectedFormElement.type?.isSpatial}
-                          onChange={(value) =>
-                            setValues((prev) => ({
-                              ...prev,
-                              [selectedFormElement!.id]: value,
-                            }))
-                          }
-                          onSubmit={() => null}
-                          typeName={selectedFormElement!.typeId}
-                          editable={true}
-                          value={values[selectedFormElement.id]}
-                          onRequestNext={() => null}
-                          onRequestPrevious={() => null}
+                          cameraOptions={style.mapCameraOptions}
                         />
-                        <div className="flex items-center mb-10 space-x-4">
-                          {selectedFormElement.typeId !== "WelcomeMessage" &&
-                            selectedFormElement.typeId !== "ThankYou" &&
-                            !advancesAutomatically(selectedFormElement) &&
-                            !components[selectedFormElement.typeId].stages &&
-                            !components[selectedFormElement.typeId].hideNav && (
-                              <Button
-                                label={t("Next")}
-                                backgroundColor={style.secondaryColor}
-                              />
-                            )}
-                          <div ref={surveyButtonFooter}></div>
-                        </div>
                       </>
                     )}
-                  </FormEditorPortalContext.Provider>
-                </SurveyButtonFooterPortalContext.Provider>
-                {(layout === FormElementLayout.MapSidebarLeft ||
-                  layout === FormElementLayout.MapSidebarRight) &&
-                  !selectedFormElement.type?.isSpatial && (
-                    <>
-                      <SurveyContextualMap
-                        isSmall={style.isSmall}
-                        admin={!!selectedFormElement.backgroundColor}
-                        formElementId={selectedFormElement.id}
-                        basemaps={
-                          (style.mapBasemaps as number[] | undefined) || []
-                        }
-                        cameraOptions={style.mapCameraOptions}
-                      />
-                    </>
-                  )}
-              </SurveyAppLayout>
-            </SurveyContext.Provider>
+                </SurveyAppLayout>
+              </SurveyContext.Provider>
+            </FormLanguageContext.Provider>
           )}
         </div>
         {/* Right Sidebar */}

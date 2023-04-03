@@ -9,6 +9,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -29,6 +30,7 @@ export type NameType = { name: string; facilitator?: string };
 const Name: FormElementComponent<NameProps, NameType> = (props) => {
   const { t } = useTranslation("surveys");
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   const [val, setVal] = useState<NameType | undefined>({
     name: context?.bestName || "",
     facilitator: undefined,
@@ -182,7 +184,7 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
                 onChange={updateComponentSetting(
                   "placeholder",
                   props.componentSettings,
-                  context.lang.code,
+                  langContext.lang.code,
                   props.alternateLanguageSettings
                 )}
               />

@@ -7,6 +7,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -25,6 +26,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
   const [val, setVal] = useState(props.value);
   const [errors, setErrors] = useState(validate(val, props.isRequired));
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   useEffect(() => {
     setErrors(validate(val, props.isRequired));
   }, [props.componentSettings, props.isRequired, val]);
@@ -90,7 +92,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
                 onChange={updateComponentSetting(
                   "placeholder",
                   props.componentSettings,
-                  context?.lang.code,
+                  langContext.lang.code,
                   props.alternateLanguageSettings
                 )}
               />

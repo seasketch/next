@@ -3,7 +3,7 @@ import { useState } from "react";
 import Papa from "papaparse";
 import { Trans, useTranslation } from "react-i18next";
 import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
-import { SurveyContext } from "./FormElement";
+import { FormLanguageContext, SurveyContext } from "./FormElement";
 
 export type FormElementOption = {
   value?: string;
@@ -25,7 +25,7 @@ export default function FormElementOptionsInput({
   heading?: string;
   description?: ReactNode | string;
 }) {
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   const { t } = useTranslation("admin:surveys");
   let initialValue: FormElementOption[] = (componentSettings || {})[prop] || [];
   if (

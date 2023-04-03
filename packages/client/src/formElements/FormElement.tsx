@@ -142,14 +142,14 @@ export function FormElementBody({
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
 
   let body = defaultBody;
   if (
-    context &&
-    context?.lang?.code !== "EN" &&
-    alternateLanguageSettings[context?.lang?.code]
+    langContext.lang?.code !== "EN" &&
+    alternateLanguageSettings[langContext.lang?.code]
   ) {
-    body = alternateLanguageSettings[context?.lang?.code][
+    body = alternateLanguageSettings[langContext.lang?.code][
       componentSettingName || "body"
     ] || {
       ...defaultBody,
@@ -593,6 +593,22 @@ export const defaultFormElementIcon = (
   </div>
 );
 
+export const FormLanguageContext = createContext<{
+  /**
+   * Survey's supported languages
+   * Current languge can be gotten from the useTranslation() hook
+   * */
+  supportedLanguages: string[];
+  lang: LangDetails;
+  setLanguage: (code: string) => void;
+}>({
+  supportedLanguages: [],
+  lang: { code: "en", name: "English" },
+  setLanguage: () => {
+    throw new Error("setLanguage not implemented");
+  },
+});
+
 export const SurveyContext = createContext<{
   surveyId: number;
   slug: string;
@@ -618,13 +634,6 @@ export const SurveyContext = createContext<{
   clientIsPreppedForOfflineUse: boolean;
   resetResponse?: () => Promise<void>;
   savingResponse?: boolean;
-  /**
-   * Survey's supported languages
-   * Current languge can be gotten from the useTranslation() hook
-   * */
-  supportedLanguages: string[];
-  lang: LangDetails;
-  setLanguage: (code: string) => void;
   practiceMode: boolean;
   togglePracticeMode: (enable: boolean) => void;
   toggleFacilitation: (enable: boolean) => void;
@@ -680,7 +689,7 @@ export function useLocalizedComponentSetting(
     "alternateLanguageSettings" | "componentSettings"
   >
 ) {
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   if (
     !context?.lang ||
     !props.alternateLanguageSettings[context.lang.code] ||
