@@ -53,14 +53,8 @@ mutation setTranslatedProps(
     typeName: $typeName
     translations: $translations
   ) {
-    __typename
-    ... on Project {
-      id
-      translatedProps
-    }
-    ... on TableOfContentsItem {
-      id
-      translatedProps
-    }
+    id
+    translatedProps
+    typeName
   }
 }

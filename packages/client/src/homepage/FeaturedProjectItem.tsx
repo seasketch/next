@@ -1,12 +1,14 @@
 /* eslint-disable i18next/no-literal-string */
 import { Link } from "react-router-dom";
 import { ProjectListItemFragment } from "../generated/graphql";
+import { useTranslatedProps } from "../components/TranslatedPropControl";
 
 export default function FeaturedProjectItem({
   project: p,
 }: {
   project: ProjectListItemFragment;
 }) {
+  const getTranslatedProp = useTranslatedProps(p);
   return (
     <Link
       className="bg-white border flex items-center p-2 gap-3 my-2 rounded"
@@ -29,7 +31,7 @@ export default function FeaturedProjectItem({
         <h3 className="text-primary-500 font-bold block truncate">{p?.name}</h3>
         {p.description && (
           <p className="truncate text-sm text-gray-500 max-w-full whitespace-nowrap">
-            {p?.description}
+            {getTranslatedProp("description")}
           </p>
         )}
       </div>

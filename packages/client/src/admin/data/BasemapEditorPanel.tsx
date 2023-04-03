@@ -27,6 +27,7 @@ import BasemapEditorPanelMap from "./BasemapEditorMap";
 import { useMediaQuery } from "beautiful-react-hooks";
 import { Link } from "react-router-dom";
 import { ArrowLeftIcon } from "@heroicons/react/outline";
+import TranslatedPropControl from "../../components/TranslatedPropControl";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
@@ -216,7 +217,7 @@ export default function BasemapEditorPanel({
           className="w-full h-full overflow-y-auto px-4 pb-4 max-w-xl"
           style={{ gridArea: "sidebar" }}
         >
-          <div className="md:max-w-sm mt-5">
+          <div className="md:max-w-sm mt-5 relative">
             <MutableAutosaveInput
               mutation={mutateItem}
               mutationStatus={mutateItemState}
@@ -224,6 +225,14 @@ export default function BasemapEditorPanel({
               value={basemap.name || ""}
               label={t("Name")}
               variables={{ id: basemapId }}
+            />
+            <TranslatedPropControl
+              id={basemap.id}
+              label={t("Basemap Name")}
+              propName="name"
+              typeName="Basemap"
+              defaultValue={basemap.name}
+              className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
             />
           </div>
           <div className="md:max-w-sm mt-5">

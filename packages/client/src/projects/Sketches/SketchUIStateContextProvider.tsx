@@ -54,6 +54,7 @@ import useLocalStorage from "../../useLocalStorage";
 import { currentSidebarState } from "../ProjectAppSidebar";
 import SketchEditorModal from "./SketchEditorModal";
 import SketchReportWindow, { ReportWindowUIState } from "./SketchReportWindow";
+import { useTranslatedProps } from "../../components/TranslatedPropControl";
 
 type ReportState = {
   sketchId: number;
@@ -859,6 +860,7 @@ export default function SketchUIStateContextProvider({
 
   const token = useAccessToken();
 
+  const getTranslatedProp = useTranslatedProps();
   const getMenuOptions = useCallback(
     (
       selectedIds: string[],
@@ -905,11 +907,15 @@ export default function SketchUIStateContextProvider({
           : []
         )
           .filter((sc) => !sc.formElementId && !sc.isArchived && sc.canDigitize)
-          .sort((a, b) => a.name.localeCompare(b.name))
+          .sort((a, b) => {
+            const aName = getTranslatedProp("name", a);
+            const bName = getTranslatedProp("name", b);
+            return aName.localeCompare(bName);
+          })
           .map((sc) => ({
             // eslint-disable-next-line i18next/no-literal-string
             id: `create-${sc.id}`,
-            label: sc.name,
+            label: getTranslatedProp("name", sc),
             onClick: async () => {
               history.replace(`/${getSlug()}/app`);
               const sketchClass: SketchingDetailsFragment | null =

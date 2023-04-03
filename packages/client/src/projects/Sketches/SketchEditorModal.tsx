@@ -34,6 +34,7 @@ import area from "@turf/area";
 import bboxPolygon from "@turf/bbox-polygon";
 import { currentSidebarState } from "../ProjectAppSidebar";
 import SketchForm from "./SketchForm";
+import { useTranslatedProps } from "../../components/TranslatedPropControl";
 
 export default function SketchEditorModal({
   sketch,
@@ -421,6 +422,8 @@ export default function SketchEditorModal({
     draw.digitizingState,
   ]);
 
+  const getTranslatedProp = useTranslatedProps(sketchClass);
+
   // useEffect(() => {
   //   if (loading) {
   //     draw.disable();
@@ -478,7 +481,7 @@ export default function SketchEditorModal({
                 <span className="flex-1">
                   <span className="font-bold">
                     {!sketch && <Trans ns="sketching">New</Trans>}{" "}
-                    {sketchClass.name}
+                    {getTranslatedProp("name")}
                   </span>
                 </span>
                 {!left && (

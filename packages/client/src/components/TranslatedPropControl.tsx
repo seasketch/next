@@ -9,6 +9,13 @@ import getSlug from "../getSlug";
 import Modal from "./Modal";
 import languages, { LangDetails } from "../lang/supported";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
+import { getSelectedLanguage } from "../surveys/LanguageSelector";
+import { gql, useApolloClient } from "@apollo/client";
+
+// Avoid graphql codegen by obfuscating the gql tag
+function ggg(l: string) {
+  return gql(l);
+}
 
 interface PropTranslations {
   [langCode: string]: string;
@@ -45,11 +52,50 @@ export default function TranslatedPropControl({
   const onError = useGlobalErrorHandler();
   const [mutate, mutationState] = useSetTranslatedPropsMutation({
     onError,
+    update: (cache, result) => {
+      const data = result.data;
+      // @ts-ignore
+      window.cache = cache;
+      if (data) {
+        cache.writeFragment({
+          id: cache.identify({
+            __typename: data.setTranslatedProp.typeName,
+            id: data.setTranslatedProp.id,
+          }),
+          fragment: ggg(`
+            fragment TranslatedProps on ${data.setTranslatedProp.typeName} {
+              translatedProps
+            }
+          `),
+          data: {
+            translatedProps: data.setTranslatedProp.translatedProps,
+          },
+        });
+      }
+    },
+    onCompleted: (data) => {
+      setModalOpen(false);
+    },
   });
 
+  const client = useApolloClient();
   const [state, setState] = useState<PropTranslations>({});
   useEffect(() => {
-    const translatedProps = data?.project?.translatedProps;
+    const record: any = client.cache.readFragment({
+      // eslint-disable-next-line i18next/no-literal-string
+      fragment: ggg(`
+        fragment TranslatedProps on ${typeName} {
+          translatedProps
+        }
+      `),
+      id: client.cache.identify({ __typename: typeName, id }),
+    });
+    if (!record) {
+      throw new Error("No record");
+    }
+    const translatedProps = record.translatedProps as {
+      [langCode: string]: { [propName: string]: string };
+    };
     if (!translatedProps) {
       setState({});
     } else {
@@ -59,7 +105,7 @@ export default function TranslatedPropControl({
       });
       setState(propTranslations);
     }
-  }, [data?.project?.translatedProps, propName]);
+  }, [data?.project?.translatedProps, propName, typeName, id, client]);
 
   return (
     <>
@@ -85,6 +131,8 @@ export default function TranslatedPropControl({
           footer={[
             {
               label: t("Save"),
+              loading: mutationState.loading,
+              disabled: mutationState.loading,
               variant: "primary",
               onClick: async () => {
                 const translations: { languageCode: string; value?: string }[] =
@@ -99,7 +147,7 @@ export default function TranslatedPropControl({
                   variables: {
                     id,
                     propName,
-                    typeName: "select * from auth;",
+                    typeName,
                     translations,
                   },
                 });
@@ -146,4 +194,37 @@ export default function TranslatedPropControl({
       )}
     </>
   );
+}
+
+type TranslatableRecordType = { translatedProps: any } & { [key: string]: any };
+export function useTranslatedProps(
+  baseRecord?: TranslatableRecordType | null | undefined
+) {
+  const { i18n } = useTranslation();
+  const { data } = useProjectMetadataQuery({ variables: { slug: getSlug() } });
+  const filteredLanguages = languages.filter(
+    (f) =>
+      !data?.project?.supportedLanguages ||
+      data.project.supportedLanguages.find((o) => o === f.code) ||
+      f.code === "EN"
+  );
+  const lang = getSelectedLanguage(i18n, filteredLanguages);
+  return function getTranslatedProp(
+    propName: string,
+    record?: TranslatableRecordType
+  ) {
+    const obj = record || baseRecord;
+    if (!obj) {
+      return "";
+    }
+    const defaultValue = obj[propName] as string;
+    if (
+      obj.translatedProps[lang.selectedLang.code] &&
+      propName in obj.translatedProps[lang.selectedLang.code] &&
+      obj.translatedProps[lang.selectedLang.code][propName]?.length > 0
+    ) {
+      return obj.translatedProps[lang.selectedLang.code][propName] as string;
+    }
+    return defaultValue;
+  };
 }

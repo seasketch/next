@@ -1,5 +1,8 @@
-import { postgraphile } from "postgraphile";
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
+import format from "pg-format";
+import snakeCase from "lodash.snakecase";
+import pluralize from "pluralize";
+
 /**
  * translatedProps is a pattern for translating admin managed content like
  * project and data layer names and discussion forum titles. Since there are
@@ -12,21 +15,23 @@ import { makeExtendSchemaPlugin, gql } from "graphile-utils";
  *       alter table projects add column if not exists translated_props jsonb not null default '{}'::jsonb;
  *       grant select(translated_props) on projects to anon;
  *    ```
- * 2. Add the schema type to the union definition below
- * 3. Update mutation setTranslatedProps in ProjectAccessControlSettings.graphql
- *    so that it returns the common props for that object type
- * 4. Use components/TranslatedPropControl.tsx in the admin interface to edit
+ * 2. Use components/TranslatedPropControl.tsx in the admin interface to edit
  *    translations and the related getTranslatableProp() function to display it.
  */
 const TranslatedPropsPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
     typeDefs: gql`
-      union Translatable = Project | TableOfContentsItem
       input TranslatedPropInput {
         languageCode: String!
         value: String
       }
+      type setTranslatedPropResult {
+        typeName: String!
+        id: Int!
+        translatedProps: JSON!
+      }
+
       extend type Mutation {
         """
         """
@@ -35,7 +40,7 @@ const TranslatedPropsPlugin = makeExtendSchemaPlugin((build) => {
           typeName: String!
           propName: String!
           translations: [TranslatedPropInput!]!
-        ): Translatable!
+        ): setTranslatedPropResult!
       }
     `,
     resolvers: {
@@ -65,40 +70,34 @@ const TranslatedPropsPlugin = makeExtendSchemaPlugin((build) => {
             throw new Error("translations must not be empty");
           }
           const { pgClient } = context;
-          console.log(sql.identifier(typeName));
 
-          const { rows } = await pgClient.query(
-            `
-            select translated_props from $1 where id = $2
-          `,
-            [typeName, id]
-          );
-          console.log(rows);
-          const translatedProps = rows[0].translated_props || {};
-
-          console.log("translatedProps", translatedProps);
-          // Update translated props with new values
-          for (const translationInput of translations) {
-            const { languageCode, value } = translationInput;
-            if (!value || value.length === 0) {
-              // If the value is empty, delete the property
-              delete translatedProps[languageCode][propName];
+          const tableName = snakeCase(pluralize(typeName));
+          const translationObject: { [languageCode: string]: string | null } =
+            {};
+          for (const translation of translations) {
+            if (!translation.languageCode) {
+              throw new Error("Missing languageCode");
+            }
+            if (!translation.value || translation.value.length === 0) {
+              translationObject[translation.languageCode] = null;
             } else {
-              translatedProps[languageCode] = {
-                ...translatedProps[languageCode],
-                [propName]: value,
-              };
+              translationObject[translation.languageCode] = translation.value;
             }
           }
 
-          // Update translated props in the database, and return the updated object
-          const updateResult = await pgClient.query(
+          const { rows } = await pgClient.query(
             `
-            update $1 set translated_props = $2 where id = $3 returning *
+            update ${format.ident(
+              tableName
+            )} set translated_props = merge_translated_props(translated_props, $1, $2::jsonb) where id = $3 returning id, translated_props
           `,
-            [typeName, translatedProps, id]
+            [propName, JSON.stringify(translationObject), id]
           );
-          return updateResult.rows[0];
+          return {
+            typeName,
+            id: rows[0].id,
+            translatedProps: rows[0].translated_props,
+          };
         },
       },
     },

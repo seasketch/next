@@ -35,6 +35,7 @@ fragment BasemapDetails on Basemap {
   type
   url
   surveysOnly
+  translatedProps
 }
 
 query GetBasemaps($slug: String!) {
@@ -98,6 +99,7 @@ mutation UploadBasemap(
 }
 
 fragment BasemapAdminDetails on Basemap {
+  ...BasemapDetails
   id
   attribution
   interactivitySettings {

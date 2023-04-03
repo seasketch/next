@@ -18,6 +18,7 @@ fragment ProjectMetadata on Project {
     canDigitize
     formElementId
     isArchived
+    translatedProps
   }
   supportedLanguages
   translatedProps

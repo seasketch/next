@@ -70,7 +70,7 @@ export default function Modal(props: ModalProps) {
     <Dialog
       open={props.open === undefined ? true : props.open}
       as={motion.div}
-      className={`relative ${props.tipyTop ? "z-50" : "z-20"}`}
+      className={`relative ${props.tipyTop ? "z-50" : "z-30"}`}
       onClose={() => {
         if (!props.disableBackdropClick) {
           props.onRequestClose();

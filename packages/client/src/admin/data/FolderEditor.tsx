@@ -10,6 +10,7 @@ import MutableAutosaveInput from "../MutableAutosaveInput";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
 import { folderToType, FolderType, typeToFolderProps } from "./EditFolderModal";
 import { MutationStateIndicator } from "../../components/MutationStateIndicator";
+import TranslatedPropControl from "../../components/TranslatedPropControl";
 
 export default function FolderEditor({
   id,
@@ -60,7 +61,7 @@ export default function FolderEditor({
 
   return (
     <div
-      className="bg-white z-50 absolute bottom-0 w-128 flex flex-col"
+      className="bg-white z-30 absolute bottom-0 w-128 flex flex-col"
       style={{ height: "calc(100vh)" }}
     >
       <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
@@ -90,7 +91,7 @@ export default function FolderEditor({
       {!folder && <Spinner />}
       {folder && (
         <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <div className="md:max-w-sm mt-5">
+          <div className="md:max-w-sm mt-5 relative">
             <MutableAutosaveInput
               // autofocus
               mutation={mutateItem}
@@ -99,6 +100,14 @@ export default function FolderEditor({
               value={folder?.title || ""}
               label={t("Name")}
               variables={{ id }}
+            />
+            <TranslatedPropControl
+              id={folder.id}
+              label={t("Folder Name")}
+              propName="title"
+              typeName="TableOfContentsItem"
+              defaultValue={folder.title}
+              className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
             />
           </div>
           <div>
