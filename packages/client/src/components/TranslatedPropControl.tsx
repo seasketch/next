@@ -49,6 +49,7 @@ export default function TranslatedPropControl({
     );
     return filteredLanguages;
   }, [data?.project?.supportedLanguages]);
+
   const onError = useGlobalErrorHandler();
   const [mutate, mutationState] = useSetTranslatedPropsMutation({
     onError,
@@ -106,9 +107,6 @@ export default function TranslatedPropControl({
       setState(propTranslations);
     }
   }, [data?.project?.translatedProps, propName, typeName, id, client]);
-
-  // TODO: remove. for production debugging
-  console.warn({ supportedLanguages });
 
   return (
     <>
