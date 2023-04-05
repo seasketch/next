@@ -12,6 +12,7 @@ const makeArgs = (componentSettings: EmailProps) => ({
   editable: false,
   isRequired: false,
   componentSettings: { ...componentSettings },
+  alternateLanguageSettings: {},
 });
 
 test("Component renders with custom body", async () => {

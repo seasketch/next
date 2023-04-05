@@ -55,6 +55,9 @@ import { currentSidebarState } from "../ProjectAppSidebar";
 import SketchEditorModal from "./SketchEditorModal";
 import SketchReportWindow, { ReportWindowUIState } from "./SketchReportWindow";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
+import languages from "../../lang/supported";
+import { getSelectedLanguage } from "../../surveys/LanguageSelector";
+import { FormLanguageContext } from "../../formElements/FormElement";
 
 type ReportState = {
   sketchId: number;
@@ -1303,6 +1306,26 @@ export default function SketchUIStateContextProvider({
     selectedIds,
   ]);
 
+  const { data } = useProjectMetadataQuery({
+    variables: {
+      slug,
+    },
+  });
+
+  const filteredLanguages = useMemo(
+    () =>
+      languages.filter(
+        (f) =>
+          !data?.project?.supportedLanguages ||
+          data?.project?.supportedLanguages.find((o) => o === f.code) ||
+          f.code === "EN"
+      ),
+    [data?.project?.supportedLanguages, languages]
+  );
+
+  const { i18n } = useTranslation();
+  const lang = getSelectedLanguage(i18n, filteredLanguages);
+
   return (
     <SketchUIStateContext.Provider
       value={{
@@ -1334,40 +1357,55 @@ export default function SketchUIStateContextProvider({
         errors,
       }}
     >
-      {children}
-      {openReports.map(({ sketchId, uiState, sketchClassId }) => (
-        <SketchReportWindow
-          key={sketchId}
-          sketchId={sketchId}
-          sketchClassId={sketchClassId}
-          onRequestClose={onRequestReportClose}
-          uiState={uiState}
-          selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
-          reportingAccessToken={
-            projectMetadata?.data?.project?.sketchGeometryToken
-          }
-          onClick={onReportClick}
-        />
-      ))}
-      {editor !== false && (
-        <SketchEditorModal
-          sketchClass={editor?.sketchClass}
-          sketch={editor?.sketch}
-          loading={editor?.loading}
-          loadingTitle={editor?.loading ? editor.loadingTitle : undefined}
-          folderId={editor?.folderId}
-          collectionId={editor?.collectionId}
-          onComplete={(item) => {
-            history.replace(`/${getSlug()}/app/sketches`);
-            setEditor(false);
-            focusOnTableOfContentsItem("Sketch", item.id, true);
-          }}
-          onCancel={() => {
-            history.replace(`/${getSlug()}/app/sketches`);
-            setEditor(false);
-          }}
-        />
-      )}
+      <FormLanguageContext.Provider
+        value={{
+          lang: lang.selectedLang,
+          setLanguage: (code: string) => {
+            const lang = languages.find((lang) => lang.code === code);
+            if (!lang) {
+              throw new Error(`Unrecognized language ${code}`);
+            }
+            i18n.changeLanguage(lang.code);
+          },
+          supportedLanguages:
+            (data?.project?.supportedLanguages as string[]) || [],
+        }}
+      >
+        {children}
+        {openReports.map(({ sketchId, uiState, sketchClassId }) => (
+          <SketchReportWindow
+            key={sketchId}
+            sketchId={sketchId}
+            sketchClassId={sketchClassId}
+            onRequestClose={onRequestReportClose}
+            uiState={uiState}
+            selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
+            reportingAccessToken={
+              projectMetadata?.data?.project?.sketchGeometryToken
+            }
+            onClick={onReportClick}
+          />
+        ))}
+        {editor !== false && (
+          <SketchEditorModal
+            sketchClass={editor?.sketchClass}
+            sketch={editor?.sketch}
+            loading={editor?.loading}
+            loadingTitle={editor?.loading ? editor.loadingTitle : undefined}
+            folderId={editor?.folderId}
+            collectionId={editor?.collectionId}
+            onComplete={(item) => {
+              history.replace(`/${getSlug()}/app/sketches`);
+              setEditor(false);
+              focusOnTableOfContentsItem("Sketch", item.id, true);
+            }}
+            onCancel={() => {
+              history.replace(`/${getSlug()}/app/sketches`);
+              setEditor(false);
+            }}
+          />
+        )}
+      </FormLanguageContext.Provider>
     </SketchUIStateContext.Provider>
   );
 }

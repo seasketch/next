@@ -126,7 +126,7 @@ export default function FormElementOptionsInput({
           }
         }}
       />
-      <EditorLanguageSelector className="py-0.5 pr-8 pl-0.5 my-1" />
+      <EditorLanguageSelector />
       {errors.map((e) => (
         <p key={e.toString()} className="text-red-900">
           {e}

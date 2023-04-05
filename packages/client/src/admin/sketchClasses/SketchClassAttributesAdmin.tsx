@@ -139,28 +139,28 @@ export default function SketchClassAttributesAdmin({
             "This form can be customized to collect important information about sketches from your users. The name field is the only form element required by SeaSketch which cannot be modified."
           )}
           <div className="mt-2 -mb-1 flex gap-2 w-full items-center">
-            <div className="flex-1">
-              <AddFormElementButton
-                label={t("Add a field")}
-                existingTypes={[]}
-                formId={formId}
-                formIsSketchClass={true}
-                nextPosition={(data?.form?.formElements || []).length}
-                onAdd={(id) => {
-                  setTimeout(() => {
-                    if (scrollableRef) {
-                      scrollableRef.scrollTo({
-                        top: 20000,
-                        behavior: "auto",
-                      });
-                    }
-                  }, 16);
-                }}
-              />
-            </div>
-            <div>
-              <EditorLanguageSelector />
-            </div>
+            {/* <div className="flex-1"> */}
+            <AddFormElementButton
+              label={t("Add a field")}
+              existingTypes={[]}
+              formId={formId}
+              formIsSketchClass={true}
+              nextPosition={(data?.form?.formElements || []).length}
+              onAdd={(id) => {
+                setTimeout(() => {
+                  if (scrollableRef) {
+                    scrollableRef.scrollTo({
+                      top: 20000,
+                      behavior: "auto",
+                    });
+                  }
+                }, 16);
+              }}
+            />
+            {/* </div> */}
+            {/* <div> */}
+            <EditorLanguageSelector large />
+            {/* </div> */}
           </div>
         </p>
         <DragDropContext

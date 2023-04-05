@@ -141,7 +141,6 @@ export function FormElementBody({
     : editorConfig.content.schema;
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
-  const context = useContext(SurveyContext);
   const langContext = useContext(FormLanguageContext);
 
   let body = defaultBody;
@@ -603,7 +602,7 @@ export const FormLanguageContext = createContext<{
   setLanguage: (code: string) => void;
 }>({
   supportedLanguages: [],
-  lang: { code: "en", name: "English" },
+  lang: { code: "EN", name: "English" },
   setLanguage: () => {
     throw new Error("setLanguage not implemented");
   },

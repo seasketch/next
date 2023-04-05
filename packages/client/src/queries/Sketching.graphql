@@ -31,6 +31,7 @@ query Sketching($slug: String!) {
   projectBySlug(slug: $slug) {
     sessionParticipationStatus
     id
+    supportedLanguages
     sketchClasses {
       ...SketchingDetails
     }
