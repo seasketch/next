@@ -4,13 +4,17 @@ import { createPortal } from "react-dom";
 import Skeleton from "../../components/Skeleton";
 import {
   SketchGeometryType,
+  useProjectMetadataQuery,
   useSketchReportingDetailsQuery,
 } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
 import Warning from "../../components/Warning";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
+import languages from "../../lang/supported";
+import getSlug from "../../getSlug";
+import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 
 export default function SketchReportWindow({
   sketchId,
@@ -42,6 +46,21 @@ export default function SketchReportWindow({
   // eslint-disable-next-line i18next/no-literal-string
   const frameId = `${sketchId}-report-iframe`;
   const [iframeLoading, setIframeLoading] = useState(true);
+  const filteredLanguages = useMemo(
+    () =>
+      languages.filter(
+        (f) =>
+          !data?.sketchClass?.project?.supportedLanguages ||
+          data?.sketchClass?.project?.supportedLanguages.find(
+            (o) => o === f.code
+          ) ||
+          f.code === "EN"
+      ),
+    [data?.sketchClass?.project?.supportedLanguages, languages]
+  );
+
+  const { i18n } = useTranslation();
+  const lang = getSelectedLanguage(i18n, filteredLanguages);
 
   const iframe = useRef<HTMLIFrameElement>(null);
 
@@ -60,6 +79,18 @@ export default function SketchReportWindow({
   ]);
 
   useEffect(() => {
+    if (iframe.current?.contentWindow) {
+      iframe.current.contentWindow.postMessage(
+        {
+          type: "SeaSketchReportingLanguageChangeEvent",
+          language: lang?.selectedLang?.code || "en",
+        },
+        "*"
+      );
+    }
+  }, [lang?.selectedLang?.code]);
+
+  useEffect(() => {
     const handler = async (e: MessageEvent<any>) => {
       if (
         e.data.frameId &&
@@ -76,6 +107,7 @@ export default function SketchReportWindow({
         const initMessage = {
           type: "SeaSketchReportingMessageEventType",
           client: data?.sketchClass?.geoprocessingClientName,
+          language: lang?.selectedLang?.code || "en",
           geometryUri,
           visibleLayers:
             mapContext.manager?.getVisibleLayerReferenceIds() || [],
@@ -149,6 +181,7 @@ export default function SketchReportWindow({
     mapContext?.layerStatesByTocStaticId,
     mapContext?.manager,
     onRequestClose,
+    lang?.selectedLang?.code,
   ]);
 
   return createPortal(

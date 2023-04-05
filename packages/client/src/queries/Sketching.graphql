@@ -196,6 +196,10 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     childProperties
   }
   sketchClass(id: $sketchClassId) {
+    project {
+      id
+      supportedLanguages
+    }
     id
     geoprocessingClientName
     geoprocessingClientUrl

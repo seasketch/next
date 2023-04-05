@@ -16931,7 +16931,10 @@ export type SketchReportingDetailsQuery = (
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
-    & { form?: Maybe<(
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'supportedLanguages'>
+    )>, form?: Maybe<(
       { __typename?: 'Form' }
       & Pick<Form, 'id'>
       & { formElements?: Maybe<Array<(
@@ -21654,6 +21657,10 @@ export const SketchReportingDetailsDocument = /*#__PURE__*/ gql`
     childProperties
   }
   sketchClass(id: $sketchClassId) {
+    project {
+      id
+      supportedLanguages
+    }
     id
     geoprocessingClientName
     geoprocessingClientUrl
