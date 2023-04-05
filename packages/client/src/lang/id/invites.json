@@ -1,0 +1,17 @@
+{
+  "Accept as": "Terima sebagai {{email}}",
+  "An account with this email address already exists.": "Akun dengan alamat email ini sudah ada.",
+  "Confirming invite": "Mengonfirmasi undangan",
+  "Contact {{supportEmail}} to request a new invitation.": "Hubungi {{supportEmail}} untuk meminta undangan baru.",
+  "Create an Account": "Buat sebuah akun",
+  "Logout and sign in as ": "Keluar dan masuk sebagai ",
+  "Sign In": "Masuk",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Undangan ini telah diterima.<1> Lanjutkan ke proyek </1> atau <5>hubungi dukungan</5>jika Anda yakin ini adalah kesalahan.",
+  "This invitation was originally sent to <2></2>.": "Undangan ini awalnya dikirim ke <2></2>.",
+  "Use another account": "Gunakan akun lain",
+  "Verifying invitation code": "Memverifikasi kode undangan",
+  "Welcome, !": "Selamat datang, !",
+  "Welcome!": "Selamat datang!",
+  "You have been invited to participate in a SeaSketch project.": "Anda telah diundang untuk berpartisipasi dalam proyek SeaSketch.",
+  "Your invitation to this project has expired.": "Undangan Anda untuk proyek ini telah kedaluwarsa."
+}

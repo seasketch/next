@@ -10,6 +10,7 @@ import {
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useMemo } from "react";
+import { useTranslatedProps } from "../../components/TranslatedPropControl";
 
 export default function ForumBreadcrumbs({
   postingNewTopic,
@@ -23,6 +24,7 @@ export default function ForumBreadcrumbs({
   const slug = getSlug();
   const { t } = useTranslation("forums");
   const onError = useGlobalErrorHandler();
+  const getTranslatedProp = useTranslatedProps();
 
   const forumData = useForumsQuery({
     onError,
@@ -59,7 +61,7 @@ export default function ForumBreadcrumbs({
           <BreadcrumbLink
             showSlash
             to={`/${slug}/app/forums/${forumId}`}
-            label={forum.name}
+            label={getTranslatedProp("name", forum)}
             className=""
           />
         )}

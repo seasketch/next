@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Bulia e dua na Cakacaka",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Bulia ga vakataki iko<1></1><2> SeaSketch project</2>",
+  "Create your project": "Bulia na nomu cakacaka",
+  "Developer API": "Dauniveivakatorocaketaki API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Yalovinaka veitaratara kei keitou ena <2>support@seasketch.org</2> me tuvanaki kina e dua na veivosaki me baleta na sala e rawa ni vakayagataki kina na SeaSketch me tokona na nomu sasaga ni tuvatuva.",
+  "Project name": "Yaca ni cakacaka",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Na cakacaka ni SeaSketch e rawa ni vakarawarawataka ena noda vakayagataka na noda dolavi <2>Geoprocessing Framework</2>. Na cakacaka e rawa ni vakamacalataka na ripote ni raitayaloyalotaka na revurevu ni iwasewase namaki ena kena vakayagataki na Typescript, React, kei na AWS Lambda.",
+  "Trusted by": "Nuitaki mai vei",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Vakayagataka na neitou iyaya ni cakacaka cokovata kei na vakadidike me baleta na kena tuvanaki na kasiviti ni sotia ena nomu yasana. Na nomu cakacaka ena oka kina na iyaya ni cakacaka me raici kina na mape, tauyavutaka na foramu ni veivosaki, ituvatuva ni droini, kei na kumuni itukutuku ena kena vakayagataki na vakadidike - <i>ka sega ni saumi!</i> Na ripote ni anlytical e rawa ni vakatorocaketaki ka vakavinakataki ena kena vakayagataki na noda suitu ni <5>geoprocessing</5>."
+}

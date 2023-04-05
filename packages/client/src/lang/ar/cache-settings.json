@@ -1,0 +1,15 @@
+{
+  "Cache Details": "تفاصيل ذاكرة التخزين المؤقت",
+  "Cache Status": "حالة ذاكرة التخزين المؤقت",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "يخزن المزيد من البيانات ويحمل الأصول مسبقًا للحصول على أداء أفضل. يدعم الاستخدام دون اتصال.",
+  "Data Caching": "تخزين البيانات",
+  "Default": "تقصير",
+  "Improved Performance": "تحسين الأداء",
+  "Maximum": "أقصى",
+  "Minimum": "الحد الأدنى",
+  "Only what's necessary to run SeaSketch": "فقط ما هو ضروري لتشغيل SeaSketch",
+  "Query Cache": "الاستعلام عن ذاكرة التخزين المؤقت",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "يحفظ بعض بيانات التطبيقات المستخدمة مؤخرًا لتحسين أداء بدء التشغيل واستخدامها عبر اتصالات الإنترنت الضعيفة",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "استخدم هذا الإعداد إذا كنت منسقًا أو مخططًا يستخدم SeaSketch بانتظام. يدعم الاستخدام دون اتصال.",
+  "Using  of your browser's storage quota": "استخدام الحصة التخزينية لمتصفحك"
+}

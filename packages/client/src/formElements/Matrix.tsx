@@ -6,6 +6,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -24,7 +25,7 @@ export type MatrixValue = {
 };
 
 const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   const { isSmall } = useContext(SurveyStyleContext);
   const options = useLocalizedComponentSetting(
     "options",

@@ -1,0 +1,17 @@
+{
+  "Accept as": "قبول كـ {{email}}",
+  "An account with this email address already exists.": "حساب مع عنوان البريد الإلكتروني هذا موجود بالفعل.",
+  "Confirming invite": "تأكيد الدعوة",
+  "Contact {{supportEmail}} to request a new invitation.": "اتصل بـ {{supportEmail}} لطلب دعوة جديدة.",
+  "Create an Account": "إنشاء حساب",
+  "Logout and sign in as ": "تسجيل الخروج وتسجيل الدخول باسم ",
+  "Sign In": "تسجيل الدخول",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "تم قبول هذه الدعوة بالفعل. <1> تابع إلى المشروع </ 1> أو <5> اتصل بالدعم </ 5> إذا كنت تعتقد أن هذا خطأ.",
+  "This invitation was originally sent to <2></2>.": "تم إرسال هذه الدعوة في الأصل إلى <2> </2>.",
+  "Use another account": "استخدم حسابا آخر",
+  "Verifying invitation code": "التحقق من رمز الدعوة",
+  "Welcome, !": "مرحباً، !",
+  "Welcome!": "مرحباً!",
+  "You have been invited to participate in a SeaSketch project.": "لقد تمت دعوتك للمشاركة في مشروع SeaSketch.",
+  "Your invitation to this project has expired.": "انتهت صلاحية دعوتك لهذا المشروع."
+}

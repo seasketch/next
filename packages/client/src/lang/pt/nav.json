@@ -1,7 +1,13 @@
 {
+  "About": "Sobre",
+  "Account settings": "Configurações da conta",
+  "Add data": "Adicionar dados",
+  "Add folder": "Adicionar pasta",
+  "Are you sure you want to delete {{name}}?": "Você tem certeza de que quer excluir {{name}}?",
   "Default Visibility": "Visibilidade Padrão",
   "Delete": "Excluir",
   "Delete Item": "Deletar item",
+  "Developer API": "Desenvolvedor API",
   "Edit": "Editar",
   "Edit metadata": "Editar metadados",
   "Metadata": "Metadados",

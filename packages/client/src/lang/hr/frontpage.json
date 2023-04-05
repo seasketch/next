@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Napravite projekt",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Izradite vlastiti<1></1><2> SeaSketch projekt</2>",
+  "Create your project": "Kreirajte svoj projekt",
+  "Developer API": "API za razvojne programere",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Kontaktirajte nas na <2>support@seasketch.org</2> kako bismo dogovorili raspravu o tome kako se SeaSketch može koristiti kao podrška vašim naporima u planiranju.",
+  "Project name": "Naziv projekta",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketch projekti mogu se prilagoditi pomoću našeg otvorenog koda <2>Geoprocessing Framework</2>. Projekti mogu definirati izvješća koja vizualiziraju utjecaj potencijalnih zona pomoću Typescripta, Reacta i AWS Lambda.",
+  "Trusted by": "Pouzdano od",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Upotrijebite naše alate za geodizajn i istraživanje za suradnju u pomorskom prostornom planiranju u vašoj regiji. Vaš će projekt uključivati alate za vizualizaciju karata, stvaranje foruma za raspravu, skiciranje planova i prikupljanje podataka pomoću anketa - <i>besplatno!</i> Analitička izvješća mogu se razviti i prilagoditi pomoću našeg <5>okvira za geoprocesiranje</5> ."
+}

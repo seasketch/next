@@ -1,0 +1,17 @@
+{
+  "Accept as": "Talia o se {{imeli}",
+  "An account with this email address already exists.": "O le Galuega e feso'otai ma lenei tuatusi fa'aimeli ua  iai.",
+  "Confirming invite": "Fa'amaonioa le valaaulia",
+  "Contact {{supportEmail}} to request a new invitation.": "Feso'otaiga {{supportEmail}} mo le talosagaina o se isi valaulia fou.",
+  "Create an Account": "Fausia se isi Tuatusi Galue ",
+  "Logout and sign in as ": "Tu'umuli ese ma toe aga'i e amata le galuega",
+  "Sign In": "Amataga",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "O lenei valaaulia ua taliaina. <1> Fa'aauau le poloketi </1> or <5>feso'otasi mo se fesoasoani</5>peafai ua e manatu ua iai se mea sese.  ",
+  "This invitation was originally sent to <2></2>.": "O lenei valaulia sa avatu ia <2></2>.",
+  "Use another account": "fa'aaoga se isi Tuatusi Galue",
+  "Verifying invitation code": "Fa'amaonia mai le numera o le valaualia",
+  "Welcome, !": "Fa'afeiloa'i atu, !",
+  "Welcome!": "Fa'afeiloa'i atu!",
+  "You have been invited to participate in a SeaSketch project.": "Ua valaaulia oe e te auai i lenei Poloketi Fa'aSeaSketch",
+  "Your invitation to this project has expired.": "O lau valaaulia i lenei polketu ua mae'a."
+}

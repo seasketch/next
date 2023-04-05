@@ -1,4 +1,26 @@
 {
+  "About": "Over",
+  "Account settings": "Account instellingen",
+  "Add data": "Voeg gegevens toe",
+  "Add folder": "Map toevoegen",
+  "Are you sure you want to delete {{name}}?": "Weet je zeker dat je {{name}} wilt verwijderen?",
+  "Contact support": "Contact opnemen met ondersteuning",
+  "Default Visibility": "Standaard zichtbaarheid",
   "Delete": "Verwijder",
-  "Edit": "Bewerk"
+  "Delete Item": "Verwijder item",
+  "Developer API": "Ontwikkelaar API",
+  "Edit": "Bewerk",
+  "Edit metadata": "Metagegevens bewerken",
+  "Metadata": "Metagegevens",
+  "Projects": "Projecten",
+  "Publish": "Publiceren",
+  "SeaSketch logo": "SeaSketch-logo",
+  "Sign in": "Aanmelden",
+  "Sign In": "Aanmelden",
+  "Sign out": "Afmelden",
+  "Signed in as": "Aangemeld als",
+  "Tree Editor": "Boom-editor",
+  "view": "weergave",
+  "Z-Order": "Z-volgorde",
+  "Zoom to bounds": "Zoom in op grenzen"
 }

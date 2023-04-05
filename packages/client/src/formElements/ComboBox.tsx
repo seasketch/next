@@ -5,6 +5,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -45,7 +46,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   const [selectedOption, setSelectedOption] = useState<
     FormElementOption | undefined | null
   >();
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
 
   useEffect(() => {
     setChoices(items.map((i) => i.label));

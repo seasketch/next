@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Faʻu ha Ngāue ke Fai",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Faʻu haʻo ngaue seaSketch<1></1><2></2>",
+  "Create your project": "Faʻu hoʻo ngaue",
+  "Developer API": "Tokotaha faʻu API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Kataki ʻo fetuʻutaki mai kiate kimautolu ʻi he <2>support@seasketch.org</2> ke fokotuʻutuʻu ha fealeleaʻaki fekauʻaki mo e founga ʻe lava ke fakaʻaongaʻi ai ʻa e SeaSketch ke poupouʻi hoʻo ngaahi ngaue palani.",
+  "Project name": "Hingoa ʻo e Ngāué",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "ʻE lava ke fakapatonu ʻa e ngaahi ngaue SeaSketch ʻo fakaʻaongaʻi ʻetau maʻuʻanga tokoni <2>Geoprocessing faʻunga</2>. ʻE lava ke fakaʻuhingaʻi ʻe he ngaahi ngaue ʻa e ngaahi lipooti ʻoku nau fakakaukauloto ki he ola ʻo e kau teuteu fakasouni ʻo fakaʻaongaʻi ʻa e Typescript, tali, mo e Lambda.",
+  "Trusted by": "Falalaʻanga ʻe",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Fakaʻaongaʻi ʻetau geodesign mo e ngaahi meʻangaue ki he savea ki he palani spatial ʻa e Tautahi ʻi homou feituʻu. ʻE kau ʻi hoʻo ngaue ʻa e ngaahi meʻangaue ke fakakaukauloto ki he ngaahi mape, faʻu ha ngaahi fakataha fealeleaʻaki, ngaahi palani fakatata, mo tanaki ha fakamatala ʻo fakaʻaongaʻi <i>ʻa e savea-taʻetotongi!</i> ʻE lava ke faʻufaʻu mo fakapatonu ʻa e ngaahi lipooti ngaahi meʻa ʻo fakaʻaongaʻi ʻetau faʻunga <5>geoprocessing</5>."
+}

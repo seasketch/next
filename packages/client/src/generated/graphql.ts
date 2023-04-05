@@ -294,6 +294,7 @@ export type Basemap = Node & {
   thumbnail: Scalars['String'];
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   tileSize: Scalars['Int'];
+  translatedProps: Scalars['JSON'];
   type: BasemapType;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
@@ -399,6 +400,7 @@ export type BasemapInput = {
   thumbnail?: Maybe<Scalars['Upload']>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   tileSize?: Maybe<Scalars['Int']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
   type: BasemapType;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
@@ -451,6 +453,7 @@ export type BasemapPatch = {
   thumbnail?: Maybe<Scalars['Upload']>;
   /** For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   tileSize?: Maybe<Scalars['Int']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
   type?: Maybe<BasemapType>;
   /**
    * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
@@ -2035,6 +2038,7 @@ export type DataSource = Node & {
   tileSize?: Maybe<Scalars['Int']>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
   tolerance?: Maybe<Scalars['BigFloat']>;
+  translatedProps: Scalars['JSON'];
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
   uploadedBy?: Maybe<Scalars['String']>;
@@ -2210,6 +2214,7 @@ export type DataSourceInput = {
   tileSize?: Maybe<Scalars['Int']>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
   tolerance?: Maybe<Scalars['BigFloat']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
   uploadedSourceFilename?: Maybe<Scalars['String']>;
@@ -2311,6 +2316,7 @@ export type DataSourcePatch = {
   tileSize?: Maybe<Scalars['Int']>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
   tolerance?: Maybe<Scalars['BigFloat']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
   /**
    * A URL to a TileJSON resource for tiled sources. For GeoJSON or
    * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
@@ -4736,6 +4742,7 @@ export type Forum = Node & {
   topicCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Topic`. */
   topicsConnection: TopicsConnection;
+  translatedProps: Scalars['JSON'];
   writeAcl?: Maybe<Acl>;
 };
 
@@ -4793,6 +4800,7 @@ export type ForumInput = {
    */
   position?: Maybe<Scalars['Int']>;
   projectId: Scalars['Int'];
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /** Represents an update to a `Forum`. Fields that are set will be updated. */
@@ -4811,6 +4819,7 @@ export type ForumPatch = {
    * position in ascending order. Set using `setForumOrder()`
    */
   position?: Maybe<Scalars['Int']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /** A `Forum` edge in the connection. */
@@ -5777,6 +5786,31 @@ export type MarkTopicAsReadPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `mergeTranslatedProps` mutation. */
+export type MergeTranslatedPropsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  existing?: Maybe<Scalars['JSON']>;
+  propName?: Maybe<Scalars['String']>;
+  propTranslations?: Maybe<Scalars['JSON']>;
+};
+
+/** The output of our `mergeTranslatedProps` mutation. */
+export type MergeTranslatedPropsPayload = {
+  __typename?: 'MergeTranslatedPropsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  json?: Maybe<Scalars['JSON']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
   answers?: Maybe<Scalars['JSON']>;
@@ -6109,6 +6143,7 @@ export type Mutation = {
    * and whenever new posts are shown.
    */
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
+  mergeTranslatedProps?: Maybe<MergeTranslatedPropsPayload>;
   modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
@@ -6165,6 +6200,7 @@ export type Mutation = {
   setTopicLocked?: Maybe<SetTopicLockedPayload>;
   /** Admins can use this mutation to place topics at the top of the forum listing. */
   setTopicSticky?: Maybe<SetTopicStickyPayload>;
+  setTranslatedProp: SetTranslatedPropResult;
   /**
    * Sets the list of groups that the given user belongs to. Will clear all other
    * group memberships in the project. Available only to admins.
@@ -7112,6 +7148,12 @@ export type MutationMarkTopicAsReadArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationMergeTranslatedPropsArgs = {
+  input: MergeTranslatedPropsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationModifySurveyAnswersArgs = {
   input: ModifySurveyAnswersInput;
 };
@@ -7213,6 +7255,15 @@ export type MutationSetTopicLockedArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetTopicStickyArgs = {
   input: SetTopicStickyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetTranslatedPropArgs = {
+  id: Scalars['Int'];
+  propName: Scalars['String'];
+  translations: Array<TranslatedPropInput>;
+  typeName: Scalars['String'];
 };
 
 
@@ -8322,6 +8373,7 @@ export type Project = Node & {
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+  translatedProps: Scalars['JSON'];
   /** Number of users who have outstanding access requests. Only relevant for invite-only projects. */
   unapprovedParticipantCount?: Maybe<Scalars['Int']>;
   /**
@@ -8937,6 +8989,7 @@ export type ProjectPatch = {
   mapboxPublicKey?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
   region?: Maybe<Scalars['GeoJSON']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /** A connection to a list of `Project` values. */
@@ -10689,6 +10742,7 @@ export type SketchClass = Node & {
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
   templateDescription?: Maybe<Scalars['String']>;
+  translatedProps: Scalars['JSON'];
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
 };
@@ -10756,6 +10810,7 @@ export type SketchClassPatch = {
   preprocessingEndpoint?: Maybe<Scalars['String']>;
   preprocessingProjectUrl?: Maybe<Scalars['String']>;
   templateDescription?: Maybe<Scalars['String']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /** A `SketchClass` edge in the connection. */
@@ -11557,6 +11612,7 @@ export type TableOfContentsItem = Node & {
   stableId: Scalars['String'];
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
+  translatedProps: Scalars['JSON'];
 };
 
 /**
@@ -11633,6 +11689,7 @@ export type TableOfContentsItemPatch = {
   showRadioChildren?: Maybe<Scalars['Boolean']>;
   /** Name used in the table of contents rendering */
   title?: Maybe<Scalars['String']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /** A connection to a list of `TableOfContentsItem` values. */
@@ -11899,6 +11956,11 @@ export enum TopicsOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
+
+export type TranslatedPropInput = {
+  languageCode: Scalars['String'];
+  value?: Maybe<Scalars['String']>;
+};
 
 
 export type UnsplashLinks = {
@@ -13764,6 +13826,13 @@ export enum WorkerJobStatus {
   Started = 'STARTED'
 }
 
+export type SetTranslatedPropResult = {
+  __typename?: 'setTranslatedPropResult';
+  id: Scalars['Int'];
+  translatedProps: Scalars['JSON'];
+  typeName: Scalars['String'];
+};
+
 export type UpdateTerrainExaggerationFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'terrainExaggeration'>
@@ -14313,7 +14382,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -14393,6 +14462,7 @@ export type BasemapAdminDetailsFragment = (
     { __typename?: 'OptionalBasemapLayer' }
     & Pick<OptionalBasemapLayer, 'basemapId' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'id' | 'layers' | 'metadata' | 'name'>
   )> }
+  & BasemapDetailsFragment
 );
 
 export type GetBasemapQueryVariables = Exact<{
@@ -14955,7 +15025,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
@@ -15093,7 +15163,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps'>
       )> }
     )> }
   )> }
@@ -15176,7 +15246,7 @@ export type UpdateDataSourceMutation = (
     { __typename?: 'UpdateDataSourcePayload' }
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
+      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
     )> }
   )> }
 );
@@ -15372,7 +15442,7 @@ export type PublishTableOfContentsMutation = (
 
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
-  & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate'>
+  & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
   & { readAcl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'nodeId'>
@@ -15476,7 +15546,7 @@ export type RecentPostFragment = (
     & Pick<Topic, 'id' | 'postsCount' | 'title' | 'sticky' | 'participantCount'>
     & { forum?: Maybe<(
       { __typename?: 'Forum' }
-      & Pick<Forum, 'id' | 'name'>
+      & Pick<Forum, 'id' | 'name' | 'translatedProps'>
     )>, participantsConnection: (
       { __typename?: 'ProfilesConnection' }
       & { nodes: Array<(
@@ -15490,7 +15560,7 @@ export type RecentPostFragment = (
 
 export type ForumDetailsFragment = (
   { __typename?: 'Forum' }
-  & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost'>
+  & Pick<Forum, 'id' | 'archived' | 'name' | 'description' | 'topicCount' | 'postCount' | 'lastPostDate' | 'canPost' | 'translatedProps'>
 );
 
 export type ForumsQueryVariables = Exact<{
@@ -16215,12 +16285,28 @@ export type ToggleLanguageSupportMutation = (
   )> }
 );
 
+export type SetTranslatedPropsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  typeName: Scalars['String'];
+  propName: Scalars['String'];
+  translations: Array<TranslatedPropInput> | TranslatedPropInput;
+}>;
+
+
+export type SetTranslatedPropsMutation = (
+  { __typename?: 'Mutation' }
+  & { setTranslatedProp: (
+    { __typename?: 'setTranslatedPropResult' }
+    & Pick<SetTranslatedPropResult, 'id' | 'translatedProps' | 'typeName'>
+  ) }
+);
+
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived'>
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
   )> }
 );
 
@@ -16340,7 +16426,7 @@ export type ProjectSlugExistsQuery = (
 
 export type OverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
@@ -16366,7 +16452,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
 );
 
 export type ClientSpriteFragment = (
@@ -16392,7 +16478,7 @@ export type DataLayerDetailsFragment = (
 
 export type ProjectListItemFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured'>
+  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured' | 'translatedProps'>
 );
 
 export type ProjectListingQueryVariables = Exact<{
@@ -16439,7 +16525,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -16632,7 +16718,7 @@ export type SketchingQuery = (
     & Pick<User, 'id'>
   )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'sessionParticipationStatus' | 'id' | 'sketchGeometryToken'>
+    & Pick<Project, 'sessionParticipationStatus' | 'id' | 'supportedLanguages' | 'sketchGeometryToken'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
@@ -16847,7 +16933,10 @@ export type SketchReportingDetailsQuery = (
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
-    & { form?: Maybe<(
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'supportedLanguages'>
+    )>, form?: Maybe<(
       { __typename?: 'Form' }
       & Pick<Form, 'id'>
       & { formElements?: Maybe<Array<(
@@ -18640,8 +18729,50 @@ export const DataFragmentDoc = gql`
   name
 }
     `;
+export const BasemapDetailsFragmentDoc = gql`
+    fragment BasemapDetails on Basemap {
+  id
+  attribution
+  interactivitySettings {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+  labelsLayerId
+  name
+  optionalBasemapLayers {
+    basemapId
+    id
+    defaultVisibility
+    description
+    options
+    groupType
+    layers
+    metadata
+    name
+  }
+  description
+  projectId
+  terrainExaggeration
+  terrainMaxZoom
+  terrainOptional
+  terrainTileSize
+  terrainUrl
+  terrainVisibilityDefault
+  thumbnail
+  tileSize
+  type
+  url
+  surveysOnly
+  translatedProps
+}
+    `;
 export const BasemapAdminDetailsFragmentDoc = gql`
     fragment BasemapAdminDetails on Basemap {
+  ...BasemapDetails
   id
   attribution
   interactivitySettings {
@@ -18679,7 +18810,7 @@ export const BasemapAdminDetailsFragmentDoc = gql`
   url
   surveysOnly
 }
-    `;
+    ${BasemapDetailsFragmentDoc}`;
 export const DataUploadDetailsFragmentDoc = gql`
     fragment DataUploadDetails on DataUploadTask {
   createdAt
@@ -18716,6 +18847,7 @@ export const ForumListDetailsFragmentDoc = gql`
     id
     nodeId
   }
+  translatedProps
 }
     `;
 export const AuthorProfileFragmentDoc = gql`
@@ -18792,6 +18924,7 @@ export const RecentPostFragmentDoc = gql`
     forum {
       id
       name
+      translatedProps
     }
     participantCount
     participantsConnection(first: 4) {
@@ -18813,6 +18946,7 @@ export const ForumDetailsFragmentDoc = gql`
   postCount
   lastPostDate
   canPost
+  translatedProps
 }
     `;
 export const ForumTopicFragmentDoc = gql`
@@ -18860,46 +18994,6 @@ export const SpriteDetailsFragmentDoc = gql`
     pixelRatio
     url
   }
-}
-    `;
-export const BasemapDetailsFragmentDoc = gql`
-    fragment BasemapDetails on Basemap {
-  id
-  attribution
-  interactivitySettings {
-    cursor
-    id
-    layers
-    longTemplate
-    shortTemplate
-    type
-  }
-  labelsLayerId
-  name
-  optionalBasemapLayers {
-    basemapId
-    id
-    defaultVisibility
-    description
-    options
-    groupType
-    layers
-    metadata
-    name
-  }
-  description
-  projectId
-  terrainExaggeration
-  terrainMaxZoom
-  terrainOptional
-  terrainTileSize
-  terrainUrl
-  terrainVisibilityDefault
-  thumbnail
-  tileSize
-  type
-  url
-  surveysOnly
 }
     `;
 export const MapEssentialsFragmentDoc = gql`
@@ -19014,8 +19108,10 @@ export const ProjectMetadataFragmentDoc = gql`
     canDigitize
     formElementId
     isArchived
+    translatedProps
   }
   supportedLanguages
+  translatedProps
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -19061,6 +19157,7 @@ export const OverlayFragmentDoc = gql`
   stableId
   title
   geoprocessingReferenceId
+  translatedProps
 }
     `;
 export const DataSourceDetailsFragmentDoc = gql`
@@ -19094,6 +19191,7 @@ export const DataSourceDetailsFragmentDoc = gql`
   urls
   useDevicePixelRatio
   supportsDynamicLayers
+  translatedProps
 }
     `;
 export const ClientSpriteFragmentDoc = gql`
@@ -19140,6 +19238,7 @@ export const ProjectListItemFragmentDoc = gql`
   description
   url
   isFeatured
+  translatedProps
 }
     `;
 export const SketchFormElementFragmentDoc = gql`
@@ -19193,6 +19292,7 @@ export const SketchingDetailsFragmentDoc = gql`
   preprocessingEndpoint
   preprocessingProjectUrl
   canDigitize
+  translatedProps
 }
     ${SketchFormElementFragmentDoc}`;
 export const AdminSketchingDetailsFragmentDoc = gql`
@@ -21895,6 +21995,7 @@ export const LayersAndSourcesForItemsDocument = gql`
       useDevicePixelRatio
       supportsDynamicLayers
       uploadedSourceFilename
+      translatedProps
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -22251,6 +22352,7 @@ export const GetLayerItemDocument = gql`
         uploadedSourceFilename
         uploadedBy
         geostats
+        translatedProps
       }
     }
   }
@@ -22461,6 +22563,7 @@ export const UpdateDataSourceDocument = gql`
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+      translatedProps
     }
   }
 }
@@ -24327,6 +24430,49 @@ export function useToggleLanguageSupportMutation(baseOptions?: Apollo.MutationHo
 export type ToggleLanguageSupportMutationHookResult = ReturnType<typeof useToggleLanguageSupportMutation>;
 export type ToggleLanguageSupportMutationResult = Apollo.MutationResult<ToggleLanguageSupportMutation>;
 export type ToggleLanguageSupportMutationOptions = Apollo.BaseMutationOptions<ToggleLanguageSupportMutation, ToggleLanguageSupportMutationVariables>;
+export const SetTranslatedPropsDocument = gql`
+    mutation setTranslatedProps($id: Int!, $typeName: String!, $propName: String!, $translations: [TranslatedPropInput!]!) {
+  setTranslatedProp(
+    id: $id
+    propName: $propName
+    typeName: $typeName
+    translations: $translations
+  ) {
+    id
+    translatedProps
+    typeName
+  }
+}
+    `;
+export type SetTranslatedPropsMutationFn = Apollo.MutationFunction<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>;
+
+/**
+ * __useSetTranslatedPropsMutation__
+ *
+ * To run a mutation, you first call `useSetTranslatedPropsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetTranslatedPropsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setTranslatedPropsMutation, { data, loading, error }] = useSetTranslatedPropsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      typeName: // value for 'typeName'
+ *      propName: // value for 'propName'
+ *      translations: // value for 'translations'
+ *   },
+ * });
+ */
+export function useSetTranslatedPropsMutation(baseOptions?: Apollo.MutationHookOptions<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>(SetTranslatedPropsDocument, options);
+      }
+export type SetTranslatedPropsMutationHookResult = ReturnType<typeof useSetTranslatedPropsMutation>;
+export type SetTranslatedPropsMutationResult = Apollo.MutationResult<SetTranslatedPropsMutation>;
+export type SetTranslatedPropsMutationOptions = Apollo.BaseMutationOptions<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>;
 export const ProjectMetadataDocument = gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
@@ -24977,6 +25123,7 @@ export const SketchingDocument = gql`
   projectBySlug(slug: $slug) {
     sessionParticipationStatus
     id
+    supportedLanguages
     sketchClasses {
       ...SketchingDetails
     }
@@ -25317,6 +25464,10 @@ export const SketchReportingDetailsDocument = gql`
     childProperties
   }
   sketchClass(id: $sketchClassId) {
+    project {
+      id
+      supportedLanguages
+    }
     id
     geoprocessingClientName
     geoprocessingClientUrl
@@ -28457,6 +28608,7 @@ export const namedOperations = {
     deleteTilePackage: 'deleteTilePackage',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
+    setTranslatedProps: 'setTranslatedProps',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

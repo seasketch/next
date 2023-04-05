@@ -44,6 +44,8 @@ import InputBlock from "../components/InputBlock";
 import useDialog from "../components/useDialog";
 import SupportedLanguagesSettings from "./SupportedLanguagesSettings";
 import getSlug from "../getSlug";
+import { TranslateIcon } from "@heroicons/react/outline";
+import TranslatedPropControl from "../components/TranslatedPropControl";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
@@ -61,10 +63,7 @@ export default function Settings() {
       <div className="pt-2 pb-6 md:py-6 max-h-full overflow-y-auto">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           {data && data.project && (
-            <BasicSettingsForm
-              {...data.project}
-              url={`https://seasketch.org/${data.project.slug}`}
-            />
+            <BasicSettingsForm {...data.project} url={data.project.url!} />
           )}
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
@@ -93,6 +92,7 @@ export default function Settings() {
 }
 
 function BasicSettingsForm(props: {
+  id: number;
   name: string;
   logo?: string;
   logoUrl?: string | null;
@@ -123,21 +123,37 @@ function BasicSettingsForm(props: {
               {t("Basic Settings")}
             </h3>
 
-            <div className="md:max-w-xs">
+            <div className="md:max-w-xs relative">
               <ProjectAutosaveInput
                 propName="name"
                 label={t("Project Name")}
                 value={props.name}
                 slug={props.slug}
               />
+              <TranslatedPropControl
+                id={props.id}
+                label={t("Project Name")}
+                propName="name"
+                typeName="Project"
+                defaultValue={props.name}
+                className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
+              />
             </div>
-            <div className="md:max-w-xs mt-5">
+            <div className="md:max-w-xs mt-5 relative">
               <ProjectAutosaveInput
                 propName="description"
                 label={t("Description")}
-                placeholder={t("Brief description below the name")}
+                placeholder={t("Brief description below the name ")}
                 value={props.description || ""}
                 slug={props.slug}
+              />
+              <TranslatedPropControl
+                id={props.id}
+                label={t("Project Description")}
+                propName="description"
+                typeName="Project"
+                defaultValue={props.description}
+                className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
               />
             </div>
 

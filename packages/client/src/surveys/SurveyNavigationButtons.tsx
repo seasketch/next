@@ -6,7 +6,10 @@ import {
 import { MouseEventHandler, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
-import { SurveyContext } from "../formElements/FormElement";
+import {
+  FormLanguageContext,
+  SurveyContext,
+} from "../formElements/FormElement";
 import { SurveyAppFormElementFragment } from "../generated/graphql";
 import { SurveyStyleContext } from "./appearance";
 import LanguageSelector from "./LanguageSelector";
@@ -35,6 +38,7 @@ export default function SurveyNavigationButton({
 }: SurveyNavigationButtonProps) {
   const style = useContext(SurveyStyleContext);
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   const { t } = useTranslation("surveys");
   if (hidden) {
     return null;
@@ -68,9 +72,9 @@ export default function SurveyNavigationButton({
           <ChevronUpIcon className="w-6 h-6" />
         </Link>
       )}
-      {(context?.supportedLanguages || []).length > 0 && (
+      {(langContext.supportedLanguages || []).length > 0 && (
         <LanguageSelector
-          options={context?.supportedLanguages}
+          options={langContext.supportedLanguages}
           button={(onClick) => (
             <button
               className="px-3"

@@ -1,0 +1,17 @@
+{
+  "Accept as": "Prihvati kao {{email}}",
+  "An account with this email address already exists.": "Račun s ovom adresom e-pošte već postoji.",
+  "Confirming invite": "Potvrđivanje pozivnice",
+  "Contact {{supportEmail}} to request a new invitation.": "Kontaktirajte {{supportEmail}} da zatražite novu pozivnicu.",
+  "Create an Account": "Stvorite račun",
+  "Logout and sign in as ": "Odjavite se i prijavite se kao ",
+  "Sign In": "Prijaviti se",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Ova pozivnica je već prihvaćena.<1> Nastavite na projekt </1> ili <5>kontaktirajte podršku</5>ako mislite da je ovo pogreška.",
+  "This invitation was originally sent to <2></2>.": "Ova je pozivnica izvorno poslana na <2></2>.",
+  "Use another account": "Koristite drugi račun",
+  "Verifying invitation code": "Provjera koda pozivnice",
+  "Welcome, !": "Dobrodošli, !",
+  "Welcome!": "Dobrodošli!",
+  "You have been invited to participate in a SeaSketch project.": "Pozvani ste da sudjelujete u projektu SeaSketch.",
+  "Your invitation to this project has expired.": "Vaša pozivnica za ovaj projekt je istekla."
+}

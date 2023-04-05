@@ -1,0 +1,17 @@
+{
+  "Accept as": "Ciqoma me {{email}}",
+  "An account with this email address already exists.": "Sa tu rawa e dua na akaude ka tiko kina na itikotiko ni imeli oqo.",
+  "Confirming invite": "Veisureti ni veivakadeitaki",
+  "Contact {{supportEmail}} to request a new invitation.": "Veitaratara kei {{supportEmail}} me kerea e dua na veisureti vou.",
+  "Create an Account": "Tauyavutaka e dua na Akaude",
+  "Logout and sign in as ": "Logout ka curu ki loma me ",
+  "Sign In": "Curu ki Loma",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Sa ciqomi oti na veisureti oqo. <1> Toso ki na cakacaka </1> se <5>na veitokoni</5>vaka o vakabauta ni oqo e dua na cala.",
+  "This invitation was originally sent to <2></2>.": "A vakau taumada na veisureti oqo ki <2></2>.",
+  "Use another account": "Vakayagataka e dua tale na akaude",
+  "Verifying invitation code": "Vakadeitaki ni nabavuni ni veisureti",
+  "Welcome, !": "Ni Matavinaka mai!",
+  "Welcome!": "Ni Matavinaka mai!",
+  "You have been invited to participate in a SeaSketch project.": "O sa sureti mo vakaitavi ena dua na cakacaka ni SeaSketch.",
+  "Your invitation to this project has expired.": "Sa oti na nomu veisureti ki na cakacaka oqo."
+}

@@ -14,6 +14,7 @@ import {
   SurveyQueryResult,
 } from "../generated/graphql";
 import { Link } from "react-router-dom";
+import { useTranslatedProps } from "../components/TranslatedPropControl";
 
 export default function FullScreenOfflineNavigation() {
   const { online, dismissed, dismiss } = useContext(OfflineStateContext);
@@ -34,6 +35,7 @@ export default function FullScreenOfflineNavigation() {
       setResults({ projects: [], surveys: [] });
     }
   }, [cache, online]);
+  const getTranslatedProp = useTranslatedProps();
 
   if (online || dismissed) {
     return null;
@@ -68,7 +70,9 @@ export default function FullScreenOfflineNavigation() {
               <div key={project.name}>
                 <h2 className="py-2 font-medium">{project.name}</h2>
                 {project.description && project.description.length > 0 && (
-                  <p className="text-sm text-gray-500">{project.description}</p>
+                  <p className="text-sm text-gray-500">
+                    {getTranslatedProp("description", project)}
+                  </p>
                 )}
                 <ul>
                   {surveys

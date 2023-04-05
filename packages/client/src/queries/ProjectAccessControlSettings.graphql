@@ -40,3 +40,21 @@ mutation toggleLanguageSupport(
     }
   }
 }
+
+mutation setTranslatedProps(
+  $id: Int!
+  $typeName: String!
+  $propName: String!
+  $translations: [TranslatedPropInput!]!
+) {
+  setTranslatedProp(
+    id: $id
+    propName: $propName
+    typeName: $typeName
+    translations: $translations
+  ) {
+    id
+    translatedProps
+    typeName
+  }
+}

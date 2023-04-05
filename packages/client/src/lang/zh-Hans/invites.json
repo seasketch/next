@@ -1,0 +1,17 @@
+{
+  "Accept as": "接受为{{email}}",
+  "An account with this email address already exists.": "使用此电子邮件地址的帐户已存在。",
+  "Confirming invite": "确认邀请",
+  "Contact {{supportEmail}} to request a new invitation.": "联系 {{supportEmail}} 请求新的邀请。",
+  "Create an Account": "创建一个帐户",
+  "Logout and sign in as ": "注销并登录为 ",
+  "Sign In": "登入",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "此邀请已被接受。<1>继续该项目</1>或<5>联系支持人员</5>如果您认为这是一个错误。",
+  "This invitation was originally sent to <2></2>.": "此邀请最初发送至 <2></2>。",
+  "Use another account": "使用其他帐户",
+  "Verifying invitation code": "验证邀请码",
+  "Welcome, !": "欢迎， ！",
+  "Welcome!": "欢迎！",
+  "You have been invited to participate in a SeaSketch project.": "您已受邀参与 SeaSketch 项目。",
+  "Your invitation to this project has expired.": "您对此项目的邀请已过期。"
+}

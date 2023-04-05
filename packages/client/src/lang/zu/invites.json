@@ -1,0 +1,17 @@
+{
+  "Accept as": "Yamukela njenge-{{imeyili}}",
+  "An account with this email address already exists.": "I-akhawunti enaleli kheli le-imeyili isivele ikhona.",
+  "Confirming invite": "Iqinisekisa isimemo",
+  "Contact {{supportEmail}} to request a new invitation.": "Xhumana no-{{supportEmail}} ukuze ucele isimemo esisha.",
+  "Create an Account": "Yenza i-akhawunti",
+  "Logout and sign in as ": "Phuma bese ungena ngemvume njengo ",
+  "Sign In": "Ngena ngemvume",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Lesi simemo sesivele samukelwe.<1> Qhubekela kuphrojekthi </1> noma <5>uthinte abosekelo</5>uma ukholwa ukuthi lokhu kuyiphutha.",
+  "This invitation was originally sent to <2></2>.": "Lesi simemo ekuqaleni sithunyelwe ku-<2></2>.",
+  "Use another account": "Sebenzisa enye i-akhawunti",
+  "Verifying invitation code": "Iqinisekisa ikhodi yesimemo",
+  "Welcome, !": "Siyakwamukela,!",
+  "Welcome!": "Siyakwamukela!",
+  "You have been invited to participate in a SeaSketch project.": "Umenywe ukuthi ubambe iqhaza kuphrojekthi ye-SeaSketch.",
+  "Your invitation to this project has expired.": "Isimemo sakho kule phrojekthi siphelelwe yisikhathi."
+}

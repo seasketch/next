@@ -13,6 +13,7 @@ import { useCallback, useState } from "react";
 import Button from "../../components/Button";
 import useDialog from "../../components/useDialog";
 import { useDelete } from "../../graphqlHookWrappers";
+import TranslatedPropControl from "../../components/TranslatedPropControl";
 
 export default function ForumForm({
   forum,
@@ -35,13 +36,13 @@ export default function ForumForm({
     },
     onError,
   });
-  const [mutate, mutationState] = useUpdateForumMutation({
+  const [mutate] = useUpdateForumMutation({
     variables: {
       id: forum.id,
     },
     onError,
   });
-  const [selectedTab, setSelectedTab] = useState("settings");
+  const [selectedTab] = useState("settings");
 
   const { confirmDelete } = useDialog();
 
@@ -79,23 +80,43 @@ export default function ForumForm({
       <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-x-hidden overflow-y-auto">
         {selectedTab === "settings" && (
           <div className="p-4 space-y-4">
-            <div className="">
-              <MutableAutosaveInput
-                value={forum.name}
-                label={t("Name")}
-                mutation={mutateName}
-                mutationStatus={mutateNameState}
+            <div className="flex w-full items-center">
+              <div className="flex-1">
+                <MutableAutosaveInput
+                  value={forum.name}
+                  label={t("Name")}
+                  mutation={mutateName}
+                  mutationStatus={mutateNameState}
+                  propName="name"
+                />
+              </div>
+              <TranslatedPropControl
+                id={forum.id}
+                label={t("Forum Name")}
                 propName="name"
+                typeName="Forum"
+                defaultValue={forum.name}
+                className="p-0.5 border rounded hover:shadow-sm -mb-5 ml-2"
               />
             </div>
-            <div className="">
-              <MutableAutosaveInput
-                textArea
-                value={forum.description || ""}
-                label={t("Description")}
-                mutation={mutateDescription}
-                mutationStatus={mutateDescriptionState}
+            <div className="flex w-full items-center">
+              <div className="flex-1">
+                <MutableAutosaveInput
+                  textArea
+                  value={forum.description || ""}
+                  label={t("Description")}
+                  mutation={mutateDescription}
+                  mutationStatus={mutateDescriptionState}
+                  propName="description"
+                />
+              </div>
+              <TranslatedPropControl
+                id={forum.id}
+                label={t("Forum Description")}
                 propName="description"
+                typeName="Forum"
+                defaultValue={forum.description}
+                className="p-0.5 border rounded hover:shadow-sm -mb-5 ml-2"
               />
             </div>
             {forum.readAcl?.nodeId && (

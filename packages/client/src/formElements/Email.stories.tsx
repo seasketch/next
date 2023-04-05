@@ -56,7 +56,6 @@ const Template: Story = (args: any) => {
       value={{
         ...TestSurveyContextValue,
         bestEmail: args.bestEmail,
-        supportedLanguages: [],
       }}
     >
       <SurveyAppLayout progress={0.4}>

@@ -31,6 +31,7 @@ query Sketching($slug: String!) {
   projectBySlug(slug: $slug) {
     sessionParticipationStatus
     id
+    supportedLanguages
     sketchClasses {
       ...SketchingDetails
     }
@@ -195,6 +196,10 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     childProperties
   }
   sketchClass(id: $sketchClassId) {
+    project {
+      id
+      supportedLanguages
+    }
     id
     geoprocessingClientName
     geoprocessingClientUrl

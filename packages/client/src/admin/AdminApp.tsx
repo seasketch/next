@@ -29,6 +29,8 @@ import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { ParticipationStatus } from "../generated/graphql";
 import useDialog from "../components/useDialog";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
+import LanguageSelector from "../surveys/LanguageSelector";
+import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
@@ -319,6 +321,9 @@ export default function AdminApp() {
             projectName={data?.project?.name || "▌"}
             open={mobileSidebarOpen}
             onRequestClose={() => setMobileSidebarOpen(false)}
+            supportedLanguages={
+              (data?.project?.supportedLanguages as string[]) || []
+            }
           />
 
           {/* <!-- Static sidebar for desktop --> */}
@@ -326,6 +331,9 @@ export default function AdminApp() {
             sections={sections}
             slug={slug}
             projectName={data?.project?.name || "▌"}
+            supportedLanguages={
+              (data?.project?.supportedLanguages as string[]) || []
+            }
           />
           <div className="flex w-0 flex-1 max-h-screen">
             {/* Header (mobile-only) */}
@@ -439,6 +447,7 @@ function SidebarContents(props: {
   slug: string;
   projectName: string;
   sections: Section[];
+  supportedLanguages: string[];
 }) {
   const cache = useContext(GraphqlQueryCacheContext);
   const { t } = useTranslation("admin");
@@ -534,6 +543,18 @@ function SidebarContents(props: {
               </button>
             </>
           )}
+          <LanguageSelector
+            button={(onClick, lang) => (
+              <button
+                className="w-full group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
+                onClick={onClick}
+              >
+                <TranslateIcon className="w-6 h-6 inline mr-3 text-primary-300 " />
+                <span>{lang.localName || lang.name}</span>
+              </button>
+            )}
+            options={props.supportedLanguages}
+          />
         </nav>
       </div>
     </div>
@@ -545,11 +566,13 @@ function StaticSidebar({
   projectName,
   slug,
   userId,
+  supportedLanguages,
 }: {
   sections: Section[];
   projectName: string;
   slug: string;
   userId?: string;
+  supportedLanguages: string[];
 }) {
   return (
     <div className="hidden md:flex md:flex-shrink-0 min-h-screen">
@@ -559,6 +582,7 @@ function StaticSidebar({
             sections={sections}
             slug={slug}
             projectName={projectName}
+            supportedLanguages={supportedLanguages}
           />
         </div>
       </div>
@@ -573,6 +597,7 @@ function MobileSidebar({
   onRequestClose,
   open,
   userId,
+  supportedLanguages,
 }: {
   sections: Section[];
   projectName: string;
@@ -580,6 +605,7 @@ function MobileSidebar({
   onRequestClose: () => void;
   open: boolean;
   userId?: string;
+  supportedLanguages: string[];
 }) {
   useEffect(() => {
     if (open) {
@@ -622,6 +648,7 @@ function MobileSidebar({
             sections={sections}
             slug={slug}
             projectName={projectName}
+            supportedLanguages={supportedLanguages}
           />
         </div>
         <div className="flex-shrink-0 w-14">

@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Maak een project aan",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Maak je eigen<1></1><2>SeaSketch-project</2>",
+  "Create your project": "Creëer uw project",
+  "Developer API": "Ontwikkelaar API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Neem contact met ons op via <2>support@seasketch.org</2> om te bespreken hoe SeaSketch kan worden gebruikt om uw planningsinspanningen te ondersteunen.",
+  "Project name": "Naam van het project",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketch-projecten kunnen worden aangepast met behulp van ons open-source <2>Geoprocessing Framework</2>. Projecten kunnen rapporten definiëren die de impact van toekomstige zones visualiseren met behulp van Typescript, React en AWS Lambda.",
+  "Trusted by": "Vertrouwd door",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Gebruik onze collaboratieve geodesign- en onderzoekstools voor mariene ruimtelijke planning in uw regio. Uw project bevat tools om kaarten te visualiseren, discussieforums te creëren, plannen te schetsen en gegevens te verzamelen met behulp van enquêtes - <i>gratis!</i> Analytische rapporten kunnen worden ontwikkeld en aangepast met behulp van ons <5>geoprocessing-framework</5> ."
+}

@@ -1,4 +1,26 @@
 {
+  "About": "Om",
+  "Account settings": "Kontoinnstillinger",
+  "Add data": "Legg til data",
+  "Add folder": "Legg til mappe",
+  "Are you sure you want to delete {{name}}?": "Er du sikker på at du vil slette {{name}}?",
+  "Contact support": "Kontakt support",
+  "Default Visibility": "Standard synlighet",
   "Delete": "Slett",
-  "Edit": "Rediger"
+  "Delete Item": "Slett element",
+  "Developer API": "Utvikler API",
+  "Edit": "Rediger",
+  "Edit metadata": "Rediger metadata",
+  "Metadata": "Metadata",
+  "Projects": "Prosjekter",
+  "Publish": "publisere",
+  "SeaSketch logo": "SeaSketch-logo",
+  "Sign in": "Logg inn",
+  "Sign In": "Logg inn",
+  "Sign out": "Logg ut",
+  "Signed in as": "Logget på som",
+  "Tree Editor": "Treredaktør",
+  "view": "utsikt",
+  "Z-Order": "Z-ordre",
+  "Zoom to bounds": "Zoom til grenser"
 }

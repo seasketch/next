@@ -21,7 +21,6 @@ import Switch from "../../components/Switch";
 import InteractivitySettings from "./InteractivitySettings";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
-import SaveStateIndicator from "../../components/SaveStateIndicator";
 import InputBlock from "../../components/InputBlock";
 import GLStyleEditor from "./GLStyleEditor/Editor";
 import {
@@ -36,6 +35,7 @@ import {
 } from "../../components/Tooltip";
 import { copyTextToClipboard } from "../../projects/Forums/InlineAuthorDetails";
 import { MapContext } from "../../dataLayers/MapContextManager";
+import TranslatedPropControl from "../../components/TranslatedPropControl";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -188,7 +188,7 @@ export default function LayerTableOfContentsItemEditor(
       {!item && <Spinner />}
       {item && selectedTab === "settings" && (
         <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <div className="md:max-w-sm mt-5">
+          <div className="md:max-w-sm mt-5 relative">
             <MutableAutosaveInput
               // autofocus
               mutation={mutateItem}
@@ -198,8 +198,16 @@ export default function LayerTableOfContentsItemEditor(
               label={t("Title")}
               variables={{ id: props.itemId }}
             />
+            <TranslatedPropControl
+              id={item.id}
+              label={t("Overlay Title")}
+              propName="title"
+              typeName="TableOfContentsItem"
+              defaultValue={item.title}
+              className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
+            />
           </div>
-          <div className="md:max-w-sm mt-5">
+          <div className="md:max-w-sm mt-5 relative">
             <MutableAutosaveInput
               propName="attribution"
               mutation={mutateSource}
@@ -211,6 +219,17 @@ export default function LayerTableOfContentsItemEditor(
               )}
               variables={{ id: source?.id }}
             />
+            {/* TODO: Disabled for now because working it into MapContextManager is tricky */}
+            {/* {source && (
+              <TranslatedPropControl
+                id={source.id}
+                label={t("Overlay Attribution")}
+                propName="attribution"
+                typeName="DataSource"
+                defaultValue={source.attribution}
+                className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
+              />
+            )} */}
           </div>
           <div className="md:max-w-sm mt-5">
             <MutableAutosaveInput

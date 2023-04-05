@@ -12,6 +12,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -33,7 +34,7 @@ const MultipleChoice: FormElementComponent<
   MultipleChoiceValue
 > = (props) => {
   const { t } = useTranslation("surveys");
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   const options = useLocalizedComponentSetting(
     "options",
     props

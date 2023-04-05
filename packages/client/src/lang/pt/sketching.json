@@ -1,6 +1,25 @@
 {
+  "Are you sure you want to delete \"{{name}}\"?": "Você tem certeza de que quer excluir \"{{name}}\"?",
+  "Are you sure you want to start over and redraw your sketch?": "Tem certeza de que quer começar de novo e redesenhar o seu sketch?",
   "Cancel": "Cancelar",
   "Delete": "Excluir",
+  "Delete Geometry": "Deletar Geometria",
   "Edit": "Editar",
-  "Submit": "Submeter"
+  "Export as GeoJSON": "Exportar como GeoJSON",
+  "Folder": "Pasta",
+  "in": "em",
+  "Name": "Nome",
+  "New": "Novo",
+  "Please complete your geometry first": "Por favor, complete a geometria",
+  "Please complete your submission first.": "Por favor, complete a sua submissão.",
+  "Processing your sketch. This should only take a moment.": "Processando o seu sketch. Isto pode levar algum tempo.",
+  "Share": "Compartilhar",
+  "Submit": "Submeter",
+  "View Reports": "Veja os relatórios",
+  "Wait until processing is complete": "Espere até que o processe esteja finalizado",
+  "What would you like to name your folder?": "Como você gostaria de nomear a sua pasta?",
+  "You": "Você",
+  "You must finish your geometry first": "Você deve terminar seu polígono primeiro",
+  "You must fix problems with your geometry first": "Você deve corrigir os problemas com o seu polígono primeiro",
+  "Zoom to": "Zoom para"
 }

@@ -1,4 +1,17 @@
 {
   "Cancel": "Annuleer",
-  "Close": "Sluit"
+  "Close": "Sluit",
+  "Contact Support": "Contact opnemen met ondersteuning",
+  "Disabled": "Uitgeschakeld",
+  "dismiss": "afwijzen",
+  "Enabled": "Ingeschakeld",
+  "Enter a URL": "Voer een URL in",
+  "Job Status": "Werkstatus",
+  "Locked at": "Gesloten op",
+  "Not signed in": "Niet ingeschreven",
+  "OK": "OK",
+  "Select a tab": "Selecteer een tabblad",
+  "Sign In": "Aanmelden",
+  "Signed in as": "Aangemeld als",
+  "Submit": "Indienen"
 }

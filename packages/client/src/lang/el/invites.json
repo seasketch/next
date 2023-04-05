@@ -1,0 +1,17 @@
+{
+  "Accept as": "Αποδοχή ως {{email}}",
+  "An account with this email address already exists.": "Υπάρχει ήδη λογαριασμός με αυτήν τη διεύθυνση email.",
+  "Confirming invite": "Επιβεβαίωση πρόσκλησης",
+  "Contact {{supportEmail}} to request a new invitation.": "Επικοινωνήστε με το {{supportEmail}} για να ζητήσετε νέα πρόσκληση.",
+  "Create an Account": "Δημιουργία λογαριασμού",
+  "Logout and sign in as ": "Αποσυνδεθείτε και συνδεθείτε ως ",
+  "Sign In": "Συνδεθείτε",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Αυτή η πρόσκληση έχει ήδη γίνει αποδεκτή.<1> Προχωρήστε στο έργο </1> ή <5>επικοινωνήστε με την υποστήριξη</5>εάν πιστεύετε ότι πρόκειται για σφάλμα.",
+  "This invitation was originally sent to <2></2>.": "Αυτή η πρόσκληση στάλθηκε αρχικά στη διεύθυνση <2></2>.",
+  "Use another account": "Χρησιμοποιήστε άλλο λογαριασμό",
+  "Verifying invitation code": "Επαλήθευση κωδικού πρόσκλησης",
+  "Welcome, !": "Καλως ΗΡΘΑΤΕ, !",
+  "Welcome!": "Καλως ΗΡΘΑΤΕ!",
+  "You have been invited to participate in a SeaSketch project.": "Έχετε προσκληθεί να συμμετάσχετε σε ένα έργο SeaSketch.",
+  "Your invitation to this project has expired.": "Η πρόσκλησή σας σε αυτό το έργο έχει λήξει."
+}

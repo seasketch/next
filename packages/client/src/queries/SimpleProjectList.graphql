@@ -6,6 +6,7 @@ fragment ProjectListItem on Project {
   description
   url
   isFeatured
+  translatedProps
 }
 
 query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {

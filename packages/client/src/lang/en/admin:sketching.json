@@ -27,6 +27,7 @@
   "Remove Service Configuration": "Remove Service Configuration",
   "Search": "Search",
   "Setting an export id will give a stable column name when exporting data and is used in reporting.": "Setting an export id will give a stable column name when exporting data and is used in reporting.",
+  "Sketch Class Name": "Sketch Class Name",
   "Sketch Classes": "Sketch Classes",
   "Sketch Classes define the feature types your users will be able to draw and share. They define the geometry type, form attributes, and analytical reports associated with them. When used well they closely match regulatory or data collection goals.": "Sketch Classes define the feature types your users will be able to draw and share. They define the geometry type, form attributes, and analytical reports associated with them. When used well they closely match regulatory or data collection goals.",
   "Specify a geoprocessing client": "Specify a geoprocessing client",

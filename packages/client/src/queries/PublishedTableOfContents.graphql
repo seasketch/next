@@ -16,6 +16,7 @@ fragment Overlay on TableOfContentsItem {
   stableId
   title
   geoprocessingReferenceId
+  translatedProps
 }
 
 query PublishedTableOfContents($slug: String!) {
@@ -57,6 +58,7 @@ fragment DataSourceDetails on DataSource {
   urls
   useDevicePixelRatio
   supportsDynamicLayers
+  translatedProps
 }
 
 fragment ClientSprite on Sprite {

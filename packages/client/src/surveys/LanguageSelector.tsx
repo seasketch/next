@@ -15,7 +15,8 @@ export default function LanguageSelector(props: {
     (f) =>
       !props.options ||
       props.options.find((o) => o === f.code) ||
-      f.code === "EN"
+      f.code === "EN" ||
+      i18n.language?.toLowerCase() === f.code.toLowerCase()
   );
   const options = filteredLanguages;
   const { matchesAnyTranslation, selectedLang } = getSelectedLanguage(
@@ -23,7 +24,10 @@ export default function LanguageSelector(props: {
     filteredLanguages
   );
 
-  if (options.length <= 1) {
+  if (
+    options.length <= 1 &&
+    i18n.language?.toLowerCase() === options[0].code.toLowerCase()
+  ) {
     return null;
   }
 

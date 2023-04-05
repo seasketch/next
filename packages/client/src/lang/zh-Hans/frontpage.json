@@ -1,0 +1,11 @@
+{
+  "Create a Project": "创建项目",
+  "Create your own<1></1><2> SeaSketch Project</2>": "创建您自己的<1></1><2>SeaSketch 项目</2>",
+  "Create your project": "创建您的项目",
+  "Developer API": "开发者接口",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "请通过 <2>support@seasketch.org</2> 联系我们，安排讨论如何使用 SeaSketch 来支持您的规划工作。",
+  "Project name": "项目名",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "可以使用我们的开源 <2>地理处理框架</2> 自定义 SeaSketch 项目。项目可以使用 Typescript、React 和 AWS Lambda 定义报告，以可视化预期区域的影响。",
+  "Trusted by": "受信任",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "使用我们的协作地理设计和调查工具在您所在地区进行海洋空间规划。您的项目将包括用于可视化地图、创建论坛、绘制计划和使用调查收集数据的工具 - <i>免费！</i>可以使用我们的<5>地理处理框架</5>开发和定制分析报告."
+}

@@ -20,6 +20,7 @@ import { getLastFormUrl } from "./Forums/Forums";
 import { useSketchUIState } from "./Sketches/SketchUIStateContextProvider";
 import LanguageSelector from "../surveys/LanguageSelector";
 import Button from "../components/Button";
+import { useTranslatedProps } from "../components/TranslatedPropControl";
 
 export default function FullSidebar({
   open,
@@ -72,6 +73,8 @@ export default function FullSidebar({
     onClose();
   };
 
+  const getTranslatedProp = useTranslatedProps(data?.project);
+
   const project = data?.project;
   return (
     <motion.div
@@ -110,7 +113,7 @@ export default function FullSidebar({
           )}
         </div>
         <div className="flex-1 max-w-md flex items-center text-xl">
-          <h1 className=" ">{project?.name}</h1>
+          <h1 className=" ">{getTranslatedProp("name")}</h1>
         </div>
         <button
           onClick={onClose}
@@ -237,9 +240,7 @@ export default function FullSidebar({
                 <NavItem
                   icon={<TranslateIcon className="w-6 h-6 inline mr-1 " />}
                   onClick={onClick}
-                  label={
-                    <Trans ns="sidebar">{lang.localName || lang.name}</Trans>
-                  }
+                  label={lang.localName || lang.name}
                 />
               )}
               options={data?.project?.supportedLanguages as string[]}

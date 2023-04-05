@@ -6,11 +6,12 @@ import EditableResponseCell, {
 import { SkippedQuestion } from "../admin/surveys/ResponseGrid";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -26,7 +27,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
   const { t } = useTranslation("surveys");
   const errors = props.isRequired && !props.value?.length;
   const showError = errors && props.submissionAttempted;
-  const context = useContext(SurveyContext);
+  const context = useContext(FormLanguageContext);
   const placeholder = useLocalizedComponentSetting("placeholder", props);
   return (
     <>
@@ -81,7 +82,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
                   />
                 }
               />
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={placeholder || ""}

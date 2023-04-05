@@ -1,10 +1,13 @@
 {
   "Cache Details": "Detalhes de cache",
   "Cache Status": "Status de cache",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "Armazena mais dados e pré-carrega aplicações para melhor performance. Permite o uso offline.",
+  "Data Caching": "Caching de dados",
   "Default": "Padrão",
   "Improved Performance": "Performance melhorada",
   "Maximum": "Máximo",
   "Minimum": "Mínimo",
   "Only what's necessary to run SeaSketch": "Apenas o necessário para rodar o SeaSketch",
+  "Query Cache": "Cache de consulta.",
   "Using  of your browser's storage quota": "Usando a cota de armazenamento do seu navegador"
 }

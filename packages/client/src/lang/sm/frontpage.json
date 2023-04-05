@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Fausia se Poloketi",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Fausia sau poloketi<1></1><2> Poloketi Fa'aSeaSketch</2>",
+  "Create your project": "Fausia sau Poloketi",
+  "Developer API": "Atinae API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Fa'afeso'otai mai matou, fa'amolemole <2>support@seasketch.org</2> mo le fa'atalanoaina pe fa'apefea ona fa'aaoga le SeaSketch i au taumafaiga fa'alefuafuaga ",
+  "Project name": "Igoa o le Poloketi",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "E mafai ona faapitoa lau poloketi Fa'aSeaSketch e fa'aaoga iai<2>Geoprocessing Framework</2>. O le a fa'amatala e lipoti o le poloketi i se va'aiga fa'aletino ia a'afiaga ofa'amoemoega fa'asone e fa'aoga iai tusitusiga ma a'asaga fa'afoliga o le AWS Lambda.",
+  "Trusted by": "Fa'atuatuaina e",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Fa'aoga a matou fa'afanua fa'atasi ma mea faigaluega su'esu'e mo fuafuaga fa'afanua o le gataifale i lau itulagi. O lau poloketi o le a aofia ai meafaigaluega e va'ava'ai ai fa'afanua, fatuina o talanoaga, ata tusi, ma aoina fa'amaumauga e fa'aaoga ai su'esu'ega - <i>mo le leai o se totogi!</i> E mafai ona atia'e ma fa'avasega lipoti fa'apitoa e fa'aaoga ai la matou <5>fa'a'aiga fa'a-geoprocessing</5>."
+}

@@ -1,0 +1,17 @@
+{
+  "Accept as": "Accepteer als {{email}}",
+  "An account with this email address already exists.": "Er bestaat al een account met dit e-mailadres.",
+  "Confirming invite": "Uitnodiging bevestigen",
+  "Contact {{supportEmail}} to request a new invitation.": "Neem contact op met {{supportEmail}} om een nieuwe uitnodiging aan te vragen.",
+  "Create an Account": "Account aanmaken",
+  "Logout and sign in as ": "Log uit en log in als ",
+  "Sign In": "Aanmelden",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Deze uitnodiging is al geaccepteerd.<1>Ga door naar het project </1> of <5>neem contact op met de ondersteuning</5>als u denkt dat dit een fout is.",
+  "This invitation was originally sent to <2></2>.": "Deze uitnodiging is oorspronkelijk verzonden naar <2></2>.",
+  "Use another account": "Gebruik een andere rekening",
+  "Verifying invitation code": "Uitnodigingscode verifiëren",
+  "Welcome, !": "Welkom, !",
+  "Welcome!": "Welkom!",
+  "You have been invited to participate in a SeaSketch project.": "U bent uitgenodigd om deel te nemen aan een SeaSketch-project.",
+  "Your invitation to this project has expired.": "Uw uitnodiging voor dit project is verlopen."
+}

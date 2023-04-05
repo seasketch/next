@@ -33,6 +33,7 @@ fragment RecentPost on Post {
     forum {
       id
       name
+      translatedProps
     }
     participantCount
     participantsConnection(first: 4) {
@@ -52,6 +53,7 @@ fragment ForumDetails on Forum {
   postCount
   lastPostDate
   canPost
+  translatedProps
 }
 
 query Forums($slug: String!) {

@@ -1,0 +1,15 @@
+{
+  "Cache Details": "Λεπτομέρειες προσωρινής μνήμης",
+  "Cache Status": "Κατάσταση προσωρινής μνήμης",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "Αποθηκεύει στην κρυφή μνήμη περισσότερα δεδομένα και προφορτώνει στοιχεία για καλύτερη απόδοση. Υποστηρίζει χρήση εκτός σύνδεσης.",
+  "Data Caching": "Προσωρινή αποθήκευση δεδομένων",
+  "Default": "Προκαθορισμένο",
+  "Improved Performance": "Βελτιωμένη απόδοση",
+  "Maximum": "Ανώτατο όριο",
+  "Minimum": "Ελάχιστο",
+  "Only what's necessary to run SeaSketch": "Μόνο ό,τι είναι απαραίτητο για την εκτέλεση του SeaSketch",
+  "Query Cache": "Query Cache",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "Αποθηκεύει ορισμένα δεδομένα εφαρμογών που χρησιμοποιήθηκαν πρόσφατα για βελτιωμένη απόδοση εκκίνησης και χρήση μέσω κακών συνδέσεων στο διαδίκτυο",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Χρησιμοποιήστε αυτήν τη ρύθμιση εάν είστε συντονιστής ή προγραμματιστής που χρησιμοποιεί τακτικά το SeaSketch. Υποστηρίζει χρήση εκτός σύνδεσης.",
+  "Using  of your browser's storage quota": "Χρήση του ορίου αποθήκευσης του προγράμματος περιήγησής σας"
+}

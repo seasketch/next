@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Hana i kahi papahana",
+  "Create your own<1></1><2> SeaSketch Project</2>": "E hana i kāu iho<1></1><2>Pahana SeaSketch</2>",
+  "Create your project": "E hana i kāu papahana",
+  "Developer API": "API hoʻomohala",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "E ʻoluʻolu e kelepona mai iā mākou ma <2>support@seasketch.org</2> e hoʻonohonoho i kahi kūkākūkā e pili ana i ka hiki ke hoʻohana ʻia ʻo SeaSketch e kākoʻo i kāu mau hana hoʻolālā.",
+  "Project name": "inoa papahana",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Hiki ke hoʻopilikino ʻia nā papahana SeaSketch me ka hoʻohana ʻana i kā mākou open-source <2>Geoprocessing Framework</2>. Hiki i nā papahana ke wehewehe i nā hōʻike e ʻike i ka hopena o nā ʻāpana e hoʻohana ana i Typescript, React, a me AWS Lambda.",
+  "Trusted by": "Ua hilinaʻi ʻia e",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "E hoʻohana i kā mākou hoʻolālā hoʻolālā a me nā mea hana noiʻi no ka hoʻolālā spatial moana ma kou wahi. E komo ana kāu papahana i nā mea hana no ka nānā 'ana i nā palapala 'āina, ka hana 'ana i nā kūkākūkā kūkākūkā, nā ho'olālā kaha ki'i, a me ka hō'ili'ili 'ikepili me ka ho'ohana 'ana i nā noi'i - <i>no ka manuahi. ."
+}

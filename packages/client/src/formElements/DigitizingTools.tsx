@@ -7,10 +7,7 @@ import {
 } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
-import {
-  SketchGeometryType,
-  useAllBasemapsLazyQuery,
-} from "../generated/graphql";
+import { SketchGeometryType } from "../generated/graphql";
 import { AnimatePresence, motion } from "framer-motion";
 import { CursorClickIcon, TrashIcon } from "@heroicons/react/outline";
 import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";

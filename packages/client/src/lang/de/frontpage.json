@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Erstellen Sie ein Projekt",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Erstellen Sie Ihr eigenes <1></1><2> SeaSketch-Projekt</2>",
+  "Create your project": "Erstellen Sie Ihr Projekt",
+  "Developer API": "Entwickler-API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Bitte kontaktieren Sie uns unter <2>support@seasket.org</2>, um eine Diskussion darüber zu vereinbaren, wie SeaSketch zur Unterstützung Ihrer Planungsbemühungen verwendet werden kann.",
+  "Project name": "Projektname",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketch-Projekte können mit unserem Open-Source-<2>Geoprocessing Framework</2> angepasst werden. Projekte können Berichte definieren, die die Auswirkungen potenzieller Zonen mithilfe von Typescript, React und AWS Lambda visualisieren.",
+  "Trusted by": "Vertraut von",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Nutzen Sie unsere kollaborativen Geodesign- und Vermessungswerkzeuge für die marine Raumplanung in Ihrer Region. Ihr Projekt umfasst Tools zum Visualisieren von Karten, Erstellen von Diskussionsforen, Skizzieren von Plänen und Sammeln von Daten mithilfe von Umfragen – <i>kostenlos!</i> Analytische Berichte können mit unserem <5>Geoverarbeitungs-Framework</5> entwickelt und angepasst werden ."
+}

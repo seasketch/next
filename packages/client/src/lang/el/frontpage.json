@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Δημιουργήστε ένα έργο",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Δημιουργήστε το δικό σας<1></1><2> SeaSketch Project</2>",
+  "Create your project": "Δημιουργήστε το έργο σας",
+  "Developer API": "API προγραμματιστών",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Επικοινωνήστε μαζί μας στο <2>support@seasketch.org</2> για να κανονίσουμε μια συζήτηση σχετικά με το πώς μπορεί να χρησιμοποιηθεί το SeaSketch για την υποστήριξη των προσπαθειών προγραμματισμού σας.",
+  "Project name": "Όνομα έργου",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Τα έργα SeaSketch μπορούν να προσαρμοστούν χρησιμοποιώντας το <2>Πλαίσιο Γεωεπεξεργασίας</2> ανοιχτού κώδικα. Τα έργα μπορούν να ορίσουν αναφορές που απεικονίζουν τον αντίκτυπο των μελλοντικών ζωνών χρησιμοποιώντας Typescript, React και AWS Lambda.",
+  "Trusted by": "Εμπιστευμένο από",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Χρησιμοποιήστε τα συνεργατικά μας εργαλεία γεωσχεδιασμού και έρευνας για τον θαλάσσιο χωροταξικό σχεδιασμό στην περιοχή σας. Το έργο σας θα περιλαμβάνει εργαλεία για την οπτικοποίηση χαρτών, τη δημιουργία φόρουμ συζήτησης, σκιαγράφηση σχεδίων και συλλογή δεδομένων χρησιμοποιώντας έρευνες - <i>δωρεάν!</i> Οι αναλυτικές αναφορές μπορούν να αναπτυχθούν και να προσαρμοστούν χρησιμοποιώντας το <5>πλαίσιο γεωεπεξεργασίας</5> ."
+}

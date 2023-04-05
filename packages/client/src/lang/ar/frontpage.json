@@ -1,0 +1,11 @@
+{
+  "Create a Project": "أنشئ مشروعًا",
+  "Create your own<1></1><2> SeaSketch Project</2>": "قم بإنشاء <1> </1> <2> مشروع SeaSketch </2> الخاص بك",
+  "Create your project": "أنشئ مشروعك",
+  "Developer API": "المطور API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "يرجى الاتصال بنا على <2> support@seasketch.org </2> لترتيب مناقشة حول كيفية استخدام SeaSketch لدعم جهود التخطيط الخاصة بك.",
+  "Project name": "اسم المشروع",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "يمكن تخصيص مشروعات SeaSketch باستخدام المصدر المفتوح <2> إطار عمل المعالجة الجغرافية </ 2>. يمكن للمشاريع تحديد التقارير التي تصور تأثير المناطق المحتملة باستخدام Typescript و React و AWS Lambda.",
+  "Trusted by": "موثوق به",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "استخدم أدوات التصميم الجغرافي والمسح التعاونية الخاصة بنا للتخطيط المكاني البحري في منطقتك. سيتضمن مشروعك أدوات لتصور الخرائط وإنشاء منتديات المناقشة ورسم الخطط وجمع البيانات باستخدام الاستطلاعات - <i> مجانًا! </ i> يمكن تطوير التقارير التحليلية وتخصيصها باستخدام <5> إطار عمل المعالجة الجغرافية </ 5> ."
+}
