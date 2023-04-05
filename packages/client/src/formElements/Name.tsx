@@ -4,11 +4,12 @@ import { Trans, useTranslation } from "react-i18next";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import TextInput from "../components/TextInput";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -29,6 +30,7 @@ export type NameType = { name: string; facilitator?: string };
 const Name: FormElementComponent<NameProps, NameType> = (props) => {
   const { t } = useTranslation("surveys");
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   const [val, setVal] = useState<NameType | undefined>({
     name: context?.bestName || "",
     facilitator: undefined,
@@ -175,14 +177,14 @@ const Name: FormElementComponent<NameProps, NameType> = (props) => {
                   button on the Welcome page.
                 </Trans>
               </p>{" "}
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={placeholder || ""}
                 onChange={updateComponentSetting(
                   "placeholder",
                   props.componentSettings,
-                  context.lang.code,
+                  langContext.lang.code,
                   props.alternateLanguageSettings
                 )}
               />

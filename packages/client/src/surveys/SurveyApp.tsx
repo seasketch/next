@@ -24,6 +24,7 @@ import FormElementFactory from "./FormElementFactory";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Auth0User } from "../auth/Auth0User";
 import {
+  FormLanguageContext,
   hideNav,
   SurveyButtonFooterPortalContext,
   SurveyContext,
@@ -374,10 +375,8 @@ function SurveyApp() {
     return (
       <>
         <ProjectAccessGate>
-          <SurveyContext.Provider
+          <FormLanguageContext.Provider
             value={{
-              slug: slug,
-              surveyId: data.survey.id,
               lang: language,
               setLanguage: (code: string) => {
                 const lang = languages.find((lang) => lang.code === code);
@@ -386,261 +385,278 @@ function SurveyApp() {
                 }
                 i18n.changeLanguage(lang.code);
               },
-              practiceMode: !!practice,
-              togglePracticeMode: (enable) => {
-                if (enable) {
-                  history.replace(
-                    `/${slug}/surveys/${surveyId}/${index}/practice`
-                  );
-                } else {
-                  history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
-                }
-              },
-              toggleFacilitation: (enable) =>
-                setResponseState((prev) => ({
-                  ...prev,
-                  facilitated: enable,
-                })),
               supportedLanguages:
                 (data.survey?.supportedLanguages as string[]) || [],
-              isAdmin: !!data.me?.isAdmin,
-              isFacilitatedResponse: responseState.facilitated,
-              surveySupportsFacilitation: !!data.survey.showFacilitationOption,
-              projectName: data.currentProject!.name,
-              projectBounds: bbox(data.currentProject!.region.geojson),
-              projectUrl: data.currentProject!.url!,
-              projectId: data.currentProject!.id,
-              surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
-              bestEmail: data.me?.profile?.email || auth0.user?.email,
-              bestName: data.me?.profile?.fullname || auth0.user?.name,
-              savingResponse: createResponseState.loading,
-              resetResponse: async () => {
-                await setResponseState((prev) => ({
-                  // eslint-disable-next-line i18next/no-literal-string
-                  facilitated: false,
-                  submitted: false,
-                }));
-                history.push(
-                  // eslint-disable-next-line i18next/no-literal-string
-                  `/${slug}/surveys/${surveyId}/`
-                );
-                return;
-              },
-              saveResponse: async () => {
-                const responseData: { [elementId: number]: any } = {};
-                for (const element of elements.filter((e) => e.type!.isInput)) {
-                  responseData[element.id] = responseState[element.id]?.value;
-                }
-                const response = await createResponse({
-                  variables: {
-                    surveyId: data!.survey!.id,
-                    isDraft: false,
-                    bypassedDuplicateSubmissionControl: false,
-                    facilitated: !!responseState.facilitated,
-                    responseData,
-                    practice: !!practice,
-                  },
-                  onError: () => {
-                    // avoid unhandled rejection errors
-                  },
-                });
-                if (response && !response.errors) {
-                  // setFormElement((prev) => ({ ...prev, exiting: prev.current }));
-                  await setResponseState((prev) => ({
-                    ...prev,
-                    submitted: true,
-                  }));
-                  // window.scrollTo(0, 0);
-                  // history.push(
-                  //   // eslint-disable-next-line i18next/no-literal-string
-                  //   `/${slug}/surveys/${surveyId}/${elements.indexOf(
-                  //     pagingState.nextFormElement!
-                  //   )}/${practice ? "practice" : ""}`
-                  // );
-                  // // setResponseState({ facilitated: false, submitted: false });
-                }
-
-                return response;
-              },
-              offlineResponseCount: offlineStore.responses.length,
-              clientIsPreppedForOfflineUse,
-              saveResponseToOfflineStore,
             }}
           >
-            <Title>{data.survey.name}</Title>
-            <Meta name="theme-color" content={style.backgroundColor} />
-
-            <SurveyAppLayout
-              navigatingBackwards={backwards}
-              showProgress={data.survey.showProgress}
-              progress={index / elements.length}
-              style={style}
-              unsplashUserName={style.unsplashAuthorName}
-              unsplashUserUrl={style.unsplashAuthorUrl}
-              practice={!!practice}
-              onPracticeClick={() => {
-                setPracticeModalOpen(true);
-              }}
-              navigation={
-                <SurveyNavigationButton
-                  hidden={hideNav(
-                    components[formElement.current!.typeId],
-                    formElement.current.componentSettings,
-                    isMobile,
-                    formElement.current.isRequired,
-                    stage,
-                    style.layout
-                  )}
-                  slug={slug}
-                  surveyId={surveyId}
-                  practice={practice}
-                  pagingState={pagingState}
-                  canAdvance={canAdvance()}
-                  onPrev={() => setBackwards(true)}
-                  onNext={(e) => {
-                    handleAdvance();
-                    if (!canAdvance()) {
-                      e.preventDefault();
-                    }
-                  }}
-                />
-              }
-            >
-              <AnimatePresence
-                initial={false}
-                exitBeforeEnter={true}
-                custom={backwards}
-                presenceAffectsLayout={false}
-                onExitComplete={() => {
-                  setBackwards(false);
-                  setFormElement((prev) => ({
+            <SurveyContext.Provider
+              value={{
+                slug: slug,
+                surveyId: data.survey.id,
+                practiceMode: !!practice,
+                togglePracticeMode: (enable) => {
+                  if (enable) {
+                    history.replace(
+                      `/${slug}/surveys/${surveyId}/${index}/practice`
+                    );
+                  } else {
+                    history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
+                  }
+                },
+                toggleFacilitation: (enable) =>
+                  setResponseState((prev) => ({
                     ...prev,
-                    exiting: undefined,
+                    facilitated: enable,
+                  })),
+                isAdmin: !!data.me?.isAdmin,
+                isFacilitatedResponse: responseState.facilitated,
+                surveySupportsFacilitation:
+                  !!data.survey.showFacilitationOption,
+                projectName: data.currentProject!.name,
+                projectBounds: bbox(data.currentProject!.region.geojson),
+                projectUrl: data.currentProject!.url!,
+                projectId: data.currentProject!.id,
+                surveyUrl: `${data.currentProject!.url!}surveys/${surveyId}`,
+                bestEmail: data.me?.profile?.email || auth0.user?.email,
+                bestName: data.me?.profile?.fullname || auth0.user?.name,
+                savingResponse: createResponseState.loading,
+                resetResponse: async () => {
+                  await setResponseState((prev) => ({
+                    // eslint-disable-next-line i18next/no-literal-string
+                    facilitated: false,
+                    submitted: false,
                   }));
+                  history.push(
+                    // eslint-disable-next-line i18next/no-literal-string
+                    `/${slug}/surveys/${surveyId}/`
+                  );
+                  return;
+                },
+                saveResponse: async () => {
+                  const responseData: { [elementId: number]: any } = {};
+                  for (const element of elements.filter(
+                    (e) => e.type!.isInput
+                  )) {
+                    responseData[element.id] = responseState[element.id]?.value;
+                  }
+                  const response = await createResponse({
+                    variables: {
+                      surveyId: data!.survey!.id,
+                      isDraft: false,
+                      bypassedDuplicateSubmissionControl: false,
+                      facilitated: !!responseState.facilitated,
+                      responseData,
+                      practice: !!practice,
+                    },
+                    onError: () => {
+                      // avoid unhandled rejection errors
+                    },
+                  });
+                  if (response && !response.errors) {
+                    // setFormElement((prev) => ({ ...prev, exiting: prev.current }));
+                    await setResponseState((prev) => ({
+                      ...prev,
+                      submitted: true,
+                    }));
+                    // window.scrollTo(0, 0);
+                    // history.push(
+                    //   // eslint-disable-next-line i18next/no-literal-string
+                    //   `/${slug}/surveys/${surveyId}/${elements.indexOf(
+                    //     pagingState.nextFormElement!
+                    //   )}/${practice ? "practice" : ""}`
+                    // );
+                    // // setResponseState({ facilitated: false, submitted: false });
+                  }
+
+                  return response;
+                },
+                offlineResponseCount: offlineStore.responses.length,
+                clientIsPreppedForOfflineUse,
+                saveResponseToOfflineStore,
+              }}
+            >
+              <Title>{data.survey.name}</Title>
+              <Meta name="theme-color" content={style.backgroundColor} />
+
+              <SurveyAppLayout
+                navigatingBackwards={backwards}
+                showProgress={data.survey.showProgress}
+                progress={index / elements.length}
+                style={style}
+                unsplashUserName={style.unsplashAuthorName}
+                unsplashUserUrl={style.unsplashAuthorUrl}
+                practice={!!practice}
+                onPracticeClick={() => {
+                  setPracticeModalOpen(true);
                 }}
-              >
-                <motion.div
-                  custom={backwards}
-                  className="relative"
-                  variants={{
-                    exit: (direction: boolean) => ({
-                      opacity: 0,
-                      translateY: direction ? 100 : -100,
-                      position: "relative",
-                    }),
-                    enter: (direction: boolean) => ({
-                      opacity: 0,
-                      translateY: direction ? -100 : 100,
-                      position: "relative",
-                    }),
-                    show: () => ({
-                      opacity: 1,
-                      translateY: 0,
-                      position: "relative",
-                    }),
-                  }}
-                  transition={{
-                    duration: 0.3,
-                  }}
-                  key={`${formElement.current.id}`}
-                  initial="enter"
-                  animate="show"
-                  exit="exit"
-                >
-                  <SurveyButtonFooterPortalContext.Provider
-                    value={surveyButtonFooter.current}
-                  >
-                    <FormElementFactory
-                      onRequestStageChange={(n) => setStage(n)}
-                      stage={stage}
-                      featureNumber={1}
-                      isLastQuestion={lastPage}
-                      isSpatial={formElement.current?.type?.isSpatial || false}
-                      {...formElement.current}
-                      typeName={formElement.current.typeId}
-                      submissionAttempted={!!state?.submissionAttempted}
-                      onChange={(value, errors, advanceAutomatically) => {
-                        if (formElement.current?.typeId === "WelcomeMessage") {
-                          setResponseState((prev) => ({
-                            submitted: false,
-                            facilitated: !!responseState.facilitated,
-                          }));
-                          if (practice) {
-                            history.push(
-                              `/${slug}/surveys/${surveyId}/1/practice`
-                            );
-                          } else {
-                            history.push(`/${slug}/surveys/${surveyId}/1`);
-                          }
-                        } else {
-                          updateState(formElement.current!, {
-                            value,
-                            errors,
-                          }).then(() => {
-                            if (advanceAutomatically) {
-                              setTimeout(() => {
-                                setAutoAdvance(true);
-                              }, 500);
-                            }
-                          });
-                        }
-                      }}
-                      onSubmit={handleAdvance}
-                      editable={false}
-                      value={state?.value}
-                      onRequestNext={() => handleAdvance({ force: true })}
-                      onRequestPrevious={() => {
-                        setBackwards(true);
-                        const url = `/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
-                          pagingState.previousFormElement!
-                        )}/${practice ? "practice" : ""}`;
-                        history.push(url);
-                      }}
-                    />
-                  </SurveyButtonFooterPortalContext.Provider>
-                  {!formElement.current?.type?.isSpatial &&
-                    !components[formElement.current?.typeId].hideNav &&
-                    (!advancesAutomatically(formElement.current) ||
-                      !formElement.current.isRequired) && (
-                      <div
-                        className={`${
-                          createResponseState.loading ||
-                          createResponseState.error ||
-                          (!formElement.exiting &&
-                            (state?.value !== undefined ||
-                              !formElement.current.isRequired) &&
-                            formElement.current.typeId !== "WelcomeMessage" &&
-                            !state?.errors)
-                            ? "opacity-100 transition-opacity duration-300"
-                            : "opacity-0"
-                        }`}
-                      >
-                        <Button
-                          className="mb-10"
-                          label={
-                            pagingState.isLastQuestion
-                              ? t("Complete Submission")
-                              : currentValue === undefined ||
-                                currentValue === null ||
-                                currentValue === ""
-                              ? formElement.current.isInput
-                                ? t("Skip Question")
-                                : t("Next")
-                              : t("Next")
-                          }
-                          onClick={handleAdvance}
-                          disabled={
-                            createResponseState.loading || !!formElement.exiting
-                          }
-                          loading={createResponseState.loading}
-                          backgroundColor={style.secondaryColor}
-                        />
-                        <span ref={surveyButtonFooter} className="ml-2"></span>
-                      </div>
+                navigation={
+                  <SurveyNavigationButton
+                    hidden={hideNav(
+                      components[formElement.current!.typeId],
+                      formElement.current.componentSettings,
+                      isMobile,
+                      formElement.current.isRequired,
+                      stage,
+                      style.layout
                     )}
-                </motion.div>
-              </AnimatePresence>
-              {/* {!hideNav(
+                    slug={slug}
+                    surveyId={surveyId}
+                    practice={practice}
+                    pagingState={pagingState}
+                    canAdvance={canAdvance()}
+                    onPrev={() => setBackwards(true)}
+                    onNext={(e) => {
+                      handleAdvance();
+                      if (!canAdvance()) {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
+                }
+              >
+                <AnimatePresence
+                  initial={false}
+                  exitBeforeEnter={true}
+                  custom={backwards}
+                  presenceAffectsLayout={false}
+                  onExitComplete={() => {
+                    setBackwards(false);
+                    setFormElement((prev) => ({
+                      ...prev,
+                      exiting: undefined,
+                    }));
+                  }}
+                >
+                  <motion.div
+                    custom={backwards}
+                    className="relative"
+                    variants={{
+                      exit: (direction: boolean) => ({
+                        opacity: 0,
+                        translateY: direction ? 100 : -100,
+                        position: "relative",
+                      }),
+                      enter: (direction: boolean) => ({
+                        opacity: 0,
+                        translateY: direction ? -100 : 100,
+                        position: "relative",
+                      }),
+                      show: () => ({
+                        opacity: 1,
+                        translateY: 0,
+                        position: "relative",
+                      }),
+                    }}
+                    transition={{
+                      duration: 0.3,
+                    }}
+                    key={`${formElement.current.id}`}
+                    initial="enter"
+                    animate="show"
+                    exit="exit"
+                  >
+                    <SurveyButtonFooterPortalContext.Provider
+                      value={surveyButtonFooter.current}
+                    >
+                      <FormElementFactory
+                        onRequestStageChange={(n) => setStage(n)}
+                        stage={stage}
+                        featureNumber={1}
+                        isLastQuestion={lastPage}
+                        isSpatial={
+                          formElement.current?.type?.isSpatial || false
+                        }
+                        {...formElement.current}
+                        typeName={formElement.current.typeId}
+                        submissionAttempted={!!state?.submissionAttempted}
+                        onChange={(value, errors, advanceAutomatically) => {
+                          if (
+                            formElement.current?.typeId === "WelcomeMessage"
+                          ) {
+                            setResponseState((prev) => ({
+                              submitted: false,
+                              facilitated: !!responseState.facilitated,
+                            }));
+                            if (practice) {
+                              history.push(
+                                `/${slug}/surveys/${surveyId}/1/practice`
+                              );
+                            } else {
+                              history.push(`/${slug}/surveys/${surveyId}/1`);
+                            }
+                          } else {
+                            updateState(formElement.current!, {
+                              value,
+                              errors,
+                            }).then(() => {
+                              if (advanceAutomatically) {
+                                setTimeout(() => {
+                                  setAutoAdvance(true);
+                                }, 500);
+                              }
+                            });
+                          }
+                        }}
+                        onSubmit={handleAdvance}
+                        editable={false}
+                        value={state?.value}
+                        onRequestNext={() => handleAdvance({ force: true })}
+                        onRequestPrevious={() => {
+                          setBackwards(true);
+                          const url = `/${slug}/surveys/${surveyId}/${pagingState.sortedFormElements.indexOf(
+                            pagingState.previousFormElement!
+                          )}/${practice ? "practice" : ""}`;
+                          history.push(url);
+                        }}
+                      />
+                    </SurveyButtonFooterPortalContext.Provider>
+                    {!formElement.current?.type?.isSpatial &&
+                      !components[formElement.current?.typeId].hideNav &&
+                      (!advancesAutomatically(formElement.current) ||
+                        !formElement.current.isRequired) && (
+                        <div
+                          className={`${
+                            createResponseState.loading ||
+                            createResponseState.error ||
+                            (!formElement.exiting &&
+                              (state?.value !== undefined ||
+                                !formElement.current.isRequired) &&
+                              formElement.current.typeId !== "WelcomeMessage" &&
+                              !state?.errors)
+                              ? "opacity-100 transition-opacity duration-300"
+                              : "opacity-0"
+                          }`}
+                        >
+                          <Button
+                            className="mb-10"
+                            label={
+                              pagingState.isLastQuestion
+                                ? t("Complete Submission")
+                                : currentValue === undefined ||
+                                  currentValue === null ||
+                                  currentValue === ""
+                                ? formElement.current.isInput
+                                  ? t("Skip Question")
+                                  : t("Next")
+                                : t("Next")
+                            }
+                            onClick={handleAdvance}
+                            disabled={
+                              createResponseState.loading ||
+                              !!formElement.exiting
+                            }
+                            loading={createResponseState.loading}
+                            backgroundColor={style.secondaryColor}
+                          />
+                          <span
+                            ref={surveyButtonFooter}
+                            className="ml-2"
+                          ></span>
+                        </div>
+                      )}
+                  </motion.div>
+                </AnimatePresence>
+                {/* {!hideNav(
               components[formElement.current!.typeId],
               formElement.current.componentSettings,
               isMobile,
@@ -662,60 +678,65 @@ function SurveyApp() {
                 }}
               />
             )} */}
-              {(style.layout === FormElementLayout.MapSidebarLeft ||
-                style.layout === FormElementLayout.MapSidebarRight ||
-                style.layout === FormElementLayout.MapTop ||
-                style.layout === FormElementLayout.MapFullscreen) &&
-                !formElement.current.type?.isSpatial && (
-                  <SurveyContextualMap
-                    isSmall={style.isSmall}
-                    displayShowMapButton={
-                      style.layout === FormElementLayout.MapTop
-                    }
-                    displayHideMapButton={stage === 1}
-                    onRequestStageChange={setStage}
-                    hideControls={style.layout === FormElementLayout.MapTop}
-                    basemaps={(style.mapBasemaps as number[] | undefined) || []}
-                    cameraOptions={style.mapCameraOptions}
-                  />
-                )}
-            </SurveyAppLayout>
-            {practiceModalOpen && (
-              <Modal
-                onRequestClose={() => {
-                  setPracticeModalOpen(false);
-                }}
-                title={t("Practice Mode")}
-                footer={[
-                  {
-                    label: t("Count My Response"),
-                    variant: "primary",
-                    onClick: () => {
-                      setPracticeModalOpen(false);
-                      history.replace(`/${slug}/surveys/${surveyId}/${index}/`);
+                {(style.layout === FormElementLayout.MapSidebarLeft ||
+                  style.layout === FormElementLayout.MapSidebarRight ||
+                  style.layout === FormElementLayout.MapTop ||
+                  style.layout === FormElementLayout.MapFullscreen) &&
+                  !formElement.current.type?.isSpatial && (
+                    <SurveyContextualMap
+                      isSmall={style.isSmall}
+                      displayShowMapButton={
+                        style.layout === FormElementLayout.MapTop
+                      }
+                      displayHideMapButton={stage === 1}
+                      onRequestStageChange={setStage}
+                      hideControls={style.layout === FormElementLayout.MapTop}
+                      basemaps={
+                        (style.mapBasemaps as number[] | undefined) || []
+                      }
+                      cameraOptions={style.mapCameraOptions}
+                    />
+                  )}
+              </SurveyAppLayout>
+              {practiceModalOpen && (
+                <Modal
+                  onRequestClose={() => {
+                    setPracticeModalOpen(false);
+                  }}
+                  title={t("Practice Mode")}
+                  footer={[
+                    {
+                      label: t("Count My Response"),
+                      variant: "primary",
+                      onClick: () => {
+                        setPracticeModalOpen(false);
+                        history.replace(
+                          `/${slug}/surveys/${surveyId}/${index}/`
+                        );
+                      },
                     },
-                  },
-                  {
-                    label: practice
-                      ? t("Continue Practice Mode")
-                      : t("Enable Practice Mode"),
-                    onClick: () => {
-                      setPracticeModalOpen(false);
-                      history.replace(
-                        `/${slug}/surveys/${surveyId}/${index}/practice`
-                      );
+                    {
+                      label: practice
+                        ? t("Continue Practice Mode")
+                        : t("Enable Practice Mode"),
+                      onClick: () => {
+                        setPracticeModalOpen(false);
+                        history.replace(
+                          `/${slug}/surveys/${surveyId}/${index}/practice`
+                        );
+                      },
                     },
-                  },
-                ]}
-              >
-                <Trans ns="surveys">
-                  Practice mode saves your responses seperately so that they are
-                  not counted in the survey results.
-                </Trans>
-              </Modal>
-            )}
-            <ImagePreloader formElements={elements} />
-          </SurveyContext.Provider>
+                  ]}
+                >
+                  <Trans ns="surveys">
+                    Practice mode saves your responses seperately so that they
+                    are not counted in the survey results.
+                  </Trans>
+                </Modal>
+              )}
+              <ImagePreloader formElements={elements} />
+            </SurveyContext.Provider>
+          </FormLanguageContext.Provider>
         </ProjectAccessGate>
       </>
     );

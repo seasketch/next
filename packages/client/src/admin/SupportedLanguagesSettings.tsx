@@ -13,7 +13,24 @@ export default function SupportedLanguagesSettings({ slug }: { slug: string }) {
       slug,
     },
   });
-  const [mutate, mutationState] = useToggleLanguageSupportMutation({});
+  const [mutate, mutationState] = useToggleLanguageSupportMutation({
+    optimisticResponse: (vars) => ({
+      __typename: "Mutation",
+      toggleLanguageSupport: {
+        __typename: "ToggleLanguageSupportPayload",
+        project: {
+          __typename: "Project",
+          id: data!.project!.id,
+          supportedLanguages: [
+            ...(data!.project!.supportedLanguages || []).filter(
+              (l) => l !== vars.code
+            ),
+            ...(vars.enable ? [vars.code] : []),
+          ],
+        },
+      },
+    }),
+  });
 
   return (
     <>
@@ -28,7 +45,8 @@ export default function SupportedLanguagesSettings({ slug }: { slug: string }) {
               <Trans ns="admin">
                 SeaSketch will detect a user's language from browser and system
                 settings and show content in that language if supported. Users
-                can also select from supported languages in the sidebar.
+                can also select from supported languages in the sidebar. At this
+                time the administrative interface is only available in English.
               </Trans>
             </p>
             <div className="relative py-2 mt-4">

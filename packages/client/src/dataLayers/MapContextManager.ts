@@ -1995,6 +1995,7 @@ export interface MapContextInterface {
     };
     supportsUndo: boolean;
   };
+  languageCode?: string;
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
@@ -2258,4 +2259,7 @@ function sketchGeoJSONUrl(id: number, timestamp?: string | number) {
     // eslint-disable-next-line i18next/no-literal-string
     `/sketches/${id}.geojson.json${timestamp ? `?timestamp=${timestamp}` : ""}`
   }`;
+}
+function useTranslation(arg0: string): { t: any; i18n: any } {
+  throw new Error("Function not implemented.");
 }

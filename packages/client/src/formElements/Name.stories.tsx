@@ -61,7 +61,6 @@ const Template: Story = (args: any) => {
       value={{
         ...TestSurveyContextValue,
         isFacilitatedResponse: args.isFacilitatedResponse,
-        supportedLanguages: [],
       }}
     >
       <SurveyAppLayout progress={0.4}>

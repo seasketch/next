@@ -1,5 +1,5 @@
 import { CameraOptions, Layer } from "mapbox-gl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import {
@@ -10,7 +10,6 @@ import {
   useSet3dTerrainMutation,
   useUpdateTerrainExaggerationMutation,
   useUpdateBasemapUrlMutation,
-  BasemapDetailsFragment,
 } from "../../generated/graphql";
 import { gql, useApolloClient } from "@apollo/client";
 
@@ -27,6 +26,7 @@ import BasemapEditorPanelMap from "./BasemapEditorMap";
 import { useMediaQuery } from "beautiful-react-hooks";
 import { Link } from "react-router-dom";
 import { ArrowLeftIcon } from "@heroicons/react/outline";
+import TranslatedPropControl from "../../components/TranslatedPropControl";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
@@ -73,10 +73,12 @@ export default function BasemapEditorPanel({
     }
   }, [basemap, exaggeration]);
 
+  const [updateExaggeration, updateExaggerationMutationState] =
+    useUpdateTerrainExaggerationMutation();
+
   useEffect(() => {
     if (
       basemap &&
-      exaggeration &&
       debouncedExaggeration &&
       parseFloat(basemap.terrainExaggeration) !==
         parseFloat(debouncedExaggeration)
@@ -99,9 +101,7 @@ export default function BasemapEditorPanel({
         },
       });
     }
-  }, [debouncedExaggeration, basemap]);
-  const [updateExaggeration, updateExaggerationMutationState] =
-    useUpdateTerrainExaggerationMutation();
+  }, [debouncedExaggeration, basemap, client, updateExaggeration]);
 
   const mapboxStyle = useMapboxStyle(
     basemap && basemap.type === BasemapType.Mapbox ? basemap.url : undefined
@@ -216,7 +216,7 @@ export default function BasemapEditorPanel({
           className="w-full h-full overflow-y-auto px-4 pb-4 max-w-xl"
           style={{ gridArea: "sidebar" }}
         >
-          <div className="md:max-w-sm mt-5">
+          <div className="md:max-w-sm mt-5 relative">
             <MutableAutosaveInput
               mutation={mutateItem}
               mutationStatus={mutateItemState}
@@ -224,6 +224,14 @@ export default function BasemapEditorPanel({
               value={basemap.name || ""}
               label={t("Name")}
               variables={{ id: basemapId }}
+            />
+            <TranslatedPropControl
+              id={basemap.id}
+              label={t("Basemap Name")}
+              propName="name"
+              typeName="Basemap"
+              defaultValue={basemap.name}
+              className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
             />
           </div>
           <div className="md:max-w-sm mt-5">

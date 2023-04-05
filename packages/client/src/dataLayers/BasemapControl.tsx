@@ -5,6 +5,7 @@ import { MapContext } from "../dataLayers/MapContextManager";
 import { useTranslation, Trans } from "react-i18next";
 import OptionalBasemapLayerControl from "../dataLayers/OptionalBasemapLayerControl";
 import { BasemapDetailsFragment } from "../generated/graphql";
+import { useTranslatedProps } from "../components/TranslatedPropControl";
 
 interface BasemapControlProps {
   basemaps?: BasemapDetailsFragment[];
@@ -21,6 +22,7 @@ export default function BasemapControl(props: BasemapControlProps) {
   const showBasemapOptions =
     selectedBasemap &&
     (selectedBasemap.optionalBasemapLayers.length || terrainOptional);
+
   return (
     <>
       <div>
@@ -103,11 +105,17 @@ function BasemapSquareItem({
   onClick,
   error,
 }: {
-  basemap: { name: string; thumbnail: string; id: number };
+  basemap: {
+    name: string;
+    thumbnail: string;
+    id: number;
+    translatedProps: any;
+  };
   selected: boolean;
   error?: Error;
   onClick?: () => void;
 }) {
+  const getTranslatedProp = useTranslatedProps(basemap);
   return (
     <div
       className="flex flex-col m-2 cursor-pointer select-none w-32"
@@ -133,7 +141,7 @@ function BasemapSquareItem({
           selected ? "text-gray-800 " : "text-gray-600"
         }`}
       >
-        {basemap.name}
+        {getTranslatedProp("name")}
       </h4>
     </div>
   );

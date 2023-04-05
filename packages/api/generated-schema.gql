@@ -377,6 +377,7 @@ type Basemap implements Node {
   For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   tileSize: Int!
+  translatedProps: JSON!
   type: BasemapType!
 
   """
@@ -458,6 +459,7 @@ input BasemapInput {
   For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   tileSize: Int
+  translatedProps: JSON
   type: BasemapType!
 
   """
@@ -528,6 +530,7 @@ input BasemapPatch {
   For use with RASTER_URL_TEMPLATE types. See the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   tileSize: Int
+  translatedProps: JSON
   type: BasemapType
 
   """
@@ -2364,6 +2367,7 @@ type DataSource implements Node {
   GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).
   """
   tolerance: BigFloat
+  translatedProps: JSON!
 
   """MapBox GL source type or custom seasketch type."""
   type: DataSourceTypes!
@@ -2588,6 +2592,7 @@ input DataSourceInput {
   GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).
   """
   tolerance: BigFloat
+  translatedProps: JSON
 
   """MapBox GL source type or custom seasketch type."""
   type: DataSourceTypes!
@@ -2742,6 +2747,7 @@ input DataSourcePatch {
   GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).
   """
   tolerance: BigFloat
+  translatedProps: JSON
 
   """
   A URL to a TileJSON resource for tiled sources. For GeoJSON or
@@ -5607,6 +5613,7 @@ type Forum implements Node {
     """The method to use when ordering `Topic`."""
     orderBy: [TopicsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TopicsConnection!
+  translatedProps: JSON!
   writeAcl: Acl
 }
 
@@ -5653,6 +5660,7 @@ input ForumInput {
   """
   position: Int
   projectId: Int!
+  translatedProps: JSON
 }
 
 """
@@ -5676,6 +5684,7 @@ input ForumPatch {
   position in ascending order. Set using `setForumOrder()`
   """
   position: Int
+  translatedProps: JSON
 }
 
 """A `Forum` edge in the connection."""
@@ -6719,6 +6728,33 @@ type MarkTopicAsReadPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `mergeTranslatedProps` mutation."""
+input MergeTranslatedPropsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  existing: JSON
+  propName: String
+  propTranslations: JSON
+}
+
+"""The output of our `mergeTranslatedProps` mutation."""
+type MergeTranslatedPropsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  json: JSON
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -7780,6 +7816,12 @@ type Mutation {
     """
     input: MarkTopicAsReadInput!
   ): MarkTopicAsReadPayload
+  mergeTranslatedProps(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MergeTranslatedPropsInput!
+  ): MergeTranslatedPropsPayload
   modifySurveyAnswers(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -7945,6 +7987,7 @@ type Mutation {
     """
     input: SetTopicStickyInput!
   ): SetTopicStickyPayload
+  setTranslatedProp(id: Int!, propName: String!, translations: [TranslatedPropInput!]!, typeName: String!): setTranslatedPropResult!
 
   """
   Sets the list of groups that the given user belongs to. Will clear all other
@@ -9691,6 +9734,7 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [TableOfContentsItem!]
+  translatedProps: JSON!
 
   """
   Number of users who have outstanding access requests. Only relevant for invite-only projects.
@@ -10039,6 +10083,7 @@ input ProjectPatch {
   mapboxPublicKey: String
   name: String
   region: GeoJSON
+  translatedProps: JSON
 }
 
 """A connection to a list of `Project` values."""
@@ -11403,6 +11448,12 @@ type SetTopicStickyPayload {
   ): TopicsEdge
 }
 
+type setTranslatedPropResult {
+  id: Int!
+  translatedProps: JSON!
+  typeName: String!
+}
+
 """All input for the `setUserGroups` mutation."""
 input SetUserGroupsInput {
   """
@@ -11674,6 +11725,7 @@ type SketchClass implements Node {
   """Number of sketches created with this sketch class"""
   sketchCount: BigInt
   templateDescription: String
+  translatedProps: JSON!
 
   """Reads and enables pagination through a set of `SketchClass`."""
   validChildren(
@@ -11787,6 +11839,7 @@ input SketchClassPatch {
   preprocessingEndpoint: String
   preprocessingProjectUrl: String
   templateDescription: String
+  translatedProps: JSON
 }
 
 type SketchFolder implements Node {
@@ -12755,6 +12808,7 @@ type TableOfContentsItem implements Node {
 
   """Name used in the table of contents rendering"""
   title: String!
+  translatedProps: JSON!
 }
 
 """
@@ -12869,6 +12923,7 @@ input TableOfContentsItemPatch {
 
   """Name used in the table of contents rendering"""
   title: String
+  translatedProps: JSON
 }
 
 """A connection to a list of `TableOfContentsItem` values."""
@@ -13204,6 +13259,11 @@ enum TopicsOrderBy {
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
+}
+
+input TranslatedPropInput {
+  languageCode: String!
+  value: String
 }
 
 type UnsplashLinks {

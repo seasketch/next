@@ -14,12 +14,13 @@ import Modal from "../components/Modal";
 import Switch from "../components/Switch";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
 import LanguageSelector from "../surveys/LanguageSelector";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -36,6 +37,7 @@ const WelcomeMessage: FormElementComponent<
   const { t } = useTranslation("admin:surveys");
   const style = useContext(FormElementLayoutContext).style;
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   if (!context) {
     throw new Error("SurveyContext not set");
@@ -75,7 +77,7 @@ const WelcomeMessage: FormElementComponent<
               <Trans ns="surveys">Language</Trans>
             </button>
           )}
-          options={context.supportedLanguages}
+          options={langContext.supportedLanguages}
         />
         <div className="sm:flex-1 sm:items-end sm:relative">
           <button
@@ -194,14 +196,14 @@ const WelcomeMessage: FormElementComponent<
         render={(updateBaseSetting, updateComponentSetting) => {
           return (
             <>
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 name="beginButtonText"
                 required
                 value={beginButtonText}
                 onChange={updateComponentSetting(
                   "beginButtonText",
                   props.componentSettings,
-                  context.lang.code,
+                  langContext.lang.code,
                   props.alternateLanguageSettings
                 )}
                 label={t("Begin Button Text", { ns: "admin:surveys" })}

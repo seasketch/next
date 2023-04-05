@@ -2,11 +2,12 @@ import { MailIcon } from "@heroicons/react/solid";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import TextInput from "../components/TextInput";
-import LocalizableTextInput from "../surveys/LocalizableTextInput";
+import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormLanguageContext,
   SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
@@ -25,6 +26,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
   const [val, setVal] = useState(props.value);
   const [errors, setErrors] = useState(validate(val, props.isRequired));
   const context = useContext(SurveyContext);
+  const langContext = useContext(FormLanguageContext);
   useEffect(() => {
     setErrors(validate(val, props.isRequired));
   }, [props.componentSettings, props.isRequired, val]);
@@ -83,14 +85,14 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
                   address if available
                 </Trans>
               </p>
-              <LocalizableTextInput
+              <SurveyLocalizableTextInput
                 label={t("Placeholder", { ns: "admin:surveys" })}
                 name="placeholder"
                 value={placeholder}
                 onChange={updateComponentSetting(
                   "placeholder",
                   props.componentSettings,
-                  context?.lang.code,
+                  langContext.lang.code,
                   props.alternateLanguageSettings
                 )}
               />

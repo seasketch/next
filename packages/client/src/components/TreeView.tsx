@@ -9,6 +9,7 @@ import ContextMenuDropdown, {
   DropdownDividerProps,
 } from "./ContextMenuDropdown";
 import { DropdownOption } from "./DropdownButton";
+import { useTranslatedProps } from "./TranslatedPropControl";
 
 export interface TreeItem {
   id: string;
@@ -477,6 +478,7 @@ export function useOverlayState(
   editable?: boolean,
   localStoragePrefix?: string
 ) {
+  const getTranslatedProp = useTranslatedProps();
   const mapContext = useContext(MapContext);
   const [expandedIds, setExpandedIds] = useLocalStorage<string[]>(
     `${localStoragePrefix}-overlays-expanded-ids`,
@@ -485,9 +487,12 @@ export function useOverlayState(
   const treeItems = useMemo(() => {
     return overlayLayerFragmentsToTreeItems(
       [...items].sort((a, b) => a.sortIndex - b.sortIndex),
-      editable
+      editable,
+      (propName: string, record: OverlayFragment) => {
+        return getTranslatedProp(propName, record)!;
+      }
     );
-  }, [items, editable]);
+  }, [items, editable, getTranslatedProp]);
 
   const { checkedItems, loadingItems, overlayErrors } = useMemo(() => {
     const checkedItems: string[] = [];
@@ -558,7 +563,8 @@ export function useOverlayState(
 
 export function overlayLayerFragmentsToTreeItems(
   fragments: OverlayFragment[],
-  editable?: boolean
+  editable?: boolean,
+  getTranslatedProp?: (propName: string, fragment: OverlayFragment) => string
 ) {
   const items: TreeItem[] = [];
   for (const fragment of fragments) {
@@ -569,7 +575,9 @@ export function overlayLayerFragmentsToTreeItems(
       checkOffOnly: fragment.isClickOffOnly,
       radioFolder: fragment.showRadioChildren,
       hideChildren: fragment.hideChildren,
-      title: fragment.title,
+      title: getTranslatedProp
+        ? getTranslatedProp("title", fragment)
+        : fragment.title,
       type: fragment.__typename!,
       dropAcceptsTypes: editable ? ["TableOfContentsItem"] : [],
     });

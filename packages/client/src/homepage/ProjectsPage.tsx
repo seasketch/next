@@ -8,6 +8,7 @@ import Button from "../components/Button";
 import Skeleton from "../components/Skeleton";
 import { useProjectListingQuery } from "../generated/graphql";
 import FeaturedProjectItem from "./FeaturedProjectItem";
+import { useTranslatedProps } from "../components/TranslatedPropControl";
 
 const LIST_SIZE = 12;
 
@@ -61,6 +62,8 @@ export default function ProjectsPage() {
       };
     }
   }, [data?.projects?.edges]);
+
+  const getTranslatedProp = useTranslatedProps();
 
   return (
     <div className="lg:flex w-full max-w-6xl sm:p-4 mx-auto">
@@ -118,7 +121,9 @@ export default function ProjectsPage() {
                     <h3 className="text-primary-500 font-bold block">
                       {p?.name}
                     </h3>
-                    <p className="truncate text-sm">{p?.description}</p>
+                    <p className="truncate text-sm">
+                      {getTranslatedProp("description", p)}
+                    </p>
                   </li>
                 </Link>
               ))}

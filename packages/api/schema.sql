@@ -1217,6 +1217,7 @@ CREATE TABLE public.sketch_classes (
     template_description text,
     preprocessing_endpoint text,
     preprocessing_project_url text,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
@@ -2383,7 +2384,8 @@ CREATE TABLE public.basemaps (
     interactivity_settings_id integer NOT NULL,
     is_disabled boolean DEFAULT false NOT NULL,
     surveys_only boolean DEFAULT false NOT NULL,
-    use_default_offline_tile_settings boolean DEFAULT true NOT NULL
+    use_default_offline_tile_settings boolean DEFAULT true NOT NULL,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -5061,6 +5063,7 @@ CREATE TABLE public.projects (
     is_offline_enabled boolean DEFAULT false,
     data_hosting_quota bigint DEFAULT 524288000 NOT NULL,
     supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -6031,6 +6034,7 @@ CREATE TABLE public.data_sources (
     normalized_source_bytes integer,
     geostats jsonb,
     upload_task_id uuid,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -6872,7 +6876,8 @@ CREATE TABLE public.forums (
     name text NOT NULL,
     "position" integer DEFAULT 0,
     description text,
-    archived boolean DEFAULT false
+    archived boolean DEFAULT false,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -8002,6 +8007,31 @@ COMMENT ON FUNCTION public.me() IS 'Access the current session''s User. The user
 
 
 --
+-- Name: merge_translated_props(jsonb, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.merge_translated_props(existing jsonb, prop_name text, prop_translations jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    lang text;
+  begin
+    for lang in select jsonb_object_keys(prop_translations) as lang
+      loop
+        RAISE notice 'lang: %, %', lang, existing->lang;
+        if existing ? lang then
+          existing := jsonb_set(existing, string_to_array(lang, ' '), existing->lang || jsonb_build_object(prop_name, prop_translations->lang));
+          RAISE notice 'changed to: %', existing;
+        else
+          existing := jsonb_set(existing, string_to_array(lang, ' '), jsonb_build_object(prop_name, prop_translations->lang));
+        end if;
+      end loop;
+    return existing;
+  end;
+$$;
+
+
+--
 -- Name: modify_survey_answers(integer[], jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8963,6 +8993,7 @@ CREATE TABLE public.table_of_contents_items (
     hide_children boolean DEFAULT false NOT NULL,
     enable_download boolean DEFAULT true NOT NULL,
     geoprocessing_reference_id text,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
 );
@@ -9890,7 +9921,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           data_layer_id,
           sort_index,
           hide_children,
-          geoprocessing_reference_id
+          geoprocessing_reference_id,
+          translated_props
         ) values (
           false,
           "projectId",
@@ -9906,7 +9938,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           lid,
           item.sort_index,
           item.hide_children,
-          item.geoprocessing_reference_id
+          item.geoprocessing_reference_id,
+          item.translated_props
         ) returning id into new_toc_id;
         select 
           type, id into acl_type, orig_acl_id 
@@ -9995,7 +10028,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           normalized_source_object_key,
           normalized_source_bytes,
           geostats,
-          upload_task_id
+          upload_task_id,
+          translated_props
         )
           select 
             "projectId", 
@@ -10034,7 +10068,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           normalized_source_object_key,
           normalized_source_bytes,
           geostats,
-          upload_task_id
+          upload_task_id,
+          translated_props
           from 
             data_sources 
           where
@@ -18242,6 +18277,14 @@ GRANT UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seaske
 
 
 --
+-- Name: COLUMN sketch_classes.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.sketch_classes TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19045,6 +19088,13 @@ GRANT ALL ON FUNCTION public.generate_label(id integer, body jsonb) TO anon;
 
 GRANT ALL ON TABLE public.basemaps TO seasketch_user;
 GRANT SELECT ON TABLE public.basemaps TO anon;
+
+
+--
+-- Name: COLUMN basemaps.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.basemaps TO anon;
 
 
 --
@@ -20329,6 +20379,14 @@ GRANT SELECT(supported_languages) ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.projects TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.projects TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20734,6 +20792,14 @@ GRANT SELECT(uploaded_source_filename) ON TABLE public.data_sources TO seasketch
 
 
 --
+-- Name: COLUMN data_sources.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.data_sources TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
 -- Name: FUNCTION data_sources_uploaded_by(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21011,6 +21077,14 @@ GRANT UPDATE(description) ON TABLE public.forums TO seasketch_user;
 --
 
 GRANT UPDATE(archived) ON TABLE public.forums TO seasketch_user;
+
+
+--
+-- Name: COLUMN forums.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.forums TO anon;
+GRANT SELECT(translated_props),UPDATE(translated_props) ON TABLE public.forums TO seasketch_user;
 
 
 --
@@ -22481,6 +22555,14 @@ GRANT ALL ON FUNCTION public.me() TO anon;
 
 
 --
+-- Name: FUNCTION merge_translated_props(existing jsonb, prop_name text, prop_translations jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.merge_translated_props(existing jsonb, prop_name text, prop_translations jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.merge_translated_props(existing jsonb, prop_name text, prop_translations jsonb) TO anon;
+
+
+--
 -- Name: FUNCTION modify_survey_answers(response_ids integer[], answers jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -23371,6 +23453,14 @@ GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_c
 
 GRANT UPDATE(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO seasketch_user;
 GRANT SELECT(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.table_of_contents_items TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seasketch_user;
 
 
 --

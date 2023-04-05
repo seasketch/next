@@ -15,6 +15,7 @@ fragment ForumListDetails on Forum {
     id
     nodeId
   }
+  translatedProps
 }
 
 query ForumAdminList($slug: String!) {

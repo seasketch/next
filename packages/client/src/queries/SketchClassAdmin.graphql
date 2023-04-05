@@ -47,6 +47,7 @@ fragment SketchingDetails on SketchClass {
   preprocessingEndpoint
   preprocessingProjectUrl
   canDigitize
+  translatedProps
 }
 
 fragment AdminSketchingDetails on SketchClass {

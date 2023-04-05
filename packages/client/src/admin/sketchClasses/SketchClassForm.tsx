@@ -21,6 +21,7 @@ import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 import PreprocessorInput from "./PreprocessorInput";
 import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
 import GeoprocessingClientInput from "./GeoprocessingClientInput";
+import TranslatedPropControl from "../../components/TranslatedPropControl";
 
 export default function SketchClassForm({
   sketchClass,
@@ -151,13 +152,23 @@ export default function SketchClassForm({
       <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-x-hidden overflow-y-auto">
         {selectedTab === "settings" && (
           <div className="p-4 space-y-4">
-            <div className="">
-              <MutableAutosaveInput
-                value={sketchClass.name}
-                label={t("Name")}
-                mutation={mutate}
-                mutationStatus={mutationState}
+            <div className="flex w-full items-center">
+              <div className="flex-1">
+                <MutableAutosaveInput
+                  value={sketchClass.name}
+                  label={t("Name")}
+                  mutation={mutate}
+                  mutationStatus={mutationState}
+                  propName="name"
+                />
+              </div>
+              <TranslatedPropControl
+                id={sketchClass.id}
+                label={t("Sketch Class Name")}
                 propName="name"
+                typeName="SketchClass"
+                defaultValue={sketchClass.name}
+                className="p-0.5 border rounded hover:shadow-sm -mb-5 ml-2"
               />
             </div>
             {sketchClass.acl?.nodeId && (

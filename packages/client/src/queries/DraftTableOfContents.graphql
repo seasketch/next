@@ -45,6 +45,7 @@ query layersAndSourcesForItems(
       useDevicePixelRatio
       supportsDynamicLayers
       uploadedSourceFilename
+      translatedProps
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -259,6 +260,7 @@ query GetLayerItem($id: Int!) {
         uploadedSourceFilename
         uploadedBy
         geostats
+        translatedProps
       }
     }
   }
@@ -378,6 +380,7 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+      translatedProps
     }
   }
 }
