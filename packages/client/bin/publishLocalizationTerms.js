@@ -15,7 +15,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+        while (_) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -36,15 +36,16 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-Object.defineProperty(exports, "__esModule", { value: true });
+exports.__esModule = true;
 /* eslint-disable i18next/no-literal-string */
 var request = require("request");
 var fs = require("fs");
 var path = require("path");
+var plurals = require("../src/lang/plurals.json");
 var util = require("util");
 var post = util.promisify(request.post);
 (function () { return __awaiter(void 0, void 0, void 0, function () {
-    var namespaces, res, data, terms, termsToAdd, termsToUpdate, _i, namespaces_1, namespace, data_1, _loop_1, key, _a, terms_1, term, updated, data_2, _b, statusCode, body, data_3, translations;
+    var namespaces, res, data, terms, termsToAdd, termsToUpdate, pluralsToUpdate, _i, namespaces_1, namespace, data_1, _loop_1, key, _a, terms_1, term, updated, data_2, _b, statusCode, body, data_3, translations, updated, data_4;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
@@ -58,8 +59,8 @@ var post = util.promisify(request.post);
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            language: "en",
-                        },
+                            language: "en"
+                        }
                     })];
             case 1:
                 res = _c.sent();
@@ -71,6 +72,7 @@ var post = util.promisify(request.post);
                 console.log("Publishing namespaces ".concat(namespaces.join(", ")));
                 termsToAdd = [];
                 termsToUpdate = [];
+                pluralsToUpdate = [];
                 for (_i = 0, namespaces_1 = namespaces; _i < namespaces_1.length; _i++) {
                     namespace = namespaces_1[_i];
                     data_1 = JSON.parse(fs
@@ -80,7 +82,21 @@ var post = util.promisify(request.post);
                         var existing = terms.find(function (t) { return t.term === key; });
                         if (existing) {
                             existing.obsolete = false;
-                            if (existing.tags.indexOf(namespace) === -1) {
+                            var content = existing.translation.content;
+                            var plural = plurals[key];
+                            if (plural) {
+                                if (existing.translation.content !== plural) {
+                                    pluralsToUpdate.push({
+                                        term: key,
+                                        translation: {
+                                            content: plural
+                                        }
+                                    });
+                                }
+                            }
+                            if (existing.tags.indexOf(namespace.toLowerCase().replace(":", "_")) ===
+                                -1) {
+                                console.log(existing.tags, namespace);
                                 existing.tags.push(namespace);
                                 termsToUpdate.push(existing);
                             }
@@ -88,8 +104,8 @@ var post = util.promisify(request.post);
                         else {
                             termsToAdd.push({
                                 term: key,
-                                english: data_1[key],
-                                tags: [namespace],
+                                english: plurals[key] || data_1[key],
+                                tags: [namespace]
                             });
                         }
                     };
@@ -109,13 +125,13 @@ var post = util.promisify(request.post);
                         termsToUpdate.push(term);
                     }
                 }
-                if (!termsToUpdate.length) return [3 /*break*/, 3];
+                if (!(termsToUpdate.length > 0)) return [3 /*break*/, 3];
                 return [4 /*yield*/, post("https://api.poeditor.com/v2/terms/update", {
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            data: JSON.stringify(termsToUpdate),
-                        },
+                            data: JSON.stringify(termsToUpdate)
+                        }
                     })];
             case 2:
                 updated = _c.sent();
@@ -133,8 +149,8 @@ var post = util.promisify(request.post);
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            data: JSON.stringify(termsToAdd),
-                        },
+                            data: JSON.stringify(termsToAdd)
+                        }
                     })];
             case 4:
                 _b = _c.sent(), statusCode = _b.statusCode, body = _b.body;
@@ -155,10 +171,10 @@ var post = util.promisify(request.post);
                                 .map(function (t) { return ({
                                 term: t.term,
                                 translation: {
-                                    content: t.english,
-                                },
-                            }); })),
-                        },
+                                    content: t.english
+                                }
+                            }); }))
+                        }
                     })];
             case 5:
                 translations = _c.sent();
@@ -171,6 +187,26 @@ var post = util.promisify(request.post);
                 }
                 _c.label = 6;
             case 6:
+                if (!pluralsToUpdate.length) return [3 /*break*/, 8];
+                return [4 /*yield*/, post("https://api.poeditor.com/v2/translations/update", {
+                        form: {
+                            api_token: process.env.POEDITOR_API_TOKEN,
+                            id: process.env.POEDITOR_PROJECT,
+                            data: JSON.stringify(pluralsToUpdate),
+                            language: "en"
+                        }
+                    })];
+            case 7:
+                updated = _c.sent();
+                data_4 = JSON.parse(updated.body);
+                if (data_4.response.status !== "success") {
+                    throw new Error("API response was ".concat(data_4.response.status));
+                }
+                else {
+                    console.log("updated ".concat(data_4.result.terms.updated, " terms from plurals.json"));
+                }
+                _c.label = 8;
+            case 8:
                 if (termsToAdd.length === 0 && termsToUpdate.length === 0) {
                     console.log("No new or updated terms.");
                 }

@@ -3,6 +3,8 @@
 import * as request from "request";
 import * as fs from "fs";
 import * as path from "path";
+import * as plurals from "../src/lang/plurals.json";
+
 const util = require("util");
 
 const post = util.promisify(request.post);
@@ -44,6 +46,8 @@ const post = util.promisify(request.post);
 
   const termsToAdd: { term: string; tags: string[]; english: string }[] = [];
   const termsToUpdate: { term: string; tags: string[] }[] = [];
+  const pluralsToUpdate: { term: string; translation: { content: string } }[] =
+    [];
 
   for (const namespace of namespaces) {
     const data = JSON.parse(
@@ -57,14 +61,30 @@ const post = util.promisify(request.post);
       const existing = terms.find((t) => t.term === key);
       if (existing) {
         existing.obsolete = false;
-        if (existing.tags.indexOf(namespace) === -1) {
+        const content = existing.translation.content;
+        const plural = plurals[key];
+        if (plural) {
+          if (existing.translation.content !== plural) {
+            pluralsToUpdate.push({
+              term: key,
+              translation: {
+                content: plural,
+              },
+            });
+          }
+        }
+        if (
+          existing.tags.indexOf(namespace.toLowerCase().replace(":", "_")) ===
+          -1
+        ) {
+          console.log(existing.tags, namespace);
           existing.tags.push(namespace);
           termsToUpdate.push(existing);
         }
       } else {
         termsToAdd.push({
           term: key,
-          english: data[key],
+          english: plurals[key] || data[key],
           tags: [namespace],
         });
       }
@@ -85,7 +105,7 @@ const post = util.promisify(request.post);
   }
 
   // update existing terms
-  if (termsToUpdate.length) {
+  if (termsToUpdate.length > 0) {
     const updated = await post(`https://api.poeditor.com/v2/terms/update`, {
       form: {
         api_token: process.env.POEDITOR_API_TOKEN,
@@ -149,6 +169,28 @@ const post = util.promisify(request.post);
     } else {
       console.log(
         `added default en translations for ${data.result.translations.added} terms`
+      );
+    }
+  }
+
+  if (pluralsToUpdate.length) {
+    const updated = await post(
+      `https://api.poeditor.com/v2/translations/update`,
+      {
+        form: {
+          api_token: process.env.POEDITOR_API_TOKEN,
+          id: process.env.POEDITOR_PROJECT,
+          data: JSON.stringify(pluralsToUpdate),
+          language: "en",
+        },
+      }
+    );
+    const data = JSON.parse(updated.body);
+    if (data.response.status !== "success") {
+      throw new Error(`API response was ${data.response.status}`);
+    } else {
+      console.log(
+        `updated ${data.result.translations.updated} terms from plurals.json`
       );
     }
   }

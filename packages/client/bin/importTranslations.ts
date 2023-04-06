@@ -100,7 +100,7 @@ const INCLUDE_EMPTY_TERMS = false;
         for (const term of terms) {
           if (
             (translated[term.term] || INCLUDE_EMPTY_TERMS) &&
-            term.tags.indexOf(namespace) !== -1
+            term.tags.indexOf(namespace.toLowerCase()) !== -1
           ) {
             translatedTerms[term.term] = translated[term.term] || "";
           }
