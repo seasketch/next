@@ -77,7 +77,6 @@ const post = util.promisify(request.post);
           existing.tags.indexOf(namespace.toLowerCase().replace(":", "_")) ===
           -1
         ) {
-          console.log(existing.tags, namespace);
           existing.tags.push(namespace);
           termsToUpdate.push(existing);
         }

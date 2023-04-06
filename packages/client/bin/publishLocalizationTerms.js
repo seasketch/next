@@ -96,7 +96,6 @@ var post = util.promisify(request.post);
                             }
                             if (existing.tags.indexOf(namespace.toLowerCase().replace(":", "_")) ===
                                 -1) {
-                                console.log(existing.tags, namespace);
                                 existing.tags.push(namespace);
                                 termsToUpdate.push(existing);
                             }
@@ -203,7 +202,7 @@ var post = util.promisify(request.post);
                     throw new Error("API response was ".concat(data_4.response.status));
                 }
                 else {
-                    console.log("updated ".concat(data_4.result.terms.updated, " terms from plurals.json"));
+                    console.log("updated ".concat(data_4.result.translations.updated, " terms from plurals.json"));
                 }
                 _c.label = 8;
             case 8:
