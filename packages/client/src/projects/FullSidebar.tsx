@@ -229,6 +229,20 @@ export default function FullSidebar({
           </div>
           {t("Contact support")}
         </a>
+        {!user && !data?.me && (
+          <>
+            <LanguageSelector
+              button={(onClick, lang) => (
+                <NavItem
+                  icon={<TranslateIcon className="w-6 h-6 inline -mr-0.5 " />}
+                  onClick={onClick}
+                  label={lang.localName || lang.name}
+                />
+              )}
+              options={data?.project?.supportedLanguages as string[]}
+            />
+          </>
+        )}
       </nav>
 
       {user && data?.me && (

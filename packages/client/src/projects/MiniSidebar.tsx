@@ -102,9 +102,11 @@ export default function MiniSidebar({
         anySidebarOpen={!!sidebar}
       /> */}
 
-      <div className="w-8 my-3" style={{ filter: "grayscale(50%)" }}>
-        <ProfileStatusButton onClick={onExpand} />
-      </div>
+      {data?.me && (
+        <div className="w-8 my-3" style={{ filter: "grayscale(50%)" }}>
+          <ProfileStatusButton onClick={onExpand} />
+        </div>
+      )}
       <LanguageSelector
         button={(onClick, lang) => (
           <LanguageButton
