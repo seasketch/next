@@ -283,6 +283,23 @@ class MapContextManager {
       optimizeForTerrain: true,
       logoPosition: "bottom-right",
       transformRequest: (url, resoureType) => {
+        if (/^\/sprites\//.test(url)) {
+          const { host, protocol } = window.location;
+          if (process.env.NODE_ENV === "development") {
+            // Access cloudfront directly. May exhibit CORS issues.
+            return {
+              // eslint-disable-next-line i18next/no-literal-string
+              url: `https://${process.env.REACT_APP_CLOUDFRONT_DOCS_DISTRO}.cloudfront.net${url}?ssn-tr=true`,
+            };
+          } else {
+            // Forward requests to the same origin, which will be routed to the
+            // s3 bucket via cloudfront
+            return {
+              // eslint-disable-next-line i18next/no-literal-string
+              url: `${protocol}//${host}${url}?ssn-tr=true`,
+            };
+          }
+        }
         const Url = new URL(url);
         if (
           this.internalState.offlineTileSimulatorActive &&
