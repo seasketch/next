@@ -165,7 +165,7 @@ async function saveSpriteImage(
   } else if (mimetype === "image/gif") {
     ext = "gif";
   }
-  const url = `https://${process.env.PUBLIC_UPLOADS_DOMAIN}/${filename}.${ext}`;
+  const url = `/sprites/${filename}.${ext}`;
   const { writeStream, promise } = uploadStream(filename + "." + ext, mimetype);
   if (
     mimetype !== "image/png" &&

@@ -23,6 +23,7 @@ export class ReactClientStack extends cdk.Stack {
       maintenanceRole: iam.IRole;
       domainName: string;
       siteSubDomain: string;
+      publicUploadsBucket: s3.Bucket;
     }
   ) {
     super(scope, id, props);
@@ -60,6 +61,14 @@ export class ReactClientStack extends cdk.Stack {
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         compress: true,
+      },
+      additionalBehaviors: {
+        "/sprites/*": {
+          origin: new origins.S3Origin(props.publicUploadsBucket),
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          compress: true,
+        },
       },
       certificate: certificate,
       domainNames: [siteDomain],

@@ -36,12 +36,7 @@ const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceBastion", {
   db: db.instance,
   redis: redis.cluster,
 });
-const client = new ReactClientStack(app, "SeaSketchReactClient", {
-  env,
-  maintenanceRole: maintenance.taskRole,
-  domainName: DOMAIN_NAME,
-  siteSubDomain: SUBDOMAIN,
-});
+
 const allowedCorsDomains = [
   `https://${[SUBDOMAIN, DOMAIN_NAME].join(".")}`,
   "http://localhost:3000",
@@ -54,6 +49,14 @@ const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
   env,
   maintenanceRole: maintenance.taskRole,
   allowedCorsDomains,
+});
+
+const client = new ReactClientStack(app, "SeaSketchReactClient", {
+  env,
+  maintenanceRole: maintenance.taskRole,
+  domainName: DOMAIN_NAME,
+  siteSubDomain: SUBDOMAIN,
+  publicUploadsBucket: uploads.bucket,
 });
 
 const tilePackages = new OfflineTilePackageBucketStack(
