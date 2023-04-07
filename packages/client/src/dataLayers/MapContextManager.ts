@@ -1241,10 +1241,43 @@ class MapContextManager {
         type: "fill",
         // eslint-disable-next-line i18next/no-literal-string
         source: `sketch-${id}`,
+        // Filter to type Polygon or Multipolygon
+        filter: [
+          "any",
+          ["==", ["geometry-type"], "Polygon"],
+          ["==", ["geometry-type"], "MultiPolygon"],
+        ],
         paint: {
           "fill-color": "orange",
           "fill-outline-color": "red",
           "fill-opacity": 0.5,
+        },
+        layout: {},
+      },
+
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-dblline`,
+        type: "line",
+        // eslint-disable-next-line i18next/no-literal-string
+        source: `sketch-${id}`,
+        filter: ["any", ["==", ["geometry-type"], "LineString"]],
+        paint: {
+          "line-color": "black",
+          "line-width": 4,
+        },
+        layout: {},
+      },
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-line`,
+        type: "line",
+        // eslint-disable-next-line i18next/no-literal-string
+        source: `sketch-${id}`,
+        filter: ["any", ["==", ["geometry-type"], "LineString"]],
+        paint: {
+          "line-color": "orange",
+          "line-width": 2,
         },
         layout: {},
       },
