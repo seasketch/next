@@ -1689,7 +1689,7 @@ CREATE FUNCTION public.add_group_to_acl("aclId" integer, "groupId" integer) RETU
     BEGIN
       select project_id into pid from access_control_lists where id = "aclId";
       if session_is_admin(pid) then
-        insert into access_control_list_groups (access_control_list_id, group_id) values ("aclId", "groupId");
+        insert into access_control_list_groups (access_control_list_id, group_id) values ("aclId", "groupId") on conflict do nothing;
       else
         raise exception 'Must be an administrator';
       end if;
