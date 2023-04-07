@@ -23,6 +23,11 @@
     -->
   <link href="%PUBLIC_URL%/fonts.css" rel="stylesheet" />
   <title>SeaSketch</title>
+  <script>
+    if (window.location.hash && /#projecthomepage|#dashboard/.test(window.location.hash)) {
+      window.location = `https://www.seasketch.org/${window.location.hash}`;
+    }
+  </script>
 </head>
 
 <body class="bg-gray-100 relative">
