@@ -1,4 +1,26 @@
 {
+  "About": "އެކަމާ ބެހޭގޮތުން",
+  "Account settings": "އެކައުންޓް ސެޓިންގްސް",
+  "Add data": "ޑޭޓާ އެޑް ކުރޭ",
+  "Add folder": "ފޯލްޑަރު އެޑް ކުރޭ",
+  "Are you sure you want to delete {{name}}?": "{{ނަން}} ޑިލީޓްކުރަން ބޭނުންވާކަން ޔަޤީންހެއްޔެވެ؟",
+  "Contact support": "ކޮންޓެކްޓް ސަޕޯޓް",
+  "Default Visibility": "Default Visibility",
   "Delete": "ޑިލީޓު ކޮއްލުމަށް",
-  "Edit": "ބަދަލުގެނައުމަށް"
+  "Delete Item": "އައިޓަމް ޑިލީޓް ކުރޭ",
+  "Developer API": "Developer API",
+  "Edit": "ބަދަލުގެނައުމަށް",
+  "Edit metadata": "Edit metadata",
+  "Metadata": "Metadata",
+  "Projects": "ޕްރޮޖެކްޓްތައް",
+  "Publish": "ޝާއިއު ކުރުން",
+  "SeaSketch logo": "SeaSketch logo",
+  "Sign in": "ސައިން އިން",
+  "Sign In": "ސައިން އިން",
+  "Sign out": "ސައިން އައުޓް",
+  "Signed in as": "ސޮއިކުރައްވާފައިވާ ފަދައިން",
+  "Tree Editor": "ޓްރީ އެޑިޓަރު ޑރ.",
+  "view": "ވިއު",
+  "Z-Order": "Z-order",
+  "Zoom to bounds": "ޒޫމް ޓު ބައުންޑްސް"
 }

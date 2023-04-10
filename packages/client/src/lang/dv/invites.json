@@ -1,4 +1,17 @@
 {
+  "Accept as": "{{އީމެއިލް}} ގެ ގޮތުގައި ޤަބޫލުކުރާށެވެ.",
+  "An account with this email address already exists.": "މި އީމެއިލް އެޑްރެސް ހިމެނޭ އެކައުންޓެއް މިހާރުވެސް އެބަހުއްޓެވެ.",
+  "Confirming invite": "ދައުވަތު ކަށަވަރުކުރުން",
+  "Contact {{supportEmail}} to request a new invitation.": "އާ ދައުވަތަކަށް އެދުމަށް {{ސަޕޯޓް އެމެއިލް}} އަށް ގުޅާށެވެ.",
+  "Create an Account": "އެކައުންޓެއް އުފެއްދުން",
+  "Logout and sign in as ": "ލޮގްއައުޓް އަދި ސައިން އިން އޭއެސް ",
+  "Sign In": "ސައިން އިން",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "އެ ދައުވަތު މިހާރު ވަނީ ބަލައިގެންފަ އެވެ. <1> </1> ނުވަތަ <5>ކޮންޓެކްޓް ސަޕޯޓް</5>ޕްރޮޖެކްޓަށް ކުރިއަށް ދާށެވެ.",
+  "This invitation was originally sent to <2></2>.": "މި ދައުވަތު އެންމެ ފުރަތަމަ ފޮނުވީ <2></2> އަށެވެ.",
+  "Use another account": "އެހެން އެކައުންޓެއް ބޭނުންކުރޭ",
+  "Verifying invitation code": "ދައުވަތު ކޯޑް ވެރިފައި ކުރުން",
   "Welcome, !": "މަރުހަބާ، !",
-  "Welcome!": "މަރުހަބާ!"
+  "Welcome!": "މަރުހަބާ!",
+  "You have been invited to participate in a SeaSketch project.": "ސީސްކެޗް ޕްރޮޖެކްޓެއްގައި ބައިވެރިވުމަށް ދައުވަތު ދީފި.",
+  "Your invitation to this project has expired.": "މި ޕްރޮޖެކްޓަށް ތިޔަ ބޭފުޅުން ދެއްވި ދައުވަތު މިހާރު ވަނީ ހަމަވެފައި."
 }

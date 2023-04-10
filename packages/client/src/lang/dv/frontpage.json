@@ -1,0 +1,11 @@
+{
+  "Create a Project": "ޕްރޮޖެކްޓެއް އުފެއްދުން",
+  "Create your own<1></1><2> SeaSketch Project</2>": "އަމިއްލަ<1></1><2> ސީސްކެޗް ޕްރޮޖެކްޓް</2 އުފައްދަވާށެވެ>",
+  "Create your project": "ޕްރޮޖެކްޓް ހައްދަވާ",
+  "Developer API": "Developer API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "<2>support@seasketch.org</2> އަށް ގުޅައިގެން ސީސްކެޗް ބޭނުންކޮށްގެން ތިޔަބޭފުޅުންގެ ރޭވުންތެރިކަމުގެ މަސައްކަތަށް އެއްބާރުލުން ދެވޭނެ ގޮތްތަކާ ބެހޭ ގޮތުން މަޝްވަރާކުރެވޭނެ އިންތިޒާމް ހަމަޖެއްސުމަށް އެދެމެވެ.",
+  "Project name": "ޕްރޮޖެކްޓްގެ ނަން",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "އަޅުގަނޑުމެންގެ އޯޕަން ސޯސް <2>ޖިއޯޕްރޮސެސިން ފްރޭމްވޯކް</2> ބޭނުންކޮށްގެން ސީސްކެޗް ޕްރޮޖެކްޓްތައް ކަސްޓަމައިޒް ކުރެވިދާނެ. ޓައިޕްސްކްރިޕްޓް، ރިއެކްޓް އަދި އޭޑަބްލިއުއެސް ލެމްބްޑާ ބޭނުންކޮށްގެން ޕްރޮސްޕެކްޓިވް ޒޯންތަކުގެ އަސަރު ވިޝުއަލައިޒްކުރާ ރިޕޯޓްތައް ޕްރޮޖެކްޓްތަކުން ކަނޑައެޅިދާނެ އެވެ.",
+  "Trusted by": "އިތުބާރު ކުރާ",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "ތިޔަބޭފުޅުންގެ ސަރަޙައްދުގެ މެރިން ސްޕޭޝަލް ޕްލޭނިންގއަށް ޓަކައި އަޅުގަނޑުމެންގެ ކޯލަބްރޭޓިވް ޖިއޯޑިޒައިން އަދި ސަރވޭ ޓޫލްސް ބޭނުންކުރާށެވެ. ތިޔަބޭފުޅުންގެ ޕްރޮޖެކްޓްގައި މެޕްތައް ވިޝުއަލައިޒްކޮށް، ޑިސްކަޝަން ފޯރަމްތައް ހެދުމާއި، ސްކޭޗް ޕްލޭންތަކާއި، ސަރވޭތައް ބޭނުންކޮށްގެން ޑޭޓާ އެއްކުރެވޭނެ ވަސީލަތްތައް ހިމެނޭނެ - <i>ހިލޭ!</i> އަޅުގަނޑުމެންގެ <5>ޖިއޯޕްރޮސެސިން ފްރޭމްވޯކް</5> ބޭނުންކޮށްގެން އެނަލިޓިކަލް ރިޕޯޓްތައް ތައްޔާރުކޮށް ކަސްޓަމައިޒް ކުރެވިދާނެއެވެ."
+}
