@@ -1,3 +1,25 @@
 {
-  "Cancel": "ބާތިލުކުރަން"
+  "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>ފޯރަމްގައި ބައިވެރިވުމަށް އެކައުންޓެއް ހޯދުމަށް</0> ނުވަތަ <4>ރަޖިސްޓަރ</4> ސޮއިކުރުން.",
+  "Cancel": "ބާތިލުކުރަން",
+  "Forums": "ފޯރަމްތައް",
+  "lastReply": "އެންމެ ފަހު ޖަވާބު {{ޓައިމްއޭގޯ}}. ފެށުނީ {{އެންމެ ފަހު ލިޔުންތެރިޔާ}}",
+  "Map Bookmark Errors": "Map ބުކްމާކް ގެ ގޯސްތައް",
+  "New Topic": "އާ މައުޟޫޢު",
+  "New Topic Title...": "ނިއު ޓޮޕިކް ޓައިޓަލް...",
+  "No forums have been configured for this project.": "މި މަޝްރޫއަށް އެއްވެސް ފޯރަމެއް ކޮންފިގަރކޮށްފައެއް ނުވެއެވެ.",
+  "participantCount": "{{ކައުންޓް}} މީހަކު",
+  "participantCount_plural": "{{ކައުންޓް}} މީހުން",
+  "Post a topic": "މައުޟޫޢެއް ޕޯސްޓްކުރުން",
+  "Post anyways": "ކޮންމެ ގޮތެއް ވިޔަސް ޕޯސްޓް ކުރުން",
+  "Post New Topic": "އާ މައުޟޫއަށް ޕޯސްޓް ކުރުން",
+  "Post Reply": "ޕޯސްޓް ރިޕްލައި",
+  "posted on": "ޕޯސްޓު ކޮށްފައި",
+  "postedAt": "Post {{timeAgo}} by {{lastAutauter}}",
+  "replied on": "ޖަވާބުގައި ޑރ.",
+  "Replying as <2></2>": "<2></2 ގެ ގޮތުގައި ޖަވާބު ދެއްވުމެވެ>",
+  "This forum has no discussion topics yet.": "މި ފޯރަމްގައި އަދި މަޝްވަރާގެ މައުޟޫއެއް ނެތެވެ.",
+  "This forum has no discussion topics yet. Be the first to create one!": "މި ފޯރަމްގައި އަދި މަޝްވަރާގެ މައުޟޫއެއް ނެތެވެ. އެންމެ ފުރަތަމަ ހެއްދެވި މީހަކަށް ވާށެވެ!",
+  "Untitled": "ނަން ނުޖަހާ",
+  "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting.": "ތިޔަބޭފުޅުންގެ ބުކްމާކްތަކުގައި މިހާރު ޕޯސްޓް ނުކުރާ ސްކޭޗްތަކަށް އިޝާރާތް ކުރެވެއެވެ. ޕޯސްޓް ކުރުމުގެ ކުރިން މި ބުކްމާކްތައް އަލުން ހަދަން ވާނެ އެވެ.",
+  "Your participation in the forum is pending admin approval.": "މި ފޯރަމްގައި ތިޔަބޭފުޅުން ބައިވެރިވެވަޑައިގަންނަވަނީ އެޑްމިން އެޕްރޫވަލް ނުލިބި."
 }
