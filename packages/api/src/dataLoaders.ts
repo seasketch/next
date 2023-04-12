@@ -3,7 +3,9 @@ import DataLoader from "dataloader";
 import * as cache from "./cache";
 import { Style } from "mapbox-gl";
 import { sign, verify } from "./auth/jwks";
-const HOST = process.env.HOST || "seasketch.org";
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
 
 export function makeDataLoaders(pool: Pool) {
   return {
@@ -28,11 +30,11 @@ export function makeDataLoaders(pool: Pool) {
       )
     ),
     signToken: async (claims: any, expires: string) => {
-      const token = await sign(pool, claims, expires, HOST);
+      const token = await sign(pool, claims, expires, ISSUER[0]);
       return token;
     },
     verifyToken: async (token: string) => {
-      return verify(pool, token, HOST);
+      return verify(pool, token, ISSUER);
     },
   };
 }

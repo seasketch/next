@@ -1,6 +1,9 @@
 import { sign, verify } from "../auth/jwks";
 import ms from "ms";
-const HOST = process.env.HOST || "seasketch.org";
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
+const HOST = ISSUER[0];
 const SURVEY_INVITE_SES_TEMPLATE =
   process.env.SURVEY_INVITE_SES_TEMPLATE || "SeaSketchSurveyInvite";
 const SURVEY_INVITE_REMINDER_SES_TEMPLATE =
@@ -423,11 +426,11 @@ export async function sendSurveyInviteReminder(
 export async function verifySurveyInvite(
   client: DBClient,
   token: string,
-  host: string
+  issuer: string | string[]
 ) {
   let claims;
   try {
-    claims = await verify<SurveyInviteTokenClaims>(client, token, host);
+    claims = await verify<SurveyInviteTokenClaims>(client, token, issuer);
   } catch (e: any) {
     if (e.name === "TokenExpiredError") {
       throw e;

@@ -6,7 +6,9 @@ import {
   // confirmProjectInvite,
 } from "../invites/surveyInvites";
 
-const HOST = process.env.HOST || "seasketch.org";
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
 
 const SurveyInvitesPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -78,7 +80,11 @@ const SurveyInvitesPlugin = makeExtendSchemaPlugin((build) => {
         verifySurveyInvite: async (_query, args, context, resolveInfo) => {
           const { pgClient } = context;
           try {
-            const claims = await verifySurveyInvite(pgClient, args.token, HOST);
+            const claims = await verifySurveyInvite(
+              pgClient,
+              args.token,
+              ISSUER
+            );
             return {
               claims,
             };

@@ -26,6 +26,10 @@ import { makeDataLoaders } from "./dataLoaders";
 import slugify from "slugify";
 import { Pool } from "pg";
 
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
+
 interface SSNRequest extends Request {
   user?: { id: number; canonicalEmail: string };
 }
@@ -313,11 +317,7 @@ app.use(
         | { userId?: number; projectId?: number; canonicalEmail?: string }
         | undefined;
       if (token) {
-        claims = await verify(
-          loadersPool,
-          token,
-          process.env.HOST || "seasketch.org"
-        );
+        claims = await verify(loadersPool, token, ISSUER);
       }
       const pgSettings = getPgSettings(req);
       if (
@@ -390,11 +390,7 @@ app.use(
         | { userId?: number; projectId?: number; canonicalEmail?: string }
         | undefined;
       if (token) {
-        claims = await verify(
-          loadersPool,
-          token,
-          process.env.HOST || "seasketch.org"
-        );
+        claims = await verify(loadersPool, token, ISSUER);
       }
       const pgSettings = getPgSettings(req);
       if (

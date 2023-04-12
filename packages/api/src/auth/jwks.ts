@@ -128,9 +128,6 @@ export async function sign(
   issuer: string
 ) {
   const privateKey = await getPrivateKey(client);
-  if (!/^http/.test(issuer)) {
-    issuer = `https://${issuer}`;
-  }
   return jwt.sign(payload, privateKey.pem, {
     expiresIn,
     issuer,
@@ -159,7 +156,7 @@ export async function getPublicKey(client: DBClient, kid: string) {
 export async function verify<Claims>(
   client: DBClient,
   token: string,
-  issuer: string
+  issuer: string | string[]
 ): Promise<Claims & JWTClaims> {
   const getKey = async (
     header: jwt.JwtHeader,
@@ -176,10 +173,8 @@ export async function verify<Claims>(
       callback(new Error(`Token must indicate key id (kid)`), "");
     }
   };
-  if (!/^http/.test(issuer)) {
-    issuer = `https://${issuer}`;
-  }
   return new Promise((resolve, reject) => {
+    console.log("expected issuer", issuer);
     jwt.verify(
       token,
       getKey,
@@ -190,6 +185,7 @@ export async function verify<Claims>(
       },
       (err, token) => {
         if (err) {
+          console.log("error", err, issuer);
           reject(err);
         } else {
           resolve(token as Claims & JWTClaims);

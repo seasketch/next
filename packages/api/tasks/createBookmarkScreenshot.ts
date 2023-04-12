@@ -5,9 +5,14 @@ import { encode } from "blurhash";
 import { sign } from "../src/auth/jwks";
 import { withTimeout } from "../src/withTimeout";
 import * as Sentry from "@sentry/node";
+
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
+
 const HOST =
-  process.env.HOST || process.env.NODE_ENV === "production"
-    ? "https://api.seasket.ch"
+  process.env.NODE_ENV !== "development" && process.env.ISSUER
+    ? ISSUER[0]
     : "http://localhost:3857";
 
 const CLOUDFLARE_IMAGES_TOKEN = process.env.CLOUDFLARE_IMAGES_TOKEN;
@@ -81,7 +86,7 @@ async function createBookmarkScreenshot(
         canonicalEmail: canonical_email,
       },
       "1 hour",
-      HOST
+      ISSUER[0]
     );
 
     const url = `${

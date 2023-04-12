@@ -1,6 +1,8 @@
 import { sign, verify } from "../auth/jwks";
 import { DBClient } from "../dbClient";
-const HOST = process.env.HOST || "seasketch.org";
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
 
 interface UnsubscribeFromTopicClaims {
   userId: number;
@@ -20,12 +22,16 @@ export async function generateUnsubscribeToken(
       userId,
     } as UnsubscribeFromTopicClaims,
     expiration,
-    HOST
+    ISSUER[0]
   );
 }
 
 export async function unsubscribeFromTopic(client: DBClient, token: string) {
-  const claims: UnsubscribeFromTopicClaims = await verify(client, token, HOST);
+  const claims: UnsubscribeFromTopicClaims = await verify(
+    client,
+    token,
+    ISSUER
+  );
   if (claims.topicId && claims.userId) {
     await client.query(
       `insert into topic_notification_unsubscribes (topic_id, user_id) values ($1, $2) on conflict do nothing`,

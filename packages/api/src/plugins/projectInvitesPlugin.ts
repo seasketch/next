@@ -5,7 +5,9 @@ import {
   confirmProjectInvite,
 } from "../invites/projectInvites";
 
-const HOST = process.env.HOST || "seasketch.org";
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
 
 const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -71,7 +73,11 @@ const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
       Mutation: {
         confirmProjectInvite: async (_query, args, context, resolveInfo) => {
           const { pgClient } = context;
-          const claims = await confirmProjectInvite(pgClient, args.token, HOST);
+          const claims = await confirmProjectInvite(
+            pgClient,
+            args.token,
+            ISSUER
+          );
           return {
             ...claims,
           };
@@ -84,7 +90,7 @@ const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
             const claims = await verifyProjectInvite(
               pgClient,
               args.token,
-              HOST
+              ISSUER
             );
             const { rows } = await context.pgClient.query(
               `select account_exists($1)`,

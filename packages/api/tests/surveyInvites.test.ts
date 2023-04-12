@@ -1358,7 +1358,9 @@ describe("Invite tokens", () => {
         const claims = await verify(
           asPg(conn),
           token,
-          process.env.HOST || "seasketch.org"
+          (process.env.ISSUER || "https://seasketch.org")
+            .split(",")
+            .map((issuer) => issuer.trim()) || "seasketch.org"
         );
         expect(claims.projectId).toBe(projectId);
         expect(claims.surveyId).toBe(surveyId);
@@ -1379,7 +1381,9 @@ describe("Invite tokens", () => {
         const claims = await verify(
           asPg(conn),
           token,
-          process.env.HOST || "seasketch.org"
+          (process.env.ISSUER || "https://seasketch.org")
+            .split(",")
+            .map((issuer) => issuer.trim()) || "seasketch.org"
         );
         expect(claims.accessType).toBe("INVITE_ONLY");
         const expiresBy = (new Date().getTime() + ms("65 days")) / 1000;
@@ -1402,7 +1406,9 @@ describe("Invite tokens", () => {
         const claims = await verify(
           asPg(conn),
           token,
-          process.env.HOST || "seasketch.org"
+          (process.env.ISSUER || "https://seasketch.org")
+            .split(",")
+            .map((issuer) => issuer.trim()) || "seasketch.org"
         );
         expect(claims.accessType).toBe("PUBLIC");
         const expiresBy = (new Date().getTime() + ms("1 year")) / 1000;
@@ -1425,7 +1431,9 @@ describe("Invite tokens", () => {
           const claims = await verifySurveyInvite(
             asPg(conn),
             token,
-            process.env.HOST || "seasketch.org"
+            (process.env.ISSUER || "https://seasketch.org")
+              .split(",")
+              .map((issuer) => issuer.trim()) || "seasketch.org"
           );
           expect(claims.surveyId).toBe(surveyId);
           expect(claims.wasUsed).toBe(false);
@@ -1447,7 +1455,9 @@ describe("Invite tokens", () => {
             verifySurveyInvite(
               asPg(conn),
               token,
-              process.env.HOST || "seasketch.org"
+              (process.env.ISSUER || "https://seasketch.org")
+                .split(",")
+                .map((issuer) => issuer.trim()) || "seasketch.org"
             )
           ).rejects.toThrow();
         }
@@ -1467,7 +1477,9 @@ describe("Invite tokens", () => {
             verifySurveyInvite(
               asPg(conn),
               token,
-              process.env.HOST || "seasketch.org"
+              (process.env.ISSUER || "https://seasketch.org")
+                .split(",")
+                .map((issuer) => issuer.trim()) || "seasketch.org"
             )
           ).rejects.toThrow(/expired/i);
           MockDate.reset();
@@ -1492,7 +1504,9 @@ describe("Invite tokens", () => {
             verifySurveyInvite(
               asPg(conn),
               token,
-              process.env.HOST || "seasketch.org"
+              (process.env.ISSUER || "https://seasketch.org")
+                .split(",")
+                .map((issuer) => issuer.trim()) || "seasketch.org"
             )
           ).rejects.toThrow();
         }

@@ -1,6 +1,5 @@
 import { sign, verify } from "../auth/jwks";
 import ms from "ms";
-const HOST = process.env.HOST || "seasketch.org";
 // TODO: replace auth0 dependency with plain http requests to the management api
 // The library is incredibly bulky, adding 2.5MB to lambda sizes
 import { ManagementClient } from "auth0";
@@ -10,6 +9,11 @@ import sendEmail from "./sendEmail";
 import * as cache from "../cache";
 import htmlTemplate from "./projectInviteTemplate";
 import textTemplate from "./projectInviteTemplateText";
+
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim())[0];
+const HOST = ISSUER[0];
 
 export type ProjectInviteTokenClaims = {
   projectId: number;
@@ -142,13 +146,16 @@ export async function sendProjectInviteEmail(
 
 async function createToken(client: DBClient, claims: ProjectInviteTokenClaims) {
   // admins have less time to use invites since they'are more sensitive
-  let expiration
-  if (process.env.IS_CYPRESS_TEST_ENV === "true" && claims.email === "test_user_3@seasketch.org") {
+  let expiration;
+  if (
+    process.env.IS_CYPRESS_TEST_ENV === "true" &&
+    claims.email === "test_user_3@seasketch.org"
+  ) {
     expiration = "0 days";
   } else {
     expiration = claims.admin ? "30 days" : "90 days";
   }
-  const token = await sign(client, claims, expiration, HOST);
+  const token = await sign(client, claims, expiration, ISSUER);
   return {
     token,
     expiration: new Date().getTime() + ms(expiration),
@@ -196,17 +203,17 @@ export async function updateStatus(
  * @export
  * @param {DBClient} client
  * @param {string} token
- * @param {string} host verifies iss claim
+ * @param {string} issuer verifies iss claim
  * @returns
  */
 export async function verifyProjectInvite(
   client: DBClient,
   token: string,
-  host: string
+  issuer: string | string[]
 ) {
   let claims;
   try {
-    claims = await verify<ProjectInviteTokenClaims>(client, token, host);
+    claims = await verify<ProjectInviteTokenClaims>(client, token, issuer);
   } catch (e) {
     throw e;
   }
@@ -232,15 +239,15 @@ export async function verifyProjectInvite(
  * @export
  * @param {DBClient} client
  * @param {string} token
- * @param {string} host
+ * @param {string} issuer
  */
 export async function confirmProjectInvite(
   client: DBClient,
   token: string,
-  host: string
+  issuer: string | string[]
 ) {
   // verify token
-  const claims = await verifyProjectInvite(client, token, host);
+  const claims = await verifyProjectInvite(client, token, issuer);
   // ensure it hasn't been used before
   if (claims.wasUsed === true) {
     throw new Error("Project invite has already been accepted");

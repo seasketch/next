@@ -4,4 +4,5 @@ export default [
   "seasketch.org",
   "localhost",
   "localhost:3000",
+  "next.seasket.ch",
 ];

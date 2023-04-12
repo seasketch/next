@@ -3,6 +3,9 @@ import { IncomingRequest } from "./IncomingRequest";
 import { verifySurveyInvite } from "../invites/surveyInvites";
 import pool from "../pool";
 
+const ISSUER = (process.env.ISSUER || "seasketch.org")
+  .split(",")
+  .map((issuer) => issuer.trim());
 /**
  * Populates req.surveyInvite with survey invite token claims if present in the
  * `x-ss-survey-invite-token` header.
@@ -22,7 +25,7 @@ export default function surveyInviteMiddlware(
       : req.headers["x-ss-survey-invite-token"];
     // TODO: use redis cache at this point
     try {
-      verifySurveyInvite(pool, token, process.env.HOST || "seasketch.org")
+      verifySurveyInvite(pool, token, ISSUER)
         .then((claims) => {
           req.surveyInvite = claims;
           next();
