@@ -586,6 +586,10 @@ export default function SketchUIStateContextProvider({
                 `,
               });
             }
+            const editLabel = t("edit");
+            const viewReportsLabel = t("view reports");
+            const hideLabel = t("hide");
+
             const popup = new Popup({
               closeOnClick: true,
               closeButton: true,
@@ -635,10 +639,10 @@ export default function SketchUIStateContextProvider({
                     ${
                       feature.properties!.sharedInForum === true
                         ? ""
-                        : `<button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">edit</button>`
+                        : `<button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">${editLabel}</button>`
                     }
-                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-view-sketch" class="underline">view reports</button>
-                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-hide-sketch" class="underline">hide</button>
+                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-view-sketch" class="underline">${viewReportsLabel}</button>
+                    <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-hide-sketch" class="underline">${hideLabel}</button>
                   </div>
                 </div>
               `
