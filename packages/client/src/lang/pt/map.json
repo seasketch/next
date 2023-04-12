@@ -1,4 +1,7 @@
 {
+  "Map bookmark shown": "Marcador de mapa mostrado",
+  "missingLayerCount": "missingLayerCount",
+  "missingLayerCount_plural": "missingLayerCount_plural",
   "undo": "desfazer",
   "view details": "ver detalhes"
 }

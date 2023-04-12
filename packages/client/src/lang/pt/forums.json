@@ -3,10 +3,12 @@
   "Cancel": "Cancelar",
   "Forums": "Fóruns",
   "lastReply": "Última resposta {{timeAgo}}. Iniciado por {{lastAuthor}}",
+  "Map Bookmark Errors": "Erros de marcadores de mapa",
   "New Topic": "Novo Tópico",
   "New Topic Title...": "Título do Novo Tópico...",
   "No forums have been configured for this project.": "Nenhum fórum foi configurado para este projeto.",
   "participantCount": "{{count}} pessoas",
+  "participantCount_plural": "participanteCount_plural",
   "Post a topic": "Postar um tópico",
   "Post anyways": "Postar de qualquer forma",
   "Post New Topic": "Postar um novo tópico",
@@ -18,5 +20,6 @@
   "This forum has no discussion topics yet.": "Este fórum não tem tópicos de discussão ainda.",
   "This forum has no discussion topics yet. Be the first to create one!": "Este fórum não tem tópicos de discussão ainda. Seja o primeiro a criar um!",
   "Untitled": "Sem título",
+  "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting.": "Seus favoritos referem-se a esboços que não são mais publicados. Você deve recriar esses favoritos antes de postar.",
   "Your participation in the forum is pending admin approval.": "Sua participação no fórum depende da aprovação do administrador."
 }

@@ -1,7 +1,7 @@
 {
   "Map bookmark shown": "Kartbokmerke vises",
-  "missingLayerCount": "Manglende antall lag",
-  "missingLayerCount_plural": "missingLayerCount_flertall",
+  "missingLayerCount": "Kartbokmerke vises ({{count}} error)",
+  "missingLayerCount_plural": "Kartbokmerke vises ({{count}} errors)",
   "undo": "angre",
   "view details": "Vis detaljer"
 }

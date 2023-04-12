@@ -1,7 +1,7 @@
 {
   "Map bookmark shown": "މެޕް ބުކްމާކް ދައްކާލައިފި",
-  "missingLayerCount": "މެޕް ބުކްމާކް ދައްކައިފި ({{ކައުންޓް}} މައްސަލައެއް)",
-  "missingLayerCount_plural": "މެޕް ބުކްމާކް ދައްކައިފި ({{ކައުންޓް}} ގޯސްތައް)",
+  "missingLayerCount": "މެޕް ބުކްމާކް ދައްކައިފި ({{count}} މައްސަލައެއް)",
+  "missingLayerCount_plural": "މެޕް ބުކްމާކް ދައްކައިފި ({{count}} ގޯސްތައް)",
   "undo": "undo",
   "view details": "ތަފްޞީލު ތައް ބައްލަވާ"
 }

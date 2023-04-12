@@ -1,17 +1,17 @@
 {
   "Cancel": "Avbryt",
   "Close": "Lukk",
-  "Contact Support": "Kontakt kundestøtte",
-  "Disabled": "Funksjonshemmet",
-  "dismiss": "avskjedige",
+  "Contact Support": "Kontakt support",
+  "Disabled": "Deaktivert",
+  "dismiss": "avvis",
   "Enabled": "Aktivert",
   "Enter a URL": "Skriv inn en URL",
-  "Job Status": "Jobb status",
+  "Job Status": "Jobbstatus",
   "Locked at": "Låst kl",
   "Not signed in": "Ikke pålogget",
   "OK": "OK",
   "Select a tab": "Velg en fane",
   "Sign In": "Logg inn",
   "Signed in as": "Logget på som",
-  "Submit": "Sende inn"
+  "Submit": "Send inn"
 }

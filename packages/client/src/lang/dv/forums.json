@@ -14,7 +14,7 @@
   "Post New Topic": "އާ މައުޟޫއަށް ޕޯސްޓް ކުރުން",
   "Post Reply": "ޕޯސްޓް ރިޕްލައި",
   "posted on": "ޕޯސްޓު ކޮށްފައި",
-  "postedAt": "Post {{timeAgo}} by {{lastAutauter}}",
+  "postedAt": "ޕޯސްޓް {{timeAgo}} ކޮށްފައިވަނީ {{lastAuthor}}",
   "replied on": "ޖަވާބުގައި ޑރ.",
   "Replying as <2></2>": "<2></2 ގެ ގޮތުގައި ޖަވާބު ދެއްވުމެވެ>",
   "This forum has no discussion topics yet.": "މި ފޯރަމްގައި އަދި މަޝްވަރާގެ މައުޟޫއެއް ނެތެވެ.",

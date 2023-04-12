@@ -1,4 +1,17 @@
 {
   "Cancel": "Cancelar",
-  "Close": "Cerrar"
+  "Close": "Cerrar",
+  "Contact Support": "Soporte de contacto",
+  "Disabled": "Desactivado",
+  "dismiss": "despedir",
+  "Enabled": "Activado",
+  "Enter a URL": "Introduce una URL",
+  "Job Status": "Estado del trabajo",
+  "Locked at": "bloqueado en",
+  "Not signed in": "No registrado",
+  "OK": "DE ACUERDO",
+  "Select a tab": "Seleccione una pestaña",
+  "Sign In": "Iniciar sesión",
+  "Signed in as": "Registrado como",
+  "Submit": "Entregar"
 }

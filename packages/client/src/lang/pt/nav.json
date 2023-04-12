@@ -4,6 +4,7 @@
   "Add data": "Adicionar dados",
   "Add folder": "Adicionar pasta",
   "Are you sure you want to delete {{name}}?": "Você tem certeza de que quer excluir {{name}}?",
+  "Contact support": "Entre em contato com o suporte",
   "Default Visibility": "Visibilidade Padrão",
   "Delete": "Excluir",
   "Delete Item": "Deletar item",
@@ -18,6 +19,8 @@
   "Sign In": "Entrar",
   "Sign out": "Sair",
   "Signed in as": "Inscrito como",
+  "Tree Editor": "Editor de árvore",
   "view": "visualizar",
+  "Z-Order": "Ordem Z",
   "Zoom to bounds": "Aproximar à extensão"
 }

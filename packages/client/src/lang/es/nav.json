@@ -1,4 +1,26 @@
 {
+  "About": "Acerca de",
+  "Account settings": "Configuraciones de la cuenta",
+  "Add data": "Agregar datos",
+  "Add folder": "Agregar carpeta",
+  "Are you sure you want to delete {{name}}?": "¿Está seguro de que desea eliminar {{name}}?",
+  "Contact support": "Soporte de contacto",
+  "Default Visibility": "Visibilidad predeterminada",
   "Delete": "Eliminar",
-  "Edit": "Editar"
+  "Delete Item": "Eliminar elemento",
+  "Developer API": "API de desarrollador",
+  "Edit": "Editar",
+  "Edit metadata": "Editar metadatos",
+  "Metadata": "metadatos",
+  "Projects": "Proyectos",
+  "Publish": "Publicar",
+  "SeaSketch logo": "Logotipo de SeaSketch",
+  "Sign in": "Iniciar sesión",
+  "Sign In": "Iniciar sesión",
+  "Sign out": "desconectar",
+  "Signed in as": "Registrado como",
+  "Tree Editor": "Editor de árboles",
+  "view": "vista",
+  "Z-Order": "Orden Z",
+  "Zoom to bounds": "Zoom a los límites"
 }

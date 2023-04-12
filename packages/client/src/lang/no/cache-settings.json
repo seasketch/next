@@ -1,9 +1,9 @@
 {
-  "Cache Details": "Cache-detaljer",
+  "Cache Details": "Buffer-detaljer",
   "Cache Status": "Bufferstatus",
-  "Caches more data and preloads assets for better performance. Supports offline use.": "Buffer flere data og forhåndslaster eiendeler for bedre ytelse. Støtter offline bruk.",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "Buffer flere data og forhåndslaster aktivum for bedre ytelse. Støtter offline bruk.",
   "Data Caching": "Databufring",
-  "Default": "Misligholde",
+  "Default": "Standard",
   "Improved Performance": "Forbedret ytelse",
   "Maximum": "Maksimum",
   "Minimum": "Minimum",

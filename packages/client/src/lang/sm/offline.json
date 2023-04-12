@@ -1,6 +1,21 @@
 {
+  " support files": "faila lagolago",
+  "Access Offline Content": "Avanoa i galuega e aunoa ma se initaneti",
+  "All responses submitted": "Ua lafoina uma mai tali",
+  "All your offline work is now saved to the SeaSketch database. You can now close the browser window, or use the links below to navigate back to your surveys and projects.": "Ua sefe uma au galuega sa faia aunoa ma se initaneti ile SeaSketch database. Ua mafai nei ona taofia lau galuega, pe fa'aoga le so'otaga i lalo e toe fa'afo'i ai i au su'esu'ega ma galuega.",
+  "Are you sure you want to delete this offline map data?": "Ua e mana'o e tape faamatalaga i le fa'afanu sa faia e aunoa ma se initaneti",
+  "Begin Download": "Amata aumaia le uta o galuega",
   "Cache Status": "Tulaga o vaega e teu ai tali o su'esu'ega",
   "Cancel": "Fa'aleaogaina",
+  "CartographicUpdates": "O le fa'afanua o lo'o iai ni fa'afouga fou fa'akomipiuta. E mafai ona e fa'afou lenei fa'afanua e aunoa ma le aumaia o fa'afanua fou.",
+  "CartographicUpdatesWithTimestamp": "Fa'afouga fa'afanua ma le Taimi sa Faailogaina ai",
+  "Clear cache": "Fa'amama faamaumauga na teuina",
+  "Clear Map Data": "Fa'amama ese Fa'amaumuaga Fa'afanua",
   "Close": "Tapuni",
+  "Created ": "Fausia",
+  "Data Caching setting must be set higher to enable offline support.": "Ia maualuga le fa'atulagaina o Fa'amaumauga Teu ina ia mafai ona maua fesoasoani mo galuega e faia e aunoa ma se initaneti",
+  "Data has been imported and is ready for use.": "Ua aumai fa'amatalaga ma ua avanoa mo le fa'aogaina",
+  "Download": "aumai",
+  "SeaSketch logo": "Fa'ailoga autu SeaSketch",
   "Sign In": "Amataga"
 }
