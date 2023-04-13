@@ -10,8 +10,6 @@ export default function reorderSchemaFieldsPlugin(
   return makeProcessSchemaPlugin((schema) => {
     // @ts-ignore
     const typeMap = schema.getTypeMap() as Map;
-    // @ts-ignore
-    console.log(fieldOrderConfig, fieldOrderConfig.Mutation._fields);
     for (const typeName in fieldOrderConfig) {
       const fieldMap = typeMap[typeName]._fields;
       const map = new Map();

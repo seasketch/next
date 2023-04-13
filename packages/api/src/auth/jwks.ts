@@ -134,7 +134,9 @@ export async function sign(
     keyid: privateKey.kid,
     algorithm: "RS256",
     header: {
-      jku: `${issuer}/.well-known/jwks.json`,
+      jku: `${
+        /^http/.test(issuer) ? "" : "https://"
+      }${issuer}/.well-known/jwks.json`,
     },
   });
 }
@@ -174,7 +176,6 @@ export async function verify<Claims>(
     }
   };
   return new Promise((resolve, reject) => {
-    console.log("expected issuer", issuer);
     jwt.verify(
       token,
       getKey,
@@ -185,7 +186,6 @@ export async function verify<Claims>(
       },
       (err, token) => {
         if (err) {
-          console.log("error", err, issuer);
           reject(err);
         } else {
           resolve(token as Claims & JWTClaims);

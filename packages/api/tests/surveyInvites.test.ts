@@ -1358,7 +1358,7 @@ describe("Invite tokens", () => {
         const claims = await verify(
           asPg(conn),
           token,
-          (process.env.ISSUER || "https://seasketch.org")
+          (process.env.ISSUER || "seasketch.org")
             .split(",")
             .map((issuer) => issuer.trim()) || "seasketch.org"
         );
@@ -1381,7 +1381,7 @@ describe("Invite tokens", () => {
         const claims = await verify(
           asPg(conn),
           token,
-          (process.env.ISSUER || "https://seasketch.org")
+          (process.env.ISSUER || "seasketch.org")
             .split(",")
             .map((issuer) => issuer.trim()) || "seasketch.org"
         );
@@ -1406,7 +1406,7 @@ describe("Invite tokens", () => {
         const claims = await verify(
           asPg(conn),
           token,
-          (process.env.ISSUER || "https://seasketch.org")
+          (process.env.ISSUER || "seasketch.org")
             .split(",")
             .map((issuer) => issuer.trim()) || "seasketch.org"
         );
@@ -1431,7 +1431,7 @@ describe("Invite tokens", () => {
           const claims = await verifySurveyInvite(
             asPg(conn),
             token,
-            (process.env.ISSUER || "https://seasketch.org")
+            (process.env.ISSUER || "seasketch.org")
               .split(",")
               .map((issuer) => issuer.trim()) || "seasketch.org"
           );
@@ -1455,7 +1455,7 @@ describe("Invite tokens", () => {
             verifySurveyInvite(
               asPg(conn),
               token,
-              (process.env.ISSUER || "https://seasketch.org")
+              (process.env.ISSUER || "seasketch.org")
                 .split(",")
                 .map((issuer) => issuer.trim()) || "seasketch.org"
             )
@@ -1477,7 +1477,7 @@ describe("Invite tokens", () => {
             verifySurveyInvite(
               asPg(conn),
               token,
-              (process.env.ISSUER || "https://seasketch.org")
+              (process.env.ISSUER || "seasketch.org")
                 .split(",")
                 .map((issuer) => issuer.trim()) || "seasketch.org"
             )
@@ -1504,7 +1504,7 @@ describe("Invite tokens", () => {
             verifySurveyInvite(
               asPg(conn),
               token,
-              (process.env.ISSUER || "https://seasketch.org")
+              (process.env.ISSUER || "seasketch.org")
                 .split(",")
                 .map((issuer) => issuer.trim()) || "seasketch.org"
             )

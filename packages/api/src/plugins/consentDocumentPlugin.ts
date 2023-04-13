@@ -46,7 +46,6 @@ const ConsentDocumentPlugin = makeExtendSchemaPlugin((build) => {
             `select create_consent_document($1, $2, $3)`,
             [parseInt(args.formElementId), parseInt(args.version), url]
           );
-          console.log(r.results);
           const [row] = await resolveInfo.graphile.selectGraphQLResultFromTable(
             sql.fragment`public.form_elements`,
             (tableAlias, queryBuilder) => {

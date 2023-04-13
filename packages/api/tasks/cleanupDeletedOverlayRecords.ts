@@ -116,8 +116,6 @@ export default async function cleanupDeletedOverlayRecords(
 }
 
 async function deleteRemote(remote: string) {
-  console.log(`delete ${remote}`);
-  // return;
   const client = /s3:/.test(remote) ? s3 : r2;
   const parts = remote.split(/:\/*/)[1].split("/");
   const Bucket = parts[0];

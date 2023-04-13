@@ -32,7 +32,6 @@ const MapBookmarkRateLimiterPlugin = makeWrapResolversPlugin({
     createMapBookmark: (resolve, source, args, context, resolveInfo) => {
       if (limiter) {
         if (context?.user?.sub) {
-          console.log(context.user.sub);
           return limiter
             .consume(context.user.sub, 1)
             .then((value) => {

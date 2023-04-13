@@ -1,110 +1,108 @@
 <!DOCTYPE html>
 <html lang="en" style="width: 100vw; height: 100vh">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SeaSketch screenshot tool</title>
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
-    <link
-      href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css"
-      rel="stylesheet"
-    />
-  </head>
 
-  <body style="width: 100%; height: 100%; padding: 0px; margin: 0px">
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div style="width: 100%; height: 100%" id="map"></div>
-    <script>
-      const params = new URLSearchParams(window.location.search);
-      if (!params.get("mt")) {
-        throw new Error("No mapbox token (?mt) specified");
-      }
-      if (!params.get("auth")) {
-        throw new Error("No auth token (?auth) specified");
-      }
-      if (!params.get("bookmarkUrl")) {
-        throw new Error("No bookmark url (?bookmarkUrl) specified");
-      }
-      const token = params.get("auth");
-      fetch(params.get("bookmarkUrl")).then(async (res) => {
-        const data = await res.json();
-        console.log(data);
-        mapboxgl.accessToken = params.get("mt");
-        const spriteImages = data.spriteImages || [];
-        const bestImages = {};
-        for (const image of spriteImages) {
-          if (!(image.spriteId in bestImages)) {
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SeaSketch screenshot tool</title>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css" rel="stylesheet" />
+</head>
+
+<body style="width: 100%; height: 100%; padding: 0px; margin: 0px">
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <div style="width: 100%; height: 100%" id="map"></div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("mt")) {
+      throw new Error("No mapbox token (?mt) specified");
+    }
+    if (!params.get("auth")) {
+      throw new Error("No auth token (?auth) specified");
+    }
+    if (!params.get("bookmarkUrl")) {
+      throw new Error("No bookmark url (?bookmarkUrl) specified");
+    }
+    const token = params.get("auth");
+    fetch(params.get("bookmarkUrl")).then(async (res) => {
+      const data = await res.json();
+      mapboxgl.accessToken = params.get("mt");
+      const spriteImages = data.spriteImages || [];
+      const bestImages = {};
+      for (const image of spriteImages) {
+        if (!(image.spriteId in bestImages)) {
+          bestImages[image.spriteId] = image;
+        } else {
+          const existing = bestImages[image.spriteId];
+          if (
+            image.pixelRatio === 2 ||
+            (existing.pixelRatio !== 2 &&
+              image.pixelRatio > existing.pixelRatio)
+          ) {
             bestImages[image.spriteId] = image;
-          } else {
-            const existing = bestImages[image.spriteId];
-            if (
-              image.pixelRatio === 2 ||
-              (existing.pixelRatio !== 2 &&
-                image.pixelRatio > existing.pixelRatio)
-            ) {
-              bestImages[image.spriteId] = image;
-            }
           }
         }
+      }
 
-        const map = new mapboxgl.Map({
-          container: "map", // container ID
-          style: data.style, // style URL
-          center: [-74.5, 40], // starting position [lng, lat]
-          zoom: 9, // starting zoom
-          ...data.cameraOptions,
-          transformRequest: (url, resourceType, etc) => {
-            const Url = new URL(url);
-            if (token && /\/sketches\/\d+\.geojson.json/.test(url)) {
-              Url.searchParams.set("reporting_access_token", token);
-              return {
-                url: Url.toString(),
-              };
-            } else {
-              return { url };
-            }
-          },
-        });
-        for (const spriteImage of Object.values(bestImages)) {
-          const el = document.getElementById(spriteImage.spriteId);
-          try {
-            await loadImage(
-              spriteImage.spriteId,
-              spriteImage.url,
-              spriteImage.pixelRatio,
-              map
-            );
-          } catch (e) {
-            console.error(e);
+      const map = new mapboxgl.Map({
+        container: "map", // container ID
+        style: data.style, // style URL
+        center: [-74.5, 40], // starting position [lng, lat]
+        zoom: 9, // starting zoom
+        ...data.cameraOptions,
+        transformRequest: (url, resourceType, etc) => {
+          const Url = new URL(url);
+          if (token && /\/sketches\/\d+\.geojson.json/.test(url)) {
+            Url.searchParams.set("reporting_access_token", token);
+            return {
+              url: Url.toString(),
+            };
+          } else {
+            return { url };
           }
-        }
-        map.on("load", () => {
-          const div = document.createElement("div");
-          div.setAttribute("id", "loaded");
-          div.setAttribute(
-            "style",
-            "position: absolute; width: 0px; height: 0px;"
+        },
+      });
+      for (const spriteImage of Object.values(bestImages)) {
+        const el = document.getElementById(spriteImage.spriteId);
+        try {
+          await loadImage(
+            spriteImage.spriteId,
+            spriteImage.url,
+            spriteImage.pixelRatio,
+            map
           );
-          document.body.appendChild(div);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      map.on("load", () => {
+        const div = document.createElement("div");
+        div.setAttribute("id", "loaded");
+        div.setAttribute(
+          "style",
+          "position: absolute; width: 0px; height: 0px;"
+        );
+        document.body.appendChild(div);
+      });
+    });
+
+    async function loadImage(id, url, pixelRatio, map) {
+      return new Promise((resolve, reject) => {
+        map.loadImage(url, (error, image) => {
+          if (error) {
+            reject(error);
+          } else {
+            if (!map.hasImage(id)) {
+              map.addImage(id, image, {
+                pixelRatio,
+              });
+            }
+            resolve(image);
+          }
         });
       });
+    }
+  </script>
+</body>
 
-      async function loadImage(id, url, pixelRatio, map) {
-        return new Promise((resolve, reject) => {
-          map.loadImage(url, (error, image) => {
-            if (error) {
-              reject(error);
-            } else {
-              if (!map.hasImage(id)) {
-                map.addImage(id, image, {
-                  pixelRatio,
-                });
-              }
-              resolve(image);
-            }
-          });
-        });
-      }
-    </script>
-  </body>
 </html>
