@@ -64,6 +64,7 @@ import SurveyContextualMap from "../../surveys/SurveyContextualMap";
 import BasemapMultiSelectInput from "./BasemapMultiSelectInput";
 import useDialog from "../../components/useDialog";
 import useResetLanguage from "../../surveys/useResetLanguage";
+import useIsSuperuser from "../../useIsSuperuser";
 
 extend([a11yPlugin]);
 extend([harmoniesPlugin]);
@@ -81,6 +82,7 @@ export default function SurveyFormEditor({
   route: "basic" | "logic" | "formElement";
   formElementId: number | null;
 }) {
+  const isSuperuser = useIsSuperuser();
   const { t, i18n } = useTranslation("admin:surveys");
   let lang: LangDetails = languages.find(
     (l) => l.code === (i18n.language || "EN")
@@ -1325,75 +1327,73 @@ export default function SurveyFormEditor({
                 child={selectedFormElement}
               />
             )}
-          {route === "basic" &&
-            auth0.user &&
-            auth0.user["https://seasketch.org/superuser"] && (
-              <div>
-                <FormEditorHeader className="mt-4">
-                  <Trans ns="admin:superuser">Superuser Settings</Trans>
-                </FormEditorHeader>
-                <div className="p-3 space-y-4">
-                  <InputBlock
-                    labelType="small"
-                    className="text-sm"
-                    title={
-                      <Trans ns="admin:superuser">Publish as template</Trans>
-                    }
-                    input={
-                      <Switch
-                        isToggled={data?.survey?.form?.isTemplate}
-                        onClick={(val) => {
-                          const templateName =
-                            data!.survey!.form!.templateName ||
-                            `Template ${data!.survey!.form!.id}`;
-                          updateForm({
-                            variables: {
-                              id: data!.survey!.form!.id,
-                              isTemplate: val,
-                              templateName,
-                            },
-                          });
-                        }}
-                      />
-                    }
-                  />
-                  <TextInput
-                    disabled={!data?.survey?.form?.isTemplate}
-                    label={<Trans ns="admin:superuser">Template name</Trans>}
-                    name="templateName"
-                    description={
-                      <Trans ns="admin:superuser">
-                        This is the label SeaSketch admins will see when
-                        choosing among templates. For ease of maintenance, it's
-                        best to publish templates from a single project like
-                        <a
-                          href={`${window.location.origin}/superuser`}
-                          className="underline"
-                        >
-                          {` ${window.location.origin.replace(
-                            /http[s]*:\/\//,
-                            ""
-                          )}/superuser`}
-                        </a>
-                        . Sharing a template won't disable it in the project
-                        so... don't let things get weird!
-                      </Trans>
-                    }
-                    value={data?.survey?.form?.templateName || ""}
-                    onChange={(val) => {
-                      const templateName =
-                        val || `Template ${data!.survey!.form!.id}`;
-                      updateForm({
-                        variables: {
-                          id: data!.survey!.form!.id,
-                          templateName,
-                        },
-                      });
-                    }}
-                  />
-                </div>
+          {route === "basic" && isSuperuser && (
+            <div>
+              <FormEditorHeader className="mt-4">
+                <Trans ns="admin:superuser">Superuser Settings</Trans>
+              </FormEditorHeader>
+              <div className="p-3 space-y-4">
+                <InputBlock
+                  labelType="small"
+                  className="text-sm"
+                  title={
+                    <Trans ns="admin:superuser">Publish as template</Trans>
+                  }
+                  input={
+                    <Switch
+                      isToggled={data?.survey?.form?.isTemplate}
+                      onClick={(val) => {
+                        const templateName =
+                          data!.survey!.form!.templateName ||
+                          `Template ${data!.survey!.form!.id}`;
+                        updateForm({
+                          variables: {
+                            id: data!.survey!.form!.id,
+                            isTemplate: val,
+                            templateName,
+                          },
+                        });
+                      }}
+                    />
+                  }
+                />
+                <TextInput
+                  disabled={!data?.survey?.form?.isTemplate}
+                  label={<Trans ns="admin:superuser">Template name</Trans>}
+                  name="templateName"
+                  description={
+                    <Trans ns="admin:superuser">
+                      This is the label SeaSketch admins will see when choosing
+                      among templates. For ease of maintenance, it's best to
+                      publish templates from a single project like
+                      <a
+                        href={`${window.location.origin}/superuser`}
+                        className="underline"
+                      >
+                        {` ${window.location.origin.replace(
+                          /http[s]*:\/\//,
+                          ""
+                        )}/superuser`}
+                      </a>
+                      . Sharing a template won't disable it in the project so...
+                      don't let things get weird!
+                    </Trans>
+                  }
+                  value={data?.survey?.form?.templateName || ""}
+                  onChange={(val) => {
+                    const templateName =
+                      val || `Template ${data!.survey!.form!.id}`;
+                    updateForm({
+                      variables: {
+                        id: data!.survey!.form!.id,
+                        templateName,
+                      },
+                    });
+                  }}
+                />
               </div>
-            )}
+            </div>
+          )}
         </div>
       </div>
     </div>
