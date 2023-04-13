@@ -230,8 +230,8 @@
     "build-storybook": "build-storybook -s public",
     "lint": "NODE_ENV=production npx eslint . --quiet",
     "deploy": "bin/deploy.sh",
-    "cypress": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress open",
-    "cypress:run": "CYPRESS_BASE_URL=${REACT_APP_PUBLIC_URL} cypress run",
+    "cypress": "cypress open",
+    "cypress:run": "cypress run",
     "generate-api-helpers": "node bin/buildApiHelpers.js && cp src/formElements/ExportUtils.d.ts ../api/src/"
   },
   "eslintConfig": {

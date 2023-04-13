@@ -212,7 +212,6 @@ jobs:
           REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
           REACT_APP_MAPBOX_ACCESS_TOKEN: abc123
           REACT_APP_GRAPHQL_ENDPOINT: https://example.com/graphql
-          REACT_APP_PUBLIC_URL: https://example.com
           REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
         run: |
           NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
@@ -308,7 +307,7 @@ jobs:
           REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
           REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
           REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
-          REACT_APP_PUBLIC_URL: http://localhost:3000
+          CYPRESS_BASE_URL: http://localhost:3000
           REACT_APP_BUILD: e2e-tests-${{ steps.short_sha.outputs.sha }}
       - name: Cypress run
         uses: cypress-io/github-action@v2
@@ -425,7 +424,7 @@ jobs:
           REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
           REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
           REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
-          REACT_APP_PUBLIC_URL: http://localhost:3000
+          CYPRESS_BASE_URL: http://localhost:3000
           REACT_APP_BUILD: e2e-tests-${{ steps.short_sha.outputs.sha }}
       - name: Percy/Cypress Run
         working-directory: ./packages/client

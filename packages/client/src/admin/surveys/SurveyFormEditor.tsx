@@ -1367,12 +1367,13 @@ export default function SurveyFormEditor({
                         choosing among templates. For ease of maintenance, it's
                         best to publish templates from a single project like
                         <a
-                          href={`${process.env.REACT_APP_PUBLIC_URL}/superuser`}
+                          href={`${window.location.origin}/superuser`}
                           className="underline"
                         >
-                          {` ${(
-                            process.env.REACT_APP_PUBLIC_URL || "seasketch.org"
-                          ).replace(/http[s]*:\/\//, "")}/superuser`}
+                          {` ${window.location.origin.replace(
+                            /http[s]*:\/\//,
+                            ""
+                          )}/superuser`}
                         </a>
                         . Sharing a template won't disable it in the project
                         so... don't let things get weird!
