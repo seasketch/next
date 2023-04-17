@@ -22,7 +22,7 @@ export class ReactClientStack extends cdk.Stack {
     props: cdk.StackProps & {
       maintenanceRole: iam.IRole;
       domainName: string;
-      siteSubDomain: string;
+      siteSubDomain?: string;
       publicUploadsBucket: s3.Bucket;
     }
   ) {
@@ -42,7 +42,9 @@ export class ReactClientStack extends cdk.Stack {
     const zone = route53.HostedZone.fromLookup(this, "Zone", {
       domainName: props.domainName,
     });
-    const siteDomain = props.siteSubDomain + "." + props.domainName;
+    const siteDomain = props.siteSubDomain
+      ? [props.siteSubDomain, props.domainName].join(".")
+      : props.domainName;
     new cdk.CfnOutput(this, "Site", { value: "https://" + siteDomain });
     // TLS certificate
     const certificate = new acm.DnsValidatedCertificate(

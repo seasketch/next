@@ -17,7 +17,9 @@ import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasket.ch";
-const SUBDOMAIN = "next";
+const SUBDOMAIN: string | undefined = "next";
+const HOST = SUBDOMAIN ? [SUBDOMAIN, DOMAIN_NAME].join(".") : DOMAIN_NAME;
+
 const EMAIL_STATUS_NOTIFICATION_TOPIC =
   "arn:aws:sns:us-west-2:196230260133:email-notification-bounces-production";
 const SES_EMAIL_SOURCE = '"SeaSketch" <do-not-reply@seasketch.org>';
@@ -38,7 +40,8 @@ const maintenance = new MaintenanceStack(app, "SeaSketchMaintenanceBastion", {
 });
 
 const allowedCorsDomains = [
-  `https://${[SUBDOMAIN, DOMAIN_NAME].join(".")}`,
+  // Hardcoded now to account for multiple historical domains
+  `https://next.seasket.ch`,
   "http://localhost:3000",
   "https://seasketch.org",
   "https://www.seasketch.org",
@@ -160,7 +163,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   redisHost: redis.cluster.attrRedisEndpointAddress,
   emailSource: SES_EMAIL_SOURCE,
   tilePackagesBucket: tilePackages.bucket,
-  clientDomain: SUBDOMAIN + "." + DOMAIN_NAME,
+  clientDomain: HOST,
   spatialUploadsBucket: dataUploads.uploadsBucket,
   spatialUploadsHandlerArn: uploadHandler.fn.functionArn,
   normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
@@ -169,11 +172,12 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
 
 uploadHandler.fn.grantInvoke;
 
+// TODO: Fix to use ISSUER var?
 new MailerLambdaStack(app, "SeaSketchMailers", {
   env,
   vpc: db.vpc,
   db: db.instance,
-  host: `${SUBDOMAIN}.${DOMAIN_NAME}`,
+  host: HOST,
   topic: EMAIL_STATUS_NOTIFICATION_TOPIC,
   emailSource: SES_EMAIL_SOURCE,
 });
