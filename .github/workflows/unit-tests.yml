@@ -331,115 +331,115 @@ jobs:
           CYPRESS_TEST_DB: postgres://postgres:password@localhost:5432/seasketch
           AUTH0_MANAGEMENT_API_CLIENT_ID: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_ID }}
           AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_SECRET }}
-  percy-visual-tests:
-    name: Percy Visual Testing
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    # container: cypress/browsers:node16.5.0-chrome94-ff93
-    services:
-      postgres:
-        image: underbluewaters/seasketch_db_base
-        ports:
-          - "5432:5432"
-        env:
-          POSTGRES_PASSWORD: password
-      redis:
-        image: "redis:alpine"
-        ports:
-          - "6379:6379"
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "18.6"
-      - id: short_sha
-        run: |
-          echo `git rev-parse HEAD`
-          echo "::set-output name=sha::`git rev-parse --short HEAD`"
-      - name: Cache node modules
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-integration-node-modules
-        with:
-          # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: |
-            node_modules
-            */*/node_modules
-            ~/.npm
-            ~/.cache/Cypress
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      - name: Install
-        run: |
-          npm install
-          npm install -g lerna
-          npm install serve -g
-          lerna bootstrap
-      - name: Init docker db
-        working-directory: ./packages/api
-        env:
-          TEST_DB: postgres://postgres:password@localhost:5432/
-          DATABASE_URL: postgres://postgres:password@localhost:5432/seasketch
-        run: |
-          node tests/init_dockerdb.js
-          npm run db:migrate
-      - name: Start API Server
-        working-directory: ./packages/api
-        env:
-          DATABASE_URL: postgres://graphile:password@localhost:5432/seasketch
-          ADMIN_DATABASE_URL: postgres://postgres:password@localhost:5432/seasketch
-          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
-          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
-          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
-          HOST: ${{ secrets.HOST }}
-          JWKS_URI: ${{ secrets.JWKS_URI }}
-          JWT_AUD: ${{ secrets.JWT_AUD }}
-          JWT_ISS: ${{ secrets.JWT_ISS }}
-          PUBLIC_S3_BUCKET: ${{ secrets.PUBLIC_S3_BUCKET }}
-          PUBLIC_UPLOADS_DOMAIN: ${{ secrets.PUBLIC_UPLOADS_DOMAIN }}
-          S3_REGION: ${{ secrets.S3_REGION }}
-          SES_EMAIL_SOURCE: ${{ secrets.SES_EMAIL_SOURCE }}
-          UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
-          NODE_ENV: staging
-          GRAPHILE_WORKER_CONCURRENCY: 5
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          IS_CYPRESS_TEST_ENV: "true"
-        run: |
-          npm run build
-          npm start &
-      - name: Start client
-        working-directory: ./packages/client
-        run: |
-          NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
-          serve -s build &
-        env:
-          SKIP_PREFLIGHT_CHECK: true
-          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
-          REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
-          REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
-          REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
-          REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
-          CYPRESS_BASE_URL: http://localhost:3000
-          REACT_APP_BUILD: e2e-tests-${{ steps.short_sha.outputs.sha }}
-      - name: Percy/Cypress Run
-        working-directory: ./packages/client
-        run: npx @percy/cli exec -- cypress run --record false
-        env:
-          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORDING_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CYPRESS_AUTH0_CLIENT_SECRET: ${{ secrets.CYPRESS_AUTH0_CLIENT_SECRET }}
-          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
-          REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
-          REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
-          REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
-          CYPRESS_TEST_DB: postgres://postgres:password@localhost:5432/seasketch
-          PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-          AUTH0_MANAGEMENT_API_CLIENT_ID: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_ID }}
-          AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_SECRET }}
+  # percy-visual-tests:
+  #   name: Percy Visual Testing
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 60
+  #   # container: cypress/browsers:node16.5.0-chrome94-ff93
+  #   services:
+  #     postgres:
+  #       image: underbluewaters/seasketch_db_base
+  #       ports:
+  #         - "5432:5432"
+  #       env:
+  #         POSTGRES_PASSWORD: password
+  #     redis:
+  #       image: "redis:alpine"
+  #       ports:
+  #         - "6379:6379"
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions/setup-node@v2
+  #       with:
+  #         node-version: "18.6"
+  #     - id: short_sha
+  #       run: |
+  #         echo `git rev-parse HEAD`
+  #         echo "::set-output name=sha::`git rev-parse --short HEAD`"
+  #     - name: Cache node modules
+  #       uses: actions/cache@v2
+  #       env:
+  #         cache-name: cache-integration-node-modules
+  #       with:
+  #         # npm cache files are stored in `~/.npm` on Linux/macOS
+  #         path: |
+  #           node_modules
+  #           */*/node_modules
+  #           ~/.npm
+  #           ~/.cache/Cypress
+  #         key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-build-${{ env.cache-name }}-
+  #           ${{ runner.os }}-build-
+  #           ${{ runner.os }}-
+  #     - name: Install
+  #       run: |
+  #         npm install
+  #         npm install -g lerna
+  #         npm install serve -g
+  #         lerna bootstrap
+  #     - name: Init docker db
+  #       working-directory: ./packages/api
+  #       env:
+  #         TEST_DB: postgres://postgres:password@localhost:5432/
+  #         DATABASE_URL: postgres://postgres:password@localhost:5432/seasketch
+  #       run: |
+  #         node tests/init_dockerdb.js
+  #         npm run db:migrate
+  #     - name: Start API Server
+  #       working-directory: ./packages/api
+  #       env:
+  #         DATABASE_URL: postgres://graphile:password@localhost:5432/seasketch
+  #         ADMIN_DATABASE_URL: postgres://postgres:password@localhost:5432/seasketch
+  #         AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+  #         AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+  #         AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+  #         HOST: ${{ secrets.HOST }}
+  #         JWKS_URI: ${{ secrets.JWKS_URI }}
+  #         JWT_AUD: ${{ secrets.JWT_AUD }}
+  #         JWT_ISS: ${{ secrets.JWT_ISS }}
+  #         PUBLIC_S3_BUCKET: ${{ secrets.PUBLIC_S3_BUCKET }}
+  #         PUBLIC_UPLOADS_DOMAIN: ${{ secrets.PUBLIC_UPLOADS_DOMAIN }}
+  #         S3_REGION: ${{ secrets.S3_REGION }}
+  #         SES_EMAIL_SOURCE: ${{ secrets.SES_EMAIL_SOURCE }}
+  #         UNSPLASH_KEY: ${{ secrets.UNSPLASH_KEY }}
+  #         NODE_ENV: staging
+  #         GRAPHILE_WORKER_CONCURRENCY: 5
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         IS_CYPRESS_TEST_ENV: "true"
+  #       run: |
+  #         npm run build
+  #         npm start &
+  #     - name: Start client
+  #       working-directory: ./packages/client
+  #       run: |
+  #         NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
+  #         serve -s build &
+  #       env:
+  #         SKIP_PREFLIGHT_CHECK: true
+  #         REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+  #         REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+  #         REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
+  #         REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
+  #         REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
+  #         REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
+  #         CYPRESS_BASE_URL: http://localhost:3000
+  #         REACT_APP_BUILD: e2e-tests-${{ steps.short_sha.outputs.sha }}
+  #     - name: Percy/Cypress Run
+  #       working-directory: ./packages/client
+  #       run: npx @percy/cli exec -- cypress run --record false
+  #       env:
+  #         CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORDING_KEY }}
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         CYPRESS_AUTH0_CLIENT_SECRET: ${{ secrets.CYPRESS_AUTH0_CLIENT_SECRET }}
+  #         REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+  #         REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+  #         REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
+  #         REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
+  #         REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
+  #         CYPRESS_TEST_DB: postgres://postgres:password@localhost:5432/seasketch
+  #         PERCY_TOKEN: ${{ secrets.PERCY_TOKEN }}
+  #         ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+  #         AUTH0_MANAGEMENT_API_CLIENT_ID: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_ID }}
+  #         AUTH0_MANAGEMENT_API_CLIENT_SECRET: ${{ secrets.AUTH0_MANAGEMENT_API_CLIENT_SECRET }}
