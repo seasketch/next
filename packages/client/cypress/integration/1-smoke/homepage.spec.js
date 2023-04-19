@@ -20,44 +20,45 @@ describe("Homepage smoke test", () => {
   it("Describes the project", () => cy.contains("SeaSketch"));
   it("SeaSketch logo links to root", () => {
     cy.get("[id=seasketch-logo]").click();
-    cy.url().should('eq', Cypress.config().baseUrl + '/');
+    cy.url().should("eq", Cypress.config().baseUrl + "/");
   });
   it("Has a link to learn more", () => {
     cy.get("[id=learn-more]").click();
-    cy.url().should('eq', Cypress.config().baseUrl + '/team'); 
-    cy.visit('/')
+    cy.url().should("eq", Cypress.config().baseUrl + "/team");
+    cy.visit("/");
   });
   it("Has a link to create a new project", () => {
-    cy.get("[id=get-started]").click(); 
-    cy.url().should('eq', Cypress.config().baseUrl + '/new-project'); 
-    cy.visit('/')
+    cy.get("[id=get-started]").click();
+    cy.url().should("eq", Cypress.config().baseUrl + "/new-project");
+    cy.visit("/");
   });
 
   describe("Large devices", () => {
-      devices.slice(0,2).forEach((device) => {
+    devices.slice(0, 2).forEach((device) => {
       it(`Links to about page - ${device}`, () => {
         cy.viewport(device);
         cy.screenshot({
           capture: "viewport",
         });
-        cy.get("[id=nav-about]").click()
-        cy.url().should('eq', Cypress.config().baseUrl + '/');
+        cy.get("[id=nav-about]").click();
+        cy.url().should("eq", Cypress.config().baseUrl + "/");
       });
       it(`Links to project listings - ${device}`, () => {
-        cy.get("[id=nav-projects]").click(); 
-        cy.url().should('eq', Cypress.config().baseUrl + '/projects');
+        cy.get("[id=nav-projects]").click();
+        cy.url().should("eq", Cypress.config().baseUrl + "/projects");
         cy.visit("/");
       });
       it(`Links to api page - ${device}`, () => {
-        cy.get("[id=nav-api]").click()
-        cy.url().should('eq', Cypress.config().baseUrl + '/api');
+        cy.get("[id=nav-api]").click();
+        cy.url().should("eq", Cypress.config().baseUrl + "/api");
         cy.visit("/");
       });
-      it(`Links to team page - ${device}`, () => {
-        cy.get("[id=nav-team]").click()
-        cy.url().should('eq', Cypress.config().baseUrl + '/team');
-        cy.visit("/");
-      });
+      // Deleted -cb
+      // it(`Links to team page - ${device}`, () => {
+      //   cy.get("[id=nav-team]").click()
+      //   cy.url().should('eq', Cypress.config().baseUrl + '/team');
+      //   cy.visit("/");
+      // });
     });
   });
   describe("Mobile devices", () => {
@@ -67,36 +68,37 @@ describe("Homepage smoke test", () => {
         cy.screenshot({
           capture: "viewport",
         });
-        cy.get("[id=collapsed-nav]").should("be.visible")
-      })
+        cy.get("[id=collapsed-nav]").should("be.visible");
+      });
       it(`Links to about page - ${device}`, () => {
         cy.viewport(device);
         cy.get("[id=collapsed-nav]").click().screenshot({
-          capture: "viewport"
-        })
-        cy.get("[id=modal-nav-about]").click()
-        cy.url().should('eq', Cypress.config().baseUrl + '/');
+          capture: "viewport",
+        });
+        cy.get("[id=modal-nav-about]").click();
+        cy.url().should("eq", Cypress.config().baseUrl + "/");
       });
       it(`Links to project listings - ${device}`, () => {
         cy.viewport(device);
-        cy.get("[id=collapsed-nav]").click()
-        cy.get("[id=modal-nav-projects]").click(); 
-        cy.url().should('eq', Cypress.config().baseUrl + '/projects');
+        cy.get("[id=collapsed-nav]").click();
+        cy.get("[id=modal-nav-projects]").click();
+        cy.url().should("eq", Cypress.config().baseUrl + "/projects");
         cy.visit("/");
       });
       it(`Links to api page - ${device}`, () => {
         cy.viewport(device);
-        cy.get("[id=collapsed-nav]").click()
-        cy.get("[id=modal-nav-api]").click()
-        cy.url().should('eq', Cypress.config().baseUrl + '/api');
+        cy.get("[id=collapsed-nav]").click();
+        cy.get("[id=modal-nav-api]").click();
+        cy.url().should("eq", Cypress.config().baseUrl + "/api");
         cy.visit("/");
       });
-      it(`Links to team page - ${device}`, () => {
-        cy.viewport(device);
-        cy.get("[id=collapsed-nav]").click()
-        cy.get("[id=modal-nav-team]").click()
-        cy.url().should('eq', Cypress.config().baseUrl + '/team');
-      })
+      // Deleted -cb
+      // it(`Links to team page - ${device}`, () => {
+      //   cy.viewport(device);
+      //   cy.get("[id=collapsed-nav]").click();
+      //   cy.get("[id=modal-nav-team]").click();
+      //   cy.url().should("eq", Cypress.config().baseUrl + "/team");
+      // });
     });
     //Signed out user
     //devices.slice(2).forEach((device) => {
@@ -108,7 +110,7 @@ describe("Homepage smoke test", () => {
     //    cy.get("[id=collapsed-nav]").then(($nav) => {
     //      cy.wrap($nav).click().then(($menu) => {
     //          cy.wrap($menu).get("[id=modal-sign-in]")
-    //      }) 
+    //      })
     //    })
     //  });
     //});
