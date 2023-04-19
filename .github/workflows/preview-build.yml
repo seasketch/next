@@ -1,0 +1,58 @@
+name: Preview Client Build
+on: [push]
+jobs:
+  deploy_client:
+    name: Deploy Client
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production_client
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "18.6"
+      - name: Cache node modules
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-client-node-modules
+        with:
+          # npm cache files are stored in `~/.npm` on Linux/macOS
+          path: |
+            node_modules
+            */*/node_modules
+            ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Install lerna
+        run: |
+          npm install
+      - name: Install dependencies
+        run: |
+          lerna bootstrap
+      - name: Build client
+        working-directory: ./packages/client
+        env:
+          SKIP_PREFLIGHT_CHECK: true
+          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+          REACT_APP_AUTH0_SCOPE: "openid profile email permissions"
+          REACT_APP_AUTH0_AUDIENCE: https://api.seasketch.org
+          REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
+          REACT_APP_GRAPHQL_ENDPOINT: ${{ secrets.REACT_APP_GRAPHQL_ENDPOINT }}
+          REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
+          REACT_APP_SENTRY_DSN: ${{ secrets.REACT_APP_SENTRY_DSN }}
+          REACT_APP_CLOUDFRONT_DOCS_DISTRO: ${{ secrets.REACT_APP_CLOUDFRONT_DOCS_DISTRO }}
+          REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT: ${{ secrets.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT }}
+        run: |
+          CI=false npm run build
+      - name: deploy to cloudflare pages
+        working-directory: ./packages/client
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{secrets.CLOUDFLARE_ACCOUNT_ID}}
+          CLOUDFLARE_API_TOKEN: ${{secrets.CLOUDFLARE_API_TOKEN}}
+        run: |
+          npx wrangler pages publish build --project-name=seasketch-next-client
