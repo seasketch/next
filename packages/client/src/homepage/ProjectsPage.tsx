@@ -2,7 +2,7 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/outline";
 import { useMediaQuery } from "beautiful-react-hooks";
 import React, { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { Link, useHistory, useLocation, useRouteMatch } from "react-router-dom";
 import Button from "../components/Button";
 import Skeleton from "../components/Skeleton";
@@ -99,6 +99,39 @@ export default function ProjectsPage() {
           href="/new-project"
           label={t("Create a Project")}
         />
+        <p className="max-w-4xl mx-auto mt-5 p-4 text-sm bg-blue-50 border text-left rounded">
+          <Trans ns="homepage">
+            Looking for projects like{" "}
+            <a
+              className="underline text-primary-500"
+              href="https://legacy.seasketch.org/#projecthomepage/520d37a7674659cb7b33c1ba/about"
+            >
+              Bermuda
+            </a>
+            ,{" "}
+            <a
+              className="underline text-primary-500"
+              href="https://legacy.seasketch.org/#projecthomepage/50e58ab28aba4075183f8fc0/about"
+            >
+              MaPP
+            </a>
+            , or{" "}
+            <a
+              className="underline text-primary-500"
+              href="https://legacy.seasketch.org/#projecthomepage/5272840f6ec5f42d210016e4/about"
+            >
+              US Mapping Coordination
+            </a>
+            ? You can find these projects in{" "}
+            <a
+              className="underline text-primary-500"
+              href="https://legacy.seasketch.org"
+            >
+              SeaSketch Legacy
+            </a>
+            .
+          </Trans>
+        </p>
       </div>
       <div className="flex-1 px-2 sm:px-4">
         <h1 className="mt-4 text-xl tracking-tight font-extrabold ">
