@@ -57,5 +57,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{secrets.CLOUDFLARE_ACCOUNT_ID}}
           CLOUDFLARE_API_TOKEN: ${{secrets.CLOUDFLARE_API_TOKEN}}
         run: |
-          URL=$(npx wrangler pages publish build --project-name=seasketch-next-client --commit-dirty=true --branch preview | grep -Eo "(http|https)://[a-zA-Z0-9./?=_%:-]*" | sort -u)
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          BRANCH=$(if [ $BRANCH = "master" ]; then echo "master-preview"; else echo $BRANCH; fi)
+          URL=$(npx wrangler pages publish build --project-name=seasketch-next-client --commit-dirty=true --branch $BRANCH | grep -Eo "(http|https)://[a-zA-Z0-9./?=_%:-]*" | sort -u)
           echo "preview_url=$(echo $URL)" >> $GITHUB_OUTPUT
