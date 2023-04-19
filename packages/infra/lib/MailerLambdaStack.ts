@@ -53,6 +53,7 @@ export class MailerLambdaStack extends cdk.Stack {
           PGREGION: props.db.env.region,
           SES_EMAIL_SOURCE: props.emailSource,
           HOST: props.host,
+          ISSUER: props.host,
         },
         memorySize: 256,
         reservedConcurrentExecutions: 50,
