@@ -46,7 +46,8 @@ const allowedCorsDomains = [
   "https://seasketch.org",
   "https://www.seasketch.org",
   "https://staging.seasket.ch",
-  "https://*.seasketch-next-client.pages.dev/",
+  "https://*.seasketch-next-client.pages.dev",
+  "https://seasketch-next-client.pages.dev",
   "https://app.seasketch.org",
 ];
 

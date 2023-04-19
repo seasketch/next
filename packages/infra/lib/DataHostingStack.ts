@@ -68,7 +68,11 @@ export class DataHostingStack extends cdk.Stack {
     const distribution = new cloudfront.Distribution(this, "GeoJSONCDN", {
       defaultBehavior: {
         origin: new origins.S3Origin(storageBucket),
-        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        cachePolicy: cloudfront.CachePolicy.fromCachePolicyId(
+          this,
+          "caching-w-cors",
+          "32ee4e23-6a0b-41f2-99dd-b170f3d0569c"
+        ),
         viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
       },
     });
