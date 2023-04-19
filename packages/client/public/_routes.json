@@ -1,4 +1,15 @@
 {
   "version": 1,
-  "include": ["/sprites/*"]
+  "include": ["/sprites/*"],
+  "exclude": [
+    "/static/*",
+    "/index.html",
+    "/*.css",
+    "/*.js",
+    "/*.json",
+    "/*.txt",
+    "/logos/*",
+    "/*.wasm",
+    "/font/*"
+  ]
 }
