@@ -5339,7 +5339,7 @@ CREATE FUNCTION public.create_project_invites("projectId" integer, "sendEmailNow
           from
             project_invites
           where
-            email in (select email from unnest("projectInviteOptions"))
+            project_id = "projectId" and email in (select email from unnest("projectInviteOptions"))
         ));
       end if;
       return query select * from project_invites where project_id = "projectId" and email in (select email from unnest("projectInviteOptions"));
