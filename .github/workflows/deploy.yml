@@ -171,7 +171,7 @@ jobs:
     concurrency: ${{github.event.inputs.environment }}_client
     environment:
       name: ${{github.event.inputs.environment}}_client
-      url: https://next.seasket.ch/
+      url: https://www.seasketch.org/
     needs:
       - detect_changes
     steps:
