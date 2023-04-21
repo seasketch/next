@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useState } from "react";
-import { Switch, Route, Redirect } from "react-router-dom";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
+import { Switch, Route, Redirect, useLocation } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
 import ProjectsPage from "./homepage/ProjectsPage";
@@ -107,6 +107,7 @@ function App() {
         >
           <GlobalErrorHandlerContext.Provider value={{ error, setError }}>
             <ClientCacheManagerProvider>
+              <AuthoritativeDomainPrompt />
               <Route
                 path={[
                   "/signin",
@@ -291,3 +292,73 @@ function App() {
 }
 
 export default App;
+
+/**
+ * If window.location.hostname is "next.seasket.ch", show a prompt for the
+ * user to access seasketch from www.seasketch.org by showing a link. The
+ * user may dismiss the prompt, and if so the dismissal will be remembered in localstorage
+ */
+function AuthoritativeDomainPrompt() {
+  const { t } = useTranslation("homepage");
+  const [dismissed, setDismissed] = useState(
+    localStorage.getItem("authoritativeDomainPromptDismissed") === "true"
+  );
+  const location = useLocation();
+
+  const wwwLink = useMemo(() => {
+    const url = new URL(window.location.toString());
+    url.hostname = "www.seasketch.org";
+    return url.toString();
+  }, [window.location.toString()]);
+
+  const top = useMemo(() => {
+    switch (location.pathname) {
+      case "/":
+      case "/about":
+      case "/api":
+      case "/projects":
+        return false;
+      default:
+        return true;
+    }
+  }, [location.pathname]);
+
+  if (window.location.hostname === "next.seasket.ch" && !dismissed) {
+    return (
+      <div
+        className={`z-50 fixed left-0 right-0 bg-yellow-100 p-4 text-gray-800  ${
+          top
+            ? "top-0 shadow border-b border-gray-800"
+            : "bottom-0 border-t border-gray-300"
+        }`}
+      >
+        <div className="flex flex-row items-center">
+          <span className="flex-grow">
+            <Trans ns="homepage">
+              You are accessing SeaSketch from the beta domain next.seasket.ch.
+              For the best experience, please use{" "}
+              <a className="text-primary-500 underline" href={wwwLink}>
+                www.seasketch.org
+              </a>
+              . If you are using offline features you will need to reload your
+              cache.
+            </Trans>
+          </span>
+          <button
+            className="ml-4"
+            onClick={() => {
+              setDismissed(true);
+              localStorage.setItem(
+                "authoritativeDomainPromptDismissed",
+                "true"
+              );
+            }}
+          >
+            {t("Dismiss")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
