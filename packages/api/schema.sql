@@ -9714,7 +9714,7 @@ CREATE FUNCTION public.projects_url(p public.projects) RETURNS text
     LANGUAGE sql STABLE
     AS $$
   SELECT
-    'https://next.seasket.ch/' || p.slug || '/'
+    'https://www.seasketch.org/' || p.slug || '/'
 $$;
 
 
