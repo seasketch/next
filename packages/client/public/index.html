@@ -27,6 +27,10 @@
     if (window.location.hash && /#projecthomepage|#dashboard/.test(window.location.hash)) {
       console.log('redirecting to legacy.seasketch.org')
       window.location = `https://legacy.seasketch.org/${window.location.hash}`;
+    } else if (window.location.hostname === "next.seasket.ch") {
+      const url = new URL(window.location);
+      url.hostname = "www.seasketch.org";
+      window.location = url.toString();
     }
   </script>
 </head>
