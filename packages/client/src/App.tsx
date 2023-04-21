@@ -340,8 +340,14 @@ function AuthoritativeDomainPrompt() {
               <a className="text-primary-500 underline" href={wwwLink}>
                 www.seasketch.org
               </a>
-              . If you are using offline features you will need to reload your
-              cache.
+              . If you are using offline features{" "}
+              <a
+                className="text-primary-500 underline"
+                href="https://github.com/seasketch/next/wiki/Offline-instructions-for-domain-change"
+              >
+                read these instructions
+              </a>
+              .
             </Trans>
           </span>
           <button
