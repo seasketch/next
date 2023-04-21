@@ -16,8 +16,8 @@ import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 let env = require("./env.production");
 
-const DOMAIN_NAME = "seasket.ch";
-const SUBDOMAIN: string | undefined = "next";
+const DOMAIN_NAME = "seasketch.org";
+const SUBDOMAIN: string | undefined = "www";
 const HOST = SUBDOMAIN ? [SUBDOMAIN, DOMAIN_NAME].join(".") : DOMAIN_NAME;
 
 const EMAIL_STATUS_NOTIFICATION_TOPIC =
