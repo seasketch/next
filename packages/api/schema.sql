@@ -2018,6 +2018,36 @@ CREATE FUNCTION public.after_response_submission() RETURNS trigger
 
 
 --
+-- Name: alternate_language_labels_for_form_element(integer, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.alternate_language_labels_for_form_element(attr_id integer, attr_value jsonb, alternate_language_settings jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+      lang   text;
+      _value text;
+      output jsonb := jsonb_build_object();
+    BEGIN
+      FOR lang, _value IN
+      SELECT * FROM jsonb_each(alternate_language_settings)
+    LOOP
+      if alternate_language_settings->lang is not null and (alternate_language_settings->lang ? 'body' or alternate_language_settings->lang ? 'options') then
+        output := output || 
+          jsonb_build_object(
+            lang, jsonb_build_object(
+              'label', case when alternate_language_settings->lang ? 'body' then generate_label(attr_id, alternate_language_settings->lang->'body') else null end,
+              'valueLabel', label_for_form_element_value(attr_value, alternate_language_settings->lang)
+            )
+          );
+      end if;
+    END LOOP;
+    return output;
+    END
+  $$;
+
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7826,6 +7856,34 @@ sure users are visible to admins so that they may gain user group permissions.
 
 
 --
+-- Name: label_for_form_element_value(jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.label_for_form_element_value(attr_value jsonb, component_settings jsonb) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+      if component_settings is not null and component_settings ? 'options' then
+        if jsonb_typeof(attr_value) = 'array' then
+          -- return null;
+          return (select to_jsonb(array(
+            select (select to_jsonb(label) from 
+            jsonb_to_recordset(component_settings->'options') as f(label text, value text)
+            where f.value = foo.* #>> '{}')
+            from jsonb_array_elements(attr_value) as foo
+          )));
+        elsif jsonb_typeof(attr_value) = 'string' then
+          return (select to_jsonb(label) from 
+            jsonb_to_recordset(component_settings->'options') as f(label text, value text)
+            where f.value = attr_value #>> '{}');
+        end if;
+      end if;
+      return null;
+    END
+  $$;
+
+
+--
 -- Name: lcfirst(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11268,13 +11326,15 @@ CREATE FUNCTION public.sketches_user_attributes(sketch public.sketches) RETURNS 
     LANGUAGE sql STABLE
     AS $$
     select jsonb_agg(jsonb_build_object(
-                'label', form_elements.generated_label,
-                'value', sketch.properties->form_elements.id::text,
-                'exportId', form_elements.generated_export_id,
-                'fieldType', form_elements.type_id
-              )) from form_elements where form_id = (
-                select id from forms where sketch_class_id = sketch.sketch_class_id
-              ) and type_id != 'FeatureName';
+      'label', form_elements.generated_label,
+      'value', sketch.properties->form_elements.id::text,
+      'valueLabel', label_for_form_element_value(sketch.properties->form_elements.id::text, form_elements.component_settings),
+      'exportId', form_elements.generated_export_id,
+      'fieldType', form_elements.type_id,
+      'alternateLanguages', alternate_language_labels_for_form_element(form_elements.id, sketch.properties->form_elements.id::text, form_elements.alternate_language_settings)
+    )) from form_elements where form_id = (
+      select id from forms where sketch_class_id = sketch.sketch_class_id
+    ) and type_id != 'FeatureName';
   $$;
 
 
@@ -18960,6 +19020,14 @@ REVOKE ALL ON FUNCTION public.after_response_submission() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION alternate_language_labels_for_form_element(attr_id integer, attr_value jsonb, alternate_language_settings jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.alternate_language_labels_for_form_element(attr_id integer, attr_value jsonb, alternate_language_settings jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.alternate_language_labels_for_form_element(attr_id integer, attr_value jsonb, alternate_language_settings jsonb) TO anon;
+
+
+--
 -- Name: TABLE users; Type: ACL; Schema: public; Owner: -
 --
 
@@ -22176,6 +22244,14 @@ REVOKE ALL ON FUNCTION public.json(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.jsonb(public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION label_for_form_element_value(attr_value jsonb, component_settings jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.label_for_form_element_value(attr_value jsonb, component_settings jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.label_for_form_element_value(attr_value jsonb, component_settings jsonb) TO anon;
 
 
 --
