@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useProjectSlugExistsQuery,
   useCreateProjectMutation,
+  useVerifyEmailMutation,
+  useMeQuery,
 } from "../generated/graphql";
 import useDebounce from "../useDebounce";
 import slugify from "slugify";
 import { useHistory } from "react-router-dom";
+import useDialog from "../components/useDialog";
 
 export default function NewProjectForm() {
   const history = useHistory();
@@ -18,6 +21,7 @@ export default function NewProjectForm() {
   const [createProject] = useCreateProjectMutation({
     refetchQueries: ["SimpleProjectList"],
   });
+  const { confirm } = useDialog();
 
   const { loading, error, data } = useProjectSlugExistsQuery({
     variables: {
@@ -28,6 +32,7 @@ export default function NewProjectForm() {
   if (error) {
     return <span>{error.message}</span>;
   }
+
   return (
     <>
       <div className="mt-6">

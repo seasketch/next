@@ -143,6 +143,34 @@ type AddValidChildSketchClassPayload {
   query: Query
 }
 
+"""All input for the `alternateLanguageLabelsForFormElement` mutation."""
+input AlternateLanguageLabelsForFormElementInput {
+  alternateLanguageSettings: JSON
+  attrId: Int
+  attrValue: JSON
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `alternateLanguageLabelsForFormElement` mutation."""
+type AlternateLanguageLabelsForFormElementPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  json: JSON
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `approveParticipant` mutation."""
 input ApproveParticipantInput {
   """
@@ -4623,6 +4651,14 @@ enum EmailSummaryFrequency {
   WEEKLY
 }
 
+enum EmailVerificationStatus {
+  """An email was sent to the address"""
+  EMAIL_SENT
+
+  """The email address is already verified"""
+  VERIFIED
+}
+
 """All input for the `enableForumPosting` mutation."""
 input EnableForumPostingInput {
   """
@@ -6444,6 +6480,33 @@ The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://
 """
 scalar JSON
 
+"""All input for the `labelForFormElementValue` mutation."""
+input LabelForFormElementValueInput {
+  attrValue: JSON
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  componentSettings: JSON
+}
+
+"""The output of our `labelForFormElementValue` mutation."""
+type LabelForFormElementValuePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  json: JSON
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `leaveProject` mutation."""
 input LeaveProjectInput {
   """
@@ -6822,6 +6885,12 @@ type Mutation {
     """
     input: AddValidChildSketchClassInput!
   ): AddValidChildSketchClassPayload
+  alternateLanguageLabelsForFormElement(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AlternateLanguageLabelsForFormElementInput!
+  ): AlternateLanguageLabelsForFormElementPayload
   approveParticipant(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -7750,6 +7819,12 @@ type Mutation {
     """
     input: JoinProjectInput!
   ): JoinProjectPayload
+  labelForFormElementValue(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: LabelForFormElementValueInput!
+  ): LabelForFormElementValuePayload
 
   """
   Turns off profile sharing in this project. User privacy choices should be 
@@ -7898,6 +7973,12 @@ type Mutation {
     """
     input: SendAllProjectInvitesInput!
   ): SendAllProjectInvitesPayload
+
+  """
+  Send an email to the user with a link to verify their email address.
+  If the user's email is already verified, no email will be sent.
+  """
+  sendEmailVerification(redirectUrl: String): EmailVerificationStatus!
 
   """
   Send a list of project invites identified by their id.
@@ -10541,6 +10622,7 @@ type Query implements Node {
     """
     nodeId: ID!
   ): InviteEmail
+  isMyEmailVerified: Boolean!
   lcfirst(word: String): String
 
   """Reads and enables pagination through a set of `MapBookmark`."""

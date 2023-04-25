@@ -136,6 +136,7 @@ export class GraphQLStack extends cdk.Stack {
             CLOUDFLARE_IMAGES_TOKEN: process.env.CLOUDFLARE_IMAGES_TOKEN,
             CLOUDFLARE_IMAGES_ACCOUNT: process.env.CLOUDFLARE_IMAGES_ACCOUNT,
             ISSUER: process.env.ISSUER || HOST,
+            API_ROOT: HOST,
           },
           containerPort: 3857,
         },

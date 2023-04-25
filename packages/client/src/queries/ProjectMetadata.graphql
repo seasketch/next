@@ -58,6 +58,7 @@ query ProjectMetadata($slug: String!) {
   me {
     ...ProjectMetadataMeFrag
   }
+  isMyEmailVerified
 }
 
 query Me {
@@ -67,4 +68,5 @@ query Me {
       ...UserProfileDetails
     }
   }
+  isMyEmailVerified
 }

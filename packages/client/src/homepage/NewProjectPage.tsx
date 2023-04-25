@@ -4,6 +4,8 @@ import { Trans, useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
 import NewProjectForm from "./NewProjectForm";
 import { Link } from "react-router-dom";
+import { useMeQuery, useVerifyEmailMutation } from "../generated/graphql";
+import Skeleton from "../components/Skeleton";
 
 const logos = [
   {
@@ -36,6 +38,7 @@ const logos = [
 export default function NewProjectPage() {
   const { t } = useTranslation("frontpage");
   const { isAuthenticated } = useAuth0();
+  const { data, loading, error } = useMeQuery();
   return (
     <main className="bg-gray-800 min-h-screen pt-12">
       <div className="mx-auto max-w-screen-xl">
@@ -113,7 +116,24 @@ export default function NewProjectPage() {
           <div className="mt-12 sm:mt-16 lg:mt-0 lg:col-span-6">
             <div className="bg-white sm:max-w-md sm:w-full sm:mx-auto sm:rounded-lg sm:overflow-hidden">
               <div className="px-4 py-8 sm:px-10">
-                {isAuthenticated ? <NewProjectForm /> : <PleaseSignIn />}
+                {loading ? (
+                  <div>
+                    <Skeleton className="w-full h-8 mb-4 mt-4" />
+                    <Skeleton className="w-full h-8 inline-block" />
+                    <div className="w-full text-center">
+                      <Skeleton className="w-3/4 mx-auto h-4 mt-2" />
+                    </div>
+                    <Skeleton className="w-full h-8 mt-5" />
+                  </div>
+                ) : isAuthenticated ? (
+                  data?.isMyEmailVerified === false ? (
+                    <PleaseVerifyEmail />
+                  ) : (
+                    <NewProjectForm />
+                  )
+                ) : (
+                  <PleaseSignIn />
+                )}
               </div>
               <div className="px-4 py-6 bg-gray-50 border-t-2 border-gray-200 sm:px-10">
                 <p className="text-xs leading-5 text-gray-500">
@@ -196,6 +216,51 @@ function PleaseSignIn() {
           "Logging into your account is the first step to creating a new SeaSketch project."
         )}
       </p>
+    </>
+  );
+}
+
+function PleaseVerifyEmail() {
+  const { t } = useTranslation("homepage");
+  const [verify, verifyState] = useVerifyEmailMutation();
+
+  const sendingEmail = verifyState.loading;
+  const sent = verifyState.called;
+  return (
+    <>
+      <p className="text-center text-sm mt-6 mb-5">
+        <Trans ns="homepage">
+          Before creating a project, you must verify your email address. Please
+          check your inbox for a verification email from{" "}
+          <span className="font-semibold">do-not-reply@seasketch.org</span>
+        </Trans>
+      </p>
+      <span className="block w-full rounded-md shadow-md">
+        <button
+          onClick={() => {
+            verify({
+              variables: {
+                redirectUrl: window.location.toString(),
+              },
+            });
+          }}
+          className={`w-full flex items-center justify-center py-2 px-4 border border-transparent text-md font-medium rounded-md  transition duration-150 ease-in-out ${
+            sendingEmail
+              ? "bg-primary-300 text-white pointer-events-none"
+              : sent
+              ? "bg-primary-300 text-white pointer-events-none"
+              : "text-white bg-primary-500 focus:outline-none focus:shadow-outline-indigo hover:bg-primary-600"
+          }`}
+        >
+          <span className="relative">
+            {sendingEmail
+              ? t("Sending email...")
+              : sent
+              ? t("Email sent. Check your inbox  📨")
+              : t("Resend verification email")}{" "}
+          </span>
+        </button>
+      </span>
     </>
   );
 }

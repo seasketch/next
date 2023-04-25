@@ -268,6 +268,7 @@ export async function confirmProjectInvite(
       [userId]
     )
   ).rows[0];
+
   const auth0 = await getManagementClient();
   if (!emailVerified) {
     try {

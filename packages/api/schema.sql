@@ -10401,6 +10401,26 @@ Send all UNSENT invites in the current project.
 
 
 --
+-- Name: send_email_verification_for_new_user(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.send_email_verification_for_new_user() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  perform graphile_worker.add_job(
+    'sendEmailVerification',
+    json_build_object(
+      'sub', NEW.sub,
+      'email', NEW.canonical_email
+    )
+  );
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: send_project_invites(integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15892,6 +15912,13 @@ CREATE TRIGGER on_map_bookmark_update_trigger AFTER UPDATE ON public.map_bookmar
 --
 
 CREATE TRIGGER post_after_insert_notify_subscriptions AFTER INSERT ON public.posts FOR EACH ROW EXECUTE FUNCTION public.after_post_insert_notify_subscriptions();
+
+
+--
+-- Name: users send_email_verification; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER send_email_verification AFTER INSERT OR DELETE OR UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.send_email_verification_for_new_user();
 
 
 --
@@ -23930,6 +23957,13 @@ GRANT SELECT(error) ON TABLE public.invite_emails TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.send_all_project_invites("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.send_all_project_invites("projectId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION send_email_verification_for_new_user(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.send_email_verification_for_new_user() FROM PUBLIC;
 
 
 --

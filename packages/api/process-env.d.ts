@@ -37,5 +37,6 @@ declare namespace NodeJS {
     CLOUDFLARE_IMAGES_TOKEN: string;
     /** May be comma seperated list. First issuer should be the primary host */
     ISSUER?: string;
+    API_ROOT: string;
   }
 }

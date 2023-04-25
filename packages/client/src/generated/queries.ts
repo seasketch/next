@@ -174,6 +174,31 @@ export type AddValidChildSketchClassPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `alternateLanguageLabelsForFormElement` mutation. */
+export type AlternateLanguageLabelsForFormElementInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  attrId?: Maybe<Scalars['Int']>;
+  attrValue?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `alternateLanguageLabelsForFormElement` mutation. */
+export type AlternateLanguageLabelsForFormElementPayload = {
+  __typename?: 'AlternateLanguageLabelsForFormElementPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  json?: Maybe<Scalars['JSON']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `approveParticipant` mutation. */
 export type ApproveParticipantInput = {
   /**
@@ -3935,6 +3960,13 @@ export enum EmailSummaryFrequency {
   Weekly = 'WEEKLY'
 }
 
+export enum EmailVerificationStatus {
+  /** An email was sent to the address */
+  EmailSent = 'EMAIL_SENT',
+  /** The email address is already verified */
+  Verified = 'VERIFIED'
+}
+
 /** All input for the `enableForumPosting` mutation. */
 export type EnableForumPostingInput = {
   /**
@@ -5512,6 +5544,30 @@ export type JoinProjectPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `labelForFormElementValue` mutation. */
+export type LabelForFormElementValueInput = {
+  attrValue?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+};
+
+/** The output of our `labelForFormElementValue` mutation. */
+export type LabelForFormElementValuePayload = {
+  __typename?: 'LabelForFormElementValuePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  json?: Maybe<Scalars['JSON']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `leaveProject` mutation. */
 export type LeaveProjectInput = {
   /**
@@ -5843,6 +5899,7 @@ export type Mutation = {
   addUserToGroup?: Maybe<AddUserToGroupPayload>;
   /** Add a SketchClass to the list of valid children for a Collection-type SketchClass. */
   addValidChildSketchClass?: Maybe<AddValidChildSketchClassPayload>;
+  alternateLanguageLabelsForFormElement?: Maybe<AlternateLanguageLabelsForFormElementPayload>;
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelDataUpload?: Maybe<CancelDataUploadPayload>;
@@ -6116,6 +6173,7 @@ export type Mutation = {
    * sure users are visible to admins so that they may gain user group permissions.
    */
   joinProject?: Maybe<JoinProjectPayload>;
+  labelForFormElementValue?: Maybe<LabelForFormElementValuePayload>;
   /**
    * Turns off profile sharing in this project. User privacy choices should be
    * respected, and profile information should disappear from the admin users lists,
@@ -6163,6 +6221,11 @@ export type Mutation = {
   revokeAdminAccess?: Maybe<RevokeAdminAccessPayload>;
   /** Send all UNSENT invites in the current project. */
   sendAllProjectInvites?: Maybe<SendAllProjectInvitesPayload>;
+  /**
+   * Send an email to the user with a link to verify their email address.
+   * If the user's email is already verified, no email will be sent.
+   */
+  sendEmailVerification: EmailVerificationStatus;
   /** Send a list of project invites identified by their id. */
   sendProjectInvites?: Maybe<SendProjectInvitesPayload>;
   /**
@@ -6413,6 +6476,12 @@ export type MutationAddUserToGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationAddValidChildSketchClassArgs = {
   input: AddValidChildSketchClassInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationAlternateLanguageLabelsForFormElementArgs = {
+  input: AlternateLanguageLabelsForFormElementInput;
 };
 
 
@@ -7104,6 +7173,12 @@ export type MutationJoinProjectArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationLabelForFormElementValueArgs = {
+  input: LabelForFormElementValueInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationLeaveProjectArgs = {
   input: LeaveProjectInput;
 };
@@ -7190,6 +7265,12 @@ export type MutationRevokeAdminAccessArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendAllProjectInvitesArgs = {
   input: SendAllProjectInvitesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSendEmailVerificationArgs = {
+  redirectUrl?: Maybe<Scalars['String']>;
 };
 
 
@@ -9216,6 +9297,7 @@ export type Query = Node & {
   inviteEmail?: Maybe<InviteEmail>;
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
+  isMyEmailVerified: Scalars['Boolean'];
   lcfirst?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `MapBookmark`. */
   mapBookmarksConnection?: Maybe<MapBookmarksConnection>;
@@ -14809,6 +14891,16 @@ export type CreateProjectMutation = (
   )> }
 );
 
+export type VerifyEmailMutationVariables = Exact<{
+  redirectUrl?: Maybe<Scalars['String']>;
+}>;
+
+
+export type VerifyEmailMutation = (
+  { __typename?: 'Mutation' }
+  & Pick<Mutation, 'sendEmailVerification'>
+);
+
 export type DataUploadDetailsFragment = (
   { __typename?: 'DataUploadTask' }
   & Pick<DataUploadTask, 'createdAt' | 'filename' | 'id' | 'progress' | 'state' | 'errorMessage'>
@@ -16329,6 +16421,7 @@ export type ProjectMetadataQueryVariables = Exact<{
 
 export type ProjectMetadataQuery = (
   { __typename?: 'Query' }
+  & Pick<Query, 'isMyEmailVerified'>
   & { project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'sessionParticipationStatus' | 'sessionHasPrivilegedAccess'>
@@ -16347,6 +16440,7 @@ export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type MeQuery = (
   { __typename?: 'Query' }
+  & Pick<Query, 'isMyEmailVerified'>
   & { me?: Maybe<(
     { __typename?: 'User' }
     & Pick<User, 'id'>
@@ -20278,6 +20372,11 @@ export const CreateProjectDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const VerifyEmailDocument = /*#__PURE__*/ gql`
+    mutation VerifyEmail($redirectUrl: String) {
+  sendEmailVerification(redirectUrl: $redirectUrl)
+}
+    `;
 export const CreateDataUploadDocument = /*#__PURE__*/ gql`
     mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!) {
   createDataUpload(
@@ -21353,6 +21452,7 @@ export const ProjectMetadataDocument = /*#__PURE__*/ gql`
   me {
     ...ProjectMetadataMeFrag
   }
+  isMyEmailVerified
 }
     ${ProjectMetadataFragmentDoc}
 ${ProjectPublicDetailsMetadataFragmentDoc}
@@ -21365,6 +21465,7 @@ export const MeDocument = /*#__PURE__*/ gql`
       ...UserProfileDetails
     }
   }
+  isMyEmailVerified
 }
     ${UserProfileDetailsFragmentDoc}`;
 export const ProjectRegionDocument = /*#__PURE__*/ gql`
@@ -22816,6 +22917,7 @@ export const namedOperations = {
     UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
     UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
     CreateProject: 'CreateProject',
+    VerifyEmail: 'VerifyEmail',
     createDataUpload: 'createDataUpload',
     submitDataUpload: 'submitDataUpload',
     DismissFailedTask: 'DismissFailedTask',

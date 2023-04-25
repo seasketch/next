@@ -1,5 +1,6 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { getCanonicalEmails, client } from "../auth/auth0";
+import { sendEmailVerification } from "../emailVerification";
 
 const CanonicalEmailPlugin = makeExtendSchemaPlugin((build) => {
   return {
@@ -39,9 +40,11 @@ const CanonicalEmailPlugin = makeExtendSchemaPlugin((build) => {
       Mutation: {
         resendVerificationEmail: async (_query, args, context, resolveInfo) => {
           try {
-            const response = await client.sendEmailVerification({
-              user_id: context.user.sub,
-            });
+            await sendEmailVerification(
+              context.adminPool,
+              context.user.sub,
+              context.user.canonicalEmail
+            );
             return {
               success: true,
             };

@@ -17,6 +17,7 @@ import {
 import MutableGroupMembershipField from "./MutableGroupMembershipField";
 import ProfilePhoto from "./ProfilePhoto";
 import UserProfile from "./UserProfile";
+import { CheckIcon } from "@heroicons/react/outline";
 
 /**
  * ParticipantModal displays details about a project participant. A participant
@@ -230,13 +231,21 @@ export default function ParticipantModal({
             profile={data.user!.profile!}
             canonicalEmail={data.user.canonicalEmail!}
           />
-          <div className="mt-2 mb-2 rounded-md shadow-sm flex border border-gray-300 max-w-lg">
+          <div className="mt-2 mb-2 rounded-md shadow-sm flex border border-gray-300">
             <span className="bg-gray-50 rounded-l-md px-3 inline-flex items-center text-gray-500 sm:text-sm py-1">
               <Trans ns="admin">Canonical Email</Trans>
             </span>
-            <span className="border-l pl-2 border-gray-300 flex-grow block min-w-0 py-1 bg-cool-gray-50 bg-opacity-60 rounded-none rounded-r-md sm:text-sm">
+            <span className="border-l pl-2 border-gray-300 flex-grow block min-w-0 py-1 bg-white bg-opacity-60 rounded-none sm:text-sm flex-1 truncate">
               {data.user.canonicalEmail}
             </span>
+            {/* <span className="bg-white rounded-r-md px-3 inline-flex items-center text-gray-500 sm:text-sm py-1">
+              {data.user.emailVerified && (
+                <span className="text-green-700 flex">
+                  <Trans ns="admin">verified</Trans>
+                  <CheckIcon className="w-5 h-5 ml-1" />
+                </span>
+              )}
+            </span> */}
           </div>
           <p className="mt-1 mb-3 text-sm text-gray-500">
             <Trans ns="admin">

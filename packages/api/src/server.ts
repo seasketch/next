@@ -25,6 +25,9 @@ import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
 import slugify from "slugify";
 import { Pool } from "pg";
+import { ManagementClient } from "auth0";
+import * as cache from "./cache";
+import { verifyEmailWithToken } from "./emailVerification";
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -269,6 +272,20 @@ const geoPool = createPool();
 const bookmarksPool = createPool();
 const loadersPool = createPool({}, "admin");
 
+app.use("/verify-email", async function (req, res, next) {
+  // get token from query string
+  const token = req.query.verification;
+  if (!token) {
+    return res.status(400).json({ error: "token is required" });
+  }
+  try {
+    const claims = await verifyEmailWithToken(token, loadersPool);
+    res.redirect(302, claims.redirectUrl || process.env.CLIENT_DOMAIN);
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message });
+  }
+});
+
 app.use(
   "/export-survey/:id/spatial/:element_id/tiles/:z/:x/:y.pbf",
   authorizationMiddleware,
@@ -498,6 +515,7 @@ app.use(
         user: req.user,
         projectId: req.projectId,
         loaders: makeDataLoaders(loadersPool),
+        adminPool: loadersPool,
       };
     },
   })
