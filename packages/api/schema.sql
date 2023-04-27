@@ -5074,7 +5074,7 @@ CREATE TABLE public.projects (
     name text NOT NULL,
     description text,
     legacy_id text,
-    slug character varying(16) NOT NULL,
+    slug character varying(24) NOT NULL,
     access_control public.project_access_control_setting DEFAULT 'admins_only'::public.project_access_control_setting NOT NULL,
     is_listed boolean DEFAULT true NOT NULL,
     logo_url text,
