@@ -208,6 +208,14 @@ export class GraphQLStack extends cdk.Stack {
         ],
       })
     );
+    service.taskDefinition.taskRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        effect: iam.Effect.ALLOW,
+        resources: [SCREENSHOTTER_FUNCTION_ARN],
+      })
+    );
+
     props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
     props.tilePackagesBucket.grantReadWrite(service.taskDefinition.taskRole);
     props.spatialUploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
