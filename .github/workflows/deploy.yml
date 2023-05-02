@@ -161,6 +161,7 @@ jobs:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           CLOUDFLARE_IMAGES_ACCOUNT: ${{ secrets.CLOUDFLARE_IMAGES_ACCOUNT }}
           CLOUDFLARE_IMAGES_TOKEN: ${{ secrets.CLOUDFLARE_IMAGES_TOKEN }}
+          SCREENSHOTTER_FUNCTION_ARN: ${{ secrets.SCREENSHOTTER_FUNCTION_ARN }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer
   deploy_client:
