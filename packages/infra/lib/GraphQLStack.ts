@@ -46,6 +46,7 @@ export class GraphQLStack extends cdk.Stack {
       UNSPLASH_KEY,
       SENTRY_DSN,
       MAPBOX_ACCESS_TOKEN,
+      SCREENSHOTTER_FUNCTION_ARN,
     } = process.env;
     if (!AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET) {
       throw new Error(
@@ -65,6 +66,9 @@ export class GraphQLStack extends cdk.Stack {
       throw new Error(
         "You must specify a COMMIT env var so that the graphql container can be built with the appropriate version of the source code."
       );
+    }
+    if (!SCREENSHOTTER_FUNCTION_ARN) {
+      throw new Error("You must specify a SCREENSHOTTER_FUNCTION_ARN env var.");
     }
     if (
       !process.env.R2_ENDPOINT ||
@@ -137,6 +141,7 @@ export class GraphQLStack extends cdk.Stack {
             CLOUDFLARE_IMAGES_ACCOUNT: process.env.CLOUDFLARE_IMAGES_ACCOUNT,
             ISSUER: process.env.ISSUER || HOST,
             API_ROOT: HOST,
+            SCREENSHOTTER_FUNCTION_ARN,
           },
           containerPort: 3857,
         },

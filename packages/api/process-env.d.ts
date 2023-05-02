@@ -38,5 +38,6 @@ declare namespace NodeJS {
     /** May be comma seperated list. First issuer should be the primary host */
     ISSUER?: string;
     API_ROOT: string;
+    SCREENSHOTTER_FUNCTION_ARN: string;
   }
 }

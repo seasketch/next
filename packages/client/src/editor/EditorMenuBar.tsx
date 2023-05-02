@@ -197,7 +197,11 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                   mapContext.manager.setLoadingOverlay(null);
                 }
               } else {
-                throw e;
+                onError(e);
+                setDisableSharing(false);
+                if (mapContext?.manager) {
+                  mapContext.manager.setLoadingOverlay(null);
+                }
               }
             }
           }

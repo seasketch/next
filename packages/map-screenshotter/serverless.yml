@@ -1,0 +1,27 @@
+service: map-screenshotter
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: us-west-2
+  timeout: 120
+  memorySize: 8184
+
+package:
+  patterns:
+    - "!chromium*.zip"
+
+functions:
+  chromium-test:
+    handler: src/map-screenshotter.handler
+    layers:
+      - !Ref ChromiumtestLambdaLayer
+    environment:
+      CLOUDFLARE_IMAGES_TOKEN: ${env:CLOUDFLARE_IMAGES_TOKEN}
+      CLOUDFLARE_IMAGES_ACCOUNT: ${env:CLOUDFLARE_IMAGES_ACCOUNT}
+
+layers:
+  chromiumtest:
+    package:
+      artifact: chromium-v111.0.0-layer.zip

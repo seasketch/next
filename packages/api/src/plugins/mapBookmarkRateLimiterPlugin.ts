@@ -15,9 +15,9 @@ if (process.env.NODE_ENV !== "test") {
   limiter = new RateLimiterRedis({
     // Basic options
     storeClient: redisClient,
-    // 3 bookmarks can be created every 5 seconds per user
-    points: 3, // Number of points
-    duration: 5, // Per second(s).
+    // 3 bookmarks can be created every 10 seconds per user
+    points: 5, // Number of points
+    duration: 30, // Per second(s).
     keyPrefix: "mapBookmarks", // must be unique for limiters with different purpose
   });
 }

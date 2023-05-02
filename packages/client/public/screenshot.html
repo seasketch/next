@@ -20,12 +20,27 @@
     if (!params.get("auth")) {
       throw new Error("No auth token (?auth) specified");
     }
-    if (!params.get("bookmarkUrl")) {
-      throw new Error("No bookmark url (?bookmarkUrl) specified");
-    }
     const token = params.get("auth");
-    fetch(params.get("bookmarkUrl")).then(async (res) => {
-      const data = await res.json();
+
+    async function loadImage(id, url, pixelRatio, map) {
+      return new Promise((resolve, reject) => {
+        map.loadImage(url, (error, image) => {
+          if (error) {
+            reject(error);
+          } else {
+            if (!map.hasImage(id)) {
+              map.addImage(id, image, {
+                pixelRatio,
+              });
+            }
+            resolve(image);
+          }
+        });
+      });
+    }
+
+    window.showBookmark = async (data) => {
+      console.log('show bookmark', data);
       mapboxgl.accessToken = params.get("mt");
       const spriteImages = data.spriteImages || [];
       const bestImages = {};
@@ -51,8 +66,17 @@
         zoom: 9, // starting zoom
         ...data.cameraOptions,
         transformRequest: (url, resourceType, etc) => {
-          const Url = new URL(url);
+          if (/^\/sprites\//.test(url)) {
+            const { host, protocol } = window.location;
+            // Forward requests to the same origin, which will be routed to the
+            // s3 bucket via cloudfront
+            return {
+              url: `${protocol}//${host}${url}?ssn-tr=true`,
+            };
+          }
           if (token && /\/sketches\/\d+\.geojson.json/.test(url)) {
+            console.log('url', url);
+            const Url = new URL(url);
             Url.searchParams.set("reporting_access_token", token);
             return {
               url: Url.toString(),
@@ -76,6 +100,7 @@
         }
       }
       map.on("load", () => {
+        console.log("setting loaded ###############");
         const div = document.createElement("div");
         div.setAttribute("id", "loaded");
         div.setAttribute(
@@ -84,24 +109,17 @@
         );
         document.body.appendChild(div);
       });
-    });
+    }
 
-    async function loadImage(id, url, pixelRatio, map) {
-      return new Promise((resolve, reject) => {
-        map.loadImage(url, (error, image) => {
-          if (error) {
-            reject(error);
-          } else {
-            if (!map.hasImage(id)) {
-              map.addImage(id, image, {
-                pixelRatio,
-              });
-            }
-            resolve(image);
-          }
-        });
+    const url = params.get("bookmarkUrl");
+    if (url) {
+      fetch(url).then(async (res) => {
+        const data = await res.json();
+        window.showBookmark(data);
       });
     }
+
+
   </script>
 </body>
 

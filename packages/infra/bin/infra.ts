@@ -49,6 +49,7 @@ const allowedCorsDomains = [
   "https://*.seasketch-next-client.pages.dev",
   "https://seasketch-next-client.pages.dev",
   "https://app.seasketch.org",
+  "https://*.seasketch.org",
 ];
 
 const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {

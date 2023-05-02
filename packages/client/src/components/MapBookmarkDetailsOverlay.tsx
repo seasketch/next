@@ -2,13 +2,12 @@ import { XIcon } from "@heroicons/react/outline";
 import { useEffect, useState, useMemo, useContext } from "react";
 import { createPortal } from "react-dom";
 import { useGetBookmarkQuery, WorkerJobStatus } from "../generated/graphql";
-import { Blurhash } from "react-blurhash";
 import Spinner from "./Spinner";
 import { motion } from "framer-motion";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 import { useTranslation, Trans } from "react-i18next";
 import { MapContext } from "../dataLayers/MapContextManager";
-import { ExclamationCircleIcon, XCircleIcon } from "@heroicons/react/solid";
+import { XCircleIcon } from "@heroicons/react/solid";
 import Warning from "./Warning";
 
 const coordinateFormatter = Intl.NumberFormat(undefined, {
@@ -117,13 +116,8 @@ export default function MapBookmarkDetailsOverlay({
       {data?.bookmarkById && (
         <>
           <div className="flex-2 flex items-center p-4 relative">
-            {data?.bookmarkById?.blurhash && !imageShown && (
+            {!imageShown && (bookmark?.imageId || data.bookmarkById.imageId) && (
               <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
-                <Blurhash
-                  hash={data.bookmarkById.blurhash}
-                  width={imageRatio ? imageRatio.width : "100%"}
-                  height={imageRatio ? imageRatio.height : "100%"}
-                />
                 <div className="mx-auto z-10 absolute top-1/2 -mt-5 flex flex-col text-center items-center justify-center">
                   <Spinner large />
                   <span className="text-gray-500 mt-1">

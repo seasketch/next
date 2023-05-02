@@ -170,7 +170,7 @@ export default function PostContentEditor({
   const createMapBookmark = useCallback(async () => {
     try {
       if (mapContext.manager) {
-        const bookmark = mapContext.manager.getMapBookmarkData();
+        const bookmark = await mapContext.manager.getMapBookmarkData();
         if (state?.doc) {
           const sketchIds = [
             ...collectExistingSketchIds(state),
@@ -232,6 +232,8 @@ export default function PostContentEditor({
             isPublic: false,
             layerNames,
             sketchNames,
+            clientGeneratedThumbnail:
+              bookmark.clientGeneratedThumbnail as string,
           },
         });
         if (data.data?.createMapBookmark?.mapBookmark?.id) {

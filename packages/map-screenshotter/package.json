@@ -1,0 +1,36 @@
+{
+  "name": "map-screenshotter",
+  "version": "1.0.0",
+  "description": "Lambda service that captures images of seasketch maps",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "src/map-screenshotter.js",
+  "directories": {
+    "src": "src",
+    "test": "__tests__"
+  },
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: run tests from root\" && exit 1",
+    "deploy": "serverless deploy"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "dependencies": {
+    "puppeteer-core": "19.7",
+    "sharp": "^0.32.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^111.0.0",
+    "serverless-plugin-typescript": "^2.1.4"
+  }
+}

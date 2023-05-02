@@ -48,6 +48,22 @@ import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 
+const rejectAfter = (duration: number) =>
+  new Promise((resolve, reject) => {
+    setTimeout(() => {
+      reject(new Error("Timeout"));
+    }, duration);
+  });
+
+export const withTimeout = (
+  duration: number,
+  callback: (...args: any) => Promise<any>
+) => {
+  return (...args: any) => {
+    return Promise.race([rejectAfter(duration), callback(...args)]);
+  };
+};
+
 const graphqlURL = new URL(
   process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
 );
@@ -282,51 +298,7 @@ class MapContextManager {
       maxPitch: 70,
       optimizeForTerrain: true,
       logoPosition: "bottom-right",
-      transformRequest: (url, resoureType) => {
-        if (/^\/sprites\//.test(url)) {
-          const { host, protocol } = window.location;
-          if (process.env.NODE_ENV === "development") {
-            // Access cloudfront directly. May exhibit CORS issues.
-            return {
-              // eslint-disable-next-line i18next/no-literal-string
-              url: `https://${process.env.REACT_APP_CLOUDFRONT_DOCS_DISTRO}.cloudfront.net${url}?ssn-tr=true`,
-            };
-          } else {
-            // Forward requests to the same origin, which will be routed to the
-            // s3 bucket via cloudfront
-            return {
-              // eslint-disable-next-line i18next/no-literal-string
-              url: `${protocol}//${host}${url}?ssn-tr=true`,
-            };
-          }
-        }
-        const Url = new URL(url);
-        if (
-          this.internalState.offlineTileSimulatorActive &&
-          /api\.mapbox\./.test(url)
-        ) {
-          url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
-        } else if (
-          this.userAccessToken &&
-          Url.host === graphqlURL.host &&
-          /\/sketches\/\d+\.geojson.json/.test(url)
-        ) {
-          const id = url.match(/sketches\/(\d+)\.geojson/)![1];
-          const timestamp = this.sketchTimestamps.get(parseInt(id));
-          if (timestamp) {
-            Url.searchParams.set("timestamp", timestamp);
-          }
-          return {
-            url: Url.toString(),
-            // eslint-disable-next-line i18next/no-literal-string
-            headers: { authorization: `Bearer ${this.userAccessToken}` },
-          };
-        } else {
-          Url.searchParams.set("ssn-tr", "true");
-          url = Url.toString();
-        }
-        return { url };
-      },
+      transformRequest: this.requestTransformer,
     };
     if (this.initialCameraOptions) {
       mapOptions = {
@@ -347,7 +319,7 @@ class MapContextManager {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
     }
     this.map = new Map(mapOptions);
-    this.addSprites(sprites);
+    this.addSprites(sprites, this.map);
 
     this.interactivityManager = new LayerInteractivityManager(
       this.map,
@@ -378,6 +350,52 @@ class MapContextManager {
 
     return this.map;
   }
+
+  requestTransformer = (url: string, resourceType: mapboxgl.ResourceType) => {
+    if (/^\/sprites\//.test(url)) {
+      const { host, protocol } = window.location;
+      if (process.env.NODE_ENV === "development") {
+        // Access cloudfront directly. May exhibit CORS issues.
+        return {
+          // eslint-disable-next-line i18next/no-literal-string
+          url: `https://${process.env.REACT_APP_CLOUDFRONT_DOCS_DISTRO}.cloudfront.net${url}?ssn-tr=true`,
+        };
+      } else {
+        // Forward requests to the same origin, which will be routed to the
+        // s3 bucket via cloudfront
+        return {
+          // eslint-disable-next-line i18next/no-literal-string
+          url: `${protocol}//${host}${url}?ssn-tr=true`,
+        };
+      }
+    }
+    const Url = new URL(url);
+    if (
+      this.internalState.offlineTileSimulatorActive &&
+      /api\.mapbox\./.test(url)
+    ) {
+      url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
+    } else if (
+      this.userAccessToken &&
+      Url.host === graphqlURL.host &&
+      /\/sketches\/\d+\.geojson.json/.test(url)
+    ) {
+      const id = url.match(/sketches\/(\d+)\.geojson/)![1];
+      const timestamp = this.sketchTimestamps.get(parseInt(id));
+      if (timestamp) {
+        Url.searchParams.set("timestamp", timestamp);
+      }
+      return {
+        url: Url.toString(),
+        // eslint-disable-next-line i18next/no-literal-string
+        headers: { authorization: `Bearer ${this.userAccessToken}` },
+      };
+    } else {
+      Url.searchParams.set("ssn-tr", "true");
+      url = Url.toString();
+    }
+    return { url };
+  };
 
   /**
    * Adds a local Feature to cache so that the map client need not request
@@ -691,7 +709,7 @@ class MapContextManager {
       this.updateStyleInfinitLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
       const styleHash = md5(JSON.stringify(style));
-      this.addSprites(sprites);
+      this.addSprites(sprites, this.map);
       if (!this.mapIsLoaded) {
         setTimeout(() => {
           this.map!.setStyle(style);
@@ -1599,7 +1617,10 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
-  private async addSprites(sprites: SpriteDetailsFragment[]) {
+  private async addSprites(
+    sprites: SpriteDetailsFragment[],
+    map: mapboxgl.Map
+  ) {
     // get unique sprite ids
     for (const sprite of sprites) {
       const spriteId =
@@ -1607,13 +1628,13 @@ class MapContextManager {
           ? sprite.id
           : // eslint-disable-next-line
             `seasketch://sprites/${sprite.id}`;
-      if (!this.map!.hasImage(spriteId)) {
-        this.addSprite(sprite);
+      if (!map!.hasImage(spriteId)) {
+        this.addSprite(sprite, map);
       }
     }
   }
 
-  private async addSprite(sprite: SpriteDetailsFragment) {
+  private async addSprite(sprite: SpriteDetailsFragment, map: mapboxgl.Map) {
     let spriteImage = sprite.spriteImages.find(
       (i) => window.devicePixelRatio === i.pixelRatio
     );
@@ -1641,9 +1662,9 @@ class MapContextManager {
       spriteImage.width,
       spriteImage.height,
       spriteImage.url,
-      this.map!
+      map
     );
-    this.map!.addImage(spriteId, image, {
+    map.addImage(spriteId, image, {
       pixelRatio: spriteImage.pixelRatio,
     });
     // } else {
@@ -1834,7 +1855,7 @@ class MapContextManager {
     this.updateStyle();
   }
 
-  getMapBookmarkData() {
+  async getMapBookmarkData(skipThumbnail = false) {
     if (!this.map) {
       throw new Error("Map not ready to create bookmark data");
     }
@@ -1852,6 +1873,11 @@ class MapContextManager {
     }
     const canvas = this.map.getCanvas();
     const sidebarState = currentSidebarState();
+    const style = this.map.getStyle();
+
+    const clientGeneratedThumbnail = skipThumbnail
+      ? undefined
+      : await this.getMapThumbnail(sidebarState);
     return {
       cameraOptions: {
         center: this.map.getCenter().toArray(),
@@ -1863,13 +1889,93 @@ class MapContextManager {
         this.internalState.basemapOptionalLayerStates || {},
       visibleDataLayers,
       selectedBasemap: parseInt(this.internalState.selectedBasemap!),
-      style: this.map.getStyle(),
+      style,
       mapDimensions: [canvas.clientWidth, canvas.clientHeight],
       sidebarState,
       visibleSketches,
       basemapName: this.basemaps[this.internalState.selectedBasemap!].name,
+      clientGeneratedThumbnail,
     };
   }
+
+  getMapThumbnail = withTimeout(
+    15000,
+    async (sidebarState: {
+      isSmall: boolean;
+      open: boolean;
+      width: number;
+    }) => {
+      return new Promise(async (resolve, reject) => {
+        try {
+          if (!this.map) {
+            throw new Error("Map not ready to create thumbnail");
+          }
+          const { sprites } = await this.getComputedStyle();
+          const style = this.map.getStyle();
+          const div = document.createElement("div");
+          div.style.setProperty("position", "absolute");
+          const width = this.map.getContainer().clientWidth;
+          const height = this.map.getContainer().clientHeight;
+          div.style.setProperty("left", width * -1.1 + "px");
+          div.style.setProperty("top", "0px");
+          // div.style.setProperty("z-index", "9999999");
+          div.style.setProperty("width", width + "px");
+          div.style.setProperty("height", height + "px");
+          document.body.appendChild(div);
+          const newMap = new mapboxgl.Map({
+            style,
+            container: div,
+            preserveDrawingBuffer: true,
+            center: this.map.getCenter(),
+            zoom: this.map.getZoom(),
+            transformRequest: this.requestTransformer,
+          });
+          this.addSprites(sprites, newMap);
+          newMap.on("load", () => {
+            let clip: null | { x: number; width: number } = null;
+            if (sidebarState.open && width >= 1080) {
+              clip = {
+                width: width - sidebarState.width,
+                x: sidebarState.width,
+              };
+            }
+            const targetWidth = 240;
+            const scalingFactor = targetWidth / width;
+            const targetHeight = scalingFactor * height;
+            const canvas = newMap.getCanvas();
+            const resizedCanvas = document.createElement("canvas");
+            const oc = document.createElement("canvas");
+            const octx = oc.getContext("2d");
+            if (!octx) {
+              return reject(new Error("Could not create canvas context"));
+            }
+            oc.width = clip ? canvas.width - clip.x : canvas.width;
+            oc.height = canvas.height;
+
+            // step 2: pre-filter image using steps as radius
+            const steps = (oc.width / targetWidth) >> 1;
+            // eslint-disable-next-line i18next/no-literal-string
+            octx.filter = `blur(${steps}px)`;
+            octx.drawImage(canvas, clip ? clip.x * -1 : 0, 0);
+            // Should be half the size of the thumbnail variant in cloudflare images
+            resizedCanvas.width = targetWidth;
+            resizedCanvas.height = targetHeight;
+            const resizedContext = resizedCanvas.getContext("2d");
+            if (!resizedContext) {
+              return reject(new Error("Could not create canvas context"));
+            }
+            resizedContext.drawImage(oc, 0, 0, targetWidth, targetHeight);
+            const data = resizedCanvas.toDataURL("image/jpeg", 0.7);
+            newMap.remove();
+            div.remove();
+            return resolve(data);
+          });
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+  );
 
   async showMapBookmark(
     bookmark: Pick<
@@ -1883,7 +1989,7 @@ class MapContextManager {
     client?: ApolloClient<NormalizedCacheObject>
   ) {
     if (savePreviousState) {
-      this.previousMapState = this.getMapBookmarkData();
+      this.previousMapState = await this.getMapBookmarkData(true);
     }
     if (!this.map) {
       throw new Error("Map not ready to show bookmark");

@@ -1,10 +1,16 @@
 import { Helpers } from "graphile-worker";
 import puppeteer, { Browser, ScreenshotOptions } from "puppeteer";
-import sharp from "sharp";
-import { encode } from "blurhash";
 import { sign } from "../src/auth/jwks";
 import { withTimeout } from "../src/withTimeout";
 import * as Sentry from "@sentry/node";
+import AWS from "aws-sdk";
+
+const lambda = new AWS.Lambda({
+  region: process.env.AWS_REGION || "us-west-2",
+  httpOptions: {
+    timeout: 120000,
+  },
+});
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -46,6 +52,7 @@ async function createBookmarkScreenshot(
   const transaction = Sentry.startTransaction({
     name: "createBookmarkScreenshot",
   });
+
   await helpers.withPgClient(async (client) => {
     let span = transaction.startChild({ op: "query bookmark" });
     const { rows } = await client.query(
@@ -93,9 +100,8 @@ async function createBookmarkScreenshot(
       /localhost/.test(process.env.CLIENT_DOMAIN) ? "http" : "https"
     }://${process.env.CLIENT_DOMAIN}/screenshot.html?mt=${
       process.env.MAPBOX_ACCESS_TOKEN
-    }&auth=${token}&bookmarkUrl=${HOST}/bookmarks/${bookmark.id}`;
+    }&auth=${token}`;
 
-    console.log(`Loading page: ${url}`);
     Sentry.setExtra("url", url);
 
     let clip: undefined | ScreenshotOptions["clip"] = undefined;
@@ -115,106 +121,60 @@ async function createBookmarkScreenshot(
       );
     }
     span.finish();
-    span = transaction.startChild({ op: "open page in browser" });
-    const browser = await getBrowser();
-    console.log("got browser");
-    const page = await browser.newPage();
-    page
-      .on("console", (message) =>
-        console.log(
-          `${message.type().substr(0, 3).toUpperCase()} ${message.text()}`
-        )
-      )
-      .on("pageerror", (error) => console.log(error.toString()))
-      .on("response", (response) =>
-        console.log(`${response.status()} ${response.url()}`)
-      )
-      .on("requestfailed", (request) =>
-        console.log(`${request.failure().errorText} ${request.url()}`)
-      );
-    page.setViewport({
+
+    const { rows: bookmarkRows } = await client.query(
+      `
+      SELECT bookmark_data($1) as bookmark
+        `,
+      [bookmark.id]
+    );
+    const bookmarkData = bookmarkRows[0].bookmark;
+    const { rows: spriteRows } = await client.query(
+      `
+      SELECT get_sprite_data_for_screenshot(map_bookmarks.*) as sprite_images from map_bookmarks where id = $1
+        `,
+      [bookmark.id]
+    );
+    const spriteImages = spriteRows[0].sprite_images;
+    const lambdaPayload = {
       width,
       height,
-      deviceScaleFactor: 2,
-    });
-
-    await page.goto(url);
-    console.log("went to url");
-
-    await page.waitForSelector("#loaded", {
-      timeout: 30000,
-    });
-    span.finish();
-    span = transaction.startChild({ op: "take screenshot" });
-    console.log("take screenshot");
-    const buffer = await page.screenshot({
-      captureBeyondViewport: false,
       clip,
-    });
-    console.log("buffer length", buffer.length);
-    span.finish();
-    span = transaction.startChild({ op: "resize screenshot" });
-    console.log("resize screenshot");
-    const form = new FormData();
-    const { data: resizedBuffer, info: resizedMetadata } = await sharp(buffer)
-      .withMetadata({ density: 144 })
-      .toBuffer({ resolveWithObject: true });
-
-    const { data: pixels, info: metadata } = await sharp(buffer)
-      .resize(
-        Math.round(clip ? clip.width / 10 : width / 10),
-        Math.round(clip ? clip.height / 10 : height / 10)
-      )
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    console.log("create blurhash");
-    const blurhash = encode(
-      new Uint8ClampedArray(pixels),
-      metadata.width,
-      metadata.height,
-      3,
-      3
-    );
-    await client.query(`update map_bookmarks set blurhash = $1 where id = $2`, [
-      blurhash,
-      bookmark.id,
-    ]);
-    console.log("saved blurhash");
-    span.finish();
-    span = transaction.startChild({ op: "send to cloudflare" });
-    form.append("file", new Blob([buffer]), `${bookmark.id}.png`);
-
-    const options: RequestInit = {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${CLOUDFLARE_IMAGES_TOKEN}`,
-      },
+      url,
+      bookmarkData,
     };
+    span = transaction.startChild({ op: "invoke lambda" });
 
-    options.body = form;
-
-    console.log(
-      "sendiing to cloudlare",
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_IMAGES_ACCOUNT}/images/v1`,
-      options
-    );
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_IMAGES_ACCOUNT}/images/v1`,
-      options
-    );
-    const data = await response.json();
-    console.log("response from cloudflare");
-    console.log(data);
-    Sentry.setExtra("cloudflare response", data);
+    const res = await lambda
+      .invoke({
+        FunctionName: process.env.SCREENSHOTTER_FUNCTION_ARN,
+        Payload: JSON.stringify(lambdaPayload),
+      })
+      .promise();
+    if (!res.Payload) {
+      console.error(`map screenshot task invocation error`, res);
+      throw new Error("Map screenshot lambda function invocation error");
+    }
     span.finish();
+    let lambdaResponseData: any;
+    if (typeof res.Payload === "string") {
+      lambdaResponseData = JSON.parse(res.Payload);
+    } else {
+      lambdaResponseData = res.Payload;
+    }
+
+    if (!lambdaResponseData.body) {
+      throw new Error("Lambda response body is empty");
+    }
+    const body = JSON.parse(lambdaResponseData.body);
+
     span = transaction.startChild({ op: "update image id in db" });
-    console.log("update map bookmarks with id");
-    await client.query(
-      `update map_bookmarks set image_id = $2, blurhash = $3 where id = $1`,
-      [bookmark.id, data.result.id, blurhash]
-    );
+    await client.query(`update map_bookmarks set image_id = $2 where id = $1`, [
+      bookmark.id,
+      body.id,
+    ]);
     span.finish();
     transaction.finish();
   });
 }
-export default withTimeout(30000, createBookmarkScreenshot);
+export default withTimeout(60000, createBookmarkScreenshot);
