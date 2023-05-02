@@ -32,6 +32,20 @@ exports.handler = async (event) => {
         : undefined
     );
 
+    page
+      .on("console", (message) =>
+        console.log(
+          `${message.type().substr(0, 3).toUpperCase()} ${message.text()}`
+        )
+      )
+      .on("pageerror", ({ message }) => console.log(message))
+      .on("response", (response) =>
+        console.log(`${response.status()} ${response.url()}`)
+      )
+      .on("requestfailed", (request) =>
+        console.log(`${request.failure().errorText} ${request.url()}`)
+      );
+
     await page.evaluate((bookmarkData) => {
       window.showBookmark(bookmarkData);
     }, bookmarkData);
@@ -45,6 +59,7 @@ exports.handler = async (event) => {
     } else {
       await page.waitForSelector("#log-messages", { timeout: 10000 });
     }
+    await new Promise((resolve) => setTimeout(resolve, 2000));
     console.log("take screenshot");
     const buffer = await page.screenshot({
       captureBeyondViewport: false,
