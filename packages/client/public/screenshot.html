@@ -65,7 +65,8 @@
         center: [-74.5, 40], // starting position [lng, lat]
         zoom: 9, // starting zoom
         ...data.cameraOptions,
-        transformRequest: (url, resourceType, etc) => {
+        transformRequest: (url, resourceType) => {
+          console.log('transformRequest', url);
           if (/seasketch:\/\/sprites\//.test(url)) {
             const { host, protocol } = window.location;
             // Forward requests to the same origin, which will be routed to the
@@ -89,6 +90,9 @@
       for (const spriteImage of Object.values(bestImages)) {
         const el = document.getElementById(spriteImage.spriteId);
         try {
+          console.log('loading image', spriteImage.spriteId,
+            spriteImage.url,
+            spriteImage.pixelRatio);
           await loadImage(
             spriteImage.spriteId,
             spriteImage.url,
