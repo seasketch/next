@@ -66,8 +66,8 @@
         zoom: 9, // starting zoom
         ...data.cameraOptions,
         transformRequest: (url, resourceType) => {
-          console.log('transformRequest', url);
           if (/seasketch:\/\/sprites\//.test(url)) {
+            console.log('transformRequest', url);
             const { host, protocol } = window.location;
             // Forward requests to the same origin, which will be routed to the
             // s3 bucket via cloudfront
@@ -76,7 +76,7 @@
             };
           }
           if (token && /\/sketches\/\d+\.geojson.json/.test(url)) {
-            console.log('url', url);
+            console.log('transformRequest', url);
             const Url = new URL(url);
             Url.searchParams.set("reporting_access_token", token);
             return {
