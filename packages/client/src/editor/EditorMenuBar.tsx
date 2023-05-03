@@ -142,12 +142,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         },
       });
     }
-    if (
-      schema.marks.attachmentLink &&
-      props.createMapBookmark &&
-      isSuperuser &&
-      user?.email === "underbluewaters@gmail.com"
-    ) {
+    if (schema.marks.attachmentLink && props.createMapBookmark) {
       options.push({
         label: t("Map Bookmark"),
         onClick: async () => {
