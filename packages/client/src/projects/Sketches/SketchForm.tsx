@@ -72,13 +72,17 @@ export default function SketchForm({
               ...prev,
               [element.id]: {
                 value,
-                errors: validationErrors,
+                error: validationErrors,
               },
             }));
             if (onChange) {
-              const hasErrors =
-                validationErrors ||
-                Object.values(state).find((v) => v.error) !== undefined;
+              let otherValidationErrors = false;
+              for (const id in state) {
+                if (state[id].error && parseInt(id) !== element.id) {
+                  otherValidationErrors = true;
+                }
+              }
+              const hasErrors = validationErrors || otherValidationErrors;
               const newProperties: { [id: number]: any } = {
                 [element.id]: value,
               };

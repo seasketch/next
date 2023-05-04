@@ -74,6 +74,12 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
   }, [props.value]);
 
   useEffect(() => {
+    if (!props.value && props.isRequired) {
+      props.onChange(props.value, true);
+    }
+  }, []);
+
+  useEffect(() => {
     if (
       (props.value === undefined || (props.value === null && props.editable)) &&
       props.componentSettings.autoSelectFirstOptionInList
@@ -144,6 +150,10 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
         onClick={() => (isOpen ? closeMenu() : openMenu())}
         className={`bg-white rounded w-full text-black ${
           style.compactAppearance ? "border-gray-300 border shadow-sm" : ""
+        } ${
+          props.isRequired && props.submissionAttempted && !props.value
+            ? "border-red-500"
+            : ""
         } relative flex justify-center ${
           getComboboxProps()["aria-expanded"]
             ? "ring ring-blue-200 ring-opacity-50"
@@ -151,12 +161,15 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
         }`}
         {...getComboboxProps()}
         style={{
-          background: `linear-gradient(white 50%, rgba(255, 255, 255, 0.85) 100%)`,
+          background:
+            props.value || !props.isRequired || !props.submissionAttempted
+              ? `linear-gradient(white 50%, rgba(255, 255, 255, 0.85) 100%)`
+              : undefined,
         }}
       >
         <input
           spellCheck={false}
-          className={`flex-1 p-2 px-3 ring-0 outline-none rounded-l bg-transparent ${
+          className={`flex-1 p-2 px-3 ring-0 outline-none rounded-l bg-transparent  ${
             selectedOption?.label === inputValue
               ? "text-black"
               : "text-gray-500"

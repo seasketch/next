@@ -33,6 +33,12 @@ const Rating: FormElementComponent<RatingProps, number> = (props) => {
     setState((prev) => ({ ...prev, selected: props.value || 0 }));
   }, [props.value]);
 
+  useEffect(() => {
+    if (props.isRequired && props.value === undefined) {
+      props.onChange(props.value, true);
+    }
+  }, []);
+
   return (
     <>
       <FormElementBody
@@ -75,7 +81,11 @@ const Rating: FormElementComponent<RatingProps, number> = (props) => {
                 strokeLinejoin="round"
                 strokeWidth={1}
                 stroke={
-                  state.selected >= star
+                  props.isRequired &&
+                  props.submissionAttempted &&
+                  props.value === undefined
+                    ? "#bb0000"
+                    : state.selected >= star
                     ? "#ffc200"
                     : state.hovered >= star
                     ? "rgba(255, 255, 255, 0.5)"

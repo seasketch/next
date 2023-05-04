@@ -20,6 +20,13 @@ export type YesNoProps = {};
  */
 const YesNo: FormElementComponent<YesNoProps, boolean> = (props) => {
   const { t } = useTranslation("surveys");
+
+  useEffect(() => {
+    if (props.isRequired && props.value === undefined) {
+      props.onChange(props.value, true);
+    }
+  }, []);
+
   return (
     <>
       <FormElementBody
@@ -36,12 +43,26 @@ const YesNo: FormElementComponent<YesNoProps, boolean> = (props) => {
           Icon={CheckIcon}
           selected={props.value === true}
           onClick={() => props.onChange(true, false, true)}
+          className={
+            props.isRequired &&
+            props.submissionAttempted &&
+            props.value === undefined
+              ? "text-red-500"
+              : ""
+          }
         />
         <SurveyInputButton
           label={t("No")}
           Icon={XIcon}
           selected={props.value === false}
           onClick={() => props.onChange(false, false, true)}
+          className={
+            props.isRequired &&
+            props.submissionAttempted &&
+            props.value === undefined
+              ? "text-red-500"
+              : ""
+          }
         />
       </div>
       {/* <FormElementEditorPortal

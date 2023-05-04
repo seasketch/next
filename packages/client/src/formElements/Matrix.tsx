@@ -46,6 +46,8 @@ const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
       validate(newValue, props.componentSettings, props.isRequired)
     );
   }
+
+  // TODO: add validation when props.isRequired is true
   return (
     <>
       <FormElementBody

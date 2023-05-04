@@ -37,6 +37,13 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
     }
   }, [context?.bestEmail]);
 
+  useEffect(() => {
+    const e = validate(props.value, props.isRequired);
+    if (e) {
+      props.onChange(props.value, true);
+    }
+  }, []);
+
   const placeholder = useLocalizedComponentSetting("placeholder", props);
 
   return (
@@ -51,7 +58,10 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
       />
       <div
         className="w-full md:w-96 max-w-full form-element-short-text pt-1"
-        style={{ height: 68 }}
+        style={{
+          height: 68,
+          marginBottom: props.submissionAttempted && errors ? 16 : undefined,
+        }}
       >
         <TextInput
           type="email"
@@ -68,6 +78,7 @@ const Email: FormElementComponent<EmailProps, string> = (props) => {
           required={props.isRequired}
           autoFocus={props.autoFocus}
           placeholder={placeholder}
+          // hideErrorMessage={props.isSketchWorkflow}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               props.onSubmit();

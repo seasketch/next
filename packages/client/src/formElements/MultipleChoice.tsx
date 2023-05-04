@@ -1,5 +1,5 @@
 import { CheckIcon } from "@heroicons/react/outline";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import EditableResponseCell from "../admin/surveys/EditableResponseCell";
 import Badge from "../components/Badge";
@@ -40,6 +40,16 @@ const MultipleChoice: FormElementComponent<
     props
   ) as FormElementOption[];
   const { confirm } = useDialog();
+
+  useEffect(() => {
+    if (props.isRequired && (!props.value || props.value.length === 0)) {
+      props.onChange(props.value, true);
+    }
+  }, []);
+
+  const noValue = props.componentSettings.multipleSelect
+    ? !props.value || props.value.length === 0
+    : !props.value;
   return (
     <>
       <FormElementBody
@@ -58,7 +68,11 @@ const MultipleChoice: FormElementComponent<
             return (
               <SurveyInputButton
                 key={value || label}
-                className={"w-full"}
+                className={`w-full ${
+                  props.isRequired && noValue && props.submissionAttempted
+                    ? `border-red-300`
+                    : ""
+                }`}
                 label={label}
                 iconPlacement={
                   props.componentSettings.multipleSelect ? "left" : "right"
@@ -83,10 +97,13 @@ const MultipleChoice: FormElementComponent<
                     const newVal = selected
                       ? current.filter((v) => v !== (value || label))
                       : [...current, value || label];
-                    props.onChange(newVal.length ? newVal : undefined, false);
+                    props.onChange(
+                      newVal.length ? newVal : undefined,
+                      !props.isRequired || newVal?.length > 0 ? false : true
+                    );
                   } else {
                     if (selected) {
-                      props.onChange(undefined, false);
+                      props.onChange(undefined, props.isRequired);
                     } else {
                       props.onChange([value || label], false, true);
                     }

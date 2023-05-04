@@ -39,6 +39,13 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
     setErrors(validate(val, props.isRequired, props.componentSettings));
   }, [props.componentSettings, props.isRequired, val]);
 
+  useEffect(() => {
+    const e = validate(props.value, props.isRequired, props.componentSettings);
+    if (e) {
+      props.onChange(props.value, true);
+    }
+  }, []);
+
   return (
     <>
       <FormElementBody
@@ -66,6 +73,7 @@ const ShortText: FormElementComponent<ShortTextProps, string> = (props) => {
             props.componentSettings.autocomplete ||
             `form-element-${props.id}-text-input`
           }
+          hideErrorMessage={props.isSketchWorkflow}
           autocomplete={props.componentSettings.autocomplete}
           required={props.isRequired}
           autoFocus={props.autoFocus}

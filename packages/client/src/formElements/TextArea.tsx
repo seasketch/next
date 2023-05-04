@@ -29,6 +29,13 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
   const showError = errors && props.submissionAttempted;
   const context = useContext(FormLanguageContext);
   const placeholder = useLocalizedComponentSetting("placeholder", props);
+
+  useEffect(() => {
+    if (props.isRequired && (!props.value || props.value.length === 0)) {
+      props.onChange(props.value, true);
+    }
+  }, []);
+
   return (
     <>
       <div className="flex flex-col" style={{ maxHeight: "60vh" }}>
@@ -44,7 +51,7 @@ const TextArea: FormElementComponent<TextAreaProps, string> = (props) => {
           autoFocus={props.autoFocus}
           required={props.isRequired}
           className={`border-gray-300 shadow-sm w-full rounded text-base text-black  my-4 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 ${
-            showError ? "bg-red-50" : "bg-white"
+            showError ? "border-red-500 bg-white" : "bg-white bg-opacity-90"
           }`}
           placeholder={showError ? t("Required field") : placeholder}
           style={{

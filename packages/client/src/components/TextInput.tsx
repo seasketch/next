@@ -34,6 +34,7 @@ export interface TextInputOptions {
   meta?: FieldMetaProps<string>;
   autocomplete?: string;
   ref?: any;
+  hideErrorMessage?: boolean;
 }
 
 const TextArea = forwardRef((props: any, ref: any) => (
@@ -212,7 +213,7 @@ export default forwardRef(function TextInput(
           </div>
         )}
       </div>
-      {error && (
+      {error && !props.hideErrorMessage && (
         <p className="mt-2 text-sm text-red-600" id={`${name}-error`}>
           {error}
         </p>
