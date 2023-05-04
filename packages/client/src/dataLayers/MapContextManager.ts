@@ -342,6 +342,7 @@ class MapContextManager {
     this.map.on("data", this.onMapDataEvent);
     this.map.on("dataloading", this.onMapDataEvent);
     this.map.on("moveend", this.onMapMove);
+    this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", () => {
       this.mapIsLoaded = true;
       // Use to trigger changes to mapContextManager.map
@@ -1617,6 +1618,8 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
+  private spritesById: { [id: string]: SpriteDetailsFragment } = {};
+
   private async addSprites(
     sprites: SpriteDetailsFragment[],
     map: mapboxgl.Map
@@ -1628,9 +1631,10 @@ class MapContextManager {
           ? sprite.id
           : // eslint-disable-next-line
             `seasketch://sprites/${sprite.id}`;
-      if (!map!.hasImage(spriteId)) {
-        this.addSprite(sprite, map);
-      }
+      this.spritesById[spriteId] = sprite;
+      // if (!map!.hasImage(spriteId)) {
+      //   this.addSprite(sprite, map);
+      // }
     }
   }
 
@@ -1672,6 +1676,15 @@ class MapContextManager {
     //   throw new Error(`Sprite id=${sprite.id} missing both dataUri and url`);
     // }
   }
+
+  onStyleImageMissing = (e: any) => {
+    if (/seasketch:\/\/sprites\/\d+/.test(e.id)) {
+      const spriteFragment = this.spritesById[e.id];
+      if (spriteFragment) {
+        this.addSprite(spriteFragment, this.map!);
+      }
+    }
+  };
 
   private updateLayerState = () => {
     delete this.updateStateDebouncerReference;
