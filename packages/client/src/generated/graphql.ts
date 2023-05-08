@@ -16632,6 +16632,9 @@ export type SketchingDetailsFragment = (
     & { formElements?: Maybe<Array<(
       { __typename?: 'FormElement' }
       & SketchFormElementFragment
+    )>>, logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & LogicRuleDetailsFragment
     )>> }
   )> }
 );
@@ -16658,7 +16661,7 @@ export type SketchClassFormQuery = (
   { __typename?: 'Query' }
   & { form?: Maybe<(
     { __typename?: 'Form' }
-    & Pick<Form, 'id'>
+    & Pick<Form, 'id' | 'sketchClassId'>
     & { formElements?: Maybe<Array<(
       { __typename?: 'FormElement' }
       & SketchFormElementFragment
@@ -16786,6 +16789,19 @@ export type UpdateSketchFormElementMutation = (
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id' | 'isRequired' | 'exportId'>
     )> }
+  )> }
+);
+
+export type SketchClassLogicRuleDetailsQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type SketchClassLogicRuleDetailsQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & SketchingDetailsFragment
   )> }
 );
 
@@ -19361,6 +19377,23 @@ export const SketchFormElementFragmentDoc = gql`
   }
 }
     `;
+export const LogicRuleDetailsFragmentDoc = gql`
+    fragment LogicRuleDetails on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
+}
+    `;
 export const SketchingDetailsFragmentDoc = gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -19380,6 +19413,9 @@ export const SketchingDetailsFragmentDoc = gql`
     formElements {
       ...SketchFormElement
     }
+    logicRules {
+      ...LogicRuleDetails
+    }
   }
   geometryType
   geoprocessingClientName
@@ -19391,7 +19427,8 @@ export const SketchingDetailsFragmentDoc = gql`
   canDigitize
   translatedProps
 }
-    ${SketchFormElementFragmentDoc}`;
+    ${SketchFormElementFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
 export const AdminSketchingDetailsFragmentDoc = gql`
     fragment AdminSketchingDetails on SketchClass {
   ...SketchingDetails
@@ -19547,23 +19584,6 @@ export const FormElementDetailsFragmentDoc = gql`
   mapCameraOptions
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
-export const LogicRuleDetailsFragmentDoc = gql`
-    fragment LogicRuleDetails on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
-  }
-}
-    `;
 export const SketchClassDetailsFragmentDoc = gql`
     fragment SketchClassDetails on SketchClass {
   id
@@ -24943,6 +24963,7 @@ export const SketchClassFormDocument = gql`
     formElements {
       ...SketchFormElement
     }
+    sketchClassId
   }
 }
     ${SketchFormElementFragmentDoc}`;
@@ -25246,6 +25267,41 @@ export function useUpdateSketchFormElementMutation(baseOptions?: Apollo.Mutation
 export type UpdateSketchFormElementMutationHookResult = ReturnType<typeof useUpdateSketchFormElementMutation>;
 export type UpdateSketchFormElementMutationResult = Apollo.MutationResult<UpdateSketchFormElementMutation>;
 export type UpdateSketchFormElementMutationOptions = Apollo.BaseMutationOptions<UpdateSketchFormElementMutation, UpdateSketchFormElementMutationVariables>;
+export const SketchClassLogicRuleDetailsDocument = gql`
+    query SketchClassLogicRuleDetails($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...SketchingDetails
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+
+/**
+ * __useSketchClassLogicRuleDetailsQuery__
+ *
+ * To run a query within a React component, call `useSketchClassLogicRuleDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchClassLogicRuleDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchClassLogicRuleDetailsQuery({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useSketchClassLogicRuleDetailsQuery(baseOptions: Apollo.QueryHookOptions<SketchClassLogicRuleDetailsQuery, SketchClassLogicRuleDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchClassLogicRuleDetailsQuery, SketchClassLogicRuleDetailsQueryVariables>(SketchClassLogicRuleDetailsDocument, options);
+      }
+export function useSketchClassLogicRuleDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchClassLogicRuleDetailsQuery, SketchClassLogicRuleDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchClassLogicRuleDetailsQuery, SketchClassLogicRuleDetailsQueryVariables>(SketchClassLogicRuleDetailsDocument, options);
+        }
+export type SketchClassLogicRuleDetailsQueryHookResult = ReturnType<typeof useSketchClassLogicRuleDetailsQuery>;
+export type SketchClassLogicRuleDetailsLazyQueryHookResult = ReturnType<typeof useSketchClassLogicRuleDetailsLazyQuery>;
+export type SketchClassLogicRuleDetailsQueryResult = Apollo.QueryResult<SketchClassLogicRuleDetailsQuery, SketchClassLogicRuleDetailsQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -28645,6 +28701,7 @@ export const namedOperations = {
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
+    SketchClassLogicRuleDetails: 'SketchClassLogicRuleDetails',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',

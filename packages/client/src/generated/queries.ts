@@ -16630,6 +16630,9 @@ export type SketchingDetailsFragment = (
     & { formElements?: Maybe<Array<(
       { __typename?: 'FormElement' }
       & SketchFormElementFragment
+    )>>, logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & LogicRuleDetailsFragment
     )>> }
   )> }
 );
@@ -16656,7 +16659,7 @@ export type SketchClassFormQuery = (
   { __typename?: 'Query' }
   & { form?: Maybe<(
     { __typename?: 'Form' }
-    & Pick<Form, 'id'>
+    & Pick<Form, 'id' | 'sketchClassId'>
     & { formElements?: Maybe<Array<(
       { __typename?: 'FormElement' }
       & SketchFormElementFragment
@@ -16784,6 +16787,19 @@ export type UpdateSketchFormElementMutation = (
       { __typename?: 'FormElement' }
       & Pick<FormElement, 'id' | 'isRequired' | 'exportId'>
     )> }
+  )> }
+);
+
+export type SketchClassLogicRuleDetailsQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type SketchClassLogicRuleDetailsQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & SketchingDetailsFragment
   )> }
 );
 
@@ -19359,6 +19375,23 @@ export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const LogicRuleDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment LogicRuleDetails on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
+}
+    `;
 export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -19378,6 +19411,9 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     formElements {
       ...SketchFormElement
     }
+    logicRules {
+      ...LogicRuleDetails
+    }
   }
   geometryType
   geoprocessingClientName
@@ -19389,7 +19425,8 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   canDigitize
   translatedProps
 }
-    ${SketchFormElementFragmentDoc}`;
+    ${SketchFormElementFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
 export const AdminSketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment AdminSketchingDetails on SketchClass {
   ...SketchingDetails
@@ -19545,23 +19582,6 @@ export const FormElementDetailsFragmentDoc = /*#__PURE__*/ gql`
   mapCameraOptions
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
-export const LogicRuleDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment LogicRuleDetails on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
-  }
-}
-    `;
 export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchClassDetails on SketchClass {
   id
@@ -21558,6 +21578,7 @@ export const SketchClassFormDocument = /*#__PURE__*/ gql`
     formElements {
       ...SketchFormElement
     }
+    sketchClassId
   }
 }
     ${SketchFormElementFragmentDoc}`;
@@ -21638,6 +21659,13 @@ export const UpdateSketchFormElementDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SketchClassLogicRuleDetailsDocument = /*#__PURE__*/ gql`
+    query SketchClassLogicRuleDetails($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...SketchingDetails
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -22861,6 +22889,7 @@ export const namedOperations = {
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
+    SketchClassLogicRuleDetails: 'SketchClassLogicRuleDetails',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',

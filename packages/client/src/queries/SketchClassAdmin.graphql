@@ -38,6 +38,9 @@ fragment SketchingDetails on SketchClass {
     formElements {
       ...SketchFormElement
     }
+    logicRules {
+      ...LogicRuleDetails
+    }
   }
   geometryType
   geoprocessingClientName
@@ -70,6 +73,7 @@ query SketchClassForm($id: Int!) {
     formElements {
       ...SketchFormElement
     }
+    sketchClassId
   }
 }
 
@@ -166,6 +170,32 @@ mutation UpdateSketchFormElement(
       id
       isRequired
       exportId
+    }
+  }
+}
+
+query SketchClassLogicRuleDetails($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...SketchingDetails
+  }
+}
+
+mutation createLogicRuleForSketchClass(
+  $formElementId: Int!
+  $operator: FieldRuleOperator!
+  $command: FormLogicCommand!
+  $subjectId: Int!
+) {
+  createLogicRule(
+    input: {
+      command: $command
+      formElementId: $formElementId
+      operator: $operator
+      subjectId: $subjectId
+    }
+  ) {
+    formLogicRule {
+      ...LogicRuleDetails
     }
   }
 }
