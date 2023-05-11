@@ -96,6 +96,7 @@ DirectSelect.fireUpdate = function () {
 // inspired by mapbox-gl-draw-waypoint
 // https://github.com/zakjan/mapbox-gl-draw-waypoint/blob/master/src/modes/direct_select.js
 DirectSelect.clickInactive = function (state: any, e: any) {
+  console.log("click inactive");
   if (state.kinks?.features.length > 0) {
     // do nothing. don't allow switching away
   } else {

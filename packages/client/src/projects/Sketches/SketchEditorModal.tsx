@@ -145,7 +145,8 @@ export default function SketchEditorModal({
     if (
       sketch?.bbox &&
       mapContext.manager?.map &&
-      sketchClass.geometryType !== SketchGeometryType.Collection
+      sketchClass.geometryType !== SketchGeometryType.Collection &&
+      sketchClass.geometryType !== SketchGeometryType.Point
     ) {
       // If the sketch is not within the current viewport bounds, or is very
       // small or otherwise hard to see, zoom to it.
