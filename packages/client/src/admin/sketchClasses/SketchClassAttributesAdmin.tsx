@@ -9,7 +9,12 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import SketchForm from "../../projects/Sketches/SketchForm";
 import AddFormElementButton from "../surveys/AddFormElementButton";
-import { MenuIcon, PencilIcon, TrashIcon } from "@heroicons/react/outline";
+import {
+  MenuIcon,
+  PencilIcon,
+  TrashIcon,
+  EyeOffIcon,
+} from "@heroicons/react/outline";
 import useDialog from "../../components/useDialog";
 import { useDelete } from "../../graphqlHookWrappers";
 import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
@@ -25,6 +30,7 @@ import TextInput from "../../components/TextInput";
 import getSlug from "../../getSlug";
 import languages from "../../lang/supported";
 import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
+import SketchAttributesFormLogicRulesModal from "./SketchAttributesFormLogicRulesModal";
 
 export default function SketchClassAttributesAdmin({
   formId,
@@ -45,6 +51,9 @@ export default function SketchClassAttributesAdmin({
     useState<HTMLDivElement | null>(null);
   const { t } = useTranslation("admin:sketching");
   const [scrollableRef] = useState<HTMLDivElement | null>(null);
+  const [showFormLogicRulesModal, setShowFormLogicRulesModal] = useState<
+    number | null
+  >(null);
 
   const del = useDelete(DeleteFormElementDocument);
   const formElements = useMemo(() => {
@@ -197,6 +206,7 @@ export default function SketchClassAttributesAdmin({
                 // ref={(el) => setRef(provided.innerRef, el)}
               >
                 <SketchForm
+                  logicRules={data?.form?.logicRules || []}
                   startingProperties={{}}
                   submissionAttempted={false}
                   formElements={formElements}
@@ -268,6 +278,19 @@ export default function SketchClassAttributesAdmin({
                                   <PencilIcon className="w-5 h-5 text-gray-500 hover:text-black" />
                                 </button>
                               )}
+                              <button
+                                className="py-1 flex-1 relative"
+                                onClick={async () => {
+                                  setShowFormLogicRulesModal(element.id);
+                                }}
+                              >
+                                <EyeOffIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                {(data.form?.logicRules || []).find(
+                                  (rule) => rule.formElementId === element.id
+                                ) && (
+                                  <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 -right-0.5 border-white border"></div>
+                                )}
+                              </button>
                             </div>
                           </div>
                         )}
@@ -387,6 +410,13 @@ export default function SketchClassAttributesAdmin({
           <div ref={setFormElementEditorContainerRef}></div>
         </div>
       </FormLanguageContext.Provider>
+      {showFormLogicRulesModal && data.form?.sketchClassId && (
+        <SketchAttributesFormLogicRulesModal
+          id={showFormLogicRulesModal}
+          onRequestClose={() => setShowFormLogicRulesModal(null)}
+          sketchClassId={data.form.sketchClassId}
+        />
+      )}
     </div>
   );
 }

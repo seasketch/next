@@ -112,6 +112,14 @@ fragment FormElementFullDetails on FormElement {
   }
 }
 
+fragment LogicRuleConditionDetails on FormLogicCondition {
+  id
+  operator
+  value
+  subjectId
+  ruleId
+}
+
 fragment LogicRuleDetails on FormLogicRule {
   booleanOperator
   command
@@ -120,11 +128,7 @@ fragment LogicRuleDetails on FormLogicRule {
   position
   formElementId
   conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
+    ...LogicRuleConditionDetails
   }
 }
 

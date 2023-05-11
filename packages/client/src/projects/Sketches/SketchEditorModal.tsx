@@ -33,7 +33,7 @@ import { MapMouseEvent } from "mapbox-gl";
 import area from "@turf/area";
 import bboxPolygon from "@turf/bbox-polygon";
 import { currentSidebarState } from "../ProjectAppSidebar";
-import SketchForm from "./SketchForm";
+import SketchForm, { evaluateVisibilityRules } from "./SketchForm";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
 
 export default function SketchEditorModal({
@@ -327,6 +327,21 @@ export default function SketchEditorModal({
       throw new Error("Name not specified");
     }
 
+    // Find hidden elements from visibility rules
+    const hiddenElements = evaluateVisibilityRules(
+      Object.keys(properties).reduce((acc, key) => {
+        acc[key] = {
+          value: properties[key],
+        };
+        return acc;
+      }, {} as { [key: string]: { value: any } }),
+      sketchClass.form?.logicRules || []
+    );
+    // delete properties that are hidden
+    for (const id of hiddenElements) {
+      delete properties[id];
+    }
+
     let data: SketchCrudResponseFragment | undefined;
     if (sketch) {
       const response = await updateSketch({
@@ -497,6 +512,7 @@ export default function SketchEditorModal({
               </h1>
               <div className="p-4 pt-0 flex-1 overflow-y-auto">
                 <SketchForm
+                  logicRules={sketchClass.form?.logicRules || []}
                   onChange={(props, validationErrors) => {
                     const nameValue = nameElementId
                       ? props[nameElementId]

@@ -5791,6 +5791,121 @@ $$;
 
 
 --
+-- Name: create_visibility_logic_rule(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_visibility_logic_rule("formElementId" integer) RETURNS public.form_logic_rules
+    LANGUAGE plpgsql
+    AS $$
+    declare
+      logic_rule form_logic_rules;
+      fid integer;
+      subject form_elements;
+      supported_opts field_rule_operator[];
+      op public.field_rule_operator;
+      min integer;
+      max integer;
+      default_value integer;
+      options jsonb;
+      val jsonb;
+    begin
+      select form_id into fid from form_elements where id = "formElementId";
+      select 
+        form_elements.*
+      into 
+        subject
+      from 
+        form_elements 
+      inner join
+        form_element_types 
+      on 
+        form_element_types.component_name = form_elements.type_id
+      where
+        id != "formElementId" and
+        form_id = fid and
+        position < (select position from form_elements where id = "formElementId") and
+        form_element_types.is_input = true and 
+        array_length(array_remove(form_element_types.supported_operators, 'is blank'), 1) > 0
+      order by position desc
+      limit 1;
+      raise notice 'subject: %', subject;
+      if subject is null then
+        raise notice 'subject is null %', subject is null;
+        select 
+          form_elements.*
+        into 
+          subject
+        from 
+          form_elements 
+        inner join
+          form_element_types 
+        on 
+          form_element_types.component_name = form_elements.type_id
+        where
+          id != "formElementId" and
+          form_id = fid and
+          form_element_types.is_input = true and
+          array_length(array_remove(form_element_types.supported_operators, 'is blank'), 1) > 0
+        order by position desc
+        limit 1;
+      end if;
+      if subject is null then
+        raise exception 'Could not find a suitable field to control this field''s visibility';
+      end if;
+      raise notice 'subject: %', subject;
+      -- insert into form_logic_rules (form_element_id, command, position) values ("formElementId", 'SHOW', 0) returning * into logic_rule;
+      -- for subject, select an appropriate operator and value into op and val
+      raise notice 'subject.type_id: %', subject.type_id;
+      select
+        array_remove(supported_operators, 'is blank')
+      into 
+        supported_opts
+      from 
+        form_element_types 
+      where 
+        form_element_types.component_name = subject.type_id;
+      op = supported_opts[1];
+      raise notice 'op: %', op;
+      select (component_settings->>'min')::int as min, (component_settings->>'max')::int as max, (component_settings->>'defaultValue')::int as default_value from form_elements where id = subject.id into min, max, default_value;
+      select component_settings->>'options' from form_elements where id = subject.id into options;
+      raise notice 'min: %, max: %', min, max;
+      raise notice 'options: %', options;
+      if op = '<' or op = '>' then
+        if max is not null then
+          val = max;
+        elsif min is not null then
+          val = min;
+        elsif default_value is not null then
+          val = default_value;
+        else
+          val = 0;
+        end if;
+      else
+        if options->0 is not null then
+          if options->0->>'value' is not null then
+            val = (options->0->'value');
+          else
+            val = (options->0->'label');
+          end if;
+        else
+          if max is not null then
+            val = max;
+          elsif min is not null then
+            val = min;
+          elsif default_value is not null then
+            val = default_value;
+          end if;
+        end if;
+      end if;
+      raise notice 'val: %', val;
+      insert into form_logic_rules (form_element_id, command, position) values ("formElementId", 'SHOW', 0) returning * into logic_rule;
+      insert into form_logic_conditions (rule_id, subject_id, operator, value) values (logic_rule.id, subject.id, op, val);
+      return logic_rule;
+    end;
+  $$;
+
+
+--
 -- Name: current_project(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11355,10 +11470,11 @@ CREATE FUNCTION public.sketches_user_attributes(sketch public.sketches) RETURNS 
     LANGUAGE sql STABLE
     AS $$
     select jsonb_agg(jsonb_build_object(
+      'formElementId', form_elements.id,
       'label', form_elements.generated_label,
       'value', sketch.properties->form_elements.id::text,
       'valueLabel', label_for_form_element_value(sketch.properties->form_elements.id::text, form_elements.component_settings),
-      'exportId', form_elements.generated_export_id,
+      'exportId', coalesce(form_elements.export_id, form_elements.generated_export_id),
       'fieldType', form_elements.type_id,
       'alternateLanguages', alternate_language_labels_for_form_element(form_elements.id, sketch.properties->form_elements.id::text, form_elements.alternate_language_settings)
     )) from form_elements where form_id = (
@@ -20653,6 +20769,14 @@ GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message
 --
 
 REVOKE ALL ON FUNCTION public.create_upload_task_job() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION create_visibility_logic_rule("formElementId" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_visibility_logic_rule("formElementId" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_visibility_logic_rule("formElementId" integer) TO seasketch_user;
 
 
 --

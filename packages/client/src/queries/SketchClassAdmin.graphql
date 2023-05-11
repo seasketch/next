@@ -38,6 +38,9 @@ fragment SketchingDetails on SketchClass {
     formElements {
       ...SketchFormElement
     }
+    logicRules {
+      ...LogicRuleDetails
+    }
   }
   geometryType
   geoprocessingClientName
@@ -69,6 +72,10 @@ query SketchClassForm($id: Int!) {
     id
     formElements {
       ...SketchFormElement
+    }
+    sketchClassId
+    logicRules {
+      ...LogicRuleDetails
     }
   }
 }
@@ -166,6 +173,127 @@ mutation UpdateSketchFormElement(
       id
       isRequired
       exportId
+    }
+  }
+}
+
+fragment LogicRuleEditorFormElementDetails on FormElement {
+  ...SketchFormElement
+  generatedLabel
+  componentSettings
+  type {
+    componentName
+    isInput
+    isHidden
+    supportedOperators
+  }
+}
+
+fragment LogicRuleEditorFormDetails on Form {
+  id
+  formElements {
+    ...LogicRuleEditorFormElementDetails
+  }
+  logicRules {
+    ...LogicRuleDetails
+  }
+}
+
+query SketchClassLogicRuleDetails($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    form {
+      ...LogicRuleEditorFormDetails
+    }
+  }
+}
+
+mutation createVisibilityRule($formElementId: Int!) {
+  createVisibilityLogicRule(input: { formElementId: $formElementId }) {
+    formLogicRule {
+      id
+      ...LogicRuleDetails
+    }
+  }
+}
+
+mutation UpdateVisibilityRule(
+  $id: Int!
+  $command: FormLogicCommand
+  $booleanOperator: FormLogicOperator
+) {
+  updateFormLogicRule(
+    input: {
+      id: $id
+      patch: { command: $command, booleanOperator: $booleanOperator }
+    }
+  ) {
+    formLogicRule {
+      id
+      command
+      booleanOperator
+    }
+  }
+}
+
+mutation UpdateVisibilityCondition(
+  $id: Int!
+  $operator: FieldRuleOperator
+  $subjectId: Int
+  $value: JSON
+) {
+  updateFormLogicCondition(
+    input: {
+      id: $id
+      patch: { operator: $operator, subjectId: $subjectId, value: $value }
+    }
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+    }
+  }
+}
+
+mutation DeleteVisibilityRule($id: Int!) {
+  deleteFormLogicRule(input: { id: $id }) {
+    formLogicRule {
+      id
+    }
+  }
+}
+
+mutation AddVisibilityCondition(
+  $ruleId: Int!
+  $subjectId: Int!
+  $operator: FieldRuleOperator!
+  $value: JSON!
+) {
+  createFormLogicCondition(
+    input: {
+      formLogicCondition: {
+        ruleId: $ruleId
+        subjectId: $subjectId
+        operator: $operator
+        value: $value
+      }
+    }
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+      ruleId
+    }
+  }
+}
+
+mutation DeleteVisibilityRuleCondition($id: Int!) {
+  deleteFormLogicCondition(input: { id: $id }) {
+    formLogicCondition {
+      id
     }
   }
 }

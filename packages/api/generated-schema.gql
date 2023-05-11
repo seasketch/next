@@ -1931,6 +1931,37 @@ type CreateTableOfContentsItemPayload {
   ): TableOfContentsItemsEdge
 }
 
+"""All input for the `createVisibilityLogicRule` mutation."""
+input CreateVisibilityLogicRuleInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  formElementId: Int
+}
+
+"""The output of our `createVisibilityLogicRule` mutation."""
+type CreateVisibilityLogicRulePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  formLogicRule: FormLogicRule
+
+  """An edge for our `FormLogicRule`. May be used by Relay 1."""
+  formLogicRuleEdge(
+    """The method to use when ordering `FormLogicRule`."""
+    orderBy: [FormLogicRulesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FormLogicRulesEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """A location in a connection that can be used for resuming pagination."""
 scalar Cursor
 
@@ -7250,6 +7281,12 @@ type Mutation {
     input: CreateTableOfContentsItemInput!
   ): CreateTableOfContentsItemPayload
   createTopic(forumId: Int!, message: JSON!, title: String!): Topic!
+  createVisibilityLogicRule(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateVisibilityLogicRuleInput!
+  ): CreateVisibilityLogicRulePayload
 
   """Deletes a single `Basemap` using a unique key."""
   deleteBasemap(
