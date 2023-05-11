@@ -206,6 +206,7 @@ export default function SketchClassAttributesAdmin({
                 // ref={(el) => setRef(provided.innerRef, el)}
               >
                 <SketchForm
+                  logicRules={data?.form?.logicRules || []}
                   startingProperties={{}}
                   submissionAttempted={false}
                   formElements={formElements}
@@ -278,12 +279,17 @@ export default function SketchClassAttributesAdmin({
                                 </button>
                               )}
                               <button
-                                className="py-1 flex-1"
+                                className="py-1 flex-1 relative"
                                 onClick={async () => {
                                   setShowFormLogicRulesModal(element.id);
                                 }}
                               >
                                 <EyeOffIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                {(data.form?.logicRules || []).find(
+                                  (rule) => rule.formElementId === element.id
+                                ) && (
+                                  <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 -right-0.5 border-white border"></div>
+                                )}
                               </button>
                             </div>
                           </div>

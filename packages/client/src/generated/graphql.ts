@@ -1718,6 +1718,37 @@ export type CreateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
   orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
+/** All input for the `createVisibilityLogicRule` mutation. */
+export type CreateVisibilityLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElementId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createVisibilityLogicRule` mutation. */
+export type CreateVisibilityLogicRulePayload = {
+  __typename?: 'CreateVisibilityLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createVisibilityLogicRule` mutation. */
+export type CreateVisibilityLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+};
+
 
 export enum CursorType {
   Auto = 'AUTO',
@@ -6020,6 +6051,7 @@ export type Mutation = {
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   createTopic: Topic;
+  createVisibilityLogicRule?: Maybe<CreateVisibilityLogicRulePayload>;
   /** Deletes a single `Basemap` using a unique key. */
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
   /** Deletes a single `Basemap` using its globally unique id. */
@@ -6748,6 +6780,12 @@ export type MutationCreateTopicArgs = {
   forumId: Scalars['Int'];
   message: Scalars['JSON'];
   title: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateVisibilityLogicRuleArgs = {
+  input: CreateVisibilityLogicRuleInput;
 };
 
 
@@ -14020,6 +14058,20 @@ export type NewZIndexFragment = (
   & Pick<DataLayer, 'zIndex'>
 );
 
+export type NewRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+  )>> }
+);
+
+export type NewConditionFragment = (
+  { __typename?: 'FormLogicCondition' }
+  & Pick<FormLogicCondition, 'id'>
+);
+
 export type NewElementFragment = (
   { __typename?: 'FormElement' }
   & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
@@ -14044,15 +14096,6 @@ export type LogicRuleEditorRuleFragment = (
   & { conditions?: Maybe<Array<(
     { __typename?: 'FormLogicCondition' }
     & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-  )>> }
-);
-
-export type NewRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
   )>> }
 );
 
@@ -16665,6 +16708,9 @@ export type SketchClassFormQuery = (
     & { formElements?: Maybe<Array<(
       { __typename?: 'FormElement' }
       & SketchFormElementFragment
+    )>>, logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & LogicRuleDetailsFragment
     )>> }
   )> }
 );
@@ -16792,6 +16838,28 @@ export type UpdateSketchFormElementMutation = (
   )> }
 );
 
+export type LogicRuleEditorFormElementDetailsFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'generatedLabel' | 'componentSettings'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isHidden' | 'supportedOperators'>
+  )> }
+  & SketchFormElementFragment
+);
+
+export type LogicRuleEditorFormDetailsFragment = (
+  { __typename?: 'Form' }
+  & Pick<Form, 'id'>
+  & { formElements?: Maybe<Array<(
+    { __typename?: 'FormElement' }
+    & LogicRuleEditorFormElementDetailsFragment
+  )>>, logicRules?: Maybe<Array<(
+    { __typename?: 'FormLogicRule' }
+    & LogicRuleDetailsFragment
+  )>> }
+);
+
 export type SketchClassLogicRuleDetailsQueryVariables = Exact<{
   sketchClassId: Scalars['Int'];
 }>;
@@ -16801,7 +16869,115 @@ export type SketchClassLogicRuleDetailsQuery = (
   { __typename?: 'Query' }
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & SketchingDetailsFragment
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & LogicRuleEditorFormDetailsFragment
+    )> }
+  )> }
+);
+
+export type CreateVisibilityRuleMutationVariables = Exact<{
+  formElementId: Scalars['Int'];
+}>;
+
+
+export type CreateVisibilityRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { createVisibilityLogicRule?: Maybe<(
+    { __typename?: 'CreateVisibilityLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id'>
+      & LogicRuleDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateVisibilityRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+  command?: Maybe<FormLogicCommand>;
+  booleanOperator?: Maybe<FormLogicOperator>;
+}>;
+
+
+export type UpdateVisibilityRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicRule?: Maybe<(
+    { __typename?: 'UpdateFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'command' | 'booleanOperator'>
+    )> }
+  )> }
+);
+
+export type UpdateVisibilityConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+  operator?: Maybe<FieldRuleOperator>;
+  subjectId?: Maybe<Scalars['Int']>;
+  value?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateVisibilityConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicCondition?: Maybe<(
+    { __typename?: 'UpdateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'operator' | 'subjectId' | 'value'>
+    )> }
+  )> }
+);
+
+export type DeleteVisibilityRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteVisibilityRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicRule?: Maybe<(
+    { __typename?: 'DeleteFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id'>
+    )> }
+  )> }
+);
+
+export type AddVisibilityConditionMutationVariables = Exact<{
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  operator: FieldRuleOperator;
+  value: Scalars['JSON'];
+}>;
+
+
+export type AddVisibilityConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { createFormLogicCondition?: Maybe<(
+    { __typename?: 'CreateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'operator' | 'subjectId' | 'value' | 'ruleId'>
+    )> }
+  )> }
+);
+
+export type DeleteVisibilityRuleConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteVisibilityRuleConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicCondition?: Maybe<(
+    { __typename?: 'DeleteFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id'>
+    )> }
   )> }
 );
 
@@ -17055,6 +17231,9 @@ export type SketchReportingDetailsQuery = (
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
         & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body' | 'generatedExportId' | 'generatedLabel'>
+      )>>, logicRules?: Maybe<Array<(
+        { __typename?: 'FormLogicRule' }
+        & LogicRuleDetailsFragment
       )>> }
     )> }
   )> }
@@ -17189,12 +17368,17 @@ export type FormElementFullDetailsFragment = (
   & FormElementDetailsFragment
 );
 
+export type LogicRuleConditionDetailsFragment = (
+  { __typename?: 'FormLogicCondition' }
+  & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+);
+
 export type LogicRuleDetailsFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
   & { conditions?: Maybe<Array<(
     { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+    & LogicRuleConditionDetailsFragment
   )>> }
 );
 
@@ -18670,6 +18854,28 @@ export const NewZIndexFragmentDoc = gql`
   zIndex
 }
     `;
+export const NewRuleFragmentDoc = gql`
+    fragment NewRule on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
+}
+    `;
+export const NewConditionFragmentDoc = gql`
+    fragment NewCondition on FormLogicCondition {
+  id
+}
+    `;
 export const NewElementFragmentDoc = gql`
     fragment NewElement on FormElement {
   body
@@ -18732,23 +18938,6 @@ export const LogicRuleEditorRuleFragmentDoc = gql`
     ruleId
     subjectId
     value
-  }
-}
-    `;
-export const NewRuleFragmentDoc = gql`
-    fragment NewRule on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
   }
 }
     `;
@@ -19377,6 +19566,15 @@ export const SketchFormElementFragmentDoc = gql`
   }
 }
     `;
+export const LogicRuleConditionDetailsFragmentDoc = gql`
+    fragment LogicRuleConditionDetails on FormLogicCondition {
+  id
+  operator
+  value
+  subjectId
+  ruleId
+}
+    `;
 export const LogicRuleDetailsFragmentDoc = gql`
     fragment LogicRuleDetails on FormLogicRule {
   booleanOperator
@@ -19386,14 +19584,10 @@ export const LogicRuleDetailsFragmentDoc = gql`
   position
   formElementId
   conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
+    ...LogicRuleConditionDetails
   }
 }
-    `;
+    ${LogicRuleConditionDetailsFragmentDoc}`;
 export const SketchingDetailsFragmentDoc = gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -19452,6 +19646,31 @@ export const TemplateSketchClassFragmentDoc = gql`
   templateDescription
 }
     `;
+export const LogicRuleEditorFormElementDetailsFragmentDoc = gql`
+    fragment LogicRuleEditorFormElementDetails on FormElement {
+  ...SketchFormElement
+  generatedLabel
+  componentSettings
+  type {
+    componentName
+    isInput
+    isHidden
+    supportedOperators
+  }
+}
+    ${SketchFormElementFragmentDoc}`;
+export const LogicRuleEditorFormDetailsFragmentDoc = gql`
+    fragment LogicRuleEditorFormDetails on Form {
+  id
+  formElements {
+    ...LogicRuleEditorFormElementDetails
+  }
+  logicRules {
+    ...LogicRuleDetails
+  }
+}
+    ${LogicRuleEditorFormElementDetailsFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -24964,9 +25183,13 @@ export const SketchClassFormDocument = gql`
       ...SketchFormElement
     }
     sketchClassId
+    logicRules {
+      ...LogicRuleDetails
+    }
   }
 }
-    ${SketchFormElementFragmentDoc}`;
+    ${SketchFormElementFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
 
 /**
  * __useSketchClassFormQuery__
@@ -25270,10 +25493,12 @@ export type UpdateSketchFormElementMutationOptions = Apollo.BaseMutationOptions<
 export const SketchClassLogicRuleDetailsDocument = gql`
     query SketchClassLogicRuleDetails($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
-    ...SketchingDetails
+    form {
+      ...LogicRuleEditorFormDetails
+    }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${LogicRuleEditorFormDetailsFragmentDoc}`;
 
 /**
  * __useSketchClassLogicRuleDetailsQuery__
@@ -25302,6 +25527,240 @@ export function useSketchClassLogicRuleDetailsLazyQuery(baseOptions?: Apollo.Laz
 export type SketchClassLogicRuleDetailsQueryHookResult = ReturnType<typeof useSketchClassLogicRuleDetailsQuery>;
 export type SketchClassLogicRuleDetailsLazyQueryHookResult = ReturnType<typeof useSketchClassLogicRuleDetailsLazyQuery>;
 export type SketchClassLogicRuleDetailsQueryResult = Apollo.QueryResult<SketchClassLogicRuleDetailsQuery, SketchClassLogicRuleDetailsQueryVariables>;
+export const CreateVisibilityRuleDocument = gql`
+    mutation createVisibilityRule($formElementId: Int!) {
+  createVisibilityLogicRule(input: {formElementId: $formElementId}) {
+    formLogicRule {
+      id
+      ...LogicRuleDetails
+    }
+  }
+}
+    ${LogicRuleDetailsFragmentDoc}`;
+export type CreateVisibilityRuleMutationFn = Apollo.MutationFunction<CreateVisibilityRuleMutation, CreateVisibilityRuleMutationVariables>;
+
+/**
+ * __useCreateVisibilityRuleMutation__
+ *
+ * To run a mutation, you first call `useCreateVisibilityRuleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateVisibilityRuleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createVisibilityRuleMutation, { data, loading, error }] = useCreateVisibilityRuleMutation({
+ *   variables: {
+ *      formElementId: // value for 'formElementId'
+ *   },
+ * });
+ */
+export function useCreateVisibilityRuleMutation(baseOptions?: Apollo.MutationHookOptions<CreateVisibilityRuleMutation, CreateVisibilityRuleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateVisibilityRuleMutation, CreateVisibilityRuleMutationVariables>(CreateVisibilityRuleDocument, options);
+      }
+export type CreateVisibilityRuleMutationHookResult = ReturnType<typeof useCreateVisibilityRuleMutation>;
+export type CreateVisibilityRuleMutationResult = Apollo.MutationResult<CreateVisibilityRuleMutation>;
+export type CreateVisibilityRuleMutationOptions = Apollo.BaseMutationOptions<CreateVisibilityRuleMutation, CreateVisibilityRuleMutationVariables>;
+export const UpdateVisibilityRuleDocument = gql`
+    mutation UpdateVisibilityRule($id: Int!, $command: FormLogicCommand, $booleanOperator: FormLogicOperator) {
+  updateFormLogicRule(
+    input: {id: $id, patch: {command: $command, booleanOperator: $booleanOperator}}
+  ) {
+    formLogicRule {
+      id
+      command
+      booleanOperator
+    }
+  }
+}
+    `;
+export type UpdateVisibilityRuleMutationFn = Apollo.MutationFunction<UpdateVisibilityRuleMutation, UpdateVisibilityRuleMutationVariables>;
+
+/**
+ * __useUpdateVisibilityRuleMutation__
+ *
+ * To run a mutation, you first call `useUpdateVisibilityRuleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateVisibilityRuleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateVisibilityRuleMutation, { data, loading, error }] = useUpdateVisibilityRuleMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      command: // value for 'command'
+ *      booleanOperator: // value for 'booleanOperator'
+ *   },
+ * });
+ */
+export function useUpdateVisibilityRuleMutation(baseOptions?: Apollo.MutationHookOptions<UpdateVisibilityRuleMutation, UpdateVisibilityRuleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateVisibilityRuleMutation, UpdateVisibilityRuleMutationVariables>(UpdateVisibilityRuleDocument, options);
+      }
+export type UpdateVisibilityRuleMutationHookResult = ReturnType<typeof useUpdateVisibilityRuleMutation>;
+export type UpdateVisibilityRuleMutationResult = Apollo.MutationResult<UpdateVisibilityRuleMutation>;
+export type UpdateVisibilityRuleMutationOptions = Apollo.BaseMutationOptions<UpdateVisibilityRuleMutation, UpdateVisibilityRuleMutationVariables>;
+export const UpdateVisibilityConditionDocument = gql`
+    mutation UpdateVisibilityCondition($id: Int!, $operator: FieldRuleOperator, $subjectId: Int, $value: JSON) {
+  updateFormLogicCondition(
+    input: {id: $id, patch: {operator: $operator, subjectId: $subjectId, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+    }
+  }
+}
+    `;
+export type UpdateVisibilityConditionMutationFn = Apollo.MutationFunction<UpdateVisibilityConditionMutation, UpdateVisibilityConditionMutationVariables>;
+
+/**
+ * __useUpdateVisibilityConditionMutation__
+ *
+ * To run a mutation, you first call `useUpdateVisibilityConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateVisibilityConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateVisibilityConditionMutation, { data, loading, error }] = useUpdateVisibilityConditionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      operator: // value for 'operator'
+ *      subjectId: // value for 'subjectId'
+ *      value: // value for 'value'
+ *   },
+ * });
+ */
+export function useUpdateVisibilityConditionMutation(baseOptions?: Apollo.MutationHookOptions<UpdateVisibilityConditionMutation, UpdateVisibilityConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateVisibilityConditionMutation, UpdateVisibilityConditionMutationVariables>(UpdateVisibilityConditionDocument, options);
+      }
+export type UpdateVisibilityConditionMutationHookResult = ReturnType<typeof useUpdateVisibilityConditionMutation>;
+export type UpdateVisibilityConditionMutationResult = Apollo.MutationResult<UpdateVisibilityConditionMutation>;
+export type UpdateVisibilityConditionMutationOptions = Apollo.BaseMutationOptions<UpdateVisibilityConditionMutation, UpdateVisibilityConditionMutationVariables>;
+export const DeleteVisibilityRuleDocument = gql`
+    mutation DeleteVisibilityRule($id: Int!) {
+  deleteFormLogicRule(input: {id: $id}) {
+    formLogicRule {
+      id
+    }
+  }
+}
+    `;
+export type DeleteVisibilityRuleMutationFn = Apollo.MutationFunction<DeleteVisibilityRuleMutation, DeleteVisibilityRuleMutationVariables>;
+
+/**
+ * __useDeleteVisibilityRuleMutation__
+ *
+ * To run a mutation, you first call `useDeleteVisibilityRuleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteVisibilityRuleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteVisibilityRuleMutation, { data, loading, error }] = useDeleteVisibilityRuleMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteVisibilityRuleMutation(baseOptions?: Apollo.MutationHookOptions<DeleteVisibilityRuleMutation, DeleteVisibilityRuleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteVisibilityRuleMutation, DeleteVisibilityRuleMutationVariables>(DeleteVisibilityRuleDocument, options);
+      }
+export type DeleteVisibilityRuleMutationHookResult = ReturnType<typeof useDeleteVisibilityRuleMutation>;
+export type DeleteVisibilityRuleMutationResult = Apollo.MutationResult<DeleteVisibilityRuleMutation>;
+export type DeleteVisibilityRuleMutationOptions = Apollo.BaseMutationOptions<DeleteVisibilityRuleMutation, DeleteVisibilityRuleMutationVariables>;
+export const AddVisibilityConditionDocument = gql`
+    mutation AddVisibilityCondition($ruleId: Int!, $subjectId: Int!, $operator: FieldRuleOperator!, $value: JSON!) {
+  createFormLogicCondition(
+    input: {formLogicCondition: {ruleId: $ruleId, subjectId: $subjectId, operator: $operator, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+      ruleId
+    }
+  }
+}
+    `;
+export type AddVisibilityConditionMutationFn = Apollo.MutationFunction<AddVisibilityConditionMutation, AddVisibilityConditionMutationVariables>;
+
+/**
+ * __useAddVisibilityConditionMutation__
+ *
+ * To run a mutation, you first call `useAddVisibilityConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddVisibilityConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addVisibilityConditionMutation, { data, loading, error }] = useAddVisibilityConditionMutation({
+ *   variables: {
+ *      ruleId: // value for 'ruleId'
+ *      subjectId: // value for 'subjectId'
+ *      operator: // value for 'operator'
+ *      value: // value for 'value'
+ *   },
+ * });
+ */
+export function useAddVisibilityConditionMutation(baseOptions?: Apollo.MutationHookOptions<AddVisibilityConditionMutation, AddVisibilityConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddVisibilityConditionMutation, AddVisibilityConditionMutationVariables>(AddVisibilityConditionDocument, options);
+      }
+export type AddVisibilityConditionMutationHookResult = ReturnType<typeof useAddVisibilityConditionMutation>;
+export type AddVisibilityConditionMutationResult = Apollo.MutationResult<AddVisibilityConditionMutation>;
+export type AddVisibilityConditionMutationOptions = Apollo.BaseMutationOptions<AddVisibilityConditionMutation, AddVisibilityConditionMutationVariables>;
+export const DeleteVisibilityRuleConditionDocument = gql`
+    mutation DeleteVisibilityRuleCondition($id: Int!) {
+  deleteFormLogicCondition(input: {id: $id}) {
+    formLogicCondition {
+      id
+    }
+  }
+}
+    `;
+export type DeleteVisibilityRuleConditionMutationFn = Apollo.MutationFunction<DeleteVisibilityRuleConditionMutation, DeleteVisibilityRuleConditionMutationVariables>;
+
+/**
+ * __useDeleteVisibilityRuleConditionMutation__
+ *
+ * To run a mutation, you first call `useDeleteVisibilityRuleConditionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteVisibilityRuleConditionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteVisibilityRuleConditionMutation, { data, loading, error }] = useDeleteVisibilityRuleConditionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteVisibilityRuleConditionMutation(baseOptions?: Apollo.MutationHookOptions<DeleteVisibilityRuleConditionMutation, DeleteVisibilityRuleConditionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteVisibilityRuleConditionMutation, DeleteVisibilityRuleConditionMutationVariables>(DeleteVisibilityRuleConditionDocument, options);
+      }
+export type DeleteVisibilityRuleConditionMutationHookResult = ReturnType<typeof useDeleteVisibilityRuleConditionMutation>;
+export type DeleteVisibilityRuleConditionMutationResult = Apollo.MutationResult<DeleteVisibilityRuleConditionMutation>;
+export type DeleteVisibilityRuleConditionMutationOptions = Apollo.BaseMutationOptions<DeleteVisibilityRuleConditionMutation, DeleteVisibilityRuleConditionMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -25671,10 +26130,13 @@ export const SketchReportingDetailsDocument = gql`
         generatedExportId
         generatedLabel
       }
+      logicRules {
+        ...LogicRuleDetails
+      }
     }
   }
 }
-    `;
+    ${LogicRuleDetailsFragmentDoc}`;
 
 /**
  * __useSketchReportingDetailsQuery__
@@ -28804,6 +29266,12 @@ export const namedOperations = {
     DeleteSketchClass: 'DeleteSketchClass',
     UpdateGeoprocessingServices: 'UpdateGeoprocessingServices',
     UpdateSketchFormElement: 'UpdateSketchFormElement',
+    createVisibilityRule: 'createVisibilityRule',
+    UpdateVisibilityRule: 'UpdateVisibilityRule',
+    UpdateVisibilityCondition: 'UpdateVisibilityCondition',
+    DeleteVisibilityRule: 'DeleteVisibilityRule',
+    AddVisibilityCondition: 'AddVisibilityCondition',
+    DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -28874,10 +29342,11 @@ export const namedOperations = {
     NewGLStyle: 'NewGLStyle',
     NewRenderUnder: 'NewRenderUnder',
     NewZIndex: 'NewZIndex',
+    NewRule: 'NewRule',
+    NewCondition: 'NewCondition',
     NewElement: 'NewElement',
     LogicRuleEditorFormElement: 'LogicRuleEditorFormElement',
     LogicRuleEditorRule: 'LogicRuleEditorRule',
-    NewRule: 'NewRule',
     NewSurvey: 'NewSurvey',
     NewGroup: 'NewGroup',
     NewInviteEmail: 'NewInviteEmail',
@@ -28920,6 +29389,8 @@ export const namedOperations = {
     SketchingDetails: 'SketchingDetails',
     AdminSketchingDetails: 'AdminSketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
+    LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
+    LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',
@@ -28930,6 +29401,7 @@ export const namedOperations = {
     FormElementDetails: 'FormElementDetails',
     SketchClassDetails: 'SketchClassDetails',
     FormElementFullDetails: 'FormElementFullDetails',
+    LogicRuleConditionDetails: 'LogicRuleConditionDetails',
     LogicRuleDetails: 'LogicRuleDetails',
     SurveyResponse: 'SurveyResponse',
     FormElementExtendedDetails: 'FormElementExtendedDetails',

@@ -1716,6 +1716,37 @@ export type CreateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
   orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
+/** All input for the `createVisibilityLogicRule` mutation. */
+export type CreateVisibilityLogicRuleInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formElementId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createVisibilityLogicRule` mutation. */
+export type CreateVisibilityLogicRulePayload = {
+  __typename?: 'CreateVisibilityLogicRulePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  formLogicRule?: Maybe<FormLogicRule>;
+  /** An edge for our `FormLogicRule`. May be used by Relay 1. */
+  formLogicRuleEdge?: Maybe<FormLogicRulesEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createVisibilityLogicRule` mutation. */
+export type CreateVisibilityLogicRulePayloadFormLogicRuleEdgeArgs = {
+  orderBy?: Maybe<Array<FormLogicRulesOrderBy>>;
+};
+
 
 export enum CursorType {
   Auto = 'AUTO',
@@ -6018,6 +6049,7 @@ export type Mutation = {
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   createTopic: Topic;
+  createVisibilityLogicRule?: Maybe<CreateVisibilityLogicRulePayload>;
   /** Deletes a single `Basemap` using a unique key. */
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
   /** Deletes a single `Basemap` using its globally unique id. */
@@ -6746,6 +6778,12 @@ export type MutationCreateTopicArgs = {
   forumId: Scalars['Int'];
   message: Scalars['JSON'];
   title: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateVisibilityLogicRuleArgs = {
+  input: CreateVisibilityLogicRuleInput;
 };
 
 
@@ -14018,6 +14056,20 @@ export type NewZIndexFragment = (
   & Pick<DataLayer, 'zIndex'>
 );
 
+export type NewRuleFragment = (
+  { __typename?: 'FormLogicRule' }
+  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
+  & { conditions?: Maybe<Array<(
+    { __typename?: 'FormLogicCondition' }
+    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+  )>> }
+);
+
+export type NewConditionFragment = (
+  { __typename?: 'FormLogicCondition' }
+  & Pick<FormLogicCondition, 'id'>
+);
+
 export type NewElementFragment = (
   { __typename?: 'FormElement' }
   & Pick<FormElement, 'body' | 'componentSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight'>
@@ -14042,15 +14094,6 @@ export type LogicRuleEditorRuleFragment = (
   & { conditions?: Maybe<Array<(
     { __typename?: 'FormLogicCondition' }
     & Pick<FormLogicCondition, 'id' | 'operator' | 'ruleId' | 'subjectId' | 'value'>
-  )>> }
-);
-
-export type NewRuleFragment = (
-  { __typename?: 'FormLogicRule' }
-  & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
-  & { conditions?: Maybe<Array<(
-    { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
   )>> }
 );
 
@@ -16663,6 +16706,9 @@ export type SketchClassFormQuery = (
     & { formElements?: Maybe<Array<(
       { __typename?: 'FormElement' }
       & SketchFormElementFragment
+    )>>, logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & LogicRuleDetailsFragment
     )>> }
   )> }
 );
@@ -16790,6 +16836,28 @@ export type UpdateSketchFormElementMutation = (
   )> }
 );
 
+export type LogicRuleEditorFormElementDetailsFragment = (
+  { __typename?: 'FormElement' }
+  & Pick<FormElement, 'generatedLabel' | 'componentSettings'>
+  & { type?: Maybe<(
+    { __typename?: 'FormElementType' }
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isHidden' | 'supportedOperators'>
+  )> }
+  & SketchFormElementFragment
+);
+
+export type LogicRuleEditorFormDetailsFragment = (
+  { __typename?: 'Form' }
+  & Pick<Form, 'id'>
+  & { formElements?: Maybe<Array<(
+    { __typename?: 'FormElement' }
+    & LogicRuleEditorFormElementDetailsFragment
+  )>>, logicRules?: Maybe<Array<(
+    { __typename?: 'FormLogicRule' }
+    & LogicRuleDetailsFragment
+  )>> }
+);
+
 export type SketchClassLogicRuleDetailsQueryVariables = Exact<{
   sketchClassId: Scalars['Int'];
 }>;
@@ -16799,7 +16867,115 @@ export type SketchClassLogicRuleDetailsQuery = (
   { __typename?: 'Query' }
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & SketchingDetailsFragment
+    & { form?: Maybe<(
+      { __typename?: 'Form' }
+      & LogicRuleEditorFormDetailsFragment
+    )> }
+  )> }
+);
+
+export type CreateVisibilityRuleMutationVariables = Exact<{
+  formElementId: Scalars['Int'];
+}>;
+
+
+export type CreateVisibilityRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { createVisibilityLogicRule?: Maybe<(
+    { __typename?: 'CreateVisibilityLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id'>
+      & LogicRuleDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateVisibilityRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+  command?: Maybe<FormLogicCommand>;
+  booleanOperator?: Maybe<FormLogicOperator>;
+}>;
+
+
+export type UpdateVisibilityRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicRule?: Maybe<(
+    { __typename?: 'UpdateFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id' | 'command' | 'booleanOperator'>
+    )> }
+  )> }
+);
+
+export type UpdateVisibilityConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+  operator?: Maybe<FieldRuleOperator>;
+  subjectId?: Maybe<Scalars['Int']>;
+  value?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateVisibilityConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFormLogicCondition?: Maybe<(
+    { __typename?: 'UpdateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'operator' | 'subjectId' | 'value'>
+    )> }
+  )> }
+);
+
+export type DeleteVisibilityRuleMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteVisibilityRuleMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicRule?: Maybe<(
+    { __typename?: 'DeleteFormLogicRulePayload' }
+    & { formLogicRule?: Maybe<(
+      { __typename?: 'FormLogicRule' }
+      & Pick<FormLogicRule, 'id'>
+    )> }
+  )> }
+);
+
+export type AddVisibilityConditionMutationVariables = Exact<{
+  ruleId: Scalars['Int'];
+  subjectId: Scalars['Int'];
+  operator: FieldRuleOperator;
+  value: Scalars['JSON'];
+}>;
+
+
+export type AddVisibilityConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { createFormLogicCondition?: Maybe<(
+    { __typename?: 'CreateFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id' | 'operator' | 'subjectId' | 'value' | 'ruleId'>
+    )> }
+  )> }
+);
+
+export type DeleteVisibilityRuleConditionMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteVisibilityRuleConditionMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteFormLogicCondition?: Maybe<(
+    { __typename?: 'DeleteFormLogicConditionPayload' }
+    & { formLogicCondition?: Maybe<(
+      { __typename?: 'FormLogicCondition' }
+      & Pick<FormLogicCondition, 'id'>
+    )> }
   )> }
 );
 
@@ -17053,6 +17229,9 @@ export type SketchReportingDetailsQuery = (
       & { formElements?: Maybe<Array<(
         { __typename?: 'FormElement' }
         & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body' | 'generatedExportId' | 'generatedLabel'>
+      )>>, logicRules?: Maybe<Array<(
+        { __typename?: 'FormLogicRule' }
+        & LogicRuleDetailsFragment
       )>> }
     )> }
   )> }
@@ -17187,12 +17366,17 @@ export type FormElementFullDetailsFragment = (
   & FormElementDetailsFragment
 );
 
+export type LogicRuleConditionDetailsFragment = (
+  { __typename?: 'FormLogicCondition' }
+  & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+);
+
 export type LogicRuleDetailsFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
   & { conditions?: Maybe<Array<(
     { __typename?: 'FormLogicCondition' }
-    & Pick<FormLogicCondition, 'id' | 'operator' | 'value' | 'subjectId' | 'ruleId'>
+    & LogicRuleConditionDetailsFragment
   )>> }
 );
 
@@ -18668,6 +18852,28 @@ export const NewZIndexFragmentDoc = /*#__PURE__*/ gql`
   zIndex
 }
     `;
+export const NewRuleFragmentDoc = /*#__PURE__*/ gql`
+    fragment NewRule on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
+}
+    `;
+export const NewConditionFragmentDoc = /*#__PURE__*/ gql`
+    fragment NewCondition on FormLogicCondition {
+  id
+}
+    `;
 export const NewElementFragmentDoc = /*#__PURE__*/ gql`
     fragment NewElement on FormElement {
   body
@@ -18730,23 +18936,6 @@ export const LogicRuleEditorRuleFragmentDoc = /*#__PURE__*/ gql`
     ruleId
     subjectId
     value
-  }
-}
-    `;
-export const NewRuleFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewRule on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
   }
 }
     `;
@@ -19375,6 +19564,15 @@ export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const LogicRuleConditionDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment LogicRuleConditionDetails on FormLogicCondition {
+  id
+  operator
+  value
+  subjectId
+  ruleId
+}
+    `;
 export const LogicRuleDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment LogicRuleDetails on FormLogicRule {
   booleanOperator
@@ -19384,14 +19582,10 @@ export const LogicRuleDetailsFragmentDoc = /*#__PURE__*/ gql`
   position
   formElementId
   conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
+    ...LogicRuleConditionDetails
   }
 }
-    `;
+    ${LogicRuleConditionDetailsFragmentDoc}`;
 export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchingDetails on SketchClass {
   id
@@ -19450,6 +19644,31 @@ export const TemplateSketchClassFragmentDoc = /*#__PURE__*/ gql`
   templateDescription
 }
     `;
+export const LogicRuleEditorFormElementDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment LogicRuleEditorFormElementDetails on FormElement {
+  ...SketchFormElement
+  generatedLabel
+  componentSettings
+  type {
+    componentName
+    isInput
+    isHidden
+    supportedOperators
+  }
+}
+    ${SketchFormElementFragmentDoc}`;
+export const LogicRuleEditorFormDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment LogicRuleEditorFormDetails on Form {
+  id
+  formElements {
+    ...LogicRuleEditorFormElementDetails
+  }
+  logicRules {
+    ...LogicRuleDetails
+  }
+}
+    ${LogicRuleEditorFormElementDetailsFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -21579,9 +21798,13 @@ export const SketchClassFormDocument = /*#__PURE__*/ gql`
       ...SketchFormElement
     }
     sketchClassId
+    logicRules {
+      ...LogicRuleDetails
+    }
   }
 }
-    ${SketchFormElementFragmentDoc}`;
+    ${SketchFormElementFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
 export const CreateSketchClassDocument = /*#__PURE__*/ gql`
     mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
   createSketchClassFromTemplate(
@@ -21662,10 +21885,82 @@ export const UpdateSketchFormElementDocument = /*#__PURE__*/ gql`
 export const SketchClassLogicRuleDetailsDocument = /*#__PURE__*/ gql`
     query SketchClassLogicRuleDetails($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
-    ...SketchingDetails
+    form {
+      ...LogicRuleEditorFormDetails
+    }
   }
 }
-    ${SketchingDetailsFragmentDoc}`;
+    ${LogicRuleEditorFormDetailsFragmentDoc}`;
+export const CreateVisibilityRuleDocument = /*#__PURE__*/ gql`
+    mutation createVisibilityRule($formElementId: Int!) {
+  createVisibilityLogicRule(input: {formElementId: $formElementId}) {
+    formLogicRule {
+      id
+      ...LogicRuleDetails
+    }
+  }
+}
+    ${LogicRuleDetailsFragmentDoc}`;
+export const UpdateVisibilityRuleDocument = /*#__PURE__*/ gql`
+    mutation UpdateVisibilityRule($id: Int!, $command: FormLogicCommand, $booleanOperator: FormLogicOperator) {
+  updateFormLogicRule(
+    input: {id: $id, patch: {command: $command, booleanOperator: $booleanOperator}}
+  ) {
+    formLogicRule {
+      id
+      command
+      booleanOperator
+    }
+  }
+}
+    `;
+export const UpdateVisibilityConditionDocument = /*#__PURE__*/ gql`
+    mutation UpdateVisibilityCondition($id: Int!, $operator: FieldRuleOperator, $subjectId: Int, $value: JSON) {
+  updateFormLogicCondition(
+    input: {id: $id, patch: {operator: $operator, subjectId: $subjectId, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+    }
+  }
+}
+    `;
+export const DeleteVisibilityRuleDocument = /*#__PURE__*/ gql`
+    mutation DeleteVisibilityRule($id: Int!) {
+  deleteFormLogicRule(input: {id: $id}) {
+    formLogicRule {
+      id
+    }
+  }
+}
+    `;
+export const AddVisibilityConditionDocument = /*#__PURE__*/ gql`
+    mutation AddVisibilityCondition($ruleId: Int!, $subjectId: Int!, $operator: FieldRuleOperator!, $value: JSON!) {
+  createFormLogicCondition(
+    input: {formLogicCondition: {ruleId: $ruleId, subjectId: $subjectId, operator: $operator, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+      ruleId
+    }
+  }
+}
+    `;
+export const DeleteVisibilityRuleConditionDocument = /*#__PURE__*/ gql`
+    mutation DeleteVisibilityRuleCondition($id: Int!) {
+  deleteFormLogicCondition(input: {id: $id}) {
+    formLogicCondition {
+      id
+    }
+  }
+}
+    `;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -21809,10 +22104,13 @@ export const SketchReportingDetailsDocument = /*#__PURE__*/ gql`
         generatedExportId
         generatedLabel
       }
+      logicRules {
+        ...LogicRuleDetails
+      }
     }
   }
 }
-    `;
+    ${LogicRuleDetailsFragmentDoc}`;
 export const CopyTocItemDocument = /*#__PURE__*/ gql`
     mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
   copySketchTocItem(id: $id, type: $type) {
@@ -22992,6 +23290,12 @@ export const namedOperations = {
     DeleteSketchClass: 'DeleteSketchClass',
     UpdateGeoprocessingServices: 'UpdateGeoprocessingServices',
     UpdateSketchFormElement: 'UpdateSketchFormElement',
+    createVisibilityRule: 'createVisibilityRule',
+    UpdateVisibilityRule: 'UpdateVisibilityRule',
+    UpdateVisibilityCondition: 'UpdateVisibilityCondition',
+    DeleteVisibilityRule: 'DeleteVisibilityRule',
+    AddVisibilityCondition: 'AddVisibilityCondition',
+    DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -23062,10 +23366,11 @@ export const namedOperations = {
     NewGLStyle: 'NewGLStyle',
     NewRenderUnder: 'NewRenderUnder',
     NewZIndex: 'NewZIndex',
+    NewRule: 'NewRule',
+    NewCondition: 'NewCondition',
     NewElement: 'NewElement',
     LogicRuleEditorFormElement: 'LogicRuleEditorFormElement',
     LogicRuleEditorRule: 'LogicRuleEditorRule',
-    NewRule: 'NewRule',
     NewSurvey: 'NewSurvey',
     NewGroup: 'NewGroup',
     NewInviteEmail: 'NewInviteEmail',
@@ -23108,6 +23413,8 @@ export const namedOperations = {
     SketchingDetails: 'SketchingDetails',
     AdminSketchingDetails: 'AdminSketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
+    LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
+    LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',
@@ -23118,6 +23425,7 @@ export const namedOperations = {
     FormElementDetails: 'FormElementDetails',
     SketchClassDetails: 'SketchClassDetails',
     FormElementFullDetails: 'FormElementFullDetails',
+    LogicRuleConditionDetails: 'LogicRuleConditionDetails',
     LogicRuleDetails: 'LogicRuleDetails',
     SurveyResponse: 'SurveyResponse',
     FormElementExtendedDetails: 'FormElementExtendedDetails',

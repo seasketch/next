@@ -15,6 +15,7 @@ import { MapContext } from "../../dataLayers/MapContextManager";
 import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
+import { evaluateVisibilityRules } from "./SketchForm";
 
 export default function SketchReportWindow({
   sketchId,
@@ -104,6 +105,23 @@ export default function SketchReportWindow({
           // eslint-disable-next-line i18next/no-literal-string
           `/sketches/${sketchId}.geojson.json?reporting_access_token=${reportingAccessToken}`
         );
+
+        // Find hidden elements from visibility rules
+        const hiddenElements = evaluateVisibilityRules(
+          Object.keys(data?.sketch?.properties || {}).reduce((acc, key) => {
+            acc[key] = {
+              value: data?.sketch?.properties[key],
+            };
+            return acc;
+          }, {} as { [key: string]: { value: any } }),
+          data?.sketchClass?.form?.logicRules || []
+        );
+
+        // Removing user attributes hidden by logic rules
+        const userAttributes = (data?.sketch?.userAttributes || []).filter(
+          (a: any) => !hiddenElements.includes(a.formElementId)
+        );
+
         const initMessage = {
           type: "SeaSketchReportingMessageEventType",
           client: data?.sketchClass?.geoprocessingClientName,
@@ -119,7 +137,7 @@ export default function SketchReportWindow({
             sketchClassId: sketchClassId,
             isCollection:
               data?.sketchClass?.geometryType === SketchGeometryType.Collection,
-            userAttributes: data?.sketch?.userAttributes || [],
+            userAttributes: userAttributes,
             // TODO: populate this from map context
             ...(data?.sketchClass?.geometryType ===
             SketchGeometryType.Collection

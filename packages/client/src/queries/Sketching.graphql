@@ -216,6 +216,9 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
         generatedExportId
         generatedLabel
       }
+      logicRules {
+        ...LogicRuleDetails
+      }
     }
   }
 }
