@@ -87,7 +87,7 @@ export default function SimpleSelectFactory(
 ) {
   return {
     ...SimpleSelect,
-    onSetup: function (opts: any, foo: any) {
+    onSetup: function (opts: any) {
       const state = _onSetup.apply(this, [opts]);
       state.preprocessingEndpoint = preprocessingEndpoint;
       state.preprocessingResults = preprocessingResults;
