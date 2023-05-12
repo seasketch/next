@@ -67,14 +67,12 @@ SimpleSelect.toDisplayFeatures = function (
 const _clickOnFeature = SimpleSelect.clickOnFeature;
 // Inspired by mapbox-gl-draw-waypoint
 SimpleSelect.clickOnFeature = function (state: any, e: any) {
-  console.log("click on feature!");
   if (e.featureTarget.geometry.type !== "Point") {
     // switch to direct_select mode for polygon/line features
     this.changeMode("direct_select", {
       featureId: e.featureTarget.properties.id,
     });
   } else {
-    console.log("is point");
     // // call parent
     _clickOnFeature.apply(this, [state, e]);
 
@@ -90,11 +88,9 @@ export default function SimpleSelectFactory(
   return {
     ...SimpleSelect,
     onSetup: function (opts: any, foo: any) {
-      console.log("onsetup", opts, foo, this);
       const state = _onSetup.apply(this, [opts]);
       state.preprocessingEndpoint = preprocessingEndpoint;
       state.preprocessingResults = preprocessingResults;
-      console.log("state", state);
       return state;
     },
   };

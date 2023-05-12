@@ -198,7 +198,6 @@ export default function useMapboxGLDraw(
           handlerState.current.onChange(e.features[0], kinks);
         },
         update: (e: any) => {
-          console.log("update", e);
           const mode = handlerState.current.draw?.getMode() as string;
           if (
             mode === "unfinished_feature_select" ||
@@ -227,7 +226,6 @@ export default function useMapboxGLDraw(
         //   setState(DigitizingState.CREATE);
         // },
         modeChange: function (e: any) {
-          console.log("modeChange", e);
           // TODO: Escape to cancel doesn't quite work
           let newState: DigitizingState | null = null;
           switch (e.mode) {
@@ -275,7 +273,6 @@ export default function useMapboxGLDraw(
               break;
           }
           if (newState) {
-            console.log("setting new state", DigitizingState[newState]);
             setState(newState);
           }
         },
@@ -312,7 +309,6 @@ export default function useMapboxGLDraw(
         },
       };
 
-      console.log("start mode", draw.getMode());
       map.on("draw.create", handlers.create);
       map.on("draw.update", handlers.update);
       map.on("seasketch.drawing_started", handlers.drawingStarted);
@@ -418,7 +414,6 @@ export default function useMapboxGLDraw(
      * Puts the current feature into editing mode.
      */
     edit: () => {
-      console.log("edit");
       if (handlerState.current.draw) {
         const selected = handlerState.current.draw.getSelected();
         if (!selected.features.length) {
@@ -454,7 +449,6 @@ export default function useMapboxGLDraw(
       setState(DigitizingState.NO_SELECTION);
     },
     selectFeature: (featureId: string) => {
-      console.log("select feature");
       if (!handlerState.current.draw) {
         console.warn("Draw not yet initialized");
         return;
@@ -465,7 +459,6 @@ export default function useMapboxGLDraw(
           ...commonModeOpts,
         });
         setSelection(handlerState.current.draw!.get(featureId)!);
-        console.log("set selection and changed mode");
       } else {
         // @ts-ignore
         handlerState.current.draw?.changeMode("direct_select", {

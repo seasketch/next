@@ -299,11 +299,18 @@ export default function SketchEditorModal({
     }
 
     if (
-      sketchClass.geometryType !== SketchGeometryType.Collection &&
-      draw.digitizingState !== DigitizingState.NO_SELECTION
+      sketchClass.geometryType === SketchGeometryType.Point &&
+      !sketchClass.preprocessingEndpoint
     ) {
-      setGeometryErrors(t("Please complete your geometry first"));
-      return;
+      // skip right over "completing" geometry
+    } else {
+      if (
+        sketchClass.geometryType !== SketchGeometryType.Collection &&
+        draw.digitizingState !== DigitizingState.NO_SELECTION
+      ) {
+        setGeometryErrors(t("Please complete your geometry first"));
+        return;
+      }
     }
 
     if (hasValidationErrors) {
