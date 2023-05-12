@@ -1317,6 +1317,31 @@ class MapContextManager {
         },
         layout: {},
       },
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-point`,
+        type: "circle",
+        // eslint-disable-next-line i18next/no-literal-string
+        source: `sketch-${id}`,
+        filter: ["any", ["==", ["geometry-type"], "Point"]],
+        paint: {
+          "circle-radius": 5,
+          "circle-color": "orange",
+        },
+      },
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-point-inner`,
+        type: "circle",
+        // eslint-disable-next-line i18next/no-literal-string
+        source: `sketch-${id}`,
+        filter: ["any", ["==", ["geometry-type"], "Point"]],
+        paint: {
+          "circle-radius": 3,
+          "circle-color": "white",
+          "circle-opacity": 0.75,
+        },
+      },
     ] as AnyLayer[];
     if (
       (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||

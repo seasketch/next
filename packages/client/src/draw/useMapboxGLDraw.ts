@@ -510,9 +510,15 @@ export default function useMapboxGLDraw(
             }
           };
         } else {
-          getNextMode = (featureId) => {
-            return ["direct_select", { featureId, ...commonModeOpts }];
-          };
+          if (geometryType === SketchGeometryType.Point) {
+            getNextMode = (featureId) => {
+              return ["simple_select", { featureIds: [], ...commonModeOpts }];
+            };
+          } else {
+            getNextMode = (featureId) => {
+              return ["direct_select", { featureId, ...commonModeOpts }];
+            };
+          }
         }
       } else if (unfinished) {
         if (geometryType === SketchGeometryType.Polygon) {
@@ -566,11 +572,19 @@ export default function useMapboxGLDraw(
         throw new Error("More than one feature. Is this a sketching workflow?");
       } else {
         const featureId = features[0].id;
-        // @ts-ignore
-        draw.changeMode("direct_select", {
-          featureId,
-          ...commonModeOpts,
-        });
+        if (geometryType === SketchGeometryType.Point) {
+          // @ts-ignore
+          draw.changeMode("simple_select", {
+            featureIds: [featureId],
+            ...commonModeOpts,
+          });
+        } else {
+          // @ts-ignore
+          draw.changeMode("direct_select", {
+            featureId,
+            ...commonModeOpts,
+          });
+        }
       }
     } else {
       // @ts-ignore

@@ -83,7 +83,7 @@ export default function TemplateChooser({
       <br />
       <div
         role="button"
-        className="divide-y divide-gray-200 overflow-hidden rounded-lg bg-gray-100 shadow sm:grid sm:grid-cols-2 sm:gap-px sm:divide-y-0"
+        className="divide-y divide-gray-200 overflow-hidden rounded-lg  sm:grid sm:grid-cols-2 sm:gap-px sm:divide-y-0"
       >
         {(data?.templateSketchClasses || []).map((template, actionIdx) => (
           <TemplateItem
@@ -104,16 +104,16 @@ export default function TemplateChooser({
             sketchClass={template}
             className={classNames(
               "relative",
-              actionIdx === 0
-                ? "rounded-tl-lg rounded-tr-lg sm:rounded-tr-none"
-                : "",
-              actionIdx === 1 ? "sm:rounded-tr-lg" : "",
-              actionIdx === (data?.templateSketchClasses || []).length - 2
-                ? "sm:rounded-bl-lg"
-                : "",
-              actionIdx === (data?.templateSketchClasses || []).length - 1
-                ? "rounded-bl-lg rounded-br-lg sm:rounded-bl-none"
-                : "",
+              // actionIdx === 0
+              //   ? "rounded-tl-lg rounded-tr-lg sm:rounded-tr-none"
+              //   : "",
+              // actionIdx === 1 ? "sm:rounded-tr-lg" : "",
+              // actionIdx === (data?.templateSketchClasses || []).length - 2
+              //   ? "sm:rounded-bl-lg"
+              //   : "",
+              // actionIdx === (data?.templateSketchClasses || []).length - 1
+              //   ? "rounded-bl-lg rounded-br-lg sm:rounded-bl-none"
+              //   : "",
               "relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500",
               clickedItem === null
                 ? "hover:bg-opacity-80"

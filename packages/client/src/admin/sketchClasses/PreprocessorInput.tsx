@@ -167,10 +167,19 @@ export default function PreprocessorInput({
       {(!sketchClass.preprocessingEndpoint ||
         !sketchClass.preprocessingProjectUrl) &&
         sketchClass.geometryType !== SketchGeometryType.Polygon && (
-          <div className=" rounded p-4 text-sm border shadow-sm w-full text-left text-gray-500 flex items-center opacity-50">
+          <div className="rounded p-4 text-sm border shadow-sm w-full text-left text-gray-500 items-center opacity-50">
             <Trans ns="admin:sketching">
               Preprocessing services only support polygons at this time, with
-              support planned for a future version of the tool.
+              support planned for a future version of the tool. Contact{" "}
+              <a
+                target="_blank"
+                className="underline text-primary-500"
+                href="mailto:support@seasketch.org"
+                rel="noreferrer"
+              >
+                support@seasketch.org
+              </a>{" "}
+              if you need preprocessing for this geometry type.
             </Trans>
           </div>
         )}
