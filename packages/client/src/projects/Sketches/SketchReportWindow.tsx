@@ -1,10 +1,8 @@
 import { XIcon } from "@heroicons/react/outline";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import Skeleton from "../../components/Skeleton";
 import {
   SketchGeometryType,
-  useProjectMetadataQuery,
   useSketchReportingDetailsQuery,
 } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
@@ -13,7 +11,6 @@ import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import languages from "../../lang/supported";
-import getSlug from "../../getSlug";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { evaluateVisibilityRules } from "./SketchForm";
 
@@ -163,7 +160,8 @@ export default function SketchReportWindow({
       } else if (
         e.data.type === "SeaSketchReportingToggleLayerVisibilityEvent" &&
         iframe.current?.contentWindow &&
-        e.data.layerId
+        e.data.layerId &&
+        e.data.frameId === frameId
       ) {
         const { layerId, on } = e.data as { layerId: string; on: boolean };
         if (mapContext.manager) {
@@ -176,7 +174,8 @@ export default function SketchReportWindow({
       } else if (
         e.data.type === "SeaSketchReportingKeydownEvent" &&
         e.data.key &&
-        e.data.key === "x"
+        e.data.key === "x" &&
+        iframe.current?.contentWindow === e.source
       ) {
         onRequestClose(sketchId);
       }
@@ -202,9 +201,9 @@ export default function SketchReportWindow({
     lang?.selectedLang?.code,
   ]);
 
-  return createPortal(
+  return (
     <div
-      className="flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg z-10 absolute top-2 right-2"
+      className="flex-none flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg pointer-events-auto"
       style={{ height: "calc(100vh - 32px)", maxHeight: 1024 }}
       onClick={(e) => {
         if (onClick) {
@@ -225,7 +224,10 @@ export default function SketchReportWindow({
             data?.sketch?.name
           )}
         </h1>
-        <button className="" onClick={() => onRequestClose(sketchId)}>
+        <button
+          className="hover:bg-gray-100 rounded-full p-2 -mr-2"
+          onClick={() => onRequestClose(sketchId)}
+        >
           <XIcon className="w-5 h-5 text-black" />
         </button>
       </div>
@@ -253,8 +255,7 @@ export default function SketchReportWindow({
           ""
         )}
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
 

@@ -58,6 +58,7 @@ import { useTranslatedProps } from "../../components/TranslatedPropControl";
 import languages from "../../lang/supported";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import { createPortal } from "react-dom";
 
 type ReportState = {
   sketchId: number;
@@ -438,9 +439,19 @@ export default function SketchUIStateContextProvider({
         // @ts-ignore
         client.cache.data.data[`Sketch:${sketchId}`];
       if (sketch) {
-        setOpenReports([
-          { sketchId, uiState: "right", sketchClassId: sketch?.sketchClassId },
-        ]);
+        setOpenReports((openReports) => {
+          const maxWindows = Math.floor((window.innerWidth - 69) / 512);
+          return [
+            {
+              sketchId,
+              uiState: "right",
+              sketchClassId: sketch?.sketchClassId,
+            },
+            ...openReports
+              .filter((r) => r.sketchId !== sketchId)
+              .slice(0, maxWindows - 1),
+          ];
+        });
       }
     },
     [client.cache, setOpenReports]
@@ -761,8 +772,9 @@ export default function SketchUIStateContextProvider({
   const onRequestReportClose = useCallback(
     (id: number) => {
       setOpenReports((prev) => [...prev.filter((r) => r.sketchId !== id)]);
+      setSelectedIds([]);
     },
-    [setOpenReports]
+    [setOpenReports, setSelectedIds]
   );
 
   const onReportClick = useCallback(
@@ -1284,9 +1296,13 @@ export default function SketchUIStateContextProvider({
             // TODO: support multiselect?
             const id = parseInt(selectedIds[0].split(":")[1]);
             onRequestReportClose(id);
+            setSelectedIds([]);
             return;
           } else {
-            setOpenReports((prev) => [...prev.slice(-1)]);
+            setOpenReports((prev) => {
+              return [...prev.slice(0, -1)];
+            });
+            setSelectedIds([]);
             return;
           }
         }
@@ -1308,6 +1324,7 @@ export default function SketchUIStateContextProvider({
     onRequestReportClose,
     openReports.length,
     selectedIds,
+    setOpenReports,
   ]);
 
   const { data } = useProjectMetadataQuery({
@@ -1376,20 +1393,30 @@ export default function SketchUIStateContextProvider({
         }}
       >
         {children}
-        {openReports.map(({ sketchId, uiState, sketchClassId }) => (
-          <SketchReportWindow
-            key={sketchId}
-            sketchId={sketchId}
-            sketchClassId={sketchClassId}
-            onRequestClose={onRequestReportClose}
-            uiState={uiState}
-            selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
-            reportingAccessToken={
-              projectMetadata?.data?.project?.sketchGeometryToken
-            }
-            onClick={onReportClick}
-          />
-        ))}
+        {openReports.length > 0 &&
+          createPortal(
+            <div
+              style={{ zIndex: 5 }}
+              className="absolute top-2 right-2 flex flex-wrap gap-2 max-w-full justify-end pointer-events-none"
+            >
+              {openReports.map(({ sketchId, uiState, sketchClassId }) => (
+                <SketchReportWindow
+                  key={sketchId}
+                  sketchId={sketchId}
+                  sketchClassId={sketchClassId}
+                  onRequestClose={onRequestReportClose}
+                  uiState={uiState}
+                  selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
+                  reportingAccessToken={
+                    projectMetadata?.data?.project?.sketchGeometryToken
+                  }
+                  onClick={onReportClick}
+                />
+              ))}
+            </div>,
+            document.body
+          )}
+
         {editor !== false && (
           <SketchEditorModal
             sketchClass={editor?.sketchClass}
