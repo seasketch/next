@@ -11,6 +11,7 @@ import {
   ProjectAppSidebarContext,
 } from "../projects/ProjectAppSidebar";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
+import { RssIcon } from "@heroicons/react/solid";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -98,6 +99,19 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       ref={mapContainer}
       onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
+      {
+        <button
+          style={{ zIndex: 1 }}
+          onClick={mapContext.manager?.measure}
+          className={`absolute bg-white border-gray-500 rounded p-1 top-28 ${
+            props.navigationControlsLocation === "top-right"
+              ? "right-2.5"
+              : "left-2.5"
+          }  shadow`}
+        >
+          <RssIcon className="w-5 h-5" />
+        </button>
+      }
       <div
         className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
           mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"
@@ -237,6 +251,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           </div>
         </div>
       )}
+
       <AnimatePresence>
         <Tooltip
           visible={!!mapContext.tooltip}

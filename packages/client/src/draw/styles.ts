@@ -1,3 +1,5 @@
+import { RULER_TICK_ID } from "./Measure";
+
 const styles = [
   {
     id: "gl-draw-polygon-fill-inactive-no-kinks",
@@ -73,6 +75,7 @@ const styles = [
       ["==", "$type", "Point"],
       ["==", "meta", "midpoint"],
       ["!=", "preprocessing", "true"],
+      ["!=", "__ruler", "true"],
     ],
     paint: {
       "circle-radius": 3,
@@ -186,6 +189,7 @@ const styles = [
       ["==", "$type", "LineString"],
       ["==", "active", "true"],
       ["!=", "preprocessing", "true"],
+      ["!=", "__ruler", "true"],
     ],
     layout: {
       "line-cap": "round",
@@ -194,6 +198,24 @@ const styles = [
     paint: {
       "line-color": "#fbb03b",
       "line-dasharray": [0.2, 2],
+      "line-width": 2,
+    },
+  },
+  {
+    id: "gl-draw-ruler-active",
+    type: "line",
+    filter: [
+      "all",
+      ["==", "$type", "LineString"],
+      ["==", "active", "true"],
+      ["==", "__ruler", "true"],
+    ],
+    layout: {
+      "line-cap": "round",
+      "line-join": "round",
+    },
+    paint: {
+      "line-color": "white",
       "line-width": 2,
     },
   },
@@ -225,6 +247,97 @@ const styles = [
     paint: {
       "circle-radius": 3,
       "circle-color": "#fbb03b",
+    },
+  },
+  {
+    id: "gl-draw-ruler-tick-circle",
+    type: "circle",
+    filter: ["all", ["==", "$type", "Point"], ["==", "__tick", "true"]],
+    paint: {
+      "circle-radius": 2.5,
+      "circle-color": "#fff",
+    },
+  },
+  {
+    id: "gl-draw-ruler-tick-inner-circle",
+    type: "circle",
+    filter: ["all", ["==", "$type", "Point"], ["==", "__tick", "true"]],
+    paint: {
+      "circle-radius": 1,
+      "circle-color": "black",
+    },
+  },
+  {
+    id: "gl-draw-ruler-tick-label",
+    type: "symbol",
+    filter: ["all", ["==", "$type", "Point"], ["==", "__tick", "true"]],
+    layout: {
+      "text-field": ["get", "distance"],
+      "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+      "text-size": 12,
+      "text-anchor": "left",
+      "text-justify": "left",
+      "icon-allow-overlap": true,
+      "text-offset": [1, 0],
+
+      // "text-allow-overlap": true,
+      "icon-ignore-placement": true,
+      // "text-ignore-placement": true,
+      "symbol-placement": "point",
+      // "text-rotation": ["get", "bearing"],
+    },
+    paint: {
+      "text-halo-color": "rgba(255, 255, 255, 1)",
+      "text-halo-width": 1,
+      "text-halo-blur": 1,
+    },
+  },
+  // {
+  //   id: "gl-draw-ruler-distance-label",
+  //   type: "symbol",
+  //   filter: ["all", ["==", "__ruler", "true"], ["==", "$type", "LineString"]],
+  //   layout: {
+  //     "text-field": ["get", "distanceLabel"],
+  //     "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+  //     "text-size": 16,
+  //     "text-anchor": "top",
+  //     // "text-offset": [0, 0],
+  //     "text-justify": "center",
+  //     "icon-allow-overlap": true,
+  //     "text-allow-overlap": true,
+  //     "icon-ignore-placement": true,
+  //     // "text-ignore-placement": true,
+  //     "symbol-placement": "line",
+  //     // "symbol-spacing": 1024,
+  //   },
+  //   paint: {
+  //     "text-halo-color": "rgba(255, 255, 255, 1)",
+  //     "text-halo-width": 2,
+  //     "text-halo-blur": 1,
+  //   },
+  // },
+  {
+    id: "gl-draw-ruler-distance-label",
+    type: "symbol",
+    filter: ["all", ["==", "__rulerEnd", "true"], ["==", "$type", "Point"]],
+    layout: {
+      "text-field": ["get", "label"],
+      "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+      "text-size": 16,
+      "text-anchor": "right",
+      "text-offset": [-1.5, 0],
+      "text-justify": "right",
+      "icon-allow-overlap": true,
+      "text-allow-overlap": true,
+      "icon-ignore-placement": true,
+      // "text-ignore-placement": true,
+      // "symbol-placement": "",
+      // "symbol-spacing": 1024,
+    },
+    paint: {
+      "text-halo-color": "rgba(255, 255, 255, 1)",
+      "text-halo-width": 2,
+      "text-halo-blur": 1,
     },
   },
   {

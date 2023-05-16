@@ -47,6 +47,13 @@ import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
+import { RULER_TICK_ID, TICK_DATA_URL } from "../draw/Measure";
+import { EventEmitter } from "eventemitter3";
+
+export const MeasureEventTypes = {
+  Started: "measure_started",
+  Stopped: "measure_stopped",
+};
 
 const rejectAfter = (duration: number) =>
   new Promise((resolve, reject) => {
@@ -86,7 +93,7 @@ export interface LayerState {
   error?: Error;
 }
 
-class MapContextManager {
+class MapContextManager extends EventEmitter {
   map?: Map;
   interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
@@ -143,6 +150,7 @@ class MapContextManager {
     cacheSize?: number,
     initialBounds?: LngLatBoundsLike
   ) {
+    super();
     cacheSize = cacheSize || bytes("50mb");
     this._setState = setState;
     // @ts-ignore
@@ -1643,6 +1651,54 @@ class MapContextManager {
     this.debouncedUpdateStyle();
   }
 
+  measure = () => {
+    console.log("emit started");
+    this.emit(MeasureEventTypes.Started);
+    if (!this.map) {
+      throw new Error("Map not initialized");
+    }
+    console.log("measure");
+    // remember previous cursor style
+    const previousCursor = this.map.getCanvas().style.cursor;
+    // set cursor
+    this.map.getCanvas().style.cursor = "pointer";
+    const map = this.map;
+    const handler = (e: any) => {
+      console.log("on click");
+      e.preventDefault();
+      e.originalEvent.preventDefault();
+      console.log("click");
+      // reset cursor
+      map!.getCanvas().style.cursor = previousCursor;
+      this.emit(MeasureEventTypes.Stopped);
+      map?.off("click", handler);
+    };
+    // add event listeners
+    this.map.on("click", handler);
+  };
+
+  cancelMeasurement = () => {
+    this.emit(MeasureEventTypes.Stopped);
+  };
+
+  clearMeasurement = () => {
+    this.emit(MeasureEventTypes.Stopped);
+  };
+
+  disableMeasurementTools = () => {
+    this.setState((prev) => ({
+      ...prev,
+      disableMeasurementTools: true,
+    }));
+  };
+
+  enableMeasurementTools = () => {
+    this.setState((prev) => ({
+      ...prev,
+      disableMeasurementTools: false,
+    }));
+  };
+
   private spritesById: { [id: string]: SpriteDetailsFragment } = {};
 
   private async addSprites(
@@ -1708,6 +1764,14 @@ class MapContextManager {
       if (spriteFragment) {
         this.addSprite(spriteFragment, this.map!);
       }
+    } else if (e.id === RULER_TICK_ID && this.map) {
+      this.map.loadImage(TICK_DATA_URL, (error, image) => {
+        if (error) {
+          throw error;
+        }
+        // @ts-ignore
+        map.addImage(RULER_TICK_ID, image);
+      });
     }
   };
 
@@ -2190,6 +2254,7 @@ export interface MapContextInterface {
     supportsUndo: boolean;
   };
   languageCode?: string;
+  disableMeasurementTools: boolean;
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
@@ -2224,6 +2289,7 @@ export function useMapContext(options?: MapContextOptions) {
     basemapOptionalLayerStates: {},
     styleHash: "",
     containerPortal: containerPortal || null,
+    disableMeasurementTools: false,
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -2310,6 +2376,7 @@ export const MapContext = createContext<MapContextInterface>({
       basemapOptionalLayerStates: {},
       styleHash: "",
       containerPortal: null,
+      disableMeasurementTools: false,
     },
     (state) => {}
   ),
@@ -2319,6 +2386,7 @@ export const MapContext = createContext<MapContextInterface>({
   terrainEnabled: false,
   basemapOptionalLayerStates: {},
   containerPortal: null,
+  disableMeasurementTools: false,
 });
 
 async function createImage(

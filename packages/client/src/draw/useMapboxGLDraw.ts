@@ -15,6 +15,11 @@ import styles from "./styles";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 import UnfinishedSimpleSelect from "./UnfinishedSimpleSelect";
 import Preprocessing from "./Preprocessing";
+import Measure from "./Measure";
+import MeasureDirectSelect from "./MeasureDirectSelect";
+import MapContextManager, {
+  MeasureEventTypes,
+} from "../dataLayers/MapContextManager";
 
 function hasKinks(feature?: Feature<any>) {
   if (feature && feature.geometry.type === "Polygon") {
@@ -61,6 +66,7 @@ export enum DigitizingState {
    * Preprocessing error can be accessed from returned `preprocessingError`
    */
   PREPROCESSING_ERROR,
+  PAUSED_FOR_MEASUREMENT,
 }
 
 export type DigitizingDragTarget = {
@@ -83,7 +89,7 @@ export const EMPTY_FEATURE_COLLECTION = {
  * @returns
  */
 export default function useMapboxGLDraw(
-  map: Map | null | undefined,
+  mapContextManager: MapContextManager | null | undefined,
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
   onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
@@ -91,6 +97,7 @@ export default function useMapboxGLDraw(
   preprocessingEndpoint?: string,
   onPreprocessedGeometry?: (geom: Geometry) => void
 ) {
+  const map = mapContextManager?.map;
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
@@ -154,6 +161,8 @@ export default function useMapboxGLDraw(
             preprocessingResults,
             onPreprocessedGeometry
           ),
+          measure: Measure,
+          measure_direct_select: MeasureDirectSelect,
         },
         styles,
         userProperties: true,
@@ -191,27 +200,31 @@ export default function useMapboxGLDraw(
 
       const handlers = {
         create: function (e: any) {
-          const kinks = hasKinks(e.features[0]);
-          if (kinks) {
-            setSelfIntersects(true);
+          if (!e.features[0].properties?.__measure) {
+            const kinks = hasKinks(e.features[0]);
+            if (kinks) {
+              setSelfIntersects(true);
+            }
+            handlerState.current.onChange(e.features[0], kinks);
           }
-          handlerState.current.onChange(e.features[0], kinks);
         },
         update: (e: any) => {
-          const mode = handlerState.current.draw?.getMode() as string;
-          if (
-            mode === "unfinished_feature_select" ||
-            mode === "unfinished_simple_select"
-          ) {
-            setState(DigitizingState.UNFINISHED);
-          } else {
-            if (handlerState.current.preprocessingError) {
-              // do nothing, already in correct state
+          if (!e.features[0].properties?.__measure) {
+            const mode = handlerState.current.draw?.getMode() as string;
+            if (
+              mode === "unfinished_feature_select" ||
+              mode === "unfinished_simple_select"
+            ) {
+              setState(DigitizingState.UNFINISHED);
             } else {
-              setState(DigitizingState.EDITING);
+              if (handlerState.current.preprocessingError) {
+                // do nothing, already in correct state
+              } else {
+                setState(DigitizingState.EDITING);
+              }
             }
+            handlerState.current.onChange(e.features[0], selfIntersects);
           }
-          handlerState.current.onChange(e.features[0], selfIntersects);
         },
         drawingStarted: () => {
           setState(DigitizingState.STARTED);
@@ -283,12 +296,15 @@ export default function useMapboxGLDraw(
             }
             setSelection(null);
           } else {
-            setSelection({ ...e.features[0] });
-            if (
-              geometryType === SketchGeometryType.Point &&
-              handlerState.current.state === DigitizingState.NO_SELECTION
-            ) {
-              setState(DigitizingState.EDITING);
+            if (!e.features[0]?.properties?.__measure) {
+              setSelection({ ...e.features[0] });
+            } else {
+              if (
+                geometryType === SketchGeometryType.Point &&
+                handlerState.current.state === DigitizingState.NO_SELECTION
+              ) {
+                setState(DigitizingState.EDITING);
+              }
             }
           }
         },
@@ -632,6 +648,59 @@ export default function useMapboxGLDraw(
   const disable = useCallback(() => {
     setDisabled(true);
   }, [setDisabled]);
+
+  useEffect(() => {
+    console.log("use effect");
+    if (mapContextManager && draw) {
+      console.log("add event listeners");
+      const manager = mapContextManager;
+      let previousState = state;
+      let previousMode = draw.getMode();
+      let previousSelectedIds = draw.getSelectedIds();
+      const onStarted = () => {
+        _setState((prev) => {
+          previousState = prev;
+          handlerState.current.state = DigitizingState.PAUSED_FOR_MEASUREMENT;
+          return DigitizingState.PAUSED_FOR_MEASUREMENT;
+        });
+        console.log("changing mode to simple_select", draw);
+        previousMode = draw.getMode();
+        previousSelectedIds = draw.getSelectedIds();
+
+        draw?.changeMode("simple_select", {
+          featureIds: [],
+          ...commonModeOpts,
+        });
+        console.log("pause");
+      };
+      const onStopped = () => {
+        setState(previousState);
+        draw?.changeMode(
+          // @ts-ignore
+          previousMode,
+          [
+            "direct_select",
+            "preprocessing",
+            "unfinished_feature_select",
+          ].includes(previousMode)
+            ? { featureId: previousSelectedIds[0] }
+            : { featureIds: previousSelectedIds }
+        );
+      };
+      manager.on(MeasureEventTypes.Started, onStarted);
+      manager.on(MeasureEventTypes.Stopped, onStopped);
+      // TODO: disable measurement tools unless state is
+      // * CREATE
+      // * NO_SELECTION
+      // * UNFINISHED
+      // * or PAUSED_FOR_MEASUREMENT
+      return () => {
+        console.log("off");
+        manager.off(MeasureEventTypes.Started, onStarted);
+        manager.off(MeasureEventTypes.Stopped, onStopped);
+      };
+    }
+  }, [mapContextManager, draw]);
 
   return {
     digitizingState: state,

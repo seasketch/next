@@ -30,6 +30,7 @@ import Button from "../../components/Button";
 import MapboxMap from "../../components/MapboxMap";
 import { Icons } from "../../components/SketchGeometryTypeSelector";
 import {
+  Measure,
   ResetView,
   ShowScaleBar,
   ZoomToFeature,
@@ -74,6 +75,7 @@ import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";
 import MapPicker from "../../components/MapPicker";
 import useDialog from "../../components/useDialog";
+import { MeasureEventTypes } from "../../dataLayers/MapContextManager";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -284,7 +286,7 @@ const SpatialAccessPriority: FormElementComponent<
     resetFeature,
     dragTarget,
   } = useMapboxGLDraw(
-    mapContext.manager?.map,
+    mapContext.manager,
     props.sketchClass!.geometryType,
     filteredFeatures,
     async (updatedFeature, hasKinks) => {
@@ -604,6 +606,15 @@ const SpatialAccessPriority: FormElementComponent<
           }
         />
       ) : null}
+      <Measure
+        onClick={actions.measure}
+        disabled={
+          digitizingState === DigitizingState.CAN_COMPLETE ||
+          digitizingState === DigitizingState.DISABLED ||
+          digitizingState === DigitizingState.STARTED ||
+          digitizingState === DigitizingState.UNFINISHED
+        }
+      />
       <ShowScaleBar mapContext={mapContext} />
     </>
   );
