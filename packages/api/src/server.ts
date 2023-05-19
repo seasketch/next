@@ -359,7 +359,7 @@ app.use(
           `,
         [id]
       );
-      const geojson = rows[0].sketch_or_collection_as_geojson;
+      const geojson = rows[0].sketch_or_collection_as_geojson || null;
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");
@@ -432,7 +432,7 @@ app.use(
           `,
         [id]
       );
-      const bookmark = rows[0].bookmark;
+      const bookmark = rows[0].bookmark || null;
       const { rows: spriteRows } = await client.query(
         `
         SELECT get_sprite_data_for_screenshot(map_bookmarks.*) as sprite_images from map_bookmarks where id = $1
