@@ -360,6 +360,16 @@ app.use(
         [id]
       );
       const geojson = rows[0].sketch_or_collection_as_geojson || null;
+      if (geojson === null) {
+        res
+          .status(404)
+          .send(
+            `Sketch with id ${id} not found. It either does not exists or is not shared with "${
+              claims?.canonicalEmail || `anon`
+            }"`
+          );
+        return;
+      }
       await client.query("COMMIT");
       await client.release();
       res.setHeader("Content-Type", "application/json");
@@ -379,15 +389,6 @@ app.use(
         // changes to "class". The attributes are burned into the cached
         // geometry with the old exportid
         res.setHeader("Cache-Control", "public, max-age=1800");
-      }
-      if (geojson === null) {
-        res
-          .status(404)
-          .send(
-            `Sketch with id ${id} not found. It either does not exists or is not shared with "${
-              claims?.canonicalEmail || `anon`
-            }"`
-          );
       }
       res.send(geojson);
     } catch (e: any) {
