@@ -160,8 +160,7 @@ export default function SketchReportWindow({
       } else if (
         e.data.type === "SeaSketchReportingToggleLayerVisibilityEvent" &&
         iframe.current?.contentWindow &&
-        e.data.layerId &&
-        e.data.frameId === frameId
+        e.data.layerId
       ) {
         const { layerId, on } = e.data as { layerId: string; on: boolean };
         if (mapContext.manager) {
