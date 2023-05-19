@@ -281,6 +281,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const projectId = project.id;
           const userId = context?.user?.id;
           const canonicalEmail = context.user?.canonicalEmail;
+          const isSuperuser = context.user?.superuser;
           if (projectId && userId) {
             return context.loaders.signToken(
               {
@@ -288,6 +289,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 userId,
                 projectId,
                 canonicalEmail,
+                isSuperuser,
               },
               "1 day"
             );

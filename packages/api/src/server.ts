@@ -331,7 +331,12 @@ app.use(
       await client.query("BEGIN");
       let token: string | undefined = req.query.reporting_access_token;
       let claims:
-        | { userId?: number; projectId?: number; canonicalEmail?: string }
+        | {
+            userId?: number;
+            projectId?: number;
+            canonicalEmail?: string;
+            isSuperuser?: boolean;
+          }
         | undefined;
       if (token) {
         claims = await verify(loadersPool, token, ISSUER);
@@ -343,7 +348,9 @@ app.use(
         claims.userId &&
         pgSettings.role === "anon"
       ) {
-        pgSettings.role = "seasketch_user";
+        pgSettings.role = claims.isSuperuser
+          ? "seasketch_superuser"
+          : "seasketch_user";
         pgSettings["session.user_id"] = claims.userId;
         pgSettings["session.email_verified"] = true;
         pgSettings["session.canonical_email"] = claims.canonicalEmail;
@@ -411,7 +418,12 @@ app.use(
       await client.query("BEGIN");
       let token: string | undefined = req.query.token;
       let claims:
-        | { userId?: number; projectId?: number; canonicalEmail?: string }
+        | {
+            userId?: number;
+            projectId?: number;
+            canonicalEmail?: string;
+            isSuperuser?: boolean;
+          }
         | undefined;
       if (token) {
         claims = await verify(loadersPool, token, ISSUER);
@@ -423,7 +435,9 @@ app.use(
         claims.userId &&
         pgSettings.role === "anon"
       ) {
-        pgSettings.role = "seasketch_user";
+        pgSettings.role = claims.isSuperuser
+          ? "seasketch_superuser"
+          : "seasketch_user";
         pgSettings["session.user_id"] = claims.userId;
         pgSettings["session.email_verified"] = true;
         pgSettings["session.canonical_email"] = claims.canonicalEmail;
