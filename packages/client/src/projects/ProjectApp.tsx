@@ -20,6 +20,13 @@ import UserProfileModal from "./UserProfileModal";
 import SketchUIStateContextProvider from "./Sketches/SketchUIStateContextProvider";
 import { useApolloClient } from "@apollo/client";
 import { getSelectedLanguage } from "../surveys/LanguageSelector";
+import {
+  Measure,
+  ResetToProjectBounds,
+  ResetView,
+  ShowScaleBar,
+} from "../draw/MapSettingsPopup";
+import { BBox } from "geojson";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -91,6 +98,33 @@ export default function ProjectApp() {
                 className="ml-2"
                 showNavigationControls={true}
                 navigationControlsLocation="top-right"
+                onRequestSidebarClose={() => setExpandSidebar(false)}
+                mapSettingsPopupActions={
+                  <>
+                    <ResetToProjectBounds
+                      mapContextManager={mapContext.manager}
+                    />
+                    <ShowScaleBar mapContext={mapContext} />
+                    <Measure
+                      disabled={
+                        mapContext.measurementToolsState.state === "disabled"
+                      }
+                      onClick={() => {
+                        if (
+                          mapContext.measurementToolsState.state === "disabled"
+                        ) {
+                          // do nothing
+                        } else if (
+                          mapContext.measurementToolsState.state === "active"
+                        ) {
+                          mapContext.manager?.cancelMeasurement();
+                        } else {
+                          mapContext.manager?.measure();
+                        }
+                      }}
+                    />
+                  </>
+                }
               />
               <div
                 className="absolute flex items-center justify-center h-full pointer-events-none"

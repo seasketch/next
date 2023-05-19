@@ -203,6 +203,21 @@ export default class LayerInteractivityManager extends EventEmitter {
     map.on("moveend", this.onMoveEnd);
   }
 
+  /**
+   * Pause interactivity manager so that it doesn't interfere with other map
+   * interactions, such as when using the measure tool.
+   */
+  pause() {
+    this.unregisterEventListeners(this.map);
+  }
+
+  /**
+   * Resume interactivity manager after pausing it.
+   */
+  resume() {
+    this.registerEventListeners(this.map);
+  }
+
   private moving = false;
   private lastMouseEvent: MapMouseEvent | undefined = undefined;
 

@@ -29,6 +29,7 @@ import useMapboxGLDraw, {
 } from "../draw/useMapboxGLDraw";
 import {
   BasemapControl,
+  Measure,
   NextQuestion,
   PreviousQuestion,
   ResetView,
@@ -231,6 +232,23 @@ const SingleSpatialInput: FormElementComponent<
                 feature={props.value?.collection.features[0]}
                 isSmall={style.isSmall}
                 geometryType={props.sketchClass!.geometryType!}
+              />
+              <Measure
+                disabled={
+                  mapContext.measurementToolsState.state &&
+                  mapContext.measurementToolsState.state === "disabled"
+                }
+                onClick={() => {
+                  if (mapContext.measurementToolsState.state === "disabled") {
+                    // do nothing
+                  } else if (
+                    mapContext.measurementToolsState.state === "active"
+                  ) {
+                    mapContext.manager?.cancelMeasurement();
+                  } else {
+                    mapContext.manager?.measure();
+                  }
+                }}
               />
               <BasemapControl
                 basemaps={basemaps}

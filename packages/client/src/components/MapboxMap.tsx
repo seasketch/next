@@ -1,7 +1,16 @@
 import mapboxgl, { Map, MapboxOptions } from "mapbox-gl";
 import ReactDOM from "react-dom";
-import React, { useEffect, useState, useRef, useContext } from "react";
-import { MapContext } from "../dataLayers/MapContextManager";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useContext,
+  ReactNode,
+} from "react";
+import {
+  MapContext,
+  MeasurementDigitizingState,
+} from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Spinner from "./Spinner";
@@ -12,6 +21,9 @@ import {
 } from "../projects/ProjectAppSidebar";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
 import { RssIcon } from "@heroicons/react/solid";
+import MeasurementToolsOverlay from "../MeasurementToolsOverlay";
+import MapSettingsPopup from "../draw/MapSettingsPopup";
+import { CogIcon } from "@heroicons/react/outline";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -29,6 +41,8 @@ export interface OverlayMapProps {
     | "top-left"
     | "bottom-right"
     | "bottom-left";
+  mapSettingsPopupActions?: ReactNode;
+  onRequestSidebarClose?: () => void;
 }
 
 mapboxgl.prewarm();
@@ -38,6 +52,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
   const [showSpinner, setShowSpinner] = useState(true);
+  const [mapSettingsPopupOpen, setMapSettingsPopupOpen] = useState(false);
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
   >(null);
@@ -91,6 +106,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
     }
   }, [map, mapContext.manager, mapContext.selectedBasemap, mapContainer.current, mapContext.ready, props.lazyLoadReady]);
 
+  const mapSettingsPopupAnchor = useRef<HTMLButtonElement>(null);
+
   return (
     <div
       className={`flex-1 bg-gray-300 ${props.className} ${
@@ -99,17 +116,36 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       ref={mapContainer}
       onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
+      {props.mapSettingsPopupActions && (
+        <MapSettingsPopup
+          open={mapSettingsPopupOpen}
+          onRequestClose={() => setMapSettingsPopupOpen(false)}
+          anchor={mapSettingsPopupAnchor.current || undefined}
+        >
+          {props.mapSettingsPopupActions}
+        </MapSettingsPopup>
+      )}
+      <MeasurementToolsOverlay
+        placement={props.navigationControlsLocation || "top-right"}
+      />
+
       {
         <button
-          style={{ zIndex: 1 }}
-          onClick={mapContext.manager?.measure}
-          className={`absolute bg-white border-gray-500 rounded p-1 top-28 ${
+          ref={mapSettingsPopupAnchor}
+          style={{ zIndex: 1, padding: 5 }}
+          onClick={() => {
+            if (props.onRequestSidebarClose) {
+              props.onRequestSidebarClose();
+            }
+            setMapSettingsPopupOpen(true);
+          }}
+          className={`absolute bg-white ring-2 ring-black ring-opacity-10 rounded top-28 ${
             props.navigationControlsLocation === "top-right"
               ? "right-2.5"
               : "left-2.5"
-          }  shadow`}
+          }`}
         >
-          <RssIcon className="w-5 h-5" />
+          <CogIcon className="w-5 h-5" />
         </button>
       }
       <div

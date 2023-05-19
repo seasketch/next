@@ -146,6 +146,7 @@ const MapSettingsPopup: FunctionComponent<{
             <div
               className="overflow-y-auto h-full p-2 pt-3 sm:pt-2"
               ref={scrollable}
+              onClick={onRequestClose}
               onScroll={handleScroll}
             >
               {children}
@@ -182,7 +183,8 @@ const MapSettingsPopup: FunctionComponent<{
 export default MapSettingsPopup;
 
 const Item: FunctionComponent<{
-  onClick: (e: React.MouseEvent<any, MouseEvent>) => void;
+  /** Return true to close the modal after clicking an item */
+  onClick: (e: React.MouseEvent<any, MouseEvent>) => any;
   title: string;
   Icon?: FunctionComponent<{ className?: string }>;
   disabled?: boolean;
@@ -203,9 +205,12 @@ const Item: FunctionComponent<{
           e.preventDefault();
           e.stopPropagation();
         } else {
-          onClick(e);
-          e.preventDefault();
-          e.stopPropagation();
+          const close = onClick(e);
+          if (close === true) {
+          } else {
+            e.preventDefault();
+            e.stopPropagation();
+          }
         }
       }}
     >
@@ -276,6 +281,23 @@ export function ResetView(
   );
 }
 
+export function ResetToProjectBounds(
+  props: MapSettingsActionItem<{ mapContextManager?: MapContextManager }>
+) {
+  const { t } = useTranslation("surveys");
+  return (
+    <Item
+      {...props}
+      Icon={ZoomOutIcon}
+      onClick={() => {
+        props.mapContextManager?.resetToProjectBounds();
+        return true;
+      }}
+      title={t("Reset view")}
+    />
+  );
+}
+
 export function ResetCamera(
   props: MapSettingsActionItem<{
     mapContextManager: MapContextManager;
@@ -319,7 +341,10 @@ export function Measure(
           ></path>
         </svg>
       )}
-      onClick={() => props.onClick()}
+      onClick={() => {
+        props.onClick();
+        return true;
+      }}
       title={t("Measure")}
     />
   );

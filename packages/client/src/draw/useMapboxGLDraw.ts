@@ -702,6 +702,20 @@ export default function useMapboxGLDraw(
     }
   }, [mapContextManager, draw]);
 
+  useEffect(() => {
+    console.log(DigitizingState[state]);
+    if (
+      state === DigitizingState.CREATE ||
+      state === DigitizingState.NO_SELECTION ||
+      state === DigitizingState.UNFINISHED ||
+      state === DigitizingState.PAUSED_FOR_MEASUREMENT
+    ) {
+      mapContextManager?.enableMeasurementTools();
+    } else {
+      mapContextManager?.disableMeasurementTools();
+    }
+  }, [state, mapContextManager]);
+
   return {
     digitizingState: state,
     selection,

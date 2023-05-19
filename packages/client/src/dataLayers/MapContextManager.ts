@@ -49,6 +49,7 @@ import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { RULER_TICK_ID, TICK_DATA_URL } from "../draw/Measure";
 import { EventEmitter } from "eventemitter3";
+import MeasureControl, { measureLayers } from "../MeasureControl";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -91,6 +92,19 @@ export interface LayerState {
   visible: true;
   loading: boolean;
   error?: Error;
+}
+
+export enum MeasurementDigitizingState {
+  Empty,
+  Started,
+  Finished,
+}
+
+export interface MeasurementToolsState {
+  state: "disabled" | "active" | "inactive";
+  /* In meters */
+  length?: number;
+  digitizingState?: MeasurementDigitizingState;
 }
 
 class MapContextManager extends EventEmitter {
@@ -141,6 +155,7 @@ class MapContextManager extends EventEmitter {
    * changed.
    */
   private geoprocessingReferenceIds: { [referenceId: string]: string } = {};
+  private MeasureControl?: MeasureControl;
 
   constructor(
     initialState: MapContextInterface,
@@ -1245,9 +1260,26 @@ class MapContextManager extends EventEmitter {
     if (this.interactivityManager) {
       this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     }
+    // add measure control layers
+    if (this.MeasureControl) {
+      baseStyle.layers.push(...measureLayers);
+      const measureSources = this.MeasureControl.getSources();
+      for (const id in measureSources) {
+        console.log("adding source", id, measureSources[id]);
+        baseStyle.sources[id] = measureSources[id];
+      }
+    }
 
     return { style: baseStyle, sprites };
   }
+
+  resetToProjectBounds = () => {
+    if (this.initialBounds && this.map) {
+      this.map.fitBounds(this.initialBounds as LngLatBoundsLike, {
+        animate: true,
+      });
+    }
+  };
 
   computeSketchLayers() {
     const allLayers: AnyLayer[] = [];
@@ -1652,51 +1684,96 @@ class MapContextManager extends EventEmitter {
   }
 
   measure = () => {
+    if (this.interactivityManager) {
+      this.interactivityManager.pause();
+    }
     console.log("emit started");
     this.emit(MeasureEventTypes.Started);
     if (!this.map) {
       throw new Error("Map not initialized");
     }
+    if (this.MeasureControl) {
+      this.MeasureControl.destroy();
+    }
+    this.MeasureControl = new MeasureControl(this.map);
+    this.MeasureControl.enable();
+
     console.log("measure");
     // remember previous cursor style
     const previousCursor = this.map.getCanvas().style.cursor;
+    this.setState((prev) => ({
+      ...prev,
+      measurementToolsState: {
+        state: "active",
+        digitizingState: MeasurementDigitizingState.Empty,
+        length: 0,
+      },
+    }));
     // set cursor
     this.map.getCanvas().style.cursor = "pointer";
     const map = this.map;
-    const handler = (e: any) => {
-      console.log("on click");
-      e.preventDefault();
-      e.originalEvent.preventDefault();
-      console.log("click");
-      // reset cursor
-      map!.getCanvas().style.cursor = previousCursor;
-      this.emit(MeasureEventTypes.Stopped);
-      map?.off("click", handler);
-    };
+    // const handler = (e: any) => {
+    //   console.log("on click");
+    //   e.preventDefault();
+    //   e.originalEvent.preventDefault();
+    //   console.log("click");
+    //   // reset cursor
+    //   map!.getCanvas().style.cursor = previousCursor;
+    //   this.emit(MeasureEventTypes.Stopped);
+    //   this.setState((prev) => ({
+    //     ...prev,
+    //     measurementToolsState: {
+    //       state: "inactive",
+    //     },
+    //   }));
+    //   map?.off("click", handler);
+    // };
     // add event listeners
-    this.map.on("click", handler);
+    // this.map.on("click", handler);
   };
 
   cancelMeasurement = () => {
+    this.MeasureControl?.destroy();
+    this.MeasureControl = undefined;
     this.emit(MeasureEventTypes.Stopped);
-  };
-
-  clearMeasurement = () => {
-    this.emit(MeasureEventTypes.Stopped);
+    this.setState((prev) => ({
+      ...prev,
+      measurementToolsState: {
+        state: "inactive",
+      },
+    }));
+    if (this.interactivityManager) {
+      this.interactivityManager.resume();
+    }
   };
 
   disableMeasurementTools = () => {
+    this.MeasureControl?.destroy();
+    this.MeasureControl = undefined;
     this.setState((prev) => ({
       ...prev,
-      disableMeasurementTools: true,
+      measurementToolsState: {
+        state: "disabled",
+      },
     }));
+    if (this.interactivityManager) {
+      this.interactivityManager.resume();
+    }
   };
 
   enableMeasurementTools = () => {
-    this.setState((prev) => ({
-      ...prev,
-      disableMeasurementTools: false,
-    }));
+    this.setState((prev) => {
+      if (prev.measurementToolsState.state === "disabled") {
+        return {
+          ...prev,
+          measurementToolsState: {
+            state: "inactive",
+          },
+        };
+      } else {
+        return prev;
+      }
+    });
   };
 
   private spritesById: { [id: string]: SpriteDetailsFragment } = {};
@@ -2254,7 +2331,7 @@ export interface MapContextInterface {
     supportsUndo: boolean;
   };
   languageCode?: string;
-  disableMeasurementTools: boolean;
+  measurementToolsState: MeasurementToolsState;
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
@@ -2289,7 +2366,9 @@ export function useMapContext(options?: MapContextOptions) {
     basemapOptionalLayerStates: {},
     styleHash: "",
     containerPortal: containerPortal || null,
-    disableMeasurementTools: false,
+    measurementToolsState: {
+      state: "inactive",
+    },
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -2376,7 +2455,9 @@ export const MapContext = createContext<MapContextInterface>({
       basemapOptionalLayerStates: {},
       styleHash: "",
       containerPortal: null,
-      disableMeasurementTools: false,
+      measurementToolsState: {
+        state: "inactive",
+      },
     },
     (state) => {}
   ),
@@ -2386,7 +2467,9 @@ export const MapContext = createContext<MapContextInterface>({
   terrainEnabled: false,
   basemapOptionalLayerStates: {},
   containerPortal: null,
-  disableMeasurementTools: false,
+  measurementToolsState: {
+    state: "inactive",
+  },
 });
 
 async function createImage(
