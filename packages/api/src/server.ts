@@ -381,7 +381,13 @@ app.use(
         res.setHeader("Cache-Control", "public, max-age=1800");
       }
       if (geojson === null) {
-        res.status(404);
+        res
+          .status(404)
+          .send(
+            `Sketch with id ${id} not found. It either does not exists or is not shared with "${
+              claims?.canonicalEmail || `anon`
+            }"`
+          );
       }
       res.send(geojson);
     } catch (e: any) {
