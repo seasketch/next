@@ -75,9 +75,10 @@ export default function Settings() {
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <MapExtentSettings />
         </div>
-        <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+        {/* Disabled until fixed */}
+        {/* <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <DataBucketSettings />
-        </div>
+        </div> */}
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <SupportedLanguagesSettings slug={getSlug()} />
         </div>
