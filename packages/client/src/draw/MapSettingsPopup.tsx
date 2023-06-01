@@ -17,6 +17,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Icons } from "../components/SketchGeometryTypeSelector";
 import Switch from "../components/Switch";
 import MapContextManager, {
+  DigitizingLockState,
   MapContext,
   MapContextInterface,
 } from "../dataLayers/MapContextManager";
@@ -26,6 +27,7 @@ import {
   SketchGeometryType,
 } from "../generated/graphql";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
+import { MeasureControlContext, MeasureControlLockId } from "../MeasureControl";
 
 type PopupPosition = "top" | "bottom";
 
@@ -317,13 +319,18 @@ export function ResetCamera(
   );
 }
 
-export function Measure(
-  props: MapSettingsActionItem<{ onClick: () => void; disabled: boolean }>
-) {
+export function Measure(props: MapSettingsActionItem<{}>) {
   const { t } = useTranslation("surveys");
+  const mapContext = useContext(MapContext);
+  const measureContext = useContext(MeasureControlContext);
   return (
     <Item
       {...props}
+      disabled={
+        !measureContext ||
+        (mapContext?.digitizingLockState !== DigitizingLockState.Free &&
+          mapContext?.digitizingLockedBy !== MeasureControlLockId)
+      }
       Icon={({ className }: { className?: string }) => (
         <svg
           viewBox="0 0 640 512"
@@ -342,7 +349,7 @@ export function Measure(
         </svg>
       )}
       onClick={() => {
-        props.onClick();
+        measureContext?.reset();
         return true;
       }}
       title={t("Measure")}

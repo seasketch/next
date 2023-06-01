@@ -7,10 +7,7 @@ import React, {
   useContext,
   ReactNode,
 } from "react";
-import {
-  MapContext,
-  MeasurementDigitizingState,
-} from "../dataLayers/MapContextManager";
+import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Spinner from "./Spinner";
@@ -21,9 +18,9 @@ import {
 } from "../projects/ProjectAppSidebar";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
 import { RssIcon } from "@heroicons/react/solid";
-import MeasurementToolsOverlay from "../MeasurementToolsOverlay";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import { CogIcon } from "@heroicons/react/outline";
+import { MeasurementToolsOverlay } from "../MeasureControl";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;

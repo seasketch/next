@@ -15,8 +15,6 @@ import styles from "./styles";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 import UnfinishedSimpleSelect from "./UnfinishedSimpleSelect";
 import Preprocessing from "./Preprocessing";
-import Measure from "./Measure";
-import MeasureDirectSelect from "./MeasureDirectSelect";
 import MapContextManager, {
   MeasureEventTypes,
 } from "../dataLayers/MapContextManager";
@@ -28,6 +26,8 @@ function hasKinks(feature?: Feature<any>) {
   return false;
 }
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
+
+export const SketchDigitizingLockId = "Sketching";
 
 export enum DigitizingState {
   /** User has not yet started drawing */
@@ -161,8 +161,6 @@ export default function useMapboxGLDraw(
             preprocessingResults,
             onPreprocessedGeometry
           ),
-          measure: Measure,
-          measure_direct_select: MeasureDirectSelect,
         },
         styles,
         userProperties: true,
@@ -200,31 +198,27 @@ export default function useMapboxGLDraw(
 
       const handlers = {
         create: function (e: any) {
-          if (!e.features[0].properties?.__measure) {
-            const kinks = hasKinks(e.features[0]);
-            if (kinks) {
-              setSelfIntersects(true);
-            }
-            handlerState.current.onChange(e.features[0], kinks);
+          const kinks = hasKinks(e.features[0]);
+          if (kinks) {
+            setSelfIntersects(true);
           }
+          handlerState.current.onChange(e.features[0], kinks);
         },
         update: (e: any) => {
-          if (!e.features[0].properties?.__measure) {
-            const mode = handlerState.current.draw?.getMode() as string;
-            if (
-              mode === "unfinished_feature_select" ||
-              mode === "unfinished_simple_select"
-            ) {
-              setState(DigitizingState.UNFINISHED);
+          const mode = handlerState.current.draw?.getMode() as string;
+          if (
+            mode === "unfinished_feature_select" ||
+            mode === "unfinished_simple_select"
+          ) {
+            setState(DigitizingState.UNFINISHED);
+          } else {
+            if (handlerState.current.preprocessingError) {
+              // do nothing, already in correct state
             } else {
-              if (handlerState.current.preprocessingError) {
-                // do nothing, already in correct state
-              } else {
-                setState(DigitizingState.EDITING);
-              }
+              setState(DigitizingState.EDITING);
             }
-            handlerState.current.onChange(e.features[0], selfIntersects);
           }
+          handlerState.current.onChange(e.features[0], selfIntersects);
         },
         drawingStarted: () => {
           setState(DigitizingState.STARTED);
@@ -296,16 +290,7 @@ export default function useMapboxGLDraw(
             }
             setSelection(null);
           } else {
-            if (!e.features[0]?.properties?.__measure) {
-              setSelection({ ...e.features[0] });
-            } else {
-              if (
-                geometryType === SketchGeometryType.Point &&
-                handlerState.current.state === DigitizingState.NO_SELECTION
-              ) {
-                setState(DigitizingState.EDITING);
-              }
-            }
+            setSelection({ ...e.features[0] });
           }
         },
         dragTarget: function (e: any) {
@@ -351,6 +336,7 @@ export default function useMapboxGLDraw(
           // map.off("draw.delete", handlers.delete);
           map.off("draw.modechange", handlers.modeChange);
           map.off("draw.selectionchange", handlers.selectionChange);
+          mapContextManager?.releaseDigitizingLock(SketchDigitizingLockId);
         }
       };
     }
@@ -702,19 +688,21 @@ export default function useMapboxGLDraw(
     }
   }, [mapContextManager, draw]);
 
-  useEffect(() => {
-    console.log(DigitizingState[state]);
-    if (
-      state === DigitizingState.CREATE ||
-      state === DigitizingState.NO_SELECTION ||
-      state === DigitizingState.UNFINISHED ||
-      state === DigitizingState.PAUSED_FOR_MEASUREMENT
-    ) {
-      mapContextManager?.enableMeasurementTools();
-    } else {
-      mapContextManager?.disableMeasurementTools();
-    }
-  }, [state, mapContextManager]);
+  // useEffect(() => {
+  //   console.log(DigitizingState[state]);
+  //   if (
+  //     state === DigitizingState.CREATE ||
+  //     state === DigitizingState.NO_SELECTION ||
+  //     state === DigitizingState.UNFINISHED ||
+  //     state === DigitizingState.PAUSED_FOR_MEASUREMENT
+  //   ) {
+  //     console.log("call enableMeasurementTools");
+  //     mapContextManager?.resumeMeasurementTools();
+  //   } else {
+  //     console.log("call disableMeasurementTools");
+  //     mapContextManager?.pauseMeasurementTools();
+  //   }
+  // }, [state, mapContextManager]);
 
   return {
     digitizingState: state,

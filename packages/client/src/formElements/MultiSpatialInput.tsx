@@ -54,6 +54,7 @@ import useDebounce from "../useDebounce";
 import MapPicker from "../components/MapPicker";
 import useDialog from "../components/useDialog";
 import { SketchClassDetailsFragment } from "../generated/queries";
+import { MeasureControlContext } from "../MeasureControl";
 
 export enum STAGES {
   DRAWING_INTRO,
@@ -481,21 +482,7 @@ const MultiSpatialInput: FormElementComponent<
         />
       ) : null}
       <ShowScaleBar mapContext={mapContext} />
-      <Measure
-        disabled={
-          mapContext.measurementToolsState.state &&
-          mapContext.measurementToolsState.state === "disabled"
-        }
-        onClick={() => {
-          if (mapContext.measurementToolsState.state === "disabled") {
-            // do nothing
-          } else if (mapContext.measurementToolsState.state === "active") {
-            mapContext.manager?.cancelMeasurement();
-          } else {
-            mapContext.manager?.measure();
-          }
-        }}
-      />
+      <Measure />
     </>
   );
 

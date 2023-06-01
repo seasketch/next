@@ -1,5 +1,3 @@
-import { RULER_TICK_ID } from "./Measure";
-
 const styles = [
   {
     id: "gl-draw-polygon-fill-inactive-no-kinks",

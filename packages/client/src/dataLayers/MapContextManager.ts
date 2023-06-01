@@ -47,9 +47,11 @@ import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
-import { RULER_TICK_ID, TICK_DATA_URL } from "../draw/Measure";
 import { EventEmitter } from "eventemitter3";
-import MeasureControl, { measureLayers } from "../MeasureControl";
+import MeasureControl, {
+  MeasureControlState,
+  measureLayers,
+} from "../MeasureControl";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -93,20 +95,6 @@ export interface LayerState {
   loading: boolean;
   error?: Error;
 }
-
-export enum MeasurementDigitizingState {
-  Empty,
-  Started,
-  Finished,
-}
-
-export interface MeasurementToolsState {
-  state: "disabled" | "active" | "inactive";
-  /* In meters */
-  length?: number;
-  digitizingState?: MeasurementDigitizingState;
-}
-
 class MapContextManager extends EventEmitter {
   map?: Map;
   interactivityManager?: LayerInteractivityManager;
@@ -155,7 +143,6 @@ class MapContextManager extends EventEmitter {
    * changed.
    */
   private geoprocessingReferenceIds: { [referenceId: string]: string } = {};
-  private MeasureControl?: MeasureControl;
 
   constructor(
     initialState: MapContextInterface,
@@ -342,6 +329,7 @@ class MapContextManager extends EventEmitter {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
     }
     this.map = new Map(mapOptions);
+
     this.addSprites(sprites, this.map);
 
     this.interactivityManager = new LayerInteractivityManager(
@@ -1260,15 +1248,6 @@ class MapContextManager extends EventEmitter {
     if (this.interactivityManager) {
       this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     }
-    // add measure control layers
-    if (this.MeasureControl) {
-      baseStyle.layers.push(...measureLayers);
-      const measureSources = this.MeasureControl.getSources();
-      for (const id in measureSources) {
-        console.log("adding source", id, measureSources[id]);
-        baseStyle.sources[id] = measureSources[id];
-      }
-    }
 
     return { style: baseStyle, sprites };
   }
@@ -1683,98 +1662,126 @@ class MapContextManager extends EventEmitter {
     this.debouncedUpdateStyle();
   }
 
-  measure = () => {
-    if (this.interactivityManager) {
-      this.interactivityManager.pause();
-    }
-    console.log("emit started");
-    this.emit(MeasureEventTypes.Started);
-    if (!this.map) {
-      throw new Error("Map not initialized");
-    }
-    if (this.MeasureControl) {
-      this.MeasureControl.destroy();
-    }
-    this.MeasureControl = new MeasureControl(this.map);
-    this.MeasureControl.enable();
-
-    console.log("measure");
-    // remember previous cursor style
-    const previousCursor = this.map.getCanvas().style.cursor;
-    this.setState((prev) => ({
-      ...prev,
-      measurementToolsState: {
-        state: "active",
-        digitizingState: MeasurementDigitizingState.Empty,
-        length: 0,
-      },
-    }));
-    // set cursor
-    this.map.getCanvas().style.cursor = "pointer";
-    const map = this.map;
-    // const handler = (e: any) => {
-    //   console.log("on click");
-    //   e.preventDefault();
-    //   e.originalEvent.preventDefault();
-    //   console.log("click");
-    //   // reset cursor
-    //   map!.getCanvas().style.cursor = previousCursor;
-    //   this.emit(MeasureEventTypes.Stopped);
-    //   this.setState((prev) => ({
-    //     ...prev,
-    //     measurementToolsState: {
-    //       state: "inactive",
-    //     },
-    //   }));
-    //   map?.off("click", handler);
-    // };
-    // add event listeners
-    // this.map.on("click", handler);
-  };
-
-  cancelMeasurement = () => {
-    this.MeasureControl?.destroy();
-    this.MeasureControl = undefined;
-    this.emit(MeasureEventTypes.Stopped);
-    this.setState((prev) => ({
-      ...prev,
-      measurementToolsState: {
-        state: "inactive",
-      },
-    }));
-    if (this.interactivityManager) {
-      this.interactivityManager.resume();
-    }
-  };
-
-  disableMeasurementTools = () => {
-    this.MeasureControl?.destroy();
-    this.MeasureControl = undefined;
-    this.setState((prev) => ({
-      ...prev,
-      measurementToolsState: {
-        state: "disabled",
-      },
-    }));
-    if (this.interactivityManager) {
-      this.interactivityManager.resume();
-    }
-  };
-
-  enableMeasurementTools = () => {
-    this.setState((prev) => {
-      if (prev.measurementToolsState.state === "disabled") {
-        return {
-          ...prev,
-          measurementToolsState: {
-            state: "inactive",
-          },
-        };
+  /**
+   * Used to manage conflicts between different digitizing tools. Tools can
+   * request a DigitizingLockState change. False is returned if the requested
+   * state is not available. Tools should provide a callback function that can
+   * release the lock if requested by other tools, cleaning up their internal
+   * state before doing so.
+   *
+   * @param id Unique identifier for the tool requesting the lock, such as "Sketching" or "MeasureControl"
+   * @param state CursorActive or Editing
+   * @param onReleaseRequested Callback function that can release the lock
+   */
+  async requestDigitizingLock(
+    id: string,
+    state: DigitizingLockState.CursorActive | DigitizingLockState.Editing,
+    onReleaseRequested: (
+      requester: string,
+      state: DigitizingLockState
+    ) => Promise<Boolean>
+  ) {
+    if (this.internalState.digitizingLockState === DigitizingLockState.Free) {
+      // can go ahead and activate tool
+      this.setDigitizingLockState(state, id);
+      return true;
+    } else {
+      // first, check if you can release the lock
+      const released = await onReleaseRequested(
+        id,
+        this.internalState.digitizingLockState
+      );
+      if (released) {
+        this.setDigitizingLockState(state, id);
+        // activate tool
+        return true;
       } else {
-        return prev;
+        // notify tool that it can't be activated
+        return false;
       }
-    });
-  };
+    }
+  }
+
+  releaseDigitizingLock(id: string) {
+    if (this.internalState.digitizingLockState !== DigitizingLockState.Free) {
+      if (this.internalState.digitizingLockedBy === id) {
+        this.setDigitizingLockState(DigitizingLockState.Free);
+      } else {
+        // TODO: Should I throw an error or do nothing here?
+      }
+    }
+  }
+
+  private setDigitizingLockState(state: DigitizingLockState, id?: string) {
+    if (!id && state !== DigitizingLockState.Free) {
+      throw new Error("Must provide id when setting non-free state");
+    }
+    this.setState((prev) => ({
+      ...prev,
+      digitizingLockState: state,
+      digitizingLockRequester: id,
+    }));
+  }
+
+  // measure = () => {
+  //   if (this.interactivityManager) {
+  //     this.interactivityManager.pause();
+  //   }
+  //   this.emit(MeasureEventTypes.Started);
+  //   if (!this.map) {
+  //     throw new Error("Map not initialized");
+  //   }
+  //   if (this.MeasureControl) {
+  //     this.MeasureControl.destroy();
+  //   }
+  //   this.MeasureControl = new MeasureControl(this.map);
+  //   this.MeasureControl.on("update", (measureControlState: any) => {
+  //     this.setState((prev) => {
+  //       return {
+  //         ...prev,
+  //         measureControlState,
+  //       };
+  //     });
+  //   });
+  //   this.MeasureControl.start();
+  // };
+
+  // resetMeasurement = () => {
+  //   if (this.MeasureControl) {
+  //     this.MeasureControl.reset();
+  //   }
+  // };
+
+  // cancelMeasurement = () => {
+  //   this.MeasureControl?.destroy();
+  //   this.MeasureControl = undefined;
+  //   this.emit(MeasureEventTypes.Stopped);
+  //   this.setState((prev) => ({
+  //     ...prev,
+  //     measureControlState: undefined,
+  //   }));
+  //   if (this.interactivityManager) {
+  //     this.interactivityManager.resume();
+  //   }
+  // };
+
+  // pauseMeasurementTools = () => {
+  //   if (this.MeasureControl) {
+  //     this.MeasureControl.setPaused(true);
+  //   }
+  //   if (this.interactivityManager) {
+  //     this.interactivityManager.resume();
+  //   }
+  // };
+
+  // resumeMeasurementTools = () => {
+  //   if (this.MeasureControl) {
+  //     if (this.interactivityManager) {
+  //       this.interactivityManager.pause();
+  //     }
+  //     this.MeasureControl.setPaused(false);
+  //   }
+  // };
 
   private spritesById: { [id: string]: SpriteDetailsFragment } = {};
 
@@ -1841,14 +1848,6 @@ class MapContextManager extends EventEmitter {
       if (spriteFragment) {
         this.addSprite(spriteFragment, this.map!);
       }
-    } else if (e.id === RULER_TICK_ID && this.map) {
-      this.map.loadImage(TICK_DATA_URL, (error, image) => {
-        if (error) {
-          throw error;
-        }
-        // @ts-ignore
-        map.addImage(RULER_TICK_ID, image);
-      });
     }
   };
 
@@ -2299,6 +2298,30 @@ export interface Tooltip {
   messages: string[];
 }
 
+/**
+ * Multiple "digitizing" tools active at once would compete for the same cursor
+ * events and conflict with each other. This enum is used to track the state of
+ * the digitizing tools and prevent conflicts.
+ */
+export enum DigitizingLockState {
+  /**
+   * No digitizing tools are active. Popups and other interactivity is enabled.
+   */
+  Free,
+  /**
+   * A digitizing tool is active and has locked the map. Popups and other
+   * interactivity is disabled. This is the most active state, with the
+   * mousemove events directly moving a "cursor" vertex until it is dropped.
+   */
+  CursorActive,
+  /**
+   * A digitizing tool is partially active, with a geometry ready to be edited
+   * when the user drags a vertex. Popups and other interactivity may be
+   * enabled, though this would require careful coordination with the digitizing
+   * tool.
+   */
+  Editing,
+}
 export interface MapContextInterface {
   layerStatesByTocStaticId: { [id: string]: LayerState };
   sketchLayerStates: { [id: number]: LayerState };
@@ -2331,7 +2354,9 @@ export interface MapContextInterface {
     supportsUndo: boolean;
   };
   languageCode?: string;
-  measurementToolsState: MeasurementToolsState;
+  measureControlState?: MeasureControlState;
+  digitizingLockState: DigitizingLockState;
+  digitizingLockedBy?: string;
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
@@ -2366,9 +2391,7 @@ export function useMapContext(options?: MapContextOptions) {
     basemapOptionalLayerStates: {},
     styleHash: "",
     containerPortal: containerPortal || null,
-    measurementToolsState: {
-      state: "inactive",
-    },
+    digitizingLockState: DigitizingLockState.Free,
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -2455,9 +2478,7 @@ export const MapContext = createContext<MapContextInterface>({
       basemapOptionalLayerStates: {},
       styleHash: "",
       containerPortal: null,
-      measurementToolsState: {
-        state: "inactive",
-      },
+      digitizingLockState: DigitizingLockState.Free,
     },
     (state) => {}
   ),
@@ -2467,9 +2488,7 @@ export const MapContext = createContext<MapContextInterface>({
   terrainEnabled: false,
   basemapOptionalLayerStates: {},
   containerPortal: null,
-  measurementToolsState: {
-    state: "inactive",
-  },
+  digitizingLockState: DigitizingLockState.Free,
 });
 
 async function createImage(

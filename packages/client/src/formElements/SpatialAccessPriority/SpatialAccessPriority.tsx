@@ -606,21 +606,7 @@ const SpatialAccessPriority: FormElementComponent<
           }
         />
       ) : null}
-      <Measure
-        disabled={
-          mapContext.measurementToolsState.state &&
-          mapContext.measurementToolsState.state === "disabled"
-        }
-        onClick={() => {
-          if (mapContext.measurementToolsState.state === "disabled") {
-            // do nothing
-          } else if (mapContext.measurementToolsState.state === "active") {
-            mapContext.manager?.cancelMeasurement();
-          } else {
-            mapContext.manager?.measure();
-          }
-        }}
-      />
+      <Measure />
       <ShowScaleBar mapContext={mapContext} />
     </>
   );

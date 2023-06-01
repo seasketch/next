@@ -233,23 +233,7 @@ const SingleSpatialInput: FormElementComponent<
                 isSmall={style.isSmall}
                 geometryType={props.sketchClass!.geometryType!}
               />
-              <Measure
-                disabled={
-                  mapContext.measurementToolsState.state &&
-                  mapContext.measurementToolsState.state === "disabled"
-                }
-                onClick={() => {
-                  if (mapContext.measurementToolsState.state === "disabled") {
-                    // do nothing
-                  } else if (
-                    mapContext.measurementToolsState.state === "active"
-                  ) {
-                    mapContext.manager?.cancelMeasurement();
-                  } else {
-                    mapContext.manager?.measure();
-                  }
-                }}
-              />
+              <Measure />
               <BasemapControl
                 basemaps={basemaps}
                 afterChange={updateMiniBasemap}
