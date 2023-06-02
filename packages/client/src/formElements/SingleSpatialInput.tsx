@@ -89,7 +89,6 @@ const SingleSpatialInput: FormElementComponent<
     dragTarget,
     selfIntersects,
   } = useMapboxGLDraw(
-    mapContext.manager,
     geometryType,
     // props.value?.collection?.features[0] || null,
     EMPTY_FEATURE_COLLECTION,

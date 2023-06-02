@@ -212,7 +212,6 @@ const MultiSpatialInput: FormElementComponent<
     resetFeature,
     dragTarget,
   } = useMapboxGLDraw(
-    mapContext.manager,
     props.sketchClass!.geometryType,
     props.value?.collection || EMPTY_FEATURE_COLLECTION,
     async (updatedFeature, hasKinks) => {

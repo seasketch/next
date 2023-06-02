@@ -3,7 +3,12 @@ import { FeatureCollection, LineString, Point } from "geojson";
 import debounce from "lodash.debounce";
 import mapboxgl, { GeoJSONSource, Map } from "mapbox-gl";
 import length from "@turf/length";
-import MapContextManager, { MapContext } from "./dataLayers/MapContextManager";
+import MapContextManager, {
+  DigitizingLockState,
+  DigitizingLockStateChangeEventPayload,
+  DigitizingLockStateChangeEventType,
+  MapContext,
+} from "./dataLayers/MapContextManager";
 import {
   ReactNode,
   createContext,
@@ -152,6 +157,11 @@ class MeasureControl extends EventEmitter {
     }
     this.map = mapContextManager.map;
     this.mapContextManager = mapContextManager;
+    this.mapContextManager.on(
+      DigitizingLockStateChangeEventType,
+      this.onDigitizingLockStateChange
+    );
+
     this.map.once("remove", this.destroy);
     this.state = "disabled";
     this.map.once("load", () => {
@@ -160,6 +170,18 @@ class MeasureControl extends EventEmitter {
       this.setState("disabled");
     });
   }
+
+  /** Un-pause measurement if no longer locked */
+  private onDigitizingLockStateChange = (
+    e: DigitizingLockStateChangeEventPayload
+  ) => {
+    if (
+      e.digitizingLockState === DigitizingLockState.Free &&
+      this.state === "paused"
+    ) {
+      this.setState("editing");
+    }
+  };
 
   private addSourcesAndLayers() {
     const sources = this.getSources();
@@ -214,9 +236,31 @@ class MeasureControl extends EventEmitter {
     document.body.removeEventListener("keydown", this.onKeyDown);
   }
 
-  setState(state: MeasureState) {
-    console.log("set state", state);
+  private async setState(state: MeasureState) {
     this.state = state;
+
+    const hasLock = this.mapContextManager.hasLock(MeasureControlLockId);
+    if (state !== "disabled" && !hasLock) {
+      const lock = await this.mapContextManager.requestDigitizingLock(
+        MeasureControlLockId,
+        state === "dragging" || state === "drawing"
+          ? DigitizingLockState.CursorActive
+          : DigitizingLockState.Editing,
+        async (requester) => {
+          console.log("lock requested", requester, state);
+          if (this.state === "editing") {
+            this.setState("paused");
+          } else {
+            this.disable();
+          }
+          return true;
+        }
+      );
+      if (!lock) {
+        return;
+      }
+    }
+
     if (state === "drawing") {
       this.setMouseCursor("default");
       this.map.doubleClickZoom.disable();
@@ -239,15 +283,11 @@ class MeasureControl extends EventEmitter {
     });
   }
 
-  setPaused(paused = true) {
-    if (paused) {
-      this.removeEventListeners(this.map);
-      this.setMouseCursor("default");
-      this.setState("paused");
-    } else {
-      this.addEventListeners(this.map);
-      this.setState("drawing");
+  disable() {
+    if (this.mapContextManager.hasLock(MeasureControlLockId)) {
+      this.mapContextManager.releaseDigitizingLock(MeasureControlLockId);
     }
+    this.setState("disabled");
   }
 
   /**
@@ -294,7 +334,8 @@ class MeasureControl extends EventEmitter {
     }, 200);
   };
 
-  onMouseOverPoint = (e: any) => {
+  onMouseOverPoint = async (e: any) => {
+    console.log("onMouseOverPoint", this.state, e.features.length);
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
@@ -315,25 +356,37 @@ class MeasureControl extends EventEmitter {
       }
     } else if (this.state === "editing") {
       if (e.features.length > 0) {
-        this.map.dragPan.disable();
-        // change cursor to pointer
-        this.setMouseCursor("grab");
-        const index = this.points.features.findIndex(
-          (point) => point.id === e.features[0].id
-        );
-        if (this.draggedPointIndex > -1) {
-          this.clearHalos();
-        }
-        this.draggedPointIndex = index;
-        this.map.setFeatureState(
-          {
-            source: "__measure-points",
-            id: e.features[0].id,
-          },
-          {
-            halo: true,
+        console.log("disable dragPan");
+        // Lock before disabling dragpan so that mapbox-gl-draw isn't active and re-enabling dragpan
+        const lock = await this.mapContextManager.requestDigitizingLock(
+          MeasureControlLockId,
+          DigitizingLockState.CursorActive,
+          async (requester) => {
+            // False because this will only be active while moused-over a point.
+            return false;
           }
         );
+        if (lock) {
+          this.map.dragPan.disable();
+          // change cursor to pointer
+          this.setMouseCursor("grab");
+          const index = this.points.features.findIndex(
+            (point) => point.id === e.features[0].id
+          );
+          if (this.draggedPointIndex > -1) {
+            this.clearHalos();
+          }
+          this.draggedPointIndex = index;
+          this.map.setFeatureState(
+            {
+              source: "__measure-points",
+              id: e.features[0].id,
+            },
+            {
+              halo: true,
+            }
+          );
+        }
       }
     }
   };
@@ -423,6 +476,8 @@ class MeasureControl extends EventEmitter {
         this.clearHalos();
       }
     } else if (this.state === "editing") {
+      console.log("enable drag path from mouseout");
+      this.mapContextManager.releaseDigitizingLock(MeasureControlLockId);
       this.map.dragPan.enable();
       this.setMouseCursor("default");
 
@@ -434,7 +489,6 @@ class MeasureControl extends EventEmitter {
   };
 
   reset = () => {
-    console.log("reset");
     this.draggedPointIndex = -1;
     this.isOverLastPoint = false;
     this.points.features = [];
@@ -459,6 +513,7 @@ class MeasureControl extends EventEmitter {
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
+    console.log("on mouse down point");
     if (this.state === "editing" && this.draggedPointIndex > -1) {
       this.setState("dragging");
     }
@@ -475,6 +530,7 @@ class MeasureControl extends EventEmitter {
   };
 
   handleDragPoint = (e: any) => {
+    console.log("handle drag point", this.draggedPointIndex);
     if (this.draggedPointIndex === -1) {
       throw new Error("draggedPointIndex is -1");
     }
@@ -521,12 +577,15 @@ class MeasureControl extends EventEmitter {
         properties: {},
       },
     ];
-    source.setData(this.cursor);
-    // update the line source
-    this.updateLineString();
+    if (source) {
+      source.setData(this.cursor);
+      // update the line source
+      this.updateLineString();
+    }
   };
 
   onMouseMove = (e: any) => {
+    console.log("on mouse move", this.state);
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
@@ -654,7 +713,6 @@ export function MeasureControlContextProvider(props: { children: ReactNode }) {
   const [value, setValue] = useState(defaultValue);
 
   useEffect(() => {
-    console.log("use effect", mapContext.manager?.map);
     if (mapContext.manager?.map) {
       const measureControl = new MeasureControl(mapContext.manager);
       setValue({
@@ -662,21 +720,19 @@ export function MeasureControlContextProvider(props: { children: ReactNode }) {
         state: "disabled",
         reset: measureControl.reset,
         close: () => {
-          measureControl.setState("disabled");
+          measureControl.disable();
         },
       });
       measureControl.on("update", (state) => {
-        console.log("update", state);
         setValue({
           ...state,
           reset: measureControl.reset,
           close: () => {
-            measureControl.setState("disabled");
+            measureControl.disable();
           },
         });
       });
       return () => {
-        console.log("resetting measurecontrol");
         measureControl.destroy();
       };
     }
@@ -741,9 +797,7 @@ export function MeasurementToolsOverlay({
     [units, selectedUnitValue]
   );
 
-  console.log("measureContext", measureContext);
   if (!measureContext || measureContext.state === "disabled") {
-    console.log("returning null");
     return null;
   }
 

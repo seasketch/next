@@ -349,7 +349,11 @@ export function Measure(props: MapSettingsActionItem<{}>) {
         </svg>
       )}
       onClick={() => {
-        measureContext?.reset();
+        if (measureContext.state === "disabled") {
+          measureContext.reset();
+        } else {
+          measureContext.close();
+        }
         return true;
       }}
       title={t("Measure")}

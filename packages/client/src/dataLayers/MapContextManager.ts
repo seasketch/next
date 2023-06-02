@@ -87,6 +87,39 @@ const LocalSketchGeometryCache = new LRU<
   max: 10,
 });
 
+/**
+ * Multiple "digitizing" tools active at once would compete for the same cursor
+ * events and conflict with each other. This enum is used to track the state of
+ * the digitizing tools and prevent conflicts.
+ */
+export enum DigitizingLockState {
+  /**
+   * No digitizing tools are active. Popups and other interactivity is enabled.
+   */
+  Free,
+  /**
+   * A digitizing tool is active and has locked the map. Popups and other
+   * interactivity is disabled. This is the most active state, with the
+   * mousemove events directly moving a "cursor" vertex until it is dropped.
+   */
+  CursorActive,
+  /**
+   * A digitizing tool is partially active, with a geometry ready to be edited
+   * when the user drags a vertex. Popups and other interactivity may be
+   * enabled, though this would require careful coordination with the digitizing
+   * tool.
+   */
+  Editing,
+}
+
+export const DigitizingLockStateChangeEventType =
+  "DigitizingLockStateChangeEvent";
+
+export type DigitizingLockStateChangeEventPayload = {
+  digitizingLockState: DigitizingLockState;
+  digitizingLockedBy: string | undefined;
+};
+
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
@@ -1662,6 +1695,10 @@ class MapContextManager extends EventEmitter {
     this.debouncedUpdateStyle();
   }
 
+  private onLockReleaseRequested:
+    | ((requester: string, state: DigitizingLockState) => Promise<Boolean>)
+    | null = null;
+
   /**
    * Used to manage conflicts between different digitizing tools. Tools can
    * request a DigitizingLockState change. False is returned if the requested
@@ -1684,14 +1721,19 @@ class MapContextManager extends EventEmitter {
     if (this.internalState.digitizingLockState === DigitizingLockState.Free) {
       // can go ahead and activate tool
       this.setDigitizingLockState(state, id);
+      this.onLockReleaseRequested = onReleaseRequested;
       return true;
     } else {
       // first, check if you can release the lock
-      const released = await onReleaseRequested(
-        id,
-        this.internalState.digitizingLockState
-      );
+      const released =
+        this.onLockReleaseRequested === null
+          ? true
+          : await this.onLockReleaseRequested(
+              id,
+              this.internalState.digitizingLockState
+            );
       if (released) {
+        this.onLockReleaseRequested = onReleaseRequested;
         this.setDigitizingLockState(state, id);
         // activate tool
         return true;
@@ -1702,16 +1744,28 @@ class MapContextManager extends EventEmitter {
     }
   }
 
+  /**
+   * Used to release a digitizing lock. If the lock is not held by the tool
+   * requesting the release, nothing happens.
+   * @param id Unique identifier for the tool requesting the release
+   */
   releaseDigitizingLock(id: string) {
     if (this.internalState.digitizingLockState !== DigitizingLockState.Free) {
       if (this.internalState.digitizingLockedBy === id) {
         this.setDigitizingLockState(DigitizingLockState.Free);
+        this.onLockReleaseRequested = null;
       } else {
         // TODO: Should I throw an error or do nothing here?
       }
     }
   }
 
+  /**
+   * Used to release a digitizing lock. If the lock is not held by the tool
+   * requesting the release, nothing happens.
+   * @param id Unique identifier for the tool requesting the release
+   * @param state State to set the lock to
+   */
   private setDigitizingLockState(state: DigitizingLockState, id?: string) {
     if (!id && state !== DigitizingLockState.Free) {
       throw new Error("Must provide id when setting non-free state");
@@ -1719,8 +1773,19 @@ class MapContextManager extends EventEmitter {
     this.setState((prev) => ({
       ...prev,
       digitizingLockState: state,
-      digitizingLockRequester: id,
+      digitizingLockedBy: id || undefined,
     }));
+    this.emit(DigitizingLockStateChangeEventType, {
+      digitizingLockState: state,
+      digitizingLockedBy: id || undefined,
+    });
+  }
+
+  hasLock(id: string) {
+    return (
+      this.internalState.digitizingLockState !== DigitizingLockState.Free &&
+      this.internalState.digitizingLockedBy === id
+    );
   }
 
   // measure = () => {
@@ -2298,30 +2363,6 @@ export interface Tooltip {
   messages: string[];
 }
 
-/**
- * Multiple "digitizing" tools active at once would compete for the same cursor
- * events and conflict with each other. This enum is used to track the state of
- * the digitizing tools and prevent conflicts.
- */
-export enum DigitizingLockState {
-  /**
-   * No digitizing tools are active. Popups and other interactivity is enabled.
-   */
-  Free,
-  /**
-   * A digitizing tool is active and has locked the map. Popups and other
-   * interactivity is disabled. This is the most active state, with the
-   * mousemove events directly moving a "cursor" vertex until it is dropped.
-   */
-  CursorActive,
-  /**
-   * A digitizing tool is partially active, with a geometry ready to be edited
-   * when the user drags a vertex. Popups and other interactivity may be
-   * enabled, though this would require careful coordination with the digitizing
-   * tool.
-   */
-  Editing,
-}
 export interface MapContextInterface {
   layerStatesByTocStaticId: { [id: string]: LayerState };
   sketchLayerStates: { [id: number]: LayerState };
