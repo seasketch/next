@@ -8,7 +8,7 @@
   "New Topic Title...": "Título do Novo Tópico...",
   "No forums have been configured for this project.": "Nenhum fórum foi configurado para este projeto.",
   "participantCount": "{{count}} pessoas",
-  "participantCount_plural": "participanteCount_plural",
+  "participantCount_plural": "{{count}} pessoas",
   "Post a topic": "Postar um tópico",
   "Post anyways": "Postar de qualquer forma",
   "Post New Topic": "Postar um novo tópico",

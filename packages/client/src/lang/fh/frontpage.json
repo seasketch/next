@@ -1,0 +1,11 @@
+{
+  "Create a Project": "एक परियोजना बनाएँ",
+  "Create your own<1></1><2> SeaSketch Project</2>": "अपना खुद का<1></1><2> सीस्केच प्रोजेक्ट</2> बनाएं",
+  "Create your project": "अपना प्रोजेक्ट बनाएं",
+  "Developer API": "डेवलपर एपीआई",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "SeaSketch का उपयोग आपके नियोजन प्रयासों का समर्थन करने के लिए कैसे किया जा सकता है, इस बारे में चर्चा की व्यवस्था करने के लिए कृपया <2>support@seasketch.org</2> पर हमसे संपर्क करें।",
+  "Project name": "परियोजना का नाम",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "सीस्केच परियोजनाओं को हमारे ओपन-सोर्स <2>जियोप्रोसेसिंग फ्रेमवर्क</2> का उपयोग करके अनुकूलित किया जा सकता है। प्रोजेक्ट रिपोर्ट को परिभाषित कर सकते हैं जो टाइपस्क्रिप्ट, रिएक्ट और एडब्ल्यूएस लैम्ब्डा का उपयोग करके संभावित क्षेत्रों के प्रभाव की कल्पना करते हैं।",
+  "Trusted by": "द्वारा भरोसा किया गया",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "अपने क्षेत्र में समुद्री स्थानिक योजना के लिए हमारे सहयोगी जियोडिज़ाइन और सर्वेक्षण उपकरणों का उपयोग करें। आपके प्रोजेक्ट में मानचित्रों की कल्पना करने, चर्चा मंच बनाने, योजनाओं को स्केच करने और सर्वेक्षणों का उपयोग करके डेटा एकत्र करने के लिए टूल शामिल होंगे - <i>मुफ्त में!</i> हमारे <5>जियोप्रोसेसिंग फ्रेमवर्क</5> का उपयोग करके विश्लेषणात्मक रिपोर्ट विकसित और अनुकूलित की जा सकती हैं। ."
+}

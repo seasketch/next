@@ -16,11 +16,6 @@
   "Visible Layers": "Visible Layers",
   "Visible Sketches": "Visible Sketches",
   "Zoom Level": "Zoom Level",
-  "attempt {{attempt}}/{{of}}": "attempt {{attempt}}/{{of}}",
-  "creating preview": "creating preview",
   "missing": "missing",
-  "preview unavailable": "preview unavailable",
-  "screenshot error": "screenshot error",
-  "screenshot failed": "screenshot failed",
-  "show details": "show details"
+  "preview unavailable": "preview unavailable"
 }

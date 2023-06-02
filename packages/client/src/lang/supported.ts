@@ -86,6 +86,11 @@ const languages: LangDetails[] = [
       code: "ar",
       rtl: true,
     },
+    {
+      name: "Dutch",
+      code: "nl",
+      localName: "Nederlands",
+    },
   ].sort((a, b) => a.name.localeCompare(b.name)),
 ];
 

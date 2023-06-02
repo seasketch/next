@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Waihanga Kaupapa",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Waihangahia taau ake<1></1><2> Kaupapa SeaSketch</2>",
+  "Create your project": "Waihangahia to kaupapa",
+  "Developer API": "API Kaiwhakawhanake",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Tena koa whakapā mai ki a matou <2>support@seasketch.org</2> ki te whakarite korero mo te whakamahinga o SeaSketch ki te tautoko i o mahi whakamahere.",
+  "Project name": "Ingoa kaupapa",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Ka taea te whakarite kaupapa SeaSketch ma te whakamahi i to maatau puna tuwhera <2>Anga Tukatuka Whenua</2>. Ka taea e nga kaupapa te tautuhi i nga purongo e tiro ana i te paanga o nga waahi ka taea ma te whakamahi i te Typescript, React, me te AWS Lambda.",
+  "Trusted by": "I whakawhirinakihia e",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Whakamahia a maatau mahi hoahoa whenua me nga taputapu rangahau mo te whakamahere mokowā moana i to rohe. Kei roto i to kaupapa he taputapu ki te tiro mapi, ki te hanga huinga korerorero, ki te tuhi mahere, me te kohikohi raraunga ma te whakamahi rangahau - <i>kore utu!</i> Ka taea te hanga me te whakarite i nga purongo tātari ma te whakamahi i to maatau <5> anga mahi geoprocessing</5> ."
+}
