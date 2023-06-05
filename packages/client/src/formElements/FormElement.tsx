@@ -102,6 +102,11 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
   isLastQuestion?: boolean;
   /** Whether this is a sketch in "MyPlans" vs a survey */
   isSketchWorkflow?: boolean;
+  /**
+   * If a survey and a ParticipantCount input has been filled out, this will be passed to the
+   * component.
+   */
+  surveyParticipantCount?: number;
 }
 
 /**
@@ -485,7 +490,9 @@ export interface FormElementComponent<T, V = {}>
    * responsible for indicating when to advance using the third argument of
    * props.onChange
    * */
-  advanceAutomatically?: boolean | ((componentSettings: T) => boolean);
+  advanceAutomatically?:
+    | boolean
+    | ((componentSettings: T, isGroupResponse: boolean) => boolean);
   icon: FunctionComponent<{
     componentSettings: T;
     sketchClass?: SketchClassDetailsFragment | undefined | null;
@@ -527,7 +534,11 @@ export interface FormElementComponent<T, V = {}>
   ) => FormElementLayout | null;
   /** Will disable option in admin interface to delete the element. Useful for welcome message, thank you, etc that are created as part of templates */
   disableDeletion?: boolean;
-  getInitialStage?: (value: V, componentSettings: T) => number;
+  getInitialStage?: (
+    value: V,
+    componentSettings: T,
+    isGroupResponse: boolean
+  ) => number;
   ChildOptions?: FunctionComponent<{
     componentSettings: T;
     child: {

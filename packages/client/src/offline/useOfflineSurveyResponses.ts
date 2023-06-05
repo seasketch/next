@@ -11,6 +11,7 @@ type OfflineSurveyResponse = {
   projectId: number;
   facilitated: boolean;
   practice: boolean;
+  groupResponse: boolean;
 };
 
 const OFFLINE_SURVEY_RESPONSES_KEY = "offline-survey-responses";
@@ -34,6 +35,7 @@ export default function useOfflineSurveyResponses() {
       projectId: number,
       facilitated: boolean,
       practice: boolean,
+      groupResponse: boolean,
       responseData: { [formElementId: number]: any }
     ) => {
       const responses = ((await localforage.getItem(
@@ -46,6 +48,7 @@ export default function useOfflineSurveyResponses() {
         facilitated,
         practice,
         responseData,
+        groupResponse,
       });
       await localforage.setItem(OFFLINE_SURVEY_RESPONSES_KEY, responses);
       setResponses([...responses]);

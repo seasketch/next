@@ -32,6 +32,7 @@ registerComponent<NameProps, NameType>({
   },
 });
 registerComponent({ name: "Email" });
+registerComponent({ name: "ParticipantCount" });
 registerComponent<ConsentProps, ConsentValue>({
   name: "Consent",
   getColumns: (componentSettings, exportId) => {
@@ -56,6 +57,15 @@ registerComponent<MultipleChoiceProps, MultipleChoiceValue>({
     };
   },
 });
+registerComponent({
+  name: "DemographicChoice",
+  getAnswers(componentSettings, exportId, answer) {
+    return {
+      [exportId]: JSON.stringify(answer),
+    };
+  },
+});
+
 registerComponent({ name: "ShortText" });
 registerComponent({ name: "TextArea" });
 registerComponent({ name: "Number" });
