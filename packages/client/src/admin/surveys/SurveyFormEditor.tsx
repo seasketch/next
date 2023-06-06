@@ -592,11 +592,15 @@ export default function SurveyFormEditor({
                             value={values[selectedFormElement.id]}
                             onRequestNext={() => null}
                             onRequestPrevious={() => null}
+                            surveyParticipantCount={10}
                           />
                           <div className="flex items-center mb-10 space-x-4">
                             {selectedFormElement.typeId !== "WelcomeMessage" &&
                               selectedFormElement.typeId !== "ThankYou" &&
-                              !advancesAutomatically(selectedFormElement) &&
+                              !advancesAutomatically(
+                                selectedFormElement,
+                                false
+                              ) &&
                               !components[selectedFormElement.typeId].stages &&
                               !components[selectedFormElement.typeId]
                                 .hideNav && (
