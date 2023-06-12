@@ -155,6 +155,10 @@ export default function AddFormElementButton({
                                 backgroundHeight: null,
                                 backgroundWidth: null,
                                 subordinateTo: subordinateTo || null,
+                                generatedExportId:
+                                  C.defaultExportId ||
+                                  "loading-" + nextPosition,
+                                generatedLabel: "Saving...",
                               },
                             },
                           },

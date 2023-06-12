@@ -42,6 +42,8 @@ import {
   FormElementDetailsFragment,
   FormElementFullDetailsFragment,
   FormElementLayout,
+  LogicRuleDetailsFragment,
+  SketchFormElementFragment,
   SketchGeometryType,
 } from "../../generated/graphql";
 import FormElementFactory from "../../surveys/FormElementFactory";
@@ -74,6 +76,11 @@ import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";
 import MapPicker from "../../components/MapPicker";
 import useDialog from "../../components/useDialog";
+import {
+  doSketchPropertiesHaveErrors,
+  evaluateVisibilityRules,
+  sketchFormStateToProperties,
+} from "../../projects/Sketches/SketchForm";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -230,7 +237,9 @@ const SpatialAccessPriority: FormElementComponent<
       updateFeatureValue(responseState.featureId as string, {
         props: responseStateToProps(
           sector!.value || sector!.label,
-          responseState
+          responseState,
+          props.sketchClass?.form?.formElements || [],
+          props.sketchClass?.form?.logicRules || []
         ),
       });
     }
@@ -464,20 +473,17 @@ const SpatialAccessPriority: FormElementComponent<
       }
       return actions.clearSelection();
     }
-    let errors = false;
-    for (const element of formElements) {
-      if (
-        element.isRequired &&
-        element.type?.isInput &&
-        visibleInSector(element, props.componentSettings, sector)
-      ) {
-        errors =
-          errors ||
-          responseState[element.id] === undefined ||
-          responseState[element.id].errors === true ||
-          responseState[element.id].value === undefined;
-      }
-    }
+    const hiddenInSector = formElements
+      .filter(
+        (el) => visibleInSector(el, props.componentSettings, sector) === false
+      )
+      .map((el) => el.id);
+    const errors = doSketchPropertiesHaveErrors(
+      responseState,
+      props.sketchClass?.form?.formElements || [],
+      props.sketchClass?.form?.logicRules || [],
+      hiddenInSector
+    );
     if (errors) {
       // Check to see that all required fields are filled in and valid
       setResponseState((prev) => ({
@@ -495,7 +501,12 @@ const SpatialAccessPriority: FormElementComponent<
       }
       const feature = { ...geometryEditingState.feature };
       feature.properties = {
-        ...responseStateToProps(sector.value || sector.label, responseState),
+        ...responseStateToProps(
+          sector.value || sector.label,
+          responseState,
+          props.sketchClass?.form?.formElements || [],
+          props.sketchClass?.form?.logicRules || []
+        ),
       };
 
       onChange({
@@ -607,6 +618,17 @@ const SpatialAccessPriority: FormElementComponent<
       <ShowScaleBar mapContext={mapContext} />
     </>
   );
+
+  const hiddenElements = useMemo(() => {
+    if (props.editable) {
+      return [];
+    } else {
+      return evaluateVisibilityRules(
+        responseState || {},
+        props.sketchClass?.form?.logicRules || []
+      );
+    }
+  }, [props.sketchClass?.form?.logicRules, responseState, props.editable]);
 
   return (
     <>
@@ -898,7 +920,10 @@ const SpatialAccessPriority: FormElementComponent<
             <div className="py-5 space-y-2">
               {formElements
                 .filter((el) => {
-                  return visibleInSector(el, props.componentSettings, sector);
+                  return (
+                    visibleInSector(el, props.componentSettings, sector) &&
+                    !hiddenElements.includes(el.id)
+                  );
                 })
                 .map((details, i) => {
                   // const Component = components[details.typeId];
@@ -1383,14 +1408,21 @@ function propsToResponseState(
   return responseState;
 }
 
-function responseStateToProps(sector: string, responseState: ResponseState) {
-  const properties: { [key: number]: any; sector: string } = { sector };
-  for (const key in responseState) {
-    if (key !== "submissionAttempted") {
-      properties[parseInt(key)] = responseState[key].value;
-    }
-  }
-  return properties;
+function responseStateToProps(
+  sector: string,
+  responseState: ResponseState,
+  formElements: Pick<SketchFormElementFragment, "id" | "isRequired">[],
+  logicRules: LogicRuleDetailsFragment[]
+) {
+  const props = sketchFormStateToProperties(
+    responseState,
+    formElements,
+    logicRules
+  );
+  return {
+    ...props,
+    sector,
+  };
 }
 
 SpatialAccessPriority.hideNav = (componentSettings, isMobile, stage) => {
