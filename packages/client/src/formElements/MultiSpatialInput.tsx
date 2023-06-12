@@ -35,7 +35,6 @@ import {
   FormElementLayout,
   SketchGeometryType,
 } from "../generated/graphql";
-import FormElementFactory from "../surveys/FormElementFactory";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import SurveyButton from "../surveys/SurveyButton";
 import DigitizingTools from "./DigitizingTools";
@@ -45,7 +44,6 @@ import {
   FormElementEditorPortal,
   SurveyMapPortal,
 } from "./FormElement";
-import { sortFormElements } from "./sortFormElements";
 import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
 import bbox from "@turf/bbox";
 import DigitizingMiniMap from "./DigitizingMiniMap";
@@ -124,7 +122,7 @@ const MultiSpatialInput: FormElementComponent<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.value, props.onChange]);
 
-  const [miniMap, setMiniMap] = useState<Map | null>(null);
+  const [, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
   const [geometryEditingState, setGeometryEditingState] = useState<{
@@ -277,6 +275,18 @@ const MultiSpatialInput: FormElementComponent<
   }, [props.stage, mapContext.manager?.map]);
 
   useEffect(() => {
+    if (state.featureId && selection?.id === state.featureId) {
+      return;
+    }
+    if (
+      state.featureId &&
+      state.hasValidationErrors &&
+      (!selection || selection.id !== state.featureId)
+    ) {
+      alert(t("Please fill in required fields", { ns: "surveys" }));
+      actions.selectFeature(state.featureId);
+      return;
+    }
     if (selection && geometryEditingState?.isNew !== true) {
       if (state.featureId !== selection.id) {
         let properties = {};
@@ -284,12 +294,6 @@ const MultiSpatialInput: FormElementComponent<
           (f) => f.id === selection.id
         );
         properties = feature?.properties || {};
-        // TODO: Make sure you can't just change selection when editing an
-        // existing feature and there are validation errors in the SketchForm.
-        // Otherwise props.onChange won't be called and changes will be lost.
-        // TODO: may need to simply check for validation errors at the top and
-        // re-select the previously selected feature if not confirmed by the
-        // user
         setState(
           featurePropertiesToInputLocalState(selection.id as string, properties)
         );
@@ -309,7 +313,7 @@ const MultiSpatialInput: FormElementComponent<
         submissionAttempted: false,
       });
     }
-  }, [selection]);
+  }, [selection, alert]);
 
   useEffect(() => {
     if (mapContext.manager && basemaps && mapContext.styleHash.length > 0) {
@@ -327,7 +331,6 @@ const MultiSpatialInput: FormElementComponent<
       );
     }
     const errors = state.hasValidationErrors === true;
-    console.log({ errors });
     if (errors) {
       // Check to see that all required fields are filled in and valid
       setState((prev) => ({
@@ -335,7 +338,12 @@ const MultiSpatialInput: FormElementComponent<
         submissionAttempted: true,
       }));
       alert(t("Please fill in required fields", { ns: "surveys" }));
-    } else if (!geometryEditingState?.feature || selfIntersects) {
+    } else if (
+      // detect when no geometry edits have been attempted so there is no
+      // need to complete the shape
+      (geometryEditingState !== null && !geometryEditingState.feature) ||
+      selfIntersects
+    ) {
       return alert(
         t("Please complete your shape on the map", { ns: "surveys" })
       );
@@ -346,21 +354,23 @@ const MultiSpatialInput: FormElementComponent<
         // }
         return actions.clearSelection();
       }
-      const feature = { ...geometryEditingState.feature };
-      feature.properties = localStateToFeatureProperties(state);
+      if (geometryEditingState?.isNew === true) {
+        const feature = { ...geometryEditingState.feature! };
+        feature.properties = localStateToFeatureProperties(state);
 
-      onChange({
-        collection: {
-          ...props.value!.collection,
-          features: [...props.value!.collection.features, feature],
-        },
-      });
-      props.onRequestStageChange(STAGES.LIST_SHAPES);
-      setGeometryEditingState(null);
-      setState({ submissionAttempted: false });
-      actions.clearSelection();
-      if (style.isSmall) {
+        onChange({
+          collection: {
+            ...props.value!.collection,
+            features: [...props.value!.collection.features, feature],
+          },
+        });
         props.onRequestStageChange(STAGES.LIST_SHAPES);
+        setGeometryEditingState(null);
+        setState({ submissionAttempted: false });
+        actions.clearSelection();
+        if (style.isSmall) {
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
+        }
       }
     }
   }
@@ -671,6 +681,7 @@ const MultiSpatialInput: FormElementComponent<
             props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
             <div className="py-5 space-y-2">
               <SketchForm
+                key={state.featureId}
                 formElements={
                   (props.sketchClass?.form?.formElements ||
                     []) as FormElementFullDetailsFragment[]
