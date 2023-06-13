@@ -8,8 +8,6 @@ import {
 } from "../../generated/graphql";
 import { ReactNode, useCallback, useMemo, useState } from "react";
 import FormElementFactory from "../../surveys/FormElementFactory";
-import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
-import { defaultStyle } from "../../surveys/appearance";
 import { sortFormElements } from "../../formElements/sortFormElements";
 require("./sketching.css");
 
@@ -147,7 +145,7 @@ export default function SketchForm({
   );
 
   return (
-    <div>
+    <div role="form">
       {formElements.map((element, i) => {
         if (props.renderElement) {
           return props.renderElement(renderElement(element), element, i);
