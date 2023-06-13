@@ -4,7 +4,6 @@ import {
   FormElementFullDetailsFragment,
   LogicRuleDetailsFragment,
 } from "../../generated/graphql";
-import { on } from "form-data";
 
 const formElements = [
   {
