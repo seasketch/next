@@ -225,6 +225,7 @@ export default function SketchClassAttributesAdmin({
                     }}
                   >
                     <SketchForm
+                      isSketchWorkflow
                       logicRules={data?.form?.logicRules || []}
                       startingProperties={{}}
                       submissionAttempted={false}

@@ -697,6 +697,9 @@ const MultiSpatialInput: FormElementComponent<
                 startingProperties={state}
                 submissionAttempted={state.submissionAttempted}
                 editable={props.editable}
+                featureNumber={
+                  ((props.value?.collection.features || []).length || 0) + 1
+                }
                 onSubmissionRequested={onClickSave}
                 onChange={(newProperties, hasValidationErrors) => {
                   setState((prev) => {

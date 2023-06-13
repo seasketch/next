@@ -886,6 +886,14 @@ const SpatialAccessPriority: FormElementComponent<
                 }
                 logicRules={props.sketchClass?.form?.logicRules || []}
                 startingProperties={state}
+                featureNumber={
+                  ((
+                    props.value?.collection.features.filter(
+                      (f) =>
+                        f.properties.sector === (sector?.value || sector?.label)
+                    ) || []
+                  ).length || 0) + 1
+                }
                 submissionAttempted={state.submissionAttempted}
                 editable={props.editable}
                 onSubmissionRequested={onClickSave}

@@ -531,6 +531,7 @@ export default function SketchEditorModal({
                   }}
                 >
                   <SketchForm
+                    isSketchWorkflow={true}
                     logicRules={sketchClass.form?.logicRules || []}
                     onChange={(props, validationErrors) => {
                       const nameValue = nameElementId

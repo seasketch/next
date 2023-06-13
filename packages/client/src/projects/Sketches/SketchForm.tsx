@@ -29,6 +29,8 @@ export default function SketchForm({
   editable,
   onSubmissionRequested,
   logicRules,
+  featureNumber,
+  isSketchWorkflow,
   ...props
 }: {
   startingProperties: { [id: number]: any };
@@ -46,6 +48,8 @@ export default function SketchForm({
     element: SketchFormElementFragment,
     index: number
   ) => ReactNode;
+  featureNumber?: number;
+  isSketchWorkflow?: boolean;
 }) {
   const [state, setState] = useState<FormState>(
     Object.keys(startingProperties).reduce(
@@ -128,12 +132,12 @@ export default function SketchForm({
               : noop
           }
           isSpatial={false}
-          featureNumber={0}
+          featureNumber={featureNumber || 0}
           onRequestStageChange={noop}
           onRequestNext={noop}
           onRequestPrevious={noop}
           stage={0}
-          isSketchWorkflow={true}
+          isSketchWorkflow={Boolean(isSketchWorkflow)}
           editable={editable}
           autoFocus={element.typeId === "FeatureName"}
         />
