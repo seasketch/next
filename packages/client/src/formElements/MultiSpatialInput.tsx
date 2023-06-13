@@ -62,11 +62,6 @@ export enum STAGES {
   MOBILE_MAP_FEATURES,
 }
 
-interface FormElementState {
-  value: any;
-  errors: boolean;
-}
-
 /**
  * Holds SketchForm related state. This is state that is "local" to the
  * input, and may not yet be hoisted up into props.value yet since it
@@ -313,6 +308,7 @@ const MultiSpatialInput: FormElementComponent<
         submissionAttempted: false,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection, alert]);
 
   useEffect(() => {
@@ -375,7 +371,6 @@ const MultiSpatialInput: FormElementComponent<
     }
   }
 
-  // TODO: check that this looks for validation errors
   function onClickDoneMobile() {
     if (selfIntersects) {
       return alert(
@@ -422,6 +417,12 @@ const MultiSpatialInput: FormElementComponent<
   }, [style.isSmall, props.componentSettings.startingBounds]);
 
   const onClickMapNonInteractive = useCallback(() => {
+    // First, check to make sure that the form has valid input
+    if (state.hasValidationErrors === true) {
+      alert(t("Please fill in required fields", { ns: "surveys" }));
+      return;
+    }
+
     props.onRequestStageChange(STAGES.SHAPE_EDITOR);
     setTimeout(() => {
       if (mapContext.manager?.map && selection) {
@@ -432,7 +433,13 @@ const MultiSpatialInput: FormElementComponent<
       }
     }, 10);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapContext?.manager?.map, props.onRequestStageChange, selection]);
+  }, [
+    mapContext.manager?.map,
+    props.onRequestStageChange,
+    selection,
+    state.hasValidationErrors,
+    t,
+  ]);
 
   const popupActions = (
     <>
@@ -1193,7 +1200,7 @@ export default MultiSpatialInput;
  * @param id
  * @param opts
  */
-function updateFeatureInCollection(
+export function updateFeatureInCollection(
   id: string,
   opts: { props?: any; geometry?: Feature<Point | Polygon | LineString> },
   collection: FC
