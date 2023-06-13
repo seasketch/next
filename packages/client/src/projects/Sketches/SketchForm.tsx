@@ -8,8 +8,7 @@ import {
 } from "../../generated/graphql";
 import { ReactNode, useCallback, useMemo, useState } from "react";
 import FormElementFactory from "../../surveys/FormElementFactory";
-import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
-import { defaultStyle } from "../../surveys/appearance";
+import { sortFormElements } from "../../formElements/sortFormElements";
 require("./sketching.css");
 
 type SketchProperties = { name?: string } & { [id: number]: string };
@@ -25,10 +24,11 @@ export default function SketchForm({
   startingProperties,
   onChange,
   submissionAttempted,
-  formElements,
   editable,
   onSubmissionRequested,
   logicRules,
+  featureNumber,
+  isSketchWorkflow,
   ...props
 }: {
   startingProperties: { [id: number]: any };
@@ -46,6 +46,8 @@ export default function SketchForm({
     element: SketchFormElementFragment,
     index: number
   ) => ReactNode;
+  featureNumber?: number;
+  isSketchWorkflow?: boolean;
 }) {
   const [state, setState] = useState<FormState>(
     Object.keys(startingProperties).reduce(
@@ -63,6 +65,11 @@ export default function SketchForm({
       }
     )
   );
+
+  // formElements need to be sorted before display
+  const formElements = useMemo<SketchFormElementFragment[]>(() => {
+    return sortFormElements(props.formElements!);
+  }, [props.formElements]);
 
   const noop = useCallback(() => {}, []);
 
@@ -90,46 +97,31 @@ export default function SketchForm({
           alternateLanguageSettings={element.alternateLanguageSettings}
           body={element.body}
           onChange={(value, validationErrors) => {
-            setState((prev) => ({
-              ...prev,
-              [element.id]: {
-                value,
-                error: validationErrors,
-              },
-            }));
-            if (onChange) {
-              let otherValidationErrors = false;
-              const hiddenFields = evaluateVisibilityRules(
-                {
-                  ...state,
-                  [element.id]: {
-                    value,
-                    error: validationErrors,
-                  },
+            setState((prev) => {
+              const newState = {
+                ...prev,
+                [element.id]: {
+                  value,
+                  error: validationErrors,
                 },
-                logicRules
-              );
-              for (const id in state) {
-                if (
-                  !hiddenFields.includes(parseInt(id)) &&
-                  state[id].error &&
-                  parseInt(id) !== element.id
-                ) {
-                  otherValidationErrors = true;
-                }
-              }
-              const hasErrors = validationErrors || otherValidationErrors;
-              const newProperties: { [id: number]: any } = {
-                [element.id]: value,
               };
-              for (const strId in state) {
-                const id = parseInt(strId);
-                if (id !== element.id) {
-                  newProperties[id] = state[id].value;
-                }
+              if (onChange) {
+                const hasErrors = doSketchPropertiesHaveErrors(
+                  newState,
+                  formElements,
+                  logicRules
+                );
+                onChange(
+                  sketchFormStateToProperties(
+                    newState,
+                    formElements,
+                    logicRules
+                  ),
+                  hasErrors
+                );
               }
-              onChange(newProperties, hasErrors);
-            }
+              return newState;
+            });
           }}
           submissionAttempted={submissionAttempted}
           onSubmit={
@@ -138,12 +130,12 @@ export default function SketchForm({
               : noop
           }
           isSpatial={false}
-          featureNumber={0}
+          featureNumber={featureNumber || 0}
           onRequestStageChange={noop}
           onRequestNext={noop}
           onRequestPrevious={noop}
           stage={0}
-          isSketchWorkflow={true}
+          isSketchWorkflow={Boolean(isSketchWorkflow)}
           editable={editable}
           autoFocus={element.typeId === "FeatureName"}
         />
@@ -153,33 +145,14 @@ export default function SketchForm({
   );
 
   return (
-    <div className="SketchForm" dir="ltr">
-      <FormElementLayoutContext.Provider
-        value={{
-          mapPortal: null,
-          style: {
-            ...defaultStyle,
-            isDark: false,
-            textClass: "text-black",
-            backgroundColor: "#eee",
-            secondaryColor: "#999",
-            secondaryColor2: "#aaa",
-            isSmall: false,
-            compactAppearance: true,
-          },
-          navigatingBackwards: false,
-        }}
-      >
-        <div>
-          {formElements.map((element, i) => {
-            if (props.renderElement) {
-              return props.renderElement(renderElement(element), element, i);
-            } else {
-              return renderElement(element);
-            }
-          })}
-        </div>
-      </FormElementLayoutContext.Provider>
+    <div role="form">
+      {formElements.map((element, i) => {
+        if (props.renderElement) {
+          return props.renderElement(renderElement(element), element, i);
+        } else {
+          return renderElement(element);
+        }
+      })}
     </div>
   );
 }
@@ -263,4 +236,67 @@ function evaluateCondition(
       return Array.isArray(value) && value.includes(condition.value);
   }
   return false;
+}
+
+export interface SketchFormState {
+  [formElementId: number]: {
+    value: any;
+    error?: boolean;
+  };
+}
+
+/**
+ * Evaluates the form state and returns true if any errors are found
+ * @param state
+ * @param formElements
+ * @param logicRules
+ * @param additionalHiddenElements
+ * @returns boolean indicating whether errors were found
+ */
+export function doSketchPropertiesHaveErrors(
+  state: SketchFormState,
+  formElements: Pick<SketchFormElementFragment, "id" | "isRequired">[],
+  logicRules: LogicRuleDetailsFragment[],
+  additionalHiddenElements: number[] = []
+) {
+  const hiddenElements = evaluateVisibilityRules(state, logicRules);
+  for (const element of formElements) {
+    if (
+      !hiddenElements.includes(element.id) &&
+      !additionalHiddenElements.includes(element.id)
+    ) {
+      if (element.isRequired && !state[element.id]) {
+        return true;
+      } else if (state[element.id] && state[element.id].error) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Converts a SketchFormState to a list of geojson properties. Evaluates
+ * visibility rules and excludes hidden elements, as well as elements with
+ * errors
+ * @returns geojson feature properties
+ */
+export function sketchFormStateToProperties(
+  state: SketchFormState,
+  formElements: Pick<SketchFormElementFragment, "id" | "isRequired">[],
+  logicRules: LogicRuleDetailsFragment[],
+  additionalHiddenElements: number[] = []
+) {
+  const hiddenElements = evaluateVisibilityRules(state, logicRules);
+  const properties: { [formElementId: number]: any } = {};
+  for (const element of formElements) {
+    if (
+      !hiddenElements.includes(element.id) &&
+      !state[element.id]?.error &&
+      !additionalHiddenElements.includes(element.id)
+    ) {
+      properties[element.id] = state[element.id]?.value || undefined;
+    }
+  }
+  return properties;
 }

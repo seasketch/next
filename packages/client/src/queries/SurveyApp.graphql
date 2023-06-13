@@ -51,6 +51,8 @@ fragment SurveyAppFormElement on FormElement {
   subordinateTo
   mapBasemaps
   mapCameraOptions
+  generatedExportId
+  generatedLabel
 }
 
 fragment SurveyAppSurvey on Survey {

@@ -17336,7 +17336,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -18092,7 +18092,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -19801,6 +19801,8 @@ export const FormElementDetailsFragmentDoc = gql`
   subordinateTo
   mapBasemaps
   mapCameraOptions
+  generatedExportId
+  generatedLabel
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
 export const SketchClassDetailsFragmentDoc = gql`
@@ -19921,6 +19923,8 @@ export const SurveyAppFormElementFragmentDoc = gql`
   subordinateTo
   mapBasemaps
   mapCameraOptions
+  generatedExportId
+  generatedLabel
 }
     ${SketchClassDetailsFragmentDoc}`;
 export const SurveyAppSurveyFragmentDoc = gql`

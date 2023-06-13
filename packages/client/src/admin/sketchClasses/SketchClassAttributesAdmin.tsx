@@ -31,6 +31,8 @@ import getSlug from "../../getSlug";
 import languages from "../../lang/supported";
 import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
 import SketchAttributesFormLogicRulesModal from "./SketchAttributesFormLogicRulesModal";
+import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
+import { defaultStyle } from "../../surveys/appearance";
 
 export default function SketchClassAttributesAdmin({
   formId,
@@ -205,121 +207,142 @@ export default function SketchClassAttributesAdmin({
                 ref={provided.innerRef}
                 // ref={(el) => setRef(provided.innerRef, el)}
               >
-                <SketchForm
-                  logicRules={data?.form?.logicRules || []}
-                  startingProperties={{}}
-                  submissionAttempted={false}
-                  formElements={formElements}
-                  editable={true}
-                  renderElement={(children, element, i) => {
-                    if (element.typeId === "FeatureName") {
-                      return children;
-                    }
-                    const draggable = (
-                      <Draggable
-                        index={i}
-                        draggableId={element.id.toString()}
-                        key={`draggable-${element.id}`}
-                        isDragDisabled={element.typeId === "FeatureName"}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            className={`flex items-center group`}
-                            ref={provided?.innerRef}
-                            {...provided?.draggableProps}
-                            key={element.id}
-                            style={provided?.draggableProps.style}
+                <div className="SketchForm" dir="ltr">
+                  <FormElementLayoutContext.Provider
+                    value={{
+                      mapPortal: null,
+                      style: {
+                        ...defaultStyle,
+                        isDark: false,
+                        textClass: "text-black",
+                        backgroundColor: "#eee",
+                        secondaryColor: "#999",
+                        secondaryColor2: "#aaa",
+                        isSmall: false,
+                        compactAppearance: true,
+                      },
+                      navigatingBackwards: false,
+                    }}
+                  >
+                    <SketchForm
+                      isSketchWorkflow
+                      logicRules={data?.form?.logicRules || []}
+                      startingProperties={{}}
+                      submissionAttempted={false}
+                      formElements={formElements}
+                      editable={true}
+                      renderElement={(children, element, i) => {
+                        if (element.typeId === "FeatureName") {
+                          return children;
+                        }
+                        const draggable = (
+                          <Draggable
+                            index={i}
+                            draggableId={element.id.toString()}
+                            key={`draggable-${element.id}`}
+                            isDragDisabled={element.typeId === "FeatureName"}
                           >
-                            <div className="flex-1">{children}</div>
-                            <div
-                              className={`h-full flex flex-col pl-3 border-l ${
-                                editableElementId
-                                  ? editableElementId === element.id
-                                    ? "opacity-100"
-                                    : "opacity-5"
-                                  : "opacity-10 group-hover:opacity-100"
-                              } z-0`}
-                            >
-                              <button
-                                className="py-1 flex-1 cursor-move"
-                                {...provided.dragHandleProps}
+                            {(provided, snapshot) => (
+                              <div
+                                className={`flex items-center group`}
+                                ref={provided?.innerRef}
+                                {...provided?.draggableProps}
+                                key={element.id}
+                                style={provided?.draggableProps.style}
                               >
-                                <MenuIcon className="w-5 h-5 text-gray-500 hover:text-black" />
-                              </button>
-                              <button
-                                className="py-1 flex-1"
-                                onClick={async () => {
-                                  confirmDelete({
-                                    message: t(
-                                      "Are you sure you want to delete this item?"
-                                    ),
-                                    onDelete: async () => {
-                                      await del(element);
-                                    },
-                                  });
-                                }}
-                              >
-                                <TrashIcon className="w-5 h-5 text-gray-500 hover:text-black" />
-                              </button>
-                              {element.isInput && (
-                                <button
-                                  ref={setReferenceElement}
-                                  className={`py-1 flex-1 ${
-                                    element.id === editableElementId
-                                      ? "text-black"
-                                      : ""
-                                  }`}
-                                  onClick={(e) => {
-                                    setEditableElementId(element.id);
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }}
+                                <div className="flex-1">{children}</div>
+                                <div
+                                  className={`h-full flex flex-col pl-3 border-l ${
+                                    editableElementId
+                                      ? editableElementId === element.id
+                                        ? "opacity-100"
+                                        : "opacity-5"
+                                      : "opacity-10 group-hover:opacity-100"
+                                  } z-0`}
                                 >
-                                  <PencilIcon className="w-5 h-5 text-gray-500 hover:text-black" />
-                                </button>
-                              )}
-                              <button
-                                className="py-1 flex-1 relative"
-                                onClick={async () => {
-                                  setShowFormLogicRulesModal(element.id);
-                                }}
-                              >
-                                <EyeOffIcon className="w-5 h-5 text-gray-500 hover:text-black" />
-                                {(data.form?.logicRules || []).find(
-                                  (rule) => rule.formElementId === element.id
-                                ) && (
-                                  <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 -right-0.5 border-white border"></div>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    );
-                    if (
-                      element.id === editableElementId &&
-                      formElementEditorContainerRef
-                    ) {
-                      return (
-                        <FormEditorPortalContext.Provider
-                          key={`context-${element.id}`}
-                          value={{
-                            container: formElementEditorContainerRef,
-                            formElementSettings: formElements.find(
-                              (el) => el.id === editableElementId
-                            ),
-                            surveyId: 0,
-                            // surveyId: data.survey.id,
-                          }}
-                        >
-                          {draggable}
-                        </FormEditorPortalContext.Provider>
-                      );
-                    } else {
-                      return draggable;
-                    }
-                  }}
-                />
+                                  <button
+                                    className="py-1 flex-1 cursor-move"
+                                    {...provided.dragHandleProps}
+                                  >
+                                    <MenuIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                  </button>
+                                  <button
+                                    className="py-1 flex-1"
+                                    onClick={async () => {
+                                      confirmDelete({
+                                        message: t(
+                                          "Are you sure you want to delete this item?"
+                                        ),
+                                        onDelete: async () => {
+                                          await del(element);
+                                        },
+                                      });
+                                    }}
+                                  >
+                                    <TrashIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                  </button>
+                                  {element.isInput && (
+                                    <button
+                                      ref={setReferenceElement}
+                                      className={`py-1 flex-1 ${
+                                        element.id === editableElementId
+                                          ? "text-black"
+                                          : ""
+                                      }`}
+                                      onClick={(e) => {
+                                        setEditableElementId(element.id);
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                      }}
+                                    >
+                                      <PencilIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                    </button>
+                                  )}
+                                  <button
+                                    className="py-1 flex-1 relative"
+                                    onClick={async () => {
+                                      setShowFormLogicRulesModal(element.id);
+                                    }}
+                                  >
+                                    <EyeOffIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                    {(data.form?.logicRules || []).find(
+                                      (rule) =>
+                                        rule.formElementId === element.id
+                                    ) && (
+                                      <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 -right-0.5 border-white border"></div>
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                        if (
+                          element.id === editableElementId &&
+                          formElementEditorContainerRef
+                        ) {
+                          return (
+                            <FormEditorPortalContext.Provider
+                              key={`context-${element.id}`}
+                              value={{
+                                container: formElementEditorContainerRef,
+                                formElementSettings: formElements.find(
+                                  (el) => el.id === editableElementId
+                                ),
+                                surveyId: 0,
+                                // surveyId: data.survey.id,
+                              }}
+                            >
+                              {draggable}
+                            </FormEditorPortalContext.Provider>
+                          );
+                        } else {
+                          return draggable;
+                        }
+                      }}
+                    />
+                  </FormElementLayoutContext.Provider>
+                </div>
                 {provided.placeholder}
               </div>
             )}

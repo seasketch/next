@@ -16,10 +16,10 @@ RUN apt-get update \
 USER seasketch
 
 WORKDIR /home/seasketch
-RUN npm install lerna
+RUN npm install lerna@6
 ARG commit
 RUN git clone https://github.com/seasketch/next.git /home/seasketch/src && cd /home/seasketch/src && git checkout $commit
 WORKDIR /home/seasketch/src/packages/api
-RUN npx lerna bootstrap && npm run build
+RUN npx lerna@6 bootstrap && npm run build
 EXPOSE 3857
 CMD ["npm", "run", "start"]

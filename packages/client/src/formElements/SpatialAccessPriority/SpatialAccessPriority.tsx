@@ -28,7 +28,6 @@ import BoundsInput from "../../admin/surveys/BoundsInput";
 import useMapEssentials from "../../admin/surveys/useMapEssentials";
 import Button from "../../components/Button";
 import MapboxMap from "../../components/MapboxMap";
-import { Icons } from "../../components/SketchGeometryTypeSelector";
 import {
   ResetView,
   ShowScaleBar,
@@ -42,9 +41,7 @@ import {
   FormElementDetailsFragment,
   FormElementFullDetailsFragment,
   FormElementLayout,
-  SketchGeometryType,
 } from "../../generated/graphql";
-import FormElementFactory from "../../surveys/FormElementFactory";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import SurveyButton from "../../surveys/SurveyButton";
 import DigitizingTools from "../DigitizingTools";
@@ -53,11 +50,9 @@ import {
   FormElementComponent,
   FormElementEditorPortal,
   FormLanguageContext,
-  SurveyContext,
   SurveyMapPortal,
   useLocalizedComponentSetting,
 } from "../FormElement";
-import { sortFormElements } from "../sortFormElements";
 import FormElementOptionsInput, {
   FormElementOption,
 } from "../FormElementOptionsInput";
@@ -74,6 +69,8 @@ import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";
 import MapPicker from "../../components/MapPicker";
 import useDialog from "../../components/useDialog";
+import SketchForm from "../../projects/Sketches/SketchForm";
+import { updateFeatureInCollection } from "../MultiSpatialInput";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -91,10 +88,11 @@ interface FormElementState {
   errors: boolean;
 }
 
-interface ResponseState {
+interface SpatialAccessPriorityInputLocalState {
   [id: number]: FormElementState;
   submissionAttempted: boolean;
   featureId?: string;
+  hasValidationErrors?: boolean;
 }
 
 interface ChildVisibilitySetting {
@@ -155,14 +153,14 @@ const SpatialAccessPriority: FormElementComponent<
   const localizedSectorHeading = sector
     ? localizedSectors.find((s) => s.value === sector?.value)?.label
     : "";
-  const [miniMap, setMiniMap] = useState<Map | null>(null);
+  const [, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
   const [geometryEditingState, setGeometryEditingState] = useState<{
     isNew: boolean;
     feature?: Feature<any>;
   } | null>(null);
-  const [responseState, setResponseState] = useState<ResponseState>({
+  const [state, setState] = useState<SpatialAccessPriorityInputLocalState>({
     submissionAttempted: false,
   });
 
@@ -189,72 +187,6 @@ const SpatialAccessPriority: FormElementComponent<
     }
     props.onChange(value, props.isRequired ? errors : false);
   }
-
-  /**
-   * Updates GeoJSON features contained in props.value.collection. Be specifying
-   * either props or geometry (or both), you can update just part of the feature
-   * @param id
-   * @param opts
-   */
-  function updateFeatureValue(
-    id: string,
-    opts: { props?: SectorFeatureProps; geometry?: Feature<Polygon> }
-  ) {
-    const features = props.value!.collection.features;
-    const idx = features.findIndex((f) => f.id === id);
-    if (idx === -1) {
-      throw new Error(`Can't find feature with id ${id}`);
-    }
-    const feature = features[idx];
-    onChange({
-      ...props.value!,
-      collection: {
-        ...props.value!.collection!,
-        features: [
-          ...features.slice(0, idx),
-          {
-            ...feature,
-            ...(opts.geometry ? { geometry: opts.geometry.geometry } : {}),
-            ...(opts.props ? { properties: opts.props } : {}),
-          } as Feature<Polygon, SectorFeatureProps>,
-          ...features.slice(idx + 1),
-        ],
-      },
-    });
-  }
-
-  // Calls updateFeatureValue whenever the property editing form is modified,
-  // as long as the feature is not new.
-  useEffect(() => {
-    if (responseState.featureId && geometryEditingState?.isNew !== true) {
-      updateFeatureValue(responseState.featureId as string, {
-        props: responseStateToProps(
-          sector!.value || sector!.label,
-          responseState
-        ),
-      });
-    }
-  }, [responseState, geometryEditingState?.isNew]);
-
-  function updateResponseState(id: number) {
-    return (value: any, errors: boolean) => {
-      setResponseState((prev) => {
-        return {
-          ...prev,
-          [id]: {
-            ...prev[id],
-            value,
-            errors,
-          },
-        };
-      });
-    };
-  }
-
-  // formElements need to be sorted before display
-  const formElements = useMemo<FormElementFullDetailsFragment[]>(() => {
-    return sortFormElements(props.sketchClass!.form!.formElements!);
-  }, [props.sketchClass!.form?.formElements]);
 
   /**
    * Filter features to just those that belong to the current stage
@@ -319,8 +251,15 @@ const SpatialAccessPriority: FormElementComponent<
             feature: updatedFeature || undefined,
           });
         } else if (updatedFeature) {
-          updateFeatureValue(updatedFeature.id as string, {
-            geometry: updatedFeature,
+          onChange({
+            collection: updateFeatureInCollection(
+              updatedFeature.id as string,
+              {
+                geometry: updatedFeature,
+              },
+              props.value?.collection || EMPTY_FEATURE_COLLECTION
+            ),
+            sectors: props.value?.sectors || [],
           });
         }
         if (
@@ -369,6 +308,9 @@ const SpatialAccessPriority: FormElementComponent<
     setCollection(filtered);
   }
 
+  /**
+   * Filter the features shown on the map to just those in the current sector
+   */
   useEffect(() => {
     if (props.value?.collection) {
       // set gl-draw collection to just those shapes in the sector
@@ -378,8 +320,13 @@ const SpatialAccessPriority: FormElementComponent<
         animate: false,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sector]);
 
+  /**
+   * Watch stage and switch to drawing mode when appropriate. Resize the map
+   * when starting to draw to ensure it renders tiles
+   */
   useEffect(() => {
     if (
       (props.stage === STAGES.DRAWING_INTRO ||
@@ -391,18 +338,31 @@ const SpatialAccessPriority: FormElementComponent<
     if (mapContext.manager?.map) {
       mapContext.manager.map.resize();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.stage, mapContext.manager?.map]);
 
   useEffect(() => {
+    if (state.featureId && selection?.id === state.featureId) {
+      return;
+    }
+    if (
+      state.featureId &&
+      state.hasValidationErrors &&
+      (!selection || selection.id !== state.featureId)
+    ) {
+      alert(t("Please fill in required fields", { ns: "surveys" }));
+      actions.selectFeature(state.featureId);
+      return;
+    }
     if (selection && geometryEditingState?.isNew !== true) {
-      if (responseState.featureId !== selection.id) {
+      if (state.featureId !== selection.id) {
         let properties = {};
         const feature = props.value!.collection.features.find(
           (f) => f.id === selection.id
         );
         properties = feature?.properties || {};
-        setResponseState(
-          propsToResponseState(selection.id as string, properties)
+        setState(
+          featurePropertiesToInputLocalState(selection.id as string, properties)
         );
         if (!style.isSmall) {
           if (props.stage === STAGES.LIST_SHAPES) {
@@ -416,12 +376,14 @@ const SpatialAccessPriority: FormElementComponent<
           props.onRequestStageChange(STAGES.LIST_SHAPES);
         }
       }
-      setResponseState({
+      setState({
         submissionAttempted: false,
       });
     }
-  }, [selection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, alert]);
 
+  // Set selected sector from props.value
   useEffect(() => {
     if (
       props.value?.sectors.length &&
@@ -433,8 +395,12 @@ const SpatialAccessPriority: FormElementComponent<
         )!
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.value?.sectors, props.componentSettings.sectorOptions]);
 
+  /**
+   * Update minimap style when basemap changes
+   */
   useEffect(() => {
     if (mapContext.manager && basemaps) {
       mapContext.manager
@@ -443,6 +409,7 @@ const SpatialAccessPriority: FormElementComponent<
     }
   }, [mapContext.manager, basemaps]);
 
+  // Why do this twice?
   useEffect(() => {
     if (mapContext.manager && basemaps && mapContext.styleHash.length > 0) {
       mapContext.manager
@@ -458,34 +425,20 @@ const SpatialAccessPriority: FormElementComponent<
         t("Please fix problems with your shape first.", { ns: "surveys" })
       );
     }
-    if (geometryEditingState?.isNew !== true) {
-      if (style.isSmall) {
-        props.onRequestStageChange(STAGES.LIST_SHAPES);
-      }
-      return actions.clearSelection();
-    }
-    let errors = false;
-    for (const element of formElements) {
-      if (
-        element.isRequired &&
-        element.type?.isInput &&
-        visibleInSector(element, props.componentSettings, sector)
-      ) {
-        errors =
-          errors ||
-          responseState[element.id] === undefined ||
-          responseState[element.id].errors === true ||
-          responseState[element.id].value === undefined;
-      }
-    }
+    const errors = state.hasValidationErrors === true;
     if (errors) {
       // Check to see that all required fields are filled in and valid
-      setResponseState((prev) => ({
+      setState((prev) => ({
         ...prev,
         submissionAttempted: true,
       }));
       alert(t("Please fill in required fields", { ns: "surveys" }));
-    } else if (!geometryEditingState?.feature || selfIntersects) {
+    } else if (
+      // detect when no geometry edits have been attempted so there is no
+      // need to complete the shape
+      (geometryEditingState !== null && !geometryEditingState.feature) ||
+      selfIntersects
+    ) {
       return alert(
         t("Please complete your shape on the map", { ns: "surveys" })
       );
@@ -493,29 +446,36 @@ const SpatialAccessPriority: FormElementComponent<
       if (!sector) {
         throw new Error("Sector not set");
       }
-      const feature = { ...geometryEditingState.feature };
-      feature.properties = {
-        ...responseStateToProps(sector.value || sector.label, responseState),
-      };
-
-      onChange({
-        sectors: props.value!.sectors,
-        collection: {
-          ...props.value!.collection,
-          features: [
-            // @ts-ignore
-            ...props.value!.collection.features,
-            // @ts-ignore
-            feature,
-          ],
-        },
-      });
-      props.onRequestStageChange(STAGES.LIST_SHAPES);
-      setGeometryEditingState(null);
-      setResponseState({ submissionAttempted: false });
-      actions.clearSelection();
-      if (style.isSmall) {
+      if (geometryEditingState?.isNew !== true) {
+        // if (style.isSmall) {
         props.onRequestStageChange(STAGES.LIST_SHAPES);
+        // }
+        return actions.clearSelection();
+      }
+      if (geometryEditingState?.isNew === true) {
+        const feature = { ...geometryEditingState.feature! };
+        feature.properties = {
+          ...localStateToFeatureProperties(state),
+          sector: sector.value || sector.label,
+        };
+
+        onChange({
+          sectors: props.value!.sectors,
+          collection: {
+            ...props.value!.collection,
+            features: [
+              ...props.value!.collection.features,
+              feature as Feature<Polygon, SectorFeatureProps>,
+            ],
+          },
+        });
+        props.onRequestStageChange(STAGES.LIST_SHAPES);
+        setGeometryEditingState(null);
+        setState({ submissionAttempted: false });
+        actions.clearSelection();
+        if (style.isSmall) {
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
+        }
       }
     }
   }
@@ -565,6 +525,12 @@ const SpatialAccessPriority: FormElementComponent<
   }, [style.isSmall]);
 
   const onClickMapNonInteractive = useCallback(() => {
+    // First, check to make sure that the form has valid input
+    if (state.hasValidationErrors === true) {
+      alert(t("Please fill in required fields", { ns: "surveys" }));
+      return;
+    }
+
     props.onRequestStageChange(STAGES.SHAPE_EDITOR);
     setTimeout(() => {
       if (mapContext.manager?.map && selection) {
@@ -574,7 +540,14 @@ const SpatialAccessPriority: FormElementComponent<
         });
       }
     }, 10);
-  }, [mapContext, props, selection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    mapContext,
+    props.onRequestStageChange,
+    selection,
+    state.hasValidationErrors,
+    t,
+  ]);
 
   const popupActions = (
     <>
@@ -818,12 +791,20 @@ const SpatialAccessPriority: FormElementComponent<
                         value={feature.properties[priorityElementId!]}
                         onChange={(e) => {
                           const value = parseInt(e.target.value);
-                          updateFeatureValue(feature.id as string, {
-                            props: {
-                              ...feature.properties,
-                              // @ts-ignore
-                              [priorityElementId]: value,
-                            },
+                          onChange({
+                            collection: updateFeatureInCollection(
+                              feature.id as string,
+                              {
+                                props: {
+                                  ...feature.properties,
+                                  // @ts-ignore
+                                  [priorityElementId]: value,
+                                },
+                              },
+                              props.value?.collection ||
+                                EMPTY_FEATURE_COLLECTION
+                            ),
+                            sectors: props.value?.sectors || [],
                           });
                         }}
                       />
@@ -844,7 +825,7 @@ const SpatialAccessPriority: FormElementComponent<
                     </span>
                   }
                   onClick={() => {
-                    setResponseState({ submissionAttempted: false });
+                    setState({ submissionAttempted: false });
                     setGeometryEditingState({
                       isNew: true,
                     });
@@ -896,39 +877,57 @@ const SpatialAccessPriority: FormElementComponent<
           {(props.stage === STAGES.SHAPE_EDITOR ||
             props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
             <div className="py-5 space-y-2">
-              {formElements
-                .filter((el) => {
-                  return visibleInSector(el, props.componentSettings, sector);
-                })
-                .map((details, i) => {
-                  // const Component = components[details.typeId];
-                  return (
-                    <FormElementFactory
-                      key={`${details.id}`}
-                      {...details}
-                      onChange={updateResponseState(details.id)}
-                      onSubmit={() => null}
-                      isSpatial={false}
-                      onRequestStageChange={() => null}
-                      featureNumber={
-                        ((
-                          props.value?.collection.features.filter(
-                            (f) =>
-                              f.properties.sector ===
-                              (sector?.value || sector?.label)
-                          ) || []
-                        ).length || 0) + 1
-                      }
-                      stage={0}
-                      onRequestNext={() => null}
-                      onRequestPrevious={() => null}
-                      typeName={details.typeId}
-                      value={responseState[details.id]?.value}
-                      autoFocus={i === 0}
-                      submissionAttempted={responseState.submissionAttempted}
-                    />
-                  );
-                })}
+              <SketchForm
+                key={state.featureId}
+                formElements={
+                  (props.sketchClass?.form?.formElements || []).filter((el) =>
+                    visibleInSector(el, props.componentSettings, sector)
+                  ) as FormElementFullDetailsFragment[]
+                }
+                logicRules={props.sketchClass?.form?.logicRules || []}
+                startingProperties={state}
+                featureNumber={
+                  ((
+                    props.value?.collection.features.filter(
+                      (f) =>
+                        f.properties.sector === (sector?.value || sector?.label)
+                    ) || []
+                  ).length || 0) + 1
+                }
+                submissionAttempted={state.submissionAttempted}
+                editable={props.editable}
+                onSubmissionRequested={onClickSave}
+                onChange={(newProperties, hasValidationErrors) => {
+                  setState((prev) => {
+                    return {
+                      ...prev,
+                      ...newProperties,
+                      hasValidationErrors,
+                    };
+                  });
+                  // If editing an existing shape and there are no validation errors,
+                  // update the feature in the collection and props.value immediately
+                  if (
+                    !hasValidationErrors &&
+                    state.featureId &&
+                    geometryEditingState?.isNew !== true
+                  ) {
+                    onChange({
+                      sectors: props.value?.sectors || [],
+                      collection: updateFeatureInCollection(
+                        state.featureId as string,
+                        {
+                          props: {
+                            ...newProperties,
+                            sector: sector!.value || sector!.label,
+                          },
+                        },
+                        props.value?.collection || EMPTY_FEATURE_COLLECTION
+                      ),
+                    });
+                  }
+                }}
+              />
               <div className="space-x-2 rtl:space-x-reverse">
                 {geometryEditingState?.isNew && (
                   <SurveyButton
@@ -1222,7 +1221,6 @@ For each selection, you will be asked to draw and prioritize valued areas.
 `);
 
 SpatialAccessPriority.icon = ({ componentSettings, sketchClass }) => {
-  const Icon = Icons[sketchClass?.geometryType || SketchGeometryType.Polygon];
   return (
     <div className="bg-red-500 w-full h-full font-bold text-center flex justify-center items-center  italic text-white relative">
       <ScaleIcon className="text-white w-5 h-6" />
@@ -1366,31 +1364,23 @@ function Admin(props: {
   );
 }
 
-function propsToResponseState(
+function featurePropertiesToInputLocalState(
   featureId: string,
   props: GeoJsonProperties
-): ResponseState {
-  const responseState = {
+): SpatialAccessPriorityInputLocalState {
+  const state = {
     submissionAttempted: false,
     featureId,
-  } as ResponseState;
-  for (const key in props) {
-    responseState[parseInt(key)] = {
-      value: props[key],
-      errors: false,
-    };
-  }
-  return responseState;
+    ...props,
+  } as SpatialAccessPriorityInputLocalState;
+  return state;
 }
 
-function responseStateToProps(sector: string, responseState: ResponseState) {
-  const properties: { [key: number]: any; sector: string } = { sector };
-  for (const key in responseState) {
-    if (key !== "submissionAttempted") {
-      properties[parseInt(key)] = responseState[key].value;
-    }
-  }
-  return properties;
+function localStateToFeatureProperties(
+  state: SpatialAccessPriorityInputLocalState
+) {
+  const { submissionAttempted, featureId, ...props } = state;
+  return props;
 }
 
 SpatialAccessPriority.hideNav = (componentSettings, isMobile, stage) => {
