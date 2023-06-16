@@ -39,5 +39,6 @@ declare namespace NodeJS {
     ISSUER?: string;
     API_ROOT: string;
     SCREENSHOTTER_FUNCTION_ARN: string;
+    R2_FILE_UPLOADS_BUCKET: string;
   }
 }

@@ -989,6 +989,43 @@ export type CreateDataUploadPayloadDataUploadTaskEdgeArgs = {
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
+/** All input for the `createFileUpload` mutation. */
+export type CreateFileUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  contentType?: Maybe<Scalars['String']>;
+  filename?: Maybe<Scalars['String']>;
+  fileSizeBytes?: Maybe<Scalars['BigInt']>;
+  projectId?: Maybe<Scalars['Int']>;
+  type?: Maybe<FileUploadType>;
+};
+
+/** The output of our `createFileUpload` mutation. */
+export type CreateFileUploadPayload = {
+  __typename?: 'CreateFileUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  fileUpload?: Maybe<FileUpload>;
+  /** An edge for our `FileUpload`. May be used by Relay 1. */
+  fileUploadEdge?: Maybe<FileUploadsEdge>;
+  /** Reads a single `Post` that is related to this `FileUpload`. */
+  post?: Maybe<Post>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createFileUpload` mutation. */
+export type CreateFileUploadPayloadFileUploadEdgeArgs = {
+  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
+};
+
 /** All input for the create `FormElement` mutation. */
 export type CreateFormElementInput = {
   /**
@@ -4099,6 +4136,75 @@ export enum FieldRuleOperator {
   NotEqual = 'NOT_EQUAL'
 }
 
+export type FileUpload = Node & {
+  __typename?: 'FileUpload';
+  contentType: Scalars['String'];
+  createdAt: Scalars['Datetime'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['BigInt'];
+  id: Scalars['UUID'];
+  location: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Post` that is related to this `FileUpload`. */
+  post?: Maybe<Post>;
+  postId?: Maybe<Scalars['Int']>;
+  /** Use to upload to cloud storage (PUT). */
+  presignedUploadUrl?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+  type: FileUploadType;
+  userId: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `FileUpload` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type FileUploadCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `postId` field. */
+  postId?: Maybe<Scalars['Int']>;
+};
+
+export enum FileUploadType {
+  ForumAttachment = 'FORUM_ATTACHMENT',
+  SurveyResponse = 'SURVEY_RESPONSE'
+}
+
+/** A connection to a list of `FileUpload` values. */
+export type FileUploadsConnection = {
+  __typename?: 'FileUploadsConnection';
+  /** A list of edges which contains the `FileUpload` and cursor to aid in pagination. */
+  edges: Array<FileUploadsEdge>;
+  /** A list of `FileUpload` objects. */
+  nodes: Array<FileUpload>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `FileUpload` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `FileUpload` edge in the connection. */
+export type FileUploadsEdge = {
+  __typename?: 'FileUploadsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FileUpload` at the end of the edge. */
+  node: FileUpload;
+};
+
+/** Methods to use when ordering `FileUpload`. */
+export enum FileUploadsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PostIdAsc = 'POST_ID_ASC',
+  PostIdDesc = 'POST_ID_DESC',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
 /**
  * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
  * Forms are used to add attributes to spatial features. In Surveys, Forms are used
@@ -5986,6 +6092,12 @@ export type Mutation = {
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
+  /**
+   * Use to upload files to cloud storage (POST). Creates a new FileUpload record.
+   * Be sure to include the presignedUploadUrl field in your query selection so
+   * that you can perform the actual file upload.
+   */
+  createFileUpload?: Maybe<CreateFileUploadPayload>;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
   /** Creates a single `FormLogicCondition`. */
@@ -6620,6 +6732,12 @@ export type MutationCreateDataSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataUploadArgs = {
   input: CreateDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateFileUploadArgs = {
+  input: CreateFileUploadInput;
 };
 
 
@@ -8189,6 +8307,10 @@ export type Post = Node & {
   blurb?: Maybe<Scalars['String']>;
   bookmarkAttachmentIds: Array<Maybe<Scalars['UUID']>>;
   createdAt: Scalars['Datetime'];
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploads?: Maybe<Array<FileUpload>>;
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploadsConnection: FileUploadsConnection;
   /**
    * If set, the post has been hidden by a project admin. Contents of the post will
    * not be available to the client. Admins should update this field using
@@ -8215,6 +8337,23 @@ export type Post = Node & {
   /** Reads a single `Topic` that is related to this `Post`. */
   topic?: Maybe<Topic>;
   topicId: Scalars['Int'];
+};
+
+
+export type PostFileUploadsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+export type PostFileUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<FileUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
 };
 
 
@@ -9298,6 +9437,11 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  fileUpload?: Maybe<FileUpload>;
+  /** Reads a single `FileUpload` using its globally unique `ID`. */
+  fileUploadByNodeId?: Maybe<FileUpload>;
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploadsConnection?: Maybe<FileUploadsConnection>;
   form?: Maybe<Form>;
   /** Reads a single `Form` using its globally unique `ID`. */
   formByNodeId?: Maybe<Form>;
@@ -9651,6 +9795,30 @@ export type QueryEmailNotificationPreferencesConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
   t?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<FileUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
 };
 
 

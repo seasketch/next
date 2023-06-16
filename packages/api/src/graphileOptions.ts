@@ -32,6 +32,10 @@ import MapBookmarkSubscriptionsPlugin from "./plugins/mapBookmarkSubscriptionsPl
 import MapBookmarkRateLimiterPlugin from "./plugins/mapBookmarkRateLimiterPlugin";
 import TranslatedPropsPlugin from "./plugins/translatedPropsPlugin";
 import VerifyEmailPlugin from "./plugins/verifyEmailPlugin";
+import {
+  FileUploadPlugin,
+  FileUploadRateLimiterPlugin,
+} from "./plugins/fileUploadPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -77,6 +81,8 @@ export default function graphileOptions(): PostGraphileOptions {
       MapBookmarkRateLimiterPlugin,
       TranslatedPropsPlugin,
       VerifyEmailPlugin,
+      FileUploadPlugin,
+      FileUploadRateLimiterPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],
