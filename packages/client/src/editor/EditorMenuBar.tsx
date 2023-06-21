@@ -21,6 +21,7 @@ import {
   MapBookmarkDetailsFragment,
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
+  FileUploadDetailsFragment,
 } from "../generated/graphql";
 import { sketchType } from "./config";
 import { ChevronDownIcon } from "@heroicons/react/outline";
@@ -34,6 +35,7 @@ import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useIsSuperuser from "../useIsSuperuser";
 import { useAuth0 } from "@auth0/auth0-react";
+import axios from "axios";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -42,6 +44,11 @@ interface EditorMenuBarProps {
   style?: any;
   schema: Schema;
   createMapBookmark?: () => Promise<MapBookmarkDetailsFragment>;
+  createFileUpload?: (
+    filename: string,
+    sizeBytes: number,
+    contentType: string
+  ) => Promise<FileUploadDetailsFragment | null>;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -200,6 +207,61 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
               }
             }
           }
+        },
+      });
+    }
+    const createFileUpload = props.createFileUpload;
+    if (schema.marks.attachmentLink && createFileUpload) {
+      options.push({
+        label: t("File Upload"),
+        onClick: async () => {
+          var input = document.createElement("input");
+          input.type = "file";
+          input.click();
+          input.onchange = async () => {
+            if (input.files?.length) {
+              const file = input.files[0];
+              console.log(input.files);
+              const uploadRecord = await createFileUpload(
+                file.name,
+                file.size,
+                file.type
+              );
+              console.log({ uploadRecord });
+              const view = props.view;
+              if (uploadRecord?.presignedUploadUrl && view) {
+                console.log("uploading", uploadRecord.presignedUploadUrl);
+                props.view!.focus();
+                attachFileUpload(uploadRecord, view.state, view.dispatch);
+                axios({
+                  url: uploadRecord.presignedUploadUrl,
+                  method: "PUT",
+                  data: file,
+                  headers: {
+                    "Content-Type": file.type,
+                    "Content-Disposition": `attachment; filename="${uploadRecord.filename}"`,
+                    "Cache-Control": "public, immutable, max-age=31536000",
+                  },
+                  onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round(
+                      (progressEvent.loaded * 100) / progressEvent.total
+                    );
+                    console.log(percentCompleted);
+                  },
+                })
+                  .then((response) => {
+                    console.log("response", response);
+                    console.log(
+                      `Done and available at ${uploadRecord.downloadUrl}`
+                    );
+                  })
+                  .catch((e) => {
+                    console.error(e);
+                  });
+                console.log(uploadRecord);
+              }
+            }
+          };
         },
       });
     }
@@ -589,6 +651,40 @@ export function attachBookmark(
   dispatch(tr);
 }
 
+export function attachFileUpload(
+  upload: FileUploadDetailsFragment,
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) {
+  let tr = state.tr;
+  tr = tr.insert(
+    state.doc.content.size - 1,
+    forumPosts.schema.nodes.attachment.create({
+      type: "FileUpload",
+      id: upload.id,
+      data: {
+        id: upload.id,
+        filename: upload.filename,
+        filesize: upload.fileSizeBytes,
+        contentType: upload.contentType,
+        downloadUrl: upload.downloadUrl,
+      },
+    })
+  );
+  const selection = state.selection;
+  if (selection && selection.$from.pos < selection.$to.pos) {
+    tr.addMark(
+      selection.from,
+      selection.to,
+      forumPosts.schema.marks.attachmentLink.create({
+        "data-attachment-id": upload.id,
+        "data-type": "FileUpload",
+      })
+    );
+  }
+  dispatch(tr);
+}
+
 function getAttachmentsNode(state: EditorState) {
   let attachments: Node | null = null;
   state.doc.content.forEach((node) => {
@@ -603,7 +699,7 @@ function getAttachmentsNode(state: EditorState) {
   }
 }
 
-export function deleteBookmark(
+export function deleteAttachment(
   id: string,
   state: EditorState,
   dispatch: (tr: Transaction) => void

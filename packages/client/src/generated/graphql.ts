@@ -991,43 +991,6 @@ export type CreateDataUploadPayloadDataUploadTaskEdgeArgs = {
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
-/** All input for the `createFileUpload` mutation. */
-export type CreateFileUploadInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  contentType?: Maybe<Scalars['String']>;
-  filename?: Maybe<Scalars['String']>;
-  fileSizeBytes?: Maybe<Scalars['BigInt']>;
-  projectId?: Maybe<Scalars['Int']>;
-  type?: Maybe<FileUploadType>;
-};
-
-/** The output of our `createFileUpload` mutation. */
-export type CreateFileUploadPayload = {
-  __typename?: 'CreateFileUploadPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  fileUpload?: Maybe<FileUpload>;
-  /** An edge for our `FileUpload`. May be used by Relay 1. */
-  fileUploadEdge?: Maybe<FileUploadsEdge>;
-  /** Reads a single `Post` that is related to this `FileUpload`. */
-  post?: Maybe<Post>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-
-/** The output of our `createFileUpload` mutation. */
-export type CreateFileUploadPayloadFileUploadEdgeArgs = {
-  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
-};
-
 /** All input for the create `FormElement` mutation. */
 export type CreateFormElementInput = {
   /**
@@ -4140,12 +4103,19 @@ export enum FieldRuleOperator {
 
 export type FileUpload = Node & {
   __typename?: 'FileUpload';
+  cloudflareImagesId?: Maybe<Scalars['String']>;
+  /** Use a listed media type from https://www.iana.org/assignments/media-types/media-types.xhtml */
   contentType: Scalars['String'];
   createdAt: Scalars['Datetime'];
+  /**
+   * Includes a temporary token to enable download. Use
+   * rel="download nofollow" so that it is not indexed by search engines.
+   */
+  downloadUrl: Scalars['String'];
   filename: Scalars['String'];
   fileSizeBytes: Scalars['BigInt'];
   id: Scalars['UUID'];
-  location: Scalars['String'];
+  isSpatial: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /** Reads a single `Post` that is related to this `FileUpload`. */
@@ -4154,7 +4124,8 @@ export type FileUpload = Node & {
   /** Use to upload to cloud storage (PUT). */
   presignedUploadUrl?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
-  type: FileUploadType;
+  tilejsonEndpoint?: Maybe<Scalars['String']>;
+  usage: FileUploadUsage;
   userId: Scalars['Int'];
 };
 
@@ -4169,9 +4140,14 @@ export type FileUploadCondition = {
   postId?: Maybe<Scalars['Int']>;
 };
 
-export enum FileUploadType {
+export enum FileUploadUsage {
   ForumAttachment = 'FORUM_ATTACHMENT',
   SurveyResponse = 'SURVEY_RESPONSE'
+}
+
+export enum FileUploadUsageInput {
+  ForumAttachment = 'forum_attachment',
+  SurveyResponse = 'survey_response'
 }
 
 /** A connection to a list of `FileUpload` values. */
@@ -6094,12 +6070,7 @@ export type Mutation = {
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
-  /**
-   * Use to upload files to cloud storage (POST). Creates a new FileUpload record.
-   * Be sure to include the presignedUploadUrl field in your query selection so
-   * that you can perform the actual file upload.
-   */
-  createFileUpload?: Maybe<CreateFileUploadPayload>;
+  createFileUpload: UploaderResponse;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
   /** Creates a single `FormLogicCondition`. */
@@ -6739,7 +6710,11 @@ export type MutationCreateDataUploadArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFileUploadArgs = {
-  input: CreateFileUploadInput;
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+  usage: FileUploadUsageInput;
 };
 
 
@@ -13891,6 +13866,12 @@ export type UpdateZIndexesPayload = {
 };
 
 
+export type UploaderResponse = {
+  __typename?: 'UploaderResponse';
+  cloudflareImagesUploadUrl?: Maybe<Scalars['String']>;
+  fileUpload: FileUpload;
+};
+
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
  * and we store no personal information unless the user explicitly adds it to the
@@ -16144,6 +16125,32 @@ export type MapBookmarkSubscription = (
 export type SketchPresentFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'name'>
+);
+
+export type FileUploadDetailsFragment = (
+  { __typename?: 'FileUpload' }
+  & Pick<FileUpload, 'id' | 'filename' | 'postId' | 'userId' | 'fileSizeBytes' | 'contentType' | 'downloadUrl' | 'presignedUploadUrl' | 'createdAt' | 'usage' | 'cloudflareImagesId'>
+);
+
+export type CreateFileUploadForPostMutationVariables = Exact<{
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+  usage: FileUploadUsageInput;
+}>;
+
+
+export type CreateFileUploadForPostMutation = (
+  { __typename?: 'Mutation' }
+  & { createFileUpload: (
+    { __typename?: 'UploaderResponse' }
+    & Pick<UploaderResponse, 'cloudflareImagesUploadUrl'>
+    & { fileUpload: (
+      { __typename?: 'FileUpload' }
+      & FileUploadDetailsFragment
+    ) }
+  ) }
 );
 
 export type SpriteDetailsFragment = (
@@ -19449,6 +19456,21 @@ export const SketchPresentFragmentDoc = gql`
     fragment SketchPresent on Sketch {
   id
   name
+}
+    `;
+export const FileUploadDetailsFragmentDoc = gql`
+    fragment FileUploadDetails on FileUpload {
+  id
+  filename
+  postId
+  userId
+  fileSizeBytes
+  contentType
+  downloadUrl
+  presignedUploadUrl
+  createdAt
+  usage
+  cloudflareImagesId
 }
     `;
 export const SpriteDetailsFragmentDoc = gql`
@@ -24232,6 +24254,52 @@ export function useMapBookmarkSubscription(baseOptions: Apollo.SubscriptionHookO
       }
 export type MapBookmarkSubscriptionHookResult = ReturnType<typeof useMapBookmarkSubscription>;
 export type MapBookmarkSubscriptionResult = Apollo.SubscriptionResult<MapBookmarkSubscription>;
+export const CreateFileUploadForPostDocument = gql`
+    mutation createFileUploadForPost($contentType: String!, $filename: String!, $fileSizeBytes: Int!, $projectId: Int!, $usage: FileUploadUsageInput!) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: $usage
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+    }
+  }
+}
+    ${FileUploadDetailsFragmentDoc}`;
+export type CreateFileUploadForPostMutationFn = Apollo.MutationFunction<CreateFileUploadForPostMutation, CreateFileUploadForPostMutationVariables>;
+
+/**
+ * __useCreateFileUploadForPostMutation__
+ *
+ * To run a mutation, you first call `useCreateFileUploadForPostMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateFileUploadForPostMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createFileUploadForPostMutation, { data, loading, error }] = useCreateFileUploadForPostMutation({
+ *   variables: {
+ *      contentType: // value for 'contentType'
+ *      filename: // value for 'filename'
+ *      fileSizeBytes: // value for 'fileSizeBytes'
+ *      projectId: // value for 'projectId'
+ *      usage: // value for 'usage'
+ *   },
+ * });
+ */
+export function useCreateFileUploadForPostMutation(baseOptions?: Apollo.MutationHookOptions<CreateFileUploadForPostMutation, CreateFileUploadForPostMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateFileUploadForPostMutation, CreateFileUploadForPostMutationVariables>(CreateFileUploadForPostDocument, options);
+      }
+export type CreateFileUploadForPostMutationHookResult = ReturnType<typeof useCreateFileUploadForPostMutation>;
+export type CreateFileUploadForPostMutationResult = Apollo.MutationResult<CreateFileUploadForPostMutation>;
+export type CreateFileUploadForPostMutationOptions = Apollo.BaseMutationOptions<CreateFileUploadForPostMutation, CreateFileUploadForPostMutationVariables>;
 export const SpritesDocument = gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29423,6 +29491,7 @@ export const namedOperations = {
     CreateReply: 'CreateReply',
     CopyTocItemForForumPost: 'CopyTocItemForForumPost',
     CreateMapBookmark: 'CreateMapBookmark',
+    createFileUploadForPost: 'createFileUploadForPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
@@ -29542,6 +29611,7 @@ export const namedOperations = {
     Job: 'Job',
     MapBookmarkDetails: 'MapBookmarkDetails',
     SketchPresent: 'SketchPresent',
+    FileUploadDetails: 'FileUploadDetails',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',

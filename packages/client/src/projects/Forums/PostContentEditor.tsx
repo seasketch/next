@@ -18,10 +18,13 @@ import {
 import { createReactNodeView } from "./ReactNodeView";
 import { useReactNodeViewPortals } from "./ReactNodeView/PortalProvider";
 import SketchNodeView from "./SketchNodeView";
-import EditorMenuBar, { deleteBookmark } from "../../editor/EditorMenuBar";
+import EditorMenuBar, { deleteAttachment } from "../../editor/EditorMenuBar";
 import {
+  FileUploadDetailsFragment,
+  FileUploadUsageInput,
   MapBookmarkDetailsFragment,
   SketchPresentFragmentDoc,
+  useCreateFileUploadForPostMutation,
   useCreateMapBookmarkMutation,
   usePublishedTableOfContentsQuery,
 } from "../../generated/graphql";
@@ -36,6 +39,8 @@ import {
   ApolloClient,
 } from "@apollo/client";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { useTranslation } from "react-i18next";
+import FileUploadItem from "./FileUploadItem";
 
 export default function PostContentEditor({
   initialContent,
@@ -63,6 +68,7 @@ export default function PostContentEditor({
   const [bookmarkErrors, setBookmarkErrors] = useState<
     { id: string; error: string }[]
   >([]);
+  const { t } = useTranslation("forums");
 
   const apolloClient = useApolloClient() as ApolloClient<NormalizedCacheObject>;
 
@@ -79,6 +85,33 @@ export default function PostContentEditor({
   const [createBookmark, createBookmarkState] = useCreateMapBookmarkMutation(
     {}
   );
+
+  const [_createFileUpload, createFileUploadState] =
+    useCreateFileUploadForPostMutation({
+      onError,
+    });
+
+  const createFileUpload = useCallback(
+    async (filename: string, fileSizeBytes: number, contentType: string) => {
+      const data = await _createFileUpload({
+        variables: {
+          contentType,
+          filename,
+          fileSizeBytes,
+          projectId: tableOfContentsData.data!.projectBySlug!.id!,
+          usage: FileUploadUsageInput.ForumAttachment,
+        },
+      });
+      return data.data?.createFileUpload?.fileUpload || null;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      _createFileUpload,
+      tableOfContentsData?.data,
+      tableOfContentsData?.data?.projectBySlug?.id,
+    ]
+  );
+
   useEffect(() => {
     editable.current = !disabled;
     if (viewRef.current && state) {
@@ -91,7 +124,7 @@ export default function PostContentEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
 
-  const [hoveredBookmarkId, setHoveredBookmarkId] = useState<string | null>(
+  const [hoveredAttachmentId, setHoveredAttachmentId] = useState<string | null>(
     null
   );
 
@@ -107,11 +140,9 @@ export default function PostContentEditor({
     }
   }, [onChange, accessibleSketchIds]);
 
-  const bookmarkAttachments = useMemo(() => {
+  const allAttachments = useMemo(() => {
     if (state?.doc) {
-      return attachmentsFromState(state?.doc).filter(
-        (a) => a.type === "MapBookmark"
-      );
+      return attachmentsFromState(state?.doc);
     } else {
       return [];
     }
@@ -127,7 +158,7 @@ export default function PostContentEditor({
           const id = e.target.getAttribute("data-attachment-id");
           const type = e.target.getAttribute("data-type");
           if (id && type === "MapBookmark") {
-            setHoveredBookmarkId(id);
+            setHoveredAttachmentId(id);
           }
         }
       };
@@ -137,7 +168,7 @@ export default function PostContentEditor({
           const id = e.target.getAttribute("data-attachment-id");
           const type = e.target.getAttribute("data-type");
           if (id && type === "MapBookmark") {
-            setHoveredBookmarkId(null);
+            setHoveredAttachmentId(null);
           }
         }
       };
@@ -147,7 +178,9 @@ export default function PostContentEditor({
           const id = e.target.getAttribute("data-attachment-id");
           const type = e.target.getAttribute("data-type");
           if (id && type === "MapBookmark") {
-            const attachment = bookmarkAttachments.find((b) => b.id === id);
+            const attachment = allAttachments.find(
+              (b) => b.id === id
+            ) as MapBookmarkAttachment;
             if (attachment && mapContext.manager) {
               mapContext.manager.showMapBookmark(
                 attachment.data,
@@ -165,7 +198,7 @@ export default function PostContentEditor({
         el.removeEventListener("click", onClickListener);
       };
     }
-  }, [root, bookmarkAttachments, mapContext?.manager, apolloClient]);
+  }, [root, allAttachments, mapContext?.manager, apolloClient]);
 
   const createMapBookmark = useCallback(async () => {
     try {
@@ -358,13 +391,13 @@ export default function PostContentEditor({
     [state, onSubmit, accessibleSketchIds]
   );
 
-  const removeBookmark = useCallback(
+  const removeAttachment = useCallback(
     (id: string) => {
       if (!viewRef.current) {
         throw new Error("viewRef not set");
       } // remove attachment from state
       viewRef.current.focus();
-      deleteBookmark(id, viewRef.current.state, viewRef.current.dispatch);
+      deleteAttachment(id, viewRef.current.state, viewRef.current.dispatch);
     },
     [viewRef]
   );
@@ -399,30 +432,49 @@ export default function PostContentEditor({
 
         <div
           className={
-            bookmarkAttachments.length > 0
-              ? ` border-t border-gray-50 pb-2`
-              : ""
+            allAttachments.length > 0 ? ` border-t border-gray-50 pb-2` : ""
           }
         >
           <AnimatePresence initial={false}>
-            {bookmarkAttachments.map((attachment) => (
-              <BookmarkItem
-                onClick={onMapBookmarkClick}
-                key={attachment.data.id}
-                bookmark={attachment.data}
-                removeBookmark={removeBookmark}
-                highlighted={Boolean(hoveredBookmarkId === attachment.data.id)}
-                onHover={(id) => setHoveredBookmarkId(id || null)}
-                hasErrors={Boolean(
-                  bookmarkErrors.find((e) => e.id === attachment.data.id)
-                )}
-              />
-            ))}
+            {allAttachments.map((attachment) => {
+              if (attachment.type === "MapBookmark") {
+                return (
+                  <BookmarkItem
+                    onClick={onMapBookmarkClick}
+                    key={attachment.data.id}
+                    bookmark={attachment.data}
+                    removeBookmark={removeAttachment}
+                    highlighted={Boolean(
+                      hoveredAttachmentId === attachment.data.id
+                    )}
+                    onHover={(id) => setHoveredAttachmentId(id || null)}
+                    hasErrors={Boolean(
+                      bookmarkErrors.find((e) => e.id === attachment.data.id)
+                    )}
+                  />
+                );
+              } else if (attachment.type === "FileUpload") {
+                return (
+                  <FileUploadItem
+                    key={attachment.data.id}
+                    fileUpload={attachment.data}
+                    removeAttachment={removeAttachment}
+                    highlighted={Boolean(
+                      hoveredAttachmentId === attachment.data.id
+                    )}
+                    onHover={(id) => setHoveredAttachmentId(id || null)}
+                    onClick={() => {}}
+                    hasErrors={false}
+                  />
+                );
+              }
+            })}
           </AnimatePresence>
         </div>
       </div>
       <EditorMenuBar
         createMapBookmark={createMapBookmark}
+        createFileUpload={createFileUpload}
         view={viewRef.current}
         className=" border-t"
         style={{
@@ -465,6 +517,15 @@ export type MapBookmarkAttachment = {
   id: string;
 };
 
+export type FileUploadAttachment = {
+  type: "FileUpload";
+  data: Pick<
+    FileUploadDetailsFragment,
+    "contentType" | "id" | "fileSizeBytes" | "filename" | "downloadUrl"
+  >;
+  id: string;
+};
+
 function collectMarks(
   doc: Node,
   type: MarkType,
@@ -492,7 +553,9 @@ function collectMarks(
   return marks;
 }
 
-function attachmentsFromState(state: Node): MapBookmarkAttachment[] {
+function attachmentsFromState(
+  state: Node
+): (MapBookmarkAttachment | FileUploadAttachment)[] {
   if (state && state.type && state.content.size) {
     let node: Node | null = null;
     state.forEach((n) => {
@@ -501,7 +564,7 @@ function attachmentsFromState(state: Node): MapBookmarkAttachment[] {
       }
     });
     if (node !== null) {
-      const attachments: MapBookmarkAttachment[] = [];
+      const attachments: (MapBookmarkAttachment | FileUploadAttachment)[] = [];
       (node as Node).forEach((n) => {
         if (n.attrs?.data) {
           attachments.push(n.attrs as MapBookmarkAttachment);
