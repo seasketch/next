@@ -224,7 +224,7 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
         downloadUrl: async (fileUpload, args, context, info) => {
           const { filename, contentType, id, cloudflareImagesId } = fileUpload;
           if (cloudflareImagesId) {
-            return `https://imagedelivery.net/${process.env.CLOUDFLARE_IMAGES_ACCOUNT}/${cloudflareImagesId}/`;
+            return `https://imagedelivery.net/${process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH}/${cloudflareImagesId}/`;
           } else {
             return await getSignedUrl(
               r2,

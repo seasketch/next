@@ -1,5 +1,13 @@
 import { EditorView } from "prosemirror-view";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
 import {
   Fragment,
@@ -22,6 +30,7 @@ import {
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
   FileUploadDetailsFragment,
+  UploaderResponse,
 } from "../generated/graphql";
 import { sketchType } from "./config";
 import { ChevronDownIcon } from "@heroicons/react/outline";
@@ -48,7 +57,7 @@ interface EditorMenuBarProps {
     filename: string,
     sizeBytes: number,
     contentType: string
-  ) => Promise<FileUploadDetailsFragment | null>;
+  ) => Promise<UploaderResponse | null>;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -67,6 +76,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const onError = useGlobalErrorHandler();
   const isSuperuser = useIsSuperuser();
   const { user } = useAuth0();
+  const { progress, updateProgress } = useContext(
+    EditorAttachmentProgressContext
+  );
 
   useEffect(() => {
     if (props.state) {
@@ -221,17 +233,20 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           input.onchange = async () => {
             if (input.files?.length) {
               const file = input.files[0];
-              console.log(input.files);
-              const uploadRecord = await createFileUpload(
+              const response = await createFileUpload(
                 file.name,
                 file.size,
                 file.type
               );
-              console.log({ uploadRecord });
+              const uploadRecord = response?.fileUpload;
               const view = props.view;
-              if (uploadRecord?.presignedUploadUrl && view) {
-                console.log("uploading", uploadRecord.presignedUploadUrl);
+              if (
+                !response?.cloudflareImagesUploadUrl &&
+                uploadRecord?.presignedUploadUrl &&
+                view
+              ) {
                 props.view!.focus();
+                updateProgress(uploadRecord.id, 0);
                 attachFileUpload(uploadRecord, view.state, view.dispatch);
                 axios({
                   url: uploadRecord.presignedUploadUrl,
@@ -246,19 +261,50 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     const percentCompleted = Math.round(
                       (progressEvent.loaded * 100) / progressEvent.total
                     );
-                    console.log(percentCompleted);
+                    updateProgress(
+                      uploadRecord.id,
+                      progressEvent.loaded / progressEvent.total
+                    );
                   },
                 })
                   .then((response) => {
-                    console.log("response", response);
-                    console.log(
-                      `Done and available at ${uploadRecord.downloadUrl}`
-                    );
+                    updateProgress(uploadRecord.id, 1);
                   })
                   .catch((e) => {
                     console.error(e);
                   });
-                console.log(uploadRecord);
+              } else if (
+                view &&
+                uploadRecord &&
+                response?.cloudflareImagesUploadUrl
+              ) {
+                const formData = new FormData();
+                formData.append("file", file);
+                props.view!.focus();
+                updateProgress(uploadRecord.id, 0);
+                attachFileUpload(uploadRecord, view.state, view.dispatch);
+                axios({
+                  url: response.cloudflareImagesUploadUrl,
+                  method: "POST",
+                  data: formData,
+                  onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round(
+                      (progressEvent.loaded * 100) / progressEvent.total
+                    );
+                    if (percentCompleted !== 100) {
+                      updateProgress(
+                        uploadRecord.id,
+                        progressEvent.loaded / progressEvent.total
+                      );
+                    }
+                  },
+                })
+                  .then((response) => {
+                    updateProgress(uploadRecord.id, 1);
+                  })
+                  .catch((e) => {
+                    console.error(e);
+                  });
               }
             }
           };
@@ -668,6 +714,7 @@ export function attachFileUpload(
         filesize: upload.fileSizeBytes,
         contentType: upload.contentType,
         downloadUrl: upload.downloadUrl,
+        cloudflareImagesId: upload.cloudflareImagesId,
       },
     })
   );
@@ -778,4 +825,49 @@ export function insertTocItems(
     0
   );
   dispatch(state.tr.replaceSelection(slice));
+}
+
+interface EditorAttachmentProgressContextValue {
+  progress: {
+    /** Value is progress, 0 to 1 */
+    [attachemntId: string]: number;
+  };
+  updateProgress: (attachmentId: string, progress: number) => void;
+}
+
+export const EditorAttachmentProgressContext =
+  createContext<EditorAttachmentProgressContextValue>({
+    progress: {},
+    updateProgress: () => {
+      throw new Error("Not implemented");
+    },
+  });
+
+export function EditorAttachmentProgressProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [state, setState] = useState<{ [attachmentId: string]: number }>({});
+
+  const updateProgress = useCallback(
+    (attachmentId: string, progress: number) => {
+      if (progress > 1) {
+        throw new Error("Progress should be an integer, 0 - 1");
+      }
+      setState((prev) => ({
+        ...prev,
+        [attachmentId]: progress,
+      }));
+    },
+    [setState]
+  );
+
+  return (
+    <EditorAttachmentProgressContext.Provider
+      value={{ progress: state, updateProgress }}
+    >
+      {children}
+    </EditorAttachmentProgressContext.Provider>
+  );
 }

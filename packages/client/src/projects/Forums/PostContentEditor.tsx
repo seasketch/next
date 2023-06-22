@@ -18,7 +18,10 @@ import {
 import { createReactNodeView } from "./ReactNodeView";
 import { useReactNodeViewPortals } from "./ReactNodeView/PortalProvider";
 import SketchNodeView from "./SketchNodeView";
-import EditorMenuBar, { deleteAttachment } from "../../editor/EditorMenuBar";
+import EditorMenuBar, {
+  EditorAttachmentProgressProvider,
+  deleteAttachment,
+} from "../../editor/EditorMenuBar";
 import {
   FileUploadDetailsFragment,
   FileUploadUsageInput,
@@ -102,7 +105,7 @@ export default function PostContentEditor({
           usage: FileUploadUsageInput.ForumAttachment,
         },
       });
-      return data.data?.createFileUpload?.fileUpload || null;
+      return data.data?.createFileUpload || null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -420,7 +423,7 @@ export default function PostContentEditor({
   );
 
   return (
-    <>
+    <EditorAttachmentProgressProvider>
       <div className="flex flex-col" style={{ minHeight: 300 }}>
         <div
           className={`flex-1 flex flex-col prosemirror-body forum-post new-forum-post ${
@@ -463,7 +466,6 @@ export default function PostContentEditor({
                       hoveredAttachmentId === attachment.data.id
                     )}
                     onHover={(id) => setHoveredAttachmentId(id || null)}
-                    onClick={() => {}}
                     hasErrors={false}
                   />
                 );
@@ -483,7 +485,7 @@ export default function PostContentEditor({
         state={state}
         schema={schema}
       />
-    </>
+    </EditorAttachmentProgressProvider>
   );
 }
 
