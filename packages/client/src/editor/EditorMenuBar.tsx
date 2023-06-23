@@ -296,6 +296,8 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                         uploadRecord.id,
                         progressEvent.loaded / progressEvent.total
                       );
+                    } else {
+                      updateProgress(uploadRecord.id, 0.95);
                     }
                   },
                 })

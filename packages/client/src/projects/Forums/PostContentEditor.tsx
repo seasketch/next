@@ -43,7 +43,10 @@ import {
 } from "@apollo/client";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useTranslation } from "react-i18next";
-import FileUploadItem from "./FileUploadItem";
+import FileUploadItem, {
+  FileUploadDetails,
+  ImageDisplayModal,
+} from "./FileUploadItem";
 
 export default function PostContentEditor({
   initialContent,
@@ -422,8 +425,53 @@ export default function PostContentEditor({
     [mapContext.manager, sketchUIContext, apolloClient]
   );
 
+  const [imageModal, setImageModal] = useState<null | FileUploadDetails>(null);
+  const onRequestNextPage = useCallback(
+    (current: FileUploadDetails) => {
+      if (
+        allAttachments.filter((a) => "cloudflareImagesId" in a.data).length > 1
+      ) {
+        let index = allAttachments.findIndex((a) => a.id === current.id);
+        while (index < allAttachments.length - 1) {
+          index++;
+          if ("cloudflareImagesId" in allAttachments[index].data) {
+            setImageModal((allAttachments[index] as FileUploadAttachment).data);
+            return;
+          }
+        }
+      }
+    },
+    [allAttachments]
+  );
+
+  const onRequestPreviousPage = useCallback(
+    (current: FileUploadDetails) => {
+      if (
+        allAttachments.filter((a) => "cloudflareImagesId" in a.data).length > 1
+      ) {
+        let index = allAttachments.findIndex((a) => a.id === current.id);
+        while (index > 0) {
+          index--;
+          if ("cloudflareImagesId" in allAttachments[index].data) {
+            setImageModal((allAttachments[index] as FileUploadAttachment).data);
+            return;
+          }
+        }
+      }
+    },
+    [allAttachments]
+  );
+
   return (
     <EditorAttachmentProgressProvider>
+      {imageModal && (
+        <ImageDisplayModal
+          onRequestNextPage={onRequestNextPage}
+          onRequestPreviousPage={onRequestPreviousPage}
+          fileUpload={imageModal}
+          onRequestClose={() => setImageModal(null)}
+        />
+      )}
       <div className="flex flex-col" style={{ minHeight: 300 }}>
         <div
           className={`flex-1 flex flex-col prosemirror-body forum-post new-forum-post ${
@@ -467,6 +515,11 @@ export default function PostContentEditor({
                     )}
                     onHover={(id) => setHoveredAttachmentId(id || null)}
                     hasErrors={false}
+                    onClick={(upload) => {
+                      if (upload.cloudflareImagesId) {
+                        setImageModal(upload);
+                      }
+                    }}
                   />
                 );
               }
@@ -523,7 +576,12 @@ export type FileUploadAttachment = {
   type: "FileUpload";
   data: Pick<
     FileUploadDetailsFragment,
-    "contentType" | "id" | "fileSizeBytes" | "filename" | "downloadUrl"
+    | "contentType"
+    | "id"
+    | "fileSizeBytes"
+    | "filename"
+    | "downloadUrl"
+    | "cloudflareImagesId"
   >;
   id: string;
 };
