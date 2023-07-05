@@ -20,6 +20,10 @@ fragment ForumPost on Post {
   mapBookmarks {
     ...MapBookmarkDetails
   }
+  fileUploads {
+    ...FileUploadDetails
+  }
+  orderedAttachmentIds
 }
 
 fragment RecentPost on Post {
@@ -312,7 +316,6 @@ fragment FileUploadDetails on FileUpload {
   fileSizeBytes
   contentType
   downloadUrl
-  presignedUploadUrl
   createdAt
   usage
   cloudflareImagesId
@@ -335,6 +338,7 @@ mutation createFileUploadForPost(
     cloudflareImagesUploadUrl
     fileUpload {
       ...FileUploadDetails
+      presignedUploadUrl
     }
   }
 }

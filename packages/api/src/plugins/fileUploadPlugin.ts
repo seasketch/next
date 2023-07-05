@@ -2,10 +2,7 @@ import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { makeWrapResolversPlugin } from "postgraphile";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import redis from "redis";
-import {
-  getSignedUrl,
-  S3RequestPresigner,
-} from "@aws-sdk/s3-request-presigner";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   S3Client,
   GetObjectCommand,
@@ -126,7 +123,6 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
           if (isCloudflareImagesSupported) {
             const img = await getDirectCreatorUploadUrl();
 
-            console.log(img);
             const { rows } = await context.adminPool.query(
               `insert into file_uploads (
                 filename,
@@ -163,7 +159,6 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
               },
             };
           } else {
-            console.log(user);
             const { rows } = await context.adminPool.query(
               `insert into file_uploads (
                 filename,

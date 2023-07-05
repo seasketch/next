@@ -258,9 +258,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     "Cache-Control": "public, immutable, max-age=31536000",
                   },
                   onUploadProgress: (progressEvent) => {
-                    const percentCompleted = Math.round(
-                      (progressEvent.loaded * 100) / progressEvent.total
-                    );
                     updateProgress(
                       uploadRecord.id,
                       progressEvent.loaded / progressEvent.total
@@ -271,7 +268,12 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     updateProgress(uploadRecord.id, 1);
                   })
                   .catch((e) => {
-                    console.error(e);
+                    onError(e);
+                    deleteAttachment(
+                      uploadRecord.id,
+                      view.state,
+                      view.dispatch
+                    );
                   });
               } else if (
                 view &&
@@ -291,7 +293,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     const percentCompleted = Math.round(
                       (progressEvent.loaded * 100) / progressEvent.total
                     );
-                    if (percentCompleted !== 100) {
+                    if (progressEvent.loaded - progress.total < 0.95) {
                       updateProgress(
                         uploadRecord.id,
                         progressEvent.loaded / progressEvent.total
@@ -305,7 +307,12 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     updateProgress(uploadRecord.id, 1);
                   })
                   .catch((e) => {
-                    console.error(e);
+                    onError(e);
+                    deleteAttachment(
+                      uploadRecord.id,
+                      view.state,
+                      view.dispatch
+                    );
                   });
               }
             }

@@ -27,6 +27,7 @@ import {
   FileUploadUsageInput,
   MapBookmarkDetailsFragment,
   SketchPresentFragmentDoc,
+  UploaderResponse,
   useCreateFileUploadForPostMutation,
   useCreateMapBookmarkMutation,
   usePublishedTableOfContentsQuery,
@@ -46,6 +47,7 @@ import { useTranslation } from "react-i18next";
 import FileUploadItem, {
   FileUploadDetails,
   ImageDisplayModal,
+  useImageAttachmentModal,
 } from "./FileUploadItem";
 
 export default function PostContentEditor({
@@ -108,7 +110,7 @@ export default function PostContentEditor({
           usage: FileUploadUsageInput.ForumAttachment,
         },
       });
-      return data.data?.createFileUpload || null;
+      return (data.data?.createFileUpload as UploaderResponse) || null;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -425,51 +427,21 @@ export default function PostContentEditor({
     [mapContext.manager, sketchUIContext, apolloClient]
   );
 
-  const [imageModal, setImageModal] = useState<null | FileUploadDetails>(null);
-  const onRequestNextPage = useCallback(
-    (current: FileUploadDetails) => {
-      if (
-        allAttachments.filter((a) => "cloudflareImagesId" in a.data).length > 1
-      ) {
-        let index = allAttachments.findIndex((a) => a.id === current.id);
-        while (index < allAttachments.length - 1) {
-          index++;
-          if ("cloudflareImagesId" in allAttachments[index].data) {
-            setImageModal((allAttachments[index] as FileUploadAttachment).data);
-            return;
-          }
-        }
-      }
-    },
-    [allAttachments]
-  );
-
-  const onRequestPreviousPage = useCallback(
-    (current: FileUploadDetails) => {
-      if (
-        allAttachments.filter((a) => "cloudflareImagesId" in a.data).length > 1
-      ) {
-        let index = allAttachments.findIndex((a) => a.id === current.id);
-        while (index > 0) {
-          index--;
-          if ("cloudflareImagesId" in allAttachments[index].data) {
-            setImageModal((allAttachments[index] as FileUploadAttachment).data);
-            return;
-          }
-        }
-      }
-    },
-    [allAttachments]
-  );
+  const {
+    currentImage,
+    setCurrentImage,
+    onRequestNextPage,
+    onRequestPreviousPage,
+  } = useImageAttachmentModal(allAttachments);
 
   return (
     <EditorAttachmentProgressProvider>
-      {imageModal && (
+      {currentImage && (
         <ImageDisplayModal
           onRequestNextPage={onRequestNextPage}
           onRequestPreviousPage={onRequestPreviousPage}
-          fileUpload={imageModal}
-          onRequestClose={() => setImageModal(null)}
+          fileUpload={currentImage}
+          onRequestClose={() => setCurrentImage(null)}
         />
       )}
       <div className="flex flex-col" style={{ minHeight: 300 }}>
@@ -517,7 +489,19 @@ export default function PostContentEditor({
                     hasErrors={false}
                     onClick={(upload) => {
                       if (upload.cloudflareImagesId) {
-                        setImageModal(upload);
+                        setCurrentImage(upload);
+                      } else {
+                        const src = upload.downloadUrl;
+                        const a = document.createElement("a");
+                        a.href = src;
+                        a.target = "_blank";
+                        a.download = upload.filename;
+                        // append the anchor element to the body
+                        document.body.appendChild(a);
+                        // click the anchor element
+                        a.click();
+                        // remove the anchor element from the body
+                        document.body.removeChild(a);
                       }
                     }}
                   />

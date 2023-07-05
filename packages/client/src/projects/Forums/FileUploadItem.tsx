@@ -9,6 +9,11 @@ import {
 } from "../../editor/EditorMenuBar";
 import { createPortal } from "react-dom";
 import { Trans } from "react-i18next";
+import Spinner from "../../components/Spinner";
+import {
+  FileUploadAttachment,
+  MapBookmarkAttachment,
+} from "./PostContentEditor";
 
 export type FileUploadDetails = Pick<
   FileUploadDetailsFragment,
@@ -186,6 +191,12 @@ export function ImageDisplayModal({
     }
   }, [ref, onRequestClose]);
 
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  const onImageLoaded = useCallback(() => {
+    setImageLoaded(true);
+  }, [setImageLoaded]);
+
   return createPortal(
     <div
       ref={ref}
@@ -205,6 +216,7 @@ export function ImageDisplayModal({
     >
       <div className="relative w-full sm:w-4/5 h-4/5 flex flex-col items-center justify-center">
         <img
+          onLoad={onImageLoaded}
           onClick={(e) => e.stopPropagation()}
           src={fileUpload.downloadUrl + "/public"}
           alt={fileUpload.filename}
@@ -252,3 +264,53 @@ export function ImageDisplayModal({
     document.body
   );
 }
+
+export const useImageAttachmentModal = (
+  attachments: (FileUploadAttachment | MapBookmarkAttachment)[]
+) => {
+  const [currentImage, setCurrentImage] = useState<FileUploadDetails | null>(
+    null
+  );
+  const onRequestNextPage = useCallback(
+    (current: FileUploadDetails) => {
+      const filtered = attachments.filter(
+        (a) =>
+          "cloudflareImagesId" in a.data && a.data.cloudflareImagesId !== null
+      );
+      if (filtered.length > 1) {
+        let index = filtered.findIndex((a) => a.id === current.id);
+        while (index < filtered.length - 1) {
+          index++;
+          setCurrentImage((filtered[index] as FileUploadAttachment).data);
+          return;
+        }
+      }
+    },
+    [attachments]
+  );
+
+  const onRequestPreviousPage = useCallback(
+    (current: FileUploadDetails) => {
+      const filtered = attachments.filter(
+        (a) =>
+          "cloudflareImagesId" in a.data && a.data.cloudflareImagesId !== null
+      );
+      if (filtered.length > 1) {
+        let index = filtered.findIndex((a) => a.id === current.id);
+        while (index > 0) {
+          index--;
+          setCurrentImage((filtered[index] as FileUploadAttachment).data);
+          return;
+        }
+      }
+    },
+    [attachments]
+  );
+
+  return {
+    currentImage,
+    onRequestNextPage,
+    setCurrentImage,
+    onRequestPreviousPage,
+  };
+};
