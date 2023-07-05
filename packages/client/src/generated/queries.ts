@@ -4099,6 +4099,88 @@ export enum FieldRuleOperator {
   NotEqual = 'NOT_EQUAL'
 }
 
+export type FileUpload = Node & {
+  __typename?: 'FileUpload';
+  cloudflareImagesId?: Maybe<Scalars['String']>;
+  /** Use a listed media type from https://www.iana.org/assignments/media-types/media-types.xhtml */
+  contentType: Scalars['String'];
+  createdAt: Scalars['Datetime'];
+  /**
+   * Includes a temporary token to enable download. Use
+   * rel="download nofollow" so that it is not indexed by search engines.
+   */
+  downloadUrl: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['BigInt'];
+  id: Scalars['UUID'];
+  isSpatial: Scalars['Boolean'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Post` that is related to this `FileUpload`. */
+  post?: Maybe<Post>;
+  postId?: Maybe<Scalars['Int']>;
+  /** Use to upload to cloud storage (PUT). */
+  presignedUploadUrl?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+  tilejsonEndpoint?: Maybe<Scalars['String']>;
+  usage: FileUploadUsage;
+  userId: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `FileUpload` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type FileUploadCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `postId` field. */
+  postId?: Maybe<Scalars['Int']>;
+};
+
+export enum FileUploadUsage {
+  ForumAttachment = 'FORUM_ATTACHMENT',
+  SurveyResponse = 'SURVEY_RESPONSE'
+}
+
+export enum FileUploadUsageInput {
+  ForumAttachment = 'forum_attachment',
+  SurveyResponse = 'survey_response'
+}
+
+/** A connection to a list of `FileUpload` values. */
+export type FileUploadsConnection = {
+  __typename?: 'FileUploadsConnection';
+  /** A list of edges which contains the `FileUpload` and cursor to aid in pagination. */
+  edges: Array<FileUploadsEdge>;
+  /** A list of `FileUpload` objects. */
+  nodes: Array<FileUpload>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `FileUpload` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `FileUpload` edge in the connection. */
+export type FileUploadsEdge = {
+  __typename?: 'FileUploadsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FileUpload` at the end of the edge. */
+  node: FileUpload;
+};
+
+/** Methods to use when ordering `FileUpload`. */
+export enum FileUploadsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PostIdAsc = 'POST_ID_ASC',
+  PostIdDesc = 'POST_ID_DESC',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
 /**
  * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
  * Forms are used to add attributes to spatial features. In Surveys, Forms are used
@@ -5986,6 +6068,7 @@ export type Mutation = {
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
+  createFileUpload: UploaderResponse;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
   /** Creates a single `FormLogicCondition`. */
@@ -6620,6 +6703,16 @@ export type MutationCreateDataSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataUploadArgs = {
   input: CreateDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateFileUploadArgs = {
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+  usage: FileUploadUsageInput;
 };
 
 
@@ -8189,6 +8282,10 @@ export type Post = Node & {
   blurb?: Maybe<Scalars['String']>;
   bookmarkAttachmentIds: Array<Maybe<Scalars['UUID']>>;
   createdAt: Scalars['Datetime'];
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploads?: Maybe<Array<FileUpload>>;
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploadsConnection: FileUploadsConnection;
   /**
    * If set, the post has been hidden by a project admin. Contents of the post will
    * not be available to the client. Admins should update this field using
@@ -8211,10 +8308,28 @@ export type Post = Node & {
   message?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  orderedAttachmentIds?: Maybe<Array<Maybe<Scalars['String']>>>;
   sketchIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** Reads a single `Topic` that is related to this `Post`. */
   topic?: Maybe<Topic>;
   topicId: Scalars['Int'];
+};
+
+
+export type PostFileUploadsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+export type PostFileUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<FileUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
 };
 
 
@@ -9268,6 +9383,7 @@ export type Query = Node & {
    */
   build: Scalars['String'];
   camelCase?: Maybe<Scalars['String']>;
+  collectAttachmentIdsFromProsemirrorBody?: Maybe<Array<Maybe<Scalars['String']>>>;
   collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
@@ -9298,6 +9414,11 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  fileUpload?: Maybe<FileUpload>;
+  /** Reads a single `FileUpload` using its globally unique `ID`. */
+  fileUploadByNodeId?: Maybe<FileUpload>;
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploadsConnection?: Maybe<FileUploadsConnection>;
   form?: Maybe<Form>;
   /** Reads a single `Form` using its globally unique `ID`. */
   formByNodeId?: Maybe<Form>;
@@ -9535,6 +9656,13 @@ export type QueryCamelCaseArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryCollectAttachmentIdsFromProsemirrorBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+  type?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryCollectTextFromProsemirrorBodyForLabelArgs = {
   body?: Maybe<Scalars['JSON']>;
 };
@@ -9651,6 +9779,30 @@ export type QueryEmailNotificationPreferencesConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
   t?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<FileUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
 };
 
 
@@ -13721,6 +13873,12 @@ export type UpdateZIndexesPayload = {
 };
 
 
+export type UploaderResponse = {
+  __typename?: 'UploaderResponse';
+  cloudflareImagesUploadUrl?: Maybe<Scalars['String']>;
+  fileUpload: FileUpload;
+};
+
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
  * and we store no personal information unless the user explicitly adds it to the
@@ -15663,13 +15821,16 @@ export type AuthorProfileFragment = (
 
 export type ForumPostFragment = (
   { __typename?: 'Post' }
-  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'topicId' | 'html' | 'sketchIds'>
+  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'topicId' | 'html' | 'sketchIds' | 'orderedAttachmentIds'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
   )>, mapBookmarks?: Maybe<Array<(
     { __typename?: 'MapBookmark' }
     & MapBookmarkDetailsFragment
+  )>>, fileUploads?: Maybe<Array<(
+    { __typename?: 'FileUpload' }
+    & FileUploadDetailsFragment
   )>> }
 );
 
@@ -15974,6 +16135,33 @@ export type MapBookmarkSubscription = (
 export type SketchPresentFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'name'>
+);
+
+export type FileUploadDetailsFragment = (
+  { __typename?: 'FileUpload' }
+  & Pick<FileUpload, 'id' | 'filename' | 'postId' | 'userId' | 'fileSizeBytes' | 'contentType' | 'downloadUrl' | 'createdAt' | 'usage' | 'cloudflareImagesId'>
+);
+
+export type CreateFileUploadForPostMutationVariables = Exact<{
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+  usage: FileUploadUsageInput;
+}>;
+
+
+export type CreateFileUploadForPostMutation = (
+  { __typename?: 'Mutation' }
+  & { createFileUpload: (
+    { __typename?: 'UploaderResponse' }
+    & Pick<UploaderResponse, 'cloudflareImagesUploadUrl'>
+    & { fileUpload: (
+      { __typename?: 'FileUpload' }
+      & Pick<FileUpload, 'presignedUploadUrl'>
+      & FileUploadDetailsFragment
+    ) }
+  ) }
 );
 
 export type SpriteDetailsFragment = (
@@ -19195,6 +19383,20 @@ export const MapBookmarkDetailsFragmentDoc = /*#__PURE__*/ gql`
   clientGeneratedThumbnail
 }
     ${JobFragmentDoc}`;
+export const FileUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment FileUploadDetails on FileUpload {
+  id
+  filename
+  postId
+  userId
+  fileSizeBytes
+  contentType
+  downloadUrl
+  createdAt
+  usage
+  cloudflareImagesId
+}
+    `;
 export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumPost on Post {
   id
@@ -19209,9 +19411,14 @@ export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
   mapBookmarks {
     ...MapBookmarkDetails
   }
+  fileUploads {
+    ...FileUploadDetails
+  }
+  orderedAttachmentIds
 }
     ${AuthorProfileFragmentDoc}
-${MapBookmarkDetailsFragmentDoc}`;
+${MapBookmarkDetailsFragmentDoc}
+${FileUploadDetailsFragmentDoc}`;
 export const RecentPostFragmentDoc = /*#__PURE__*/ gql`
     fragment RecentPost on Post {
   ...ForumPost
@@ -21408,6 +21615,23 @@ export const MapBookmarkDocument = /*#__PURE__*/ gql`
   }
 }
     ${MapBookmarkDetailsFragmentDoc}`;
+export const CreateFileUploadForPostDocument = /*#__PURE__*/ gql`
+    mutation createFileUploadForPost($contentType: String!, $filename: String!, $fileSizeBytes: Int!, $projectId: Int!, $usage: FileUploadUsageInput!) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: $usage
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${FileUploadDetailsFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -23279,6 +23503,7 @@ export const namedOperations = {
     CreateReply: 'CreateReply',
     CopyTocItemForForumPost: 'CopyTocItemForForumPost',
     CreateMapBookmark: 'CreateMapBookmark',
+    createFileUploadForPost: 'createFileUploadForPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
@@ -23398,6 +23623,7 @@ export const namedOperations = {
     Job: 'Job',
     MapBookmarkDetails: 'MapBookmarkDetails',
     SketchPresent: 'SketchPresent',
+    FileUploadDetails: 'FileUploadDetails',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',

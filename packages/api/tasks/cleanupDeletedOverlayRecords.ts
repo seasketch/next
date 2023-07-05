@@ -1,7 +1,5 @@
 import { Helpers } from "graphile-worker";
 import S3 from "aws-sdk/clients/s3";
-import { UPLOAD_TASK_PRESIGNED_URL_TTL } from "../src/plugins/dataUploadTaskPlugin";
-import { ResponseOutput } from "spatial-uploads-handler";
 
 const s3 = new S3({
   region: process.env.AWS_REGION!,

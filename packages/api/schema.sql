@@ -243,6 +243,33 @@ CREATE TYPE public.field_rule_operator AS ENUM (
 
 
 --
+-- Name: file_upload_location; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.file_upload_location AS ENUM (
+    'r2',
+    'cloudflare_images'
+);
+
+
+--
+-- Name: file_upload_usage; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.file_upload_usage AS ENUM (
+    'forum_attachment',
+    'survey_response'
+);
+
+
+--
+-- Name: TYPE file_upload_usage; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TYPE public.file_upload_usage IS '@enum';
+
+
+--
 -- Name: form_element_layout; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -2269,6 +2296,20 @@ $$;
 
 
 --
+-- Name: assign_file_upload_node_post_ids(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_file_upload_node_post_ids() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  perform assign_post_id_to_attached_file_uploads(NEW.message_contents, NEW.id);
+	RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: assign_map_bookmark_node_post_ids(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2280,6 +2321,23 @@ BEGIN
 	RETURN NEW;
 END;
 $$;
+
+
+--
+-- Name: assign_post_id_to_attached_file_uploads(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_post_id_to_attached_file_uploads(body jsonb, post_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      file_upload_ids text[];
+    begin
+      select collect_attachment_ids_from_prosemirror_body(body, 'FileUpload') into file_upload_ids;
+      update file_uploads set post_id = assign_post_id_to_attached_file_uploads.post_id where id::text = any(file_upload_ids);
+      return true;
+    end;
+  $$;
 
 
 --
@@ -3452,6 +3510,13 @@ CREATE TABLE public.map_bookmarks (
 
 
 --
+-- Name: TABLE map_bookmarks; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.map_bookmarks IS '@omit create';
+
+
+--
 -- Name: COLUMN map_bookmarks.client_generated_thumbnail; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -3660,6 +3725,38 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
     LANGUAGE sql
     AS $$
     update form_elements set background_image = null, background_color = null, layout = null, background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
+  $$;
+
+
+--
+-- Name: collect_attachment_ids_from_prosemirror_body(jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_attachment_ids_from_prosemirror_body(body jsonb, type text) RETURNS text[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output text[];
+      i jsonb;
+      attachment jsonb;
+    begin
+      output = '{}';
+      if body ? 'attrs' and (body -> 'attrs') ? 'type' then
+        if type is null or (body -> 'attrs') ->> 'type' = type then
+          select body ->> 'attrs' into attachment;
+          if attachment is not null and attachment->>'id' is not null then
+            output = (attachment->>'id')::text || output;
+          end if;
+        end if;
+      end if;
+      if body ? 'content' and (body ->> 'type' = 'attachments' or body ->> 'type' = 'doc') then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          output = output || collect_attachment_ids_from_prosemirror_body(i, type);
+        end loop;
+      end if;
+      return output;
+    end;
   $$;
 
 
@@ -4967,7 +5064,8 @@ CREATE TABLE public.posts (
     message_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     hidden_by_moderator boolean DEFAULT false NOT NULL,
     html text NOT NULL,
-    bookmark_attachment_ids uuid[] GENERATED ALWAYS AS (public.extract_post_bookmark_attachments(message_contents)) STORED NOT NULL
+    bookmark_attachment_ids uuid[] GENERATED ALWAYS AS (public.extract_post_bookmark_attachments(message_contents)) STORED NOT NULL,
+    ordered_attachment_ids text[] GENERATED ALWAYS AS (public.collect_attachment_ids_from_prosemirror_body(message_contents, NULL::text)) STORED
 );
 
 
@@ -7646,6 +7744,13 @@ CREATE FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookma
 
 
 --
+-- Name: FUNCTION get_sprite_data_for_screenshot(bookmark public.map_bookmarks); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) IS '@omit';
+
+
+--
 -- Name: get_surveys(integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8475,6 +8580,58 @@ CREATE FUNCTION public.posts_blurb(post public.posts) RETURNS text
     AS $$
     select collect_text_from_prosemirror_body(post.message_contents, 52);
   $$;
+
+
+--
+-- Name: file_uploads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.file_uploads (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    filename text NOT NULL,
+    file_size_bytes bigint NOT NULL,
+    content_type text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    post_id integer,
+    user_id integer NOT NULL,
+    usage public.file_upload_usage NOT NULL,
+    project_id integer NOT NULL,
+    is_spatial boolean DEFAULT false NOT NULL,
+    tilejson_endpoint text,
+    cloudflare_images_id text
+);
+
+
+--
+-- Name: TABLE file_uploads; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.file_uploads IS '@omit create';
+
+
+--
+-- Name: COLUMN file_uploads.content_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.file_uploads.content_type IS 'Use a listed media type from https://www.iana.org/assignments/media-types/media-types.xhtml';
+
+
+--
+-- Name: posts_file_uploads(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.posts_file_uploads(p public.posts) RETURNS SETOF public.file_uploads
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from file_uploads where post_id = p.id;
+  $$;
+
+
+--
+-- Name: FUNCTION posts_file_uploads(p public.posts); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.posts_file_uploads(p public.posts) IS '@simpleCollections only';
 
 
 --
@@ -14255,6 +14412,14 @@ ALTER TABLE ONLY public.survey_invites
 
 
 --
+-- Name: file_uploads file_uploads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: form_element_types form_element_types_label_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14840,6 +15005,13 @@ CREATE INDEX data_upload_tasks_state_project_id_idx ON public.data_upload_tasks 
 --
 
 CREATE INDEX email_notification_preferences_user_id_idx ON public.email_notification_preferences USING btree (user_id);
+
+
+--
+-- Name: file_uploads_post_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX file_uploads_post_id_idx ON public.file_uploads USING btree (post_id);
 
 
 --
@@ -15844,6 +16016,13 @@ CREATE TRIGGER after_response_submission AFTER INSERT OR UPDATE ON public.survey
 
 
 --
+-- Name: posts assign_file_upload_attachment_post_ids_from_message_contents; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER assign_file_upload_attachment_post_ids_from_message_contents AFTER INSERT OR UPDATE ON public.posts FOR EACH ROW EXECUTE FUNCTION public.assign_file_upload_node_post_ids();
+
+
+--
 -- Name: posts assign_map_bookmark_attachment_post_ids_from_message_contents; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -16342,6 +16521,30 @@ ALTER TABLE ONLY public.data_upload_tasks
 
 ALTER TABLE ONLY public.email_notification_preferences
     ADD CONSTRAINT email_notification_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_uploads file_uploads_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_uploads file_uploads_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_uploads file_uploads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -19252,10 +19455,24 @@ GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boo
 
 
 --
+-- Name: FUNCTION assign_file_upload_node_post_ids(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_file_upload_node_post_ids() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION assign_map_bookmark_node_post_ids(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.assign_map_bookmark_node_post_ids() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION assign_post_id_to_attached_file_uploads(body jsonb, post_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_post_id_to_attached_file_uploads(body jsonb, post_id integer) FROM PUBLIC;
 
 
 --
@@ -19605,6 +19822,7 @@ GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
 --
 
 GRANT SELECT ON TABLE public.map_bookmarks TO anon;
+GRANT INSERT ON TABLE public.map_bookmarks TO seasketch_superuser;
 
 
 --
@@ -19711,6 +19929,7 @@ GRANT SELECT(sketch_names) ON TABLE public.map_bookmarks TO anon;
 
 REVOKE ALL ON FUNCTION public.bookmark_by_id(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.bookmark_by_id(id uuid) TO seasketch_user;
+GRANT ALL ON FUNCTION public.bookmark_by_id(id uuid) TO anon;
 
 
 --
@@ -20006,6 +20225,14 @@ REVOKE ALL ON FUNCTION public.cleanup_tile_package() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION collect_attachment_ids_from_prosemirror_body(body jsonb, type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_attachment_ids_from_prosemirror_body(body jsonb, type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.collect_attachment_ids_from_prosemirror_body(body jsonb, type text) TO anon;
 
 
 --
@@ -23368,6 +23595,23 @@ GRANT ALL ON FUNCTION public.posts_author_profile(post public.posts) TO anon;
 
 REVOKE ALL ON FUNCTION public.posts_blurb(post public.posts) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.posts_blurb(post public.posts) TO anon;
+
+
+--
+-- Name: TABLE file_uploads; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT ON TABLE public.file_uploads TO seasketch_superuser;
+GRANT SELECT ON TABLE public.file_uploads TO anon;
+GRANT SELECT ON TABLE public.file_uploads TO seasketch_user;
+
+
+--
+-- Name: FUNCTION posts_file_uploads(p public.posts); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.posts_file_uploads(p public.posts) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.posts_file_uploads(p public.posts) TO anon;
 
 
 --

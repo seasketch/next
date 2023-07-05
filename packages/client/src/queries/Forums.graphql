@@ -20,6 +20,10 @@ fragment ForumPost on Post {
   mapBookmarks {
     ...MapBookmarkDetails
   }
+  fileUploads {
+    ...FileUploadDetails
+  }
+  orderedAttachmentIds
 }
 
 fragment RecentPost on Post {
@@ -302,4 +306,39 @@ subscription MapBookmark($id: UUID!) {
 fragment SketchPresent on Sketch {
   id
   name
+}
+
+fragment FileUploadDetails on FileUpload {
+  id
+  filename
+  postId
+  userId
+  fileSizeBytes
+  contentType
+  downloadUrl
+  createdAt
+  usage
+  cloudflareImagesId
+}
+
+mutation createFileUploadForPost(
+  $contentType: String!
+  $filename: String!
+  $fileSizeBytes: Int!
+  $projectId: Int!
+  $usage: FileUploadUsageInput!
+) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: $usage
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
 }
