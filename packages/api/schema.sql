@@ -7747,7 +7747,7 @@ CREATE FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookma
 -- Name: FUNCTION get_sprite_data_for_screenshot(bookmark public.map_bookmarks); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) IS '@arg0variant base @omit';
+COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) IS '@omit';
 
 
 --

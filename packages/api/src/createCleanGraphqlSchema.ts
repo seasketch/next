@@ -3,10 +3,6 @@ import graphileOptions from "./graphileOptions";
 import { lexicographicSortSchema, printSchema } from "graphql";
 import fs from "fs";
 
-console.log(
-  `GM_DBURL=${process.env.GM_DBURL}`
-  // process.env.GM_DBURL!.replace("postgres:password", "graphile:password")
-);
 const DB_URL = process.env.GM_DBURL!.replace(
   "postgres:password",
   "graphile:password"
