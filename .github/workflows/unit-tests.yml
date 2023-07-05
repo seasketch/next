@@ -26,7 +26,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap
+          npx lerna bootstrap
       - name: Init docker db
         working-directory: ./packages/api
         env:
@@ -72,7 +72,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap
+          npx lerna bootstrap
       - name: Initialize database
         working-directory: ./packages/api
         env:
@@ -112,7 +112,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap
+          npx lerna bootstrap
       - name: Test client
         working-directory: ./packages/client
         env:
@@ -145,7 +145,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          lerna bootstrap
+          npx lerna bootstrap
       - name: Build client
         working-directory: ./packages/client
         env:
