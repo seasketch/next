@@ -73,16 +73,18 @@ export class GraphQLStack extends cdk.Stack {
     if (
       !process.env.R2_ENDPOINT ||
       !process.env.R2_SECRET_ACCESS_KEY ||
-      !process.env.R2_ACCESS_KEY_ID
+      !process.env.R2_ACCESS_KEY_ID ||
+      !process.env.R2_FILE_UPLOADS_BUCKET
     ) {
       throw new Error(
-        `R2_ENDPOINT, R2_SECRET_ACCESS_KEY, and R2_ACCESS_KEY_ID must be set in environment`
+        `R2_ENDPOINT, R2_SECRET_ACCESS_KEY, R2_FILE_UPLOADS_BUCKET, R2_SECRET_ACCESS_KEY and R2_ACCESS_KEY_ID must be set in environment`
       );
     }
 
     if (
       !process.env.CLOUDFLARE_IMAGES_TOKEN ||
-      !process.env.CLOUDFLARE_IMAGES_ACCOUNT
+      !process.env.CLOUDFLARE_IMAGES_ACCOUNT ||
+      !process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH
     ) {
       throw new Error(
         `CLOUDFLARE_IMAGES_TOKEN & CLOUDFLARE_IMAGES_ACCOUNT must be set in environment`
@@ -137,8 +139,11 @@ export class GraphQLStack extends cdk.Stack {
             R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
             R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
             R2_ENDPOINT: process.env.R2_ENDPOINT,
+            R2_FILE_UPLOADS_BUCKET: process.env.R2_FILE_UPLOADS_BUCKET,
             CLOUDFLARE_IMAGES_TOKEN: process.env.CLOUDFLARE_IMAGES_TOKEN,
             CLOUDFLARE_IMAGES_ACCOUNT: process.env.CLOUDFLARE_IMAGES_ACCOUNT,
+            CLOUDFLARE_IMAGES_ACCOUNT_HASH:
+              process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH,
             ISSUER: process.env.ISSUER || HOST,
             API_ROOT: HOST,
             SCREENSHOTTER_FUNCTION_ARN,
