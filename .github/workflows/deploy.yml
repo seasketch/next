@@ -172,7 +172,7 @@ jobs:
           npm install
       - name: Install dependencies
         run: |
-          npx lerna bootstrap
+          npx lerna bootstrap --ci
       - name: Build client
         working-directory: ./packages/client
         env:
