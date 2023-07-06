@@ -22,7 +22,7 @@ import InteractivitySettings from "./InteractivitySettings";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import InputBlock from "../../components/InputBlock";
-import GLStyleEditor from "./GLStyleEditor/Editor";
+import GLStyleEditor from "./GLStyleEditor/GLStyleEditor";
 import {
   ClipboardCopyIcon,
   DotsHorizontalIcon,
@@ -756,7 +756,6 @@ export default function LayerTableOfContentsItemEditor(
                 )}
                 <GLStyleEditor
                   className="flex-1 overflow-hidden"
-                  dataLayerId={layer?.id}
                   initialStyle={
                     typeof layer!.mapboxGlStyles! === "string"
                       ? layer!.mapboxGlStyles

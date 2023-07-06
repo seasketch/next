@@ -18664,13 +18664,6 @@ GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seaske
 
 
 --
--- Name: COLUMN sketch_classes.mapbox_gl_style; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(mapbox_gl_style) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
 -- Name: COLUMN sketch_classes.template_description; Type: ACL; Schema: public; Owner: -
 --
 

@@ -199,7 +199,6 @@ mutation UpdateFormElementSketchClass(
   $id: Int!
   $geometryType: SketchGeometryType
   $allowMulti: Boolean
-  $mapboxGlStyle: JSON
   $geoprocessingClientName: String
   $geoprocessingClientUrl: String
   $geoprocessingProjectUrl: String
@@ -210,7 +209,6 @@ mutation UpdateFormElementSketchClass(
       patch: {
         geometryType: $geometryType
         allowMulti: $allowMulti
-        mapboxGlStyle: $mapboxGlStyle
         geoprocessingClientName: $geoprocessingClientName
         geoprocessingClientUrl: $geoprocessingClientUrl
         geoprocessingProjectUrl: $geoprocessingProjectUrl

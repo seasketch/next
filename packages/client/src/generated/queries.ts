@@ -6508,6 +6508,8 @@ export type Mutation = {
   updateSketchClassByFormElementId?: Maybe<UpdateSketchClassPayload>;
   /** Updates a single `SketchClass` using its globally unique id and a patch. */
   updateSketchClassByNodeId?: Maybe<UpdateSketchClassPayload>;
+  /** Admin mutation for updating the mapbox gl style for a sketch class */
+  updateSketchClassMapboxGLStyle: SketchClass;
   /** Updates a single `SketchFolder` using a unique key and a patch. */
   updateSketchFolder?: Maybe<UpdateSketchFolderPayload>;
   /** Updates a single `SketchFolder` using its globally unique id and a patch. */
@@ -7833,6 +7835,13 @@ export type MutationUpdateSketchClassByFormElementIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchClassByNodeIdArgs = {
   input: UpdateSketchClassByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchClassMapboxGlStyleArgs = {
+  sketchClassId: Scalars['Int'];
+  style?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -11071,12 +11080,6 @@ export type SketchClassPatch = {
    * class in order to render existing sketches of this type.
    */
   isArchived?: Maybe<Scalars['Boolean']>;
-  /**
-   * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
-   * render features. Sketches can be styled based on attribute data by using
-   * [Expressions](https://docs.mapbox.com/help/glossary/expression/).
-   */
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
   preprocessingEndpoint?: Maybe<Scalars['String']>;
@@ -17167,6 +17170,20 @@ export type DeleteVisibilityRuleConditionMutation = (
   )> }
 );
 
+export type UpdateSketchClassStyleMutationVariables = Exact<{
+  id: Scalars['Int'];
+  style?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateSketchClassStyleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClassMapboxGLStyle: (
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id'>
+  ) }
+);
+
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection'>
@@ -17637,7 +17654,6 @@ export type UpdateFormElementSketchClassMutationVariables = Exact<{
   id: Scalars['Int'];
   geometryType?: Maybe<SketchGeometryType>;
   allowMulti?: Maybe<Scalars['Boolean']>;
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
   geoprocessingClientName?: Maybe<Scalars['String']>;
   geoprocessingClientUrl?: Maybe<Scalars['String']>;
   geoprocessingProjectUrl?: Maybe<Scalars['String']>;
@@ -22189,6 +22205,13 @@ export const DeleteVisibilityRuleConditionDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateSketchClassStyleDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketchClassStyle($id: Int!, $style: JSON) {
+  updateSketchClassMapboxGLStyle(sketchClassId: $id, style: $style) {
+    id
+  }
+}
+    `;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -22440,9 +22463,9 @@ export const UpdateSurveyBaseSettingsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateFormElementSketchClassDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $mapboxGlStyle: JSON, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
+    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
   updateSketchClass(
-    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, mapboxGlStyle: $mapboxGlStyle, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
+    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
   ) {
     sketchClass {
       id
@@ -23525,6 +23548,7 @@ export const namedOperations = {
     DeleteVisibilityRule: 'DeleteVisibilityRule',
     AddVisibilityCondition: 'AddVisibilityCondition',
     DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
+    UpdateSketchClassStyle: 'UpdateSketchClassStyle',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',

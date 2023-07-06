@@ -46,6 +46,7 @@ import {
   SketchChildType,
   PopupShareDetailsFragment,
   useDeleteSketchTocItemsMutation,
+  SketchClassDetailsFragment,
 } from "../../generated/graphql";
 import { SketchFolderDetailsFragment } from "../../generated/queries";
 import getSlug from "../../getSlug";
@@ -147,6 +148,9 @@ interface SketchUIStateContextValue {
     read: DropdownOption[];
     update: DropdownOption[];
   };
+  setSketchClasses: (
+    sketchClasses: Pick<SketchClassDetailsFragment, "id" | "mapboxGlStyle">[]
+  ) => void;
 }
 
 const NotImplemented = () => {
@@ -176,6 +180,7 @@ const defaultValue: SketchUIStateContextValue = {
   errors: {},
   loading: [],
   getMenuOptions: NotImplemented,
+  setSketchClasses: NotImplemented,
 };
 
 export const SketchUIStateContext =
@@ -207,6 +212,23 @@ export default function SketchUIStateContextProvider({
     `expanded-sketches-${slug}`,
     []
   );
+
+  const [sketchClasses, setSketchClasses] = useState<
+    Pick<SketchClassDetailsFragment, "id" | "mapboxGlStyle">[]
+  >([]);
+
+  useEffect(() => {
+    if (mapContext.manager && mapContext.ready) {
+      const styles: { [sketchClassId: number]: any[] } = {};
+      for (const sketchClass of sketchClasses) {
+        if (sketchClass.mapboxGlStyle && sketchClass.mapboxGlStyle.length > 0) {
+          styles[sketchClass.id] = sketchClass.mapboxGlStyle;
+        }
+      }
+      mapContext.manager.setSketchClassGlStyles(styles);
+    }
+  }, [mapContext.manager, mapContext.ready, sketchClasses]);
+
   const { expandItem, collapseItem, onExpand } = useMemo(() => {
     const expandItem = (item: { id: string }) => {
       setExpandedIds((prev) => [
@@ -265,7 +287,11 @@ export default function SketchUIStateContextProvider({
 
   useEffect(() => {
     if (mapContext.manager) {
-      const sketches: { id: number; timestamp?: string }[] = [];
+      const sketches: {
+        id: number;
+        timestamp?: string;
+        sketchClassId?: number;
+      }[] = [];
       // @ts-ignore
       window.client = client;
       for (const stringId of visibleSketches) {
@@ -274,12 +300,18 @@ export default function SketchUIStateContextProvider({
           const isCached = client.cache.data.get(stringId, "id");
           // @ts-ignore private api
           const isCollection = client.cache.data.get(stringId, "isCollection");
+          // @ts-ignore private api
+          const sketchClassId = client.cache.data.get(
+            stringId,
+            "sketchClassId"
+          );
           if (isCached && !isCollection) {
             // @ts-ignore private api
             const timestamp = client.cache.data.get(stringId, "timestamp");
             sketches.push({
               id: parseInt(stringId.split(":")[1]),
               timestamp: timestamp,
+              sketchClassId: sketchClassId,
             });
           }
         }
@@ -1376,6 +1408,7 @@ export default function SketchUIStateContextProvider({
         setVisibleSketches,
         loading,
         errors,
+        setSketchClasses,
       }}
     >
       <FormLanguageContext.Provider

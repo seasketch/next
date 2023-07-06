@@ -36,6 +36,7 @@ import {
   FileUploadPlugin,
   FileUploadRateLimiterPlugin,
 } from "./plugins/fileUploadPlugin";
+import SketchClassStylePlugin from "./plugins/sketchClassStylePlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -83,6 +84,7 @@ export default function graphileOptions(): PostGraphileOptions {
       MapBookmarkRateLimiterPlugin,
       TranslatedPropsPlugin,
       VerifyEmailPlugin,
+      SketchClassStylePlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

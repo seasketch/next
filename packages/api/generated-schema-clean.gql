@@ -8723,6 +8723,9 @@ type Mutation {
     input: UpdateSketchClassByNodeIdInput!
   ): UpdateSketchClassPayload
 
+  """Admin mutation for updating the mapbox gl style for a sketch class"""
+  updateSketchClassMapboxGLStyle(sketchClassId: Int!, style: JSON): SketchClass!
+
   """Updates a single `SketchFolder` using a unique key and a patch."""
   updateSketchFolder(
     """
@@ -12123,14 +12126,6 @@ input SketchClassPatch {
   
   """
   isArchived: Boolean
-
-  """
-  [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
-  render features. Sketches can be styled based on attribute data by using 
-  [Expressions](https://docs.mapbox.com/help/glossary/expression/).
-  
-  """
-  mapboxGlStyle: JSON
 
   """Label chosen by project admins that is shown to users."""
   name: String

@@ -5,10 +5,7 @@ import { json, jsonParseLinter, jsonLanguage } from "@codemirror/lang-json";
 import { sublime } from "@uiw/codemirror-theme-sublime";
 import { linter, lintGutter } from "@codemirror/lint";
 import { color } from "./extensions/glStyleColor";
-import {
-  glStyleLinter,
-  validateGLStyleFragment,
-} from "./extensions/glStyleValidator";
+import { glStyleLinter } from "./extensions/glStyleValidator";
 import { glStyleAutocomplete } from "./extensions/glStyleAutocomplete";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
@@ -28,11 +25,11 @@ import {
 } from "../../../generated/graphql";
 import getSlug from "../../../getSlug";
 import SpritePopover from "./SpritePopover";
+import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
 
 interface GLStyleEditorProps {
   initialStyle?: string;
   onChange?: (newStyle: string) => void;
-  dataLayerId?: number;
   className?: string;
 }
 
@@ -68,15 +65,14 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     },
   });
 
-  const [spriteState, setSpriteState] =
-    useState<null | {
-      from: number;
-      to: number;
-      view: EditorView;
-      value: string;
-      target: HTMLSpanElement;
-      selectedSpriteId: number | null;
-    }>(null);
+  const [spriteState, setSpriteState] = useState<null | {
+    from: number;
+    to: number;
+    view: EditorView;
+    value: string;
+    target: HTMLSpanElement;
+    selectedSpriteId: number | null;
+  }>(null);
 
   const extensions = useMemo(() => {
     return [

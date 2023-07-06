@@ -22,6 +22,7 @@ import PreprocessorInput from "./PreprocessorInput";
 import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
 import GeoprocessingClientInput from "./GeoprocessingClientInput";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
+import SketchClassStyleAdmin from "./SketchClassStyleAdmin";
 
 export default function SketchClassForm({
   sketchClass,
@@ -233,6 +234,9 @@ export default function SketchClassForm({
         )}
         {selectedTab === "attributes" && sketchClass.form && (
           <SketchClassAttributesAdmin formId={sketchClass.form.id} />
+        )}
+        {selectedTab === "style" && (
+          <SketchClassStyleAdmin sketchClass={sketchClass} />
         )}
       </div>
     </div>
