@@ -2227,11 +2227,6 @@ type DataSource implements Node {
   bounds: [BigFloat]
 
   """
-  SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.
-  """
-  bucketId: String
-
-  """
   GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
   buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
   values produce fewer rendering artifacts near tile edges and slower performance.
@@ -2376,9 +2371,6 @@ type DataSource implements Node {
   """
   normalizedSourceObjectKey: String
 
-  """SEASKETCH_VECTOR sources only. S3 object key where data are stored"""
-  objectKey: UUID
-
   """
   For SeaSketchVector sources, identifies location of original service that
   hosted the data, if any. This can be used to update a layer with an updated
@@ -2487,11 +2479,6 @@ input DataSourceInput {
   as metadata for non-tiled sources.
   """
   bounds: [BigFloat]
-
-  """
-  SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.
-  """
-  bucketId: String
 
   """
   GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
@@ -2603,9 +2590,6 @@ input DataSourceInput {
   download function. SEASKETCH_VECTOR sources only.
   """
   normalizedSourceObjectKey: String
-
-  """SEASKETCH_VECTOR sources only. S3 object key where data are stored"""
-  objectKey: UUID
 
   """
   For SeaSketchVector sources, identifies location of original service that

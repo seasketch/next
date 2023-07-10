@@ -16,7 +16,6 @@ query layersAndSourcesForItems(
     dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -32,7 +31,6 @@ query layersAndSourcesForItems(
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       queryParameters
       scheme
@@ -228,7 +226,6 @@ query GetLayerItem($id: Int!) {
         id
         attribution
         bounds
-        bucketId
         buffer
         byteLength
         cluster
@@ -244,7 +241,6 @@ query GetLayerItem($id: Int!) {
         lineMetrics
         maxzoom
         minzoom
-        objectKey
         originalSourceUrl
         promoteId
         queryParameters
@@ -351,7 +347,6 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
       id
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -367,7 +362,6 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       promoteId
       queryParameters
@@ -431,8 +425,6 @@ query DataSourceUrlProperties($id: Int!) {
   dataSource(id: $id) {
     id
     type
-    bucketId
-    objectKey
     url
     originalSourceUrl
     queryParameters

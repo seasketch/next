@@ -1045,11 +1045,7 @@ class MapContextManager {
                   case DataSourceTypes.Geojson:
                     baseStyle.sources[source.id.toString()] = {
                       type: "geojson",
-                      data:
-                        source.type === DataSourceTypes.SeasketchVector
-                          ? // eslint-disable-next-line
-                            `${source.bucketId}/${source.objectKey}`
-                          : source.url!,
+                      data: source.url!,
                       attribution: source.attribution || "",
                     };
                     sourceWasAdded = true;

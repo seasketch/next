@@ -94,6 +94,7 @@ export default async function cleanupDeletedOverlayRecords(
       ]);
     }
 
+    // TODO: migrate this over to use TBD upload_data_resources model
     const data = await client.query(
       `select deleted_geojson_objects.id, deleted_geojson_objects.object_key, data_sources_buckets.bucket as bucket from deleted_geojson_objects inner join data_sources_buckets on data_sources_buckets.url = deleted_geojson_objects.bucket`
     );

@@ -1901,22 +1901,6 @@ Add a SketchClass to the list of valid children for a Collection-type SketchClas
 
 
 --
--- Name: after_deleted__data_sources(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.after_deleted__data_sources() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-  BEGIN
-    if OLD.bucket_id is not null and OLD.object_key is not null and OLD.upload_task_id is null then
-      insert into deleted_geojson_objects (object_key, bucket) values (OLD.object_key, OLD.bucket_id);
-    end if;
-    return OLD;
-  END;
-$$;
-
-
---
 -- Name: after_insert_or_update_or_delete_project_invite_email(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2814,39 +2798,6 @@ CREATE FUNCTION public.before_delete_sketch_class_check_form_element_id() RETURN
     end if;
     return OLD;
     end;
-  $$;
-
-
---
--- Name: before_deleted__data_layers(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.before_deleted__data_layers() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-  BEGIN
-    insert into deleted_data_layers (
-      data_source_id,
-      data_layer_id,
-      project_id,
-      data_upload_task_id,
-      bucket_id,
-      object_key,
-      outputs
-    ) select 
-        OLD.data_source_id,
-        data_layers.id, 
-        data_layers.project_id, 
-        data_sources.upload_task_id, 
-        data_sources.bucket_id, 
-        data_sources.object_key, 
-        data_upload_tasks.outputs
-      from data_layers 
-      inner join data_sources on data_sources.id = OLD.data_source_id 
-      inner join data_upload_tasks on data_upload_tasks.id = data_sources.upload_task_id 
-      where data_layers.id = OLD.id;
-      return OLD;
-    END;
   $$;
 
 
@@ -6276,8 +6227,6 @@ CREATE TABLE public.data_sources (
     import_type text,
     original_source_url text,
     enhanced_security boolean,
-    bucket_id text,
-    object_key uuid,
     byte_length integer,
     supports_dynamic_layers boolean DEFAULT true NOT NULL,
     uploaded_source_filename text,
@@ -6502,20 +6451,6 @@ COMMENT ON COLUMN public.data_sources.original_source_url IS 'For SeaSketchVecto
 --
 
 COMMENT ON COLUMN public.data_sources.enhanced_security IS 'SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.';
-
-
---
--- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
-
-
---
--- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
 
 
 --
@@ -10358,8 +10293,6 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           import_type,
           original_source_url,
           enhanced_security,
-          bucket_id,
-          object_key,
           byte_length,
           supports_dynamic_layers,
           uploaded_source_filename,
@@ -10398,8 +10331,6 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           import_type,
           original_source_url,
           enhanced_security,
-          bucket_id,
-          object_key,
           byte_length,
           supports_dynamic_layers,
           uploaded_source_filename,
@@ -15967,13 +15898,6 @@ CREATE TRIGGER _002_set_survey_response_last_updated_by BEFORE UPDATE ON public.
 
 
 --
--- Name: data_sources _500_gql_after_deleted__data_sources; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER _500_gql_after_deleted__data_sources AFTER DELETE ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.after_deleted__data_sources();
-
-
---
 -- Name: invite_emails _500_gql_insert_or_update_or_delete_project_invite_email; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -16450,14 +16374,6 @@ ALTER TABLE ONLY public.data_layers
 --
 
 COMMENT ON CONSTRAINT data_layers_project_id_fkey ON public.data_layers IS '@omit';
-
-
---
--- Name: data_sources data_sources_bucket_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.data_sources
-    ADD CONSTRAINT data_sources_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES public.data_sources_buckets(url) ON DELETE CASCADE;
 
 
 --
@@ -19326,13 +19242,6 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, 
 
 
 --
--- Name: FUNCTION after_deleted__data_sources(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.after_deleted__data_sources() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION after_insert_or_update_or_delete_project_invite_email(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19667,13 +19576,6 @@ REVOKE ALL ON FUNCTION public.before_basemap_insert_create_interactivity_setting
 --
 
 REVOKE ALL ON FUNCTION public.before_delete_sketch_class_check_form_element_id() FROM PUBLIC;
-
-
---
--- Name: FUNCTION before_deleted__data_layers(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.before_deleted__data_layers() FROM PUBLIC;
 
 
 --

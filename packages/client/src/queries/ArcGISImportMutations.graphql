@@ -125,9 +125,7 @@ mutation CreateSeaSketchVectorSource(
       type
       url
       presignedUploadUrl
-      bucketId
       enhancedSecurity
-      objectKey
     }
   }
 }

@@ -32,7 +32,6 @@ fragment DataSourceDetails on DataSource {
   id
   attribution
   bounds
-  bucketId
   buffer
   byteLength
   cluster
@@ -46,7 +45,6 @@ fragment DataSourceDetails on DataSource {
   lineMetrics
   maxzoom
   minzoom
-  objectKey
   originalSourceUrl
   queryParameters
   scheme

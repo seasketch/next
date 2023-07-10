@@ -1969,8 +1969,6 @@ export type DataSource = Node & {
    * as metadata for non-tiled sources.
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
-  /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
-  bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
@@ -2059,8 +2057,6 @@ export type DataSource = Node & {
    * download function. SEASKETCH_VECTOR sources only.
    */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
-  /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
-  objectKey?: Maybe<Scalars['UUID']>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
    * hosted the data, if any. This can be used to update a layer with an updated
@@ -2151,8 +2147,6 @@ export type DataSourceInput = {
    * as metadata for non-tiled sources.
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
-  /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
-  bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
@@ -2237,8 +2231,6 @@ export type DataSourceInput = {
    * download function. SEASKETCH_VECTOR sources only.
    */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
-  /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
-  objectKey?: Maybe<Scalars['UUID']>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
    * hosted the data, if any. This can be used to update a layer with an updated
@@ -14541,7 +14533,7 @@ export type CreateSeaSketchVectorSourceMutation = (
     { __typename?: 'CreateDataSourcePayload' }
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url' | 'presignedUploadUrl' | 'bucketId' | 'enhancedSecurity' | 'objectKey'>
+      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url' | 'presignedUploadUrl' | 'enhancedSecurity'>
     )> }
   )> }
 );
@@ -15321,7 +15313,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
@@ -15459,7 +15451,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps'>
       )> }
     )> }
   )> }
@@ -15542,7 +15534,7 @@ export type UpdateDataSourceMutation = (
     { __typename?: 'UpdateDataSourcePayload' }
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
+      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
     )> }
   )> }
 );
@@ -15593,7 +15585,7 @@ export type DataSourceUrlPropertiesQuery = (
   { __typename?: 'Query' }
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl' | 'queryParameters'>
+    & Pick<DataSource, 'id' | 'type' | 'url' | 'originalSourceUrl' | 'queryParameters'>
   )> }
 );
 
@@ -16781,7 +16773,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
 );
 
 export type ClientSpriteFragment = (
@@ -19688,7 +19680,6 @@ export const DataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   id
   attribution
   bounds
-  bucketId
   buffer
   byteLength
   cluster
@@ -19702,7 +19693,6 @@ export const DataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   lineMetrics
   maxzoom
   minzoom
-  objectKey
   originalSourceUrl
   queryParameters
   scheme
@@ -20448,9 +20438,7 @@ export const CreateSeaSketchVectorSourceDocument = /*#__PURE__*/ gql`
       type
       url
       presignedUploadUrl
-      bucketId
       enhancedSecurity
-      objectKey
     }
   }
 }
@@ -20966,7 +20954,6 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
     dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -20982,7 +20969,6 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       queryParameters
       scheme
@@ -21147,7 +21133,6 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
         id
         attribution
         bounds
-        bucketId
         buffer
         byteLength
         cluster
@@ -21163,7 +21148,6 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
         lineMetrics
         maxzoom
         minzoom
-        objectKey
         originalSourceUrl
         promoteId
         queryParameters
@@ -21246,7 +21230,6 @@ export const UpdateDataSourceDocument = /*#__PURE__*/ gql`
       id
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -21262,7 +21245,6 @@ export const UpdateDataSourceDocument = /*#__PURE__*/ gql`
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       promoteId
       queryParameters
@@ -21315,8 +21297,6 @@ export const DataSourceUrlPropertiesDocument = /*#__PURE__*/ gql`
   dataSource(id: $id) {
     id
     type
-    bucketId
-    objectKey
     url
     originalSourceUrl
     queryParameters
