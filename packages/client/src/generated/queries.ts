@@ -1969,6 +1969,7 @@ export type DataSource = Node & {
    * as metadata for non-tiled sources.
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
   bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
@@ -2058,6 +2059,7 @@ export type DataSource = Node & {
    * download function. SEASKETCH_VECTOR sources only.
    */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
+  /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
   objectKey?: Maybe<Scalars['UUID']>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
@@ -2149,6 +2151,7 @@ export type DataSourceInput = {
    * as metadata for non-tiled sources.
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
   bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
@@ -2234,6 +2237,7 @@ export type DataSourceInput = {
    * download function. SEASKETCH_VECTOR sources only.
    */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
+  /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
   objectKey?: Maybe<Scalars['UUID']>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
