@@ -6,7 +6,21 @@ const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
 
-export async function createTableOfContentsItemForLayer(
+/**
+ * Creates database records for a processed upload. This includes:
+ *  * data_sources
+ *  * data_layers
+ *  * table_of_contents_items
+ *
+ * For data layers this includes choosing a default cartographic style
+ *
+ * @param layer ProcessedUploadLayer
+ * @param projectId the project id
+ * @param client pg client
+ * @param uploadTaskId the upload task id
+ * @returns
+ */
+export async function createDBRecordsForProcessedUpload(
   layer: ProcessedUploadLayer,
   projectId: number,
   client: PoolClient | Client,
@@ -27,13 +41,22 @@ export async function createTableOfContentsItemForLayer(
     const pmtiles = layer.outputs.find((output) => output.type === "PMTiles");
     let bucketId: string | null = null;
     let objectKey: string | null = null;
-    if (geojson) {
+    if (geojson && /s3:\/\//.test(geojson.remote)) {
       bucketId = geojson.remote.replace("s3://", "").split("/")[0];
       objectKey = geojson.remote
         .replace("s3://", "")
         .split("/")
         .slice(1)
         .join("/");
+    }
+
+    let url = pmtiles?.url;
+    if (!pmtiles?.url) {
+      const d = await client.query(
+        `select url from data_sources_buckets where bucket = $1`,
+        [bucketId]
+      );
+      url = `${d.rows[0].url}/${objectKey}`;
     }
 
     // create data source
@@ -62,7 +85,7 @@ export async function createTableOfContentsItemForLayer(
         projectId,
         pmtiles ? "seasketch-mvt" : "seasketch-vector",
         pmtiles ? null : layer.bounds,
-        pmtiles?.url || null,
+        url,
         "upload",
         bucketId,
         objectKey,

@@ -1969,6 +1969,7 @@ export type DataSource = Node & {
    * as metadata for non-tiled sources.
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
@@ -2057,6 +2058,7 @@ export type DataSource = Node & {
    * download function. SEASKETCH_VECTOR sources only.
    */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
+  objectKey?: Maybe<Scalars['UUID']>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
    * hosted the data, if any. This can be used to update a layer with an updated
@@ -2147,6 +2149,7 @@ export type DataSourceInput = {
    * as metadata for non-tiled sources.
    */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  bucketId?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
    * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
@@ -2231,6 +2234,7 @@ export type DataSourceInput = {
    * download function. SEASKETCH_VECTOR sources only.
    */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
+  objectKey?: Maybe<Scalars['UUID']>;
   /**
    * For SeaSketchVector sources, identifies location of original service that
    * hosted the data, if any. This can be used to update a layer with an updated

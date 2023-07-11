@@ -2939,7 +2939,6 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
         new.object_key = (select gen_random_uuid());
       end if;
       new.tiles = null;
-      new.url = null;
     end if;
     return new;
   end;
@@ -6236,6 +6235,8 @@ CREATE TABLE public.data_sources (
     geostats jsonb,
     upload_task_id uuid,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    object_key uuid,
+    bucket_id text,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );

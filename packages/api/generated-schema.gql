@@ -2225,6 +2225,7 @@ type DataSource implements Node {
   as metadata for non-tiled sources.
   """
   bounds: [BigFloat]
+  bucketId: String
 
   """
   GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
@@ -2370,6 +2371,7 @@ type DataSource implements Node {
   download function. SEASKETCH_VECTOR sources only.
   """
   normalizedSourceObjectKey: String
+  objectKey: UUID
 
   """
   For SeaSketchVector sources, identifies location of original service that
@@ -2479,6 +2481,7 @@ input DataSourceInput {
   as metadata for non-tiled sources.
   """
   bounds: [BigFloat]
+  bucketId: String
 
   """
   GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
@@ -2590,6 +2593,7 @@ input DataSourceInput {
   download function. SEASKETCH_VECTOR sources only.
   """
   normalizedSourceObjectKey: String
+  objectKey: UUID
 
   """
   For SeaSketchVector sources, identifies location of original service that

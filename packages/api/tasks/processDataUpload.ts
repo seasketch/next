@@ -4,7 +4,7 @@ import {
   ProcessedUploadResponse,
   SpatialUploadsHandlerRequest,
 } from "spatial-uploads-handler";
-import { createTableOfContentsItemForLayer } from "../src/spatialUploads";
+import { createDBRecordsForProcessedUpload } from "../src/spatialUploads";
 import AWS from "aws-sdk";
 const s3 = new S3();
 
@@ -72,7 +72,7 @@ export default async function processDataUpload(
         );
         // Create layers
         for (const layer of data.layers) {
-          const records = await createTableOfContentsItemForLayer(
+          const records = await createDBRecordsForProcessedUpload(
             layer,
             projectId,
             client,
