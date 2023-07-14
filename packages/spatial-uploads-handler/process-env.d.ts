@@ -9,11 +9,14 @@ declare namespace NodeJS {
     AWS_ACCESS_KEY_ID: string;
     AWS_SECRET_ACCESS_KEY: string;
     BUCKET: string;
-    NORMALIZED_OUTPUTS_BUCKET: string;
     R2_ACCESS_KEY_ID: string;
     R2_SECRET_ACCESS_KEY: string;
     R2_ENDPOINT: string;
     SLACK_TOKEN?: string;
     SLACK_CHANNEL?: string;
+    UPLOADS_BASE_URL: string;
+    RESOURCES_REMOTE: string;
+    TILES_REMOTE: string;
+    TILES_BASE_URL: string;
   }
 }

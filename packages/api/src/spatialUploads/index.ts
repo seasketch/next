@@ -2,6 +2,7 @@ import { Client, PoolClient } from "pg";
 import { ProcessedUploadLayer } from "spatial-uploads-handler";
 import { customAlphabet } from "nanoid";
 import { GeoJsonGeometryTypes } from "geojson";
+import { GeostatsLayer } from "spatial-uploads-handler/src/geostats";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
@@ -35,6 +36,10 @@ export async function createDBRecordsForProcessedUpload(
     // vector
     const geojson = layer.outputs.find((output) => output.type === "GeoJSON");
     const fgb = layer.outputs.find((output) => output.type === "FlatGeobuf");
+    const original = layer.outputs.find((output) => output.isOriginal);
+    if (!original) {
+      throw new Error("Original not listed in outputs");
+    }
     if (!fgb) {
       throw new Error("FlatGeobuf not listed in outputs of vector source");
     }
@@ -48,15 +53,6 @@ export async function createDBRecordsForProcessedUpload(
         .split("/")
         .slice(1)
         .join("/");
-    }
-
-    let url = pmtiles?.url;
-    if (!pmtiles?.url) {
-      const d = await client.query(
-        `select url from data_sources_buckets where bucket = $1`,
-        [bucketId]
-      );
-      url = `${d.rows[0].url}/${objectKey}`;
     }
 
     // create data source
@@ -85,15 +81,15 @@ export async function createDBRecordsForProcessedUpload(
         projectId,
         pmtiles ? "seasketch-mvt" : "seasketch-vector",
         pmtiles ? null : layer.bounds,
-        url,
+        layer.url,
         "upload",
         bucketId,
         objectKey,
-        fgb.size,
+        original.size,
         layer.filename,
         layer.name,
         fgb.remote.replace("s3://", "").split("/").slice(1).join("/"),
-        fgb.size,
+        original.size,
         layer.geostats,
       ]
     );
@@ -115,7 +111,11 @@ export async function createDBRecordsForProcessedUpload(
         dataSourceId,
         pmtiles ? layer.name : undefined,
         JSON.stringify(
-          getStyle(layer.geostats?.geometry || "Polygon", uploadCount)
+          getStyle(
+            layer.geostats?.geometry || "Polygon",
+            uploadCount,
+            layer.geostats
+          )
         ),
       ]
     );
@@ -176,6 +176,35 @@ export async function createDBRecordsForProcessedUpload(
       ]
     );
     const tableOfContentsItemId = tocResult.rows[0].id;
+
+    // Create data_upload_outputs for each output
+    for (const output of layer.outputs) {
+      await client.query(
+        `
+        insert into data_upload_outputs (
+          data_source_id,
+          type,
+          remote,
+          size,
+          filename,
+          url,
+          is_original,
+          project_id
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+        [
+          dataSourceId,
+          output.type,
+          output.remote,
+          output.size,
+          output.filename,
+          output.url,
+          Boolean(output.isOriginal),
+          projectId,
+        ]
+      );
+    }
+
     return {
       dataSourceId,
       dataLayerId,
@@ -208,8 +237,25 @@ function getColor(i: number) {
   return lightColors[i % (lightColors.length - 1)];
 }
 
-function getStyle(type: GeoJsonGeometryTypes, colorIndex: number) {
+function getStyle(
+  type: GeoJsonGeometryTypes,
+  colorIndex: number,
+  geostats?: GeostatsLayer | null
+) {
   const color = getColor(colorIndex);
+  let labelAttribute: string | undefined;
+  if (geostats) {
+    for (const attr of geostats.attributes) {
+      if (
+        attr.attribute !== "OBJECTID" &&
+        attr.attribute !== "FEATURE_ID" &&
+        attr.type === "string"
+      ) {
+        labelAttribute = attr.attribute;
+        break;
+      }
+    }
+  }
   switch (type) {
     case "Polygon":
     case "MultiPolygon":
@@ -254,15 +300,37 @@ function getStyle(type: GeoJsonGeometryTypes, colorIndex: number) {
       ];
     case "MultiPoint":
     case "Point":
-      [
-        {
-          type: "circle",
-          paint: {
-            "circle-radius": 12,
-            "circle-color": color,
-          },
+      const circleLayer = {
+        type: "circle",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": color,
+          "circle-stroke-color": "#000000",
+          "circle-stroke-width": 1,
+          "circle-stroke-opacity": 0.5,
         },
-      ];
+      };
+      if (labelAttribute) {
+        return [
+          circleLayer,
+          {
+            type: "symbol",
+            paint: {
+              "text-halo-color": "white",
+              "text-halo-width": 1,
+            },
+            layout: {
+              "text-size": 12,
+              "text-field": ["get", "FEATURE_NA"],
+              "text-anchor": "left",
+              "symbol-placement": "point",
+              "text-offset": [0.5, 0.5],
+            },
+          },
+        ];
+      } else {
+        return [circleLayer];
+      }
     default:
       return [
         {

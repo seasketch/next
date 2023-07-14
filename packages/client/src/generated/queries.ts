@@ -6389,6 +6389,7 @@ export type Mutation = {
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
+  tableOfContentsItemsPrimaryDownloadUrl?: Maybe<TableOfContentsItemsPrimaryDownloadUrlPayload>;
   /**
    * Toggle admin access for the given project and user. User must have already
    * joined the project and shared their user profile.
@@ -7502,6 +7503,12 @@ export type MutationSoftDeleteSpriteArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSubmitDataUploadArgs = {
   input: SubmitDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationTableOfContentsItemsPrimaryDownloadUrlArgs = {
+  input: TableOfContentsItemsPrimaryDownloadUrlInput;
 };
 
 
@@ -12003,6 +12010,29 @@ export enum TableOfContentsItemsOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
+
+/** All input for the `tableOfContentsItemsPrimaryDownloadUrl` mutation. */
+export type TableOfContentsItemsPrimaryDownloadUrlInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  item?: Maybe<TableOfContentsItemInput>;
+};
+
+/** The output of our `tableOfContentsItemsPrimaryDownloadUrl` mutation. */
+export type TableOfContentsItemsPrimaryDownloadUrlPayload = {
+  __typename?: 'TableOfContentsItemsPrimaryDownloadUrlPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  string?: Maybe<Scalars['String']>;
+};
 
 export enum TileScheme {
   Tms = 'TMS',

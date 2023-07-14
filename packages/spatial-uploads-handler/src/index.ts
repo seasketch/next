@@ -26,17 +26,18 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 export { SpatialUploadsHandlerRequest };
 
-enum SupportedTypes {
-  GeoJSON,
-  FlatGeobuf,
-  ZippedShapefile,
-}
+type SupportedTypes = "GeoJSON" | "FlatGeobuf" | "ZippedShapefile";
 
 export interface ResponseOutput {
   remote: string;
-  type: "FlatGeobuf" | "GeoJSON" | "PMTiles";
+  filename: string;
+  /**
+   * Note, these should be kept in sync with the postgres data_upload_output_type enum
+   */
+  type: SupportedTypes | "PMTiles";
   url?: string;
   size: number;
+  isOriginal?: boolean;
 }
 
 export interface ProcessedUploadLayer {
@@ -45,6 +46,7 @@ export interface ProcessedUploadLayer {
   geostats: GeostatsLayer | null;
   outputs: ResponseOutput[];
   bounds?: number[];
+  url: string;
 }
 
 export interface ProcessedUploadResponse {
@@ -53,18 +55,14 @@ export interface ProcessedUploadResponse {
   error?: string;
 }
 
-// Don't create geojson archives if flatgeobuf is over 15mb
-const GEOJSON_BYTE_LIMIT = 15000000;
-// Create a tileset if flatgeobuf is > 1MB
-const MVT_THRESHOLD = 1000000;
+// Create a tileset if flatgeobuf is > 500kb
+const MVT_THRESHOLD = 500000;
 // Outputs should not exceed 1 GB
 const MAX_OUTPUT_SIZE = 1000000000;
 
 export default async function handleUpload(
   uuid: string,
   objectKey: string,
-  dataSourcesBucket: string,
-  dataSourcesUrl: string,
   suffix: string,
   requestingUser: string,
   skipLoggingProgress?: boolean
@@ -110,6 +108,8 @@ export default async function handleUpload(
   // completes (error or none using try..finally)
   const tmpobj = dirSync({
     unsafeCleanup: true,
+    keep: true,
+    prefix: "uploads-",
   });
 
   // Logger/task executor which tracks all stdout/stderr outputs so they can be
@@ -124,40 +124,80 @@ export default async function handleUpload(
     );
   });
 
+  /** Final url that should be assigned to mapbox-gl-style source */
+  let sourceUrl: string | undefined;
+
   const s3LogPath = `s3://${process.env.BUCKET}/${uuid}.log.txt`;
   let { name, ext, base } = path.parse(objectKey);
   name = sanitize(name);
   const originalName = name;
   name = `${uuid}`;
+  const originalNameWithExtension = `${name}${ext}`;
+  const isZip = ext === ".zip";
 
   try {
     // Step 1) Fetch the uploaded file from S3
-    const filepath = `${path.join(tmpobj.name, objectKey.split("/")[1])}`;
+    let workingFilePath = `${path.join(tmpobj.name, objectKey.split("/")[1])}`;
+    let originalFilePath = workingFilePath;
     await updateProgress("fetching", 0.0);
     await getObject(
-      filepath,
+      workingFilePath,
       `s3://${path.join(process.env.BUCKET!, objectKey)}`,
       logger
     );
     logger.updateProgress(1 / 20);
+
+    if (isZip) {
+      const workingDir = tmpobj.name;
+      // // Unzip the file
+      await logger.exec(
+        ["unzip", ["-o", workingFilePath, "-d", workingDir]],
+        "Problem unzipping file",
+        1 / 20
+      );
+
+      // Find the first shapefile (.shp) in the working Dir
+      const shapefile = await logger.exec(
+        [
+          "find",
+          [
+            workingDir,
+            "-type",
+            "f",
+            "-not",
+            "-path",
+            "*/.*",
+            "-not",
+            "-path",
+            "*/__",
+            "-name",
+            "*.shp",
+          ],
+        ],
+        "Problem finding shapefile in zip archive",
+        1 / 20
+      );
+      workingFilePath = shapefile.trim();
+    }
 
     // Step 2) Use ogr/gdal to see if it is a supported file format
     await updateProgress("validating");
     let type: SupportedTypes;
     let wgs84 = false;
     const ogrInfo = await logger.exec(
-      `ogrinfo -al -so ${ext === ".zip" ? "/vsizip/" : ""}${filepath}`,
+      ["ogrinfo", ["-al", "-so", workingFilePath]],
+      // `ogrinfo -al -so ${workingFilePath}`,
       ext === ".shp"
         ? "Could not read file. Shapefiles should be uploaded as a zip archive with related sidecar files"
         : "Could not run ogrinfo on file",
       1 / 20
     );
     if (/GeoJSON/.test(ogrInfo)) {
-      type = SupportedTypes.GeoJSON;
+      type = "GeoJSON";
     } else if (/FlatGeobuf/.test(ogrInfo)) {
-      type = SupportedTypes.FlatGeobuf;
+      type = "FlatGeobuf";
     } else if (/ESRI Shapefile/.test(ogrInfo)) {
-      type = SupportedTypes.ZippedShapefile;
+      type = "ZippedShapefile";
     } else {
       throw new Error("Not a recognized file type");
     }
@@ -175,15 +215,9 @@ export default async function handleUpload(
      * Raster TBD, but likely COG and/or pmtiles
      */
     await updateProgress("converting_format");
-    const outputs: {
-      type: "GeoJSON" | "PMTiles" | "FlatGeobuf";
-      remote: string;
-      local: string;
-      url?: string;
-      size: number;
-    }[] = [];
+    const outputs: (ResponseOutput & { local: string })[] = [];
     const dist = path.join(tmpobj.name, "dist");
-    await logger.exec(`mkdir ${dist}`, "Failed to create directory", 0);
+    await logger.exec(["mkdir", [dist]], "Failed to create directory", 0);
     const normalizedVectorPath = path.join(dist, name + ".fgb");
 
     // All vector files are normalized to a WGS84 FlatGeobuf for long-term
@@ -191,9 +225,18 @@ export default async function handleUpload(
     // formats, and fgb doesn't take up too much storage capacity.
     try {
       await logger.exec(
-        `ogr2ogr -skipfailures -t_srs EPSG:4326 ${normalizedVectorPath} ${
-          type === SupportedTypes.ZippedShapefile ? "/vsizip/" : ""
-        }${filepath} `,
+        [
+          "ogr2ogr",
+          [
+            "-skipfailures",
+            "-t_srs",
+            "EPSG:4326",
+            normalizedVectorPath,
+            workingFilePath,
+            "-nln",
+            originalName,
+          ],
+        ],
         "Problem converting to FlatGeobuf",
         1 / 20
       );
@@ -205,20 +248,46 @@ export default async function handleUpload(
         logger.output +=
           "Mixed geometry types. Attempting to run ogr2ogr again using PROMOTE_TO_MULTI.\n";
         await logger.exec(
-          `ogr2ogr -skipfailures -t_srs EPSG:4326 -nlt PROMOTE_TO_MULTI ${normalizedVectorPath} ${
-            type === SupportedTypes.ZippedShapefile ? "/vsizip/" : ""
-          }${filepath} `,
+          [
+            "ogr2ogr",
+            [
+              "-skipfailures",
+              "-t_srs",
+              "EPSG:4326",
+              "-nlt",
+              "PROMOTE_TO_MULTI",
+              normalizedVectorPath,
+              workingFilePath,
+              "-nln",
+              originalName,
+            ],
+          ],
           "Problem converting to FlatGeobuf",
           1 / 20
         );
       }
     }
+
+    const baseKey = `projects/${suffix}/public`;
+
+    outputs.push({
+      type: type,
+      filename: name + ext,
+      remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${name}${ext}`,
+      local: originalFilePath,
+      size: statSync(originalFilePath).size,
+      url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${name}${ext}`,
+      isOriginal: true,
+    });
+
     const normalizedVectorFileSize = statSync(normalizedVectorPath).size;
     outputs.push({
       type: "FlatGeobuf",
-      remote: `s3://${process.env.NORMALIZED_OUTPUTS_BUCKET}/projects/${suffix}/${uuid}.fgb`,
+      filename: `${uuid}.fgb`,
+      remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}.fgb`,
       local: normalizedVectorPath,
       size: normalizedVectorFileSize,
+      url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.fgb`,
     });
 
     let stats: GeostatsLayer | null = null;
@@ -227,20 +296,35 @@ export default async function handleUpload(
     // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
     // from the normalized fgb dynamically if someone wants to download it as
     // GeoJSON or shapefile.
-    if (normalizedVectorFileSize <= GEOJSON_BYTE_LIMIT) {
+    if (normalizedVectorFileSize <= MVT_THRESHOLD) {
       const geojsonPath = path.join(dist, name + ".geojson.json");
       await logger.exec(
-        `ogr2ogr -skipfailures -t_srs EPSG:4326 -f GeoJSON -nlt PROMOTE_TO_MULTI ${geojsonPath} ${normalizedVectorPath} `,
+        [
+          "ogr2ogr",
+          [
+            "-skipfailures",
+            "-t_srs",
+            "EPSG:4326",
+            "-f",
+            "GeoJSON",
+            "-nlt",
+            "PROMOTE_TO_MULTI",
+            geojsonPath,
+            normalizedVectorPath,
+          ],
+        ],
         "Problem converting to GeoJSON",
         1 / 20
       );
       outputs.push({
         type: "GeoJSON",
-        remote: `s3://${dataSourcesBucket}/${uuid}`,
+        remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}.geojson.json`,
         local: geojsonPath,
-        url: `${dataSourcesUrl}/${uuid}`,
+        url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`,
         size: statSync(geojsonPath).size,
+        filename: `${uuid}.geojson.json`,
       });
+      sourceUrl = `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`;
     }
 
     /**
@@ -259,22 +343,36 @@ export default async function handleUpload(
       const pmtilesPath = path.join(dist, name + ".pmtiles");
       await updateProgress("tiling");
       await logger.exec(
-        `tippecanoe -n "${originalName}" -zg -L'{"file":"${normalizedVectorPath}", "layer":"${originalName}"}' -o ${mvtPath}`,
+        [
+          "tippecanoe",
+          [
+            "-n",
+            `"${originalName}"`,
+            "-zg",
+            "-l",
+            `${originalName}`,
+            "-o",
+            mvtPath,
+            normalizedVectorPath,
+          ],
+        ],
         "Tippecanoe failed",
         10 / 20
       );
       await logger.exec(
-        `pmtiles convert ${mvtPath} ${pmtilesPath}`,
+        [`pmtiles`, ["convert", mvtPath, pmtilesPath]],
         "PMTiles conversion failed",
         2 / 20
       );
       outputs.push({
         type: "PMTiles",
-        remote: `r2://ssn-tiles/projects/${suffix}/public/${uuid}.pmtiles`,
+        remote: `${process.env.TILES_REMOTE}/${baseKey}/${uuid}.pmtiles`,
         local: pmtilesPath,
         size: statSync(pmtilesPath).size,
-        url: `https://tiles.seasketchdata.com/projects/${suffix}/public/${uuid}`,
+        url: `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}.pmtiles`,
+        filename: `${uuid}.pmtiles`,
       });
+      sourceUrl = `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}`;
 
       // Collect mapbox-geostats from mbtiles archive
       // (generated automatically by tippecanoe)
@@ -318,14 +416,22 @@ export default async function handleUpload(
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
+    if (!sourceUrl) {
+      throw new Error("sourceUrl not set");
+    }
     return {
       layers: [
         {
           filename: originalName + ext,
           name: originalName,
           geostats: stats,
-          outputs: outputs.map((o) => ({ ...o, local: undefined })),
+          outputs: outputs.map((o) => ({
+            ...o,
+            local: undefined,
+            filename: o.filename,
+          })),
           bounds: bounds || undefined,
+          url: sourceUrl,
         },
       ],
       logfile: s3LogPath,
@@ -362,7 +468,7 @@ export default async function handleUpload(
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
-    tmpobj.removeCallback();
+    // tmpobj.removeCallback();
   }
 }
 
@@ -383,7 +489,7 @@ class Logger {
    * @returns
    */
   async exec(
-    command: string,
+    command: [string, string[]],
     throwMsg: string,
     progressFraction?: number
   ): Promise<string> {
@@ -391,8 +497,9 @@ class Logger {
     const self = this;
     return new Promise((resolve, reject) => {
       let progress = 0;
-      self.output += command + "\n";
-      const child = spawn(command, { shell: true });
+      self.output += `${command[0]} ${command[1].join(" ")}\n`;
+      // console.log(`SPAWN: ${command[0]} ${command[1].join(" ")}\n`);
+      const child = spawn(command[0], command[1]);
 
       const progressRegExp = /([\d\.]+)%/;
 
@@ -407,7 +514,7 @@ class Logger {
           self.updateProgress((increment / 100) * progressFraction);
         }
         stdout += data.toString();
-        self.output += data.toString();
+        self.output += data.toString() + "\n";
       });
 
       child.stderr.setEncoding("utf8");
@@ -428,7 +535,7 @@ class Logger {
           progress = newProgress;
           self.updateProgress((increment / 100) * progressFraction);
         }
-        self.output += data.toString();
+        self.output += data.toString() + "\n";
       });
 
       child.on("close", async function (code) {
@@ -489,7 +596,7 @@ async function getObject(
   const parts = remote.replace("s3://", "").split("/");
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
-  logger.output += `getObject ${remote} to ${filepath}`;
+  logger.output += `getObject ${remote} to ${filepath}\n`;
   const response = await s3Client.send(
     new GetObjectCommand({
       Bucket,

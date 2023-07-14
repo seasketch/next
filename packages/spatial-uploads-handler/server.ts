@@ -19,8 +19,6 @@ const server = http.createServer(function (req, res) {
           const outputs = await handleUpload.default(
             data.taskId,
             data.objectKey,
-            data.dataSourcesBucket,
-            data.dataSourcesUrl,
             data.suffix,
             data.requestingUser,
             data.skipLoggingProgress
