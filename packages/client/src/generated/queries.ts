@@ -2551,6 +2551,14 @@ export type DataUploadTaskCondition = {
   state?: Maybe<DataUploadState>;
 };
 
+export type DataUploadTaskSubscriptionPayload = {
+  __typename?: 'DataUploadTaskSubscriptionPayload';
+  dataUploadTask?: Maybe<DataUploadTask>;
+  dataUploadTaskId: Scalars['UUID'];
+  project: Project;
+  projectId: Scalars['Int'];
+};
+
 /** A connection to a list of `DataUploadTask` values. */
 export type DataUploadTasksConnection = {
   __typename?: 'DataUploadTasksConnection';
@@ -11340,6 +11348,8 @@ export type SubmitDataUploadPayloadDataUploadTaskEdgeArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type Subscription = {
   __typename?: 'Subscription';
+  /** Triggered on all updates to DataUploadTasks in a project */
+  dataUploadTasks?: Maybe<DataUploadTaskSubscriptionPayload>;
   /** Triggered when a new post is created in the subscribed topic */
   forumActivity?: Maybe<ForumActivityPayload>;
   /**
@@ -11350,6 +11360,12 @@ export type Subscription = {
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
   /** Triggered when a map bookmark is updated */
   updatedMapBookmark?: Maybe<BookmarkPayload>;
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionDataUploadTasksArgs = {
+  slug: Scalars['String'];
 };
 
 
