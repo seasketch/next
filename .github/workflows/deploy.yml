@@ -150,6 +150,10 @@ jobs:
           CLOUDFLARE_IMAGES_TOKEN: ${{ secrets.CLOUDFLARE_IMAGES_TOKEN }}
           CLOUDFLARE_IMAGES_ACCOUNT_HASH: ${{ secrets.CLOUDFLARE_IMAGES_ACCOUNT_HASH }}
           SCREENSHOTTER_FUNCTION_ARN: ${{ secrets.SCREENSHOTTER_FUNCTION_ARN }}
+          UPLOADS_BASE_URL: ${{ secrets.UPLOADS_BASE_URL }}
+          RESOURCES_REMOTE: ${{ secrets.RESOURCES_REMOTE }}
+          TILES_REMOTE: ${{ secrets.TILES_REMOTE }}
+          TILES_BASE_URL: ${{ secrets.TILES_BASE_URL }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer
   deploy_client:
