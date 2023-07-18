@@ -37,6 +37,7 @@ import {
   FileUploadRateLimiterPlugin,
 } from "./plugins/fileUploadPlugin";
 import SketchClassStylePlugin from "./plugins/sketchClassStylePlugin";
+import DataUploadTasksSubscriptionPlugin from "./plugins/dataUploadTasksSubscriptionPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -85,6 +86,7 @@ export default function graphileOptions(): PostGraphileOptions {
       TranslatedPropsPlugin,
       VerifyEmailPlugin,
       SketchClassStylePlugin,
+      DataUploadTasksSubscriptionPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],
