@@ -38,8 +38,14 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
       throw new Error("TILES_BASE_URL must be set in environment");
     }
 
-    const { UPLOADS_BASE_URL, RESOURCES_REMOTE, TILES_REMOTE, TILES_BASE_URL } =
-      process.env;
+    const {
+      UPLOADS_BASE_URL,
+      RESOURCES_REMOTE,
+      TILES_REMOTE,
+      TILES_BASE_URL,
+      DEBUGGING_AWS_ACCESS_KEY_ID,
+      DEBUGGING_AWS_SECRET_ACCESS_KEY,
+    } = process.env;
 
     const fn = new lambda.DockerImageFunction(this, "SpatialUploadHandler", {
       functionName: "SpatialUploadsHandler",
@@ -67,6 +73,8 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         RESOURCES_REMOTE,
         TILES_REMOTE,
         TILES_BASE_URL,
+        DEBUGGING_AWS_ACCESS_KEY_ID: DEBUGGING_AWS_ACCESS_KEY_ID || "",
+        DEBUGGING_AWS_SECRET_ACCESS_KEY: DEBUGGING_AWS_SECRET_ACCESS_KEY || "",
       },
       memorySize: 10240,
       reservedConcurrentExecutions: 100,

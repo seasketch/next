@@ -18,5 +18,7 @@ declare namespace NodeJS {
     RESOURCES_REMOTE: string;
     TILES_REMOTE: string;
     TILES_BASE_URL: string;
+    DEBUGGING_AWS_ACCESS_KEY_ID?: string;
+    DEBUGGING_AWS_SECRET_ACCESS_KEY?: string;
   }
 }

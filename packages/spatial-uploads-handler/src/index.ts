@@ -452,9 +452,22 @@ export default async function handleUpload(
         Bucket: process.env.BUCKET,
         Key: objectKey,
       });
-      const presignedDownloadUrl = await getSignedUrl(s3Client, command, {
-        expiresIn: 172800,
-      });
+      const presignedDownloadUrl = await getSignedUrl(
+        process.env.DEBUGGING_AWS_ACCESS_KEY_ID &&
+          process.env.DEBUGGING_AWS_SECRET_ACCESS_KEY
+          ? new S3Client({
+              region: process.env.AWS_REGION!,
+              credentials: {
+                accessKeyId: process.env.DEBUGGING_AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.DEBUGGING_AWS_SECRET_ACCESS_KEY,
+              },
+            })
+          : s3Client,
+        command,
+        {
+          expiresIn: 172800,
+        }
+      );
 
       await notifySlackChannel(
         originalName + ext,
