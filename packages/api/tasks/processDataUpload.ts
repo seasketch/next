@@ -53,7 +53,7 @@ export default async function processDataUpload(
 
     // Fire off request to lambda (or local http server if in development)
     try {
-      const data = await runLambda({
+      await runLambda({
         taskId: uploadId,
         objectKey: `${uploadId}/${filename}`,
         dataSourcesBucket: source_buckets.rows[0].bucket,
@@ -65,26 +65,26 @@ export default async function processDataUpload(
         // skipLoggingProgress: true,
       });
 
-      if (!data.error) {
-        // Create layers
-        for (const layer of data.layers) {
-          const records = await createDBRecordsForProcessedUpload(
-            layer,
-            projectId,
-            client,
-            uploadId
-          );
-        }
-        await client.query(
-          `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
-          [data, uploadId]
-        );
-      } else {
-        await client.query(
-          `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
-          [data.error, uploadId]
-        );
-      }
+      // if (!data.error) {
+      //   // Create layers
+      //   for (const layer of data.layers) {
+      //     const records = await createDBRecordsForProcessedUpload(
+      //       layer,
+      //       projectId,
+      //       client,
+      //       uploadId
+      //     );
+      //   }
+      //   await client.query(
+      //     `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
+      //     [data, uploadId]
+      //   );
+      // } else {
+      //   await client.query(
+      //     `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
+      //     [data.error, uploadId]
+      //   );
+      // }
     } catch (e) {
       console.error("error!!", e);
       if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
@@ -131,6 +131,7 @@ async function runLambda(
   } else if (process.env.SPATIAL_UPLOADS_LAMBDA_ARN) {
     const response = await client
       .invoke({
+        InvocationType: "Event",
         FunctionName: process.env.SPATIAL_UPLOADS_LAMBDA_ARN,
         Payload: JSON.stringify({
           ...event,

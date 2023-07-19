@@ -2498,6 +2498,7 @@ export enum DataSourcesOrderBy {
 
 export enum DataUploadState {
   AwaitingUpload = 'AWAITING_UPLOAD',
+  Cartography = 'CARTOGRAPHY',
   Complete = 'COMPLETE',
   ConvertingFormat = 'CONVERTING_FORMAT',
   Failed = 'FAILED',
@@ -2508,7 +2509,8 @@ export enum DataUploadState {
   Tiling = 'TILING',
   Uploaded = 'UPLOADED',
   UploadingProducts = 'UPLOADING_PRODUCTS',
-  Validating = 'VALIDATING'
+  Validating = 'VALIDATING',
+  WorkerComplete = 'WORKER_COMPLETE'
 }
 
 export type DataUploadTask = Node & {

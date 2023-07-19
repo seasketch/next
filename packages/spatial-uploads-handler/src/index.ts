@@ -84,7 +84,8 @@ export default async function handleUpload(
       | "tiling"
       | "uploading_products"
       | "complete"
-      | "failed",
+      | "failed"
+      | "worker_complete",
     progress?: number
   ) {
     if (skipLoggingProgress) {
@@ -399,6 +400,7 @@ export default async function handleUpload(
 
     // Ensure that outputs do not exceed file size limits
     await updateProgress("uploading_products");
+    console.log("uploading");
     for (const output of outputs) {
       if (output.size > MAX_OUTPUT_SIZE) {
         throw new Error(
@@ -408,21 +410,24 @@ export default async function handleUpload(
     }
     for (const output of outputs) {
       if (/s3:/.test(output.remote)) {
-        await putObject(output.local, output.remote, logger, 1 / 20);
+        await putObject(output.local, output.remote, logger, 2 / 20);
       } else if (/r2:/.test(output.remote)) {
-        await putObject(output.local, output.remote, logger, 1 / 20);
+        await putObject(output.local, output.remote, logger, 2 / 20);
       } else {
         throw new Error(`Unrecognized remote ${output.remote}`);
       }
     }
 
+    console.log("done uploading");
+    await updateProgress("worker_complete", 1);
+    console.log("set status");
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
     if (!sourceUrl) {
       throw new Error("sourceUrl not set");
     }
-    return {
+    const response = {
       layers: [
         {
           filename: originalName + ext,
@@ -439,6 +444,19 @@ export default async function handleUpload(
       ],
       logfile: s3LogPath,
     };
+    console.log("response", response);
+    // Trigger the task to process the outputs
+    await pgClient.query(
+      `SELECT graphile_worker.add_job('processDataUploadOutputs', $1::json)`,
+      [
+        JSON.stringify({
+          uploadId: uuid,
+          data: response,
+        }),
+      ]
+    );
+    console.log("done");
+    return response;
   } catch (e) {
     const error = e as Error;
     if (!skipLoggingProgress) {

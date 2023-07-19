@@ -2974,6 +2974,7 @@ enum DataSourceTypes {
 
 enum DataUploadState {
   AWAITING_UPLOAD
+  CARTOGRAPHY
   COMPLETE
   CONVERTING_FORMAT
   FAILED
@@ -2985,6 +2986,7 @@ enum DataUploadState {
   UPLOADED
   UPLOADING_PRODUCTS
   VALIDATING
+  WORKER_COMPLETE
 }
 
 type DataUploadTask implements Node {

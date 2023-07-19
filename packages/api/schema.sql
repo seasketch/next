@@ -192,7 +192,9 @@ CREATE TYPE public.data_upload_state AS ENUM (
     'uploading_products',
     'complete',
     'failed',
-    'failed_dismissed'
+    'failed_dismissed',
+    'cartography',
+    'worker_complete'
 );
 
 

@@ -234,6 +234,12 @@ export default function DataUploadTaskList({
                   {upload.state === DataUploadState.Processing && (
                     <Trans ns="admin:data">queued...</Trans>
                   )}
+                  {upload.state === DataUploadState.WorkerComplete && (
+                    <Trans ns="admin:data">worker complete...</Trans>
+                  )}
+                  {upload.state === DataUploadState.Cartography && (
+                    <Trans ns="admin:data">applying cartography</Trans>
+                  )}
                 </span>
               </div>
               {upload.state !== DataUploadState.Failed &&
