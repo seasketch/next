@@ -62,29 +62,7 @@ export default async function processDataUpload(
         requestingUser: user.fullname
           ? `${user.fullname} <${user.email || user.canonical_email}>`
           : user.email || user.canonical_email,
-        // skipLoggingProgress: true,
       });
-
-      // if (!data.error) {
-      //   // Create layers
-      //   for (const layer of data.layers) {
-      //     const records = await createDBRecordsForProcessedUpload(
-      //       layer,
-      //       projectId,
-      //       client,
-      //       uploadId
-      //     );
-      //   }
-      //   await client.query(
-      //     `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
-      //     [data, uploadId]
-      //   );
-      // } else {
-      //   await client.query(
-      //     `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
-      //     [data.error, uploadId]
-      //   );
-      // }
     } catch (e) {
       console.error("error!!", e);
       if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
@@ -109,9 +87,7 @@ const client = new AWS.Lambda({
   },
 });
 
-async function runLambda(
-  event: SpatialUploadsHandlerRequest
-): Promise<ProcessedUploadResponse> {
+async function runLambda(event: SpatialUploadsHandlerRequest) {
   if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
     const response = await fetch(
       process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER,
@@ -129,7 +105,7 @@ async function runLambda(
     const data = JSON.parse(text) as ProcessedUploadResponse;
     return data;
   } else if (process.env.SPATIAL_UPLOADS_LAMBDA_ARN) {
-    const response = await client
+    await client
       .invoke({
         InvocationType: "Event",
         FunctionName: process.env.SPATIAL_UPLOADS_LAMBDA_ARN,
@@ -142,20 +118,6 @@ async function runLambda(
         }),
       })
       .promise();
-    if (!response.Payload) {
-      console.error(
-        `upload task invocation error (${event.taskId}): ${event.objectKey}`,
-        response.Payload
-      );
-      console.log(event);
-      console.log("lambda arn = ", process.env.SPATIAL_UPLOADS_LAMBDA_ARN);
-      throw new Error("Lambda function invocation error");
-    }
-    if (typeof response.Payload === "string") {
-      return JSON.parse(response.Payload) as ProcessedUploadResponse;
-    } else {
-      return response.Payload as ProcessedUploadResponse;
-    }
   } else {
     throw new Error(
       `Neither SPATIAL_UPLOADS_LAMBDA_ARN or SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER are defined`
