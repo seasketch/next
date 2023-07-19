@@ -1,6 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 import { InformationCircleIcon, XIcon } from "@heroicons/react/outline";
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Prompt, useParams } from "react-router-dom";
 import Modal from "../../components/Modal";
@@ -20,14 +20,16 @@ export default function DataUploadTaskList({
   className: string;
 }) {
   const { slug } = useParams<{ slug: string }>();
-  const [modalOpen, setModalOpen] =
-    useState<DataUploadDetailsFragment | null>(null);
+  const [modalOpen, setModalOpen] = useState<DataUploadDetailsFragment | null>(
+    null
+  );
 
   const { t } = useTranslation("admin:data");
   const { data } = useProjectDataQuotaRemainingQuery({
     variables: {
       slug,
     },
+    fetchPolicy: "cache-first",
   });
 
   const LeavingMsg = t(
@@ -46,7 +48,10 @@ export default function DataUploadTaskList({
       if (
         Boolean(
           context.uploads.find(
-            (u) => u.state === DataUploadState.AwaitingUpload
+            (u) =>
+              u.state === DataUploadState.AwaitingUpload &&
+              context.manager &&
+              context.manager.isUploadFromMySession(u.id)
           )
         )
       ) {
@@ -58,17 +63,31 @@ export default function DataUploadTaskList({
     return () => {
       window.removeEventListener("beforeunload", listener);
     };
-  }, [LeavingMsg, context.uploads]);
+  }, [LeavingMsg, context.manager, context.uploads]);
 
-  if (
-    context.uploads.filter((u) => u.state !== DataUploadState.Complete)
-      .length === 0
-  ) {
+  const dismissAllFailures = useCallback(() => {
+    context.uploads
+      .filter((u) => u.state === DataUploadState.Failed)
+      .forEach((u) => {
+        context.manager?.dismissFailedUpload(u.id);
+      });
+  }, [context.uploads, context.manager]);
+
+  const tasks = context.uploads || [];
+
+  const hasActiveUploads =
+    tasks.filter(
+      (u) =>
+        u.state !== DataUploadState.Complete &&
+        u.state !== DataUploadState.FailedDismissed
+    ).length > 0;
+
+  if (!hasActiveUploads) {
     return null;
   }
 
   return (
-    <div className={`p-4 space-y-2 border-t ${className}`}>
+    <div className={`bg-gray-50 p-4 space-y-2 border-t ${className}`}>
       <Prompt
         when={Boolean(
           context.uploads.find(
@@ -78,8 +97,19 @@ export default function DataUploadTaskList({
         message={LeavingMsg}
       />
       <h3 className="-mb-1">
-        <Trans ns="admin:data">Upload Tasks</Trans>
+        {hasActiveUploads ? (
+          <Trans ns="admin:data">Upload Tasks</Trans>
+        ) : (
+          <Trans ns="admin:data">Upload Data</Trans>
+        )}
       </h3>
+      {!hasActiveUploads && (
+        <div className="text-sm">
+          <Trans ns="admin:data">
+            Drag and drop spatial data files here to upload.
+          </Trans>
+        </div>
+      )}
       {data?.projectBySlug?.dataHostingQuota && (
         <p className="flex text-sm text-gray-500 pb-1 items-center">
           <span className="flex-1">
@@ -113,18 +143,21 @@ export default function DataUploadTaskList({
           <span>
             {context.uploads.filter((u) => u.state === DataUploadState.Failed)
               .length > 1 && (
-              <button
-                className="underline"
-                onClick={context.manager?.dismissAllFailures}
-              >
+              <button className="underline" onClick={dismissAllFailures}>
                 dismiss failures
               </button>
             )}
           </span>
         </p>
       )}
-      {context.uploads
-        .filter((u) => u.state !== DataUploadState.Complete)
+      {tasks
+        .filter(
+          (u) =>
+            u.state !== DataUploadState.Complete &&
+            u.state !== DataUploadState.FailedDismissed &&
+            (u.state !== DataUploadState.AwaitingUpload ||
+              (context.manager && context.manager.isUploadFromMySession(u.id)))
+        )
         .sort(
           (a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

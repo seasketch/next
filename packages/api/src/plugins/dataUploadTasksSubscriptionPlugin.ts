@@ -16,6 +16,7 @@ const DataUploadTasksSubscriptionPlugin = makeExtendSchemaPlugin(
       project: Project!,
       dataUploadTaskId: UUID!
       dataUploadTask: DataUploadTask
+      previousState: DataUploadState
     }
 
     extend type Subscription {
@@ -36,18 +37,22 @@ const DataUploadTasksSubscriptionPlugin = makeExtendSchemaPlugin(
           _context,
           { graphile: { selectGraphQLResultFromTable } }
         ) {
-          console.log("this is the event", event);
-          const rows = await selectGraphQLResultFromTable(
-            sql.fragment`data_upload_tasks`,
-            (tableAlias, sqlBuilder) => {
-              return sqlBuilder.where(
-                sql.fragment`${tableAlias}.id = ${sql.value(
-                  event.dataUploadTaskId
-                )}`
-              );
-            }
-          );
-          return rows[0];
+          try {
+            const rows = await selectGraphQLResultFromTable(
+              sql.fragment`public.data_upload_tasks`,
+              (tableAlias, sqlBuilder) => {
+                return sqlBuilder.where(
+                  sql.fragment`${tableAlias}.id = ${sql.value(
+                    event.dataUploadTaskId
+                  )}`
+                );
+              }
+            );
+            return rows[0];
+          } catch (e) {
+            console.error(e);
+            throw e;
+          }
         },
         async project(
           event,

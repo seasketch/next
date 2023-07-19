@@ -66,10 +66,6 @@ export default async function processDataUpload(
       });
 
       if (!data.error) {
-        await client.query(
-          `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
-          [data, uploadId]
-        );
         // Create layers
         for (const layer of data.layers) {
           const records = await createDBRecordsForProcessedUpload(
@@ -79,6 +75,10 @@ export default async function processDataUpload(
             uploadId
           );
         }
+        await client.query(
+          `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
+          [data, uploadId]
+        );
       } else {
         await client.query(
           `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,

@@ -2524,6 +2524,7 @@ export type DataUploadTask = Node & {
   layers?: Maybe<Array<DataLayer>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  outputs?: Maybe<Scalars['JSON']>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
   /** 0.0 to 1.0 scale, applies to tiling process. */
@@ -2531,7 +2532,10 @@ export type DataUploadTask = Node & {
   /** Reads a single `Project` that is related to this `DataUploadTask`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  startedAt?: Maybe<Scalars['Datetime']>;
   state: DataUploadState;
+  tableOfContentsItemStableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
+  userId: Scalars['Int'];
 };
 
 
@@ -2557,6 +2561,7 @@ export type DataUploadTaskSubscriptionPayload = {
   __typename?: 'DataUploadTaskSubscriptionPayload';
   dataUploadTask?: Maybe<DataUploadTask>;
   dataUploadTaskId: Scalars['UUID'];
+  previousState?: Maybe<DataUploadState>;
   project: Project;
   projectId: Scalars['Int'];
 };
@@ -15157,15 +15162,7 @@ export type VerifyEmailMutation = (
 
 export type DataUploadDetailsFragment = (
   { __typename?: 'DataUploadTask' }
-  & Pick<DataUploadTask, 'createdAt' | 'filename' | 'id' | 'progress' | 'state' | 'errorMessage'>
-  & { layers?: Maybe<Array<(
-    { __typename?: 'DataLayer' }
-    & Pick<DataLayer, 'id'>
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'nodeId' | 'id' | 'stableId'>
-    )> }
-  )>> }
+  & Pick<DataUploadTask, 'createdAt' | 'filename' | 'id' | 'progress' | 'state' | 'errorMessage' | 'tableOfContentsItemStableIds'>
 );
 
 export type CreateDataUploadMutationVariables = Exact<{
@@ -15277,6 +15274,28 @@ export type CancelUploadMutation = (
   & { cancelDataUpload?: Maybe<(
     { __typename?: 'CancelDataUploadPayload' }
     & Pick<CancelDataUploadPayload, 'clientMutationId'>
+  )> }
+);
+
+export type DataUploadEventFragment = (
+  { __typename?: 'DataUploadTaskSubscriptionPayload' }
+  & Pick<DataUploadTaskSubscriptionPayload, 'projectId' | 'dataUploadTaskId' | 'previousState'>
+  & { dataUploadTask?: Maybe<(
+    { __typename?: 'DataUploadTask' }
+    & DataUploadDetailsFragment
+  )> }
+);
+
+export type DataUploadsSubscriptionVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DataUploadsSubscription = (
+  { __typename?: 'Subscription' }
+  & { dataUploadTasks?: Maybe<(
+    { __typename?: 'DataUploadTaskSubscriptionPayload' }
+    & DataUploadEventFragment
   )> }
 );
 
@@ -19371,16 +19390,19 @@ export const DataUploadDetailsFragmentDoc = gql`
   progress
   state
   errorMessage
-  layers {
-    id
-    tableOfContentsItem {
-      nodeId
-      id
-      stableId
-    }
-  }
+  tableOfContentsItemStableIds
 }
     `;
+export const DataUploadEventFragmentDoc = gql`
+    fragment DataUploadEvent on DataUploadTaskSubscriptionPayload {
+  projectId
+  dataUploadTaskId
+  previousState
+  dataUploadTask {
+    ...DataUploadDetails
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
 export const ForumListDetailsFragmentDoc = gql`
     fragment ForumListDetails on Forum {
   id
@@ -22435,6 +22457,36 @@ export function useCancelUploadMutation(baseOptions?: Apollo.MutationHookOptions
 export type CancelUploadMutationHookResult = ReturnType<typeof useCancelUploadMutation>;
 export type CancelUploadMutationResult = Apollo.MutationResult<CancelUploadMutation>;
 export type CancelUploadMutationOptions = Apollo.BaseMutationOptions<CancelUploadMutation, CancelUploadMutationVariables>;
+export const DataUploadsDocument = gql`
+    subscription DataUploads($slug: String!) {
+  dataUploadTasks(slug: $slug) {
+    ...DataUploadEvent
+  }
+}
+    ${DataUploadEventFragmentDoc}`;
+
+/**
+ * __useDataUploadsSubscription__
+ *
+ * To run a query within a React component, call `useDataUploadsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDataUploadsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDataUploadsSubscription({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useDataUploadsSubscription(baseOptions: Apollo.SubscriptionHookOptions<DataUploadsSubscription, DataUploadsSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<DataUploadsSubscription, DataUploadsSubscriptionVariables>(DataUploadsDocument, options);
+      }
+export type DataUploadsSubscriptionHookResult = ReturnType<typeof useDataUploadsSubscription>;
+export type DataUploadsSubscriptionResult = Apollo.SubscriptionResult<DataUploadsSubscription>;
 export const DownloadableOfflineTilePackagesDocument = gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29670,6 +29722,7 @@ export const namedOperations = {
     UpdateProfile: 'UpdateProfile'
   },
   Subscription: {
+    DataUploads: 'DataUploads',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
@@ -29704,6 +29757,7 @@ export const namedOperations = {
     BasemapDetails: 'BasemapDetails',
     BasemapAdminDetails: 'BasemapAdminDetails',
     DataUploadDetails: 'DataUploadDetails',
+    DataUploadEvent: 'DataUploadEvent',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',

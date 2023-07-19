@@ -3010,6 +3010,7 @@ type DataUploadTask implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  outputs: JSON
 
   """Use to upload source data to s3. Must be an admin."""
   presignedUploadUrl: String
@@ -3020,7 +3021,10 @@ type DataUploadTask implements Node {
   """Reads a single `Project` that is related to this `DataUploadTask`."""
   project: Project
   projectId: Int!
+  startedAt: Datetime
   state: DataUploadState!
+  tableOfContentsItemStableIds: [String]
+  userId: Int!
 }
 
 """
@@ -3080,6 +3084,7 @@ enum DataUploadTasksOrderBy {
 type DataUploadTaskSubscriptionPayload {
   dataUploadTask: DataUploadTask
   dataUploadTaskId: UUID!
+  previousState: DataUploadState
   project: Project!
   projectId: Int!
 }
