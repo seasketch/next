@@ -100,7 +100,7 @@ export default function NewTopicForm({
   });
 
   return (
-    <div>
+    <div className="overflow-auto">
       <div
         className={`bg-white shadow ${
           mutationState.loading ? "opacity-70" : ""
