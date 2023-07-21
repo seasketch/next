@@ -3,7 +3,10 @@
 // Don't forget to update both!
 import { validate } from "@mapbox/mapbox-gl-style-spec";
 
-export function validateGLStyleFragment(layers: any) {
+export function validateGLStyleFragment(
+  layers: any,
+  type = "vector" as "vector" | "raster"
+) {
   if (Array.isArray(layers) && layers.length > 0) {
     let errors = validate({
       version: 8,
@@ -11,11 +14,11 @@ export function validateGLStyleFragment(layers: any) {
       glyphs: "https://seasketch/{range}/{fontstack}",
       layers: layers.map((layer: any, index: number) => ({
         ...layer,
-        source: "1",
+        source: type === "vector" ? "1" : "2",
         "source-layer": "mock",
         id: index.toString(),
       })),
-      sources: { 1: { type: "vector" } },
+      sources: { 1: { type: "vector" }, 2: { type: "raster" } },
     });
     if (errors.length) {
       return errors;
