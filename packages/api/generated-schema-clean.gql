@@ -2962,7 +2962,10 @@ enum DataSourceTypes {
   """SeaSketch-hosted vector tiles"""
   SEASKETCH_MVT
 
-  """Combination of geojson and vector sources hosted on SeaSketch CDN"""
+  """Raster data hosting on SeaSketch CDN"""
+  SEASKETCH_RASTER
+
+  """GeoJSON hosted on SeaSketch CDN"""
   SEASKETCH_VECTOR
 
   """MapBox GL Style "vector" source"""

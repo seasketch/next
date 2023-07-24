@@ -26,25 +26,32 @@ export default async function processDataUpload(
       `update data_upload_tasks set state = 'cartography', started_at = now() where id = $1 returning *`,
       [uploadId]
     );
-    const projectId = results.rows[0].project_id;
-    if (!data.error) {
-      // Create layers
-      for (const layer of data.layers) {
-        const records = await createDBRecordsForProcessedUpload(
-          layer,
-          projectId,
-          client,
-          uploadId
+    try {
+      const projectId = results.rows[0].project_id;
+      if (!data.error) {
+        // Create layers
+        for (const layer of data.layers) {
+          const records = await createDBRecordsForProcessedUpload(
+            layer,
+            projectId,
+            client,
+            uploadId
+          );
+        }
+        await client.query(
+          `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
+          [data, uploadId]
+        );
+      } else {
+        await client.query(
+          `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
+          [data.error, uploadId]
         );
       }
-      await client.query(
-        `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
-        [data, uploadId]
-      );
-    } else {
+    } catch (e) {
       await client.query(
         `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
-        [data.error, uploadId]
+        [(e as Error).toString(), uploadId]
       );
     }
   });

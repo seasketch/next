@@ -29,6 +29,7 @@ import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
 
 interface GLStyleEditorProps {
   initialStyle?: string;
+  type?: "vector" | "raster";
   onChange?: (newStyle: string) => void;
   className?: string;
 }
@@ -59,6 +60,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const dialog = useDialog();
 
+  const type = props.type || "vector";
+
   const spriteQuery = useSpritesQuery({
     variables: {
       slug: getSlug(),
@@ -80,7 +83,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
       jsonCompletions,
       lintGutter(),
       linter(jsonParseLinter()),
-      glStyleLinter,
+      glStyleLinter(type),
       color,
       sprites({
         getSpriteUrl: async (id) => {
@@ -192,7 +195,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         }}
         onChange={(value, viewUpdate) => {
           try {
-            const errors = validateGLStyleFragment(JSON.parse(value));
+            const errors = validateGLStyleFragment(JSON.parse(value), type);
             if (errors.length === 0) {
               if (props.onChange) {
                 onChange(value);

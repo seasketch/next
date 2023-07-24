@@ -2401,7 +2401,9 @@ export enum DataSourceTypes {
   RasterDem = 'RASTER_DEM',
   /** SeaSketch-hosted vector tiles */
   SeasketchMvt = 'SEASKETCH_MVT',
-  /** Combination of geojson and vector sources hosted on SeaSketch CDN */
+  /** Raster data hosting on SeaSketch CDN */
+  SeasketchRaster = 'SEASKETCH_RASTER',
+  /** GeoJSON hosted on SeaSketch CDN */
   SeasketchVector = 'SEASKETCH_VECTOR',
   /** MapBox GL Style "vector" source */
   Vector = 'VECTOR',

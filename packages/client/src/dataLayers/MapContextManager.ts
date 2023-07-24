@@ -1050,6 +1050,18 @@ class MapContextManager {
                     };
                     sourceWasAdded = true;
                     break;
+                  case DataSourceTypes.SeasketchRaster:
+                    if (source.url) {
+                      baseStyle.sources[source.id.toString()] = {
+                        type: "raster",
+                        url: source.url,
+                        attribution: source.attribution || "",
+                      };
+                      sourceWasAdded = true;
+                    } else {
+                      throw new Error("Not implemented");
+                    }
+                    break;
                   case DataSourceTypes.ArcgisVector:
                     throw new Error("not supported");
                     // const request = this.arcgisVectorSourceCache.get(source);
@@ -1087,6 +1099,7 @@ class MapContextManager {
                   (source.type === DataSourceTypes.SeasketchVector ||
                     source.type === DataSourceTypes.Geojson ||
                     source.type === DataSourceTypes.Vector ||
+                    source.type === DataSourceTypes.SeasketchRaster ||
                     // source.type === DataSourceTypes.ArcgisVector ||
                     source.type === DataSourceTypes.SeasketchMvt) &&
                   layer.mapboxGlStyles?.length
@@ -1095,7 +1108,8 @@ class MapContextManager {
                     const layers = isUnderLabels ? underLabels : overLabels;
                     if (
                       source.type === DataSourceTypes.SeasketchMvt ||
-                      source.type === DataSourceTypes.Vector
+                      source.type === DataSourceTypes.Vector ||
+                      source.type === DataSourceTypes.SeasketchRaster
                     ) {
                       layers.push({
                         ...layer.mapboxGlStyles[i],

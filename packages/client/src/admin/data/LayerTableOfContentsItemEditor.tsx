@@ -730,6 +730,7 @@ export default function LayerTableOfContentsItemEditor(
             (source.type === DataSourceTypes.Geojson ||
               source.type === DataSourceTypes.SeasketchVector ||
               source.type === DataSourceTypes.SeasketchMvt ||
+              source.type === DataSourceTypes.SeasketchRaster ||
               source.type === DataSourceTypes.Vector) && (
               <div className="h-full overflow-hidden flex flex-col">
                 <p className="text-sm text-gray-100 px-2 pb-2 pt-1 bg-gray-700">
@@ -755,6 +756,11 @@ export default function LayerTableOfContentsItemEditor(
                   </p>
                 )}
                 <GLStyleEditor
+                  type={
+                    source.type === DataSourceTypes.SeasketchRaster
+                      ? "raster"
+                      : "vector"
+                  }
                   className="flex-1 overflow-hidden"
                   initialStyle={
                     typeof layer!.mapboxGlStyles! === "string"
