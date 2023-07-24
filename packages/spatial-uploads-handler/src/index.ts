@@ -62,6 +62,21 @@ const MVT_THRESHOLD = 500000;
 // Outputs should not exceed 1 GB
 const MAX_OUTPUT_SIZE = 1000000000;
 
+enum ColorInterp {
+  RGB,
+  RGBA,
+  GRAY,
+  PALETTE,
+}
+
+const DEFAULT_RASTER_INFO = {
+  colorInterp: ColorInterp.GRAY,
+  isCorrectProjection: false,
+  stats: [] as { min: number; max: number; mean: number; std: number }[],
+  bounds: [-180.0, -85.06, 180.0, 85.06] as [number, number, number, number],
+  resolution: 100,
+};
+
 export default async function handleUpload(
   uuid: string,
   objectKey: string,
@@ -69,7 +84,6 @@ export default async function handleUpload(
   requestingUser: string,
   skipLoggingProgress?: boolean
 ): Promise<ProcessedUploadResponse> {
-  console.log("handling", uuid);
   const pgClient = await getClient();
 
   /**
@@ -136,7 +150,6 @@ export default async function handleUpload(
   name = sanitize(name);
   const originalName = name;
   name = `${uuid}`;
-  const originalNameWithExtension = `${name}${ext}`;
   const isZip = ext === ".zip";
   const isTif = ext === ".tif";
 
@@ -190,19 +203,7 @@ export default async function handleUpload(
     let type: SupportedTypes;
     let wgs84 = false;
     const rasterInfo = {
-      isSingleBand: false,
-      isCorrectProjection: false,
-      stats: [] as { min: number; max: number; mean: number; std: number }[],
-      dtype: "unit8" as "uint8" | "uint16" | "float16" | string,
-      bounds: [-180.0, -85.06, 180.0, 85.06] as [
-        number,
-        number,
-        number,
-        number
-      ],
-      hasAlphaChannel: false,
-      isPaletted: false,
-      resolution: 100,
+      ...DEFAULT_RASTER_INFO,
     };
     if (isTif) {
       type = "GeoTIFF";
@@ -212,36 +213,28 @@ export default async function handleUpload(
         1 / 20
       );
       const rioData = JSON.parse(rioInfo);
-      console.log(JSON.stringify(rioData, null, "  "));
       if (rioData.driver !== "GTiff") {
         throw new Error(`Unrecognized raster driver "${rioData.driver}"`);
       }
-      rasterInfo.isSingleBand =
-        rioData.stats.length === 1 && rioData.colorinterp[0] !== "palette";
-      rasterInfo.hasAlphaChannel =
-        rioData.count === 4 && rioData.colorinterp[3] === "alpha";
+      if (rioData.colorinterp[0] === "gray") {
+        rasterInfo.colorInterp = ColorInterp.GRAY;
+      } else if (rioData.colorinterp[0] === "red") {
+        if (rioData.colorinterp[3] === "alpha") {
+          rasterInfo.colorInterp = ColorInterp.RGBA;
+        } else {
+          rasterInfo.colorInterp = ColorInterp.RGB;
+        }
+      } else if (rioData.colorinterp[0] === "palette") {
+        rasterInfo.colorInterp = ColorInterp.PALETTE;
+      } else {
+        throw new Error(
+          `Unrecognized colorinterp [${rioData.colorinterp.join(",")}]`
+        );
+      }
       rasterInfo.isCorrectProjection = rioData.crs === "EPSG:3857";
       rasterInfo.stats = rioData.stats;
-      rasterInfo.dtype = rioData.dtype;
       rasterInfo.bounds = rioData.bounds;
-      rasterInfo.isPaletted =
-        rioData.colorinterp && rioData.colorinterp[0] === "palette";
       rasterInfo.resolution = rioData.transform[0];
-
-      // Disabled since RGB output from QGIS may be ["grayscale"]!?
-      // if (!rasterInfo.isSingleBand) {
-      //   const colorinterp = rioData.colorinterp;
-      //   if (
-      //     colorinterp[0] !== "red" ||
-      //     colorinterp[1] !== "blue" ||
-      //     colorinterp[1] !== "green"
-      //   ) {
-      //     console.log(JSON.stringify(rasterInfo));
-      //     throw new Error(
-      //       `Only single-band rasters or RGB rasters are supported. Unrecognized colorinterp ${colorinterp.toString()}`
-      //     );
-      //   }
-      // }
 
       const fc = await logger.exec(
         ["rio", ["bounds", workingFilePath]],
@@ -312,8 +305,7 @@ export default async function handleUpload(
         );
         inputPath = warpedPath;
       }
-      console.log("warped", inputPath);
-      if (rasterInfo.isPaletted) {
+      if (rasterInfo.colorInterp === ColorInterp.PALETTE) {
         // use pct2rgb.py to convert to rgb
         const rgbPath = path.join(dist, name + ".rgb.tif");
         await logger.exec(
@@ -322,14 +314,12 @@ export default async function handleUpload(
           1 / 20
         );
         inputPath = rgbPath;
-      } else if (rasterInfo.isSingleBand) {
+      } else if (rasterInfo.colorInterp === ColorInterp.GRAY) {
         // If singleband, determine scale ratio. Otherwise set to 1
         // An example of using the scale ratio is a single-band raster with 8-bit
         // float values 0 - 1. We want to scale these to 0 - 255 so they can be
         // displayed in grayscale.
-        let scaleRatio = rasterInfo.isSingleBand
-          ? 255 / rasterInfo.stats[0].max
-          : 1;
+        let scaleRatio = 255 / rasterInfo.stats[0].max;
         // use rio to convert to rgb
         const rgbPath = path.join(dist, name + "-rgb.png");
         await logger.exec(
@@ -379,18 +369,6 @@ export default async function handleUpload(
         Math.ceil(Math.log2(equator / tileSize / rasterInfo.resolution))
       );
 
-      console.log(
-        JSON.stringify({
-          bounds,
-          minzoom,
-          maxzoom,
-          isSingleBand: rasterInfo.isSingleBand,
-          stats: rasterInfo.stats,
-          rasterInfo,
-        })
-      );
-
-      console.log("starting mbtiles conversion");
       await logger.exec(
         [
           "rio",
@@ -410,8 +388,8 @@ export default async function handleUpload(
             "--tile-size",
             tileSize.toString(),
             "--resampling",
-            rasterInfo.isSingleBand ? "nearest" : "bilinear",
-            ...(rasterInfo.hasAlphaChannel ? ["--rgba"] : []),
+            "nearest",
+            ...(rasterInfo.colorInterp === ColorInterp.RGBA ? ["--rgba"] : []),
           ],
         ],
         "Problem converting raster to mbtiles",
@@ -638,7 +616,8 @@ export default async function handleUpload(
           })),
           bounds: bounds || undefined,
           url: sourceUrl,
-          isSingleBandRaster: isTif && rasterInfo.isSingleBand,
+          isSingleBandRaster:
+            isTif && rasterInfo.colorInterp === ColorInterp.GRAY,
         } as ProcessedUploadLayer,
       ],
       logfile: s3LogPath,
