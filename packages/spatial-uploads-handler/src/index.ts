@@ -29,15 +29,25 @@ export { SpatialUploadsHandlerRequest };
 type SupportedTypes = "GeoJSON" | "FlatGeobuf" | "ZippedShapefile" | "GeoTIFF";
 
 export interface ResponseOutput {
+  /** Remote location string as used in rclone */
   remote: string;
   filename: string;
   /**
    * Note, these should be kept in sync with the postgres data_upload_output_type enum
    */
-  type: SupportedTypes | "PMTiles" | "PNG";
+  type:
+    | SupportedTypes
+    | "PMTiles"
+    // geotif may be converted to normalized png when processing gray -> rgb
+    | "PNG";
+  /** URL of the tile service (or geojson if really small) */
   url?: string;
+  /** in bytes */
   size: number;
+  /** Original file uploaded by the user. Kept for export */
   isOriginal?: boolean;
+  /** "normalized" outputs are all in a uniform projection and can be used to
+   * created alternative export files in the future */
   isNormalizedOutput?: boolean;
 }
 
@@ -57,8 +67,8 @@ export interface ProcessedUploadResponse {
   error?: string;
 }
 
-// Create a tileset if flatgeobuf is > 500kb
-const MVT_THRESHOLD = 500000;
+// Create a tileset if flatgeobuf is > 100kb (~1mb geojson)
+const MVT_THRESHOLD = 100000;
 // Outputs should not exceed 1 GB
 const MAX_OUTPUT_SIZE = 1000000000;
 
@@ -358,13 +368,15 @@ export default async function handleUpload(
       // Convert to mbtiles
       await updateProgress("tiling");
       const mbtilesPath = path.join(dist, name + ".mbtiles");
-      const [west, south, east, north] = bounds;
 
+      // Using resolution output from rio info and some hints from:
+      // https://gis.stackexchange.com/questions/268107/gdal2tiles-py-how-to-find-optimal-zoom-level-for-leaflet
       const radius = 6378137;
       const equator = 2 * Math.PI * radius;
       const tileSize = 512;
       const minzoom = 0;
       const maxzoom = Math.min(
+        // At most, tile to zoom level 16
         16,
         Math.ceil(Math.log2(equator / tileSize / rasterInfo.resolution))
       );
