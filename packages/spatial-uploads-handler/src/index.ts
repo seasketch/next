@@ -22,7 +22,6 @@ import {
 import { SpatialUploadsHandlerRequest } from "../handler";
 import { Readable } from "node:stream";
 import { WebClient } from "@slack/web-api";
-import { bboxToTile, tileToBBOX } from "@mapbox/tilebelt";
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 export { SpatialUploadsHandlerRequest };
