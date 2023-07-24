@@ -1452,6 +1452,11 @@ class MapContextManager {
   private onMapError = (event: ErrorEvent & { sourceId?: string }) => {
     if (event.sourceId && event.sourceId !== "composite") {
       let anySet = false;
+      // Questionable behavior from mapbox-gl-js here
+      // https://github.com/mapbox/mapbox-gl-js/issues/9304
+      if (/source image could not be decoded/.test(event.error.message)) {
+        return;
+      }
       if (/sketch-\d+$/.test(event.sourceId)) {
         const id = parseInt(event.sourceId.split("-")[1]);
         const state = this.internalState.sketchLayerStates[id];
