@@ -22,9 +22,6 @@ FROM ghcr.io/lambgeo/lambda-gdal:3.6 as gdal
 
 FROM amazon/aws-lambda-nodejs:18
 WORKDIR ${LAMBDA_TASK_ROOT}
-RUN yum install -y python3
-RUN pip3 install rasterio
-RUN pip3 install rio-mbtiles
 # Bring C libs from lambgeo/lambda-gdal image
 COPY --from=gdal /opt/lib/ /opt/lib/
 COPY --from=gdal /opt/include/ /opt/include/
@@ -46,4 +43,6 @@ COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
 COPY .rclone.conf /var/task/rclone.conf
+RUN yum install -y python3
+RUN pip3 install rasterio
 CMD ["handler.processUpload"]

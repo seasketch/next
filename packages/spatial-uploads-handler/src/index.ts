@@ -319,7 +319,7 @@ export default async function handleUpload(
         // use pct2rgb.py to convert to rgb
         const rgbPath = path.join(dist, name + ".rgb.tif");
         await logger.exec(
-          ["pct2rgb.py", [inputPath, rgbPath]],
+          ["gdal_translate", ["-expand", "rgb", inputPath, rgbPath]],
           "Problem converting palletized raster to RGB",
           1 / 20
         );
@@ -369,44 +369,75 @@ export default async function handleUpload(
       await updateProgress("tiling");
       const mbtilesPath = path.join(dist, name + ".mbtiles");
 
+      // Not necessary when using gdal_translate & gdaladdo
       // Using resolution output from rio info and some hints from:
       // https://gis.stackexchange.com/questions/268107/gdal2tiles-py-how-to-find-optimal-zoom-level-for-leaflet
-      const radius = 6378137;
-      const equator = 2 * Math.PI * radius;
-      const tileSize = 512;
-      const minzoom = 0;
-      const maxzoom = Math.min(
-        // At most, tile to zoom level 16
-        16,
-        Math.ceil(Math.log2(equator / tileSize / rasterInfo.resolution))
-      );
+      // const radius = 6378137;
+      // const equator = 2 * Math.PI * radius;
+      // const tileSize = 512;
+      // const minzoom = 0;
+      // const maxzoom = Math.min(
+      //   // At most, tile to zoom level 16
+      //   16,
+      //   Math.ceil(Math.log2(equator / tileSize / rasterInfo.resolution))
+      // );
+
+      // await logger.exec(
+      //   [
+      //     "rio",
+      //     [
+      //       "mbtiles",
+      //       inputPath,
+      //       mbtilesPath,
+      //       "--format",
+      //       "PNG",
+      //       "--include-empty-tiles",
+      //       "--title",
+      //       name,
+      //       "--description",
+      //       name + ext,
+      //       "--zoom-levels",
+      //       `${minzoom}..${maxzoom}`,
+      //       "--tile-size",
+      //       tileSize.toString(),
+      //       "--resampling",
+      //       rasterInfo.colorInterp === ColorInterp.GRAY ? "nearest" : "cubic",
+      //       ...(rasterInfo.colorInterp === ColorInterp.RGBA ? ["--rgba"] : []),
+      //       "--progress-bar",
+      //       "--implementation",
+      //       "cf",
+      //     ],
+      //   ],
+      //   "Problem converting raster to mbtiles",
+      //   5 / 20
+      // );
 
       await logger.exec(
         [
-          "rio",
+          "gdal_translate",
           [
+            "-of",
             "mbtiles",
+            "-co",
+            "BLOCKSIZE=512",
+            "-co",
+            "RESAMPLING=NEAREST",
+            "-co",
+            `NAME=${name}`,
             inputPath,
             mbtilesPath,
-            "--format",
-            "PNG",
-            "--include-empty-tiles",
-            "--title",
-            name,
-            "--description",
-            name + ext,
-            "--zoom-levels",
-            `${minzoom}..${maxzoom}`,
-            "--tile-size",
-            tileSize.toString(),
-            "--resampling",
-            rasterInfo.colorInterp === ColorInterp.GRAY ? "nearest" : "cubic",
-            ...(rasterInfo.colorInterp === ColorInterp.RGBA ? ["--rgba"] : []),
           ],
         ],
         "Problem converting raster to mbtiles",
-        5 / 20
+        3 / 20
       );
+
+      await logger.exec(
+        ["gdaladdo", ["-minsize", "8", "-r", "cubic", mbtilesPath]],
+        "Problem adding overviews to mbtiles",
+        2 / 20
+      );
+
       // Convert to pmtiles
       const pmtilesPath = path.join(dist, name + ".pmtiles");
       await logger.exec(
@@ -715,6 +746,7 @@ class Logger {
     throwMsg: string,
     progressFraction?: number
   ): Promise<string> {
+    // console.log("exec " + command[0] + " " + command[1].join(" "));
     let stdout = "";
     const self = this;
     return new Promise((resolve, reject) => {
