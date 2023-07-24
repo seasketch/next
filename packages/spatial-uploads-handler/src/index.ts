@@ -400,7 +400,7 @@ export default async function handleUpload(
             "--tile-size",
             tileSize.toString(),
             "--resampling",
-            "nearest",
+            rasterInfo.colorInterp === ColorInterp.GRAY ? "nearest" : "cubic",
             ...(rasterInfo.colorInterp === ColorInterp.RGBA ? ["--rgba"] : []),
           ],
         ],

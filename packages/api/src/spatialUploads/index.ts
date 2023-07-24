@@ -80,7 +80,11 @@ export async function createDBRecordsForProcessedUpload(
     [
       uploadTaskId,
       projectId,
-      pmtiles ? (isVector ? "seasketch-mvt" : "raster") : "seasketch-vector",
+      pmtiles
+        ? isVector
+          ? "seasketch-mvt"
+          : "seasketch-raster"
+        : "seasketch-vector",
       pmtiles ? null : layer.bounds,
       layer.url,
       "upload",

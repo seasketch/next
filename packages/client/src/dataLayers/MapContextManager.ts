@@ -1050,7 +1050,7 @@ class MapContextManager {
                     };
                     sourceWasAdded = true;
                     break;
-                  case DataSourceTypes.Raster:
+                  case DataSourceTypes.SeasketchRaster:
                     if (source.url) {
                       baseStyle.sources[source.id.toString()] = {
                         type: "raster",
@@ -1099,7 +1099,7 @@ class MapContextManager {
                   (source.type === DataSourceTypes.SeasketchVector ||
                     source.type === DataSourceTypes.Geojson ||
                     source.type === DataSourceTypes.Vector ||
-                    source.type === DataSourceTypes.Raster ||
+                    source.type === DataSourceTypes.SeasketchRaster ||
                     // source.type === DataSourceTypes.ArcgisVector ||
                     source.type === DataSourceTypes.SeasketchMvt) &&
                   layer.mapboxGlStyles?.length
@@ -1109,7 +1109,7 @@ class MapContextManager {
                     if (
                       source.type === DataSourceTypes.SeasketchMvt ||
                       source.type === DataSourceTypes.Vector ||
-                      source.type === DataSourceTypes.Raster
+                      source.type === DataSourceTypes.SeasketchRaster
                     ) {
                       layers.push({
                         ...layer.mapboxGlStyles[i],

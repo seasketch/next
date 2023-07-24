@@ -2888,9 +2888,9 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
       if new.source_layer is null then
         raise 'Layers with "vector" data sources must specify a source_layer';
       end if;
-    elsif source_type != 'seasketch-mvt' and source_type != 'raster' then
+    elsif source_type != 'seasketch-mvt' and source_type != 'seasketch-raster' then
       if new.source_layer is not null then
-        raise 'Only Layers with data_sources of type "vector", "seasketch-mvt", or "raster" should specify a source_layer';
+        raise 'Only Layers with data_sources of type "vector", "seasketch-mvt", or "seasketch-raster" should specify a source_layer';
       end if;
     end if;
     if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector' or source_type = 'seasketch-mvt') then
@@ -2898,7 +2898,7 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
         raise 'Vector layers must specify mapbox_gl_styles';
       end if;
     else
-      if new.mapbox_gl_styles is not null and source_type != 'raster' then
+      if new.mapbox_gl_styles is not null and source_type != 'seasketch-raster' and source_type != 'raster' then
         raise 'Layers with data_sources of type % should not specify mapbox_gl_styles', (source_type);
       end if;
     end if;
@@ -2925,7 +2925,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
   declare
     bucket_id text;
   begin
-    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' ) then
+    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' ) then
       raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
     end if;
     if new.coordinates is null and (new.type = 'video' or new.type = 'image') then
@@ -2949,14 +2949,14 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.encoding is not null and new.type != 'raster-dem' then
       raise 'encoding property only allowed on raster-dem sources';
     end if;
-    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt') then
+    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster') then
       raise 'tile_size property is not allowed for "%" sources', (new.type);
     end if;
     if (new.type != 'geojson' and new.type != 'seasketch-vector') and (new.buffer is not null or new.cluster is not null or new.cluster_max_zoom is not null or new.cluster_properties is not null or new.cluster_radius is not null or new.generate_id is not null or new.line_metrics is not null or new.promote_id is not null or new.tolerance is not null) then
       raise 'geojson props such as buffer, cluster, generate_id, etc not allowed on % sources', (new.type);
     end if;
-    if (new.byte_length is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'raster') then
-      raise 'byte_length can only be set on seasketch-vector, seasketch_mvt and raster sources';
+    if (new.byte_length is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster') then
+      raise 'byte_length can only be set on seasketch-vector, seasketch_mvt and seasketch-raster sources';
     end if;
     if (new.type = 'seasketch-vector' and new.type != 'seasketch-mvt' and new.byte_length is null) then
       raise 'seasketch-vector and mvt sources must have byte_length set to an approximate value';
@@ -2970,8 +2970,8 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.use_device_pixel_ratio is not null and new.type != 'arcgis-dynamic-mapserver' then
       raise 'use_device_pixel_ratio property not allowed on % sources', (new.type);
     end if;
-    if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'raster' then
-      raise 'import_type property is only allowed for seasketch-vector, seasketch-mvt, and raster sources';
+    if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' then
+      raise 'import_type property is only allowed for seasketch-vector, seasketch-mvt, and seasketch-raster sources';
     end if;
     if new.import_type is null and (new.type = 'seasketch-vector' or new.type = 'seasketch-mvt') then
       raise 'import_type property is required for seasketch-vector sources';
