@@ -2,41 +2,70 @@ import { CompletionContext } from "@codemirror/autocomplete";
 import { syntaxTree } from "@codemirror/language";
 import { SyntaxNode } from "@lezer/common";
 import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
+import { GeoJsonGeometryTypes } from "geojson";
 
-export function glStyleAutocomplete(context: CompletionContext) {
-  let word = context.matchBefore(/[\w-]*/);
-  let { state, pos } = context,
-    around = syntaxTree(state).resolveInner(pos),
-    tree = around.resolve(pos, -1);
-  for (
-    let scan = pos, before;
-    around === tree && (before = tree.childBefore(scan));
-
-  ) {
-    let last = before.lastChild;
-    if (!last || !last.type.isError || last.from < last.to) break;
-    around = tree = before;
-    scan = last.from;
-  }
-
-  if (!word) {
-    return null;
-  } else {
-    const styleContext = getStyleContext(around, context);
-    if (styleContext) {
-      return {
-        from: word.from,
-        options: styleContext.values,
-      };
-    } else {
-      return null;
-    }
-  }
+export interface GeostatsAttribute {
+  attribute: string;
+  count: number;
+  type: GeostatsAttributeType;
+  values: (string | number | boolean | null)[];
+  min?: number;
+  max?: number;
 }
+
+export type GeostatsAttributeType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "null"
+  | "mixed"
+  | "object"
+  | "array";
+
+export interface GeostatsLayer {
+  layer: string;
+  count: number;
+  geometry: GeoJsonGeometryTypes;
+  attributeCount: number;
+  attributes: GeostatsAttribute[];
+}
+
+export const glStyleAutocomplete =
+  (layer?: GeostatsLayer) => (context: CompletionContext) => {
+    let word = context.matchBefore(/[\w-]*/);
+    let { state, pos } = context,
+      around = syntaxTree(state).resolveInner(pos),
+      tree = around.resolve(pos, -1);
+    for (
+      let scan = pos, before;
+      around === tree && (before = tree.childBefore(scan));
+
+    ) {
+      let last = before.lastChild;
+      if (!last || !last.type.isError || last.from < last.to) break;
+      around = tree = before;
+      scan = last.from;
+    }
+
+    if (!word) {
+      return null;
+    } else {
+      const styleContext = getStyleContext(around, context, layer);
+      if (styleContext) {
+        return {
+          from: word.from,
+          options: styleContext.values,
+        };
+      } else {
+        return null;
+      }
+    }
+  };
 
 function getStyleContext(
   node: SyntaxNode,
-  completionContext: CompletionContext
+  completionContext: CompletionContext,
+  layer?: GeostatsLayer
 ) {
   const contextState = completionContext.state;
   if (
@@ -130,6 +159,42 @@ function getStyleContext(
             }
           }
         }
+      } else if (property.name === "Array") {
+        const children = property.getChildren("String");
+        if (children.length) {
+          const [functionName, ...args] = children.map((node) => {
+            return contextState.sliceDoc(node.from, node.to).replace(/"/g, "");
+          });
+          // @ts-ignore
+          const nodeIsFunctionName = children[0].index === node.index;
+          if (nodeIsFunctionName) {
+            context.values = valuesToCompletions(
+              styleSpec.expression_name.values
+            );
+          } else {
+            let argumentPosition = children.findIndex(
+              // @ts-ignore
+              (child) => child.index === node.index
+            );
+            if (argumentPosition > -1) {
+              argumentPosition--;
+            }
+
+            if (
+              layer?.attributes?.length &&
+              functionName === "get" &&
+              argumentPosition === 0
+            ) {
+              context.values = layer.attributes.map((a) => {
+                return {
+                  label: a.attribute,
+                  detail: a.type,
+                };
+              });
+            }
+          }
+        }
+        // we're in an argument to a function?
       }
     }
     return context as StyleContext;

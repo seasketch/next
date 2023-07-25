@@ -6,7 +6,10 @@ import { sublime } from "@uiw/codemirror-theme-sublime";
 import { linter, lintGutter } from "@codemirror/lint";
 import { color } from "./extensions/glStyleColor";
 import { glStyleLinter } from "./extensions/glStyleValidator";
-import { glStyleAutocomplete } from "./extensions/glStyleAutocomplete";
+import {
+  GeostatsLayer,
+  glStyleAutocomplete,
+} from "./extensions/glStyleAutocomplete";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
@@ -32,11 +35,8 @@ interface GLStyleEditorProps {
   type?: "vector" | "raster";
   onChange?: (newStyle: string) => void;
   className?: string;
+  geostats?: GeostatsLayer;
 }
-
-const jsonCompletions = jsonLanguage.data.of({
-  autocomplete: glStyleAutocomplete,
-});
 
 function Button({ className, ...props }: any) {
   return (
@@ -59,6 +59,11 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
   const editorRef = useRef<ReactCodeMirrorRef>(null);
   const dialog = useDialog();
+  const jsonCompletions = useMemo(() => {
+    return jsonLanguage.data.of({
+      autocomplete: glStyleAutocomplete(props.geostats),
+    });
+  }, [props.geostats]);
 
   const type = props.type || "vector";
 
