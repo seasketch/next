@@ -3098,6 +3098,9 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
         raise 'is_click_off_only must be false if is_folder=false';
       end if;
     end if;
+    if length(trim(new.title)) = 0 then
+      raise 'title cannot be empty';
+    end if;
     return new;
   end;
 $$;
