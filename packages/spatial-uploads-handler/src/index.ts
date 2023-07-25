@@ -719,7 +719,6 @@ export default async function handleUpload(
   } finally {
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
-    console.log("log path", logPath);
     await putObject(logPath, s3LogPath, logger);
     // tmpobj.removeCallback();
   }
@@ -758,6 +757,7 @@ class Logger {
 
       child.stdout.setEncoding("utf8");
       child.stdout.on("data", function (data) {
+        // console.log(`stdout: ${data}`);
         if (progressFraction && progressRegExp.test(data.toString())) {
           const newProgress = parseFloat(
             data.toString().match(progressRegExp)[1]
@@ -772,6 +772,7 @@ class Logger {
 
       child.stderr.setEncoding("utf8");
       child.stderr.on("data", function (data) {
+        // console.log(`stderr: ${data}`);
         if (
           data.indexOf("ERROR 1: ICreateFeature: Mismatched geometry type") !=
           -1

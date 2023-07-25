@@ -54,7 +54,22 @@ export default function geostats(
 
   function addFeature(feature: Feature) {
     if (layer.geometry !== feature.geometry.type) {
-      throw new Error("Mixed geometry types");
+      if (
+        layer.geometry === "Polygon" &&
+        feature.geometry.type === "MultiPolygon"
+      ) {
+        layer.geometry = "MultiPolygon";
+      } else if (
+        layer.geometry === "LineString" &&
+        feature.geometry.type === "MultiLineString"
+      ) {
+        layer.geometry = "MultiLineString";
+      } else if (
+        layer.geometry === "Point" &&
+        feature.geometry.type === "MultiPoint"
+      ) {
+        layer.geometry = "MultiPoint";
+      }
     }
     layer.count++;
     for (const propName in feature.properties) {
