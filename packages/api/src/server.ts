@@ -377,8 +377,6 @@ app.use(
           );
         return;
       }
-      await client.query("COMMIT");
-      await client.release();
       res.setHeader("Content-Type", "application/json");
       const name = geojson?.properties?.name || `Sketch-${id}`;
       res.setHeader(
@@ -399,10 +397,11 @@ app.use(
       }
       res.send(geojson);
     } catch (e: any) {
-      client.query("COMMIT");
-      client.release();
       res.status(500).send(`Problem generating geojson.\n${e.toString()}`);
       return;
+    } finally {
+      client.query("COMMIT");
+      client.release();
     }
   }
 );
