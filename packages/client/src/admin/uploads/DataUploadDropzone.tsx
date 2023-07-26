@@ -27,6 +27,7 @@ import DataUploadManager, {
   DataUploadErrorEvent,
   DataUploadProcessingCompleteEvent,
 } from "./DataUploadManager";
+import sleep from "../../sleep";
 
 export const DataUploadDropzoneContext = createContext<{
   uploads: DataUploadDetailsFragment[];
@@ -107,16 +108,102 @@ export default function DataUploadDropzone({
     }
   }, [client, slug, projectId, mapContext.manager, alert, onError, t]);
 
+  const { confirm } = useDialog();
+
+  function isUploadForSupported(file: File) {
+    let message: string | null = null;
+    let isPartOfShapefile = false;
+    let isUnsupportedRaster = false;
+    if (file.name.endsWith(".docx")) {
+      message = t(`"${file.name}" is a Word document.`);
+    } else if (file.name.endsWith(".xlsx")) {
+      message = t(`"${file.name}" is an Excel spreadsheet.`);
+    } else if (file.name.endsWith(".csv")) {
+      message = t(`"${file.name}" is a CSV file.`);
+    } else if (file.name.endsWith(".pdf")) {
+      message = t(`"${file.name}" is a PDF file.`);
+    } else if (file.name.endsWith(".txt")) {
+      message = t(`"${file.name}" is a text file.`);
+    } else if (file.name.endsWith(".dbf")) {
+      message = t(`"${file.name}" is a database file.`);
+      isPartOfShapefile = true;
+    } else if (file.name.endsWith(".shx")) {
+      message = t(`"${file.name}" is a shape index file.`);
+      isPartOfShapefile = true;
+    } else if (file.name.endsWith(".sbn")) {
+      message = t(`"${file.name}" is a shape index file.`);
+      isPartOfShapefile = true;
+    } else if (file.name.endsWith(".sbx")) {
+      message = t(`"${file.name}" is a shape index file.`);
+      isPartOfShapefile = true;
+    } else if (file.name.endsWith(".cpg")) {
+      message = t(`"${file.name}" is a code page file.`);
+      isPartOfShapefile = true;
+    } else if (file.name.endsWith(".prj")) {
+      message = t(`"${file.name}" is a projection file.`);
+      isPartOfShapefile = true;
+    } else if (file.name.endsWith(".shp")) {
+      message = t(`"${file.name}" is a bare shapefile.`);
+      isPartOfShapefile = true;
+    } else if (file.name.endsWith(".xml")) {
+      message = t(`"${file.name}" is an XML file.`);
+    } else if (file.name.endsWith(".png")) {
+      message = t(`"${file.name}" is a PNG image.`);
+      isUnsupportedRaster = true;
+    } else if (file.name.endsWith(".jpg") || file.name.endsWith(".jpeg")) {
+      message = t(`"${file.name}" is a JPG image.`);
+      isUnsupportedRaster = true;
+    }
+    if (message) {
+      const description = isPartOfShapefile
+        ? t(
+            `This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.`
+          )
+        : isUnsupportedRaster
+        ? t(
+            `This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.`
+          )
+        : t(
+            "This appears to be a file type which SeaSketch does not support for spatial uploads."
+          );
+      return {
+        message,
+        description,
+      };
+    } else {
+      return true;
+    }
+  }
+
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
+      const filteredFiles: File[] = [];
+      for (const file of acceptedFiles) {
+        const supported = isUploadForSupported(file);
+        if (supported !== true) {
+          const { message, description } = supported;
+          const response = await confirm(message, {
+            description,
+            primaryButtonText: "Upload anyway",
+          });
+          if (response) {
+            filteredFiles.push(file);
+            // Something weird happens when opening these confirm dialogs over and over again
+            await sleep(100);
+          }
+        } else {
+          filteredFiles.push(file);
+        }
+      }
+
       setState((prev) => ({
         ...prev,
-        droppedFiles: acceptedFiles.length,
+        droppedFiles: filteredFiles.length,
       }));
 
       if (state.manager) {
         state.manager
-          .uploadFiles(acceptedFiles)
+          .uploadFiles(filteredFiles)
           .then(() => {
             setState((prev) => ({
               ...prev,
