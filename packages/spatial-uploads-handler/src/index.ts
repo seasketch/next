@@ -712,7 +712,8 @@ export default async function handleUpload(
         logger.output,
         process.env.BUCKET!,
         objectKey,
-        requestingUser
+        requestingUser,
+        error.message || error.name
       );
     }
     throw e;
@@ -876,7 +877,8 @@ async function notifySlackChannel(
   logs: string,
   bucket: string,
   objectKey: string,
-  user: string
+  user: string,
+  error: string
 ) {
   const slack = new WebClient(process.env.SLACK_TOKEN!);
 
@@ -888,6 +890,13 @@ async function notifySlackChannel(
         text: {
           type: "plain_text",
           text: "An Upload Failed",
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: error,
         },
       },
       {
