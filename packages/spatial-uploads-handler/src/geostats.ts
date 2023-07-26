@@ -86,7 +86,8 @@ export default function geostats(
         };
       }
       const attr = attributeData[propName];
-      if (attributeType(value) !== attr.type) {
+      const type = attributeType(value);
+      if (type !== attr.type && type !== "null") {
         attr.type = "mixed";
       }
       if (attr.type !== "object" && attr.type !== "array") {
