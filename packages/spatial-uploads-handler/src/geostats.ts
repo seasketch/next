@@ -23,6 +23,7 @@ export interface GeostatsAttribute {
   values: (string | number | boolean | null)[];
   min?: number;
   max?: number;
+  quantiles?: number[];
 }
 
 export interface GeostatsLayer {

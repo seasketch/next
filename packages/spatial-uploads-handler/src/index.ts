@@ -553,6 +553,85 @@ export default async function handleUpload(
         sourceUrl = `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`;
       }
 
+      // For some reason tippecanoe often converts numeric columns from fgb
+      // to mixed and stringifies the values. To avoid that, detect numeric
+      // columns using fiona (fio info) and then use the -T command to
+      // manually specify the types.
+      const fioInfo = await logger.exec(
+        ["fio", ["info", normalizedVectorPath]],
+        "Problem detecting numeric properties using fiona.",
+        1 / 20
+      );
+      const fioData = JSON.parse(fioInfo);
+      const schema = fioData?.schema?.properties || {};
+      const numericAttributes: {
+        name: string;
+        type: "int" | "float";
+        quantiles?: number[];
+      }[] = [];
+      for (const key in schema) {
+        const type = schema[key];
+        if (/int/i.test(type)) {
+          numericAttributes.push({ name: key, type: "int" });
+        } else if (/float/i.test(type)) {
+          numericAttributes.push({ name: key, type: "float" });
+        }
+      }
+      try {
+        // If there are numeric attributes, calculate quantiles
+        if (numericAttributes.length) {
+          for (const attribute of numericAttributes) {
+            if (
+              !/fid/i.test(attribute.name) &&
+              !/objectid/i.test(attribute.name) &&
+              !/^id$/i.test(attribute.name)
+            ) {
+              const attrDataFname = path.join(
+                dist,
+                `details-${numericAttributes.indexOf(attribute)}.json`
+              );
+              const data = await logger.exec(
+                [
+                  "ogr2ogr",
+                  [
+                    attrDataFname,
+                    normalizedVectorPath,
+                    "-dialect",
+                    "sqlite",
+                    "-sql",
+                    `
+                    SELECT 
+                      quantile, 
+                      max(VALUE) as max 
+                    from (
+                      SELECT 
+                        "${attribute.name}" as VALUE, 
+                        NTILE(20) OVER (ORDER BY "${attribute.name}") as quantile 
+                      FROM 
+                        "${originalName}"
+                    ) group by quantile
+                  `,
+                  ],
+                ],
+                "Problem calculating quantiles",
+                1 / 20
+              );
+              const attrData = JSON.parse(
+                readFileSync(attrDataFname).toString()
+              );
+              if (attrData && attrData.features.length) {
+                attribute.quantiles = attrData.features.map(
+                  (f: any) => f.properties.max
+                );
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Don't do anything if quantiles fail
+        console.error("Failed to generate quantiles");
+      }
+
       /**
        * Tiling only happens if the file is over a certain size. If very small
        * just loading the raw GeoJSON in mapbox-gl-js should be sufficient.
@@ -565,26 +644,6 @@ export default async function handleUpload(
        * seems the Felt is doing a lot of work on improving the default behavior.
        */
       if (normalizedVectorFileSize > MVT_THRESHOLD) {
-        // For some reason tippecanoe often converts numeric columns from fgb
-        // to mixed and stringifies the values. To avoid that, detect numeric
-        // columns using fiona (fio info) and then use the -T command to
-        // manually specify the types.
-        const fioInfo = await logger.exec(
-          ["fio", ["info", normalizedVectorPath]],
-          "Problem detecting numeric properties using fiona.",
-          1 / 20
-        );
-        const fioData = JSON.parse(fioInfo);
-        const schema = fioData?.schema?.properties || {};
-        const numericAttributes: { name: string; type: "int" | "float" }[] = [];
-        for (const key in schema) {
-          const type = schema[key];
-          if (/int/i.test(type)) {
-            numericAttributes.push({ name: key, type: "int" });
-          } else if (/float/i.test(type)) {
-            numericAttributes.push({ name: key, type: "float" });
-          }
-        }
         const mvtPath = path.join(dist, name + ".mbtiles");
         const pmtilesPath = path.join(dist, name + ".pmtiles");
         await updateProgress("tiling");
@@ -598,6 +657,7 @@ export default async function handleUpload(
               "-n",
               `"${originalName}"`,
               "-zg",
+              "--drop-densest-as-needed",
               "-l",
               `${originalName}`,
               "-o",
@@ -627,6 +687,14 @@ export default async function handleUpload(
         // (generated automatically by tippecanoe)
         const info = await statsFromMBTiles(mvtPath);
         stats = info.geostats;
+        for (const attr of stats?.attributes || []) {
+          const numeric = numericAttributes.find(
+            (a) => a.name === attr.attribute
+          );
+          if (numeric && numeric.quantiles) {
+            attr.quantiles = numeric.quantiles;
+          }
+        }
         bounds = info.bounds;
       }
 
@@ -639,6 +707,15 @@ export default async function handleUpload(
           | FeatureCollection;
         stats = geostats(geojson, originalName);
         bounds = bbox(geojson);
+      }
+
+      for (const attr of stats?.attributes || []) {
+        const numeric = numericAttributes.find(
+          (a) => a.name === attr.attribute
+        );
+        if (numeric && numeric.quantiles) {
+          attr.quantiles = numeric.quantiles;
+        }
       }
     }
 
