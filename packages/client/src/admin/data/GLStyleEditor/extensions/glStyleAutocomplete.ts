@@ -5,7 +5,10 @@ import { SyntaxNode } from "@lezer/common";
 import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
 import { GeoJsonGeometryTypes } from "geojson";
 import { formatJSONCommand } from "../formatCommand";
-import { schemeTableau10, interpolatePlasma } from "d3-scale-chromatic";
+import {
+  schemeTableau10,
+  interpolatePlasma as interpolateColorScale,
+} from "d3-scale-chromatic";
 
 export interface GeostatsAttribute {
   attribute: string;
@@ -14,6 +17,7 @@ export interface GeostatsAttribute {
   values: (string | number | boolean | null)[];
   min?: number;
   max?: number;
+  quantiles?: number[];
 }
 
 export type GeostatsAttributeType =
@@ -635,10 +639,16 @@ function getPlaceholderValue(
     if (type === "categorical") {
       return `"${schemeTableau10[index]}"`;
     } else {
-      return `"${interpolatePlasma(index)}"`;
+      return `"${interpolateColorScale(index)}"`;
     }
   } else if (propertyValueType === "number") {
-    return `${index}`;
+    if (context.propertyName === "circle-radius") {
+      return `${Math.max(1, index * 50)}`;
+    } else if (/opacity/.test(context.propertyName)) {
+      return Math.max(Math.min(index, 1), 0);
+    } else {
+      return `${Math.max(1, index * 4)}`;
+    }
   } else if (propertyValueType === "boolean") {
     return `${index % 2 === 0}`;
   } else if (propertyValueType === "enum" && context.enumValues) {
@@ -832,13 +842,13 @@ function getCompletionsForEvaluatedContext(
           [
             "step",
             ["zoom"],
-            ${valueType === "color" ? `"${interpolatePlasma(1 / 4)}"` : 1},
+            ${valueType === "color" ? `"${interpolateColorScale(1 / 4)}"` : 1},
             10,
-            ${valueType === "color" ? `"${interpolatePlasma(2 / 4)}"` : 3},
+            ${valueType === "color" ? `"${interpolateColorScale(2 / 4)}"` : 3},
             12,
-            ${valueType === "color" ? `"${interpolatePlasma(3 / 4)}"` : 5},
+            ${valueType === "color" ? `"${interpolateColorScale(3 / 4)}"` : 5},
             14,
-            ${valueType === "color" ? `"${interpolatePlasma(4 / 4)}"` : 7}
+            ${valueType === "color" ? `"${interpolateColorScale(4 / 4)}"` : 7}
           ]`,
           })
         );
@@ -890,6 +900,81 @@ function getCompletionsForEvaluatedContext(
                   : 0
               }
             ]`,
+            })
+          );
+        }
+        if (
+          attribute.type === "number" &&
+          expressions &&
+          expressions.interpolate &&
+          attribute.min !== undefined &&
+          attribute.max
+        ) {
+          // add interpolate
+          if (attribute.quantiles?.length) {
+            let quantiles = attribute.quantiles;
+            if (quantiles.length === 20) {
+              quantiles = quantiles.reduce((acc, q, i) => {
+                if (i % 2 === 0) {
+                  acc.push(q);
+                }
+                return acc;
+              }, [] as number[]);
+            }
+            completions.push(
+              replaceExpressionCompletion(styleContext.ArrayNode, {
+                label: `interpolate(${attribute.attribute}) quantile`,
+                info: "Interpolate expression with pre-populated values, using 10 quantiles",
+                detail: `${attribute.type} ${attribute.min}-${attribute.max}`,
+                expression: `
+            [
+              ${
+                styleContext.propertyContext.propertyValueType === "color"
+                  ? `"interpolate-hcl"`
+                  : `"interpolate"`
+              },
+              ["linear"],
+              ["get", "${attribute.attribute}"],
+              ${quantiles
+                .map((q, i) => {
+                  return `${q},\n ${getPlaceholderValue(
+                    styleContext.propertyContext,
+                    i / quantiles.length,
+                    "linear"
+                  )}`;
+                })
+                .join(",\n")}
+              ]`,
+              })
+            );
+          }
+          completions.push(
+            replaceExpressionCompletion(styleContext.ArrayNode, {
+              label: `interpolate(${attribute.attribute})`,
+              info: "Interpolate expression with pre-populated values",
+              detail: `${attribute.type} ${attribute.min}-${attribute.max}`,
+              expression: `
+              [
+                ${
+                  styleContext.propertyContext.propertyValueType === "color"
+                    ? `"interpolate-hcl"`
+                    : `"interpolate"`
+                },
+                ["linear"],
+                ["get", "${attribute.attribute}"],
+                ${attribute.min},
+                ${getPlaceholderValue(
+                  styleContext.propertyContext,
+                  0,
+                  "linear"
+                )},
+                ${attribute.max},
+                ${getPlaceholderValue(
+                  styleContext.propertyContext,
+                  1,
+                  "linear"
+                )}
+                ]`,
             })
           );
         }
