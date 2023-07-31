@@ -620,9 +620,14 @@ export default async function handleUpload(
                 readFileSync(attrDataFname).toString()
               );
               if (attrData && attrData.features.length) {
-                attribute.quantiles = attrData.features.map(
-                  (f: any) => f.properties.max
-                );
+                attribute.quantiles = [];
+                for (const feature of attrData.features) {
+                  if (
+                    attribute.quantiles.indexOf(feature.properties.max) === -1
+                  ) {
+                    attribute.quantiles.push(feature.properties.max);
+                  }
+                }
               }
             }
           }
