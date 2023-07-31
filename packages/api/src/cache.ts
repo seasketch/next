@@ -5,6 +5,7 @@ if (process.env.NODE_ENV !== "test") {
   client = redis.createClient({
     connect_timeout: 5000,
     host: process.env.REDIS_HOST || "127.0.0.1",
+    password: process.env.REDIS_PASSWORD,
   });
 } else {
   client = {
