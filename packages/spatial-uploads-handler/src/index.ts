@@ -565,6 +565,26 @@ export default async function handleUpload(
        * seems the Felt is doing a lot of work on improving the default behavior.
        */
       if (normalizedVectorFileSize > MVT_THRESHOLD) {
+        // For some reason tippecanoe often converts numeric columns from fgb
+        // to mixed and stringifies the values. To avoid that, detect numeric
+        // columns using fiona (fio info) and then use the -T command to
+        // manually specify the types.
+        const fioInfo = await logger.exec(
+          ["fio", ["info", normalizedVectorPath]],
+          "Problem detecting numeric properties using fiona.",
+          1 / 20
+        );
+        const fioData = JSON.parse(fioInfo);
+        const schema = fioData?.schema?.properties || {};
+        const numericAttributes: { name: string; type: "int" | "float" }[] = [];
+        for (const key in schema) {
+          const type = schema[key];
+          if (/int/i.test(type)) {
+            numericAttributes.push({ name: key, type: "int" });
+          } else if (/float/i.test(type)) {
+            numericAttributes.push({ name: key, type: "float" });
+          }
+        }
         const mvtPath = path.join(dist, name + ".mbtiles");
         const pmtilesPath = path.join(dist, name + ".pmtiles");
         await updateProgress("tiling");
@@ -572,6 +592,9 @@ export default async function handleUpload(
           [
             "tippecanoe",
             [
+              ...numericAttributes
+                .map((a) => [`-T`, `${a.name}:${a.type}`])
+                .flat(),
               "-n",
               `"${originalName}"`,
               "-zg",
@@ -721,7 +744,7 @@ export default async function handleUpload(
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
-    // tmpobj.removeCallback();
+    tmpobj.removeCallback();
   }
 }
 

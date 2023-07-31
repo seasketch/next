@@ -44,5 +44,5 @@ COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
 COPY .rclone.conf /var/task/rclone.conf
 RUN yum install -y python3
-RUN pip3 install rasterio
+RUN pip3 install rasterio fiona
 CMD ["handler.processUpload"]
