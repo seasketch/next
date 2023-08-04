@@ -43,6 +43,11 @@ module.exports = {
             test: /\.wasm$/,
             type: "javascript/auto",
           },
+          {
+            test: /\.mjs/,
+            include: /node_modules/,
+            type: "javascript/auto",
+          },
         ],
       },
     },

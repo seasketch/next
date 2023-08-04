@@ -1,0 +1,3 @@
+.RadixDropdownItem[data-state="open"]:not(:hover) {
+  background-color: rgba(0, 0, 100, 0.1);
+}

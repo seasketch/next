@@ -8,6 +8,8 @@ import { color } from "./extensions/glStyleColor";
 import { glStyleLinter } from "./extensions/glStyleValidator";
 import {
   GeostatsLayer,
+  InsertLayerOption,
+  getInsertLayerOptions,
   glStyleAutocomplete,
 } from "./extensions/glStyleAutocomplete";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -29,6 +31,10 @@ import {
 import getSlug from "../../../getSlug";
 import SpritePopover from "./SpritePopover";
 import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
+import InsertLayerModal from "./InsertLayerModal";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
+require("./RadixDropdown.css");
 
 interface GLStyleEditorProps {
   initialStyle?: string;
@@ -139,6 +145,23 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     [setSpriteState]
   );
 
+  const [insertLayerOptions, setInsertLayerOptions] = useState<
+    null | InsertLayerOption[]
+  >(null);
+
+  const { layerTypes, insertOptions } = useMemo(() => {
+    const options = props.geostats ? getInsertLayerOptions(props.geostats) : [];
+    const layerTypes: string[] = [];
+    for (const option of options) {
+      if (!layerTypes.includes(option.layer.type)) {
+        layerTypes.push(option.layer.type);
+      }
+    }
+    return { layerTypes, insertOptions: options };
+  }, [props.geostats]);
+
+  const mac = navigator.appVersion.indexOf("Mac");
+
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
@@ -148,21 +171,189 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         className="p-2 border-b border-black border-opacity-30 z-10 shadow flex space-x-2 flex-0"
         style={{ backgroundColor: "#303841" }}
       >
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              // className="rounded-full w-7 h-7 inline-flex items-center justify-center text-blue-600 bg-white shadow outline-none focus:shadow-black"
+              className="text-sm bg-gray-400 rounded-sm p-0 px-1 shadow"
+              aria-label="Customise options"
+            >
+              Edit <CaretDownIcon className="inline" />
+            </button>
+            {/* <Button
+              title="insert dropdown"
+              onClick={() => {
+                if (editorRef.current?.view && props.geostats) {
+                  const editorView = editorRef.current?.view;
+                  setInsertLayerOptions(getInsertLayerOptions(props.geostats));
+                }
+              }}
+            >
+              <Trans ns="admin:data">insert</Trans>
+            </Button> */}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal className="z-50">
+            <DropdownMenu.Content
+              className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
+              style={{ minWidth: 220 }}
+              // sideOffset={5}
+              // side="bottom"
+              sideOffset={5}
+              align="start"
+              // alignOffset={-50}
+            >
+              <DropdownMenu.Item
+                onClick={() => {
+                  if (editorRef.current?.view) {
+                    const editorView = editorRef.current?.view;
+                    formatJSONCommand(editorView);
+                  }
+                }}
+                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+              >
+                Format Code{" "}
+                <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+F</div>
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator
+                style={{ height: 1 }}
+                className="bg-gray-400 opacity-50 my-1.5"
+              />
+              <DropdownMenu.Label className="pl-2 text-gray-500 text-sm lowercase leading-2 mb-1">
+                Insert a new layer
+              </DropdownMenu.Label>
+              {layerTypes.map((type) => (
+                <DropdownMenu.Sub>
+                  <DropdownMenu.SubTrigger className="RadixDropdownItem capitalize group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none ">
+                    {type === "symbol" ? "Labels & Symbols" : type}
+                    <div className="ml-auto pl-[20px] text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8">
+                      <ChevronRightIcon />
+                    </div>
+                  </DropdownMenu.SubTrigger>
+                  <DropdownMenu.Portal className="z-50">
+                    <DropdownMenu.SubContent
+                      className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
+                      sideOffset={2}
+                      alignOffset={-5}
+                    >
+                      {insertOptions
+                        .filter(
+                          (o) => o.layer.type === type && !o.propertyChoice
+                        )
+                        .map((option) => (
+                          <DropdownMenu.Item
+                            onClick={() => {
+                              if (editorRef.current?.view) {
+                                const editorView = editorRef.current?.view;
+                                editorView.dispatch({
+                                  changes: {
+                                    from: editorView.state.doc.length - 2,
+                                    to: editorView.state.doc.length - 2,
+                                    insert:
+                                      editorView.state.doc.length > 10
+                                        ? "," + JSON.stringify(option.layer)
+                                        : JSON.stringify(option.layer),
+                                  },
+                                  scrollIntoView: true,
+                                  selection: {
+                                    anchor: editorView.state.doc.length - 1,
+                                  },
+                                });
+                                formatJSONCommand(editorView);
+                              }
+                            }}
+                            className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+                          >
+                            {option.label}
+                          </DropdownMenu.Item>
+                        ))}
+                      {(() => {
+                        const groupedOptions = insertOptions.reduce(
+                          (acc, o) => {
+                            if (o.layer.type === type && o.propertyChoice) {
+                              const group = acc.find(
+                                (g) => g.label === o.label
+                              );
+                              if (group) {
+                                group.options.push(o);
+                              } else {
+                                acc.push({
+                                  label: o.label,
+                                  options: [o],
+                                });
+                              }
+                            }
+                            return acc;
+                          },
+                          [] as {
+                            label: string;
+                            options: InsertLayerOption[];
+                          }[]
+                        );
+                        return groupedOptions.map((group) => (
+                          <>
+                            <DropdownMenu.Label className="pl-2 text-gray-500 text-sm leading-2 mb-1 mt-1 capitalize">
+                              {group.label}
+                            </DropdownMenu.Label>
+                            {group.options.map((option) => (
+                              <DropdownMenu.Item
+                                onClick={() => {
+                                  if (editorRef.current?.view) {
+                                    const editorView = editorRef.current?.view;
+                                    editorView.dispatch({
+                                      changes: {
+                                        from: editorView.state.doc.length - 2,
+                                        to: editorView.state.doc.length - 2,
+                                        insert:
+                                          editorView.state.doc.length > 10
+                                            ? "," + JSON.stringify(option.layer)
+                                            : JSON.stringify(option.layer),
+                                      },
+                                      scrollIntoView: true,
+                                      selection: {
+                                        anchor: editorView.state.doc.length - 1,
+                                      },
+                                    });
+                                    formatJSONCommand(editorView);
+                                  }
+                                }}
+                                className="RadixDropdownItem px-2 group pl-4 cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative select-none outline-none "
+                              >
+                                {option.propertyChoice!.property}
+                                {option.propertyChoice?.type === "string" && (
+                                  <div
+                                    style={{ maxWidth: 350 }}
+                                    className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
+                                  >
+                                    {(option.propertyChoice!.values || []).join(
+                                      ", "
+                                    )}
+                                  </div>
+                                )}
+                                {option.propertyChoice?.type === "number" &&
+                                  option.propertyChoice?.min !== undefined &&
+                                  option.propertyChoice.max && (
+                                    <div
+                                      style={{ maxWidth: 350 }}
+                                      className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
+                                    >
+                                      {option.propertyChoice.min} -{" "}
+                                      {option.propertyChoice.max}
+                                    </div>
+                                  )}
+                              </DropdownMenu.Item>
+                            ))}
+                          </>
+                        ));
+                      })()}
+                    </DropdownMenu.SubContent>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Sub>
+              ))}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
         <Button
           onClick={() => {
-            if (editorRef.current?.view) {
-              const editorView = editorRef.current?.view;
-              formatJSONCommand(editorView);
-            }
-          }}
-          // eslint-disable-next-line i18next/no-literal-string
-          title="format code (cmd-f)"
-        >
-          <Trans ns="admin:data">format</Trans>
-        </Button>
-        <Button
-          onClick={() => {
-            const mac = navigator.appVersion.indexOf("Mac");
             dialog.alert(
               <div>
                 <p className="my-2">
@@ -213,6 +404,33 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }
         }}
       />
+      {insertLayerOptions && (
+        <InsertLayerModal
+          onRequestClose={() => setInsertLayerOptions(null)}
+          options={insertLayerOptions}
+          onSelect={(option) => {
+            setInsertLayerOptions(null);
+            if (editorRef.current?.view) {
+              const editorView = editorRef.current?.view;
+              editorView.dispatch({
+                changes: {
+                  from: editorView.state.doc.length - 2,
+                  to: editorView.state.doc.length - 2,
+                  insert:
+                    editorView.state.doc.length > 10
+                      ? "," + JSON.stringify(option.layer)
+                      : JSON.stringify(option.layer),
+                },
+                scrollIntoView: true,
+                selection: {
+                  anchor: editorView.state.doc.length - 1,
+                },
+              });
+              formatJSONCommand(editorView);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

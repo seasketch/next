@@ -36,6 +36,7 @@ interface ModalProps {
   onTabChange?: (selectedIndex: number) => void;
   initialFocus?: any;
   open?: boolean;
+  dark?: boolean;
 }
 
 export default function Modal(props: ModalProps) {
@@ -96,6 +97,7 @@ export default function Modal(props: ModalProps) {
               autoWidth={props.autoWidth}
               grid={grid}
               initialFocus={props.initialFocus}
+              dark={props.dark}
             >
               <div
                 className={`w-full justify-center ${
@@ -222,12 +224,14 @@ function Panel({
   grid,
   zeroPadding,
   initialFocus,
+  dark,
 }: {
   children?: ReactNode;
   autoWidth?: boolean;
   grid: string;
   zeroPadding: boolean;
   initialFocus?: React.RefObject<HTMLElement>;
+  dark?: boolean;
 }) {
   const myRef = useRef(null);
   return (
@@ -257,7 +261,9 @@ function Panel({
       initial={{ scale: 0.5, opacity: 0 }}
       animate="enter"
       exit="exit"
-      className={`relative bg-white rounded-lg ${
+      className={`relative ${
+        dark ? "bg-gray-700 text-white" : "bg-white"
+      } rounded-lg ${
         zeroPadding ? "" : "px-4"
       } pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-xl lg:max-w-2xl ${
         autoWidth ? "w-auto" : "w-full"

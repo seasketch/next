@@ -2,6 +2,7 @@ import SegmentControl from "../../components/SegmentControl";
 import useSegmentState from "../../components/useSegmentState";
 import DataUploadTaskList from "../uploads/DataUploadTaskList";
 import BaseMapEditor from "./BasemapEditor";
+import DropdownMenuDemo from "./GLStyleEditor/DropdownMenuDemo";
 import TableOfContentsEditor from "./TableOfContentsEditor";
 
 export default function LayerAdminSidebar() {
