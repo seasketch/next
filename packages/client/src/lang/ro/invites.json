@@ -1,0 +1,17 @@
+{
+  "Accept as": "Acceptați ca {{email}}",
+  "An account with this email address already exists.": "Există deja un cont cu această adresă de e-mail.",
+  "Confirming invite": "Se confirmă invitația",
+  "Contact {{supportEmail}} to request a new invitation.": "Contactați {{supportEmail}} pentru a solicita o nouă invitație.",
+  "Create an Account": "Creați un cont",
+  "Logout and sign in as ": "Deconectați-vă și conectați-vă ca ",
+  "Sign In": "Conectare",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Această invitație a fost deja acceptată.<1> Continuați cu proiectul </1> sau <5>contactați asistența</5>dacă considerați că aceasta este o eroare.",
+  "This invitation was originally sent to <2></2>.": "Această invitație a fost trimisă inițial către <2></2>.",
+  "Use another account": "Utilizați alt cont",
+  "Verifying invitation code": "Se verifică codul de invitație",
+  "Welcome, !": "Bine ati venit, !",
+  "Welcome!": "Bine ati venit!",
+  "You have been invited to participate in a SeaSketch project.": "Ați fost invitat să participați la un proiect SeaSketch.",
+  "Your invitation to this project has expired.": "Invitația dvs. la acest proiect a expirat."
+}

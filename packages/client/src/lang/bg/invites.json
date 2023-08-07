@@ -1,0 +1,17 @@
+{
+  "Accept as": "Приеми като {{имейл}}",
+  "An account with this email address already exists.": "Акаунт с този имейл адрес вече съществува.",
+  "Confirming invite": "Поканата се потвърждава",
+  "Contact {{supportEmail}} to request a new invitation.": "Свържете се с {{supportEmail}}, за да поискате нова покана.",
+  "Create an Account": "Създай профил",
+  "Logout and sign in as ": "Излезте и влезте като ",
+  "Sign In": "Впиши се",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Тази покана вече е приета.<1> Продължете към проекта </1> или <5>се свържете с поддръжката</5>, ако смятате, че това е грешка.",
+  "This invitation was originally sent to <2></2>.": "Тази покана първоначално беше изпратена до <2></2>.",
+  "Use another account": "Използвайте друг акаунт",
+  "Verifying invitation code": "Кодът на поканата се потвърждава",
+  "Welcome, !": "Добре дошли, !",
+  "Welcome!": "Добре дошли!",
+  "You have been invited to participate in a SeaSketch project.": "Поканени сте да участвате в проект на SeaSketch.",
+  "Your invitation to this project has expired.": "Вашата покана за този проект е изтекла."
+}

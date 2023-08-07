@@ -1,5 +1,6 @@
 {
   "authenticating...": "authentifizieren...",
+  "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "Bevor Sie ein Projekt erstellen, müssen Sie Ihre E-Mail-Adresse bestätigen. Bitte überprüfen Sie Ihren Posteingang auf eine Bestätigungs-E-Mail von <2>do-not-reply@seasketch.org</2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "Indem Sie ein Projekt erstellen, stimmen Sie unseren <2>Nutzungsbedingungen</2> und unserer <6>Datenschutzerklärung</6> zu.",
   "Copied!": "Kopiert!",
   "Copy Link": "Link kopieren",
@@ -7,12 +8,14 @@
   "Create an account": "Ein Konto erstellen",
   "Create your own SeaSketch project.": "Erstellen Sie Ihr eigenes SeaSketch-Projekt.",
   "Dismiss": "Zurückweisen",
+  "Email sent. Check your inbox  📨": "E-Mail gesendet. Überprüfen Sie Ihren Posteingang 📨",
   "Get started": "Loslegen",
   "Latest activity": "Letzte Aktivität",
   "Latest Discussions": "Neueste Diskussionen",
   "Learn more": "Erfahren Sie mehr",
   "Link Copied!": "Link kopiert!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Die Anmeldung bei Ihrem Konto ist der erste Schritt zur Erstellung eines neuen SeaSketch-Projekts.",
+  "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "Suchen Sie nach Projekten wie <2>Bermuda</2>, <5>MaPP</5> oder <8>US Mapping Coordination</8>? Sie finden diese Projekte in <11>SeaSketch Legacy</11>.",
   "Metadata": "Metadaten",
   "NumPosts": "{{count}} Beiträge",
   "NumPosts_plural": "NumPosts_plural",
@@ -26,6 +29,8 @@
   "Resend verification email": "Bestätigungsmail erneut senden",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "SeaSketch gibt Ozeanplanern leistungsstarke Tools an die Hand,\n              Stakeholder und die Öffentlichkeit, die einst auf GIS beschränkt waren\n              Fachleute, die eine partizipative Meeresraumplanung ermöglichen\n              Prozesse, die eng mit der einschlägigen Wissenschaft verbunden sind und\n              Information. SeaSketch wird rund um den Globus im Kleinen eingesetzt\n              Agenturteams und große Community-Initiativen, um besser zu werden\n              Managemententscheidungen jeden Tag.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "SeaSketch unterstützt die kollaborative Planung für unsere Ozeane",
+  "Sending email...": "Email schicken...",
   "Sign In": "Anmelden",
+  "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "Sie greifen über die Beta-Domain next.seasket.ch auf SeaSketch zu. Für das beste Erlebnis nutzen Sie bitte <2>www.seasketch.org</2>. Wenn Sie Offline-Funktionen verwenden, <5>lesen Sie diese Anweisungen</5>.",
   "Zoom to bounds": "Auf Grenzen zoomen"
 }

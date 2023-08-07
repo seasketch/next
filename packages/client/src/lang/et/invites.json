@@ -1,0 +1,17 @@
+{
+  "Accept as": "Nõustu kui {{email}}",
+  "An account with this email address already exists.": "Selle e-posti aadressiga konto on juba olemas.",
+  "Confirming invite": "Kutse kinnitamine",
+  "Contact {{supportEmail}} to request a new invitation.": "Uue kutse taotlemiseks võtke ühendust aadressil {{supportEmail}}.",
+  "Create an Account": "Kontot looma",
+  "Logout and sign in as ": "Logige välja ja logige sisse kui ",
+  "Sign In": "Logi sisse",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "See kutse on juba vastu võetud. <1> Jätkake projektiga </1> või <5>võtke ühendust toega</5>, kui arvate, et see on viga.",
+  "This invitation was originally sent to <2></2>.": "See kutse saadeti algselt aadressile <2></2>.",
+  "Use another account": "Kasutage teist kontot",
+  "Verifying invitation code": "Kutsekoodi kinnitamine",
+  "Welcome, !": "Tere tulemast, !",
+  "Welcome!": "Tere tulemast!",
+  "You have been invited to participate in a SeaSketch project.": "Teid on kutsutud osalema SeaSketchi projektis.",
+  "Your invitation to this project has expired.": "Teie kutse sellele projektile on aegunud."
+}

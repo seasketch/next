@@ -1,5 +1,6 @@
 {
   "authenticating...": "provjera autentičnosti...",
+  "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "Prije izrade projekta morate potvrditi svoju adresu e-pošte. Provjerite svoju pristiglu poštu za e-poruku za potvrdu od <2>do-not-reply@seasketch.org</2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "Stvaranjem projekta pristajete na naše <2>Uvjete korištenja</2> i <6>Pravila privatnosti</6>.",
   "Copied!": "Kopirano!",
   "Copy Link": "Kopiraj link",
@@ -7,12 +8,14 @@
   "Create an account": "Stvorite račun",
   "Create your own SeaSketch project.": "Izradite vlastiti SeaSketch projekt.",
   "Dismiss": "Odbaciti",
+  "Email sent. Check your inbox  📨": "E-mail poslan. Provjerite svoj inbox 📨",
   "Get started": "Započnite",
   "Latest activity": "Najnovija aktivnost",
   "Latest Discussions": "Najnovije rasprave",
   "Learn more": "Saznajte više",
   "Link Copied!": "Veza je kopirana!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Prijava na vaš račun prvi je korak za stvaranje novog SeaSketch projekta.",
+  "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "Tražite projekte kao što su <2>Bermuda</2>, <5>MaPP</5> ili <8>US Mapping Coordination</8>? Ove projekte možete pronaći u <11>SeaSketch Legacy</11>.",
   "Metadata": "Metapodaci",
   "NumPosts": "{{count}} postova",
   "NumPosts_plural": "NumPosts_množina",
@@ -26,6 +29,8 @@
   "Resend verification email": "Ponovno pošalji e-poruku za potvrdu",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "SeaSketch stavlja moćne alate u ruke planera oceana,\n              dionicima i javnosti koji su nekoć bili ograničeni na GIS\n              profesionalci, omogućujući participativno morsko prostorno planiranje\n              procesi koji su usko vezani uz relevantnu znanost i\n              informacija. SeaSketch se koristi diljem svijeta u malom\n              agencijskih timova i velikih inicijativa koje pokreće zajednica kako bismo poboljšali\n              upravljačkih odluka svaki dan.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "SeaSketch podržava zajedničko planiranje za naše oceane",
+  "Sending email...": "Slanje e-pošte...",
   "Sign In": "Prijaviti se",
+  "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "SeaSketchu pristupate s beta domene next.seasket.ch. Za najbolje iskustvo koristite <2>www.seasketch.org</2>. Ako koristite izvanmrežne značajke <5>pročitajte ove upute</5>.",
   "Zoom to bounds": "Povećaj do granica"
 }
