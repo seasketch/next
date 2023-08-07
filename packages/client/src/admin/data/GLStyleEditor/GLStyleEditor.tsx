@@ -28,8 +28,6 @@ import {
   formatJSONCommand,
   formatJSONKeyBinding,
 } from "./formatCommand";
-import { Trans } from "react-i18next";
-import useDialog from "../../../components/useDialog";
 import { getBestSpriteImage, sprites } from "./extensions/glStyleSprites";
 import {
   useSpritesQuery,
@@ -66,7 +64,6 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [value] = useState(formatGLStyle(props.initialStyle || ""));
   const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
   const editorRef = useRef<ReactCodeMirrorRef>(null);
-  const dialog = useDialog();
   const jsonCompletions = useMemo(() => {
     return jsonLanguage.data.of({
       autocomplete: glStyleAutocomplete(props.geostats),
@@ -120,7 +117,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }
         },
         onSpriteClick: (event) => {
-          setSpriteState((prev) => ({
+          setSpriteState(() => ({
             ...event,
             selectedSpriteId: /seasketch:\/\/sprites\/(\d+)/.test(event.value)
               ? parseInt(event.value.match(/seasketch:\/\/sprites\/(\d+)/)![1])
@@ -130,7 +127,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
       }),
       keymap.of([formatJSONKeyBinding, ...defaultKeymap]),
     ];
-  }, [spriteQuery, setSpriteState]);
+  }, [spriteQuery, setSpriteState, type, jsonCompletions]);
 
   const onSpriteChange = useCallback(
     (selectedSpriteId: number | null, value?: string) => {
@@ -489,7 +486,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           foldGutter: true,
           searchKeymap: false,
         }}
-        onChange={(value, viewUpdate) => {
+        onChange={(value) => {
           try {
             const errors = validateGLStyleFragment(JSON.parse(value), type);
             if (errors.length === 0) {
