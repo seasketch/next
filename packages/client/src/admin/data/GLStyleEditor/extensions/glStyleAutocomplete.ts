@@ -1655,6 +1655,8 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
     });
   }
   if (layer.attributes.find((a) => a.type === "string")) {
+    const isLine =
+      layer.geometry === "LineString" || layer.geometry === "MultiLineString";
     for (const attribute of layer.attributes || []) {
       if (attribute.type === "string") {
         options.push({
@@ -1669,6 +1671,7 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
             layout: {
               "text-field": ["get", attribute.attribute],
               "text-size": 12,
+              "symbole-placement": isLine ? "line" : "point",
             },
             paint: {
               "text-color": "black",
