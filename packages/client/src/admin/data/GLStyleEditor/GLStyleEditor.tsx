@@ -19,6 +19,7 @@ import {
   useMemo,
   useRef,
   useState,
+  Fragment,
 } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
@@ -43,7 +44,6 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
-import { map } from "react-sortable-tree";
 
 require("./RadixDropdown.css");
 
