@@ -1,0 +1,17 @@
+{
+  "Accept as": "Accepter som {{email}}",
+  "An account with this email address already exists.": "Der findes allerede en konto med denne e-mailadresse.",
+  "Confirming invite": "Bekræfter invitation",
+  "Contact {{supportEmail}} to request a new invitation.": "Kontakt {{supportEmail}} for at anmode om en ny invitation.",
+  "Create an Account": "Opret en konto",
+  "Logout and sign in as ": "Log ud og log ind som ",
+  "Sign In": "Log ind",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Denne invitation er allerede blevet accepteret.<1> Fortsæt til projektet </1> eller <5>kontakt support</5>, hvis du mener, at dette er en fejl.",
+  "This invitation was originally sent to <2></2>.": "Denne invitation blev oprindeligt sendt til <2></2>.",
+  "Use another account": "Brug en anden konto",
+  "Verifying invitation code": "Bekræfter invitationskode",
+  "Welcome, !": "Velkommen, !",
+  "Welcome!": "Velkommen!",
+  "You have been invited to participate in a SeaSketch project.": "Du er blevet inviteret til at deltage i et SeaSketch-projekt.",
+  "Your invitation to this project has expired.": "Din invitation til dette projekt er udløbet."
+}

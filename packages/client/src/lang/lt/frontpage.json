@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Sukurti projektą",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Sukurkite savo<1></1><2>SeaSketch projektą</2>",
+  "Create your project": "Sukurkite savo projektą",
+  "Developer API": "Kūrėjo API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Susisiekite su mumis adresu <2>support@seasketch.org</2>, kad surengtumėte diskusiją apie tai, kaip SeaSketch gali būti naudojamas jūsų planavimo pastangoms paremti.",
+  "Project name": "Projekto pavadinimas",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketch projektus galima tinkinti naudojant mūsų atvirojo kodo <2>geografinio apdorojimo sistemą</2>. Projektai gali apibrėžti ataskaitas, kuriose vizualizuojamas būsimų zonų poveikis naudojant Typescript, React ir AWS Lambda.",
+  "Trusted by": "Pasitikėjo",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Naudokite mūsų bendrus geoprojektavimo ir tyrimų įrankius jūrų erdviniam planavimui savo regione. Į jūsų projektą bus įtraukti įrankiai, skirti vizualizuoti žemėlapius, kurti diskusijų forumus, eskizuoti planus ir rinkti duomenis naudojant apklausas – <i>nemokamai!</i> Analitines ataskaitas galima kurti ir pritaikyti naudojant mūsų <5>geografinio apdorojimo sistemą</5>. ."
+}

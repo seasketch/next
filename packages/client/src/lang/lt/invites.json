@@ -1,0 +1,17 @@
+{
+  "Accept as": "Priimti kaip {{email}}",
+  "An account with this email address already exists.": "Paskyra šiuo el. pašto adresu jau yra.",
+  "Confirming invite": "Kvietimas patvirtinamas",
+  "Contact {{supportEmail}} to request a new invitation.": "Susisiekite su {{supportEmail}} ir paprašykite naujo kvietimo.",
+  "Create an Account": "Sukurti paskyrą",
+  "Logout and sign in as ": "Atsijunkite ir prisijunkite kaip ",
+  "Sign In": "Prisijungti",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Šis kvietimas jau priimtas. <1> Pereikite prie projekto </1> arba <5>susisiekite su palaikymo komanda</5>, jei manote, kad tai klaida.",
+  "This invitation was originally sent to <2></2>.": "Šis kvietimas iš pradžių buvo išsiųstas <2></2>.",
+  "Use another account": "Naudokite kitą paskyrą",
+  "Verifying invitation code": "Kvietimo kodo patvirtinimas",
+  "Welcome, !": "Sveiki, !",
+  "Welcome!": "Sveiki!",
+  "You have been invited to participate in a SeaSketch project.": "Jus pakvietė dalyvauti SeaSketch projekte.",
+  "Your invitation to this project has expired.": "Jūsų kvietimas į šį projektą baigėsi."
+}

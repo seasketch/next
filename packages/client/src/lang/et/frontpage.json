@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Loo projekt",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Looge oma<1></1><2>SeaSketchi projekt</2>",
+  "Create your project": "Looge oma projekt",
+  "Developer API": "Arendaja API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Võtke meiega ühendust aadressil <2>support@seasketch.org</2>, et leppida kokku arutelu selle üle, kuidas SeaSketchi saaks teie planeerimispüüdluste toetamiseks kasutada.",
+  "Project name": "Projekti nimi",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketchi projekte saab kohandada meie avatud lähtekoodiga <2>geotöötlusraamistiku</2> abil. Projektid saavad Typescripti, Reacti ja AWS Lambda abil määratleda aruandeid, mis visualiseerivad tulevaste tsoonide mõju.",
+  "Trusted by": "Usaldanud",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Kasutage oma piirkonna mereruumi planeerimiseks meie koostööl põhinevaid geodisaini ja mõõdistustööriistu. Teie projekt sisaldab tööriistu kaartide visualiseerimiseks, arutelufoorumite loomiseks, plaanide visandamiseks ja uuringute abil andmete kogumiseks – <i>tasuta!</i> Analüütilisi aruandeid saab arendada ja kohandada meie <5>geotöötlusraamistiku</5> abil. ."
+}

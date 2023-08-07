@@ -1,5 +1,6 @@
 {
   "authenticating...": "ifakazela ubuqiniso...",
+  "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "Ngaphambi kokudala iphrojekthi, kufanele uqinisekise ikheli lakho le-imeyili. Sicela uhlole ibhokisi lakho lokungenayo ukuze uthole i-imeyili yokuqinisekisa evela ku-<2>do-not-reply@seasketch.org</2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "Ngokwenza iphrojekthi, uyavumelana <2>Nemigomo Yokusebenzisa</2> kanye <6>Nenqubomgomo Yobumfihlo</6>.",
   "Copied!": "Kukopishiwe!",
   "Copy Link": "Kopisha Isixhumanisi",
@@ -7,12 +8,14 @@
   "Create an account": "Yenza i-akhawunti",
   "Create your own SeaSketch project.": "Dala iphrojekthi yakho ye-SeaSketch.",
   "Dismiss": "Cashisa",
+  "Email sent. Check your inbox  📨": "I-imeyili ithunyelwe. Hlola ibhokisi lakho lokungenayo 📨",
   "Get started": "Qalisa",
   "Latest activity": "Umsebenzi wakamuva",
   "Latest Discussions": "Izingxoxo Zakamuva",
   "Learn more": "Funda kabanzi",
   "Link Copied!": "Isixhumanisi Sikopishiwe!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Ukungena ku-akhawunti yakho kuyisinyathelo sokuqala sokudala iphrojekthi entsha ye-SeaSketch.",
+  "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "Ufuna amaphrojekthi afana ne-<2>Bermuda</2>, <5>MaPP</5>, noma i-<8>US Mapping Coordination</8>? Ungathola lawa maphrojekthi kokuthi <11>SeaSketch Legacy</11>.",
   "Metadata": "Imethadatha",
   "NumPosts": "{{count}} okuthunyelwe",
   "NumPosts_plural": "NumPosts_plural",
@@ -26,6 +29,8 @@
   "Resend verification email": "Thumela kabusha i-imeyili yokuqinisekisa",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "I-SeaSketch ibeka amathuluzi anamandla ezandleni zabahleli bolwandle,\n              ababambiqhaza kanye nomphakathi owake wakhawulelwa ku-GIS\n              ochwepheshe, okuvumela ukuhlela ukubamba iqhaza kwezindawo zasolwandle\n              izinqubo ezisondelene kakhulu nesayensi efanele kanye\n              ulwazi. I-SeaSketch isetshenziswa emhlabeni wonke ngamancane\n              amaqembu e-ejensi kanye nezinhlelo ezinkulu eziqhutshwa umphakathi zokwenza ngcono\n              izinqumo zabaphathi nsuku zonke.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "I-SeaSketch Isekela Ukuhlelwa Ngokuhlanganyela Kwezilwandle zethu",
+  "Sending email...": "Ithumela i-imeyili...",
   "Sign In": "Ngena ngemvume",
+  "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "Ufinyelela i-SeaSketch kusukela kusizinda se-beta esilandelayo.seasket.ch. Ukuze uthole ulwazi olungcono kakhulu, sicela usebenzise <2>www.seasketch.org</2>. Uma usebenzisa izici ezingaxhunyiwe ku-inthanethi <5>funda le miyalo</5>.",
   "Zoom to bounds": "Sondeza emikhawulweni"
 }

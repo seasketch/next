@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Създаване на проект",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Създайте свой собствен<1></1><2> SeaSketch проект</2>",
+  "Create your project": "Създайте своя проект",
+  "Developer API": "API за разработчици",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Моля, свържете се с нас на <2>support@seasketch.org</2>, за да организираме дискусия за това как SeaSketch може да се използва в подкрепа на вашите усилия за планиране.",
+  "Project name": "Име на проекта",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Проектите на SeaSketch могат да бъдат персонализирани с помощта на нашата <2>Geoprocessing Framework</2> с отворен код. Проектите могат да дефинират отчети, които визуализират въздействието на перспективни зони с помощта на Typescript, React и AWS Lambda.",
+  "Trusted by": "Доверен от",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Използвайте нашите инструменти за съвместен геодизайн и проучване за морско пространствено планиране във вашия регион. Вашият проект ще включва инструменти за визуализиране на карти, създаване на дискусионни форуми, скициране на планове и събиране на данни с помощта на проучвания - <i>безплатно!</i> Аналитичните отчети могат да бъдат разработени и персонализирани с помощта на нашата <5>рамка за геообработка</5> ."
+}

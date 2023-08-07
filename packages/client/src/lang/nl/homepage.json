@@ -1,5 +1,6 @@
 {
   "authenticating...": "authenticeren...",
+  "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "Voordat u een project aanmaakt, moet u uw e-mailadres verifiëren. Controleer uw inbox voor een verificatie-e-mail van <2>do-not-reply@seasketch.org</2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "Door een project aan te maken, gaat u akkoord met onze <2>Gebruiksvoorwaarden</2> en ons <6>Privacybeleid</6>.",
   "Copied!": "Gekopieerd!",
   "Copy Link": "Kopieer link",
@@ -7,12 +8,14 @@
   "Create an account": "Account aanmaken",
   "Create your own SeaSketch project.": "Maak je eigen SeaSketch-project.",
   "Dismiss": "Afwijzen",
+  "Email sent. Check your inbox  📨": "Email verzonden. Check je inbox 📨",
   "Get started": "Begin",
   "Latest activity": "Laatste activiteiten",
   "Latest Discussions": "Laatste discussies",
   "Learn more": "Kom meer te weten",
   "Link Copied!": "Link gekopieerd!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Inloggen op uw account is de eerste stap naar het maken van een nieuw SeaSketch-project.",
+  "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "Op zoek naar projecten zoals <2>Bermuda</2>, <5>MaPP</5> of <8>US Mapping Coordination</8>? U kunt deze projecten vinden in <11>SeaSketch Legacy</11>.",
   "Metadata": "Metagegevens",
   "NumPosts": "{{count}} berichten",
   "NumPosts_plural": "NumPosts_plural",
@@ -26,6 +29,8 @@
   "Resend verification email": "Verificatie-e-mail opnieuw verzenden",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "SeaSketch legt krachtige tools in handen van oceaanplanners,\nbelanghebbenden en het publiek die ooit beperkt waren tot GIS\nprofessionals, die participatieve mariene ruimtelijke planning mogelijk maken van processen die nauw verbonden zijn met de relevante wetenschap en\n              informatie. SeaSketch wordt over de hele wereld in het klein gebruikt\n              bureauteams en grote door de gemeenschap aangestuurde initiatieven om het beter te maken\n              dagelijkse managementbeslissingen.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "SeaSketch ondersteunt gezamenlijke planning voor onze oceanen",
+  "Sending email...": "Email verzenden...",
   "Sign In": "Aanmelden",
+  "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "U opent SeaSketch vanaf het bètadomein next.seasket.ch. Gebruik <2>www.seasketch.org</2> voor de beste ervaring. Als u offline functies gebruikt <5>lees dan deze instructies</5>.",
   "Zoom to bounds": "Zoom in op grenzen"
 }

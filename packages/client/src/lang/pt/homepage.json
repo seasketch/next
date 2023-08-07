@@ -1,5 +1,6 @@
 {
   "authenticating...": "autenticando...",
+  "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "Antes de criar um projeto, você deve verificar seu endereço de e-mail. Por favor, verifique sua caixa de entrada para um e-mail de verificação de <2>do-not-reply@seasketch.org</2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "Ao criar um projeto, você concorda com nossos <2>Termos de Uso</2> e nossa <6>Política de Privacidade</6>.",
   "Copied!": "Copiado!",
   "Copy Link": "Link para copiar",
@@ -7,12 +8,14 @@
   "Create an account": "Crie uma conta",
   "Create your own SeaSketch project.": "Crie seu próprio projeto no SeaSketch",
   "Dismiss": "Dispensar",
+  "Email sent. Check your inbox  📨": "E-mail enviado. Verifique sua caixa de entrada 📨",
   "Get started": "Começar",
   "Latest activity": "Última atividade",
   "Latest Discussions": "Últimas Discussões",
   "Learn more": "Saiba mais",
   "Link Copied!": "Link copiado!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Fazer login na sua conta é o primeiro passo para criar um novo projeto SeaSketch.",
+  "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "Procurando projetos como <2>Bermudas</2>, <5>MaPP</5> ou <8>Coordenação de mapeamento dos EUA</8>? Você pode encontrar esses projetos em <11>SeaSketch Legacy</11>.",
   "Metadata": "Metadados",
   "NumPosts": "{{count}} postagens",
   "NumPosts_plural": "{{count}} postagens",
@@ -26,6 +29,8 @@
   "Resend verification email": "Re-enviar o email de verificação",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "O SeaSketch coloca ferramentas poderosas nas mãos dos gestores dos oceanos, partes interessadas e o público em geral que anteriormente era limitado à profissionais em SIG, possibilitando um processo de Planejamento Espacial Marinho participativo que é intimamente ligado à ciência e informação. SeaSketch tem sido utilizado em todo o mundo em pequenas agências e grandes iniciativas orientadas pela comunidade para melhorar as decisões de gestão todos os dias.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "SeaSketch Apoia o Planejamento Colaborativo dos nossos Oceanos",
+  "Sending email...": "Enviando email...",
   "Sign In": "Entrar",
+  "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "Você está acessando SeaSketch do domínio beta next.seasket.ch. Para obter a melhor experiência, use <2>www.seasketch.org</2>. Se você estiver usando recursos off-line, <5>leia estas instruções</5>.",
   "Zoom to bounds": "Aproximar à extensão"
 }
