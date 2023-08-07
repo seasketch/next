@@ -782,6 +782,16 @@ export default function LayerTableOfContentsItemEditor(
                     });
                     setStyle(newStyle);
                   }}
+                  bounds={
+                    item.bounds
+                      ? (item.bounds.map((b) => parseFloat(b)) as [
+                          number,
+                          number,
+                          number,
+                          number
+                        ])
+                      : undefined
+                  }
                 />
               </div>
             )}

@@ -94,7 +94,9 @@ export default async function handleUpload(
   requestingUser: string,
   skipLoggingProgress?: boolean
 ): Promise<ProcessedUploadResponse> {
+  console.log("handle");
   const pgClient = await getClient();
+  console.log("got client");
 
   /**
    * Updates progress of the upload task

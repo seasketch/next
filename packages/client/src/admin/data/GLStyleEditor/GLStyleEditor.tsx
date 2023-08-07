@@ -12,7 +12,14 @@ import {
   getInsertLayerOptions,
   glStyleAutocomplete,
 } from "./extensions/glStyleAutocomplete";
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
 import {
@@ -34,6 +41,10 @@ import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
 import InsertLayerModal from "./InsertLayerModal";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
+import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
+import { MapContext } from "../../../dataLayers/MapContextManager";
+import { map } from "react-sortable-tree";
+
 require("./RadixDropdown.css");
 
 interface GLStyleEditorProps {
@@ -42,18 +53,9 @@ interface GLStyleEditorProps {
   onChange?: (newStyle: string) => void;
   className?: string;
   geostats?: GeostatsLayer;
+  bounds?: [number, number, number, number];
 }
 
-function Button({ className, ...props }: any) {
-  return (
-    <button
-      className={`bg-gray-400 hover:bg-gray-300 bg-gradient-to-b rounded-sm p-0 px-1 text-sm shadow ${className}`}
-      {...props}
-    >
-      {props.children}
-    </button>
-  );
-}
 /**
  * This is an uncontrolled component. Changes to initialStyle after initial rendering will not
  * change the value of the editor.
@@ -160,8 +162,26 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     return { layerTypes, insertOptions: options };
   }, [props.geostats]);
 
-  const mac = navigator.appVersion.indexOf("Mac");
+  const mapContext = useContext(MapContext);
 
+  const [zoom, setZoom] = useState(0);
+  useEffect(() => {
+    if (mapContext.manager?.map) {
+      const onZoom = () => {
+        setZoom(
+          Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10
+        );
+      };
+      mapContext.manager.map.on("zoom", onZoom);
+      setZoom(Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10);
+      return () => {
+        mapContext.manager?.map?.off("zoom", onZoom);
+      };
+    }
+  }, [mapContext.manager?.map]);
+
+  const mac = navigator.appVersion.indexOf("Mac");
+  const editorState = editorRef.current?.view?.state;
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
@@ -171,6 +191,68 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         className="p-2 border-b border-black border-opacity-30 z-10 shadow flex space-x-2 flex-0"
         style={{ backgroundColor: "#303841" }}
       >
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              // className="rounded-full w-7 h-7 inline-flex items-center justify-center text-blue-600 bg-white shadow outline-none focus:shadow-black"
+              className="text-sm bg-gray-400 rounded-sm p-0 px-1 shadow"
+              aria-label="Customise options"
+            >
+              View <CaretDownIcon className="inline" />
+            </button>
+            {/* <Button
+              title="insert dropdown"
+              onClick={() => {
+                if (editorRef.current?.view && props.geostats) {
+                  const editorView = editorRef.current?.view;
+                  setInsertLayerOptions(getInsertLayerOptions(props.geostats));
+                }
+              }}
+            >
+              <Trans ns="admin:data">insert</Trans>
+            </Button> */}
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal className="z-50">
+            <DropdownMenu.Content
+              className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
+              style={{ minWidth: 220 }}
+              // sideOffset={5}
+              // side="bottom"
+              sideOffset={5}
+              align="start"
+              // alignOffset={-50}
+            >
+              <DropdownMenu.Item
+                disabled={!props.bounds}
+                onClick={() => {
+                  if (mapContext.manager && props.geostats) {
+                    mapContext.manager.map?.fitBounds(props.bounds!);
+                  }
+                }}
+                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+              >
+                Show Layer Extent
+                {/* <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+Z</div> */}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                disabled={
+                  !Boolean(editorState) || undoDepth(editorState!) === 0
+                }
+                onClick={() => {
+                  if (editorRef.current?.view) {
+                    const editorView = editorRef.current?.view;
+                    undo(editorView);
+                  }
+                }}
+                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+              >
+                Open Layer Property Details
+                {/* <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+Z</div> */}
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button
@@ -202,6 +284,36 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
               align="start"
               // alignOffset={-50}
             >
+              <DropdownMenu.Item
+                disabled={
+                  !Boolean(editorState) || undoDepth(editorState!) === 0
+                }
+                onClick={() => {
+                  if (editorRef.current?.view) {
+                    const editorView = editorRef.current?.view;
+                    undo(editorView);
+                  }
+                }}
+                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+              >
+                Undo
+                <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+Z</div>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                disabled={
+                  !Boolean(editorState) || redoDepth(editorState!) === 0
+                }
+                onClick={() => {
+                  if (editorRef.current?.view) {
+                    const editorView = editorRef.current?.view;
+                    redo(editorView);
+                  }
+                }}
+                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+              >
+                Redo
+                <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+R</div>
+              </DropdownMenu.Item>
               <DropdownMenu.Item
                 onClick={() => {
                   if (editorRef.current?.view) {
@@ -356,28 +468,12 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
-        <Button
-          onClick={() => {
-            dialog.alert(
-              <div>
-                <p className="my-2">
-                  <span className="font-mono bg-gray-100 rounded p-1">
-                    Control-Space
-                  </span>{" "}
-                  autocomplete
-                </p>
-                <p className="my-2">
-                  <span className="font-mono bg-gray-100 rounded p-1">
-                    {mac ? "Command" : "Ctrl"}-f
-                  </span>{" "}
-                  format code
-                </p>
-              </div>
-            );
-          }}
-        >
-          <Trans ns="admin:data">key shortcuts...</Trans>
-        </Button>
+        <span className="font-mono text-sm bg-gray-700 text-blue-300 text-opacity-80 px-1 py-0.5 rounded w-24 text-center tabular-nums">
+          zoom{" "}
+          <span className="font-mono ">
+            {Math.round(zoom) === zoom ? zoom + ".0" : zoom}
+          </span>
+        </span>
       </div>
 
       <SpritePopover spriteState={spriteState} onChange={onSpriteChange} />

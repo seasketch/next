@@ -9,7 +9,6 @@ import {
   schemeTableau10,
   interpolatePlasma as interpolateColorScale,
 } from "d3-scale-chromatic";
-import { EditorState } from "prosemirror-state";
 
 export interface GeostatsAttribute {
   attribute: string;
@@ -72,6 +71,8 @@ interface RootContext {
 interface LayerRootPropertyNameStyleContext {
   type: "LayerRootPropertyName";
   values: PropertyNameOption[];
+  PropertyNode: SyntaxNode;
+  hasValue: boolean;
 }
 
 interface LayerRootPropertyValueStyleContext {
@@ -94,7 +95,7 @@ interface PropertyNameStyleContext {
   type: "PropertyName";
   layerType: LayerType;
   values: PropertyNameOption[];
-  ContainerNode: SyntaxNode;
+  PropertyNode: SyntaxNode;
   hasValue: boolean;
 }
 
@@ -314,6 +315,7 @@ function evaluateStyleContext(
         LayerObject,
         context
       );
+      const currentProperty = node.parent!;
       // Get a list of all property names that are not already used, as well
       // as banned property names that should not be suggested like source & id.
       const excludedPropertyNames = [
@@ -335,6 +337,11 @@ function evaluateStyleContext(
               valueType: details.type,
             };
           }),
+        PropertyNode: currentProperty,
+        hasValue: Boolean(
+          currentProperty.getChild("PropertyVaue") ||
+            currentProperty.getChild("String")
+        ),
       };
       return styleContext;
     } else if (
@@ -426,7 +433,7 @@ function evaluateStyleContext(
               currentProperty.getChild("PropertyVaue") ||
                 currentProperty.getChild("String")
             ),
-            ContainerNode: currentProperty,
+            PropertyNode: currentProperty,
             values: Object.keys(specBase)
               .map((name) => ({
                 name,
@@ -826,11 +833,11 @@ function getCompletionsForEvaluatedContext(
       if (
         styleContext.type === "PropertyName" &&
         value.valueType === "color" &&
-        styleContext.ContainerNode &&
+        styleContext.PropertyNode &&
         !styleContext.hasValue
       ) {
         completions.push(
-          replacePropertyCompletion(styleContext.ContainerNode, {
+          replacePropertyCompletion(styleContext.PropertyNode, {
             label: value.name,
             detail: value.valueType,
             info: value.doc,
@@ -842,11 +849,11 @@ function getCompletionsForEvaluatedContext(
       } else if (
         styleContext.type === "PropertyName" &&
         value.defaultValue !== undefined &&
-        styleContext.ContainerNode &&
+        styleContext.PropertyNode &&
         !styleContext.hasValue
       ) {
         completions.push(
-          replacePropertyCompletion(styleContext.ContainerNode, {
+          replacePropertyCompletion(styleContext.PropertyNode, {
             label: value.name,
             detail: value.valueType,
             info: value.doc,
@@ -859,6 +866,54 @@ function getCompletionsForEvaluatedContext(
             }`,
           })
         );
+      } else if (
+        styleContext.type === "LayerRootPropertyName" &&
+        !styleContext.hasValue &&
+        styleContext.PropertyNode
+      ) {
+        let defaultValue: string | undefined;
+        if (value.name === "maxzoom") {
+          defaultValue = "12";
+        } else if (value.name === "minzoom") {
+          defaultValue = "5";
+        } else if (value.name === "paint" || value.name === "layout") {
+          defaultValue = "{}";
+        } else if (value.name === "filter") {
+          defaultValue = `["==", ["get", ""], ""]`;
+        } else if (value.name === "type") {
+          if (layer?.geometry === "Point" || layer?.geometry === "MultiPoint") {
+            defaultValue = `"circle"`;
+          } else if (
+            layer?.geometry === "LineString" ||
+            layer?.geometry === "MultiLineString"
+          ) {
+            defaultValue = `"line"`;
+          } else if (
+            layer?.geometry === "Polygon" ||
+            layer?.geometry === "MultiPolygon"
+          ) {
+            defaultValue = `"fill"`;
+          }
+        } else if (value.valueType === "string") {
+          defaultValue = `""`;
+        }
+        if (defaultValue) {
+          completions.push(
+            replacePropertyCompletion(styleContext.PropertyNode, {
+              label: value.name,
+              detail: value.valueType,
+              info: value.doc,
+              expression: `"${value.name}": ${defaultValue}`,
+            })
+          );
+        } else {
+          completions.push({
+            label: value.name,
+            detail: value.valueType,
+            info: value.doc,
+            // boost: BOOSTS[value.name],
+          });
+        }
       } else {
         completions.push({
           label: value.name,
@@ -1469,6 +1524,28 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
         layout: {},
       },
     });
+    options.push({
+      label: "Fill with opacity interpolated by zoom",
+      type: "fill",
+      layer: {
+        type: "fill",
+        paint: {
+          "fill-color": schemeTableau10[colorChoiceCounter++ % 10],
+          "fill-opacity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            0,
+            5,
+            0,
+            10,
+            1,
+          ],
+        },
+        layout: {},
+      },
+    });
     for (const attr of layer.attributes || []) {
       if (attr.type === "string") {
         options.push({
@@ -1546,6 +1623,37 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
       }
     }
   }
+  if (
+    layer.geometry === "LineString" ||
+    layer.geometry === "MultiLineString" ||
+    layer.geometry === "Polygon" ||
+    layer.geometry === "MultiPolygon"
+  ) {
+    options.push({
+      label: "Simple Line",
+      type: "line",
+      layer: {
+        type: "line",
+        paint: {
+          "line-color": schemeTableau10[colorChoiceCounter++ % 10],
+          "line-width": 2,
+        },
+        layout: {},
+      },
+    });
+    options.push({
+      label: "Line with width determined by zoom",
+      type: "line",
+      layer: {
+        type: "line",
+        paint: {
+          "line-color": schemeTableau10[colorChoiceCounter++ % 10],
+          "line-width": ["step", ["zoom"], 0, 8, 1, 12, 3],
+        },
+        layout: {},
+      },
+    });
+  }
   if (layer.attributes.find((a) => a.type === "string")) {
     for (const attribute of layer.attributes || []) {
       if (attribute.type === "string") {
@@ -1560,6 +1668,31 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
             type: "symbol",
             layout: {
               "text-field": ["get", attribute.attribute],
+              "text-size": 12,
+            },
+            paint: {
+              "text-color": "black",
+              "text-halo-color": "white",
+              "text-halo-width": 2,
+            },
+          },
+        });
+        options.push({
+          type: "symbol",
+          label: "Interpolated string label",
+          propertyChoice: {
+            property: attribute.attribute,
+            ...attribute,
+          },
+          layer: {
+            type: "symbol",
+            layout: {
+              "text-field": [
+                "concat",
+                `${attribute.attribute}: [`,
+                ["get", attribute.attribute],
+                "]",
+              ],
               "text-size": 12,
             },
             paint: {
