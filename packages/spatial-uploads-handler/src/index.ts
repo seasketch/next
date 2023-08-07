@@ -227,7 +227,23 @@ export default async function handleUpload(
         throw new Error(`Unrecognized raster driver "${rioData.driver}"`);
       }
       if (rioData.colorinterp[0] === "gray") {
-        rasterInfo.colorInterp = ColorInterp.GRAY;
+        // It seems Arc Desktop exports rgb files in a format that gdal/rio info
+        // doesn't interpret correctly. Hopefully guessing this way is ok.
+        if (
+          rioData.colorinterp.length === 3 &&
+          rioData.colorinterp[1] === "undefined"
+        ) {
+          rasterInfo.colorInterp = ColorInterp.RGB;
+        } else {
+          rasterInfo.colorInterp = ColorInterp.GRAY;
+        }
+      } else if (
+        // Sam Arc Desktop hueristic here for rgba
+        rioData.colorinterp.length === 4 &&
+        rioData.colorinterp[3] === "alpha" &&
+        rioData.colorinterp[0] === "undefined"
+      ) {
+        rasterInfo.colorInterp = ColorInterp.RGBA;
       } else if (rioData.colorinterp[0] === "red") {
         if (rioData.colorinterp[3] === "alpha") {
           rasterInfo.colorInterp = ColorInterp.RGBA;
