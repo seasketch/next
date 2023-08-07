@@ -12,7 +12,7 @@ import {
   getInsertLayerOptions,
   glStyleAutocomplete,
 } from "./extensions/glStyleAutocomplete";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
 import {
@@ -222,7 +222,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                 Insert a new layer
               </DropdownMenu.Label>
               {layerTypes.map((type) => (
-                <DropdownMenu.Sub>
+                <DropdownMenu.Sub key={type}>
                   <DropdownMenu.SubTrigger className="RadixDropdownItem capitalize group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none ">
                     {type === "symbol" ? "Labels & Symbols" : type}
                     <div className="ml-auto pl-[20px] text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8">
@@ -241,6 +241,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                         )
                         .map((option) => (
                           <DropdownMenu.Item
+                            key={option.label + option.propertyChoice?.property}
                             onClick={() => {
                               if (editorRef.current?.view) {
                                 const editorView = editorRef.current?.view;
@@ -290,12 +291,15 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                           }[]
                         );
                         return groupedOptions.map((group) => (
-                          <>
+                          <Fragment key={group.label}>
                             <DropdownMenu.Label className="pl-2 text-gray-500 text-sm leading-2 mb-1 mt-1 capitalize">
                               {group.label}
                             </DropdownMenu.Label>
                             {group.options.map((option) => (
                               <DropdownMenu.Item
+                                key={
+                                  option.label + option.propertyChoice?.property
+                                }
                                 onClick={() => {
                                   if (editorRef.current?.view) {
                                     const editorView = editorRef.current?.view;
@@ -342,7 +346,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                                   )}
                               </DropdownMenu.Item>
                             ))}
-                          </>
+                          </Fragment>
                         ));
                       })()}
                     </DropdownMenu.SubContent>
