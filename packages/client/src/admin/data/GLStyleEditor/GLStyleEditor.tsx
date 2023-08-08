@@ -20,6 +20,7 @@ import {
   useRef,
   useState,
   Fragment,
+  ReactNode,
 } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
@@ -189,281 +190,160 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         style={{ backgroundColor: "#303841" }}
       >
         <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              // className="rounded-full w-7 h-7 inline-flex items-center justify-center text-blue-600 bg-white shadow outline-none focus:shadow-black"
-              className="text-sm bg-gray-400 rounded-sm p-0 px-1 shadow"
-              aria-label="Customise options"
-            >
-              View <CaretDownIcon className="inline" />
-            </button>
-            {/* <Button
-              title="insert dropdown"
+          <DropdownTrigger label="View" ariaLabel="View menu" />
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              disabled={!props.bounds}
               onClick={() => {
-                if (editorRef.current?.view && props.geostats) {
-                  const editorView = editorRef.current?.view;
-                  setInsertLayerOptions(getInsertLayerOptions(props.geostats));
+                if (mapContext.manager && props.geostats) {
+                  mapContext.manager.map?.fitBounds(props.bounds!);
                 }
               }}
-            >
-              <Trans ns="admin:data">insert</Trans>
-            </Button> */}
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal className="z-50">
-            <DropdownMenu.Content
-              className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
-              style={{ minWidth: 220 }}
-              // sideOffset={5}
-              // side="bottom"
-              sideOffset={5}
-              align="start"
-              // alignOffset={-50}
-            >
-              <DropdownMenu.Item
-                disabled={!props.bounds}
-                onClick={() => {
-                  if (mapContext.manager && props.geostats) {
-                    mapContext.manager.map?.fitBounds(props.bounds!);
-                  }
-                }}
-                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
-              >
-                Show Layer Extent
-                {/* <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+Z</div> */}
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                disabled={
-                  !Boolean(editorState) || undoDepth(editorState!) === 0
-                }
-                onClick={() => {
-                  if (editorRef.current?.view) {
-                    const editorView = editorRef.current?.view;
-                    undo(editorView);
-                  }
-                }}
-                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
-              >
-                Open Layer Property Details
-                {/* <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+Z</div> */}
-              </DropdownMenu.Item>
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
+              label="Show Layer Extent"
+            />
+            <DropdownMenuItem
+              label="View layer column summary"
+              disabled={true}
+              onClick={() => {}}
+            />
+          </DropdownMenuContent>
         </DropdownMenu.Root>
 
         <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              // className="rounded-full w-7 h-7 inline-flex items-center justify-center text-blue-600 bg-white shadow outline-none focus:shadow-black"
-              className="text-sm bg-gray-400 rounded-sm p-0 px-1 shadow"
-              aria-label="Customise options"
-            >
-              Edit <CaretDownIcon className="inline" />
-            </button>
-            {/* <Button
-              title="insert dropdown"
+          <DropdownTrigger label="Edit" ariaLabel="Edit menu" />
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              label="Undo"
+              disabled={!Boolean(editorState) || undoDepth(editorState!) === 0}
               onClick={() => {
-                if (editorRef.current?.view && props.geostats) {
+                if (editorRef.current?.view) {
                   const editorView = editorRef.current?.view;
-                  setInsertLayerOptions(getInsertLayerOptions(props.geostats));
+                  undo(editorView);
                 }
               }}
-            >
-              <Trans ns="admin:data">insert</Trans>
-            </Button> */}
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal className="z-50">
-            <DropdownMenu.Content
-              className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
-              style={{ minWidth: 220 }}
-              // sideOffset={5}
-              // side="bottom"
-              sideOffset={5}
-              align="start"
-              // alignOffset={-50}
-            >
-              <DropdownMenu.Item
-                disabled={
-                  !Boolean(editorState) || undoDepth(editorState!) === 0
+              keyCode={(mac ? "⌘" : "^") + "Z"}
+            />
+            <DropdownMenuItem
+              label="Redo"
+              disabled={!Boolean(editorState) || redoDepth(editorState!) === 0}
+              onClick={() => {
+                if (editorRef.current?.view) {
+                  const editorView = editorRef.current?.view;
+                  redo(editorView);
                 }
-                onClick={() => {
-                  if (editorRef.current?.view) {
-                    const editorView = editorRef.current?.view;
-                    undo(editorView);
-                  }
-                }}
-                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
-              >
-                Undo
-                <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+Z</div>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                disabled={
-                  !Boolean(editorState) || redoDepth(editorState!) === 0
+              }}
+              keyCode={(mac ? "⌘" : "^") + "R"}
+            />
+            <DropdownMenuItem
+              label="Format Code"
+              onClick={() => {
+                if (editorRef.current?.view) {
+                  const editorView = editorRef.current?.view;
+                  formatJSONCommand(editorView);
                 }
-                onClick={() => {
-                  if (editorRef.current?.view) {
-                    const editorView = editorRef.current?.view;
-                    redo(editorView);
-                  }
-                }}
-                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+              }}
+              keyCode={`${mac ? "⌘" : "^"}+F`}
+            />
+            <DropdownSeperator />
+            <DropdownLabel label="Insert a new layer" />
+            {layerTypes.map((type) => (
+              <DropdownSubmenu
+                label={type === "symbol" ? "Labels & Symbols" : type}
+                key={type}
               >
-                Redo
-                <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+R</div>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item
-                onClick={() => {
-                  if (editorRef.current?.view) {
-                    const editorView = editorRef.current?.view;
-                    formatJSONCommand(editorView);
-                  }
-                }}
-                className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
-              >
-                Format Code{" "}
-                <div className="ml-auto pl-1">{mac ? "⌘" : "^"}+F</div>
-              </DropdownMenu.Item>
-              <DropdownMenu.Separator
-                style={{ height: 1 }}
-                className="bg-gray-400 opacity-50 my-1.5"
-              />
-              <DropdownMenu.Label className="pl-2 text-gray-500 text-sm lowercase leading-2 mb-1">
-                Insert a new layer
-              </DropdownMenu.Label>
-              {layerTypes.map((type) => (
-                <DropdownMenu.Sub key={type}>
-                  <DropdownMenu.SubTrigger className="RadixDropdownItem capitalize group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none ">
-                    {type === "symbol" ? "Labels & Symbols" : type}
-                    <div className="ml-auto pl-[20px] text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8">
-                      <ChevronRightIcon />
-                    </div>
-                  </DropdownMenu.SubTrigger>
-                  <DropdownMenu.Portal className="z-50">
-                    <DropdownMenu.SubContent
-                      className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
-                      sideOffset={2}
-                      alignOffset={-5}
-                    >
-                      {insertOptions
-                        .filter(
-                          (o) => o.layer.type === type && !o.propertyChoice
-                        )
-                        .map((option) => (
-                          <DropdownMenu.Item
-                            key={option.label + option.propertyChoice?.property}
-                            onClick={() => {
-                              if (editorRef.current?.view) {
-                                const editorView = editorRef.current?.view;
-                                editorView.dispatch({
-                                  changes: {
-                                    from: editorView.state.doc.length - 2,
-                                    to: editorView.state.doc.length - 2,
-                                    insert:
-                                      editorView.state.doc.length > 10
-                                        ? "," + JSON.stringify(option.layer)
-                                        : JSON.stringify(option.layer),
-                                  },
-                                  scrollIntoView: true,
-                                  selection: {
-                                    anchor: editorView.state.doc.length - 1,
-                                  },
-                                });
-                                formatJSONCommand(editorView);
-                              }
-                            }}
-                            className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
-                          >
-                            {option.label}
-                          </DropdownMenu.Item>
-                        ))}
-                      {(() => {
-                        const groupedOptions = insertOptions.reduce(
-                          (acc, o) => {
-                            if (o.layer.type === type && o.propertyChoice) {
-                              const group = acc.find(
-                                (g) => g.label === o.label
-                              );
-                              if (group) {
-                                group.options.push(o);
-                              } else {
-                                acc.push({
-                                  label: o.label,
-                                  options: [o],
-                                });
-                              }
+                {insertOptions
+                  .filter((o) => o.layer.type === type && !o.propertyChoice)
+                  .map((option) => (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (editorRef.current?.view) {
+                          const editorView = editorRef.current?.view;
+                          editorView.dispatch({
+                            changes: {
+                              from: editorView.state.doc.length - 2,
+                              to: editorView.state.doc.length - 2,
+                              insert:
+                                editorView.state.doc.length > 10
+                                  ? "," + JSON.stringify(option.layer)
+                                  : JSON.stringify(option.layer),
+                            },
+                            scrollIntoView: true,
+                            selection: {
+                              anchor: editorView.state.doc.length - 1,
+                            },
+                          });
+                          formatJSONCommand(editorView);
+                        }
+                      }}
+                      key={option.label + option.propertyChoice?.property}
+                      label={option.label}
+                    />
+                  ))}
+                {(() => {
+                  const groupedOptions = insertOptions.reduce(
+                    (acc, o) => {
+                      if (o.layer.type === type && o.propertyChoice) {
+                        const group = acc.find((g) => g.label === o.label);
+                        if (group) {
+                          group.options.push(o);
+                        } else {
+                          acc.push({
+                            label: o.label,
+                            options: [o],
+                          });
+                        }
+                      }
+                      return acc;
+                    },
+                    [] as {
+                      label: string;
+                      options: InsertLayerOption[];
+                    }[]
+                  );
+                  return groupedOptions.map((group) => (
+                    <Fragment key={group.label}>
+                      <DropdownLabel label={group.label} />
+                      {group.options.map((option) => (
+                        <DropdownMenuItem
+                          key={option.label + option.propertyChoice?.property}
+                          onClick={() => {
+                            if (editorRef.current?.view) {
+                              const editorView = editorRef.current?.view;
+                              editorView.dispatch({
+                                changes: {
+                                  from: editorView.state.doc.length - 2,
+                                  to: editorView.state.doc.length - 2,
+                                  insert:
+                                    editorView.state.doc.length > 10
+                                      ? "," + JSON.stringify(option.layer)
+                                      : JSON.stringify(option.layer),
+                                },
+                                scrollIntoView: true,
+                                selection: {
+                                  anchor: editorView.state.doc.length - 1,
+                                },
+                              });
+                              formatJSONCommand(editorView);
                             }
-                            return acc;
-                          },
-                          [] as {
-                            label: string;
-                            options: InsertLayerOption[];
-                          }[]
-                        );
-                        return groupedOptions.map((group) => (
-                          <Fragment key={group.label}>
-                            <DropdownMenu.Label className="pl-2 text-gray-500 text-sm leading-2 mb-1 mt-1 capitalize">
-                              {group.label}
-                            </DropdownMenu.Label>
-                            {group.options.map((option) => (
-                              <DropdownMenu.Item
-                                key={
-                                  option.label + option.propertyChoice?.property
-                                }
-                                onClick={() => {
-                                  if (editorRef.current?.view) {
-                                    const editorView = editorRef.current?.view;
-                                    editorView.dispatch({
-                                      changes: {
-                                        from: editorView.state.doc.length - 2,
-                                        to: editorView.state.doc.length - 2,
-                                        insert:
-                                          editorView.state.doc.length > 10
-                                            ? "," + JSON.stringify(option.layer)
-                                            : JSON.stringify(option.layer),
-                                      },
-                                      scrollIntoView: true,
-                                      selection: {
-                                        anchor: editorView.state.doc.length - 1,
-                                      },
-                                    });
-                                    formatJSONCommand(editorView);
-                                  }
-                                }}
-                                className="RadixDropdownItem px-2 group pl-4 cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative select-none outline-none "
-                              >
-                                {option.propertyChoice!.property}
-                                {option.propertyChoice?.type === "string" && (
-                                  <div
-                                    style={{ maxWidth: 350 }}
-                                    className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
-                                  >
-                                    {(option.propertyChoice!.values || []).join(
-                                      ", "
-                                    )}
-                                  </div>
-                                )}
-                                {option.propertyChoice?.type === "number" &&
-                                  option.propertyChoice?.min !== undefined &&
-                                  option.propertyChoice.max && (
-                                    <div
-                                      style={{ maxWidth: 350 }}
-                                      className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
-                                    >
-                                      {option.propertyChoice.min} -{" "}
-                                      {option.propertyChoice.max}
-                                    </div>
-                                  )}
-                              </DropdownMenu.Item>
-                            ))}
-                          </Fragment>
-                        ));
-                      })()}
-                    </DropdownMenu.SubContent>
-                  </DropdownMenu.Portal>
-                </DropdownMenu.Sub>
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
+                          }}
+                          label={option.label}
+                          details={
+                            option.propertyChoice?.type === "string"
+                              ? (option.propertyChoice!.values || []).join(", ")
+                              : option.propertyChoice?.type === "number" &&
+                                option.propertyChoice?.min !== undefined &&
+                                option.propertyChoice.max
+                              ? `${option.propertyChoice.min} - ${option.propertyChoice.max}`
+                              : undefined
+                          }
+                        />
+                      ))}
+                    </Fragment>
+                  ));
+                })()}
+              </DropdownSubmenu>
+            ))}
+          </DropdownMenuContent>
         </DropdownMenu.Root>
         <span className="font-mono text-sm bg-gray-700 text-blue-300 text-opacity-80 px-1 py-0.5 rounded w-24 text-center tabular-nums">
           zoom{" "}
@@ -529,5 +409,117 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         />
       )}
     </div>
+  );
+}
+
+function DropdownTrigger({
+  label,
+  ariaLabel,
+}: {
+  label: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <DropdownMenu.Trigger asChild>
+      <button
+        className="text-sm bg-gray-400 rounded-sm p-0 px-1 shadow pl-2"
+        aria-label={ariaLabel}
+      >
+        {label} <CaretDownIcon className="inline" />
+      </button>
+    </DropdownMenu.Trigger>
+  );
+}
+
+function DropdownMenuContent({ children }: { children: ReactNode }) {
+  return (
+    <DropdownMenu.Portal className="z-50">
+      <DropdownMenu.Content
+        className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
+        style={{ minWidth: 220 }}
+        sideOffset={5}
+        align="start"
+      >
+        {children}
+      </DropdownMenu.Content>
+    </DropdownMenu.Portal>
+  );
+}
+
+function DropdownMenuItem({
+  disabled,
+  onClick,
+  label,
+  keyCode,
+  details,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  label: string;
+  keyCode?: string;
+  details?: string;
+}) {
+  return (
+    <DropdownMenu.Item
+      disabled={disabled}
+      onClick={onClick}
+      className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+    >
+      {label}
+      {keyCode && <div className="ml-auto pl-1">{keyCode}</div>}
+      {details && (
+        <div
+          style={{ maxWidth: 350 }}
+          className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
+        >
+          {details}
+        </div>
+      )}
+    </DropdownMenu.Item>
+  );
+}
+
+function DropdownSeperator() {
+  return (
+    <DropdownMenu.Separator
+      style={{ height: 1 }}
+      className="bg-gray-400 opacity-50 my-1.5"
+    />
+  );
+}
+
+function DropdownLabel({ label }: { label: string }) {
+  return (
+    <DropdownMenu.Label className="pl-2 text-gray-500 text-sm lowercase leading-2 mb-1">
+      {label}
+    </DropdownMenu.Label>
+  );
+}
+
+function DropdownSubmenu({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <DropdownMenu.Sub>
+      <DropdownMenu.SubTrigger className="RadixDropdownItem capitalize group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none ">
+        {label}
+        <div className="ml-auto pl-[20px] text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8">
+          <ChevronRightIcon />
+        </div>
+      </DropdownMenu.SubTrigger>
+      <DropdownMenu.Portal className="z-50">
+        <DropdownMenu.SubContent
+          className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
+          sideOffset={2}
+          alignOffset={-5}
+        >
+          {children}
+        </DropdownMenu.SubContent>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Sub>
   );
 }
