@@ -43,7 +43,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
-import { useOverlayState } from "../../../components/TreeView";
+import GeostatsModal, { Geostats } from "./GeostatsModal";
 
 require("./RadixDropdown.css");
 
@@ -89,6 +89,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     target: HTMLSpanElement;
     selectedSpriteId: number | null;
   }>(null);
+
+  const [geostatsModal, setGeostatsModal] = useState<null | Geostats>(null);
 
   const extensions = useMemo(() => {
     return [
@@ -192,41 +194,53 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         className="p-2 border-b border-black border-opacity-30 z-10 shadow flex space-x-2 flex-0"
         style={{ backgroundColor: "#303841" }}
       >
-        <DropdownMenu.Root>
-          <DropdownTrigger label="View" ariaLabel="View menu" />
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              disabled={!props.bounds}
-              onClick={() => {
-                if (mapContext.manager && props.geostats) {
-                  mapContext.manager.map?.fitBounds(props.bounds!);
-                }
-              }}
-              label="Show Layer Extent"
-            />
-            {props.tocItemId && (
-              <DropdownMenuItem
-                label="Hide all other overlays"
-                disabled={
-                  !visibleLayers ||
-                  (visibleLayers.length === 1 &&
-                    visibleLayers[0] === props.tocItemId)
-                }
-                onClick={() => {
-                  if (mapContext.manager && props.geostats) {
-                    mapContext.manager.setVisibleTocItems([props.tocItemId!]);
-                  }
-                }}
-              />
-            )}
-            <DropdownMenuItem
-              label="View layer column summary"
-              disabled={true}
-              onClick={() => {}}
-            />
-          </DropdownMenuContent>
-        </DropdownMenu.Root>
-
+        {props.tocItemId && (
+          <>
+            <DropdownMenu.Root>
+              <DropdownTrigger label="View" ariaLabel="View menu" />
+              <DropdownMenuContent>
+                <DropdownMenuItem
+                  disabled={!props.bounds}
+                  onClick={() => {
+                    if (mapContext.manager && props.geostats) {
+                      mapContext.manager.map?.fitBounds(props.bounds!);
+                    }
+                  }}
+                  label="Show layer extent"
+                />
+                {props.tocItemId && (
+                  <DropdownMenuItem
+                    label="Hide all other overlays"
+                    disabled={
+                      !visibleLayers ||
+                      (visibleLayers.length === 1 &&
+                        visibleLayers[0] === props.tocItemId)
+                    }
+                    onClick={() => {
+                      if (mapContext.manager && props.geostats) {
+                        mapContext.manager.setVisibleTocItems([
+                          props.tocItemId!,
+                        ]);
+                      }
+                    }}
+                  />
+                )}
+                {props.geostats && (
+                  <DropdownMenuItem
+                    label="Open layer property details"
+                    disabled={!props.geostats}
+                    onClick={() => {
+                      setGeostatsModal({
+                        layers: [props.geostats!],
+                        layerCount: 1,
+                      });
+                    }}
+                  />
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu.Root>
+          </>
+        )}
         <DropdownMenu.Root>
           <DropdownTrigger label="Edit" ariaLabel="Edit menu" />
           <DropdownMenuContent>
@@ -262,8 +276,13 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
               }}
               keyCode={`${mac ? "⌘" : "^"}+F`}
             />
-            <DropdownSeperator />
-            <DropdownLabel label="Insert a new layer" />
+
+            {props.tocItemId && (
+              <>
+                <DropdownSeperator />
+                <DropdownLabel label="Insert a new layer" />
+              </>
+            )}
             {layerTypes.map((type) => (
               <DropdownSubmenu
                 label={type === "symbol" ? "Labels & Symbols" : type}
@@ -343,12 +362,14 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu.Root>
-        <span className="font-mono text-sm bg-gray-700 text-blue-300 text-opacity-80 px-1 py-0.5 rounded w-24 text-center tabular-nums">
-          zoom{" "}
-          <span className="font-mono ">
-            {Math.round(zoom) === zoom ? zoom + ".0" : zoom}
+        {props.tocItemId && (
+          <span className="font-mono text-sm bg-gray-700 text-blue-300 text-opacity-80 px-1 py-0.5 rounded w-24 text-center tabular-nums">
+            zoom{" "}
+            <span className="font-mono ">
+              {Math.round(zoom) === zoom ? zoom + ".0" : zoom}
+            </span>
           </span>
-        </span>
+        )}
       </div>
 
       <SpritePopover spriteState={spriteState} onChange={onSpriteChange} />
@@ -379,30 +400,11 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }
         }}
       />
-      {insertLayerOptions && (
-        <InsertLayerModal
-          onRequestClose={() => setInsertLayerOptions(null)}
-          options={insertLayerOptions}
-          onSelect={(option) => {
-            setInsertLayerOptions(null);
-            if (editorRef.current?.view) {
-              const editorView = editorRef.current?.view;
-              editorView.dispatch({
-                changes: {
-                  from: editorView.state.doc.length - 2,
-                  to: editorView.state.doc.length - 2,
-                  insert:
-                    editorView.state.doc.length > 10
-                      ? "," + JSON.stringify(option.layer)
-                      : JSON.stringify(option.layer),
-                },
-                scrollIntoView: true,
-                selection: {
-                  anchor: editorView.state.doc.length - 1,
-                },
-              });
-              formatJSONCommand(editorView);
-            }
+      {geostatsModal && (
+        <GeostatsModal
+          geostats={geostatsModal}
+          onRequestClose={() => {
+            setGeostatsModal(null);
           }}
         />
       )}
