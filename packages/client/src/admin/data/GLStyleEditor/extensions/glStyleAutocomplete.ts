@@ -43,7 +43,8 @@ type LayerType =
   | "symbol"
   | "circle"
   | "raster"
-  | "background";
+  | "background"
+  | "heatmap";
 
 type PropertyValueType =
   | "color"
@@ -1703,6 +1704,80 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
               "text-halo-color": "white",
               "text-halo-width": 2,
             },
+          },
+        });
+      }
+    }
+  }
+  if (layer.geometry === "MultiPoint" || layer.geometry === "Point") {
+    options.push({
+      type: "heatmap",
+      label: "Heatmap of point locations",
+      layer: {
+        type: "heatmap",
+        paint: {
+          "heatmap-intensity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            1,
+            9,
+            3,
+          ],
+          "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 0, 2, 9, 20],
+        },
+        layout: {},
+      },
+    });
+
+    for (const attribute of (layer.attributes || []).filter(
+      (a) => a.type === "number"
+    )) {
+      if (
+        attribute.min !== undefined &&
+        attribute.max &&
+        attribute.max > attribute.min
+      ) {
+        options.push({
+          type: "heatmap",
+          label: "Heatmap of point locations",
+          propertyChoice: {
+            property: attribute.attribute,
+            ...attribute,
+          },
+          layer: {
+            type: "heatmap",
+            paint: {
+              "heatmap-intensity": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                0,
+                1,
+                9,
+                1,
+              ],
+              "heatmap-radius": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                1,
+                2,
+                9,
+                20,
+              ],
+              "heatmap-weight": [
+                "interpolate",
+                ["linear"],
+                ["get", attribute.attribute],
+                attribute.min,
+                0,
+                attribute.max,
+                10,
+              ],
+            },
+            layout: {},
           },
         });
       }

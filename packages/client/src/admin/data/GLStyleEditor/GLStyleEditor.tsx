@@ -318,7 +318,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                   ))}
                 {(() => {
                   const groups = insertOptions.reduce((set, o) => {
-                    if (o.propertyChoice) {
+                    if (o.propertyChoice && o.type === type) {
                       set.add(o.label);
                     }
                     return set;
