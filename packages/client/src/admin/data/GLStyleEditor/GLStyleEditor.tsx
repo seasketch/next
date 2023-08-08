@@ -505,7 +505,7 @@ function DropdownSubmenu({
 }) {
   return (
     <DropdownMenu.Sub>
-      <DropdownMenu.SubTrigger className="RadixDropdownItem capitalize group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none ">
+      <DropdownMenu.SubTrigger className="RadixDropdownItem capitalize group leading-none cursor-pointer rounded flex items-center h-5 relative px-2 select-none outline-none ">
         {label}
         <div className="ml-auto pl-[20px] text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8">
           <ChevronRightIcon />
