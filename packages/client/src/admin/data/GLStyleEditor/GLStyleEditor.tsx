@@ -280,64 +280,44 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                     />
                   ))}
                 {(() => {
-                  const groupedOptions = insertOptions.reduce(
-                    (acc, o) => {
-                      if (o.layer.type === type && o.propertyChoice) {
-                        const group = acc.find((g) => g.label === o.label);
-                        if (group) {
-                          group.options.push(o);
-                        } else {
-                          acc.push({
-                            label: o.label,
-                            options: [o],
-                          });
-                        }
-                      }
-                      return acc;
-                    },
-                    [] as {
-                      label: string;
-                      options: InsertLayerOption[];
-                    }[]
-                  );
-                  return groupedOptions.map((group) => (
-                    <Fragment key={group.label}>
-                      <DropdownLabel label={group.label} />
-                      {group.options.map((option) => (
-                        <DropdownMenuItem
-                          key={option.label + option.propertyChoice?.property}
-                          onClick={() => {
-                            if (editorRef.current?.view) {
-                              const editorView = editorRef.current?.view;
-                              editorView.dispatch({
-                                changes: {
-                                  from: editorView.state.doc.length - 2,
-                                  to: editorView.state.doc.length - 2,
-                                  insert:
-                                    editorView.state.doc.length > 10
-                                      ? "," + JSON.stringify(option.layer)
-                                      : JSON.stringify(option.layer),
-                                },
-                                scrollIntoView: true,
-                                selection: {
-                                  anchor: editorView.state.doc.length - 1,
-                                },
-                              });
-                              formatJSONCommand(editorView);
+                  const groups = insertOptions.reduce((set, o) => {
+                    if (o.propertyChoice) {
+                      set.add(o.label);
+                    }
+                    return set;
+                  }, new Set<string>());
+
+                  return [...groups].map((group) => (
+                    <Fragment key={group}>
+                      <DropdownLabel label={group} />
+                      {insertOptions
+                        .filter((v) => v.label === group)
+                        .map((option) => (
+                          <DropdownMenuItem
+                            inset
+                            key={option.label + option.propertyChoice?.property}
+                            onClick={() => {
+                              if (editorRef.current?.view) {
+                                insertLayer(
+                                  editorRef.current.view,
+                                  option.layer
+                                );
+                              }
+                            }}
+                            label={option.propertyChoice?.property || ""}
+                            details={
+                              option.propertyChoice?.type === "string"
+                                ? (option.propertyChoice!.values || []).join(
+                                    ", "
+                                  )
+                                : option.propertyChoice?.type === "number" &&
+                                  option.propertyChoice?.min !== undefined &&
+                                  option.propertyChoice.max
+                                ? `${option.propertyChoice.min} - ${option.propertyChoice.max}`
+                                : undefined
                             }
-                          }}
-                          label={option.label}
-                          details={
-                            option.propertyChoice?.type === "string"
-                              ? (option.propertyChoice!.values || []).join(", ")
-                              : option.propertyChoice?.type === "number" &&
-                                option.propertyChoice?.min !== undefined &&
-                                option.propertyChoice.max
-                              ? `${option.propertyChoice.min} - ${option.propertyChoice.max}`
-                              : undefined
-                          }
-                        />
-                      ))}
+                          />
+                        ))}
                     </Fragment>
                   ));
                 })()}
@@ -452,18 +432,22 @@ function DropdownMenuItem({
   label,
   keyCode,
   details,
+  inset,
 }: {
   disabled?: boolean;
   onClick: () => void;
   label: string;
   keyCode?: string;
   details?: string;
+  inset?: boolean;
 }) {
   return (
     <DropdownMenu.Item
       disabled={disabled}
       onClick={onClick}
-      className="RadixDropdownItem group leading-none cursor-pointer rounded flex items-center h-5 relative px-2 select-none outline-none "
+      className={`RadixDropdownItem group leading-none cursor-pointer rounded flex items-center h-5 relative px-2 select-none outline-none ${
+        inset ? "ml-2" : ""
+      }`}
     >
       {label}
       {keyCode && <div className="ml-auto pl-1">{keyCode}</div>}
@@ -483,14 +467,14 @@ function DropdownSeperator() {
   return (
     <DropdownMenu.Separator
       style={{ height: 1 }}
-      className="bg-gray-400 opacity-50 my-1.5"
+      className="bg-gray-400 opacity-50 my-1.5 mb-1"
     />
   );
 }
 
 function DropdownLabel({ label }: { label: string }) {
   return (
-    <DropdownMenu.Label className="pl-2 text-gray-500 text-sm lowercase leading-2 mb-1">
+    <DropdownMenu.Label className="pl-2 text-gray-500 text-sm leading-2 mb-1 mt-2">
       {label}
     </DropdownMenu.Label>
   );
@@ -522,4 +506,22 @@ function DropdownSubmenu({
       </DropdownMenu.Portal>
     </DropdownMenu.Sub>
   );
+}
+
+function insertLayer(editorView: EditorView, layer: any) {
+  editorView.dispatch({
+    changes: {
+      from: editorView.state.doc.length - 2,
+      to: editorView.state.doc.length - 2,
+      insert:
+        editorView.state.doc.length > 10
+          ? "," + JSON.stringify(layer)
+          : JSON.stringify(layer),
+    },
+    scrollIntoView: true,
+    selection: {
+      anchor: editorView.state.doc.length - 1,
+    },
+  });
+  formatJSONCommand(editorView);
 }
