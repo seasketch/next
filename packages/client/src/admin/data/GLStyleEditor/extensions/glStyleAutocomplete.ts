@@ -1671,7 +1671,7 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
             layout: {
               "text-field": ["get", attribute.attribute],
               "text-size": 12,
-              "symbole-placement": isLine ? "line" : "point",
+              "symbol-placement": isLine ? "line" : "point",
             },
             paint: {
               "text-color": "black",
