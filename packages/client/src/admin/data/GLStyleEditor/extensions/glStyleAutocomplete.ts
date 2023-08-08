@@ -71,6 +71,7 @@ interface RootContext {
 
 interface LayerRootPropertyNameStyleContext {
   type: "LayerRootPropertyName";
+  value?: string;
   values: PropertyNameOption[];
   PropertyNode: SyntaxNode;
   hasValue: boolean;
@@ -98,6 +99,7 @@ interface PropertyNameStyleContext {
   values: PropertyNameOption[];
   PropertyNode: SyntaxNode;
   hasValue: boolean;
+  value?: string;
 }
 
 interface PropertyValueStyleContext {
@@ -251,7 +253,7 @@ const BANNED_PROPERTY_NAMES = ["id", "source", "source-layer"];
  * @param context CompletionContext
  * @returns EvaluatedStyleContext | null
  */
-function evaluateStyleContext(
+export function evaluateStyleContext(
   node: SyntaxNode,
   context: CompletionContext
 ): EvaluatedStyleContext | null {
@@ -328,6 +330,7 @@ function evaluateStyleContext(
       // that are not already used.
       styleContext = {
         type: "LayerRootPropertyName",
+        value: currentValue,
         values: Object.entries(styleSpec.layer)
           .filter(([name]) => !excludedPropertyNames.includes(name))
           .map((entry) => {
@@ -428,6 +431,7 @@ function evaluateStyleContext(
         ) {
           styleContext = {
             type: "PropertyName",
+            value: currentPropertyName || undefined,
             category: layerPropertyName,
             layerType,
             hasValue: Boolean(
@@ -1511,6 +1515,80 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
         layout: {},
       },
     });
+
+    for (const attribute of layer.attributes.filter(
+      (a) => a.type === "string"
+    )) {
+      options.push({
+        label: "Circle Marker colored by string",
+        propertyChoice: {
+          property: attribute.attribute,
+          ...attribute,
+        },
+        type: "circle",
+        layer: {
+          type: "circle",
+          paint: {
+            "circle-radius": 5,
+            "circle-opacity": 0.7,
+            "circle-stroke-opacity": 1,
+            "circle-stroke-width": 1,
+            "circle-color": [
+              "match",
+              ["get", attribute.attribute],
+              ...attribute.values
+                .filter((v) => v !== null)
+                .map((v, i) => {
+                  return [v, schemeTableau10[i % 10]];
+                })
+                .flat(),
+              "black",
+            ],
+            "circle-stroke-color": [
+              "match",
+              ["get", attribute.attribute],
+              ...attribute.values
+                .filter((v) => v !== null)
+                .map((v, i) => {
+                  return [v, schemeTableau10[i % 10]];
+                })
+                .flat(),
+              "black",
+            ],
+          },
+          layout: {},
+        },
+      });
+    }
+    for (const attribute of layer.attributes.filter(
+      (a) => a.type === "number"
+    )) {
+      options.push({
+        label: "Circle sized by number",
+        propertyChoice: {
+          property: attribute.attribute,
+          ...attribute,
+        },
+        type: "circle",
+        layer: {
+          type: "circle",
+          paint: {
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["get", attribute.attribute],
+              attribute.min,
+              3,
+              attribute.max,
+              50,
+            ],
+            "circle-color": schemeTableau10[colorChoiceCounter++ % 10],
+            "circle-stroke-width": 1,
+          },
+          layout: {},
+        },
+      });
+    }
   }
   if (layer.geometry === "Polygon" || layer.geometry === "MultiPolygon") {
     options.push({
@@ -1712,7 +1790,7 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
   if (layer.geometry === "MultiPoint" || layer.geometry === "Point") {
     options.push({
       type: "heatmap",
-      label: "Heatmap of point locations",
+      label: "Simple Heatmap",
       layer: {
         type: "heatmap",
         paint: {
@@ -1750,7 +1828,7 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
       ) {
         options.push({
           type: "heatmap",
-          label: "Heatmap of point locations",
+          label: "Heatmap intensity by number property",
           propertyChoice: {
             property: attribute.attribute,
             ...attribute,

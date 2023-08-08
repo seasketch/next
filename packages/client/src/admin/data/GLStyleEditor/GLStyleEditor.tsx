@@ -44,6 +44,7 @@ import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import GeostatsModal, { Geostats } from "./GeostatsModal";
+import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
 
 require("./RadixDropdown.css");
 
@@ -100,6 +101,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
       linter(jsonParseLinter()),
       glStyleLinter(type),
       color,
+      glStyleHoverTooltips,
       sprites({
         getSpriteUrl: async (id) => {
           const sprite = (spriteQuery.data?.projectBySlug?.sprites || []).find(
