@@ -463,7 +463,7 @@ function DropdownMenuItem({
     <DropdownMenu.Item
       disabled={disabled}
       onClick={onClick}
-      className="RadixDropdownItem group leading-none cursor-pointer hover:bg-indigo-900 hover:text-gray-100 rounded flex items-center h-5 relative px-2 select-none outline-none "
+      className="RadixDropdownItem group leading-none cursor-pointer rounded flex items-center h-5 relative px-2 select-none outline-none "
     >
       {label}
       {keyCode && <div className="ml-auto pl-1">{keyCode}</div>}

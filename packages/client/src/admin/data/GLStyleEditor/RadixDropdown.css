@@ -6,3 +6,7 @@
   color: rgba(0, 0, 0, 0.3);
   pointer-events: none;
 }
+
+.RadixDropdownItem[data-highlighted] {
+  @apply bg-indigo-900 text-gray-100;
+}
