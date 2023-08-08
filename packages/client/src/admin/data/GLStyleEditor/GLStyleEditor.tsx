@@ -43,6 +43,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
+import { useOverlayState } from "../../../components/TreeView";
 
 require("./RadixDropdown.css");
 
@@ -53,6 +54,7 @@ interface GLStyleEditorProps {
   className?: string;
   geostats?: GeostatsLayer;
   bounds?: [number, number, number, number];
+  tocItemId?: string;
 }
 
 /**
@@ -161,6 +163,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   }, [props.geostats]);
 
   const mapContext = useContext(MapContext);
+  const visibleLayers = mapContext.manager?.getVisibleLayerReferenceIds();
 
   const [zoom, setZoom] = useState(0);
   useEffect(() => {
@@ -201,6 +204,21 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
               }}
               label="Show Layer Extent"
             />
+            {props.tocItemId && (
+              <DropdownMenuItem
+                label="Hide all other overlays"
+                disabled={
+                  !visibleLayers ||
+                  (visibleLayers.length === 1 &&
+                    visibleLayers[0] === props.tocItemId)
+                }
+                onClick={() => {
+                  if (mapContext.manager && props.geostats) {
+                    mapContext.manager.setVisibleTocItems([props.tocItemId!]);
+                  }
+                }}
+              />
+            )}
             <DropdownMenuItem
               label="View layer column summary"
               disabled={true}
