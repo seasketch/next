@@ -8,7 +8,6 @@ import { color } from "./extensions/glStyleColor";
 import { glStyleLinter } from "./extensions/glStyleValidator";
 import {
   GeostatsLayer,
-  InsertLayerOption,
   getInsertLayerOptions,
   glStyleAutocomplete,
 } from "./extensions/glStyleAutocomplete";
@@ -38,7 +37,6 @@ import {
 import getSlug from "../../../getSlug";
 import SpritePopover from "./SpritePopover";
 import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
-import InsertLayerModal from "./InsertLayerModal";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
@@ -150,10 +148,6 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     },
     [setSpriteState]
   );
-
-  const [insertLayerOptions, setInsertLayerOptions] = useState<
-    null | InsertLayerOption[]
-  >(null);
 
   const { layerTypes, insertOptions } = useMemo(() => {
     const options = props.geostats ? getInsertLayerOptions(props.geostats) : [];
