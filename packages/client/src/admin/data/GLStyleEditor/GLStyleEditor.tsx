@@ -66,11 +66,6 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [value] = useState(formatGLStyle(props.initialStyle || ""));
   const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
   const editorRef = useRef<ReactCodeMirrorRef>(null);
-  const jsonCompletions = useMemo(() => {
-    return jsonLanguage.data.of({
-      autocomplete: glStyleAutocomplete(props.geostats),
-    });
-  }, [props.geostats]);
 
   const type = props.type || "vector";
 
@@ -79,6 +74,15 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
       slug: getSlug(),
     },
   });
+
+  const jsonCompletions = useMemo(() => {
+    return jsonLanguage.data.of({
+      autocomplete: glStyleAutocomplete(
+        props.geostats,
+        spriteQuery?.data?.publicSprites || []
+      ),
+    });
+  }, [props.geostats, spriteQuery.data?.publicSprites]);
 
   const [spriteState, setSpriteState] = useState<null | {
     from: number;
@@ -175,7 +179,12 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   );
 
   const { layerTypes, insertOptions } = useMemo(() => {
-    const options = props.geostats ? getInsertLayerOptions(props.geostats) : [];
+    const options = props.geostats
+      ? getInsertLayerOptions(props.geostats, [
+          ...(spriteQuery.data?.publicSprites || []),
+          ...(spriteQuery.data?.projectBySlug?.sprites || []),
+        ])
+      : [];
     const layerTypes: string[] = [];
     for (const option of options) {
       if (!layerTypes.includes(option.layer.type)) {
@@ -183,7 +192,11 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
       }
     }
     return { layerTypes, insertOptions: options };
-  }, [props.geostats]);
+  }, [
+    props.geostats,
+    spriteQuery.data?.publicSprites,
+    spriteQuery.data?.projectBySlug?.sprites,
+  ]);
 
   const mapContext = useContext(MapContext);
   const visibleLayers = mapContext.manager?.getVisibleLayerReferenceIds();

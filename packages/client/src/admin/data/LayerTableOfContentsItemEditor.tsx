@@ -746,7 +746,10 @@ export default function LayerTableOfContentsItemEditor(
                     </a>
                     . Don't specify a <code>source</code> or <code>id</code>{" "}
                     property on your layers, those will be managed for you by
-                    SeaSketch.
+                    SeaSketch. Press{" "}
+                    <span className="font-mono">Control+Space</span> to
+                    autocomplete string values and property names, and hover
+                    over properties to see documentation.
                   </Trans>
                 </p>
                 {updateGLStyleMutationState.error && (

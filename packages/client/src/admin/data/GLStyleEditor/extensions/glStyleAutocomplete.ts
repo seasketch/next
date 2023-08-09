@@ -9,6 +9,7 @@ import {
   schemeTableau10,
   interpolatePlasma as interpolateColorScale,
 } from "d3-scale-chromatic";
+import { SpriteDetailsFragment } from "../../../../generated/graphql";
 
 export interface GeostatsAttribute {
   attribute: string;
@@ -176,7 +177,8 @@ export interface InsertLayerOption {
 }
 
 export const glStyleAutocomplete =
-  (layer?: GeostatsLayer) => (context: CompletionContext) => {
+  (layer?: GeostatsLayer, sprites?: SpriteDetailsFragment[]) =>
+  (context: CompletionContext) => {
     let word = context.matchBefore(/[\w-]*/);
     let { state, pos } = context,
       around = syntaxTree(state).resolveInner(pos),
@@ -206,6 +208,7 @@ export const glStyleAutocomplete =
       if (evaluatedContext) {
         const completions = getCompletionsForEvaluatedContext(
           evaluatedContext,
+          sprites || [],
           layer
         );
         if (completions && completions.length) {
@@ -872,6 +875,7 @@ let colorChoiceCounter = 9;
 
 function getCompletionsForEvaluatedContext(
   styleContext: EvaluatedStyleContext,
+  sprites: SpriteDetailsFragment[],
   layer?: GeostatsLayer
 ) {
   const completions: Completion[] = [];
@@ -1569,7 +1573,10 @@ function getRoot(
   }
 }
 
-export function getInsertLayerOptions(layer: GeostatsLayer) {
+export function getInsertLayerOptions(
+  layer: GeostatsLayer,
+  sprites: SpriteDetailsFragment[]
+) {
   const options: InsertLayerOption[] = [];
   if (layer.geometry === "Point" || layer.geometry === "MultiPoint") {
     // Add circle types
@@ -1947,6 +1954,54 @@ export function getInsertLayerOptions(layer: GeostatsLayer) {
           },
         });
       }
+    }
+    if (
+      sprites.length &&
+      (layer.geometry === "MultiPoint" || layer.geometry === "Point")
+    ) {
+      options.push({
+        type: "symbol",
+        label: "Image Symbol",
+        layer: {
+          type: "symbol",
+          layout: {
+            "icon-image": `seasketch://sprites/${sprites[0].id}`,
+          },
+          paint: {},
+        },
+      });
+    }
+    for (const attribute of (layer.attributes || []).filter(
+      (a) => a.type === "string"
+    )) {
+      options.push({
+        type: "symbol",
+        label: "Different image for each string value",
+        propertyChoice: {
+          property: attribute.attribute,
+          ...attribute,
+        },
+        layer: {
+          type: "symbol",
+          layout: {
+            "icon-image": [
+              "match",
+              ["get", attribute.attribute],
+              ...attribute.values
+                .filter((v) => v !== null)
+                .map((v, i) => {
+                  return [
+                    v,
+                    `seasketch://sprites/${sprites[i % sprites.length].id}`,
+                  ];
+                })
+                .flat(),
+              `seasketch://sprites/${sprites[0].id}`,
+            ],
+          },
+          paint: {},
+        },
+      });
     }
   }
   return options;
