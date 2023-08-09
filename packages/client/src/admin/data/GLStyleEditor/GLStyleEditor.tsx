@@ -91,6 +91,31 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
 
   const [geostatsModal, setGeostatsModal] = useState<null | Geostats>(null);
 
+  useEffect(() => {
+    const view = editorRef.current?.view;
+    if (view) {
+      const keydownHandler = (e: KeyboardEvent) => {
+        if (
+          (e.target as Element).tagName &&
+          (e.target as Element).classList.contains("cm-content")
+        ) {
+          return;
+        }
+        if (e.key === "z" && e.metaKey) {
+          if (e.shiftKey) {
+            redo(view);
+          } else {
+            undo(view);
+          }
+        }
+      };
+      document.body.addEventListener("keydown", keydownHandler);
+      return () => {
+        document.body.removeEventListener("keydown", keydownHandler);
+      };
+    }
+  }, [editorRef.current?.view]);
+
   const extensions = useMemo(() => {
     return [
       json(),
@@ -260,7 +285,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                   redo(editorView);
                 }
               }}
-              keyCode={(mac ? "⌘" : "^") + "R"}
+              keyCode={(mac ? "⌘" : "^") + `+Shift+Z`}
             />
             <DropdownMenuItem
               label="Format Code"
