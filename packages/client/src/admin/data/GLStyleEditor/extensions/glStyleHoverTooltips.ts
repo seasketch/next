@@ -1,10 +1,10 @@
 /* eslint-disable i18next/no-literal-string */
-import { Tooltip, hoverTooltip } from "@codemirror/view";
+import { hoverTooltip } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
 import { evaluateStyleContext } from "./glStyleAutocomplete";
 import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
-import { doc } from "prettier";
-
+import { expressionsUsageDocumentation } from "./expressionUsageDocumentation";
+require("./glStyleTooltips.css");
 export const glStyleHoverTooltips = hoverTooltip(
   (view, pos, side) => {
     let { from, to, text } = view.state.doc.lineAt(pos);
@@ -118,6 +118,7 @@ export const glStyleHoverTooltips = hoverTooltip(
                   },
                   body: expressionDetails.doc,
                   linkRef: expressionName,
+                  usage: (expressionsUsageDocumentation as any)[expressionName],
                 }),
               };
             },
@@ -139,13 +140,15 @@ function tooltipDom(props: {
   title: string;
   linkRef?: string;
   body: string;
+  usage?: { text: string; html: string }[];
 }) {
   const { linkRef, details } = props;
   const dom = document.createElement("div");
   dom.style.setProperty("min-width", "300px");
   const { required, type, ...rest } = details;
-  dom.className =
-    "max-w-xs p-2 shadow-lg border border-black border-opacity-20";
+  dom.className = `${
+    type === "expression" ? "max-w-2xl" : "max-w-sm"
+  } p-2 shadow-lg border border-black border-opacity-20`;
   dom.innerHTML = `
     ${
       linkRef
@@ -171,7 +174,7 @@ function tooltipDom(props: {
         ? `
       ${required ? "Required" : "Optional"} ${type}.
     `
-        : `${type}.`
+        : `<span class="capitalize">${type}</span>.`
     }
     ${Object.entries(rest)
       .filter(([key, value]) => value !== undefined && value !== null)
@@ -180,7 +183,20 @@ function tooltipDom(props: {
       })
       .join(" ")}
     </div>
-    <div class="text-sm">${props.body}</div>
+    <div class="text-sm">${props.body.replace(/\n/g, "<br>")}</div>
+    ${
+      props.usage && props.usage.length
+        ? `<div class="text-xs text-gray-200 mt-2">
+      <div class="font-semibold">Usage</div>
+      ${props.usage
+        .map(
+          (u) =>
+            `<pre class="glStyleUsage mt-1 text-gray-400 font-mono">${u.html}</pre>`
+        )
+        .join("")}
+    </div>`
+        : ""
+    }
   `;
   return dom;
 }

@@ -1,0 +1,23 @@
+.glStyleUsage .token {
+  @apply text-gray-400;
+}
+
+.glStyleUsage .token.string {
+  @apply text-green-300;
+}
+
+.glStyleUsage .token.literal-property {
+  @apply text-blue-300;
+}
+
+.glStyleUsage .token.function {
+  @apply text-blue-400;
+}
+
+.glStyleUsage .token.punctuation {
+  @apply text-gray-300;
+}
+
+.glStyleUsage .token.operator {
+  @apply text-gray-300;
+}
