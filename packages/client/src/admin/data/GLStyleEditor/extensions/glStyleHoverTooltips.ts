@@ -124,6 +124,72 @@ export const glStyleHoverTooltips = hoverTooltip(
             },
           };
         }
+      } else if (context.type === "InterpolationType" && context.value) {
+        switch (context.value) {
+          case "linear":
+            return {
+              pos: start,
+              end,
+              above: true,
+              create(view) {
+                return {
+                  dom: tooltipDom({
+                    title: "linear",
+                    details: {
+                      type: "interpolation type",
+                    },
+                    body: "Interpolates linearly between the pair of stops just less than and just greater than the input.",
+                  }),
+                };
+              },
+            };
+          case "exponential":
+            return {
+              pos: start,
+              end,
+              above: true,
+              create(view) {
+                return {
+                  dom: tooltipDom({
+                    title: "exponential",
+                    details: {
+                      type: "interpolation type",
+                    },
+                    body: "Interpolates exponentially between the stops just less than and just greater than the input. `base` controls the rate at which the output increases: higher values make the output increase more towards the high end of the range. With values close to 1 the output increases linearly.",
+                    usage: [
+                      {
+                        text: `["exponential"]`,
+                        html: '<span class="token punctuation">[</span><span class="token string">"exponential"</span><span class="token punctuation">,</span> base: number<span class="token punctuation">]</span>',
+                      },
+                    ],
+                  }),
+                };
+              },
+            };
+          case "cubic-bezier":
+            return {
+              pos: start,
+              end,
+              above: true,
+              create(view) {
+                return {
+                  dom: tooltipDom({
+                    title: "cubic-bezier",
+                    details: {
+                      type: "interpolation type",
+                    },
+                    body: "Interpolates using the cubic bezier curve defined by the given control points.",
+                    usage: [
+                      {
+                        text: `["cubic-bezier", x1, y1, x2, y2]`,
+                        html: '<span class="token punctuation">[</span><span class="token string">"cubic-bezier"</span><span class="token punctuation">,\n </span> x1: number<span class="token punctuation">,</span> y1: number<span class="token punctuation">,</span> x2: number<span class="token punctuation">,</span> y2: number<span class="token punctuation">]</span>',
+                      },
+                    ],
+                  }),
+                };
+              },
+            };
+        }
       }
     }
     return null;

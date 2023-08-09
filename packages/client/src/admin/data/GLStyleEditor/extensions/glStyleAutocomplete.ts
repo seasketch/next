@@ -130,6 +130,14 @@ interface ExpressionFnStyleContext {
   value?: string;
 }
 
+interface InterpolationTypeStyleContext {
+  type: "InterpolationType";
+  propertyContext: PropertyValueStyleContext;
+  isRootExpression: boolean;
+  SurroundingNode: SyntaxNode;
+  value?: string;
+}
+
 interface ExpressionArgStyleContext {
   type: "ExpressionArg";
   propertyContext: PropertyValueStyleContext;
@@ -151,7 +159,8 @@ type EvaluatedStyleContext =
   | PropertyValueStyleContext
   | ExpressionFnStyleContext
   | ExpressionArgStyleContext
-  | RootContext;
+  | RootContext
+  | InterpolationTypeStyleContext;
 
 export interface InsertLayerOption {
   type: LayerType;
@@ -536,13 +545,47 @@ export function evaluateStyleContext(
             }
 
             const isFnName = position === 0;
-            const argPosition = position - 1;
+            let argPosition = position - 1;
             const isRootExpression =
               currentPropertyName === "filter"
                 ? path.length === 5
                 : path.length === 7;
 
             if (isFnName) {
+              if (!isRootExpression) {
+                const ParentExpressionName =
+                  ArrayNode.parent?.getChild("String");
+                if (
+                  ParentExpressionName &&
+                  ParentExpressionName.type.name === "String"
+                ) {
+                  const parentExpressionName = context.state.sliceDoc(
+                    ParentExpressionName.from,
+                    ParentExpressionName.to
+                  );
+                  if (/interpolate/.test(parentExpressionName)) {
+                    let position = 0;
+                    let child = ArrayNode;
+                    while (
+                      child.prevSibling &&
+                      child.prevSibling.type.name !== "["
+                    ) {
+                      child = child.prevSibling;
+                      position++;
+                    }
+                    if (position === 1) {
+                      styleContext = {
+                        type: "InterpolationType",
+                        value: currentExpressionName,
+                        isRootExpression,
+                        propertyContext: currentPropertyContext,
+                        SurroundingNode: ArrayNode,
+                      };
+                      return styleContext;
+                    }
+                  }
+                }
+              }
               styleContext = {
                 type: "ExpressionFn",
                 value: currentExpressionName,
@@ -1425,7 +1468,31 @@ function getCompletionsForEvaluatedContext(
           }
         }
     }
+  } else if (styleContext.type === "InterpolationType") {
+    completions.push(
+      replaceExpressionCompletion(styleContext.SurroundingNode, {
+        expression: `["linear"]`,
+        label: "linear",
+        info: "Interpolates linearly between the pair of stops just less than and just greater than the input",
+      })
+    );
+    completions.push(
+      replaceExpressionCompletion(styleContext.SurroundingNode, {
+        expression: `["exponential", 1.2]`,
+        label: "exponential",
+        info: "Interpolates exponentially between the stops just less than and just greater than the input. `base` controls the rate at which the output increases: higher values make the output increase more towards the high end of the range. With values close to 1 the output increases linearly.",
+      })
+    );
+
+    completions.push(
+      replaceExpressionCompletion(styleContext.SurroundingNode, {
+        expression: `["cubic-bezier", 0, 0.5, 1, 0.5]`,
+        label: "cubic-bezier",
+        info: "Interpolates using the cubic bezier curve defined by the given control points.",
+      })
+    );
   }
+
   return completions;
 }
 
