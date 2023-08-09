@@ -90,6 +90,7 @@ interface LayerRootPropertyValueStyleContext {
         zoom: boolean;
         interpolate: boolean;
       };
+  value: string;
 }
 
 interface PropertyNameStyleContext {
@@ -117,6 +118,7 @@ interface PropertyValueStyleContext {
         zoom: boolean;
         interpolate: boolean;
       };
+  value: string;
 }
 
 interface ExpressionFnStyleContext {
@@ -125,6 +127,7 @@ interface ExpressionFnStyleContext {
   isRootExpression: boolean;
   matchingValues: { name: string; doc: string; group?: string }[];
   SurroundingNode: SyntaxNode;
+  value?: string;
 }
 
 interface ExpressionArgStyleContext {
@@ -374,6 +377,7 @@ export function evaluateStyleContext(
       // for the property.
       styleContext = {
         type: "LayerRootPropertyValue",
+        value: context.state.sliceDoc(node.from, node.to).replace(/"/g, ""),
         propertyName,
         propertyValueType: spec.type,
         enumValues: spec.values
@@ -469,6 +473,7 @@ export function evaluateStyleContext(
           }
           const currentPropertyContext: PropertyValueStyleContext = {
             type: "PropertyValue",
+            value: context.state.sliceDoc(node.from, node.to).replace(/"/g, ""),
             category: layerPropertyName,
             layerType,
             propertyName: currentPropertyName,
@@ -538,9 +543,9 @@ export function evaluateStyleContext(
                 : path.length === 7;
 
             if (isFnName) {
-              console.log(styleSpec.expression_name.values);
               styleContext = {
                 type: "ExpressionFn",
+                value: currentExpressionName,
                 isRootExpression,
                 propertyContext: currentPropertyContext,
                 matchingValues: Object.entries(
@@ -710,7 +715,6 @@ function replaceExpressionCompletion(
     group?: string;
   }
 ) {
-  console.log(group);
   return {
     label,
     info,
@@ -960,7 +964,6 @@ function getCompletionsForEvaluatedContext(
           // Show only expressions that retunr a boolean;
           continue;
         }
-        console.log("push completions", value);
         completions.push({
           label: value.name,
           info: value.doc,
