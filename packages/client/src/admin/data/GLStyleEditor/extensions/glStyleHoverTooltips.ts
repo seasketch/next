@@ -5,82 +5,44 @@ import { evaluateStyleContext } from "./glStyleAutocomplete";
 import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
 import { doc } from "prettier";
 
-export const glStyleHoverTooltips = hoverTooltip((view, pos, side) => {
-  let { from, to, text } = view.state.doc.lineAt(pos);
-  let start = pos,
-    end = pos;
-  while (start > from && /[^"]/.test(text[start - from - 1])) start--;
-  while (end < to && /[^"]/.test(text[end - from])) end++;
-  if ((start === pos && side < 0) || (end === pos && side > 0)) return null;
-  const state = view.state;
-  const around = syntaxTree(state).resolveInner(pos);
-  const layer = styleSpec.layer as any;
-  const spec = styleSpec as any;
-  if (
-    around.type.name === "String" ||
-    around.type.name === "PropertyValue" ||
-    around.type.name === "PropertyName"
-  ) {
-    const context = evaluateStyleContext(
-      around,
-      // @ts-ignore
-      {
-        explicit: true,
-        state: state,
-        pos,
-      }
-    );
-    if (context === null) {
-      return null;
-    } else if (
-      (context.type === "LayerRootPropertyName" ||
-        context.type === "PropertyName") &&
-      context.value
+export const glStyleHoverTooltips = hoverTooltip(
+  (view, pos, side) => {
+    let { from, to, text } = view.state.doc.lineAt(pos);
+    let start = pos,
+      end = pos;
+    while (start > from && /[^"]/.test(text[start - from - 1])) start--;
+    while (end < to && /[^"]/.test(text[end - from])) end++;
+    if ((start === pos && side < 0) || (end === pos && side > 0)) return null;
+    const state = view.state;
+    const around = syntaxTree(state).resolveInner(pos);
+    const layer = styleSpec.layer as any;
+    const spec = styleSpec as any;
+    if (
+      around.type.name === "String" ||
+      around.type.name === "PropertyValue" ||
+      around.type.name === "PropertyName"
     ) {
-      const specDetails =
-        context.type === "LayerRootPropertyName"
-          ? layer[context.value]
-          : spec[`${context.category}_${context.layerType}`][context.value];
-      if (specDetails) {
-        return {
-          pos: start,
-          end,
-          above: true,
-          create(view) {
-            return {
-              dom: tooltipDom({
-                title: context.value!,
-                linkRef:
-                  context.type === "LayerRootPropertyName"
-                    ? context.value!
-                    : `${context.category}-${context.layerType}-${context.value}`,
-                details: {
-                  type: specDetails.type,
-                  required: Boolean(specDetails.required),
-                  min: specDetails.minimum,
-                  max: specDetails.maximum,
-                  default: specDetails.default,
-                },
-                body: specDetails.doc,
-              }),
-            };
-          },
-        };
-      }
-    } else if (
-      context.type === "LayerRootPropertyValue" ||
-      context.type === "PropertyValue"
-    ) {
-      const isEnum = context.propertyValueType === "enum";
-      if (isEnum) {
-        const values =
-          context.type === "LayerRootPropertyValue"
-            ? layer[context.propertyName].values || []
-            : spec[`${context.category}_${context.layerType}`][
-                context.propertyName
-              ].values || [];
-        const value = values[context.value || ""];
-        if (value && value.doc) {
+      const context = evaluateStyleContext(
+        around,
+        // @ts-ignore
+        {
+          explicit: true,
+          state: state,
+          pos,
+        }
+      );
+      if (context === null) {
+        return null;
+      } else if (
+        (context.type === "LayerRootPropertyName" ||
+          context.type === "PropertyName") &&
+        context.value
+      ) {
+        const specDetails =
+          context.type === "LayerRootPropertyName"
+            ? layer[context.value]
+            : spec[`${context.category}_${context.layerType}`][context.value];
+        if (specDetails) {
           return {
             pos: start,
             end,
@@ -89,42 +51,84 @@ export const glStyleHoverTooltips = hoverTooltip((view, pos, side) => {
               return {
                 dom: tooltipDom({
                   title: context.value!,
+                  linkRef:
+                    context.type === "LayerRootPropertyName"
+                      ? context.value!
+                      : `${context.category}-${context.layerType}-${context.value}`,
                   details: {
-                    type: "enum",
+                    type: specDetails.type,
+                    required: Boolean(specDetails.required),
+                    min: specDetails.minimum,
+                    max: specDetails.maximum,
+                    default: specDetails.default,
                   },
-                  body: value.doc,
+                  body: specDetails.doc,
+                }),
+              };
+            },
+          };
+        }
+      } else if (
+        context.type === "LayerRootPropertyValue" ||
+        context.type === "PropertyValue"
+      ) {
+        const isEnum = context.propertyValueType === "enum";
+        if (isEnum) {
+          const values =
+            context.type === "LayerRootPropertyValue"
+              ? layer[context.propertyName].values || []
+              : spec[`${context.category}_${context.layerType}`][
+                  context.propertyName
+                ].values || [];
+          const value = values[context.value || ""];
+          if (value && value.doc) {
+            return {
+              pos: start,
+              end,
+              above: true,
+              create(view) {
+                return {
+                  dom: tooltipDom({
+                    title: context.value!,
+                    details: {
+                      type: "enum",
+                    },
+                    body: value.doc,
+                  }),
+                };
+              },
+            };
+          }
+        }
+      } else if (context.type === "ExpressionFn" && context.value) {
+        const expressionName = context.value;
+        const expressionDetails =
+          spec.expression_name?.values?.[expressionName];
+        if (expressionDetails) {
+          return {
+            pos: start,
+            end,
+            above: true,
+            create(view) {
+              return {
+                dom: tooltipDom({
+                  title: expressionName,
+                  details: {
+                    type: "expression",
+                  },
+                  body: expressionDetails.doc,
+                  linkRef: expressionName,
                 }),
               };
             },
           };
         }
       }
-    } else if (context.type === "ExpressionFn" && context.value) {
-      const expressionName = context.value;
-      const expressionDetails = spec.expression_name?.values?.[expressionName];
-      if (expressionDetails) {
-        return {
-          pos: start,
-          end,
-          above: true,
-          create(view) {
-            return {
-              dom: tooltipDom({
-                title: expressionName,
-                details: {
-                  type: "expression",
-                },
-                body: expressionDetails.doc,
-                linkRef: expressionName,
-              }),
-            };
-          },
-        };
-      }
     }
-  }
-  return null;
-});
+    return null;
+  },
+  { hideOnChange: true }
+);
 
 function tooltipDom(props: {
   details: {
