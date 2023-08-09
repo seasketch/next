@@ -243,6 +243,7 @@ if (process.env.NODE_ENV !== "test") {
   const redisClient = redis.createClient({
     connect_timeout: 5000,
     host: process.env.REDIS_HOST || "127.0.0.1",
+    password: process.env.REDIS_PASSWORD,
   });
 
   // It is recommended to process Redis errors and setup some reconnection strategy

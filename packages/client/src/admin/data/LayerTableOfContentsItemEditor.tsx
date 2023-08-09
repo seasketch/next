@@ -746,7 +746,10 @@ export default function LayerTableOfContentsItemEditor(
                     </a>
                     . Don't specify a <code>source</code> or <code>id</code>{" "}
                     property on your layers, those will be managed for you by
-                    SeaSketch.
+                    SeaSketch. Press{" "}
+                    <span className="font-mono">Control+Space</span> to
+                    autocomplete string values and property names, and hover
+                    over properties to see documentation.
                   </Trans>
                 </p>
                 {updateGLStyleMutationState.error && (
@@ -756,6 +759,7 @@ export default function LayerTableOfContentsItemEditor(
                   </p>
                 )}
                 <GLStyleEditor
+                  tocItemId={item.stableId}
                   geostats={source.geostats}
                   type={
                     source.type === DataSourceTypes.SeasketchRaster
@@ -782,6 +786,16 @@ export default function LayerTableOfContentsItemEditor(
                     });
                     setStyle(newStyle);
                   }}
+                  bounds={
+                    item.bounds
+                      ? (item.bounds.map((b) => parseFloat(b)) as [
+                          number,
+                          number,
+                          number,
+                          number
+                        ])
+                      : undefined
+                  }
                 />
               </div>
             )}

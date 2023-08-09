@@ -12,5 +12,7 @@ services:
     command: ["postgres", "-c", "log_statement=all"]
   redis:
     image: "redis:alpine"
+    command: >
+      --requirepass ucsb
     ports:
       - "6379:6379"

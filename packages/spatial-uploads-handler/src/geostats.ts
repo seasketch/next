@@ -23,6 +23,7 @@ export interface GeostatsAttribute {
   values: (string | number | boolean | null)[];
   min?: number;
   max?: number;
+  quantiles?: number[];
 }
 
 export interface GeostatsLayer {
@@ -88,6 +89,7 @@ export default function geostats(
       const attr = attributeData[propName];
       const type = attributeType(value);
       if (type !== attr.type && type !== "null") {
+        console.log("found non matching type", attr.type, type);
         attr.type = "mixed";
       }
       if (attr.type !== "object" && attr.type !== "array") {
@@ -175,7 +177,6 @@ export async function statsFromMBTiles(mbtilesPath: string) {
       }
     });
   });
-  console.log("info", info);
   return {
     geostats: info?.tilestats?.layers?.length
       ? (info.tilestats.layers[0] as GeostatsLayer)

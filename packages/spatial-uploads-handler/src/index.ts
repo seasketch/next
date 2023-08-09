@@ -94,7 +94,9 @@ export default async function handleUpload(
   requestingUser: string,
   skipLoggingProgress?: boolean
 ): Promise<ProcessedUploadResponse> {
+  console.log("handle");
   const pgClient = await getClient();
+  console.log("got client");
 
   /**
    * Updates progress of the upload task
@@ -227,7 +229,23 @@ export default async function handleUpload(
         throw new Error(`Unrecognized raster driver "${rioData.driver}"`);
       }
       if (rioData.colorinterp[0] === "gray") {
-        rasterInfo.colorInterp = ColorInterp.GRAY;
+        // It seems Arc Desktop exports rgb files in a format that gdal/rio info
+        // doesn't interpret correctly. Hopefully guessing this way is ok.
+        if (
+          rioData.colorinterp.length === 3 &&
+          rioData.colorinterp[1] === "undefined"
+        ) {
+          rasterInfo.colorInterp = ColorInterp.RGB;
+        } else {
+          rasterInfo.colorInterp = ColorInterp.GRAY;
+        }
+      } else if (
+        // Sam Arc Desktop hueristic here for rgba
+        rioData.colorinterp.length === 4 &&
+        rioData.colorinterp[3] === "alpha" &&
+        rioData.colorinterp[0] === "undefined"
+      ) {
+        rasterInfo.colorInterp = ColorInterp.RGBA;
       } else if (rioData.colorinterp[0] === "red") {
         if (rioData.colorinterp[3] === "alpha") {
           rasterInfo.colorInterp = ColorInterp.RGBA;
@@ -553,6 +571,90 @@ export default async function handleUpload(
         sourceUrl = `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`;
       }
 
+      // For some reason tippecanoe often converts numeric columns from fgb
+      // to mixed and stringifies the values. To avoid that, detect numeric
+      // columns using fiona (fio info) and then use the -T command to
+      // manually specify the types.
+      const fioInfo = await logger.exec(
+        ["fio", ["info", normalizedVectorPath]],
+        "Problem detecting numeric properties using fiona.",
+        1 / 20
+      );
+      const fioData = JSON.parse(fioInfo);
+      const schema = fioData?.schema?.properties || {};
+      const numericAttributes: {
+        name: string;
+        type: "int" | "float";
+        quantiles?: number[];
+      }[] = [];
+      for (const key in schema) {
+        const type = schema[key];
+        if (/int/i.test(type)) {
+          numericAttributes.push({ name: key, type: "int" });
+        } else if (/float/i.test(type)) {
+          numericAttributes.push({ name: key, type: "float" });
+        }
+      }
+      try {
+        // If there are numeric attributes, calculate quantiles
+        if (numericAttributes.length) {
+          for (const attribute of numericAttributes) {
+            if (
+              !/fid/i.test(attribute.name) &&
+              !/objectid/i.test(attribute.name) &&
+              !/^id$/i.test(attribute.name)
+            ) {
+              const attrDataFname = path.join(
+                dist,
+                `details-${numericAttributes.indexOf(attribute)}.json`
+              );
+              const data = await logger.exec(
+                [
+                  "ogr2ogr",
+                  [
+                    attrDataFname,
+                    normalizedVectorPath,
+                    "-dialect",
+                    "sqlite",
+                    "-sql",
+                    `
+                    SELECT 
+                      quantile, 
+                      max(VALUE) as max 
+                    from (
+                      SELECT 
+                        "${attribute.name}" as VALUE, 
+                        NTILE(20) OVER (ORDER BY "${attribute.name}") as quantile 
+                      FROM 
+                        "${originalName}"
+                    ) group by quantile
+                  `,
+                  ],
+                ],
+                "Problem calculating quantiles",
+                1 / 20
+              );
+              const attrData = JSON.parse(
+                readFileSync(attrDataFname).toString()
+              );
+              if (attrData && attrData.features.length) {
+                attribute.quantiles = [];
+                for (const feature of attrData.features) {
+                  if (
+                    attribute.quantiles.indexOf(feature.properties.max) === -1
+                  ) {
+                    attribute.quantiles.push(feature.properties.max);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Don't do anything if quantiles fail
+        console.error("Failed to generate quantiles");
+      }
+
       /**
        * Tiling only happens if the file is over a certain size. If very small
        * just loading the raw GeoJSON in mapbox-gl-js should be sufficient.
@@ -572,9 +674,13 @@ export default async function handleUpload(
           [
             "tippecanoe",
             [
+              ...numericAttributes
+                .map((a) => [`-T`, `${a.name}:${a.type}`])
+                .flat(),
               "-n",
               `"${originalName}"`,
               "-zg",
+              "--drop-densest-as-needed",
               "-l",
               `${originalName}`,
               "-o",
@@ -604,6 +710,14 @@ export default async function handleUpload(
         // (generated automatically by tippecanoe)
         const info = await statsFromMBTiles(mvtPath);
         stats = info.geostats;
+        for (const attr of stats?.attributes || []) {
+          const numeric = numericAttributes.find(
+            (a) => a.name === attr.attribute
+          );
+          if (numeric && numeric.quantiles) {
+            attr.quantiles = numeric.quantiles;
+          }
+        }
         bounds = info.bounds;
       }
 
@@ -616,6 +730,15 @@ export default async function handleUpload(
           | FeatureCollection;
         stats = geostats(geojson, originalName);
         bounds = bbox(geojson);
+      }
+
+      for (const attr of stats?.attributes || []) {
+        const numeric = numericAttributes.find(
+          (a) => a.name === attr.attribute
+        );
+        if (numeric && numeric.quantiles) {
+          attr.quantiles = numeric.quantiles;
+        }
       }
     }
 
@@ -721,7 +844,7 @@ export default async function handleUpload(
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
-    // tmpobj.removeCallback();
+    tmpobj.removeCallback();
   }
 }
 
