@@ -1970,38 +1970,39 @@ export function getInsertLayerOptions(
           paint: {},
         },
       });
-    }
-    for (const attribute of (layer.attributes || []).filter(
-      (a) => a.type === "string"
-    )) {
-      options.push({
-        type: "symbol",
-        label: "Different image for each string value",
-        propertyChoice: {
-          property: attribute.attribute,
-          ...attribute,
-        },
-        layer: {
+
+      for (const attribute of (layer.attributes || []).filter(
+        (a) => a.type === "string"
+      )) {
+        options.push({
           type: "symbol",
-          layout: {
-            "icon-image": [
-              "match",
-              ["get", attribute.attribute],
-              ...attribute.values
-                .filter((v) => v !== null)
-                .map((v, i) => {
-                  return [
-                    v,
-                    `seasketch://sprites/${sprites[i % sprites.length].id}`,
-                  ];
-                })
-                .flat(),
-              `seasketch://sprites/${sprites[0].id}`,
-            ],
+          label: "Different image for each string value",
+          propertyChoice: {
+            property: attribute.attribute,
+            ...attribute,
           },
-          paint: {},
-        },
-      });
+          layer: {
+            type: "symbol",
+            layout: {
+              "icon-image": [
+                "match",
+                ["get", attribute.attribute],
+                ...attribute.values
+                  .filter((v) => v !== null)
+                  .map((v, i) => {
+                    return [
+                      v,
+                      `seasketch://sprites/${sprites[i % sprites.length].id}`,
+                    ];
+                  })
+                  .flat(),
+                `seasketch://sprites/${sprites[0].id}`,
+              ],
+            },
+            paint: {},
+          },
+        });
+      }
     }
   }
   return options;
