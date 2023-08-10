@@ -11880,6 +11880,7 @@ export type TableOfContentsItem = Node & {
   dataLayerId?: Maybe<Scalars['Int']>;
   enableDownload: Scalars['Boolean'];
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
+  hasMetadata?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
@@ -16826,7 +16827,7 @@ export type ProjectSlugExistsQuery = (
 
 export type OverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps' | 'hasMetadata'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
@@ -19755,6 +19756,7 @@ export const OverlayFragmentDoc = gql`
   title
   geoprocessingReferenceId
   translatedProps
+  hasMetadata
 }
     `;
 export const DataSourceDetailsFragmentDoc = gql`

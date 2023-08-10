@@ -13066,6 +13066,7 @@ type TableOfContentsItem implements Node {
   dataLayerId: Int
   enableDownload: Boolean!
   geoprocessingReferenceId: String
+  hasMetadata: Boolean
   hideChildren: Boolean!
   id: Int!
 

@@ -10,7 +10,8 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
-    "shell": "bin/shell.sh"
+    "shell": "bin/shell.sh",
+    "info": "node lib/getBastionProps.js"
   },
   "devDependencies": {
     "@aws-cdk/assert": "1.106.0",

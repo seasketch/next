@@ -3081,9 +3081,6 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
       if new.data_layer_id is not null then
         raise 'Folders cannot have data_layer_id set';
       end if;
-      if new.metadata is not null then
-        raise 'Folders cannot have metadata set';
-      end if;
       if new.bounds is not null then
         raise 'Folders cannot have bounds set';
       end if;
@@ -12086,6 +12083,17 @@ CREATE FUNCTION public.surveys_submitted_response_count(survey public.surveys) R
     AS $$
     select count(*)::int from survey_responses where survey_id = survey.id and is_draft = false and is_practice = false and archived = false;
 $$;
+
+
+--
+-- Name: table_of_contents_items_has_metadata(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select metadata is not null from table_of_contents_items where id = toc.id;
+  $$;
 
 
 --
@@ -27689,6 +27697,14 @@ GRANT ALL ON FUNCTION public.surveys_responses_spatial_extent(survey public.surv
 
 REVOKE ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surveys) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surveys) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_has_metadata(toc public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) TO anon;
 
 
 --

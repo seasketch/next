@@ -147,7 +147,7 @@ export default function TableOfContentsEditor() {
             },
           },
         ];
-        if (!item.isFolder) {
+        if (!item.isFolder || item.hideChildren) {
           contextMenuOptions.push({
             id: "metadata",
             label: t("Metadata"),

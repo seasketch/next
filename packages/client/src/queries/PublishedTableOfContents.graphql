@@ -17,6 +17,7 @@ fragment Overlay on TableOfContentsItem {
   title
   geoprocessingReferenceId
   translatedProps
+  hasMetadata
 }
 
 query PublishedTableOfContents($slug: String!) {
