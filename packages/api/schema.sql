@@ -10246,7 +10246,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer,
             render_under,
             mapbox_gl_styles,
-            interactivity_settings_id
+            interactivity_settings_id,
+            z_index
           )
           select "projectId", 
             data_source_id, 
@@ -10254,7 +10255,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer, 
             render_under, 
             mapbox_gl_styles,
-            new_interactivity_settings_id
+            new_interactivity_settings_id,
+            z_index
           from 
             data_layers
           where 
