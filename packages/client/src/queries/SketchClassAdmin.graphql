@@ -17,6 +17,8 @@ fragment SketchFormElement on FormElement {
     isSurveysOnly
     label
     isHidden
+    geostatsType
+    geostatsArrayOf
   }
 }
 
@@ -301,5 +303,6 @@ mutation DeleteVisibilityRuleCondition($id: Int!) {
 mutation UpdateSketchClassStyle($id: Int!, $style: JSON) {
   updateSketchClassMapboxGLStyle(sketchClassId: $id, style: $style) {
     id
+    mapboxGlStyle
   }
 }

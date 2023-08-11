@@ -146,7 +146,7 @@ export default function SketchClassForm({
             color="text-indigo-100"
           />
         </h1>
-        <div className="flex-0 mb-2 -mt-2 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+        <div className="flex-0 mb-2 -mt-2 bg-gray-700 text-primary-300 flex items-center">
           <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
         </div>
       </div>
