@@ -86,6 +86,7 @@
   "Take Survey": "Osalege küsitluses",
   "This survey either does not exist or your account does not have access to it. Surveys marked as draft require special permission to access.": "Seda küsitlust kas pole olemas või pole teie kontol sellele juurdepääsu. Mustandiks märgitud küsitlustele on juurdepääsuks vaja eriluba.",
   "This will delete your entire shape. Are you sure?": "See kustutab kogu teie kuju. Oled sa kindel?",
+  "Total": "Kokku",
   "UnsubmittedResponse": "Teie vastus on selles seadmes turvaline, kuid see tuleb enne loendamist serverisse saata.",
   "View Map": "Vaata kaarti",
   "Yes": "Jah",

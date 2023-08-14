@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "Dedela Amafayela Lapha Ukuze Uwalayishe",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "I-SeaSketch okwamanje isekela idatha ye-vector ku-GeoJSON, i-Shapefile (ezipwe), i-GeoTiff, nefomethi ye-FlatGeobuf.",
+  "Starting upload": "Iqala ukulayisha",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Lokhu kubonakala kuwuhlobo lwefayela i-SeaSketch engalusekeli ekulayishweni kwendawo.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Lokhu kubonakala kuwuhlobo lwefayela le-raster elingasekelwe. Ukuze uthole idatha ye-raster, layisha i-GeoTiff.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Lokhu kubonakala kuyingxenye kuphela yefayela lokuma. Ukuze ulayishe amafomu, dala ifayela le-.zip elinawo wonke amafayela ahlobene (.shp, .prj, .shx, njll) bese ulayisha leyo zipfi."
+}

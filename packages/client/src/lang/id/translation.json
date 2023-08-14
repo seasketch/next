@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "Jatuhkan File Di Sini untuk Mengunggah",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch saat ini mendukung data vektor dalam format GeoJSON, Shapefile (zip), GeoTiff, dan FlatGeobuf.",
+  "Starting upload": "Memulai pengunggahan",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Ini tampaknya merupakan jenis file yang tidak didukung oleh SeaSketch untuk unggahan spasial.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Ini tampaknya jenis file raster yang tidak didukung. Untuk data raster, unggah GeoTiff.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Ini tampaknya hanya bagian dari sebuah shapefile. Untuk mengunggah shapefile, buat file .zip dengan semua file terkait (.shp, .prj, .shx, dll) dan unggah file zip tersebut."
+}

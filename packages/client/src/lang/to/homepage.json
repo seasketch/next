@@ -1,5 +1,6 @@
 {
   "authenticating...": "authenticating ...",
+  "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "Kimuʻa pea faʻu ha ngāué, kuo pau ke ke fakapapauʻi ho tuʻasila ʻīmeilí. Kataki ʻo vakaiʻi hoʻo puha (inbox) ki ha ʻimeili fakapapauʻi mei he <2>do-not-reply@seasketch.org</2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "ʻI hoʻo faʻu ha ngaue, ʻoku ke loto fiemalie ai ki heʻetau <2>ngaahi meʻa ke fakaʻaongaʻi</2> mo e <6></6>.",
   "Copied!": "Hiki tatau!",
   "Copy Link": "Hiki Tatau e Fehokotakiʻangá",
@@ -7,12 +8,14 @@
   "Create an account": "Faʻu ha ʻakauni",
   "Create your own SeaSketch project.": "Faʻu haʻo ngaue SeaSketch pe ʻaʻau.",
   "Dismiss": "Tukuange",
+  "Email sent. Check your inbox  📨": "Ne ʻave e ʻīmeilí. Vakaiʻi hoʻo puha (inbox) 📨",
   "Get started": "Kamata",
   "Latest activity": "ʻEkitiviti fakamuimui taha",
   "Latest Discussions": "Ngaahi fealeleaʻaki fakamuimui taha",
   "Learn more": "Ako lahi ange",
   "Link Copied!": "Hiki ha tatau ʻo e fehokotakiʻanga!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Ko e hu ki hoʻo ʻakauni ko e ʻuluaki sitepu ia ki hono faʻu ha ngaue seaSketch foʻou.",
+  "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "Fekumi ki he ngaahi ngaue hange ko e <2>Bermuda</2>, <5>MaPP</5>, pe <8>US mape fakafekauʻaki</8>? Te ke lava ʻo maʻu ʻa e ngaahi ngaue ko ʻeni ʻi he <11>seaSketch Legacy</11>.",
   "Metadata": "Metadata",
   "NumPosts": "{{lau}} ngaahi pou",
   "NumPosts_plural": "NumPosts_plural",
@@ -26,6 +29,8 @@
   "Resend verification email": "Toe ʻave ʻa e ʻīmeili fakapapauʻí",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "ʻOku fokotuʻu ʻe SeaSketch ha ngaahi meʻangaue malohi ki he nima ʻo e palani ʻo e ʻoseni,\n              stakeholders mo e kakai naʻe fakangatangata pe ki he GIS\n              kau palofesinale, lavameʻa participatory Tautahi spatial palani\n              ngaahi founga ʻoku fekauʻaki vaofi mo e saienisi ʻoku fekauʻaki mo ia pea\n              fakamatala. ʻOku fakaʻaongaʻi ʻa e SeaSketch ʻi he funga ʻo e mamani ʻi ha fanga kiʻi\n              ngaahi timi tauʻataina ke fili mo e ngaahi ngaue lalahi ʻa e kolo ke toe lelei ange\n              ngaahi tuʻutuʻuni fakapule ʻi he ʻaho kotoa pe.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "ʻOku poupouʻi ʻe seaSketch ʻa e palani fengaueʻaki ki hotau ngaahi ʻoseni",
+  "Sending email...": "ʻAve ʻo e ʻīmeilí...",
   "Sign In": "Hū ki he Polokalamá",
+  "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "ʻOku ke maʻu SeaSketch mei he kelekele beta next.seasket.ch. Ke aʻusia lelei taha, kataki ʻo fakaʻaongaʻi ʻa e <2>www.seasketch.org</2>. Kapau ʻoku ke fakaʻaongaʻi ʻa e ngaahi meʻa ʻoku ʻikai ke ʻInitaneti <5> lau ʻa e ngaahi fakahinohino ko ʻeni</5>.",
   "Zoom to bounds": "Fakaʻata siʻi ki he ngaahi ngataʻanga"
 }

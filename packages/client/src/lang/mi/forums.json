@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Waitohu</0> ranei <4>rehita</4> mo tetahi kaute kia uru atu ki te huinga.",
   "Cancel": "Whakakore",
+  "close": "kati",
+  "download": "tango",
   "Forums": "Huihuinga",
   "lastReply": "Whakautu whakamutunga {{timeAgo}}. I timatahia e {{lastAuthor}}",
   "Map Bookmark Errors": "Mahere Tohu Tohu Hapa",

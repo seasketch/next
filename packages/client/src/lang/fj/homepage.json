@@ -1,5 +1,6 @@
 {
   "authenticating...": "vakadeitaki...",
+  "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "Ni bera ni o tauyavutaka e dua na cakacaka, sa dodonu mo vakadeitaka na nomu itikotiko ni imeli. Yalovinaka raica na nomu kato ni veivakadeitaki me baleta e dua na imeli ni veivakadeitaki mai na <2>do-not-reply@seasketch.org</2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "Ni ko sa tauyavutaka e dua na cakacaka, o sa vakadonuya tiko na noda <2>Terms of Use</2> kei na <6>Privacy Policy</6>.",
   "Copied!": "Lavetaki!",
   "Copy Link": "Lavetaka na iSema",
@@ -7,12 +8,14 @@
   "Create an account": "Tauyavutaka e dua na akaude",
   "Create your own SeaSketch project.": "Cakava ga na nomu cakacaka ni SeaSketch.",
   "Dismiss": "Vakasukai",
+  "Email sent. Check your inbox  📨": "Vakau na imeli. Raica na nomu kato 📨 ni curu",
   "Get started": "Tekivu",
   "Latest activity": "iTaviqaravi vou",
   "Latest Discussions": "Veivosaki Vou",
   "Learn more": "Vulica eso tale na ka",
   "Link Copied!": "Lavetaki na iSema!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "Na curu ki na nomu akaude sa imatai ni ikalawa ni kena tauyavutaki e dua na cakacaka vou ni SeaSketch.",
+  "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "Vaqara na cakacaka me vaka na <2>Bermuda</2>, <5>MaPP</5>, se <8>US Mapping Coordination</8>? E rawa ni o raica na cakacaka oqo ena <11>SeaSketch ivotavota vakawa</11>.",
   "Metadata": "Metadata",
   "NumPosts": "{{count}} duru",
   "NumPosts_plural": "NumPosts_plural",
@@ -26,6 +29,8 @@
   "Resend verification email": "Vakauta tale na imeli ni veivakadeitaki",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "E biuta o SeaSketch na iyaya kaukauwa ki na ligadra na dautuvatuva ni wasawasa,\n              vakaitutu kei ira na lewenivanua ka ra a yalani tu ena dua na gauna ki na GIS\n              kenadau, ka rawa ni ra vakaitavi ena ituvatuva ni kasiviti ni sotia\n              iwalewale e semati vakavoleka sara ki na vakadidike e gadrevi kei na\n              itukutuku. Sa vakayagataki tiko na SeaSketch e vuravura raraba ena veika lalai\n              timi ni tabana kei na sasaga lelevu ni itikotiko raraba me vakavinakataki cake\n              vakatulewa ni veiliutaki ena veisiga.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "Tokona na SeaSketch na Tuvalaka Vata ni Noda Wasawasa",
+  "Sending email...": "Vakauta na imeli...",
   "Sign In": "Curu ki Loma",
+  "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "O sa curuma tiko na SeaSketch mai na vanua ni beta next.seasket.ch. Me baleta na veika vinaka duadua, yalovinaka vakayagataka na <2>www.seasketch.org</2>. Kevaka o vakayagataka tiko na veika <5> wilika na idusidusi oqo</5>.",
   "Zoom to bounds": "Vakarabailevutaka ki na iyalayala"
 }

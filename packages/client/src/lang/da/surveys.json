@@ -86,6 +86,7 @@
   "Take Survey": "Tag undersøgelsen",
   "This survey either does not exist or your account does not have access to it. Surveys marked as draft require special permission to access.": "Denne undersøgelse findes enten ikke, eller også har din konto ikke adgang til den. Undersøgelser markeret som kladde kræver særlig tilladelse for at få adgang.",
   "This will delete your entire shape. Are you sure?": "Dette vil slette hele din form. Er du sikker?",
+  "Total": "Total",
   "UnsubmittedResponse": "Dit svar er sikkert på denne enhed, men skal sendes til serveren, før det tælles.",
   "View Map": "Se kort",
   "Yes": "Ja",

@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "将文件拖放到此处上传",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch 目前支持 GeoJSON、Shapefile（压缩）、GeoTiff 和 FlatGeobuf 格式的矢量数据。",
+  "Starting upload": "开始上传",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "这似乎是 SeaSketch 不支持空间上传的文件类型。",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "这似乎是不受支持的光栅文件类型。对于栅格数据，请上传 GeoTiff。",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "这似乎只是 shapefile 的一部分。要上传 shapefile，请创建包含所有相关文件（.shp、.prj、.shx 等）的 .zip 文件，然后上传该 zip 文件。"
+}

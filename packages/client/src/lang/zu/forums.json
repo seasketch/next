@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Ngena ngemvume</0> noma <4>bhalisa</4> ukuze uthole i-akhawunti yokubamba iqhaza kunkundla.",
   "Cancel": "Khansela",
+  "close": "vala",
+  "download": "download",
   "Forums": "Izinkundla",
   "lastReply": "Impendulo yokugcina {{timeAgo}}. Iqalwe ngu-{{lastAuthor}}",
   "Map Bookmark Errors": "Amaphutha ebhukhimakhi yemephu",

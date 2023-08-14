@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "Foorumis osalemiseks konto saamiseks <0>logige sisse</0> või <4>registreerige</4>.",
   "Cancel": "Tühista",
+  "close": "Sulge",
+  "download": "lae alla",
   "Forums": "Foorumid",
   "lastReply": "Viimane vastus {{timeAgo}}. Alustas {{lastAuthor}}",
   "Map Bookmark Errors": "Kaardi järjehoidjate vead",

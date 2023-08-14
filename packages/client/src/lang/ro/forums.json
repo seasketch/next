@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Conectați-vă</0> sau <4>înregistrați-vă</4> pentru un cont pentru a participa la forum.",
   "Cancel": "Anulare",
+  "close": "închide",
+  "download": "Descarca",
   "Forums": "Forumuri",
   "lastReply": "Ultimul răspuns {{timeAgo}}. Început de {{lastAuthor}}",
   "Map Bookmark Errors": "Erori de marcaj pe hartă",

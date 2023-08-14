@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Accedi</0> o <4>registrati</4> per un account per partecipare al forum.",
   "Cancel": "Annulla",
+  "close": "vicino",
+  "download": "scaricamento",
   "Forums": "Forum",
   "lastReply": "Ultima risposta {{timeAgo}}. Iniziato da {{lastAuthor}}",
   "Map Bookmark Errors": "Errori nei segnalibri della mappa",

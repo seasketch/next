@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Melden Sie sich an</0> oder <4>registrieren</4> Sie sich für ein Konto, um am Forum teilzunehmen.",
   "Cancel": "Stornieren",
+  "close": "schließen",
+  "download": "herunterladen",
   "Forums": "Foren",
   "lastReply": "Letzte Antwort vor {{timeAgo}}. Gestartet von {{lastAuthor}}",
   "Map Bookmark Errors": "Karten-Lesezeichen-Fehler",

@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "Nometiet failus šeit, lai augšupielādētu",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch pašlaik atbalsta vektordatus GeoJSON, Shapefile (zip), GeoTiff un FlatGeobuf formātos.",
+  "Starting upload": "Tiek sākta augšupielāde",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Šķiet, ka šis ir faila tips, kuru SeaSketch neatbalsta telpiskām augšupielādēm.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Šķiet, ka tas ir neatbalstīts rastra faila veids. Rastra datiem augšupielādējiet GeoTiff.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Šķiet, ka tā ir tikai daļa no formas faila. Lai augšupielādētu Shape failus, izveidojiet .zip failu ar visiem saistītajiem failiem (.shp, .prj, .shx utt.) un augšupielādējiet šo zip failu."
+}
