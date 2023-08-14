@@ -37,6 +37,7 @@ import SketchForm from "./SketchForm";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import { defaultStyle } from "../../surveys/appearance";
+// import { extractRelevantPropsFromStyle } from "../../admin/sketchClasses/SketchClassStyleAdmin";
 
 export default function SketchEditorModal({
   sketch,
@@ -68,6 +69,34 @@ export default function SketchEditorModal({
   const [name, setName] = useState<string>();
   const [properties, setProperties] = useState<any>(sketch?.properties || {});
   const [hasValidationErrors, setHasValidationErrors] = useState(false);
+
+  //   const styleRelevantProps = useMemo(() => {
+  //     return extractRelevantPropsFromStyle(sketchClass.mapboxGlStyle || []);
+  //   }, [sketchClass]);
+  // //
+  //   console.log(styleRelevantProps, properties);
+
+  // useEffect(() => {
+  //   const elements = sketchClass.form?.formElements || [];
+  //   if (styleRelevantProps.length && elements.length && mapContext.manager) {
+  //     const newProperties: { [key: string]: any } = {};
+  //     styleRelevantProps.forEach((prop) => {
+  //       const element =
+  //         prop === "name"
+  //           ? elements.find((e) => e.type?.componentName === "FeatureName")
+  //           : elements.find((e) => e.generatedExportId === prop);
+  //       if (element) {
+  //         newProperties[prop] = properties[element.id];
+  //       }
+  //     });
+  //     mapContext.manager.updateSketchProperties(sketch?.id || 0, newProperties);
+  //   }
+  // }, [
+  //   styleRelevantProps,
+  //   properties,
+  //   sketchClass.form?.formElements,
+  //   mapContext.manager,
+  // ]);
 
   const formElements = useMemo(() => {
     const elements = sketchClass.form?.formElements || [];

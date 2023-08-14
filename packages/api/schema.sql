@@ -257,6 +257,21 @@ CREATE TYPE public.email_summary_frequency AS ENUM (
 
 
 --
+-- Name: extended_geostats_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.extended_geostats_type AS ENUM (
+    'string',
+    'number',
+    'boolean',
+    'null',
+    'mixed',
+    'array',
+    'object'
+);
+
+
+--
 -- Name: field_rule_operator; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1274,7 +1289,8 @@ CREATE TABLE public.sketch_classes (
     preprocessing_project_url text,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
-    CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+    CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
+    CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
 );
 
 
@@ -6986,7 +7002,9 @@ CREATE TABLE public.form_element_types (
     is_spatial boolean DEFAULT false NOT NULL,
     sketch_class_template_id integer,
     is_required_for_sketch_classes boolean DEFAULT false NOT NULL,
-    allow_admin_updates boolean DEFAULT true NOT NULL
+    allow_admin_updates boolean DEFAULT true NOT NULL,
+    geostats_type public.extended_geostats_type,
+    geostats_array_of public.extended_geostats_type
 );
 
 

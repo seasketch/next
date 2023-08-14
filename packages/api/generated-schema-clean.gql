@@ -4768,6 +4768,16 @@ type EnableOfflineSupportPayload {
   query: Query
 }
 
+enum ExtendedGeostatsType {
+  ARRAY
+  BOOLEAN
+  MIXED
+  NULL
+  NUMBER
+  OBJECT
+  STRING
+}
+
 """All input for the `failDataUpload` mutation."""
 input FailDataUploadInput {
   """
@@ -5449,6 +5459,8 @@ type FormElementType implements Node {
   allowAdminUpdates: Boolean!
   allowedLayouts: [FormElementLayout]
   componentName: String!
+  geostatsArrayOf: ExtendedGeostatsType
+  geostatsType: ExtendedGeostatsType
   isHidden: Boolean!
 
   """

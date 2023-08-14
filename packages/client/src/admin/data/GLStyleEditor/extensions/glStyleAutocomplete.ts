@@ -5,11 +5,12 @@ import { SyntaxNode } from "@lezer/common";
 import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
 import { GeoJsonGeometryTypes } from "geojson";
 import { formatJSONCommand } from "../formatCommand";
+import { SpriteDetailsFragment } from "../../../../generated/graphql";
+import { ExtendedGeostatsLayer } from "../GLStyleEditor";
 import {
   schemeTableau10,
   interpolatePlasma as interpolateColorScale,
 } from "d3-scale-chromatic";
-import { SpriteDetailsFragment } from "../../../../generated/graphql";
 
 export interface GeostatsAttribute {
   attribute: string;
@@ -172,6 +173,7 @@ export interface InsertLayerOption {
     min?: number;
     max?: number;
     type: PropertyValueType;
+    typeArrayOf?: PropertyValueType;
   };
   layer: any;
 }
@@ -1574,7 +1576,7 @@ function getRoot(
 }
 
 export function getInsertLayerOptions(
-  layer: GeostatsLayer,
+  layer: ExtendedGeostatsLayer,
   sprites: SpriteDetailsFragment[]
 ) {
   const options: InsertLayerOption[] = [];
@@ -1702,13 +1704,22 @@ export function getInsertLayerOptions(
         layout: {},
       },
     });
-    for (const attr of layer.attributes || []) {
-      if (attr.type === "string") {
+    for (const attribute of layer.attributes || []) {
+      if (
+        (attribute.type === "string" &&
+          (attribute.attribute !== "name" || attribute.values.length > 1)) ||
+        (attribute.type === "array" &&
+          attribute.typeArrayOf === "string" &&
+          attribute.values.length > 1)
+      ) {
         options.push({
-          label: "Fill color by string property",
+          label:
+            attribute.type === "array"
+              ? "Fill color by first value in string array"
+              : "Fill color by string property",
           propertyChoice: {
-            property: attr.attribute,
-            ...attr,
+            property: attribute.attribute,
+            ...attribute,
           },
           type: "fill",
           layer: {
@@ -1716,8 +1727,10 @@ export function getInsertLayerOptions(
             paint: {
               "fill-color": [
                 "match",
-                ["get", attr.attribute],
-                ...attr.values
+                attribute.type === "array"
+                  ? ["at", 0, ["get", attribute.attribute]]
+                  : ["get", attribute.attribute],
+                ...attribute.values
                   .filter((v) => v !== null)
                   .map((v, i) => {
                     return [v, schemeTableau10[i % 10]];
@@ -1809,6 +1822,47 @@ export function getInsertLayerOptions(
         layout: {},
       },
     });
+    for (const attribute of layer.attributes || []) {
+      if (
+        (attribute.type === "string" &&
+          (attribute.attribute !== "name" || attribute.values.length > 1)) ||
+        (attribute.type === "array" &&
+          attribute.typeArrayOf === "string" &&
+          attribute.values.length > 1)
+      ) {
+        options.push({
+          label:
+            attribute.type === "array"
+              ? "Line color by first value in string array"
+              : "Line color by string property",
+          propertyChoice: {
+            property: attribute.attribute,
+            ...attribute,
+          },
+          type: "line",
+          layer: {
+            type: "line",
+            paint: {
+              "line-color": [
+                "match",
+                attribute.type === "array"
+                  ? ["at", 0, ["get", attribute.attribute]]
+                  : ["get", attribute.attribute],
+                ...attribute.values
+                  .filter((v) => v !== null)
+                  .map((v, i) => {
+                    return [v, schemeTableau10[i % 10]];
+                  })
+                  .flat(),
+                "black",
+              ],
+              "line-width": 2,
+            },
+            layout: {},
+          },
+        });
+      }
+    }
   }
   if (layer.attributes.find((a) => a.type === "string")) {
     const isLine =

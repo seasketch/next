@@ -4073,6 +4073,16 @@ export type EnableOfflineSupportPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
+export enum ExtendedGeostatsType {
+  Array = 'ARRAY',
+  Boolean = 'BOOLEAN',
+  Mixed = 'MIXED',
+  Null = 'NULL',
+  Number = 'NUMBER',
+  Object = 'OBJECT',
+  String = 'STRING'
+}
+
 /** All input for the `failDataUpload` mutation. */
 export type FailDataUploadInput = {
   /**
@@ -4599,6 +4609,8 @@ export type FormElementType = Node & {
   allowAdminUpdates: Scalars['Boolean'];
   allowedLayouts?: Maybe<Array<Maybe<FormElementLayout>>>;
   componentName: Scalars['String'];
+  geostatsArrayOf?: Maybe<ExtendedGeostatsType>;
+  geostatsType?: Maybe<ExtendedGeostatsType>;
   isHidden: Scalars['Boolean'];
   /**
    * Whether the element is an input that collects information from users or
@@ -16918,7 +16930,7 @@ export type SketchFormElementFragment = (
   & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden' | 'geostatsType' | 'geostatsArrayOf'>
   )> }
 );
 
@@ -17250,7 +17262,7 @@ export type UpdateSketchClassStyleMutation = (
   { __typename?: 'Mutation' }
   & { updateSketchClassMapboxGLStyle: (
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id'>
+    & Pick<SketchClass, 'id' | 'mapboxGlStyle'>
   ) }
 );
 
@@ -19856,6 +19868,8 @@ export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
     isSurveysOnly
     label
     isHidden
+    geostatsType
+    geostatsArrayOf
   }
 }
     `;
@@ -22278,6 +22292,7 @@ export const UpdateSketchClassStyleDocument = /*#__PURE__*/ gql`
     mutation UpdateSketchClassStyle($id: Int!, $style: JSON) {
   updateSketchClassMapboxGLStyle(sketchClassId: $id, style: $style) {
     id
+    mapboxGlStyle
   }
 }
     `;

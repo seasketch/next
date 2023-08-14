@@ -32,7 +32,6 @@ const SketchClassStylePlugin = makeExtendSchemaPlugin((build) => {
         ) => {
           const { pgClient, adminPool } = context;
           const { sketchClassId, style } = args;
-          console.log({ style });
           if (!sketchClassId) {
             throw new Error("sketchClassId is required");
           }
