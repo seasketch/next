@@ -60,7 +60,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           expect(
             conn.oneFirst(
@@ -77,7 +77,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -95,7 +95,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           await createSession(conn, userIds[0], true, false, projectId);
           expect(
@@ -113,7 +113,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -141,7 +141,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           let form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -168,7 +168,7 @@ describe("Forms", () => {
         async (conn, projectId, groupId, adminId) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           await limitToGroup(conn, "sketch_class_id", sketchClassId, groupId);
           let form = await conn.one(
@@ -261,7 +261,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, true, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           let form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -289,7 +289,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -305,7 +305,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, true, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const source = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -316,7 +316,7 @@ describe("Forms", () => {
           expect(template.is_template).toBe(true);
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassBId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class B', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class B', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_sketch_class_form_from_template(${sketchClassBId}, ${template.id})`
@@ -332,7 +332,7 @@ describe("Forms", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, true, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const source = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -353,7 +353,7 @@ describe("Forms", () => {
           ).toBe(1);
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassBId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class B', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class B', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_sketch_class_form_from_template(${sketchClassBId}, ${template.id})`
@@ -383,7 +383,7 @@ describe("Form Fields", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -412,7 +412,7 @@ describe("Form Fields", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -491,7 +491,7 @@ describe("Form Fields", () => {
         async (conn, projectId, groupId, adminId) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           await limitToGroup(conn, "sketch_class_id", sketchClassId, groupId);
           let form = await conn.one(
@@ -514,7 +514,7 @@ describe("Form Fields", () => {
       async (conn, projectId, adminId, userIds) => {
         await createSession(conn, adminId, true, false, projectId);
         const sketchClassId = await conn.oneFirst(
-          sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+          sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
         );
         const form = await conn.one(
           sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -537,7 +537,7 @@ describe("Form Fields", () => {
       async (conn, projectId, adminId, userIds) => {
         await createSession(conn, adminId, true, false, projectId);
         const sketchClassId = await conn.oneFirst(
-          sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+          sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
         );
         const form = await conn.one(
           sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -577,7 +577,7 @@ describe("Form Fields", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
@@ -670,7 +670,7 @@ describe("Form Fields", () => {
         async (conn, projectId, adminId, userIds) => {
           await createSession(conn, adminId, true, false, projectId);
           const sketchClassId = await conn.oneFirst(
-            sql`insert into sketch_classes (name, project_id) values ('Sketch Class A', ${projectId}) returning id`
+            sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           const form = await conn.one(
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`

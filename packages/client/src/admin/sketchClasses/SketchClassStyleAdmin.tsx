@@ -17,6 +17,7 @@ import scorpion from "./scorpion.json";
 import point from "./point.json";
 import line from "./line.json";
 import { Feature } from "geojson";
+import bbox from "@turf/bbox";
 
 export default function SketchClassStyleAdmin({
   sketchClass,
@@ -31,6 +32,10 @@ export default function SketchClassStyleAdmin({
   const [sketchAttributeValues, setSketchAttributeValues] = useState<{
     [exportId: string]: any;
   }>(getDefaultSketchProperties(sketchClass));
+
+  const [bounds, setBounds] = useState<[number, number, number, number] | null>(
+    null
+  );
 
   const mapContainer = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -51,6 +56,7 @@ export default function SketchClassStyleAdmin({
       } else if (sketchClass.geometryType === SketchGeometryType.Linestring) {
         data = line;
       }
+      setBounds(bbox(data) as [number, number, number, number]);
       data.properties = sketchAttributeValues;
       m.on("load", () => {
         setMap(m);
@@ -255,8 +261,11 @@ export default function SketchClassStyleAdmin({
                 ) {
                   return (
                     <select
-                      multiple={fe.componentSettings.multipleSelect == true}
-                      className="text-xs rounded-sm p-1 bg-gray-500 pr-2"
+                      // This just gets ugly and difficult to use if set to multiple.
+                      // Wait to enable until someone asks for it.
+                      // -cb aug 14, 2023
+                      // multiple={fe.componentSettings.multipleSelect == true}
+                      className="text-xs rounded-sm p-1 bg-gray-500 pr-2 max-h-8"
                       value={sketchAttributeValues[fe.generatedExportId]}
                       onChange={(e) => {
                         const options = e.target.options;
@@ -302,6 +311,10 @@ export default function SketchClassStyleAdmin({
           update(sketchClass.id, newStyle);
         }}
         geostats={geostats}
+        bounds={bounds || undefined}
+        onRequestShowBounds={() => {
+          map?.fitBounds(bounds!, { padding: 20 });
+        }}
       />
     </div>
   );
@@ -445,7 +458,7 @@ function getDefaultSketchProperties(
   return props;
 }
 
-function extractRelevantPropsFromStyle(style: any) {
+export function extractRelevantPropsFromStyle(style: any) {
   const props: string[] = [];
   if (Array.isArray(style)) {
     for (const layer of style) {

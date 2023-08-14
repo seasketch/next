@@ -11,6 +11,7 @@ import mapboxgl, {
   AnySourceData,
   AnyLayer,
   Sources,
+  GeoJSONSource,
 } from "mapbox-gl";
 import {
   createContext,

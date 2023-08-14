@@ -42,11 +42,13 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                     <div className="mt-2 sm:flex sm:justify-between">
                       <div className="sm:flex">
                         <p className="flex items-center text-sm text-gray-500">
-                          {layer.count} features
+                          {layer.count}{" "}
+                          {layer.count === 1 ? "feature" : "features"}
                         </p>
                       </div>
                       <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                        {layer.attributeCount} properties
+                        {layer.attributeCount}{" "}
+                        {layer.attributeCount === 1 ? "property" : "properties"}
                       </div>
                     </div>
                   </div>
@@ -87,6 +89,16 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                                               : v
                                           )
                                           .join(", ")}
+                                    {attribute.type === "boolean" &&
+                                      `true, false`}
+                                    {attribute.type === "string" &&
+                                    attribute.values.length === 0 ? (
+                                      <span className="italic">
+                                        Values unknown
+                                      </span>
+                                    ) : (
+                                      ""
+                                    )}
                                   </div>
                                 </>
                               ))}

@@ -21,13 +21,13 @@ describe("Access Control", () => {
       const projectId = await createProject(conn, adminId);
       await createSession(conn, adminId, true, false, projectId);
       const sketchClass = await conn.one(
-        sql`insert into sketch_classes (project_id, name) values (${projectId}, 'MPA') returning *`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name) values ('[]'::jsonb, ${projectId}, 'MPA') returning *`
       );
       expect(sketchClass.name).toBe("MPA");
       await createSession(conn, regularGuy, true, false, projectId);
       expect(
         conn.any(
-          sql`insert into sketch_classes (project_id, name) values (${projectId}, 'MPA-eyy!') returning *`
+          sql`insert into sketch_classes (mapbox_gl_style, project_id, name) values ('[]'::jsonb, ${projectId}, 'MPA-eyy!') returning *`
         )
       ).rejects.toThrow();
       await conn.any(sql`ROLLBACK`);
@@ -50,7 +50,7 @@ describe("Access Control", () => {
       );
       await createSession(conn, adminId, true, false, projectId);
       const sketchClass = await conn.one(
-        sql`insert into sketch_classes (project_id, name) values (${projectId}, 'MPA') returning *`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name) values ('[]'::jsonb, ${projectId}, 'MPA') returning *`
       );
       expect(sketchClass.name).toBe("MPA");
       await createSession(conn, approvedParticipant, true, false, projectId);
@@ -89,7 +89,7 @@ describe("Access Control", () => {
         approvedParticipant,
       ]);
       const sketchClass = await conn.one(
-        sql`insert into sketch_classes (project_id, name) values (${projectId}, 'MPA') returning *`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name) values ('[]'::jsonb, ${projectId}, 'MPA') returning *`
       );
       await clearSession(conn);
       const aclId = await conn.oneFirst(
@@ -124,7 +124,7 @@ test("Cannot change project_id", async () => {
     const projectBId = await createProject(conn, adminId, "public");
     await createSession(conn, adminId, true, false, projectId);
     const sketchClass = await conn.one(
-      sql`insert into sketch_classes (project_id, name) values (${projectId}, 'MPA') returning *`
+      sql`insert into sketch_classes (mapbox_gl_style, project_id, name) values ('[]'::jsonb, ${projectId}, 'MPA') returning *`
     );
     expect(sketchClass.name).toBe("MPA");
     expect(
@@ -144,10 +144,10 @@ describe("Collections - valid children", () => {
       const projectId = await createProject(conn, adminId, "invite_only");
       await createSession(conn, adminId, true, false, projectId);
       const collectionId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
       );
       const mpaId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
       await conn.any(
         sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
@@ -168,10 +168,10 @@ describe("Collections - valid children", () => {
       const projectId = await createProject(conn, adminId, "invite_only");
       await createSession(conn, adminId, true, false, projectId);
       const collectionId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
       );
       const mpaId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
       await conn.any(
         sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
@@ -191,10 +191,10 @@ describe("Collections - valid children", () => {
       const projectId = await createProject(conn, adminId, "invite_only");
       await createSession(conn, adminId, true, false, projectId);
       const collectionId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
       );
       const mpaId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
       await conn.any(
         sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
@@ -218,13 +218,13 @@ describe("Collections - valid children", () => {
       const projectId = await createProject(conn, adminId, "invite_only");
       await createSession(conn, adminId, true, false, projectId);
       const collectionId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
       );
       const mpaId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
       const notValidChildId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Not Valid Child', 'POLYGON') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Not Valid Child', 'POLYGON') returning id`
       );
       await conn.any(
         sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
@@ -243,10 +243,10 @@ describe("Collections - valid children", () => {
       const projectId = await createProject(conn, adminId, "invite_only");
       await createSession(conn, adminId, true, false, projectId);
       const collectionId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
       );
       const mpaId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
       expect(
         conn.any(
@@ -264,10 +264,10 @@ describe("Collections - valid children", () => {
       const projectBId = await createProject(conn, adminId, "invite_only");
       await createSession(conn, adminId, true, false, projectId);
       const collectionId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectBId}, 'Collection', 'COLLECTION') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectBId}, 'Collection', 'COLLECTION') returning id`
       );
       const mpaId = await conn.oneFirst(
-        sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning id`
+        sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
       expect(
         conn.any(
@@ -285,7 +285,7 @@ test("sketchCount indicates how many sketches have been created", async function
     const projectId = await createProject(conn, adminId);
     await createSession(conn, adminId, true, false, projectId);
     const sketchClassId = await conn.oneFirst(
-      sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+      sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
     );
     let count = 11;
     while (count--) {
@@ -308,7 +308,7 @@ test("Cannot delete SketchClasses with more that 10 sketches", async () => {
     const projectId = await createProject(conn, adminId);
     await createSession(conn, adminId, true, false, projectId);
     const sketchClassId = await conn.oneFirst(
-      sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning id`
+      sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
     );
     let count = 11;
     while (count--) {
@@ -446,7 +446,7 @@ test("Don't allow geometry type to be changed for sketch classes that aren't a p
     const projectBId = await createProject(conn, adminId, "public");
     await createSession(conn, adminId, true, false, projectId);
     const sketchClass = await conn.one(
-      sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'MPA', 'POLYGON') returning *`
+      sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning *`
     );
     expect(sketchClass.name).toBe("MPA");
     expect(

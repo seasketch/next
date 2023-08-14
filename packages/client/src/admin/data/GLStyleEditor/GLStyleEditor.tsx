@@ -79,6 +79,7 @@ interface GLStyleEditorProps {
   geostats?: ExtendedGeostatsLayer;
   bounds?: [number, number, number, number];
   tocItemId?: string;
+  onRequestShowBounds?: (bounds: [number, number, number, number]) => void;
 }
 
 /**
@@ -124,6 +125,10 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     const view = editorRef.current?.view;
     if (view) {
       const keydownHandler = (e: KeyboardEvent) => {
+        if (e.key === "s" && e.metaKey) {
+          e.preventDefault();
+          return;
+        }
         if (
           (e.target as Element).tagName &&
           (e.target as Element).classList.contains("cm-content")
@@ -253,20 +258,24 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         className="p-2 border-b border-black border-opacity-30 z-10 shadow flex space-x-2 flex-0"
         style={{ backgroundColor: "#303841" }}
       >
-        {props.tocItemId && (
+        {(props.tocItemId || props.geostats) && (
           <>
             <DropdownMenu.Root>
               <DropdownTrigger label="View" ariaLabel="View menu" />
               <DropdownMenuContent>
-                <DropdownMenuItem
-                  disabled={!props.bounds}
-                  onClick={() => {
-                    if (mapContext.manager && props.geostats) {
-                      mapContext.manager.map?.fitBounds(props.bounds!);
-                    }
-                  }}
-                  label="Show layer extent"
-                />
+                {props.bounds && (
+                  <DropdownMenuItem
+                    disabled={!props.bounds}
+                    onClick={() => {
+                      if (props.bounds && props.onRequestShowBounds) {
+                        props.onRequestShowBounds(props.bounds);
+                      } else if (mapContext.manager && props.geostats) {
+                        mapContext.manager.map?.fitBounds(props.bounds!);
+                      }
+                    }}
+                    label="Show layer extent"
+                  />
+                )}
                 {props.tocItemId && (
                   <DropdownMenuItem
                     label="Hide all other overlays"
@@ -402,7 +411,9 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                             }}
                             label={option.propertyChoice?.property || ""}
                             details={
-                              option.propertyChoice?.type === "string"
+                              option.propertyChoice?.type === "string" ||
+                              (option.propertyChoice?.type === "array" &&
+                                option.propertyChoice?.typeArrayOf === "string")
                                 ? (option.propertyChoice!.values || []).join(
                                     ", "
                                   )

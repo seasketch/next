@@ -90,6 +90,7 @@ module.exports = {
         };
       babelLoaderOptions.ignore = [
         "./node_modules/mapbox-gl/dist/mapbox-gl.js",
+        "./node_modules/d3-scale-chromatic",
       ];
       return babelLoaderOptions;
     },
