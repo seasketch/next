@@ -88,3 +88,13 @@ subscription DataUploads($slug: String!) {
     ...DataUploadEvent
   }
 }
+
+mutation UpdateDataHostingQuota($projectId: Int!, $quota: BigInt!) {
+  updateDataHostingQuota(input: { projectId: $projectId, quota: $quota }) {
+    project {
+      id
+      dataHostingQuota
+      dataHostingQuotaUsed
+    }
+  }
+}

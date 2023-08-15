@@ -17,6 +17,8 @@ import {
   useMapboxApiKeysQuery,
   UpdateSecretKeyDocument,
   useUpdateOfflineEnabledMutation,
+  useProjectHostingQuotaQuery,
+  useUpdateDataHostingQuotaMutation,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -46,6 +48,7 @@ import SupportedLanguagesSettings from "./SupportedLanguagesSettings";
 import getSlug from "../getSlug";
 import { TranslateIcon } from "@heroicons/react/outline";
 import TranslatedPropControl from "../components/TranslatedPropControl";
+import bytes from "bytes";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
@@ -713,8 +716,27 @@ function SuperUserSettings() {
   const { t, i18n } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
   const [isFeatured, setIsFeatured] = useState<boolean | null>(null);
+  const onError = useGlobalErrorHandler();
   const { data, loading, error } = useCurrentProjectMetadata();
   const [mutate, mutationState] = useUpdateProjectSettingsMutation();
+  const quotaQuery = useProjectHostingQuotaQuery({
+    variables: { slug },
+    onError,
+  });
+
+  const [updateQuota, updateQuotaState] = useUpdateDataHostingQuotaMutation({
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateProjectById: {
+          __typename: "Project",
+          id: data.projectId,
+          dataHostingQuota: data.quota,
+        },
+      };
+    },
+  });
+
   const [updateOfflineEnabled, updateOfflineEnabledState] =
     useUpdateOfflineEnabledMutation();
 
@@ -798,6 +820,67 @@ function SuperUserSettings() {
                 title={t("Enable Offline Support")}
                 description={t(
                   "If enabled, project administrators will have access to experimental offline survey functionality. Otherwise these options will be hidden."
+                )}
+              />
+              <InputBlock
+                input={
+                  <select
+                    className="text-sm rounded py-1"
+                    value={(
+                      quotaQuery.data?.projectBySlug?.dataHostingQuota || 0
+                    ).toString()}
+                    onChange={(e) => {
+                      const quota = parseInt(e.target.value);
+                      updateQuota({
+                        variables: {
+                          projectId: data!.project!.id,
+                          quota,
+                        },
+                      });
+                    }}
+                  >
+                    <option value={bytes("500 MB").toString()}>500 MB</option>
+                    <option value={bytes("1 GB").toString()}>1 GB</option>
+                    <option value={bytes("2 GB").toString()}>2 GB</option>
+                    <option value={bytes("5 GB").toString()}>5 GB</option>
+                    <option value={bytes("10 GB").toString()}>10 GB</option>
+                    <option value={bytes("20 GB").toString()}>20 GB</option>
+                  </select>
+                }
+                title={
+                  <>
+                    <span>{t("Data Hosting Quota")}</span>
+                    {quotaQuery.data?.projectBySlug?.dataHostingQuota ? (
+                      <span
+                        className={` ml-5 ${
+                          quotaQuery.data.projectBySlug.dataHostingQuota *
+                            0.9 <=
+                          quotaQuery.data.projectBySlug.dataHostingQuotaUsed
+                            ? "text-red-800"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {bytes(
+                          parseInt(
+                            quotaQuery.data.projectBySlug.dataHostingQuotaUsed
+                          ),
+                          {
+                            unit: "GB",
+                          }
+                        ) +
+                          " / " +
+                          bytes(
+                            parseInt(
+                              quotaQuery.data.projectBySlug.dataHostingQuota
+                            )
+                          ) +
+                          " used"}
+                      </span>
+                    ) : null}
+                  </>
+                }
+                description={t(
+                  "Amount of spatial data that can be uploaded to this project. We limit this amount initially to prevent abuse and to identify important projects."
                 )}
               />
             </div>

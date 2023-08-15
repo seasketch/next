@@ -12539,6 +12539,20 @@ CREATE FUNCTION public.update_basemap_offline_tile_settings("projectId" integer,
 
 
 --
+-- Name: update_data_hosting_quota(integer, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) RETURNS public.projects
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update projects
+    set data_hosting_quota = quota
+    where id = project_id
+    returning *;
+  $$;
+
+
+--
 -- Name: update_mapbox_secret_key(integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -27988,6 +28002,14 @@ GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
 
 REVOKE ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_data_hosting_quota(project_id integer, quota bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) TO seasketch_superuser;
 
 
 --

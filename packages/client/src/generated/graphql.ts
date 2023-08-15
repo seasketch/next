@@ -6449,6 +6449,7 @@ export type Mutation = {
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
   updateCommunityGuidelineByNodeId?: Maybe<UpdateCommunityGuidelinePayload>;
+  updateDataHostingQuota?: Maybe<UpdateDataHostingQuotaPayload>;
   /** Updates a single `DataLayer` using a unique key and a patch. */
   updateDataLayer?: Maybe<UpdateDataLayerPayload>;
   /** Updates a single `DataLayer` using a unique key and a patch. */
@@ -7624,6 +7625,12 @@ export type MutationUpdateCommunityGuidelineArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineByNodeIdArgs = {
   input: UpdateCommunityGuidelineByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataHostingQuotaArgs = {
+  input: UpdateDataHostingQuotaInput;
 };
 
 
@@ -12567,6 +12574,40 @@ export type UpdateCommunityGuidelinePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `updateDataHostingQuota` mutation. */
+export type UpdateDataHostingQuotaInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  quota?: Maybe<Scalars['BigInt']>;
+};
+
+/** The output of our `updateDataHostingQuota` mutation. */
+export type UpdateDataHostingQuotaPayload = {
+  __typename?: 'UpdateDataHostingQuotaPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateDataHostingQuota` mutation. */
+export type UpdateDataHostingQuotaPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 /** All input for the `updateDataLayerByInteractivitySettingsId` mutation. */
 export type UpdateDataLayerByInteractivitySettingsIdInput = {
   /**
@@ -15313,6 +15354,23 @@ export type DataUploadsSubscription = (
   & { dataUploadTasks?: Maybe<(
     { __typename?: 'DataUploadTaskSubscriptionPayload' }
     & DataUploadEventFragment
+  )> }
+);
+
+export type UpdateDataHostingQuotaMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  quota: Scalars['BigInt'];
+}>;
+
+
+export type UpdateDataHostingQuotaMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataHostingQuota?: Maybe<(
+    { __typename?: 'UpdateDataHostingQuotaPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
+    )> }
   )> }
 );
 
@@ -22507,6 +22565,44 @@ export function useDataUploadsSubscription(baseOptions: Apollo.SubscriptionHookO
       }
 export type DataUploadsSubscriptionHookResult = ReturnType<typeof useDataUploadsSubscription>;
 export type DataUploadsSubscriptionResult = Apollo.SubscriptionResult<DataUploadsSubscription>;
+export const UpdateDataHostingQuotaDocument = gql`
+    mutation UpdateDataHostingQuota($projectId: Int!, $quota: BigInt!) {
+  updateDataHostingQuota(input: {projectId: $projectId, quota: $quota}) {
+    project {
+      id
+      dataHostingQuota
+      dataHostingQuotaUsed
+    }
+  }
+}
+    `;
+export type UpdateDataHostingQuotaMutationFn = Apollo.MutationFunction<UpdateDataHostingQuotaMutation, UpdateDataHostingQuotaMutationVariables>;
+
+/**
+ * __useUpdateDataHostingQuotaMutation__
+ *
+ * To run a mutation, you first call `useUpdateDataHostingQuotaMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDataHostingQuotaMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDataHostingQuotaMutation, { data, loading, error }] = useUpdateDataHostingQuotaMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      quota: // value for 'quota'
+ *   },
+ * });
+ */
+export function useUpdateDataHostingQuotaMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDataHostingQuotaMutation, UpdateDataHostingQuotaMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateDataHostingQuotaMutation, UpdateDataHostingQuotaMutationVariables>(UpdateDataHostingQuotaDocument, options);
+      }
+export type UpdateDataHostingQuotaMutationHookResult = ReturnType<typeof useUpdateDataHostingQuotaMutation>;
+export type UpdateDataHostingQuotaMutationResult = Apollo.MutationResult<UpdateDataHostingQuotaMutation>;
+export type UpdateDataHostingQuotaMutationOptions = Apollo.BaseMutationOptions<UpdateDataHostingQuotaMutation, UpdateDataHostingQuotaMutationVariables>;
 export const DownloadableOfflineTilePackagesDocument = gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29643,6 +29739,7 @@ export const namedOperations = {
     DismissFailedTask: 'DismissFailedTask',
     FailUpload: 'FailUpload',
     CancelUpload: 'CancelUpload',
+    UpdateDataHostingQuota: 'UpdateDataHostingQuota',
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
