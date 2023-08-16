@@ -1,12 +1,12 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import Button from "../../components/Button";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
 import {
   useDeleteBranchMutation,
+  useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
   useLayersAndSourcesForItemsQuery,
   useUpdateTableOfContentsItemChildrenMutation,
@@ -26,6 +26,20 @@ import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 import { createBoundsRecursive } from "../../projects/OverlayLayers";
 import { SortingState } from "../../projects/Sketches/TreeItemComponent";
 import { OverlayFragment } from "../../generated/queries";
+import * as Menubar from "@radix-ui/react-menubar";
+import {
+  MenuBarContent,
+  MenuBarItem,
+  MenuBarSeparator,
+  MenuBarSubmenu,
+  MenubarRadioItem,
+  MenubarTrigger,
+} from "../../components/Menubar";
+import bbox from "@turf/bbox";
+import { DataUploadDropzoneContext } from "../uploads/DataUploadDropzone";
+import { Feature } from "geojson";
+import { Map } from "mapbox-gl";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -47,6 +61,12 @@ export default function TableOfContentsEditor() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteItem] = useDeleteBranchMutation();
   const mapContext = useContext(MapContext);
+  useDraftStatusSubscription({
+    variables: {
+      slug,
+    },
+    shouldResubscribe: true,
+  });
 
   const layersAndSources = useLayersAndSourcesForItemsQuery({
     variables: {
@@ -360,54 +380,31 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setPublishOpen(false)}
         />
       )}
-      <header className="bg-white h-14 w-128 z-20 flex-none border-b shadow-sm">
-        <div className="mx-auto mt-4 w-auto text-center">
-          <div className="bg-cool-gray-200 w-auto inline-block p-0.5 rounded text-sm text-center">
-            <span className="px-2">{t("view")}</span>
-            <select
-              value={selectedView}
-              onChange={(e) => setSelectedView(e.target.value)}
-              className="bg-white form-select text-sm overflow-visible p-1 px-2 pr-7 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 rounded-md focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5"
-              style={{ lineHeight: 1, backgroundSize: "1em 1em" }}
-            >
-              <option value="tree">{t("Tree Editor")}</option>
-              <option value="state">{t("Default Visibility")}</option>
-              <option value="order">{t("Z-Order")}</option>
-            </select>
-          </div>
-          {/* <Link
-            to={`./data/add-data`}
-            className="bg-white rounded shadow-sm border-grey-500 border px-2 py-1 text-sm mx-2"
-          >
-            Add data
-          </Link> */}
-          <Button
-            small
-            label={t("Add data")}
-            href={`./data/add-data`}
-            className="ml-1"
-          />
-          <Button
-            className="ml-1"
-            label={t("Add folder")}
-            small
-            onClick={async () => {
-              setCreateNewFolderModalOpen(true);
-            }}
-          />
-          <Button
-            small
-            className="ml-1"
-            label={t("Publish")}
-            onClick={() => setPublishOpen(true)}
-          />
-        </div>
-      </header>
+      <Header
+        onRequestOpenFolder={() => {
+          setCreateNewFolderModalOpen(true);
+        }}
+        map={mapContext.manager?.map}
+        region={tocQuery.data?.projectBySlug?.region.geojson}
+        selectedView={selectedView}
+        setSelectedView={setSelectedView}
+        onRequestPublish={() => setPublishOpen(true)}
+        publishDisabled={
+          tocQuery.data?.projectBySlug?.draftTableOfContentsHasChanges === false
+        }
+        lastPublished={
+          tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
+            ? new Date(
+                tocQuery.data.projectBySlug.tableOfContentsLastPublished!
+              )
+            : undefined
+        }
+      />
       <div
         className="flex-1 overflow-y-auto p-2 px-8"
         onContextMenu={(e) => e.preventDefault()}
       >
-        {tocQuery.loading && <Spinner />}
+        {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
         {selectedView === "tree" && (
           <TreeView
             loadingItems={loadingItems}
@@ -459,5 +456,141 @@ export default function TableOfContentsEditor() {
         />
       )}
     </>
+  );
+}
+
+function Header({
+  selectedView,
+  setSelectedView,
+  region,
+  map,
+  onRequestOpenFolder,
+  onRequestPublish,
+  publishDisabled,
+  lastPublished,
+}: {
+  selectedView: string;
+  setSelectedView: (view: string) => void;
+  region?: Feature<any>;
+  map?: Map;
+  onRequestOpenFolder: () => void;
+  onRequestPublish: () => void;
+  publishDisabled?: boolean;
+  lastPublished?: Date;
+}) {
+  const uploadContext = useContext(DataUploadDropzoneContext);
+  const { t } = useTranslation("admin:data");
+
+  return (
+    <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
+      <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
+        <Menubar.Menu>
+          <MenubarTrigger>{t("View")}</MenubarTrigger>
+          <Menubar.Portal>
+            <MenuBarContent>
+              <Menubar.RadioGroup
+                value={selectedView}
+                onValueChange={setSelectedView}
+              >
+                <MenubarRadioItem value="tree">
+                  <Trans ns="admin:data">Table of Contents</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="order">
+                  <Trans ns="admin:data">Layer Z-Ordering</Trans>
+                </MenubarRadioItem>
+              </Menubar.RadioGroup>
+              <MenuBarSeparator />
+              <MenuBarItem
+                disabled={!region || !map}
+                onClick={() => {
+                  if (region && map) {
+                    map.fitBounds(
+                      bbox(region) as [number, number, number, number],
+                      {
+                        padding: {
+                          top: 20,
+                          bottom: 20,
+                          left: 150,
+                          right: 20,
+                        },
+                      }
+                    );
+                  }
+                }}
+              >
+                <Trans ns="admin:data">Zoom to Project Bounds</Trans>
+              </MenuBarItem>
+            </MenuBarContent>
+          </Menubar.Portal>
+        </Menubar.Menu>
+        <Menubar.Menu>
+          <MenubarTrigger>{t("Edit")}</MenubarTrigger>
+          <Menubar.Portal>
+            <MenuBarContent>
+              <MenuBarItem onClick={onRequestOpenFolder}>
+                <Trans ns="admin:data">Add Folder</Trans>
+              </MenuBarItem>
+              <MenuBarSubmenu label={t("Add Data")}>
+                <MenuBarItem
+                  onClick={() => {
+                    const fileInput = document.createElement("input");
+                    fileInput.type = "file";
+                    fileInput.accept = ".zip,.json,.geojson,.fgb,.tif,.tiff";
+                    fileInput.multiple = true;
+                    fileInput.onchange = async (e) => {
+                      const files = (e.target as HTMLInputElement).files;
+                      if (!files) {
+                        return;
+                      }
+                      uploadContext.handleFiles([...files]);
+                    };
+                    fileInput.click();
+                  }}
+                >
+                  {t("Upload spatial data files")}
+                </MenuBarItem>
+              </MenuBarSubmenu>
+            </MenuBarContent>
+          </Menubar.Portal>
+        </Menubar.Menu>
+        <div className="flex-1 text-right">
+          <Tooltip.Provider>
+            <Tooltip.Root delayDuration={200}>
+              <Tooltip.Trigger>
+                <button
+                  // disabled={Boolean(publishDisabled)}
+                  className={`${
+                    publishDisabled
+                      ? "bg-white text-black opacity-80"
+                      : "bg-primary-500 text-white"
+                  } rounded px-2 py-0.5 mx-1 shadow-sm`}
+                  onClick={onRequestPublish}
+                >
+                  <Trans ns="admin:data">Publish</Trans>
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                style={{ maxWidth: 220 }}
+                className="select-none rounded bg-white px-4 py-2 shadow text-center"
+                // sideOffset={-200}
+                side="right"
+              >
+                {publishDisabled ? (
+                  t("No changes")
+                ) : (
+                  <span>
+                    {t("Has changes since last publish")}
+                    {lastPublished
+                      ? " on " + lastPublished.toLocaleDateString()
+                      : null}
+                  </span>
+                )}
+                <Tooltip.Arrow className="" style={{ fill: "white" }} />
+              </Tooltip.Content>
+            </Tooltip.Root>
+          </Tooltip.Provider>
+        </div>
+      </Menubar.Root>
+    </header>
   );
 }

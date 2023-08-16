@@ -1,6 +1,11 @@
 query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    draftTableOfContentsHasChanges
+    tableOfContentsLastPublished
+    region {
+      geojson
+    }
     draftTableOfContentsItems {
       ...Overlay
     }
@@ -520,6 +525,18 @@ mutation PublishTableOfContents($projectId: Int!) {
   publishTableOfContents(input: { projectId: $projectId }) {
     tableOfContentsItems {
       id
+    }
+  }
+}
+
+subscription DraftStatus($slug: String!) {
+  updatedDraftTableOfContentsStatus(slug: $slug) {
+    hasChanges
+    projectId
+    project {
+      id
+      draftTableOfContentsHasChanges
+      tableOfContentsLastPublished
     }
   }
 }

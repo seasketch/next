@@ -52,6 +52,7 @@ export default function MutableAutosaveInput(props: {
 
   return (
     <TextInput
+      autocomplete="off"
       autoFocus={props.autofocus}
       description={props.description}
       name={props.propName}

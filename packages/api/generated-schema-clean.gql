@@ -9669,6 +9669,7 @@ type Project implements Node {
 
   """Should be a short length in order to fit in the project header."""
   description: String
+  draftTableOfContentsHasChanges: Boolean!
 
   """
   Draft layer lists, accessible only to admins. Make edits to the layer list and
@@ -10036,6 +10037,7 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [TableOfContentsItem!]
+  tableOfContentsLastPublished: Datetime
   translatedProps: JSON!
 
   """
@@ -10114,6 +10116,12 @@ input ProjectCondition {
 
   """Checks for equality with the object’s `slug` field."""
   slug: String
+}
+
+type ProjectDraftTableOfContentsStatusPayload {
+  hasChanges: Boolean!
+  project: Project
+  projectId: Int!
 }
 
 """
@@ -12445,6 +12453,9 @@ type Subscription {
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
 
+  """Triggered when a project's draft table of contents status changes"""
+  updatedDraftTableOfContentsStatus(slug: String!): ProjectDraftTableOfContentsStatusPayload
+
   """Triggered when a map bookmark is updated"""
   updatedMapBookmark(id: UUID!): BookmarkPayload
 }
@@ -13123,6 +13134,7 @@ type TableOfContentsItem implements Node {
   
   """
   parentStableId: String
+  project: Project
   projectId: Int!
 
   """

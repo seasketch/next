@@ -8537,6 +8537,7 @@ export type Project = Node & {
   dataUploadTasksConnection: DataUploadTasksConnection;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
    * then use the `publishTableOfContents` mutation when it is ready for end-users.
@@ -8661,6 +8662,7 @@ export type Project = Node & {
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+  tableOfContentsLastPublished?: Maybe<Scalars['Datetime']>;
   translatedProps: Scalars['JSON'];
   /** Number of users who have outstanding access requests. Only relevant for invite-only projects. */
   unapprovedParticipantCount?: Maybe<Scalars['Int']>;
@@ -9029,6 +9031,13 @@ export type ProjectCondition = {
   name?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `slug` field. */
   slug?: Maybe<Scalars['String']>;
+};
+
+export type ProjectDraftTableOfContentsStatusPayload = {
+  __typename?: 'ProjectDraftTableOfContentsStatusPayload';
+  hasChanges: Scalars['Boolean'];
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
 };
 
 /**
@@ -11388,6 +11397,8 @@ export type Subscription = {
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+  /** Triggered when a project's draft table of contents status changes */
+  updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
   updatedMapBookmark?: Maybe<BookmarkPayload>;
 };
@@ -11401,6 +11412,12 @@ export type SubscriptionDataUploadTasksArgs = {
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
+  slug: Scalars['String'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionUpdatedDraftTableOfContentsStatusArgs = {
   slug: Scalars['String'];
 };
 
@@ -11925,6 +11942,7 @@ export type TableOfContentsItem = Node & {
    * `updateTableOfContentsItemParent` mutation.
    */
   parentStableId?: Maybe<Scalars['String']>;
+  project?: Maybe<Project>;
   projectId: Scalars['Int'];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
@@ -15442,8 +15460,11 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ), draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & OverlayFragment
     )>> }
@@ -15875,6 +15896,23 @@ export type PublishTableOfContentsMutation = (
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id'>
     )>> }
+  )> }
+);
+
+export type DraftStatusSubscriptionVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DraftStatusSubscription = (
+  { __typename?: 'Subscription' }
+  & { updatedDraftTableOfContentsStatus?: Maybe<(
+    { __typename?: 'ProjectDraftTableOfContentsStatusPayload' }
+    & Pick<ProjectDraftTableOfContentsStatusPayload, 'hasChanges' | 'projectId'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    )> }
   )> }
 );
 
@@ -22729,6 +22767,11 @@ export const DraftTableOfContentsDocument = gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    draftTableOfContentsHasChanges
+    tableOfContentsLastPublished
+    region {
+      geojson
+    }
     draftTableOfContentsItems {
       ...Overlay
     }
@@ -23856,6 +23899,42 @@ export function usePublishTableOfContentsMutation(baseOptions?: Apollo.MutationH
 export type PublishTableOfContentsMutationHookResult = ReturnType<typeof usePublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationResult = Apollo.MutationResult<PublishTableOfContentsMutation>;
 export type PublishTableOfContentsMutationOptions = Apollo.BaseMutationOptions<PublishTableOfContentsMutation, PublishTableOfContentsMutationVariables>;
+export const DraftStatusDocument = gql`
+    subscription DraftStatus($slug: String!) {
+  updatedDraftTableOfContentsStatus(slug: $slug) {
+    hasChanges
+    projectId
+    project {
+      id
+      draftTableOfContentsHasChanges
+      tableOfContentsLastPublished
+    }
+  }
+}
+    `;
+
+/**
+ * __useDraftStatusSubscription__
+ *
+ * To run a query within a React component, call `useDraftStatusSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDraftStatusSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDraftStatusSubscription({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useDraftStatusSubscription(baseOptions: Apollo.SubscriptionHookOptions<DraftStatusSubscription, DraftStatusSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<DraftStatusSubscription, DraftStatusSubscriptionVariables>(DraftStatusDocument, options);
+      }
+export type DraftStatusSubscriptionHookResult = ReturnType<typeof useDraftStatusSubscription>;
+export type DraftStatusSubscriptionResult = Apollo.SubscriptionResult<DraftStatusSubscription>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29841,6 +29920,7 @@ export const namedOperations = {
   },
   Subscription: {
     DataUploads: 'DataUploads',
+    DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'

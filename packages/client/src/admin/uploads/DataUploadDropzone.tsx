@@ -33,9 +33,11 @@ export const DataUploadDropzoneContext = createContext<{
   uploads: DataUploadDetailsFragment[];
   manager?: DataUploadManager;
   setDisabled: (disabled: boolean) => void;
+  handleFiles: (files: File[]) => void;
 }>({
   uploads: [],
   setDisabled: () => {},
+  handleFiles: () => {},
 });
 
 export default function DataUploadDropzone({
@@ -239,6 +241,7 @@ export default function DataUploadDropzone({
         uploads: uploadsQuery.data?.projectBySlug?.activeDataUploads || [],
         manager: state.manager,
         setDisabled,
+        handleFiles: onDrop,
       }}
     >
       <div

@@ -38,6 +38,7 @@ import {
 } from "./plugins/fileUploadPlugin";
 import SketchClassStylePlugin from "./plugins/sketchClassStylePlugin";
 import DataUploadTasksSubscriptionPlugin from "./plugins/dataUploadTasksSubscriptionPlugin";
+import DraftTocStatusPlugin from "./plugins/projectDraftTableOfContentsStatusSubscription";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -87,6 +88,7 @@ export default function graphileOptions(): PostGraphileOptions {
       VerifyEmailPlugin,
       SketchClassStylePlugin,
       DataUploadTasksSubscriptionPlugin,
+      DraftTocStatusPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

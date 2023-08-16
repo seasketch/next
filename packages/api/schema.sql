@@ -1748,6 +1748,24 @@ COMMENT ON FUNCTION public.account_exists(email text) IS '@omit';
 
 
 --
+-- Name: acl_update_draft_toc_has_changes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acl_update_draft_toc_has_changes() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  begin
+    update projects set draft_table_of_contents_has_changes = true where id = (
+      select project_id from table_of_contents_items where id = (
+        select table_of_contents_item_id from access_control_lists where id = NEW.id
+      )
+    );
+    return NEW;
+  end;
+  $$;
+
+
+--
 -- Name: add_group_to_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1942,6 +1960,54 @@ CREATE FUNCTION public.add_valid_child_sketch_class(parent integer, child intege
 COMMENT ON FUNCTION public.add_valid_child_sketch_class(parent integer, child integer) IS '
 Add a SketchClass to the list of valid children for a Collection-type SketchClass.
 ';
+
+
+--
+-- Name: after_data_layers_update_or_delete_set_draft_table_of_contents_(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_contents_() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+begin
+  update projects
+  set draft_table_of_contents_has_changes = true
+  where id in (
+    select 
+      tocs.project_id
+    from 
+      table_of_contents_items as tocs
+    where 
+      tocs.data_layer_id = old.id
+  );
+  return NEW;
+end;
+$$;
+
+
+--
+-- Name: after_data_sources_update_or_delete_set_draft_table_of_contents(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_contents() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+begin
+  update projects
+  set draft_table_of_contents_has_changes = true
+  where id in (
+    select 
+      tocs.project_id
+    from 
+      table_of_contents_items as tocs
+    where 
+      tocs.data_layer_id in (
+        select data_layers.id from data_layers where data_layers.data_source_id = old.id
+      )
+    );
+  return NEW;
+end;
+$$;
 
 
 --
@@ -5218,6 +5284,8 @@ CREATE TABLE public.projects (
     data_hosting_quota bigint DEFAULT 524288000 NOT NULL,
     supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    draft_table_of_contents_has_changes boolean DEFAULT false NOT NULL,
+    table_of_contents_last_published timestamp without time zone,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -6825,6 +6893,22 @@ CREATE FUNCTION public.dismiss_failed_upload(id uuid) RETURNS public.data_upload
         raise exception 'permission denied';
       end if;
     end;
+  $$;
+
+
+--
+-- Name: draft_table_of_contents_has_changes_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.draft_table_of_contents_has_changes_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    if NEW.draft_table_of_contents_has_changes != OLD.draft_table_of_contents_has_changes then
+      perform pg_notify(concat('graphql:project:', NEW.slug, ':toc_draft_changed'), json_build_object('projectId', NEW.id, 'hasChanges', NEW.draft_table_of_contents_has_changes)::text);
+    end if;
+    return NEW;
+  end;
   $$;
 
 
@@ -10458,6 +10542,13 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             is_folder = false
           ));
       end loop;
+      update 
+        projects 
+      set 
+        draft_table_of_contents_has_changes = false, 
+        table_of_contents_last_published = now() 
+      where 
+        id = "projectId";
       -- return items
       return query select * from table_of_contents_items 
         where project_id = "projectId" and is_draft = false;
@@ -12138,6 +12229,33 @@ CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.
             limit 1
           )
       end;
+  $$;
+
+
+--
+-- Name: table_of_contents_items_project(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) RETURNS public.projects
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from projects where id = t.project_id;
+  $$;
+
+
+--
+-- Name: table_of_contents_items_project_update(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if tg_op = 'INSERT' or tg_op = 'UPDATE' or tg_op = 'DELETE' then
+        update projects set draft_table_of_contents_has_changes = true where id = NEW.project_id;
+      end if;
+      return NEW;
+    end;
   $$;
 
 
@@ -16098,10 +16216,31 @@ CREATE TRIGGER _500_gql_insert_or_update_or_delete_project_invite_email AFTER IN
 
 
 --
+-- Name: access_control_lists acl_update_draft_toc_has_changes_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER acl_update_draft_toc_has_changes_trigger AFTER UPDATE ON public.access_control_lists FOR EACH ROW EXECUTE FUNCTION public.acl_update_draft_toc_has_changes();
+
+
+--
 -- Name: project_group_members after_add_user_to_group_update_survey_invites; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER after_add_user_to_group_update_survey_invites AFTER INSERT ON public.project_group_members FOR EACH ROW EXECUTE FUNCTION public.add_user_to_group_update_survey_invites_trigger();
+
+
+--
+-- Name: data_layers after_data_layers_update_or_delete_set_draft_table_of_contents_; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_data_layers_update_or_delete_set_draft_table_of_contents_ AFTER DELETE OR UPDATE ON public.data_layers FOR EACH ROW EXECUTE FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_contents_();
+
+
+--
+-- Name: data_sources after_data_sources_update_or_delete_set_draft_table_of_contents; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_data_sources_update_or_delete_set_draft_table_of_contents AFTER DELETE OR UPDATE ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_contents();
 
 
 --
@@ -16301,6 +16440,13 @@ CREATE TRIGGER data_upload_task_notify_subscriptions AFTER INSERT OR UPDATE ON p
 
 
 --
+-- Name: projects draft_table_of_contents_has_changes_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER draft_table_of_contents_has_changes_trigger AFTER UPDATE OF draft_table_of_contents_has_changes ON public.projects FOR EACH ROW EXECUTE FUNCTION public.draft_table_of_contents_has_changes_notify();
+
+
+--
 -- Name: form_elements form_element_associated_sketch_class; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -16396,6 +16542,13 @@ CREATE TRIGGER survey_invites_before_insert BEFORE INSERT ON public.survey_invit
 --
 
 CREATE TRIGGER survey_invites_before_update BEFORE UPDATE ON public.survey_invites FOR EACH ROW EXECUTE FUNCTION public.survey_invite_before_update_trigger();
+
+
+--
+-- Name: table_of_contents_items table_of_contents_items_project_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER table_of_contents_items_project_update AFTER INSERT OR DELETE OR UPDATE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.table_of_contents_items_project_update();
 
 
 --
@@ -19384,6 +19537,13 @@ GRANT ALL ON FUNCTION public.account_exists(email text) TO anon;
 
 
 --
+-- Name: FUNCTION acl_update_draft_toc_has_changes(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acl_update_draft_toc_has_changes() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION add_group_to_acl("aclId" integer, "groupId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19455,6 +19615,20 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, schema_name character varying, table_name character varying, column_name character varying, new_srid_in integer, new_type character varying, new_dim integer, use_typmod boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_data_layers_update_or_delete_set_draft_table_of_contents_(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_contents_() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_data_sources_update_or_delete_set_draft_table_of_contents(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_contents() FROM PUBLIC;
 
 
 --
@@ -20952,6 +21126,20 @@ GRANT UPDATE(translated_props) ON TABLE public.projects TO seasketch_user;
 
 
 --
+-- Name: COLUMN projects.draft_table_of_contents_has_changes; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(draft_table_of_contents_has_changes) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.table_of_contents_last_published; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(table_of_contents_last_published) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21456,6 +21644,13 @@ REVOKE ALL ON FUNCTION public.disablelongtransactions() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.dismiss_failed_upload(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.dismiss_failed_upload(id uuid) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION draft_table_of_contents_has_changes_notify(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.draft_table_of_contents_has_changes_notify() FROM PUBLIC;
 
 
 --
@@ -27745,6 +27940,21 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.tab
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_project(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_project_update(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_project_update() FROM PUBLIC;
 
 
 --

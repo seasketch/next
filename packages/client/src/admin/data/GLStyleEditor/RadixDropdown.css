@@ -8,5 +8,9 @@
 }
 
 .RadixDropdownItem[data-highlighted] {
-  @apply bg-indigo-900 text-gray-100;
+  @apply bg-primary-600 text-gray-100;
+}
+
+.MenubarTrigger[data-state="open"] {
+  @apply bg-gray-300 bg-opacity-70;
 }
