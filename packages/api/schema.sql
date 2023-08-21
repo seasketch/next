@@ -12615,9 +12615,9 @@ BEGIN
   -- get parent collection if exists
   select get_parent_collection_id(NEW) into sketch_collection_id;
   select get_parent_collection_id(OLD) into previous_sketch_collection_id;
-  raise notice 'sketch_collection_id: %, previous_sketch_collection_id: %', sketch_collection_id, previous_sketch_collection_id;
+  -- raise notice 'sketch_collection_id: %, previous_sketch_collection_id: %', sketch_collection_id, previous_sketch_collection_id;
   if sketch_collection_id is not null then
-    raise exception 'passes! %, %', sketch_collection_id, now();
+    -- raise exception 'passes! %, %', sketch_collection_id, now();
     update sketches set updated_at = now() where id = sketch_collection_id;
   end if;
   if previous_sketch_collection_id is not null and ((sketch_collection_id is null) or (previous_sketch_collection_id != sketch_collection_id)) then
