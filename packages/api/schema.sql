@@ -3429,6 +3429,30 @@ CREATE FUNCTION public.before_sketch_insert_or_update() RETURNS trigger
 
 
 --
+-- Name: before_sketch_update_touch_parent_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_sketch_update_touch_parent_updated_at() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+      declare
+        sketch_collection_id int;
+        new_sketch_collection_id int;
+      begin
+        -- get parent collection if exists
+        select get_parent_collection_id(OLD) into sketch_collection_id;
+        select get_parent_collection_id(NEW) into new_sketch_collection_id;
+        raise notice 'sketch_collection_id: %, new_sketch_collection_id: %', sketch_collection_id, new_sketch_collection_id;
+        if new_sketch_collection_id != sketch_collection_id or (new_sketch_collection_id is null and sketch_collection_id is not null) or (new_sketch_collection_id is not null and sketch_collection_id is null) then
+          raise notice 'passes!';
+          update sketches set updated_at = now() where id = sketch_collection_id;
+        end if;
+        return NEW;
+      end;
+    $$;
+
+
+--
 -- Name: before_survey_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7757,6 +7781,35 @@ $$;
 
 
 --
+-- Name: get_parent_collection_id(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_parent_collection_id(sketch public.sketches) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      col int;
+      folder int;
+    begin
+      if sketch.collection_id is not null then
+        return sketch.collection_id;
+      elsif sketch.folder_id is not null then
+        return get_parent_collection_id('sketch_folder', sketch.folder_id);
+      else
+        return null;
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_parent_collection_id(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_parent_collection_id(sketch public.sketches) IS '@omit';
+
+
+--
 -- Name: get_parent_collection_id(public.sketch_child_type, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7787,7 +7840,7 @@ CREATE FUNCTION public.get_parent_collection_id(type public.sketch_child_type, p
 -- Name: FUNCTION get_parent_collection_id(type public.sketch_child_type, parent_id integer); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) IS 'omit';
+COMMENT ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) IS '@omit';
 
 
 --
@@ -12557,11 +12610,19 @@ CREATE FUNCTION public.trigger_update_collection_updated_at() RETURNS trigger
     AS $$
 DECLARE
   sketch_collection_id int;
+  previous_sketch_collection_id int;
 BEGIN
   -- get parent collection if exists
-  select get_parent_collection_id('sketch', NEW.id) into sketch_collection_id;
+  select get_parent_collection_id(NEW) into sketch_collection_id;
+  select get_parent_collection_id(OLD) into previous_sketch_collection_id;
+  raise notice 'sketch_collection_id: %, previous_sketch_collection_id: %', sketch_collection_id, previous_sketch_collection_id;
   if sketch_collection_id is not null then
+    raise exception 'passes! %, %', sketch_collection_id, now();
     update sketches set updated_at = now() where id = sketch_collection_id;
+  end if;
+  if previous_sketch_collection_id is not null and ((sketch_collection_id is null) or (previous_sketch_collection_id != sketch_collection_id)) then
+    -- raise exception 'passes! b %', previous_sketch_collection_id;
+    update sketches set updated_at = now() where id = previous_sketch_collection_id;
   end if;
   RETURN NEW;
 END;
@@ -20060,6 +20121,13 @@ REVOKE ALL ON FUNCTION public.before_sketch_insert_or_update() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION before_sketch_update_touch_parent_updated_at(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_sketch_update_touch_parent_updated_at() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION before_survey_delete(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22737,6 +22805,13 @@ GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id in
 
 REVOKE ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_parent_collection_id(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_parent_collection_id(sketch public.sketches) FROM PUBLIC;
 
 
 --
