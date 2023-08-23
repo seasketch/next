@@ -192,7 +192,6 @@ var MapBoxGLEsriSources = (function (exports) {
                 .replace("seasketch-replace-me", "{bbox-epsg-3857}");
         }
         updateLayers(layers) {
-            console.log("updateLayers", layers, this.layers);
             if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
                 this.layers = layers;
                 this.debouncedUpdateSource();
