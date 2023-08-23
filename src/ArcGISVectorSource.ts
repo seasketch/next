@@ -275,7 +275,7 @@ async function fetchData(
           expectedFeatureCount = objectIdParameters.objectIds.length;
           objectIdFieldName = objectIdParameters.objectIdFieldName;
         } catch (e) {
-          return onError(e);
+          return onError(e as Error);
         }
       }
 
