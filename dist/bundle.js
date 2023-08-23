@@ -7,18 +7,25 @@ var MapBoxGLEsriSources = (function (exports) {
             this.supportDevicePixelRatio = true;
             this.supportsDynamicLayers = false;
             this._loading = true;
+            this.useTiles = false;
+            this.tileSize = 256;
             this.updateSource = () => {
                 this._loading = true;
-                const bounds = this.map.getBounds();
-                this.source.updateImage({
-                    url: this.getUrl(),
-                    coordinates: [
-                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                    ],
-                });
+                if (this.useTiles || this.source.type === "raster") {
+                    this.source.setTiles([this.getUrl()]);
+                }
+                else {
+                    const bounds = this.map.getBounds();
+                    this.source.updateImage({
+                        url: this.getUrl(),
+                        coordinates: [
+                            [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                            [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                        ],
+                    });
+                }
             };
             this.debouncedUpdateSource = () => {
                 if (this.debounceTimeout) {
@@ -34,8 +41,12 @@ var MapBoxGLEsriSources = (function (exports) {
             this.url = new URL(this.baseUrl + "/export");
             this.url.searchParams.set("f", "image");
             this.map = map;
-            this.map.on("moveend", this.updateSource);
+            if (!(options === null || options === void 0 ? void 0 : options.useTiles)) {
+                this.map.on("moveend", this.updateSource);
+            }
             this.layers = options === null || options === void 0 ? void 0 : options.layers;
+            this.useTiles = (options === null || options === void 0 ? void 0 : options.useTiles) || false;
+            this.tileSize = (options === null || options === void 0 ? void 0 : options.tileSize) || 256;
             this.queryParameters = {
                 transparent: "true",
                 ...((options === null || options === void 0 ? void 0 : options.queryParameters) || {}),
@@ -50,16 +61,25 @@ var MapBoxGLEsriSources = (function (exports) {
             });
             this.supportsDynamicLayers = (options === null || options === void 0 ? void 0 : options.supportsDynamicLayers) || false;
             const bounds = this.map.getBounds();
-            this.map.addSource(this.id, {
-                type: "image",
-                url: this.getUrl(),
-                coordinates: [
-                    [bounds.getWest(), bounds.getNorth()],
-                    [bounds.getEast(), bounds.getNorth()],
-                    [bounds.getEast(), bounds.getSouth()],
-                    [bounds.getWest(), bounds.getSouth()],
-                ],
-            });
+            if (this.useTiles) {
+                this.map.addSource(this.id, {
+                    type: "raster",
+                    tiles: [this.getUrl()],
+                    tileSize: this.tileSize,
+                });
+            }
+            else {
+                this.map.addSource(this.id, {
+                    type: "image",
+                    url: this.getUrl(),
+                    coordinates: [
+                        [bounds.getWest(), bounds.getNorth()],
+                        [bounds.getEast(), bounds.getNorth()],
+                        [bounds.getEast(), bounds.getSouth()],
+                        [bounds.getWest(), bounds.getSouth()],
+                    ],
+                });
+            }
             this.source = this.map.getSource(this.id);
             this.map.on("data", (event) => {
                 if (event.sourceId === this.id &&
@@ -173,7 +193,19 @@ var MapBoxGLEsriSources = (function (exports) {
             for (const key in this.queryParameters) {
                 this.url.searchParams.set(key, this.queryParameters[key].toString());
             }
-            return this.url.toString();
+            if (this.useTiles) {
+                this.url.searchParams.set("bbox", `seasketch-replace-me`);
+                if (this.supportDevicePixelRatio && window.devicePixelRatio > 1) {
+                    const size = this.tileSize * window.devicePixelRatio;
+                    this.url.searchParams.set("size", [size, size].join(","));
+                }
+                else {
+                    this.url.searchParams.set("size", [this.tileSize, this.tileSize].join(","));
+                }
+            }
+            return this.url
+                .toString()
+                .replace("seasketch-replace-me", "{bbox-epsg-3857}");
         }
         get loading() {
             return this._loading;
@@ -291,7 +323,7 @@ var MapBoxGLEsriSources = (function (exports) {
     }
     async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
         bytesReceived = bytesReceived || 0;
-        const decoder = new TextDecoder("utf-8");
+        new TextDecoder("utf-8");
         params.set("returnIdsOnly", "false");
         if (featureCollection.features.length > 0) {
             params.delete("where");
@@ -356,11 +388,14 @@ var MapBoxGLEsriSources = (function (exports) {
         return s;
     }
 
-    var getRandomValues = typeof crypto !== 'undefined' && crypto.getRandomValues && crypto.getRandomValues.bind(crypto) || typeof msCrypto !== 'undefined' && typeof msCrypto.getRandomValues === 'function' && msCrypto.getRandomValues.bind(msCrypto);
+    var getRandomValues;
     var rnds8 = new Uint8Array(16);
     function rng() {
       if (!getRandomValues) {
-        throw new Error('crypto.getRandomValues() not supported. See https://github.com/uuidjs/uuid#getrandomvalues-not-supported');
+        getRandomValues = typeof crypto !== 'undefined' && crypto.getRandomValues && crypto.getRandomValues.bind(crypto) || typeof msCrypto !== 'undefined' && typeof msCrypto.getRandomValues === 'function' && msCrypto.getRandomValues.bind(msCrypto);
+        if (!getRandomValues) {
+          throw new Error('crypto.getRandomValues() not supported. See https://github.com/uuidjs/uuid#getrandomvalues-not-supported');
+        }
       }
       return getRandomValues(rnds8);
     }
@@ -1147,6 +1182,8 @@ var MapBoxGLEsriSources = (function (exports) {
     exports.ImageList = ImageList;
     exports.styleForFeatureLayer = styleForFeatureLayer;
 
+    Object.defineProperty(exports, '__esModule', { value: true });
+
     return exports;
 
-}({}));
+})({});
