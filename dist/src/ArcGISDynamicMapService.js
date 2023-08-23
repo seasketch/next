@@ -59,17 +59,25 @@ export class ArcGISDynamicMapService {
     constructor(map, id, baseUrl, options) {
         this.supportDevicePixelRatio = true;
         this.supportsDynamicLayers = false;
+        this.useTiles = false;
+        this.tileSize = 256;
         this.updateSource = () => {
-            const bounds = this.map.getBounds();
-            this.source.updateImage({
-                url: this.getUrl(),
-                coordinates: [
-                    [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                    [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                    [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                    [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                ],
-            });
+            if (this.useTiles || this.source.type === "raster") {
+                // @ts-ignore - setTiles is in fact a valid method
+                this.source.setTiles([this.getUrl()]);
+            }
+            else {
+                const bounds = this.map.getBounds();
+                this.source.updateImage({
+                    url: this.getUrl(),
+                    coordinates: [
+                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                    ],
+                });
+            }
         };
         this.debouncedUpdateSource = () => {
             if (this.debounceTimeout) {
@@ -85,8 +93,12 @@ export class ArcGISDynamicMapService {
         this.url = new URL(this.baseUrl + "/export");
         this.url.searchParams.set("f", "image");
         this.map = map;
-        this.map.on("moveend", this.updateSource);
+        if (!(options === null || options === void 0 ? void 0 : options.useTiles)) {
+            this.map.on("moveend", this.updateSource);
+        }
         this.layers = options === null || options === void 0 ? void 0 : options.layers;
+        this.useTiles = (options === null || options === void 0 ? void 0 : options.useTiles) || false;
+        this.tileSize = (options === null || options === void 0 ? void 0 : options.tileSize) || 256;
         this.queryParameters = {
             transparent: "true",
             ...((options === null || options === void 0 ? void 0 : options.queryParameters) || {}),
@@ -101,16 +113,25 @@ export class ArcGISDynamicMapService {
         });
         this.supportsDynamicLayers = (options === null || options === void 0 ? void 0 : options.supportsDynamicLayers) || false;
         const bounds = this.map.getBounds();
-        this.map.addSource(this.id, {
-            type: "image",
-            url: this.getUrl(),
-            coordinates: [
-                [bounds.getWest(), bounds.getNorth()],
-                [bounds.getEast(), bounds.getNorth()],
-                [bounds.getEast(), bounds.getSouth()],
-                [bounds.getWest(), bounds.getSouth()],
-            ],
-        });
+        if (this.useTiles) {
+            this.map.addSource(this.id, {
+                type: "raster",
+                tiles: [this.getUrl()],
+                tileSize: this.tileSize,
+            });
+        }
+        else {
+            this.map.addSource(this.id, {
+                type: "image",
+                url: this.getUrl(),
+                coordinates: [
+                    [bounds.getWest(), bounds.getNorth()],
+                    [bounds.getEast(), bounds.getNorth()],
+                    [bounds.getEast(), bounds.getSouth()],
+                    [bounds.getWest(), bounds.getSouth()],
+                ],
+            });
+        }
         this.source = this.map.getSource(this.id);
     }
     /**
@@ -226,7 +247,19 @@ export class ArcGISDynamicMapService {
         for (const key in this.queryParameters) {
             this.url.searchParams.set(key, this.queryParameters[key].toString());
         }
-        return this.url.toString();
+        if (this.useTiles) {
+            this.url.searchParams.set("bbox", `seasketch-replace-me`);
+            if (this.supportDevicePixelRatio && window.devicePixelRatio > 1) {
+                const size = this.tileSize * window.devicePixelRatio;
+                this.url.searchParams.set("size", [size, size].join(","));
+            }
+            else {
+                this.url.searchParams.set("size", [this.tileSize, this.tileSize].join(","));
+            }
+        }
+        return this.url
+            .toString()
+            .replace("seasketch-replace-me", "{bbox-epsg-3857}");
     }
     /**
      * Update the list of sublayers and re-render the the map. If

@@ -32,6 +32,16 @@ export interface ArcGISDynamicMapServiceOptions {
     queryParameters?: {
         [queryString: string]: string | number;
     };
+    /**
+     * Request tiles instead of a single image.
+     * @default false
+     */
+    useTiles?: boolean;
+    /**
+     * Tile size in pixels. Only used if `useTiles` is true.
+     * @default 256
+     * */
+    tileSize?: number;
 }
 /**
  * Add an Esri Dynamic Map Service as an image source to a MapBox GL JS map, and
@@ -94,6 +104,8 @@ export declare class ArcGISDynamicMapService {
     private supportDevicePixelRatio;
     private supportsDynamicLayers;
     private debounceTimeout?;
+    private useTiles;
+    private tileSize;
     /**
      * @param {Map} map MapBox GL JS Map instance
      * @param {string} id ID to be used when adding refering to this source from layers
