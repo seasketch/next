@@ -17,12 +17,12 @@ import DataUploadDropzone from "../uploads/DataUploadDropzone";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 
-// const LazyArcGISBrowser = React.lazy(
-//   () =>
-//     import(
-//       /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISBrowser"
-//     )
-// );
+const LazyArcGISBrowser = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISBrowser"
+    )
+);
 
 export default function DataSettings() {
   const { path } = useRouteMatch();
@@ -100,9 +100,9 @@ export default function DataSettings() {
                 </div>
               </div>
             </Route>
-            {/* <Route exact path={`${path}/add-data/arcgis`}>
+            <Route exact path={`${path}/add-data/arcgis`}>
               <LazyArcGISBrowser />
-            </Route> */}
+            </Route>
           </Switch>
         </MapContext.Provider>
       </DndProvider>

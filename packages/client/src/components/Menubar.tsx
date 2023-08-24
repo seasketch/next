@@ -30,6 +30,14 @@ export function MenubarRadioItem({
   );
 }
 
+export function MenuBarLabel({ children }: { children?: ReactNode }) {
+  return (
+    <Menubar.Label className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none pl-2 outline-none text-gray-500">
+      {children}
+    </Menubar.Label>
+  );
+}
+
 export function MenuBarSeparator() {
   return (
     <Menubar.Separator

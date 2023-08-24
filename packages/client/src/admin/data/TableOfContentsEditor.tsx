@@ -30,6 +30,7 @@ import * as Menubar from "@radix-ui/react-menubar";
 import {
   MenuBarContent,
   MenuBarItem,
+  MenuBarLabel,
   MenuBarSeparator,
   MenuBarSubmenu,
   MenubarRadioItem,
@@ -40,6 +41,14 @@ import { DataUploadDropzoneContext } from "../uploads/DataUploadDropzone";
 import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import React from "react";
+
+const LazyArcGISCartModal = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISCartModal"
+    )
+);
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -61,6 +70,7 @@ export default function TableOfContentsEditor() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteItem] = useDeleteBranchMutation();
   const mapContext = useContext(MapContext);
+  const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
     variables: {
       slug,
@@ -381,6 +391,9 @@ export default function TableOfContentsEditor() {
         />
       )}
       <Header
+        openArcGISCart={() => {
+          setArcgisCartOpen(true);
+        }}
         onRequestOpenFolder={() => {
           setCreateNewFolderModalOpen(true);
         }}
@@ -455,6 +468,9 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setOpenMetadataViewerId(undefined)}
         />
       )}
+      {arcgisCartOpen && (
+        <LazyArcGISCartModal onRequestClose={() => setArcgisCartOpen(false)} />
+      )}
     </>
   );
 }
@@ -468,6 +484,7 @@ function Header({
   onRequestPublish,
   publishDisabled,
   lastPublished,
+  openArcGISCart,
 }: {
   selectedView: string;
   setSelectedView: (view: string) => void;
@@ -477,6 +494,7 @@ function Header({
   onRequestPublish: () => void;
   publishDisabled?: boolean;
   lastPublished?: Date;
+  openArcGISCart: () => void;
 }) {
   const uploadContext = useContext(DataUploadDropzoneContext);
   const { t } = useTranslation("admin:data");
@@ -531,6 +549,7 @@ function Header({
                 <Trans ns="admin:data">Add Folder</Trans>
               </MenuBarItem>
               <MenuBarSubmenu label={t("Add Data")}>
+                <MenuBarLabel>{t("Host data on SeaSketch")}</MenuBarLabel>
                 <MenuBarItem
                   onClick={() => {
                     const fileInput = document.createElement("input");
@@ -548,6 +567,15 @@ function Header({
                   }}
                 >
                   {t("Upload spatial data files")}
+                </MenuBarItem>
+                <MenuBarSeparator />
+                <MenuBarLabel>{t("Connect to data services")}</MenuBarLabel>
+                <MenuBarItem
+                  onClick={() => {
+                    openArcGISCart();
+                  }}
+                >
+                  {t("Esri ArcGIS Service...")}
                 </MenuBarItem>
               </MenuBarSubmenu>
             </MenuBarContent>
