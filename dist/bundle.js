@@ -256,11 +256,11 @@ var MapBoxGLEsriSources = (function (exports) {
             this.outFields = "*";
             this.supportsPagination = true;
             this._loading = true;
-            this.id = id;
+            this._id = id;
             this.baseUrl = url;
             this.options = options;
             this.map = map;
-            this.map.addSource(this.id, {
+            this.map.addSource(this._id, {
                 data: this.data,
                 type: "geojson",
             });
@@ -272,20 +272,20 @@ var MapBoxGLEsriSources = (function (exports) {
             if (options && options.outFields) {
                 this.outFields = options.outFields;
             }
-            this.source = this.map.getSource(this.id);
+            this.source = this.map.getSource(this._id);
             let hadError = false;
             const onError = (e) => {
                 hadError = true;
                 this._loading = false;
                 this.map.fire("error", {
                     source: this.source,
-                    sourceId: this.id,
+                    sourceId: this._id,
                     error: e,
                 });
             };
             this.map.fire("dataloading", {
                 source: this.source,
-                sourceId: this.id,
+                sourceId: this._id,
                 dataType: "source",
                 isSourceLoaded: false,
                 sourceDataType: "content",
@@ -301,6 +301,12 @@ var MapBoxGLEsriSources = (function (exports) {
         }
         get loading() {
             return this._loading;
+        }
+        get id() {
+            return this._id;
+        }
+        destroy() {
+            this.map.removeSource(this._id);
         }
     }
     async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
@@ -580,7 +586,7 @@ var MapBoxGLEsriSources = (function (exports) {
                 paint: {},
                 layout: {
                     "icon-allow-overlap": true,
-                    "icon-rotate": symbol.angle,
+                    "icon-rotate": symbol.angle || 0,
                     "icon-offset": [symbol.xoffset || 0, symbol.yoffset || 0],
                     "icon-image": imageId,
                 },
@@ -879,9 +885,11 @@ var MapBoxGLEsriSources = (function (exports) {
                             },
                         ],
                     };
-                    const legend2x = await fetchLegendImage(serviceBaseUrl, sublayer, legendIndex, 2);
-                    const legend3x = await fetchLegendImage(serviceBaseUrl, sublayer, legendIndex, 3);
-                    imageSet.images.push(legend2x, legend3x);
+                    if (/MapServer/.test(serviceBaseUrl)) {
+                        const legend2x = await fetchLegendImage(serviceBaseUrl, sublayer, legendIndex, 2);
+                        const legend3x = await fetchLegendImage(serviceBaseUrl, sublayer, legendIndex, 3);
+                        imageSet.images.push(legend2x, legend3x);
+                    }
                     resolve(imageSet);
                 }));
             }
@@ -988,6 +996,7 @@ var MapBoxGLEsriSources = (function (exports) {
     const cache = {};
     async function fetchLegendImage(serviceRoot, sublayer, legendIndex, pixelRatio) {
         const legendData = await fetchLegendData(serviceRoot, pixelRatio);
+        console.log("legendData", serviceRoot, legendData);
         const sublayerData = legendData.layers.find((lyr) => lyr.layerId === sublayer);
         const legendItem = sublayerData.legend[legendIndex];
         return {
@@ -1043,13 +1052,15 @@ var MapBoxGLEsriSources = (function (exports) {
         return expression;
     }
 
-    async function styleForFeatureLayer(url, sourceId) {
-        const rootUrl = url.replace(/\/\d+[\/]*$/, "");
-        const sublayer = parseInt(url.match(/\/(\d+)[\/]*$/)[1]);
-        const response = await fetch(url + "?f=json").then((r) => r.json());
-        const renderer = response.drawingInfo.renderer;
+    async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceMetadata) {
+        console.log({ serviceMetadata });
+        serviceBaseUrl = serviceBaseUrl.replace(/\/$/, "");
+        const url = `${serviceBaseUrl}/${sublayer}`;
+        serviceMetadata =
+            serviceMetadata || (await fetch(url + "?f=json").then((r) => r.json()));
+        const renderer = serviceMetadata.drawingInfo.renderer;
         let layers = [];
-        const imageList = new ImageList(response.currentVersion);
+        const imageList = new ImageList(serviceMetadata.currentVersion);
         let legendItemIndex = 0;
         switch (renderer.type) {
             case "uniqueValue": {
@@ -1064,12 +1075,12 @@ var MapBoxGLEsriSources = (function (exports) {
                 const field = renderer.field1;
                 legendItemIndex = renderer.defaultSymbol ? 1 : 0;
                 const fieldTypes = fields.map((f) => {
-                    const fieldRecord = response.fields.find((r) => r.name === f);
+                    const fieldRecord = serviceMetadata.fields.find((r) => r.name === f);
                     return FIELD_TYPES[fieldRecord === null || fieldRecord === void 0 ? void 0 : fieldRecord.type] || "string";
                 });
                 for (const info of renderer.uniqueValueInfos) {
                     const values = normalizeValuesForFieldTypes(info.value, renderer.fieldDelimiter, fieldTypes);
-                    layers.push(...symbolToLayers(info.symbol, sourceId, imageList, rootUrl, sublayer, legendItemIndex++).map((lyr) => {
+                    layers.push(...symbolToLayers(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex++).map((lyr) => {
                         if (fields.length === 1) {
                             lyr.filter = ["==", field, values[0]];
                             filters.push(lyr.filter);
@@ -1089,7 +1100,7 @@ var MapBoxGLEsriSources = (function (exports) {
                     }));
                 }
                 if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
-                    layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, rootUrl, sublayer, 0).map((lyr) => {
+                    layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
                         lyr.filter = ["none", ...filters];
                         return lyr;
                     }));
@@ -1098,7 +1109,7 @@ var MapBoxGLEsriSources = (function (exports) {
             }
             case "classBreaks":
                 if (renderer.backgroundFillSymbol) {
-                    layers.push(...symbolToLayers(renderer.backgroundFillSymbol, sourceId, imageList, rootUrl, sublayer, 0));
+                    layers.push(...symbolToLayers(renderer.backgroundFillSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0));
                 }
                 const field = renderer.field;
                 const filters = [];
@@ -1110,7 +1121,7 @@ var MapBoxGLEsriSources = (function (exports) {
                     return values;
                 });
                 for (const info of [...renderer.classBreakInfos].reverse()) {
-                    layers.push(...symbolToLayers(info.symbol, sourceId, imageList, rootUrl, sublayer, legendItemIndex--).map((lyr) => {
+                    layers.push(...symbolToLayers(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex--).map((lyr) => {
                         const [min, max] = minMaxValues[renderer.classBreakInfos.indexOf(info)];
                         if (renderer.classBreakInfos.indexOf(info) === 0) {
                             lyr.filter = ["all", ["<=", field, max]];
@@ -1123,7 +1134,7 @@ var MapBoxGLEsriSources = (function (exports) {
                     }));
                 }
                 if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
-                    const defaultLayers = await symbolToLayers(renderer.defaultSymbol, sourceId, imageList, rootUrl, sublayer, 0);
+                    const defaultLayers = await symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0);
                     for (const index in defaultLayers) {
                         defaultLayers[index].filter = ["none", filters];
                     }
@@ -1131,15 +1142,17 @@ var MapBoxGLEsriSources = (function (exports) {
                 }
                 break;
             default:
-                layers = symbolToLayers(renderer.symbol, sourceId, imageList, rootUrl, sublayer, 0);
+                layers = symbolToLayers(renderer.symbol, sourceId, imageList, serviceBaseUrl, sublayer, 0);
                 break;
         }
-        if (response.drawingInfo.labelingInfo) {
-            for (const info of response.drawingInfo.labelingInfo) {
-                const layer = esriTS(info, response.geometryType, response.fields.map((f) => f.name));
-                layer.source = sourceId;
-                layer.id = generateId();
-                layers.push(layer);
+        if (serviceMetadata.drawingInfo.labelingInfo) {
+            for (const info of serviceMetadata.drawingInfo.labelingInfo) {
+                if (info.labelExpression) {
+                    const layer = esriTS(info, serviceMetadata.geometryType, serviceMetadata.fields.map((f) => f.name));
+                    layer.source = sourceId;
+                    layer.id = generateId();
+                    layers.push(layer);
+                }
             }
         }
         return {

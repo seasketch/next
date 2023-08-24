@@ -70,7 +70,7 @@ export class ArcGISVectorSource {
    * @type {GeoJSONSource}
    */
   protected source: GeoJSONSource;
-  protected id: string;
+  private _id: string;
   private baseUrl: string;
   private options:
     | undefined
@@ -95,11 +95,11 @@ export class ArcGISVectorSource {
     url: string,
     options?: ArcGISVectorSourceOptions
   ) {
-    this.id = id;
+    this._id = id;
     this.baseUrl = url;
     this.options = options;
     this.map = map;
-    this.map.addSource(this.id, {
+    this.map.addSource(this._id, {
       data: this.data,
       type: "geojson",
     });
@@ -113,20 +113,20 @@ export class ArcGISVectorSource {
     if (options && options.outFields) {
       this.outFields = options.outFields;
     }
-    this.source = this.map.getSource(this.id) as GeoJSONSource;
+    this.source = this.map.getSource(this._id) as GeoJSONSource;
     let hadError = false;
     const onError = (e: Error) => {
       hadError = true;
       this._loading = false;
       this.map.fire("error", {
         source: this.source,
-        sourceId: this.id,
+        sourceId: this._id,
         error: e,
       });
     };
     this.map.fire("dataloading", {
       source: this.source,
-      sourceId: this.id,
+      sourceId: this._id,
       dataType: "source",
       isSourceLoaded: false,
       sourceDataType: "content",
@@ -149,11 +149,21 @@ export class ArcGISVectorSource {
         }
       })
       .catch(onError);
-    // this.fetchGeoJSON().catch(options?.onError);
   }
 
   get loading(): boolean {
     return this._loading;
+  }
+
+  get id(): string {
+    return this._id;
+  }
+
+  /**
+   * Remove the source from the map and any related event listeners
+   */
+  destroy() {
+    this.map.removeSource(this._id);
   }
 }
 

@@ -40,11 +40,11 @@ export class ArcGISVectorSource {
         this.supportsPagination = true;
         /** Set to true when source is fetching data */
         this._loading = true;
-        this.id = id;
+        this._id = id;
         this.baseUrl = url;
         this.options = options;
         this.map = map;
-        this.map.addSource(this.id, {
+        this.map.addSource(this._id, {
             data: this.data,
             type: "geojson",
         });
@@ -56,20 +56,20 @@ export class ArcGISVectorSource {
         if (options && options.outFields) {
             this.outFields = options.outFields;
         }
-        this.source = this.map.getSource(this.id);
+        this.source = this.map.getSource(this._id);
         let hadError = false;
         const onError = (e) => {
             hadError = true;
             this._loading = false;
             this.map.fire("error", {
                 source: this.source,
-                sourceId: this.id,
+                sourceId: this._id,
                 error: e,
             });
         };
         this.map.fire("dataloading", {
             source: this.source,
-            sourceId: this.id,
+            sourceId: this._id,
             dataType: "source",
             isSourceLoaded: false,
             sourceDataType: "content",
@@ -82,10 +82,18 @@ export class ArcGISVectorSource {
             }
         })
             .catch(onError);
-        // this.fetchGeoJSON().catch(options?.onError);
     }
     get loading() {
         return this._loading;
+    }
+    get id() {
+        return this._id;
+    }
+    /**
+     * Remove the source from the map and any related event listeners
+     */
+    destroy() {
+        this.map.removeSource(this._id);
     }
 }
 export async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {

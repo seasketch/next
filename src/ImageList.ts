@@ -101,19 +101,22 @@ export class ImageList {
               },
             ],
           };
-          const legend2x = await fetchLegendImage(
-            serviceBaseUrl,
-            sublayer,
-            legendIndex,
-            2
-          );
-          const legend3x = await fetchLegendImage(
-            serviceBaseUrl,
-            sublayer,
-            legendIndex,
-            3
-          );
-          imageSet.images.push(legend2x, legend3x);
+          // FeatureServers don't have a legend endpoint
+          if (/MapServer/.test(serviceBaseUrl)) {
+            const legend2x = await fetchLegendImage(
+              serviceBaseUrl,
+              sublayer,
+              legendIndex,
+              2
+            );
+            const legend3x = await fetchLegendImage(
+              serviceBaseUrl,
+              sublayer,
+              legendIndex,
+              3
+            );
+            imageSet.images.push(legend2x, legend3x);
+          }
           resolve(imageSet);
         })
       );
@@ -300,6 +303,7 @@ async function fetchLegendImage(
   pixelRatio: 2 | 3
 ): Promise<Image> {
   const legendData = await fetchLegendData(serviceRoot, pixelRatio);
+  console.log("legendData", serviceRoot, legendData);
   const sublayerData = legendData.layers.find(
     (lyr: any) => lyr.layerId === sublayer
   );

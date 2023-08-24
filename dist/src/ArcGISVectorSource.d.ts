@@ -63,7 +63,7 @@ export declare class ArcGISVectorSource {
      * @type {GeoJSONSource}
      */
     protected source: GeoJSONSource;
-    protected id: string;
+    private _id;
     private baseUrl;
     private options;
     private map;
@@ -79,5 +79,10 @@ export declare class ArcGISVectorSource {
      */
     constructor(map: Map, id: string, url: string, options?: ArcGISVectorSourceOptions);
     get loading(): boolean;
+    get id(): string;
+    /**
+     * Remove the source from the map and any related event listeners
+     */
+    destroy(): void;
 }
 export declare function fetchFeatureLayerData(url: string, outFields: string, onError: (error: Error) => void, geometryPrecision?: number, abortController?: AbortController | null, onPageReceived?: ((bytes: number, loadedFeatures: number, estimatedFeatures: number) => void) | null, disablePagination?: boolean, pageSize?: number, bytesLimit?: number): Promise<FeatureCollection<import("geojson").Geometry, import("geojson").GeoJsonProperties>>;

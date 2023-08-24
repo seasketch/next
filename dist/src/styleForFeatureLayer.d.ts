@@ -34,11 +34,14 @@ import { ImageList } from "./ImageList";
  *
  * ```
  *
- * @param {string} url Feature layer endpoint. Should terminate in _/MapServer/0..n_
+ * @param {string} serviceBaseUrl Main Service url. Should end in MapServer or FeatureServer
+ * @param {number} sublayer Sublayer to style
  * @param {string} sourceId ID for the [source](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/) of vector data to be used in rendering.
+ * @param {any} [serviceMetadata] Optional metadata for the service. If not provided it will be fetched from the service.
  * @returns The {@link ImageList.addToMap} function should be called before adding the generated layers to the map.
  */
-export default function styleForFeatureLayer(url: string, sourceId: string): Promise<{
+declare function styleForFeatureLayer(serviceBaseUrl: string, sublayer: number, sourceId: string, serviceMetadata?: any): Promise<{
     imageList: ImageList;
     layers: Layer[];
 }>;
+export default styleForFeatureLayer;

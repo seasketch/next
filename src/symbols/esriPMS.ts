@@ -26,7 +26,7 @@ export default (
       paint: {},
       layout: {
         "icon-allow-overlap": true,
-        "icon-rotate": symbol.angle,
+        "icon-rotate": symbol.angle || 0,
         "icon-offset": [symbol.xoffset || 0, symbol.yoffset || 0],
         "icon-image": imageId,
       },

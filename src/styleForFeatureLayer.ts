@@ -96,21 +96,28 @@ interface ClassBreaksRenderer {
  *
  * ```
  *
- * @param {string} url Feature layer endpoint. Should terminate in _/MapServer/0..n_
+ * @param {string} serviceBaseUrl Main Service url. Should end in MapServer or FeatureServer
+ * @param {number} sublayer Sublayer to style
  * @param {string} sourceId ID for the [source](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/) of vector data to be used in rendering.
+ * @param {any} [serviceMetadata] Optional metadata for the service. If not provided it will be fetched from the service.
  * @returns The {@link ImageList.addToMap} function should be called before adding the generated layers to the map.
  */
-export default async function styleForFeatureLayer(
-  url: string,
-  sourceId: string
+async function styleForFeatureLayer(
+  serviceBaseUrl: string,
+  sublayer: number,
+  sourceId: string,
+  serviceMetadata?: any
 ): Promise<{ imageList: ImageList; layers: Layer[] }> {
-  const rootUrl = url.replace(/\/\d+[\/]*$/, "");
-  const sublayer = parseInt(url.match(/\/(\d+)[\/]*$/)![1]);
-  const response = await fetch(url + "?f=json").then((r) => r.json());
-  const renderer = response.drawingInfo.renderer as Renderer;
+  console.log({ serviceMetadata });
+  // remove trailing slash if present
+  serviceBaseUrl = serviceBaseUrl.replace(/\/$/, "");
+  const url = `${serviceBaseUrl}/${sublayer}`;
+  serviceMetadata =
+    serviceMetadata || (await fetch(url + "?f=json").then((r) => r.json()));
+  const renderer = serviceMetadata.drawingInfo.renderer as Renderer;
 
   let layers: Layer[] = [];
-  const imageList = new ImageList(response.currentVersion);
+  const imageList = new ImageList(serviceMetadata.currentVersion);
   let legendItemIndex = 0;
   switch (renderer.type) {
     case "uniqueValue": {
@@ -125,7 +132,9 @@ export default async function styleForFeatureLayer(
       const field = renderer.field1;
       legendItemIndex = renderer.defaultSymbol ? 1 : 0;
       const fieldTypes = fields.map((f) => {
-        const fieldRecord = response.fields.find((r: any) => r.name === f);
+        const fieldRecord = serviceMetadata.fields.find(
+          (r: any) => r.name === f
+        );
         return FIELD_TYPES[fieldRecord?.type] || "string";
       });
       for (const info of renderer.uniqueValueInfos) {
@@ -139,7 +148,7 @@ export default async function styleForFeatureLayer(
             info.symbol,
             sourceId,
             imageList,
-            rootUrl,
+            serviceBaseUrl,
             sublayer,
             legendItemIndex++
           ).map((lyr) => {
@@ -167,7 +176,7 @@ export default async function styleForFeatureLayer(
             renderer.defaultSymbol,
             sourceId,
             imageList,
-            rootUrl,
+            serviceBaseUrl,
             sublayer,
             0
           ).map((lyr) => {
@@ -186,7 +195,7 @@ export default async function styleForFeatureLayer(
             renderer.backgroundFillSymbol,
             sourceId,
             imageList,
-            rootUrl,
+            serviceBaseUrl,
             sublayer,
             0
           )
@@ -200,7 +209,7 @@ export default async function styleForFeatureLayer(
         (b) => {
           const values = [b.classMinValue || minValue, b.classMaxValue] as [
             number,
-            number
+            number,
           ];
           minValue = values[1];
           return values;
@@ -213,13 +222,12 @@ export default async function styleForFeatureLayer(
             info.symbol,
             sourceId,
             imageList,
-            rootUrl,
+            serviceBaseUrl,
             sublayer,
             legendItemIndex--
           ).map((lyr) => {
-            const [min, max] = minMaxValues[
-              renderer.classBreakInfos.indexOf(info)
-            ];
+            const [min, max] =
+              minMaxValues[renderer.classBreakInfos.indexOf(info)];
             if (renderer.classBreakInfos.indexOf(info) === 0) {
               lyr.filter = ["all", ["<=", field, max]];
             } else {
@@ -236,7 +244,7 @@ export default async function styleForFeatureLayer(
           renderer.defaultSymbol,
           sourceId,
           imageList,
-          rootUrl,
+          serviceBaseUrl,
           sublayer,
           0
         );
@@ -252,22 +260,24 @@ export default async function styleForFeatureLayer(
         renderer.symbol,
         sourceId,
         imageList,
-        rootUrl,
+        serviceBaseUrl,
         sublayer,
         0
       );
       break;
   }
-  if (response.drawingInfo.labelingInfo) {
-    for (const info of response.drawingInfo.labelingInfo) {
-      const layer = esriTS(
-        info,
-        response.geometryType,
-        response.fields.map((f: any) => f.name)
-      );
-      layer.source = sourceId;
-      layer.id = generateId();
-      layers.push(layer);
+  if (serviceMetadata.drawingInfo.labelingInfo) {
+    for (const info of serviceMetadata.drawingInfo.labelingInfo) {
+      if (info.labelExpression) {
+        const layer = esriTS(
+          info,
+          serviceMetadata.geometryType,
+          serviceMetadata.fields.map((f: any) => f.name)
+        );
+        layer.source = sourceId;
+        layer.id = generateId();
+        layers.push(layer);
+      }
     }
   }
   return {
@@ -310,3 +320,5 @@ const FIELD_TYPES: { [key: string]: "string" | "float" | "integer" } = {
   esriFieldTypeGlobalID: "string",
   esriFieldTypeXML: "string",
 };
+
+export default styleForFeatureLayer;
