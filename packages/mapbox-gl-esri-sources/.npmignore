@@ -1,0 +1,6 @@
+src/
+examples/
+docs/
+.vscode/
+index.ts
+tsconfig.json
