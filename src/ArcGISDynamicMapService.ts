@@ -120,6 +120,7 @@ export class ArcGISDynamicMapService {
   private _loading = true;
   private useTiles = false;
   private tileSize = 256;
+  // TODO: fetch metadata and calculate minzoom, maxzoom, and bounds
 
   /**
    * @param {Map} map MapBox GL JS Map instance
