@@ -9,7 +9,7 @@ import {
   useCatalogItems,
   useMapServerInfo,
 } from "./arcgis";
-import { LngLatBoundsLike, Map } from "mapbox-gl";
+import { LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
 import Skeleton from "../../../components/Skeleton";
 import { ArrowLeftIcon, MinusIcon, PlusIcon } from "@radix-ui/react-icons";
@@ -23,12 +23,25 @@ import {
   ArcGISVectorSource,
   styleForFeatureLayer,
 } from "@seasketch/mapbox-gl-esri-sources";
+import { Feature } from "geojson";
+import bbox from "@turf/bbox";
 
 export default function ArcGISCartModal({
   onRequestClose,
+  region,
 }: {
   onRequestClose: () => void;
+  region?: Feature<any>;
 }) {
+  let mapBounds: LngLatBoundsLike | undefined = undefined;
+  if (region) {
+    const box = region
+      ? (bbox(region) as [number, number, number, number])
+      : undefined;
+    if (box) {
+      mapBounds = new LngLatBounds([box[0], box[1]], [box[2], box[3]]);
+    }
+  }
   const [location, setLocation] =
     useState<NormalizedArcGISServerLocation | null>(null);
   const [mapDiv, setMapDiv] = useState<HTMLDivElement | null>(null);
@@ -57,11 +70,15 @@ export default function ArcGISCartModal({
       // initialize mapbox map
       const m = new Map({
         container: mapDiv,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: "mapbox://styles/mapbox/streets-v11",
+        // bounds: mapBounds,
         center: [-74.5, 40],
         zoom: 9,
       });
+      m.fitBounds(mapBounds as LngLatBounds, { padding: 10, animate: false });
+
       m.on("load", () => {
+        // m.fitBounds(mapBounds as LngLatBounds, { padding: 10, animate: false });
         m.resize();
         setMap(m);
         m.on("dataloading", (e) => {
@@ -130,7 +147,7 @@ export default function ArcGISCartModal({
             tileSize:
               mapServerInfo.data.mapServerInfo.tileInfo.rows /
               window.devicePixelRatio,
-            minzoom,
+            minzoom: Math.max(minzoom, 1),
             maxzoom,
             // ...(bounds ? { bounds } : {}),
           });

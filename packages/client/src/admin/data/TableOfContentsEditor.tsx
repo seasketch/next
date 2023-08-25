@@ -469,7 +469,10 @@ export default function TableOfContentsEditor() {
         />
       )}
       {arcgisCartOpen && (
-        <LazyArcGISCartModal onRequestClose={() => setArcgisCartOpen(false)} />
+        <LazyArcGISCartModal
+          region={tocQuery.data?.projectBySlug?.region.geojson}
+          onRequestClose={() => setArcgisCartOpen(false)}
+        />
       )}
     </>
   );
