@@ -394,6 +394,136 @@ var MapBoxGLEsriSources = (function (exports) {
         return s;
     }
 
+    class ArcGISRESTServiceRequestManager {
+        constructor(options) {
+            this.inFlightRequests = {};
+            caches
+                .open((options === null || options === void 0 ? void 0 : options.cacheKey) || "seasketch-arcgis-rest-services")
+                .then((cache) => {
+                this.cache = cache;
+            });
+        }
+        async getMapServiceMetadata(url, credentials) {
+            if (!/rest\/services/.test(url)) {
+                throw new Error("Invalid ArcGIS REST Service URL");
+            }
+            if (!/MapServer/.test(url)) {
+                throw new Error("Invalid MapServer URL");
+            }
+            url = url.replace(/\/$/, "");
+            url = url.replace(/\?.*$/, "");
+            const params = new URLSearchParams();
+            params.set("f", "json");
+            if (credentials) {
+                const token = await this.getToken(url.replace(/rest\/services\/.*/, "/rest/services/"), credentials);
+                params.set("token", token);
+            }
+            const requestUrl = `${url}?${params.toString()}`;
+            const serviceMetadata = await this.fetch(requestUrl);
+            const layers = await this.fetch(`${url}/layers?${params.toString()}`);
+            if (layers.error) {
+                throw new Error(layers.error.message);
+            }
+            return { serviceMetadata, layers };
+        }
+        async getToken(url, credentials) {
+            throw new Error("Not implemented");
+        }
+        async fetch(url) {
+            if (url in this.inFlightRequests) {
+                return this.inFlightRequests[url].then((json) => json);
+            }
+            const cache = await this.cache;
+            if (!cache) {
+                throw new Error("Cache not initialized");
+            }
+            this.inFlightRequests[url] = fetchWithTTL(url, 60 * 300, cache);
+            return new Promise((resolve, reject) => {
+                this.inFlightRequests[url]
+                    .then((json) => {
+                    if (json["error"]) {
+                        reject(new Error(json["error"].message));
+                    }
+                    else {
+                        resolve(json);
+                    }
+                })
+                    .catch(reject)
+                    .finally(() => {
+                    delete this.inFlightRequests[url];
+                });
+            });
+        }
+        async getLegendMetadata(url, credentials) {
+            if (!/rest\/services/.test(url)) {
+                throw new Error("Invalid ArcGIS REST Service URL");
+            }
+            if (!/MapServer/.test(url)) {
+                throw new Error("Invalid MapServer URL");
+            }
+            url = url.replace(/\/$/, "");
+            url = url.replace(/\?.*$/, "");
+            const params = new URLSearchParams();
+            params.set("f", "json");
+            if (credentials) {
+                const token = await this.getToken(url.replace(/rest\/services\/.*/, "/rest/services/"), credentials);
+                params.set("token", token);
+            }
+            const requestUrl = `${url}/legend?${params.toString()}`;
+            const response = await this.fetch(requestUrl);
+            return response;
+        }
+    }
+    function cachedResponseIsExpired(response) {
+        const cacheControlHeader = response.headers.get("Cache-Control");
+        if (cacheControlHeader) {
+            const expires = /expires=(.*)/i.exec(cacheControlHeader);
+            if (expires) {
+                const expiration = new Date(expires[1]);
+                if (new Date().getTime() > expiration.getTime()) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+    async function fetchWithTTL(url, ttl, cache, options
+    ) {
+        var _a, _b, _c;
+        if (!((_a = options === null || options === void 0 ? void 0 : options.signal) === null || _a === void 0 ? void 0 : _a.aborted)) {
+            const request = new Request(url, options);
+            if ((_b = options === null || options === void 0 ? void 0 : options.signal) === null || _b === void 0 ? void 0 : _b.aborted) {
+                Promise.reject("aborted");
+            }
+            let cachedResponse = await cache.match(request);
+            if (cachedResponse && cachedResponseIsExpired(cachedResponse)) {
+                cache.delete(request);
+                cachedResponse = undefined;
+            }
+            if (cachedResponse) {
+                return cachedResponse.json();
+            }
+            else {
+                const response = await fetch(url, options);
+                if (!((_c = options === null || options === void 0 ? void 0 : options.signal) === null || _c === void 0 ? void 0 : _c.aborted)) {
+                    const headers = new Headers(response.headers);
+                    headers.set("Cache-Control", `Expires=${new Date(new Date().getTime() + 1000 * ttl).toUTCString()}`);
+                    const copy = response.clone();
+                    const clone = new Response(copy.body, {
+                        headers,
+                        status: response.status,
+                        statusText: response.statusText,
+                    });
+                    cache.put(url, clone);
+                }
+                return await response.json();
+            }
+        }
+    }
+
     var getRandomValues;
     var rnds8 = new Uint8Array(16);
     function rng() {
@@ -438,6 +568,346 @@ var MapBoxGLEsriSources = (function (exports) {
         return buf;
       }
       return stringify(rnds);
+    }
+
+    function replaceSource(sourceId, map, sourceData) {
+        var _a;
+        const existingSource = map.getSource(sourceId);
+        if (!existingSource) {
+            throw new Error("Source does not exist");
+        }
+        if (existingSource.type !== sourceData.type) {
+            throw new Error("Source type mismatch");
+        }
+        const allLayers = map.getStyle().layers || [];
+        const relatedLayers = allLayers.filter((l) => {
+            return "source" in l && l.source === sourceId;
+        });
+        relatedLayers.reverse();
+        const idx = allLayers.indexOf(relatedLayers[0]);
+        let before = ((_a = allLayers[idx + 1]) === null || _a === void 0 ? void 0 : _a.id) || undefined;
+        for (const layer of relatedLayers) {
+            map.removeLayer(layer.id);
+        }
+        map.removeSource(sourceId);
+        map.addSource(sourceId, sourceData);
+        for (const layer of relatedLayers) {
+            map.addLayer(layer, before);
+            before = layer.id;
+        }
+    }
+    function metersToDegrees(x, y) {
+        var lon = (x * 180) / 20037508.34;
+        var lat = (Math.atan(Math.exp((y * Math.PI) / 20037508.34)) * 360) / Math.PI - 90;
+        return [lon, lat];
+    }
+    async function extentToLatLngBounds(extent) {
+        if (extent) {
+            const wkid = normalizeSpatialReference(extent.spatialReference);
+            if (wkid === 4326) {
+                return [extent.xmin, extent.ymin, extent.xmax, extent.ymax];
+            }
+            else if (wkid === 3857 || wkid === 102100) {
+                return [
+                    ...metersToDegrees(extent.xmin, extent.ymin),
+                    ...metersToDegrees(extent.xmax, extent.ymax),
+                ];
+            }
+            else {
+                try {
+                    const projected = await projectExtent(extent);
+                    console.log("projected", projected, extent);
+                    return [projected.xmin, projected.ymin, projected.xmax, projected.ymax];
+                }
+                catch (e) {
+                    console.error(e);
+                    return;
+                }
+            }
+        }
+    }
+    function normalizeSpatialReference(sr) {
+        const wkid = "latestWkid" in sr ? sr.latestWkid : "wkid" in sr ? sr.wkid : -1;
+        if (typeof wkid === "string") {
+            if (/WGS\s*84/.test(wkid)) {
+                return 4326;
+            }
+            else {
+                return -1;
+            }
+        }
+        else {
+            return wkid || -1;
+        }
+    }
+    async function projectExtent(extent) {
+        const endpoint = "https://tasks.arcgisonline.com/arcgis/rest/services/Geometry/GeometryServer/project";
+        const params = new URLSearchParams({
+            geometries: JSON.stringify({
+                geometryType: "esriGeometryEnvelope",
+                geometries: [extent],
+            }),
+            inSR: `${extent.spatialReference.wkid}`,
+            outSR: "4326",
+            f: "json",
+        });
+        const response = await fetch(`${endpoint}?${params.toString()}`);
+        const data = await response.json();
+        const projected = data.geometries[0];
+        if (projected) {
+            return projected;
+        }
+        else {
+            throw new Error("Failed to reproject");
+        }
+    }
+    function contentOrFalse(str) {
+        if (str && str.length > 0) {
+            return str;
+        }
+        else {
+            return false;
+        }
+    }
+    function pickDescription(info, layer) {
+        var _a, _b;
+        return (contentOrFalse(layer === null || layer === void 0 ? void 0 : layer.description) ||
+            contentOrFalse(info.description) ||
+            contentOrFalse((_a = info.documentInfo) === null || _a === void 0 ? void 0 : _a.Subject) ||
+            contentOrFalse((_b = info.documentInfo) === null || _b === void 0 ? void 0 : _b.Comments));
+    }
+    function generateMetadataForLayer(url, mapServerInfo, layer) {
+        var _a, _b, _c, _d;
+        const attribution = contentOrFalse(layer.copyrightText) ||
+            contentOrFalse(mapServerInfo.copyrightText) ||
+            contentOrFalse((_a = mapServerInfo.documentInfo) === null || _a === void 0 ? void 0 : _a.Author);
+        const description = pickDescription(mapServerInfo, layer);
+        let keywords = ((_b = mapServerInfo.documentInfo) === null || _b === void 0 ? void 0 : _b.Keywords) &&
+            ((_c = mapServerInfo.documentInfo) === null || _c === void 0 ? void 0 : _c.Keywords.length)
+            ? (_d = mapServerInfo.documentInfo) === null || _d === void 0 ? void 0 : _d.Keywords.split(",")
+            : [];
+        return {
+            type: "doc",
+            content: [
+                {
+                    type: "heading",
+                    attrs: { level: 1 },
+                    content: [{ type: "text", text: layer.name }],
+                },
+                ...(description
+                    ? [
+                        {
+                            type: "paragraph",
+                            content: [
+                                {
+                                    type: "text",
+                                    text: description,
+                                },
+                            ],
+                        },
+                    ]
+                    : []),
+                ...(attribution
+                    ? [
+                        { type: "paragraph" },
+                        {
+                            type: "heading",
+                            attrs: { level: 3 },
+                            content: [{ type: "text", text: "Attribution" }],
+                        },
+                        {
+                            type: "paragraph",
+                            content: [
+                                {
+                                    type: "text",
+                                    text: attribution,
+                                },
+                            ],
+                        },
+                    ]
+                    : []),
+                ...(keywords && keywords.length
+                    ? [
+                        { type: "paragraph" },
+                        {
+                            type: "heading",
+                            attrs: { level: 3 },
+                            content: [
+                                {
+                                    type: "text",
+                                    text: "Keywords",
+                                },
+                            ],
+                        },
+                        {
+                            type: "bullet_list",
+                            marks: [],
+                            attrs: {},
+                            content: keywords.map((word) => ({
+                                type: "list_item",
+                                content: [
+                                    {
+                                        type: "paragraph",
+                                        content: [{ type: "text", text: word }],
+                                    },
+                                ],
+                            })),
+                        },
+                    ]
+                    : []),
+                { type: "paragraph" },
+                {
+                    type: "paragraph",
+                    content: [
+                        {
+                            type: "text",
+                            marks: [
+                                {
+                                    type: "link",
+                                    attrs: {
+                                        href: url,
+                                        title: "ArcGIS Server",
+                                    },
+                                },
+                            ],
+                            text: url,
+                        },
+                    ],
+                },
+            ],
+        };
+    }
+
+    class ArcGISTiledMapService {
+        constructor(requestManager, options) {
+            options.url = options.url.replace(/\/$/, "");
+            if (!/rest\/services/.test(options.url) || !/MapServer/.test(options.url)) {
+                throw new Error("Invalid ArcGIS REST Service URL");
+            }
+            this.requestManager = requestManager;
+            this.sourceId = options.sourceId || v4();
+            this.options = options;
+        }
+        getMetadata() {
+            if (this.serviceMetadata && this.layerMetadata) {
+                return Promise.resolve({
+                    serviceMetadata: this.serviceMetadata,
+                    layers: this.layerMetadata,
+                });
+            }
+            else {
+                return this.requestManager
+                    .getMapServiceMetadata(this.options.url, this.options.credentials)
+                    .then(({ serviceMetadata, layers }) => {
+                    this.serviceMetadata = serviceMetadata;
+                    this.layerMetadata = layers;
+                    return { serviceMetadata, layers };
+                });
+            }
+        }
+        async getComputedMetadata() {
+            await this.getMetadata();
+            const { bounds, minzoom, maxzoom, tileSize, attribution } = await this.getComputedProperties();
+            return {
+                bounds: bounds || undefined,
+                minzoom,
+                maxzoom,
+                attribution,
+                metadata: generateMetadataForLayer(this.options.url, this.serviceMetadata, this.layerMetadata.layers[0]),
+            };
+        }
+        get loading() {
+            var _a, _b;
+            return Boolean(((_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId)) &&
+                ((_b = this.map) === null || _b === void 0 ? void 0 : _b.isSourceLoaded(this.sourceId)) === false);
+        }
+        async getLegend() {
+            const data = await this.requestManager.getLegendMetadata(this.options.url);
+            return data.layers[0].legend.map((l) => ({
+                id: l.url,
+                label: l.label,
+                imageUrl: `data:${l.contentType};base64,${l.imageData}`,
+            }));
+        }
+        async getComputedProperties() {
+            var _a, _b, _c;
+            const { serviceMetadata, layers } = await this.getMetadata();
+            const levels = ((_a = serviceMetadata.tileInfo) === null || _a === void 0 ? void 0 : _a.lods.map((l) => l.level)) || [];
+            const attribution = contentOrFalse(layers.layers[0].copyrightText) ||
+                contentOrFalse(serviceMetadata.copyrightText) ||
+                contentOrFalse((_b = serviceMetadata.documentInfo) === null || _b === void 0 ? void 0 : _b.Author) ||
+                undefined;
+            const minzoom = Math.min(...levels);
+            const maxzoom = Math.max(...levels);
+            if (!((_c = serviceMetadata.tileInfo) === null || _c === void 0 ? void 0 : _c.rows)) {
+                throw new Error("Invalid tile info");
+            }
+            return {
+                minzoom,
+                maxzoom,
+                bounds: await extentToLatLngBounds(serviceMetadata.fullExtent),
+                tileSize: serviceMetadata.tileInfo.rows,
+                attribution,
+            };
+        }
+        async addToMap(map) {
+            this.map = map;
+            const { minzoom, maxzoom, bounds, tileSize, attribution } = await this.getComputedProperties();
+            const sourceData = {
+                type: "raster",
+                tiles: [`${this.options.url}/tile/{z}/{y}/{x}`],
+                tileSize: this.options.supportHighDpiDisplays
+                    ? tileSize / window.devicePixelRatio
+                    : tileSize,
+                minzoom,
+                maxzoom,
+                attribution,
+                ...(bounds ? { bounds } : {}),
+            };
+            console.log("add to map", sourceData);
+            if (this.map.getSource(this.sourceId)) {
+                replaceSource(this.sourceId, this.map, sourceData);
+            }
+            else {
+                this.map.addSource(this.sourceId, sourceData);
+            }
+            return this.sourceId;
+        }
+        async getLayers() {
+            return [
+                {
+                    type: "raster",
+                    source: this.sourceId,
+                    id: v4(),
+                    paint: {
+                        "raster-fade-duration": 300,
+                    },
+                },
+            ];
+        }
+        removeFromMap(map, removeLayers) {
+            if (map.getSource(this.sourceId)) {
+                const layers = map.getStyle().layers || [];
+                for (const layer of layers) {
+                    if ("source" in layer && layer.source === this.sourceId) {
+                        map.removeLayer(layer.id);
+                    }
+                }
+                map.removeSource(this.sourceId);
+                this.map = undefined;
+            }
+        }
+        async getSupportsDynamicRendering() {
+            return {
+                layerOrder: false,
+                layerOpacity: false,
+            };
+        }
+        destroy() {
+            if (this.map) {
+                this.removeFromMap(this.map);
+            }
+        }
     }
 
     function generateId() {
@@ -1191,6 +1661,8 @@ var MapBoxGLEsriSources = (function (exports) {
     };
 
     exports.ArcGISDynamicMapService = ArcGISDynamicMapService;
+    exports.ArcGISRESTServiceRequestManager = ArcGISRESTServiceRequestManager;
+    exports.ArcGISTiledMapService = ArcGISTiledMapService;
     exports.ArcGISVectorSource = ArcGISVectorSource;
     exports.ImageList = ImageList;
     exports.styleForFeatureLayer = styleForFeatureLayer;

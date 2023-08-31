@@ -26,7 +26,8 @@
     "**/dist/**": true,
     "**/infra/lib/*.d.ts": true,
     "**/infra/lib/*Stack.js": true,
-    "node_modules": true
+    "node_modules": true,
+    "packages/client/src/lang/**/*.json": true
   },
   "eslint.workingDirectories": ["packages/client"],
   "[git-commit]": {

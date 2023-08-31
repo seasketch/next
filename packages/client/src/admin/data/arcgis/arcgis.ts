@@ -10,10 +10,7 @@ import { v4 as uuid } from "uuid";
 import bboxPolygon from "@turf/bbox-polygon";
 import area from "@turf/area";
 import bbox from "@turf/bbox";
-import geobuf from "geobuf";
-import Pbf from "pbf";
 import { FeatureCollection } from "geojson";
-import Worker from "../../../workers/index";
 import {
   useCreateTableOfContentsItemMutation,
   useCreateArcGisDynamicDataSourceMutation,
@@ -30,7 +27,6 @@ import {
   AddImageToSpriteMutation,
   DataSourceTypes,
   useUpdateInteractivitySettingsMutation,
-  OverlayFragment,
   DataSourceDetailsFragment,
 } from "../../../generated/graphql";
 // import nanoid from "nanoid";

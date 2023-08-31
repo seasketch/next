@@ -1,5 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import ArcGISSearchPage from "./ArcGISSearchPage";
 import {
@@ -15,16 +15,18 @@ import Skeleton from "../../../components/Skeleton";
 import { ArrowLeftIcon, MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/solid";
 import Spinner from "../../../components/Spinner";
-import { TiledMapService } from "mapbox-gl-esri-sources";
 import FeatureService from "mapbox-gl-arcgis-featureserver";
 import Button from "../../../components/Button";
 import {
   ArcGISDynamicMapService,
-  ArcGISVectorSource,
-  styleForFeatureLayer,
+  ArcGISRESTServiceRequestManager,
+  CustomGLSource,
+  ArcGISTiledMapService,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { Feature } from "geojson";
 import bbox from "@turf/bbox";
+
+const requestManager = new ArcGISRESTServiceRequestManager();
 
 export default function ArcGISCartModal({
   onRequestClose,
@@ -121,6 +123,8 @@ export default function ArcGISCartModal({
 
   const [mapIsLoadingData, setMapIsLoadingData] = useState(false);
 
+  const [customSources, setCustomSources] = useState<CustomGLSource<any>[]>([]);
+
   useEffect(() => {
     if (mapServerInfo.data && map && selection) {
       const bounds = extentToLatLngBounds(
@@ -135,31 +139,30 @@ export default function ArcGISCartModal({
           .map((l) => l.id.toString());
         setSelectedLayerIds(layersToSelect);
         if (mapServerInfo.data.mapServerInfo.tileInfo?.rows) {
-          const levels = mapServerInfo.data.mapServerInfo.tileInfo.lods.map(
-            (lod) => lod.level
-          );
-          const minzoom = Math.min(...levels);
-          const maxzoom = Math.max(...levels);
-          const sourceId = `${selection.name}-raster-source`;
-          map.addSource(sourceId, {
-            type: "raster",
-            tiles: [selection.url + "/tile/{z}/{y}/{x}"],
-            tileSize:
-              mapServerInfo.data.mapServerInfo.tileInfo.rows /
-              window.devicePixelRatio,
-            minzoom: Math.max(minzoom, 1),
-            maxzoom,
-            // ...(bounds ? { bounds } : {}),
+          const tileSource = new ArcGISTiledMapService(requestManager, {
+            url: selection.url,
+            supportHighDpiDisplays: true,
           });
-          const layerId = `${selection.name}-tiled-layer`;
-          map.addLayer({
-            id: layerId,
-            type: "raster",
-            source: sourceId,
+          // @ts-ignore
+          window.map = map;
+          tileSource.getLegend().then((legend) => {
+            console.log("legend", legend);
+          });
+          tileSource.getComputedMetadata().then((metadata) => {
+            console.log("metadata", metadata);
+          });
+          setCustomSources([tileSource]);
+          tileSource.addToMap(map).then(() => {
+            tileSource.getLayers().then((layers) => {
+              console.log("add layers", layers);
+              for (const layer of layers) {
+                map.addLayer(layer);
+              }
+            });
           });
           return () => {
-            map.removeLayer(layerId);
-            map.removeSource(sourceId);
+            setCustomSources([]);
+            tileSource.removeFromMap(map);
           };
         } else {
           const useTiles = false;

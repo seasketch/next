@@ -50,6 +50,7 @@ const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAAB
  * @class ArcGISDynamicMapService
  */
 export class ArcGISDynamicMapService {
+    // TODO: fetch metadata and calculate minzoom, maxzoom, and bounds
     /**
      * @param {Map} map MapBox GL JS Map instance
      * @param {string} id ID to be used when adding refering to this source from layers
