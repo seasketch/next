@@ -48,6 +48,7 @@ import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
+import cloneDeep from "lodash.clonedeep";
 
 const rejectAfter = (duration: number) =>
   new Promise((resolve, reject) => {
@@ -841,6 +842,15 @@ class MapContextManager {
 
   private sketchClassGLStyles: { [sketchClassId: number]: AnyLayer[] } = {};
 
+  getSketchClassGLStyles(sketchClassId: number): AnyLayer[] {
+    // Clone the style layers. Mapbox GL JS will freeze the objects after adding
+    // to the map, which will prevent us from modifying the style later and
+    // throw exceptions
+    return cloneDeep(
+      this.sketchClassGLStyles[sketchClassId] || this.defaultSketchLayers
+    );
+  }
+
   setSketchClassGlStyles(styles: { [sketchClassId: number]: AnyLayer[] }) {
     this.sketchClassGLStyles = styles;
     this.debouncedUpdateStyle();
@@ -1373,9 +1383,7 @@ class MapContextManager {
     const layers = this.assignSketchLayersToSketch(
       id,
       source,
-      sketchClassId && this.sketchClassGLStyles[sketchClassId]
-        ? this.sketchClassGLStyles[sketchClassId]
-        : this.defaultSketchLayers
+      this.getSketchClassGLStyles(sketchClassId || 99999)
     );
     if (
       (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||
