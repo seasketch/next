@@ -8,16 +8,19 @@ import {
   fetchFeatureLayerData,
 } from "./src/ArcGISVectorSource";
 import { ArcGISRESTServiceRequestManager } from "./src/ArcGISRESTServiceRequestManager";
-import {
+export {
   ArcGISTiledMapService,
   ArcGISTiledMapServiceOptions,
 } from "./src/ArcGISTiledMapService";
+export { MapServiceMetadata } from "./src/ServiceMetadata";
 export {
   CustomGLSource,
   CustomGLSourceOptions,
   DynamicRenderingSupportOptions,
   LegendItem,
   SingleImageLegend,
+  DataTableOfContentsItem,
+  FolderTableOfContentsItem,
 } from "./src/CustomGLSource";
 export {
   ArcGISDynamicMapService,
@@ -25,8 +28,6 @@ export {
   ArcGISDynamicMapServiceOptions,
   ArcGISVectorSourceOptions,
   ArcGISRESTServiceRequestManager,
-  ArcGISTiledMapService,
-  ArcGISTiledMapServiceOptions,
 };
 export { default as styleForFeatureLayer } from "./src/styleForFeatureLayer";
 export { ImageList } from "./src/ImageList";

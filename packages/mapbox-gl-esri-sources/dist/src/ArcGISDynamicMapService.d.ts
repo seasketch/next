@@ -1,29 +1,24 @@
-import { Map } from "mapbox-gl";
-export interface SublayerState {
-    /** 0-based sublayer index */
-    sublayer: number;
-    /** sublayer opacity from 0.0 - 1.0 */
-    opacity?: number;
-}
-export interface ArcGISDynamicMapServiceOptions {
+import { Map, AnyLayer } from "mapbox-gl";
+import { ComputedMetadata, CustomGLSource, CustomGLSourceOptions, LegendItem, OrderedLayerSettings } from "./CustomGLSource";
+import { ArcGISRESTServiceRequestManager } from "./ArcGISRESTServiceRequestManager";
+/** @hidden */
+export declare const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+export interface ArcGISDynamicMapServiceOptions extends CustomGLSourceOptions {
+    /**
+     * URL for the service. Should end in /MapServer
+     */
+    url: string;
     /**
      * Fetch larger images for high-resolution devices.
      * @default true
      * */
-    useDevicePixelRatio?: boolean;
+    supportHighDpiDisplays?: boolean;
     /**
      * List of sublayers to display, in order. Order will be respected  only if
-     * `supportsDynamicLayers` is true. If left undefined the service will be
+     * `supportsDynamicRendering` is true. If left undefined the service will be
      * with the default layers.
      * */
-    layers?: SublayerState[];
-    /**
-     * Set true if the Map Service supports [dynamic layers](https://developers.arcgis.com/rest/services-reference/export-map.htm#GUID-E781BA37-0260-485E-BB21-CA9B85206AAE)
-     * , in which case sublayer order and opacity can be specified. If set false
-     * any order and opacity settings will be ignored.
-     * @default false
-     * */
-    supportsDynamicLayers?: boolean;
+    layers?: OrderedLayerSettings;
     /**
      * All query parameters will be added to each MapServer export request,
      * overriding any settings made by this library. Useful for specifying image
@@ -38,82 +33,56 @@ export interface ArcGISDynamicMapServiceOptions {
      */
     useTiles?: boolean;
     /**
-     * Tile size in pixels. Only used if `useTiles` is true.
-     * @default 256
-     * */
+     * 256 or 512 would be most appropriate. default is 256
+     */
     tileSize?: number;
+    credentials?: {
+        username: string;
+        password: string;
+    };
 }
-/**
- * Add an Esri Dynamic Map Service as an image source to a MapBox GL JS map, and
- * use the included methods to update visible sublayers, set layer order and
- * opacity, support high-dpi screens, and transparently deal with issues related
- * to crossing the central meridian.
- *
- * ```typescript
- * import { ArcGISDynamicMapService } from "mapbox-gl-esri-sources";
- *
- * // ... setup your map
- *
- * const populatedPlaces = new ArcGISDynamicMapService(
- *   map,
- *   "populated-places-source",
- *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer", {
- *     supportsDynamicLayers: true,
- *     sublayers: [
- *       { sublayer: 0, opacity: 1 },
- *       { sublayer: 1, opacity: 1 },
- *       { sublayer: 2, opacity: 0.5 },
- *     ],
- *     queryParameters: {
- *       format: 'png32'
- *     }
- *   }
- * });
- *
- * // Don't forget to add a layer to reference your source
- * map.addLayer({
- *   id: "ags-layer",
- *   type: "raster",
- *   source: populatedPlaces.id,
- *   paint: {
- *     "raster-fade-duration": 0,
- *     "raster-opacity": 0.9
- *   },
- * });
- *
- * // turn off the third sublayer and update opacity
- * populatedPlaces.updateLayers([
- *   { sublayer: 0, opacity: 0.5 },
- *   { sublayer: 1, opacity: 1 },
- * ]);
- *
- * // disable high-dpi screen support
- * populatedPlaces.updateUseDevicePixelRatio(false);
- * ```
- * @class ArcGISDynamicMapService
- */
-export declare class ArcGISDynamicMapService {
+export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDynamicMapServiceOptions, LegendItem[]> {
     /** Source id used in the map style */
-    id: string;
-    private baseUrl;
-    private url;
-    private map;
+    sourceId: string;
+    private map?;
+    private requestManager;
+    private serviceMetadata?;
+    private layerMetadata?;
+    private options;
     private layers?;
-    private queryParameters;
-    private source;
-    private supportDevicePixelRatio;
     private supportsDynamicLayers;
     private debounceTimeout?;
     private _loading;
-    private useTiles;
-    private tileSize;
+    private resolution?;
     /**
-     * @param {Map} map MapBox GL JS Map instance
-     * @param {string} id ID to be used when adding refering to this source from layers
+     * @param {string} sourceId ID to be used when adding refering to this source from layers
      * @param {string} baseUrl Location of the service. Should end in /MapServer
      * @param {ArcGISDynamicMapServiceOptions} [options]
      */
-    constructor(map: Map, id: string, baseUrl: string, options?: ArcGISDynamicMapServiceOptions);
+    constructor(requestManager: ArcGISRESTServiceRequestManager, options: ArcGISDynamicMapServiceOptions);
+    private respondToResolutionChange;
+    /**
+     * Use ArcGISRESTServiceRequestManager to fetch metadata for the service,
+     * caching it on the instance for reuse.
+     */
+    private getMetadata;
+    /**
+     * Returns computed metadata for the service, including bounds, minzoom, maxzoom, and attribution.
+     * @returns ComputedMetadata
+     * @throws Error if metadata is not available
+     * @throws Error if tileInfo is not available
+     * */
+    getComputedMetadata(): Promise<ComputedMetadata>;
+    /**
+     * Private method used as the basis for getComputedMetadata and also used
+     * when generating the source data for addToMap.
+     * @returns Computed properties for the service, including bounds, minzoom, maxzoom, and attribution.
+     */
+    private getComputedProperties;
+    private onMapData;
+    private onMapError;
+    addToMap(map: Map): Promise<string>;
+    removeFromMap(map: Map): void;
     /**
      * Clears all map event listeners setup by this instance.
      */
@@ -140,7 +109,7 @@ export declare class ArcGISDynamicMapService {
      *               optional `opacity` props.
      *
      */
-    updateLayers(layers: SublayerState[]): void;
+    updateLayers(layers: OrderedLayerSettings): void;
     /**
      * Update query params sent with each export request and re-render the map. A
      * list of supported parameters can be found in the [Esri REST API docs](https://developers.arcgis.com/rest/services-reference/export-map.htm#GUID-C93E8957-99FD-473B-B0E1-68EA315EBD98).
@@ -167,4 +136,5 @@ export declare class ArcGISDynamicMapService {
      * @param enable
      */
     updateUseDevicePixelRatio(enable: boolean): void;
+    getGLStyleLayers(): Promise<AnyLayer[]>;
 }

@@ -5,26 +5,27 @@ import ArcGISSearchPage from "./ArcGISSearchPage";
 import {
   CatalogItem,
   NormalizedArcGISServerLocation,
-  extentToLatLngBounds,
+  useCatalogItemDetails,
   useCatalogItems,
-  useMapServerInfo,
 } from "./arcgis";
 import { LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
 import Skeleton from "../../../components/Skeleton";
-import { ArrowLeftIcon, MinusIcon, PlusIcon } from "@radix-ui/react-icons";
+import { ArrowLeftIcon } from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/solid";
 import Spinner from "../../../components/Spinner";
-import FeatureService from "mapbox-gl-arcgis-featureserver";
 import Button from "../../../components/Button";
 import {
   ArcGISDynamicMapService,
   ArcGISRESTServiceRequestManager,
   CustomGLSource,
   ArcGISTiledMapService,
+  DataTableOfContentsItem,
+  FolderTableOfContentsItem,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { Feature } from "geojson";
 import bbox from "@turf/bbox";
+import ArcGISCartLegend from "./ArcGISCartLegend";
 
 const requestManager = new ArcGISRESTServiceRequestManager();
 
@@ -53,19 +54,23 @@ export default function ArcGISCartModal({
   );
   const [map, setMap] = useState<Map | null>(null);
   const [showLayerList, setShowLayerList] = useState(false);
-  const [dynamicMapService, setDynamicMapService] =
-    useState<null | ArcGISDynamicMapService>(null);
-
-  // const mapServerInfo = useMapServerInfo(location?.baseUrl);
   const { catalogInfo, error, loading } = useCatalogItems(
     location?.servicesRoot
       ? selectedFolder
         ? location.servicesRoot + "/" + selectedFolder.name
         : location.servicesRoot
-      : ""
+      : "",
+    requestManager
   );
 
   const [selectedLayerIds, setSelectedLayerIds] = useState<string[]>([]);
+  const [sourceLoading, setSourceLoading] = useState(false);
+
+  const [tableOfContentsItems, setTableOfContentsItems] = useState<
+    (FolderTableOfContentsItem | DataTableOfContentsItem)[]
+  >([]);
+
+  const [visibleLayers, setVisibleLayers] = useState<string[]>([]);
 
   useEffect(() => {
     if (mapDiv) {
@@ -83,32 +88,50 @@ export default function ArcGISCartModal({
         // m.fitBounds(mapBounds as LngLatBounds, { padding: 10, animate: false });
         m.resize();
         setMap(m);
-        m.on("dataloading", (e) => {
-          setMapIsLoadingData(true);
-          setTimeout(() => {
-            for (const id in m.getStyle().sources || {}) {
-              if (!m.isSourceLoaded(id)) {
-                setMapIsLoadingData(true);
-                return;
-              }
-            }
-            setMapIsLoadingData(false);
-          }, 1000);
-        });
-        m.on("data", (e) => {
-          for (const id in m.getStyle().sources || {}) {
-            if (!m.isSourceLoaded(id)) {
-              setMapIsLoadingData(true);
-              return;
-            }
-          }
-          setMapIsLoadingData(false);
-        });
       });
     }
-  }, [mapDiv]);
+  }, [mapDiv, setSourceLoading]);
+  const [customSources, setCustomSources] = useState<CustomGLSource<any>[]>([]);
 
-  const mapServerInfo = useMapServerInfo(selection?.url);
+  useEffect(() => {
+    if (map) {
+      const dataLoadingHandler = () => {
+        let anyLoading = false;
+        if (customSources.length > 0) {
+          for (const source of customSources) {
+            if (source.loading) {
+              anyLoading = true;
+              break;
+            }
+          }
+        }
+        if (anyLoading) {
+          setSourceLoading(true);
+          setTimeout(() => {
+            dataLoadingHandler();
+          }, 200);
+        } else {
+          setSourceLoading(false);
+        }
+      };
+      map.on("dataloading", dataLoadingHandler);
+      map.on("data", dataLoadingHandler);
+      map.on("moveend", dataLoadingHandler);
+
+      return () => {
+        map.off("dataloading", dataLoadingHandler);
+        map.off("data", dataLoadingHandler);
+        map.off("moveend", dataLoadingHandler);
+      };
+    }
+  }, [map, setSourceLoading, customSources]);
+
+  const catalogItemDetailsQuery = useCatalogItemDetails(
+    requestManager,
+    selection?.type === "FeatureServer" || selection?.type === "MapServer"
+      ? selection.url
+      : undefined
+  );
 
   const [search, setSearch] = useState("");
 
@@ -121,163 +144,151 @@ export default function ArcGISCartModal({
         i.name.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const [mapIsLoadingData, setMapIsLoadingData] = useState(false);
-
-  const [customSources, setCustomSources] = useState<CustomGLSource<any>[]>([]);
-
   useEffect(() => {
-    if (mapServerInfo.data && map && selection) {
-      const bounds = extentToLatLngBounds(
-        mapServerInfo.data.mapServerInfo.fullExtent
-      ) as LngLatBoundsLike | undefined;
-      if (bounds) {
-        map.fitBounds(bounds, { padding: 10 });
-      }
-      if (selection.type === "MapServer") {
-        const layersToSelect = mapServerInfo.data.layerInfo
-          .filter((l) => l.defaultVisibility && l.type !== "Group Layer")
-          .map((l) => l.id.toString());
-        setSelectedLayerIds(layersToSelect);
-        if (mapServerInfo.data.mapServerInfo.tileInfo?.rows) {
-          const tileSource = new ArcGISTiledMapService(requestManager, {
-            url: selection.url,
-            supportHighDpiDisplays: true,
-          });
-          // @ts-ignore
-          window.map = map;
-          tileSource.getLegend().then((legend) => {
-            console.log("legend", legend);
-          });
-          tileSource.getComputedMetadata().then((metadata) => {
-            console.log("metadata", metadata);
-          });
-          setCustomSources([tileSource]);
-          tileSource.addToMap(map).then(() => {
-            tileSource.getLayers().then((layers) => {
-              console.log("add layers", layers);
-              for (const layer of layers) {
-                map.addLayer(layer);
-              }
-            });
-          });
-          return () => {
-            setCustomSources([]);
-            tileSource.removeFromMap(map);
-          };
-        } else {
-          const useTiles = false;
-          const sourceId = `${selection.name}-raster-source`;
-          const source = new ArcGISDynamicMapService(
-            map,
-            sourceId,
-            selection.url,
-            {
-              supportsDynamicLayers:
-                mapServerInfo.data.mapServerInfo.supportsDynamicLayers,
-              useDevicePixelRatio: true,
-              layers: layersToSelect.map((l) => ({
-                sublayer: parseInt(l),
-                opacity: 1,
-              })),
-              useTiles,
+    setSourceLoading(false);
+    setTableOfContentsItems([]);
+    if (catalogItemDetailsQuery.data && map && selection) {
+      const { type } = catalogItemDetailsQuery.data;
+      setSourceLoading(true);
+      if (type === "MapServer" && catalogItemDetailsQuery.data.tiled) {
+        const tileSource = new ArcGISTiledMapService(requestManager, {
+          url: selection.url,
+          supportHighDpiDisplays: true,
+        });
+        tileSource
+          .getComputedMetadata()
+          .then(({ bounds, tableOfContentsItems }) => {
+            setTableOfContentsItems(tableOfContentsItems);
+            setVisibleLayers(
+              tableOfContentsItems
+                .filter(
+                  (item) =>
+                    item.type === "data" && item.defaultVisibility === true
+                )
+                .map((item) => item.id)
+            );
+            if (bounds && bounds[0]) {
+              map.fitBounds(bounds, { padding: 10 });
             }
-          );
-          const layerId = `${selection.name}-dynamic-layer`;
-
-          map.addLayer({
-            id: layerId,
-            type: "raster",
-            source: sourceId,
-            paint: {
-              "raster-fade-duration": useTiles ? 100 : 0,
-            },
           });
-          setDynamicMapService(source);
-          return () => {
-            setDynamicMapService(null);
-            map.removeLayer(layerId);
-            map.removeSource(sourceId);
-          };
-        }
-      } else if (selection.type === "FeatureServer") {
-        const featureLayers = mapServerInfo.data.layerInfo.filter(
-          (l) => l.type === "Feature Layer"
-        );
-        const sources: { [sourceId: string]: FeatureService } = {};
-        // @ts-ignore
-        window.map = map;
-        for (const layer of featureLayers) {
-          if (layer.defaultVisibility === false) {
-            continue;
-          }
-          const sourceId = `${selection.name}-${layer.id}`;
-          const source = new FeatureService(sourceId, map, {
-            url: layer.url,
-            precision: 6,
-            simplifyFactor: 0.3,
-            setAttributionFromService: false,
-            minZoom: 0,
-          });
-
-          // const source = new ArcGISVectorSource(map, sourceId, layer.url, {
-          //   supportsPagination: true,
-          //   bytesLimit: 10000000, // 10 mb
-          // });
-          sources[sourceId] = source;
-          const imageList = layer.imageList;
-          if (layer.mapboxLayers) {
-            if (imageList) {
-              imageList.addToMap(map);
-            }
-            for (const glLayer of [...layer.mapboxLayers].reverse()) {
-              console.log("adding layer", glLayer, sourceId);
-              // @ts-ignore
-              map.addLayer({
-                ...glLayer,
-                source: sourceId,
-              });
-            }
-          }
-        }
-        return () => {
-          const layers = map.getStyle().layers || [];
-          for (const sourceId in sources) {
+        setCustomSources([tileSource]);
+        tileSource.addToMap(map).then(() => {
+          tileSource.getGLStyleLayers().then((layers) => {
             for (const layer of layers) {
-              // @ts-ignore
-              console.log("removing", layer.source, sourceId);
-              // @ts-ignore
-              if (layer.source === sourceId) {
-                map.removeLayer(layer.id);
-              }
+              map.addLayer(layer);
             }
-            // source.destroy();
-            sources[sourceId].destroySource();
+          });
+        });
+        return () => {
+          setCustomSources([]);
+          tileSource.destroy();
+        };
+      } else if (type === "MapServer") {
+        const dynamicSource = new ArcGISDynamicMapService(requestManager, {
+          url: selection.url,
+          supportHighDpiDisplays: true,
+          tileSize: 512,
+          useTiles: false,
+        });
+        dynamicSource.getComputedMetadata().then((data) => {
+          const { bounds, tableOfContentsItems } = data;
+          setTableOfContentsItems(tableOfContentsItems);
+          setVisibleLayers(
+            tableOfContentsItems
+              .filter(
+                (item) =>
+                  item.type === "data" && item.defaultVisibility === true
+              )
+              .map((item) => item.id)
+          );
+          if (bounds && bounds[0]) {
+            map.fitBounds(bounds, { padding: 10 });
           }
+        });
+        setCustomSources([dynamicSource]);
+        dynamicSource.addToMap(map).then(() => {
+          dynamicSource.getGLStyleLayers().then((layers) => {
+            for (const layer of layers) {
+              map.addLayer(layer);
+            }
+          });
+        });
+        return () => {
+          setCustomSources([]);
+          dynamicSource.destroy();
         };
       }
+      return;
+      // } else if (selection.type === "FeatureServer") {
+      //   const featureLayers = mapServerInfo.data.layerInfo.filter(
+      //     (l) => l.type === "Feature Layer"
+      //   );
+      //   const sources: { [sourceId: string]: FeatureService } = {};
+      //   // @ts-ignore
+      //   window.map = map;
+      //   for (const layer of featureLayers) {
+      //     if (layer.defaultVisibility === false) {
+      //       continue;
+      //     }
+      //     const sourceId = `${selection.name}-${layer.id}`;
+      //     const source = new FeatureService(sourceId, map, {
+      //       url: layer.url,
+      //       precision: 6,
+      //       simplifyFactor: 0.3,
+      //       setAttributionFromService: false,
+      //       minZoom: 0,
+      //     });
+
+      //     // const source = new ArcGISVectorSource(map, sourceId, layer.url, {
+      //     //   supportsPagination: true,
+      //     //   bytesLimit: 10000000, // 10 mb
+      //     // });
+      //     sources[sourceId] = source;
+      //     const imageList = layer.imageList;
+      //     if (layer.mapboxLayers) {
+      //       if (imageList) {
+      //         imageList.addToMap(map);
+      //       }
+      //       for (const glLayer of [...layer.mapboxLayers].reverse()) {
+      //         console.log("adding layer", glLayer, sourceId);
+      //         // @ts-ignore
+      //         map.addLayer({
+      //           ...glLayer,
+      //           source: sourceId,
+      //         });
+      //       }
+      //     }
+      //   }
+      //   return () => {
+      //     const layers = map.getStyle().layers || [];
+      //     for (const sourceId in sources) {
+      //       for (const layer of layers) {
+      //         // @ts-ignore
+      //         console.log("removing", layer.source, sourceId);
+      //         // @ts-ignore
+      //         if (layer.source === sourceId) {
+      //           map.removeLayer(layer.id);
+      //         }
+      //       }
+      //       // source.destroy();
+      //       sources[sourceId].destroySource();
+      //     }
+      //   };
+      // }
     }
-  }, [mapServerInfo.data, map]);
+  }, [catalogItemDetailsQuery.data, map]);
 
   useEffect(() => {
-    if (selectedLayerIds && map && dynamicMapService) {
-      dynamicMapService.updateLayers(
-        selectedLayerIds.sort().map((l) => ({
-          sublayer: parseInt(l),
+    if (customSources.length === 1) {
+      const source = customSources[0];
+      source.updateLayers(
+        visibleLayers.map((id) => ({
+          id: id.toString(),
           opacity: 1,
         }))
       );
-      if (selectedLayerIds.length === 0) {
-        map.removeLayer("dynamic-layer");
-      } else if (!map.getLayer("dynamic-layer")) {
-        map.addLayer({
-          id: "dynamic-layer",
-          type: "raster",
-          source: "dynamic",
-        });
-      }
-      // }
     }
-  }, [selectedLayerIds, map, dynamicMapService]);
+  }, [visibleLayers, customSources]);
 
   return createPortal(
     <>
@@ -386,11 +397,11 @@ export default function ArcGISCartModal({
                             height={133 / 3}
                             loading="lazy"
                             alt="thumbnail map"
-                            className="bg-gray-100 flex-none"
+                            className="bg-gray-100 flex-none rounded-sm"
                           />
                           {selection &&
                             selection === item &&
-                            mapServerInfo.loading && (
+                            catalogItemDetailsQuery.loading && (
                               <div className="absolute w-full h-full flex items-center justify-center z-50 bg-blue-700 bg-opacity-20 top-0 left-0">
                                 <Spinner />
                               </div>
@@ -401,99 +412,21 @@ export default function ArcGISCartModal({
                   ))}
                 </div>
               </div>
-              {map &&
-                mapServerInfo.data?.layerInfo &&
-                // @ts-ignore
-                !mapServerInfo.data.mapServerInfo.tileInfo?.format &&
-                (showLayerList ? (
-                  <div className="w-60 max-h-96 overflow-x-hidden overflow-y-scroll absolute bg-white shadow rounded left-96 ml-4 top-4 z-50 px-2 pr-8 text-sm pb-2">
-                    <div className="flex items-center py-1 px-1">
-                      <button
-                        className="border inline-block"
-                        onClick={() => setShowLayerList(false)}
-                      >
-                        <MinusIcon className="w-4 h-4 text-gray-400" />
-                      </button>
-
-                      <button
-                        className="underline text-sm text-primary-500 ml-2"
-                        onClick={() => {
-                          if (
-                            selectedLayerIds.length > 0 ||
-                            !mapServerInfo?.data?.layerInfo
-                          ) {
-                            setSelectedLayerIds([]);
-                          } else {
-                            setSelectedLayerIds(
-                              mapServerInfo.data.layerInfo
-                                .filter((l) => l.type !== "Group Layer")
-                                .map((l) => l.id.toString())
-                                .sort()
-                            );
-                          }
-                        }}
-                      >
-                        toggle layers
-                      </button>
-                      {mapIsLoadingData ? (
-                        <Spinner className="ml-2" />
-                      ) : (
-                        <div> </div>
-                      )}
-                    </div>
-                    {mapServerInfo.data.layerInfo
-                      .filter((l) => l.type !== "Group Layer")
-                      .map((layer) => (
-                        <div className="w-full truncate px-1 py-1">
-                          <label>
-                            <input
-                              className="rounded mr-2"
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedLayerIds([
-                                    ...(selectedLayerIds || []),
-                                    e.target.value,
-                                  ]);
-                                } else {
-                                  setSelectedLayerIds(
-                                    (selectedLayerIds || []).filter(
-                                      (id) => id !== e.target.value
-                                    )
-                                  );
-                                }
-                              }}
-                              checked={
-                                selectedLayerIds &&
-                                selectedLayerIds.includes(layer.id.toString())
-                              }
-                              type="checkbox"
-                              name="checkbox"
-                              value={layer.id.toString()}
-                            />
-                            {layer.name}
-                          </label>
-                        </div>
-                      ))}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowLayerList(true)}
-                    className="absolute bg-white shadow rounded-full left-96 ml-4 top-4 z-50 px-4 pr-8 flex items-center"
-                  >
-                    <PlusIcon className="w-4 h-4 text-gray-400 mr-1 -ml-2" />
-                    {
-                      mapServerInfo.data.layerInfo.filter(
-                        (l) => l.type !== "Group Layer"
-                      ).length
-                    }{" "}
-                    layers
-                    {mapIsLoadingData ? (
-                      <Spinner className="absolute right-1 top-0.5" />
-                    ) : (
-                      <div> </div>
-                    )}
-                  </button>
-                ))}
+              <ArcGISCartLegend
+                loading={sourceLoading}
+                items={tableOfContentsItems}
+                className="absolute left-96 bg-white top-0 z-50 mt-2 ml-2"
+                visibleLayerIds={visibleLayers}
+                toggleLayer={(id) => {
+                  setVisibleLayers((prev) => {
+                    if (prev.includes(id)) {
+                      return prev.filter((i) => i !== id);
+                    } else {
+                      return [...prev, id];
+                    }
+                  });
+                }}
+              />
               <div ref={setMapDiv} className={`bg-gray-50 flex-1`}></div>
             </div>
             <div className="border-t border-gray-800 border-opacity-20 flex w-full bg-gray-200 p-4 rounded-b-md items-end justify-end gap-2">

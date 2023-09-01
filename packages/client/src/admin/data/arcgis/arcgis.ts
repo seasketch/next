@@ -3,8 +3,10 @@ import { Layer } from "mapbox-gl";
 import { useContext, useEffect, useState } from "react";
 import { Symbol } from "arcgis-rest-api";
 import {
+  ArcGISRESTServiceRequestManager,
   ImageList,
   styleForFeatureLayer,
+  MapServiceMetadata,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { v4 as uuid } from "uuid";
 import bboxPolygon from "@turf/bbox-polygon";
@@ -34,6 +36,7 @@ import { customAlphabet } from "nanoid";
 import { default as axios } from "axios";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import { MutationFunctionOptions } from "@apollo/client";
+import { metadata } from "../../../editor/config";
 // import { ArcGISVectorSourceCacheEvent } from "../../../dataLayers/ArcGISVectorSourceCache";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -351,6 +354,60 @@ export function useMapServerInfo(location: string | undefined) {
   };
 }
 
+export interface MapServerCatalogItemDetails {
+  type: "MapServer";
+  tiled: boolean;
+  metadata: MapServiceMetadata;
+}
+
+export interface FeatureServerCatalogItemDetails {
+  type: "FeatureServer";
+  metadata: any;
+}
+
+export function useCatalogItemDetails(
+  requestManager: ArcGISRESTServiceRequestManager,
+  url?: string
+) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+  const [data, setData] = useState<
+    MapServerCatalogItemDetails | FeatureServerCatalogItemDetails | null
+  >();
+
+  useEffect(() => {
+    setLoading(true);
+    setError(undefined);
+    setData(null);
+    const AC = new AbortController();
+    if (url && /MapServer/.test(url)) {
+      requestManager
+        .getMapServiceMetadata(url, { signal: AC.signal })
+        .then((data) => {
+          if (!AC.signal.aborted) {
+            setError(undefined);
+            setLoading(false);
+            setData({
+              type: "MapServer",
+              tiled: !!data.serviceMetadata.singleFusedMapCache,
+              metadata: data.serviceMetadata,
+            });
+          }
+        })
+        .catch((e) => {
+          if (e.cancelled) {
+            // do nothing
+          } else {
+            setError(e.message);
+          }
+        });
+      return () => AC.abort();
+    }
+  }, [url]);
+
+  return { data, loading, error };
+}
+
 export function metersToDegrees(x: number, y: number): [number, number] {
   var lon = (x * 180) / 20037508.34;
   var lat =
@@ -397,63 +454,10 @@ export interface CatalogItem {
   url: string;
 }
 
-function cachedResponseIsExpired(response: Response) {
-  const cacheControlHeader = response.headers.get("Cache-Control");
-  if (cacheControlHeader) {
-    const expires = /expires=(.*)/i.exec(cacheControlHeader);
-    if (expires) {
-      const expiration = new Date(expires[1]);
-      if (new Date().getTime() > expiration.getTime()) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-  return false;
-}
-
-async function fetchWithTTL(
-  url: string,
-  ttl: number,
-  options?: RequestInit
-  // @ts-ignore
-): Promise<Response> {
-  const cache = await caches.open("seasketch-arcgis-browser");
-  if (!options?.signal?.aborted) {
-    const request = new Request(url, options);
-    if (options?.signal?.aborted) {
-      Promise.reject("aborted");
-    }
-    let cachedResponse = await cache.match(request);
-    if (cachedResponse && cachedResponseIsExpired(cachedResponse)) {
-      cache.delete(request);
-      cachedResponse = undefined;
-    }
-    if (cachedResponse) {
-      return cachedResponse;
-    } else {
-      const response = await fetch(url, options);
-      if (!options?.signal?.aborted) {
-        const headers = new Headers(response.headers);
-        headers.set(
-          "Cache-Control",
-          `Expires=${new Date(new Date().getTime() + 60000 * 2).toUTCString()}`
-        );
-        const copy = response.clone();
-        const clone = new Response(copy.body, {
-          headers,
-          status: response.status,
-          statusText: response.statusText,
-        });
-        cache.put(url, clone);
-      }
-      return response;
-    }
-  }
-}
-
-export function useCatalogItems(location: string) {
+export function useCatalogItems(
+  location: string,
+  requestManager: ArcGISRESTServiceRequestManager
+) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [catalogInfo, setCatalogInfo] = useState<CatalogItem[]>();
@@ -462,15 +466,17 @@ export function useCatalogItems(location: string) {
     setCatalogInfo([]);
     setLoading(true);
     setError(undefined);
+    if (!location) {
+      return;
+    }
     let abortController = new AbortController();
-    fetchWithTTL(location + "?f=json", 5, {
-      signal: abortController.signal,
-      // cache: "force-cache",
-    }).then(async (r) => {
-      const data = await r.json();
-      if (!abortController.signal.aborted) {
-        setError(undefined);
-        setLoading(false);
+    requestManager
+      .getCatalogItems(location, { signal: abortController.signal })
+      .then((data) => {
+        if (!abortController.signal.aborted) {
+          setError(undefined);
+          setLoading(false);
+        }
         const info = [
           ...(data.folders || []).map((name: string) => ({
             name,
@@ -486,17 +492,29 @@ export function useCatalogItems(location: string) {
           }
           let name = item.name;
           if (/\//.test(item.name)) {
-            name = item.name.split("/").slice(-1);
+            name = item.name.split("/").slice(-1)[0];
           }
           return {
             name,
             url,
-            type: item.type,
+            type: item.type as
+              | "Folder"
+              | "GPServer"
+              | "MapServer"
+              | "FeatureServer"
+              | "GeometryServer"
+              | "GeocodeServer",
           };
         });
         setCatalogInfo(info);
-      }
-    });
+      })
+      .catch((e) => {
+        if ("cancelled" in e) {
+          // do nothing
+        } else {
+          setError(e.message);
+        }
+      });
     return () => abortController.abort();
   }, [location]);
 

@@ -76,11 +76,11 @@ export interface DetailedLayerMetadata {
   currentVersion: number;
   id: number;
   name: string;
-  type: "Feature Layer" | "Raster Layer";
+  type: "Feature Layer" | "Raster Layer" | "Group Layer";
   description: string;
   geometryType: esriGeometryType;
   copyrightText: string;
-  parentLayer: null | number;
+  parentLayer: null | { id: number; name: string };
   sublayers: { id: number; name: string }[];
   minScale: number;
   maxScale: number;

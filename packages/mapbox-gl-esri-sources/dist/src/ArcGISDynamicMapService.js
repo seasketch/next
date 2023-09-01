@@ -1,85 +1,63 @@
+import { v4 as uuid } from "uuid";
+import { contentOrFalse, extentToLatLngBounds, generateMetadataForLayer, makeLegend, } from "./utils";
 /** @hidden */
-const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
-/**
- * Add an Esri Dynamic Map Service as an image source to a MapBox GL JS map, and
- * use the included methods to update visible sublayers, set layer order and
- * opacity, support high-dpi screens, and transparently deal with issues related
- * to crossing the central meridian.
- *
- * ```typescript
- * import { ArcGISDynamicMapService } from "mapbox-gl-esri-sources";
- *
- * // ... setup your map
- *
- * const populatedPlaces = new ArcGISDynamicMapService(
- *   map,
- *   "populated-places-source",
- *   "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer", {
- *     supportsDynamicLayers: true,
- *     sublayers: [
- *       { sublayer: 0, opacity: 1 },
- *       { sublayer: 1, opacity: 1 },
- *       { sublayer: 2, opacity: 0.5 },
- *     ],
- *     queryParameters: {
- *       format: 'png32'
- *     }
- *   }
- * });
- *
- * // Don't forget to add a layer to reference your source
- * map.addLayer({
- *   id: "ags-layer",
- *   type: "raster",
- *   source: populatedPlaces.id,
- *   paint: {
- *     "raster-fade-duration": 0,
- *     "raster-opacity": 0.9
- *   },
- * });
- *
- * // turn off the third sublayer and update opacity
- * populatedPlaces.updateLayers([
- *   { sublayer: 0, opacity: 0.5 },
- *   { sublayer: 1, opacity: 1 },
- * ]);
- *
- * // disable high-dpi screen support
- * populatedPlaces.updateUseDevicePixelRatio(false);
- * ```
- * @class ArcGISDynamicMapService
- */
+export const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 export class ArcGISDynamicMapService {
     // TODO: fetch metadata and calculate minzoom, maxzoom, and bounds
     /**
-     * @param {Map} map MapBox GL JS Map instance
-     * @param {string} id ID to be used when adding refering to this source from layers
+     * @param {string} sourceId ID to be used when adding refering to this source from layers
      * @param {string} baseUrl Location of the service. Should end in /MapServer
      * @param {ArcGISDynamicMapServiceOptions} [options]
      */
-    constructor(map, id, baseUrl, options) {
-        this.supportDevicePixelRatio = true;
+    constructor(requestManager, options) {
         this.supportsDynamicLayers = false;
         this._loading = true;
-        this.useTiles = false;
-        this.tileSize = 256;
-        this.updateSource = () => {
-            this._loading = true;
-            if (this.useTiles || this.source.type === "raster") {
-                // @ts-ignore - setTiles is in fact a valid method
-                this.source.setTiles([this.getUrl()]);
+        this.respondToResolutionChange = () => {
+            if (this.options.supportHighDpiDisplays) {
+                this.updateSource();
             }
-            else {
-                const bounds = this.map.getBounds();
-                this.source.updateImage({
-                    url: this.getUrl(),
-                    coordinates: [
-                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                    ],
-                });
+            if (this.resolution) {
+                matchMedia(this.resolution).removeListener(this.respondToResolutionChange);
+            }
+            this.resolution = `(resolution: ${window.devicePixelRatio}dppx)`;
+            matchMedia(this.resolution).addListener(this.respondToResolutionChange);
+        };
+        this.onMapData = (event) => {
+            if (event.sourceId && event.sourceId === this.sourceId) {
+                this._loading = false;
+            }
+        };
+        this.onMapError = (event) => {
+            if (event.sourceId === this.sourceId &&
+                event.dataType === "source" &&
+                event.sourceDataType === "content") {
+                this._loading = false;
+            }
+        };
+        this.updateSource = () => {
+            var _a;
+            this._loading = true;
+            const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
+            if (source && this.map) {
+                if (source.type === "raster") {
+                    // @ts-ignore - setTiles is in fact a valid method
+                    source.setTiles([this.getUrl()]);
+                }
+                else if (source.type === "image") {
+                    const bounds = this.map.getBounds();
+                    source.updateImage({
+                        url: this.getUrl(),
+                        coordinates: [
+                            [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                            [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                        ],
+                    });
+                }
+                else {
+                    // do nothing, source isn't added
+                }
             }
         };
         this.debouncedUpdateSource = () => {
@@ -91,40 +69,172 @@ export class ArcGISDynamicMapService {
                 this.updateSource();
             }, 5);
         };
-        this.id = id;
-        this.baseUrl = baseUrl;
-        this.url = new URL(this.baseUrl + "/export");
-        this.url.searchParams.set("f", "image");
-        this.map = map;
-        if (!(options === null || options === void 0 ? void 0 : options.useTiles)) {
-            this.map.on("moveend", this.updateSource);
+        this.options = options;
+        this.requestManager = requestManager;
+        this.sourceId = (options === null || options === void 0 ? void 0 : options.sourceId) || uuid();
+        // remove trailing slash if present
+        options.url = options.url.replace(/\/$/, "");
+        if (!/rest\/services/.test(options.url) || !/MapServer/.test(options.url)) {
+            throw new Error("Invalid ArcGIS REST Service URL");
         }
-        this.layers = options === null || options === void 0 ? void 0 : options.layers;
-        this.useTiles = (options === null || options === void 0 ? void 0 : options.useTiles) || false;
-        this.tileSize = (options === null || options === void 0 ? void 0 : options.tileSize) || 256;
-        this.queryParameters = {
-            transparent: "true",
-            ...((options === null || options === void 0 ? void 0 : options.queryParameters) || {}),
-        };
-        if (options && "useDevicePixelRatio" in options) {
-            this.supportDevicePixelRatio = !!options.useDevicePixelRatio;
-        }
-        matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addListener(() => {
-            if (this.supportDevicePixelRatio) {
-                this.updateSource();
-            }
-        });
-        this.supportsDynamicLayers = (options === null || options === void 0 ? void 0 : options.supportsDynamicLayers) || false;
-        const bounds = this.map.getBounds();
-        if (this.useTiles) {
-            this.map.addSource(this.id, {
-                type: "raster",
-                tiles: [this.getUrl()],
-                tileSize: this.tileSize,
+        this.resolution = `(resolution: ${window.devicePixelRatio}dppx)`;
+        matchMedia(this.resolution).addListener(this.respondToResolutionChange);
+    }
+    /**
+     * Use ArcGISRESTServiceRequestManager to fetch metadata for the service,
+     * caching it on the instance for reuse.
+     */
+    getMetadata() {
+        if (this.serviceMetadata && this.layerMetadata) {
+            return Promise.resolve({
+                serviceMetadata: this.serviceMetadata,
+                layers: this.layerMetadata,
             });
         }
         else {
-            this.map.addSource(this.id, {
+            return this.requestManager
+                .getMapServiceMetadata(this.options.url, {
+                credentials: this.options.credentials,
+            })
+                .then(({ serviceMetadata, layers }) => {
+                this.serviceMetadata = serviceMetadata;
+                this.layerMetadata = layers;
+                this.supportsDynamicLayers = serviceMetadata.supportsDynamicLayers;
+                return { serviceMetadata, layers };
+            });
+        }
+    }
+    /**
+     * Returns computed metadata for the service, including bounds, minzoom, maxzoom, and attribution.
+     * @returns ComputedMetadata
+     * @throws Error if metadata is not available
+     * @throws Error if tileInfo is not available
+     * */
+    async getComputedMetadata() {
+        var _a, _b;
+        const { serviceMetadata, layers } = await this.getMetadata();
+        const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+        const results = /\/.+\/MapServer/.exec(this.options.url);
+        let label = results ? results[0] : false;
+        if (!label) {
+            if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
+                label = this.layerMetadata.layers[0].name;
+            }
+        }
+        const legendData = await this.requestManager.getLegendMetadata(this.options.url);
+        // find hidden layers
+        // Not as simple as just reading the defaultVisibility property, because
+        // if a parent layer is hidden, all children are hidden as well. Folders can
+        // be nested arbitrarily deep.
+        const hiddenIds = new Set();
+        for (const layer of layers.layers) {
+            if (!layer.defaultVisibility) {
+                hiddenIds.add(layer.id);
+            }
+            else {
+                // check if parents are hidden
+                if (layer.parentLayer) {
+                    if (hiddenIds.has(layer.parentLayer.id)) {
+                        hiddenIds.add(layer.id);
+                    }
+                    else {
+                        // may not be added yet
+                        const parent = layers.layers.find((l) => { var _a; return l.id === ((_a = layer.parentLayer) === null || _a === void 0 ? void 0 : _a.id); });
+                        if (parent && !parent.defaultVisibility) {
+                            hiddenIds.add(layer.id);
+                            hiddenIds.add(parent.id);
+                        }
+                    }
+                }
+            }
+        }
+        return {
+            bounds: bounds || undefined,
+            minzoom,
+            maxzoom,
+            attribution,
+            tableOfContentsItems: layers.layers.map((lyr) => {
+                const legendLayer = legendData.layers.find((l) => l.layerId === lyr.id);
+                const isFolder = lyr.type === "Group Layer";
+                if (isFolder) {
+                    return {
+                        type: "folder",
+                        id: lyr.id.toString(),
+                        label: lyr.name,
+                        defaultVisibility: hiddenIds.has(lyr.id)
+                            ? false
+                            : lyr.defaultVisibility,
+                        parentId: lyr.parentLayer
+                            ? lyr.parentLayer.id.toString()
+                            : undefined,
+                    };
+                }
+                else {
+                    return {
+                        type: "data",
+                        id: lyr.id.toString(),
+                        label: lyr.name,
+                        defaultVisibility: hiddenIds.has(lyr.id)
+                            ? false
+                            : lyr.defaultVisibility,
+                        metadata: generateMetadataForLayer(this.options.url + "/" + lyr.id, this.serviceMetadata, lyr),
+                        parentId: lyr.parentLayer
+                            ? lyr.parentLayer.id.toString()
+                            : undefined,
+                        legend: makeLegend(legendData, lyr.id),
+                    };
+                }
+            }),
+            supportsDynamicRendering: {
+                layerOpacity: this.supportsDynamicLayers,
+                layerOrder: true,
+                layerVisibility: true,
+            },
+        };
+    }
+    /**
+     * Private method used as the basis for getComputedMetadata and also used
+     * when generating the source data for addToMap.
+     * @returns Computed properties for the service, including bounds, minzoom, maxzoom, and attribution.
+     */
+    async getComputedProperties() {
+        var _a, _b;
+        const { serviceMetadata, layers } = await this.getMetadata();
+        const levels = ((_a = serviceMetadata.tileInfo) === null || _a === void 0 ? void 0 : _a.lods.map((l) => l.level)) || [];
+        const attribution = contentOrFalse(layers.layers[0].copyrightText) ||
+            contentOrFalse(serviceMetadata.copyrightText) ||
+            contentOrFalse((_b = serviceMetadata.documentInfo) === null || _b === void 0 ? void 0 : _b.Author) ||
+            undefined;
+        const minzoom = Math.min(...levels);
+        const maxzoom = Math.max(...levels);
+        return {
+            minzoom,
+            maxzoom,
+            bounds: await extentToLatLngBounds(serviceMetadata.fullExtent),
+            attribution,
+        };
+    }
+    async addToMap(map) {
+        var _a;
+        const { attribution, bounds } = await this.getComputedProperties();
+        this.map = map;
+        if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.useTiles)) {
+            this.map.on("moveend", this.updateSource);
+            this.map.on("data", this.onMapData);
+            this.map.on("error", this.onMapError);
+        }
+        if (this.options.useTiles) {
+            this.map.addSource(this.sourceId, {
+                type: "raster",
+                tiles: [this.getUrl()],
+                tileSize: this.options.tileSize || 256,
+                bounds: bounds,
+                attribution,
+            });
+        }
+        else {
+            const bounds = this.map.getBounds();
+            this.map.addSource(this.sourceId, {
                 type: "image",
                 url: this.getUrl(),
                 coordinates: [
@@ -135,29 +245,39 @@ export class ArcGISDynamicMapService {
                 ],
             });
         }
-        this.source = this.map.getSource(this.id);
-        this.map.on("data", (event) => {
-            if (event.sourceId === this.id &&
-                event.dataType === "source" &&
-                event.sourceDataType === "content") {
-                this._loading = false;
+        return this.sourceId;
+    }
+    removeFromMap(map) {
+        if (map.getSource(this.sourceId)) {
+            const layers = map.getStyle().layers || [];
+            for (const layer of layers) {
+                if ("source" in layer && layer.source === this.sourceId) {
+                    map.removeLayer(layer.id);
+                }
             }
-        });
-        this.map.on("error", (event) => {
-            if (event.sourceId && event.sourceId === this.id) {
-                this._loading = false;
-            }
-        });
+            map.off("moveend", this.updateSource);
+            map.off("data", this.onMapData);
+            map.off("error", this.onMapError);
+            map.removeSource(this.sourceId);
+            this.map = undefined;
+        }
     }
     /**
      * Clears all map event listeners setup by this instance.
      */
     destroy() {
-        this.map.off("moveend", this.updateSource);
-        this.map.off("data", this.updateSource);
-        this.map.off("error", this.updateSource);
+        matchMedia(this.resolution).removeListener(this.respondToResolutionChange);
+        if (this.map) {
+            this.removeFromMap(this.map);
+        }
     }
     getUrl() {
+        if (!this.map) {
+            throw new Error("Map not set");
+        }
+        let url = new URL(this.options.url + "/export");
+        url.searchParams.set("f", "image");
+        url.searchParams.set("transparent", "true");
         const bounds = this.map.getBounds();
         // create bbox in web mercator
         let bbox = [
@@ -167,39 +287,39 @@ export class ArcGISDynamicMapService {
             lat2meters(bounds.getNorth()),
         ];
         const groundResolution = getGroundResolution(this.map.getZoom() +
-            (this.supportDevicePixelRatio ? window.devicePixelRatio - 1 : 0));
+            (this.options.supportHighDpiDisplays ? window.devicePixelRatio - 1 : 0));
         // Width and height can't be based on container width if the map is rotated
         const width = Math.round((bbox[2] - bbox[0]) / groundResolution);
         const height = Math.round((bbox[3] - bbox[1]) / groundResolution);
-        this.url.searchParams.set("format", "png");
-        this.url.searchParams.set("size", [width, height].join(","));
-        if (this.supportDevicePixelRatio) {
+        url.searchParams.set("format", "png");
+        url.searchParams.set("size", [width, height].join(","));
+        if (this.options.supportHighDpiDisplays) {
             switch (window.devicePixelRatio) {
                 case 1:
                     // standard pixelRatio looks best at 96
-                    this.url.searchParams.set("dpi", "96");
+                    url.searchParams.set("dpi", "96");
                     break;
                 case 2:
                     // for higher pixelRatios, esri's software seems to like the dpi
                     // bumped up somewhat higher than a simple formula would suggest
-                    this.url.searchParams.set("dpi", "220");
+                    url.searchParams.set("dpi", "220");
                     break;
                 case 3:
-                    this.url.searchParams.set("dpi", "390");
+                    url.searchParams.set("dpi", "390");
                     break;
                 default:
-                    this.url.searchParams.set("dpi", 
+                    url.searchParams.set("dpi", 
                     // Bumping pixel ratio a bit. see above
                     (window.devicePixelRatio * 96 * 1.22).toString());
                     break;
             }
         }
         else {
-            this.url.searchParams.set("dpi", "96");
+            url.searchParams.set("dpi", "96");
         }
         // Default to epsg:3857
-        this.url.searchParams.set("imageSR", "102100");
-        this.url.searchParams.set("bboxSR", "102100");
+        url.searchParams.set("imageSR", "102100");
+        url.searchParams.set("bboxSR", "102100");
         // If the map extent crosses the meridian, we need to create a new
         // projection and map the x coordinates to that space. The Esri JS API
         // exhibits this same behavior. Solution was inspired by:
@@ -207,7 +327,7 @@ export class ArcGISDynamicMapService {
         // * https://gist.github.com/perrygeo/4478844
         if (Math.abs(bbox[0]) > 20037508.34 || Math.abs(bbox[2]) > 20037508.34) {
             const centralMeridian = bounds.getCenter().lng;
-            if (this.supportDevicePixelRatio && window.devicePixelRatio > 1) {
+            if (this.options.supportHighDpiDisplays && window.devicePixelRatio > 1) {
                 bbox[0] = -(width * groundResolution) / (window.devicePixelRatio * 2);
                 bbox[2] = (width * groundResolution) / (window.devicePixelRatio * 2);
             }
@@ -218,25 +338,25 @@ export class ArcGISDynamicMapService {
             const sr = JSON.stringify({
                 wkt: `PROJCS["WGS_1984_Web_Mercator_Auxiliary_Sphere",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Mercator_Auxiliary_Sphere"],PARAMETER["False_Easting",0.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",${centralMeridian}],PARAMETER["Standard_Parallel_1",0.0],PARAMETER["Auxiliary_Sphere_Type",0.0],UNIT["Meter",1.0]]`,
             });
-            this.url.searchParams.set("imageSR", sr);
-            this.url.searchParams.set("bboxSR", sr);
+            url.searchParams.set("imageSR", sr);
+            url.searchParams.set("bboxSR", sr);
         }
         if (Array.isArray(this.layers)) {
             if (this.layers.length === 0) {
                 return blankDataUri;
             }
             else {
-                this.url.searchParams.set("layers", `show:${this.layers.map((lyr) => lyr.sublayer).join(",")}`);
+                url.searchParams.set("layers", `show:${this.layers.map((lyr) => lyr.id).join(",")}`);
             }
         }
-        this.url.searchParams.set("bbox", bbox.join(","));
-        this.url.searchParams.delete("dynamicLayers");
+        url.searchParams.set("bbox", bbox.join(","));
+        url.searchParams.delete("dynamicLayers");
         let layersInOrder = true;
         let hasOpacityUpdates = false;
         if (this.supportsDynamicLayers && this.layers) {
             for (var i = 0; i < this.layers.length; i++) {
                 if (this.layers[i - 1] &&
-                    this.layers[i].sublayer < this.layers[i - 1].sublayer) {
+                    parseInt(this.layers[i].id) < parseInt(this.layers[i - 1].id)) {
                     layersInOrder = false;
                 }
                 const opacity = this.layers[i].opacity;
@@ -249,9 +369,9 @@ export class ArcGISDynamicMapService {
             // need to provide renderInfo
             const dynamicLayers = this.layers.map((lyr) => {
                 return {
-                    id: lyr.sublayer,
+                    id: lyr.id,
                     source: {
-                        mapLayerId: lyr.sublayer,
+                        mapLayerId: lyr.id,
                         type: "mapLayer",
                     },
                     drawingInfo: {
@@ -259,28 +379,34 @@ export class ArcGISDynamicMapService {
                     },
                 };
             });
-            this.url.searchParams.set("dynamicLayers", JSON.stringify(dynamicLayers));
+            url.searchParams.set("dynamicLayers", JSON.stringify(dynamicLayers));
         }
-        for (const key in this.queryParameters) {
-            this.url.searchParams.set(key, this.queryParameters[key].toString());
+        for (const key in this.options.queryParameters) {
+            url.searchParams.set(key, this.options.queryParameters[key].toString());
         }
-        if (this.useTiles) {
-            this.url.searchParams.set("bbox", `seasketch-replace-me`);
-            if (this.supportDevicePixelRatio && window.devicePixelRatio > 1) {
-                const size = this.tileSize * window.devicePixelRatio;
-                this.url.searchParams.set("size", [size, size].join(","));
+        const tileSize = this.options.tileSize || 256;
+        if (this.options.useTiles) {
+            url.searchParams.set("bbox", `seasketch-replace-me`);
+            if (this.options.supportHighDpiDisplays && window.devicePixelRatio > 1) {
+                const size = tileSize * window.devicePixelRatio;
+                url.searchParams.set("size", [size, size].join(","));
             }
             else {
-                this.url.searchParams.set("size", [this.tileSize, this.tileSize].join(","));
+                url.searchParams.set("size", [tileSize, tileSize].join(","));
             }
         }
-        return this.url
-            .toString()
-            .replace("seasketch-replace-me", "{bbox-epsg-3857}");
+        return url.toString().replace("seasketch-replace-me", "{bbox-epsg-3857}");
     }
     /** Whether a source image is currently being fetched over the network */
     get loading() {
-        return this._loading;
+        var _a;
+        const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
+        if (source && source.type === "raster") {
+            return this.map.isSourceLoaded(this.sourceId) === false;
+        }
+        else {
+            return this._loading;
+        }
     }
     /**
      * Update the list of sublayers and re-render the the map. If
@@ -324,8 +450,9 @@ export class ArcGISDynamicMapService {
      */
     updateQueryParameters(queryParameters) {
         // do a deep comparison of layers to detect whether there are any changes
-        if (JSON.stringify(this.queryParameters) !== JSON.stringify(queryParameters)) {
-            this.queryParameters = queryParameters;
+        if (JSON.stringify(this.options.queryParameters) !==
+            JSON.stringify(queryParameters)) {
+            this.options.queryParameters = queryParameters;
             this.debouncedUpdateSource();
         }
     }
@@ -336,10 +463,22 @@ export class ArcGISDynamicMapService {
      * @param enable
      */
     updateUseDevicePixelRatio(enable) {
-        if (enable !== this.supportDevicePixelRatio) {
-            this.supportDevicePixelRatio = enable;
+        if (enable !== this.options.supportHighDpiDisplays) {
+            this.options.supportHighDpiDisplays = enable;
             this.debouncedUpdateSource();
         }
+    }
+    async getGLStyleLayers() {
+        return [
+            {
+                id: uuid(),
+                type: "raster",
+                source: this.sourceId,
+                paint: {
+                    "raster-fade-duration": this.options.useTiles ? 300 : 0,
+                },
+            },
+        ];
     }
 }
 /** @hidden */

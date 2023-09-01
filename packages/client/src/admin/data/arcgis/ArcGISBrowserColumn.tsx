@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Spinner from "../../../components/Spinner";
 import { useCatalogItems, CatalogItem } from "./arcgis";
+import { ArcGISRESTServiceRequestManager } from "@seasketch/mapbox-gl-esri-sources";
 
 export interface ArcGISBrowserColumnProps {
   url: string;
@@ -15,10 +16,14 @@ export interface ArcGISBrowserColumnProps {
     | "GeocodeServer";
   onSelection?: (item: CatalogItem) => void;
   leading?: boolean;
+  requestManager: ArcGISRESTServiceRequestManager;
 }
 
 export function ArcGISBrowserColumn(props: ArcGISBrowserColumnProps) {
-  const { catalogInfo, error, loading } = useCatalogItems(props.url);
+  const { catalogInfo, error, loading } = useCatalogItems(
+    props.url,
+    props.requestManager
+  );
   const [selectedItem, setSelectedItem] = useState<CatalogItem>();
   const updateSelection = (item: CatalogItem) => {
     setSelectedItem(item);

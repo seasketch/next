@@ -4,6 +4,24 @@ import {
   MapServiceMetadata,
 } from "./ServiceMetadata";
 
+interface UserCredentials {
+  username: string;
+  password: string;
+}
+
+interface FetchOptions {
+  signal?: AbortSignal;
+  credentials?: UserCredentials;
+}
+
+export interface MapServiceLegendMetadata {
+  layers: {
+    layerId: number;
+    layerName: string;
+    layerType: "Feature Layer" | "Raster Layer";
+    legend: LayerLegendData[];
+  }[];
+}
 export class ArcGISRESTServiceRequestManager {
   private cache?: Cache;
 
@@ -17,10 +35,7 @@ export class ArcGISRESTServiceRequestManager {
       });
   }
 
-  async getMapServiceMetadata(
-    url: string,
-    credentials?: { username: string; password: string }
-  ) {
+  async getMapServiceMetadata(url: string, options: FetchOptions) {
     if (!/rest\/services/.test(url)) {
       throw new Error("Invalid ArcGIS REST Service URL");
     }
@@ -33,16 +48,19 @@ export class ArcGISRESTServiceRequestManager {
     url = url.replace(/\?.*$/, "");
     const params = new URLSearchParams();
     params.set("f", "json");
-    if (credentials) {
+    if (options?.credentials) {
       const token = await this.getToken(
         url.replace(/rest\/services\/.*/, "/rest/services/"),
-        credentials
+        options.credentials
       );
       params.set("token", token);
     }
 
     const requestUrl = `${url}?${params.toString()}`;
-    const serviceMetadata = await this.fetch<MapServiceMetadata>(requestUrl);
+    const serviceMetadata = await this.fetch<MapServiceMetadata>(
+      requestUrl,
+      options?.signal
+    );
     const layers = await this.fetch<LayersMetadata>(
       `${url}/layers?${params.toString()}`
     );
@@ -50,6 +68,43 @@ export class ArcGISRESTServiceRequestManager {
       throw new Error((layers as any).error.message);
     }
     return { serviceMetadata, layers };
+  }
+
+  async getCatalogItems(url: string, options?: FetchOptions) {
+    if (!/rest\/services/.test(url)) {
+      throw new Error("Invalid ArcGIS REST Service URL");
+    }
+    // remove trailing slash if present
+    url = url.replace(/\/$/, "");
+    // remove url params if present
+    url = url.replace(/\?.*$/, "");
+    const params = new URLSearchParams();
+    params.set("f", "json");
+    if (options?.credentials) {
+      const token = await this.getToken(
+        url.replace(/rest\/services\/.*/, "/rest/services/"),
+        options.credentials
+      );
+      params.set("token", token);
+    }
+
+    const requestUrl = `${url}?${params.toString()}`;
+    const response = await this.fetch<{
+      currentVersion: number;
+      folders: string[];
+      services: {
+        name: string;
+        type:
+          | "MapServer"
+          | "FeatureServer"
+          | "GPServer"
+          | "GeometryServer"
+          | "ImageServer"
+          | "GeocodeServer"
+          | string;
+      }[];
+    }>(requestUrl, options?.signal);
+    return response;
   }
 
   async getToken(
@@ -61,7 +116,7 @@ export class ArcGISRESTServiceRequestManager {
 
   private inFlightRequests: { [url: string]: Promise<any> } = {};
 
-  private async fetch<T>(url: string) {
+  private async fetch<T>(url: string, signal?: AbortSignal) {
     if (url in this.inFlightRequests) {
       return this.inFlightRequests[url].then((json) => json as T);
     }
@@ -69,7 +124,7 @@ export class ArcGISRESTServiceRequestManager {
     if (!cache) {
       throw new Error("Cache not initialized");
     }
-    this.inFlightRequests[url] = fetchWithTTL(url, 60 * 300, cache);
+    this.inFlightRequests[url] = fetchWithTTL(url, 60 * 300, cache, { signal });
     return new Promise<T>((resolve, reject) => {
       this.inFlightRequests[url]
         .then((json) => {
@@ -111,14 +166,7 @@ export class ArcGISRESTServiceRequestManager {
     }
 
     const requestUrl = `${url}/legend?${params.toString()}`;
-    const response = await this.fetch<{
-      layers: {
-        layerId: number;
-        layerName: string;
-        layerType: "Feature Layer" | "Raster Layer";
-        legend: LayerLegendData[];
-      }[];
-    }>(requestUrl);
+    const response = await this.fetch<MapServiceLegendMetadata>(requestUrl);
     return response;
   }
 }

@@ -5,6 +5,8 @@ import {
   MapServiceMetadata,
 } from "./ServiceMetadata";
 import { SpatialReference } from "arcgis-rest-api";
+import { MapServiceLegendMetadata } from "./ArcGISRESTServiceRequestManager";
+import { blankDataUri } from "./ArcGISDynamicMapService";
 
 /**
  * Replaced an existing source, preserving layers and their order by temporarily
@@ -78,7 +80,6 @@ export async function extentToLatLngBounds(
     } else {
       try {
         const projected = await projectExtent(extent);
-        console.log("projected", projected, extent);
         return [projected.xmin, projected.ymin, projected.xmax, projected.ymax];
       } catch (e) {
         console.error(e);
@@ -257,4 +258,29 @@ export function generateMetadataForLayer(
       },
     ],
   };
+}
+
+export function makeLegend(data: MapServiceLegendMetadata, layerId: number) {
+  const legendLayer = data.layers.find((l) => l.layerId === layerId);
+  if (legendLayer) {
+    return legendLayer.legend.map((legend) => {
+      return {
+        id: legend.url,
+        label:
+          legend.label && legend.label.length > 0
+            ? legend.label
+            : legendLayer.legend.length === 1
+            ? legendLayer.layerName
+            : "",
+        imageUrl: legend?.imageData
+          ? `data:${legend.contentType};base64,${legend.imageData}`
+          : blankDataUri,
+        imageWidth: 20,
+        imageHeight: 20,
+      };
+    });
+  } else {
+    return undefined;
+    // throw new Error(`Legend for layerId=${layerId} not found`);
+  }
 }

@@ -1,18 +1,26 @@
-import { AnyLayer, AnySourceData, Map } from "mapbox-gl";
-import { ArcGISRESTServiceRequestManager } from "./ArcGISRESTServiceRequestManager";
+import { AnyLayer, Map } from "mapbox-gl";
 
 export interface CustomGLSourceOptions {
   /** Optional. If not provided a uuid will be used. */
   sourceId?: string;
 }
 
+/**
+ * LegendItems are assumed to be static and need not be refreshed after updating
+ * layer visibility.
+ */
 export interface LegendItem {
   /** Use for jsx key, no more */
   id: string;
   label: string;
   imageUrl: string;
+  imageWidth?: number;
+  imageHeight?: number;
 }
 
+/**
+ * SingleImage legends should be updated whenever layer visibility changes
+ */
 export interface SingleImageLegend {
   url: string;
 }
@@ -20,21 +28,46 @@ export interface SingleImageLegend {
 export interface DynamicRenderingSupportOptions {
   layerOrder: boolean;
   layerOpacity: boolean;
+  layerVisibility: boolean;
 }
 
+export interface FolderTableOfContentsItem {
+  type: "folder";
+  id: string;
+  label: string;
+  defaultVisibility: boolean;
+  parentId?: string;
+}
+
+export interface DataTableOfContentsItem {
+  type: "data";
+  id: string;
+  label: string;
+  defaultVisibility: boolean;
+  /** Metadata as prosemirror document */
+  metadata: {
+    type: string;
+    content: ({ type: string } & any)[];
+  };
+  legend?: LegendItem[];
+  parentId?: string;
+}
 export interface ComputedMetadata {
   /** xmin, ymin, xmax, ymax */
   bounds?: [number, number, number, number];
   minzoom: number;
   maxzoom: number;
   attribution?: string;
-  /** Metadata as prosemirror document */
-  metadata: {
-    type: string;
-    content: ({ type: string } & any)[];
-  };
+  tableOfContentsItems: (FolderTableOfContentsItem | DataTableOfContentsItem)[];
+  supportsDynamicRendering: DynamicRenderingSupportOptions;
 }
 
+export interface LayerSettings {
+  id: string;
+  opacity: number;
+}
+
+export type OrderedLayerSettings = LayerSettings[];
 /**
  * CustomGLSources are used to add custom data sources to a Mapbox GL JS map.
  * Used to support ArcGIS, WMS, (and other?) sources using SeaSketch's
@@ -69,19 +102,15 @@ export interface CustomGLSource<
    * @throws If the source is not on the map
    */
   removeFromMap(map: Map): void;
-  // /**
-  //  * Get metadata for the source. Requests should be de-duped and cached.
-  //  * @returns Metadata for the source
-  //  */
-  // getMetadata(): Promise<MetadataType>;
-  /**
-   * Whether the source supports dynamic rendering. If true, clients can use
-   * the updateLayers method to update source data.
-   */
-  getSupportsDynamicRendering(): Promise<DynamicRenderingSupportOptions>;
   /** Removes the source from the map and removes any event listeners */
   destroy(): void;
-  getLegend(): Promise<LegendType>;
-  getLayers(): Promise<AnyLayer[]>;
+  /**
+   * If provided, this source uses a single image to represent all sublayers in
+   * the legend. It will need to be updated with a new image each time rendering
+   * options are changed.
+   * */
+  getLegend?(): Promise<SingleImageLegend>;
+  getGLStyleLayers(): Promise<AnyLayer[]>;
   getComputedMetadata(): Promise<ComputedMetadata>;
+  updateLayers(layers: OrderedLayerSettings): void;
 }

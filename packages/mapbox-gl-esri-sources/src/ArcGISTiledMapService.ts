@@ -5,6 +5,7 @@ import {
   CustomGLSource,
   CustomGLSourceOptions,
   LegendItem,
+  OrderedLayerSettings,
 } from "./CustomGLSource";
 import { v4 as uuid } from "uuid";
 import { LayersMetadata, MapServiceMetadata } from "./ServiceMetadata";
@@ -12,8 +13,10 @@ import {
   contentOrFalse,
   extentToLatLngBounds,
   generateMetadataForLayer,
+  makeLegend,
   replaceSource,
 } from "./utils";
+import { blankDataUri } from "./ArcGISDynamicMapService";
 
 export interface ArcGISTiledMapServiceOptions extends CustomGLSourceOptions {
   url: string;
@@ -68,7 +71,9 @@ export class ArcGISTiledMapService
       });
     } else {
       return this.requestManager
-        .getMapServiceMetadata(this.options.url, this.options.credentials)
+        .getMapServiceMetadata(this.options.url, {
+          credentials: this.options.credentials,
+        })
         .then(({ serviceMetadata, layers }) => {
           this.serviceMetadata = serviceMetadata;
           this.layerMetadata = layers;
@@ -87,17 +92,41 @@ export class ArcGISTiledMapService
     const { serviceMetadata, layers } = await this.getMetadata();
     const { bounds, minzoom, maxzoom, tileSize, attribution } =
       await this.getComputedProperties();
+    const legendData = await this.requestManager.getLegendMetadata(
+      this.options.url
+    );
+    const results = /\/([^/]+)\/MapServer/.exec(this.options.url);
+    let label = results && results.length >= 1 ? results[1] : false;
+    if (!label) {
+      if (this.layerMetadata?.layers?.[0]) {
+        label = this.layerMetadata.layers[0].name;
+      }
+    }
 
     return {
       bounds: bounds || undefined,
       minzoom,
       maxzoom,
       attribution,
-      metadata: generateMetadataForLayer(
-        this.options.url,
-        this.serviceMetadata!,
-        this.layerMetadata!.layers[0]
-      ),
+      tableOfContentsItems: [
+        {
+          type: "data",
+          id: this.sourceId,
+          label: label || "Layer",
+          defaultVisibility: true,
+          metadata: generateMetadataForLayer(
+            this.options.url,
+            this.serviceMetadata!,
+            this.layerMetadata!.layers[0]
+          ),
+          legend: makeLegend(legendData, legendData.layers[0].layerId),
+        },
+      ],
+      supportsDynamicRendering: {
+        layerOrder: false,
+        layerOpacity: false,
+        layerVisibility: false,
+      },
     };
   }
 
@@ -110,15 +139,6 @@ export class ArcGISTiledMapService
       this.map?.getSource(this.sourceId) &&
         this.map?.isSourceLoaded(this.sourceId) === false
     );
-  }
-
-  async getLegend(): Promise<LegendItem[]> {
-    const data = await this.requestManager.getLegendMetadata(this.options.url);
-    return data.layers[0].legend.map((l) => ({
-      id: l.url,
-      label: l.label,
-      imageUrl: `data:${l.contentType};base64,${l.imageData}`,
-    }));
   }
 
   /**
@@ -168,7 +188,6 @@ export class ArcGISTiledMapService
       attribution,
       ...(bounds ? { bounds } : {}),
     } as RasterSource;
-    console.log("add to map", sourceData);
     // It's possible that the map has changed since we started fetching metadata
     if (this.map.getSource(this.sourceId)) {
       replaceSource(this.sourceId, this.map, sourceData);
@@ -182,7 +201,7 @@ export class ArcGISTiledMapService
    * Returns a raster layer for the source.
    * @returns RasterLayer[]
    */
-  async getLayers() {
+  async getGLStyleLayers() {
     return [
       {
         type: "raster",
@@ -200,7 +219,7 @@ export class ArcGISTiledMapService
    * source, they will also be removed.
    * @param map Mapbox GL JS Map
    */
-  removeFromMap(map: Map, removeLayers?: boolean) {
+  removeFromMap(map: Map) {
     if (map.getSource(this.sourceId)) {
       const layers = map.getStyle().layers || [];
       for (const layer of layers) {
@@ -214,20 +233,6 @@ export class ArcGISTiledMapService
   }
 
   /**
-   * Returns an object with booleans indicating whether the source supports
-   * dynamic rendering of layer order and opacity. Always returns false for
-   * this service type.
-   * @returns DynamicRenderingSupportOptions
-   * @throws Error if metadata is not available
-   */
-  async getSupportsDynamicRendering() {
-    return {
-      layerOrder: false,
-      layerOpacity: false,
-    };
-  }
-
-  /**
    * Removes the source from the map and removes any event listeners
    */
   destroy(): void {
@@ -235,4 +240,7 @@ export class ArcGISTiledMapService
       this.removeFromMap(this.map);
     }
   }
+
+  /** noop */
+  updateLayers(layers: OrderedLayerSettings) {}
 }
