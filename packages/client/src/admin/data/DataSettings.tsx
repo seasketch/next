@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Link,
   Route,
@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 import DataUploadDropzone from "../uploads/DataUploadDropzone";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import Legend, { LegendItem } from "../../dataLayers/Legend";
 
 const LazyArcGISBrowser = React.lazy(
   () =>
@@ -35,6 +36,28 @@ export default function DataSettings() {
     },
   });
 
+  const [legendState, setLegendState] = useState<{ items: LegendItem[] }>({
+    items: [],
+  });
+
+  useEffect(() => {
+    if (mapContext.legends) {
+      // TODO: this does't really handle WMS or dynamic map services
+      const visibleLegends: LegendItem[] = [];
+      for (const id in mapContext.layerStatesByTocStaticId) {
+        if (mapContext.layerStatesByTocStaticId[id].visible) {
+          const legend = mapContext.legends[id];
+          if (legend) {
+            visibleLegends.push(legend);
+          }
+        }
+      }
+      setLegendState({
+        items: visibleLegends,
+      });
+    }
+  }, [mapContext.legends, mapContext.layerStatesByTocStaticId]);
+
   return (
     <>
       <DndProvider backend={HTML5Backend}>
@@ -49,6 +72,15 @@ export default function DataSettings() {
                   <LayerAdminSidebar />
                 </div>
                 <div className="flex-1 h-full">
+                  <Legend
+                    maxHeight={800}
+                    className="absolute ml-5 top-5 z-10"
+                    items={legendState.items}
+                    hiddenItems={[]}
+                    opacity={{}}
+                    zOrder={{}}
+                    map={mapContext.manager?.map}
+                  />
                   {data?.projectBySlug && (
                     <MapboxMap
                       bounds={

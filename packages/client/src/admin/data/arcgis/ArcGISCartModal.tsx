@@ -8,7 +8,7 @@ import {
   useCatalogItemDetails,
   useCatalogItems,
 } from "./arcgis";
-import { LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
+import { AnyLayer, LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
 import Skeleton from "../../../components/Skeleton";
 import { ArrowLeftIcon } from "@radix-ui/react-icons";
@@ -22,6 +22,7 @@ import {
   ArcGISTiledMapService,
   DataTableOfContentsItem,
   FolderTableOfContentsItem,
+  ArcGISFeatureLayerSource,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { Feature } from "geojson";
 import bbox from "@turf/bbox";
@@ -82,6 +83,8 @@ export default function ArcGISCartModal({
         center: [-74.5, 40],
         zoom: 9,
       });
+      // const legend = new LegendControl();
+      // m.addControl(legend, "bottom-left");
       m.fitBounds(mapBounds as LngLatBounds, { padding: 10, animate: false });
 
       m.on("load", () => {
@@ -147,6 +150,7 @@ export default function ArcGISCartModal({
   useEffect(() => {
     setSourceLoading(false);
     setTableOfContentsItems([]);
+    setVisibleLayers([]);
     if (catalogItemDetailsQuery.data && map && selection) {
       const { type } = catalogItemDetailsQuery.data;
       setSourceLoading(true);
@@ -173,7 +177,7 @@ export default function ArcGISCartModal({
           });
         setCustomSources([tileSource]);
         tileSource.addToMap(map).then(() => {
-          tileSource.getGLStyleLayers().then((layers) => {
+          tileSource.getGLStyleLayers().then(({ layers }) => {
             for (const layer of layers) {
               map.addLayer(layer);
             }
@@ -207,7 +211,7 @@ export default function ArcGISCartModal({
         });
         setCustomSources([dynamicSource]);
         dynamicSource.addToMap(map).then(() => {
-          dynamicSource.getGLStyleLayers().then((layers) => {
+          dynamicSource.getGLStyleLayers().then(({ layers }) => {
             for (const layer of layers) {
               map.addLayer(layer);
             }
@@ -216,6 +220,61 @@ export default function ArcGISCartModal({
         return () => {
           setCustomSources([]);
           dynamicSource.destroy();
+        };
+      } else if (type === "FeatureServer") {
+        const sources: ArcGISFeatureLayerSource[] = [];
+        for (const layer of [
+          ...catalogItemDetailsQuery.data.metadata?.layers,
+        ].reverse()) {
+          const featureLayerSource = new ArcGISFeatureLayerSource(
+            requestManager,
+            {
+              url: selection.url + "/" + layer.id,
+              fetchStrategy: "raw",
+            }
+          );
+          sources.push(featureLayerSource);
+          featureLayerSource.getComputedMetadata().then((data) => {
+            const { bounds, tableOfContentsItems } = data;
+            setTableOfContentsItems((prev) => [
+              ...prev,
+              ...tableOfContentsItems,
+            ]);
+            setVisibleLayers((prev) => {
+              return [
+                ...prev,
+                ...tableOfContentsItems
+                  .filter(
+                    (item) =>
+                      item.type === "data" && item.defaultVisibility === true
+                  )
+                  .map((item) => item.id),
+              ];
+            });
+            if (bounds && bounds[0]) {
+              map.fitBounds(bounds, { padding: 10 });
+            }
+          });
+          featureLayerSource.addToMap(map).then(() => {
+            featureLayerSource
+              .getGLStyleLayers()
+              .then(({ layers, imageList }) => {
+                if (imageList) {
+                  imageList.addToMap(map);
+                }
+                for (const layer of layers) {
+                  map.addLayer(layer as AnyLayer);
+                }
+              });
+          });
+        }
+
+        setCustomSources(sources);
+        return () => {
+          setCustomSources([]);
+          for (const source of sources) {
+            source.destroy();
+          }
         };
       }
       return;
@@ -300,6 +359,7 @@ export default function ArcGISCartModal({
         {!location && (
           <div className="bg-gray-200 w-3/4 h-3/4 pointer-events-auto shadow-lg rounded-lg flex items-center justify-center">
             <ArcGISSearchPage
+              requestManager={requestManager}
               onResult={(result) => {
                 setLocation(result.location);
               }}
@@ -365,10 +425,12 @@ export default function ArcGISCartModal({
                     <button
                       key={item.url}
                       onClick={(e) => {
+                        console.log("onclick", item);
                         if (item.type === "Folder") {
                           setSelection(null);
                           setSelectedFolder(item);
                         } else {
+                          console.log("setting selection", item);
                           setSelection(item);
                         }
                       }}
@@ -412,21 +474,24 @@ export default function ArcGISCartModal({
                   ))}
                 </div>
               </div>
-              <ArcGISCartLegend
-                loading={sourceLoading}
-                items={tableOfContentsItems}
-                className="absolute left-96 bg-white top-0 z-50 mt-2 ml-2"
-                visibleLayerIds={visibleLayers}
-                toggleLayer={(id) => {
-                  setVisibleLayers((prev) => {
-                    if (prev.includes(id)) {
-                      return prev.filter((i) => i !== id);
-                    } else {
-                      return [...prev, id];
-                    }
-                  });
-                }}
-              />
+              {map && (
+                <ArcGISCartLegend
+                  map={map}
+                  loading={sourceLoading}
+                  items={tableOfContentsItems}
+                  className="absolute left-96 bg-white top-0 z-50 mt-2 ml-2"
+                  visibleLayerIds={visibleLayers}
+                  toggleLayer={(id) => {
+                    setVisibleLayers((prev) => {
+                      if (prev.includes(id)) {
+                        return prev.filter((i) => i !== id);
+                      } else {
+                        return [...prev, id];
+                      }
+                    });
+                  }}
+                />
+              )}
               <div ref={setMapDiv} className={`bg-gray-50 flex-1`}></div>
             </div>
             <div className="border-t border-gray-800 border-opacity-20 flex w-full bg-gray-200 p-4 rounded-b-md items-end justify-end gap-2">

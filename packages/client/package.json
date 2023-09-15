@@ -148,6 +148,7 @@
     "lodash.setwith": "^4.3.2",
     "lodash.sortby": "^4.7.0",
     "lru-cache": "^6.0.0",
+    "mapbox-expression": "^0.0.3",
     "mapbox-gl": "2.15",
     "mapbox-gl-arcgis-featureserver": "file://Users/cburt/src/mapbox-gl-arcgis-featureserver",
     "mapbox-gl-draw-rectangle-mode": "^1.0.4",

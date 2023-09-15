@@ -785,6 +785,7 @@ export default function LayerTableOfContentsItemEditor(
                       },
                     });
                     setStyle(newStyle);
+                    mapContext.manager?.updateLegends(true);
                   }}
                   bounds={
                     item.bounds

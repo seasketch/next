@@ -68,6 +68,24 @@ export interface MapServiceMetadata {
   };
 }
 
+export interface FeatureServerMetadata {
+  /** ArcGIS Server REST API version */
+  currentVersion: number;
+  serviceDescription: string;
+  maxRecordCount: number;
+  supportedQueryFormats: string;
+  supportedExportFormats: string;
+  capabilities: string;
+  description: string;
+  copyrightText: string;
+  spatialReference: SpatialReference;
+  initialExtent: Extent;
+  fullExtent: Extent;
+  size?: number;
+  layers: SimpleLayerInfo[];
+  documentInfo: undefined;
+}
+
 export interface LayersMetadata {
   layers: DetailedLayerMetadata[];
 }

@@ -16,6 +16,7 @@ import {
   generateMetadataForLayer,
   makeLegend,
 } from "./utils";
+import { ImageList } from "./ImageList";
 
 /** @hidden */
 export const blankDataUri =
@@ -575,17 +576,19 @@ export class ArcGISDynamicMapService
     }
   }
 
-  async getGLStyleLayers(): Promise<AnyLayer[]> {
-    return [
-      {
-        id: uuid(),
-        type: "raster",
-        source: this.sourceId,
-        paint: {
-          "raster-fade-duration": this.options.useTiles ? 300 : 0,
+  async getGLStyleLayers() {
+    return {
+      layers: [
+        {
+          id: uuid(),
+          type: "raster",
+          source: this.sourceId,
+          paint: {
+            "raster-fade-duration": this.options.useTiles ? 300 : 0,
+          },
         },
-      },
-    ] as AnyLayer[];
+      ] as AnyLayer[],
+    };
   }
 }
 

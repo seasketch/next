@@ -7,6 +7,7 @@ import {
   ImageList,
   styleForFeatureLayer,
   MapServiceMetadata,
+  FeatureServerMetadata,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { v4 as uuid } from "uuid";
 import bboxPolygon from "@turf/bbox-polygon";
@@ -36,7 +37,6 @@ import { customAlphabet } from "nanoid";
 import { default as axios } from "axios";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import { MutationFunctionOptions } from "@apollo/client";
-import { metadata } from "../../../editor/config";
 // import { ArcGISVectorSourceCacheEvent } from "../../../dataLayers/ArcGISVectorSourceCache";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -362,7 +362,7 @@ export interface MapServerCatalogItemDetails {
 
 export interface FeatureServerCatalogItemDetails {
   type: "FeatureServer";
-  metadata: any;
+  metadata: FeatureServerMetadata;
 }
 
 export function useCatalogItemDetails(
@@ -390,6 +390,27 @@ export function useCatalogItemDetails(
             setData({
               type: "MapServer",
               tiled: !!data.serviceMetadata.singleFusedMapCache,
+              metadata: data.serviceMetadata,
+            });
+          }
+        })
+        .catch((e) => {
+          if (e.cancelled) {
+            // do nothing
+          } else {
+            setError(e.message);
+          }
+        });
+      return () => AC.abort();
+    } else if (url && /FeatureServer/.test(url)) {
+      requestManager
+        .getFeatureServerMetadata(url, { signal: AC.signal })
+        .then((data) => {
+          if (!AC.signal.aborted) {
+            setError(undefined);
+            setLoading(false);
+            setData({
+              type: "FeatureServer",
               metadata: data.serviceMetadata,
             });
           }

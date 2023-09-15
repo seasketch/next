@@ -136,5 +136,7 @@ export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDyn
      * @param enable
      */
     updateUseDevicePixelRatio(enable: boolean): void;
-    getGLStyleLayers(): Promise<AnyLayer[]>;
+    getGLStyleLayers(): Promise<{
+        layers: AnyLayer[];
+    }>;
 }

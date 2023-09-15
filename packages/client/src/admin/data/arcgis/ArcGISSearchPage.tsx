@@ -6,14 +6,17 @@ import {
 import useRecentDataServers from "./useRecentServers";
 import { Trans } from "react-i18next";
 import Spinner from "../../../components/Spinner";
+import { ArcGISRESTServiceRequestManager } from "@seasketch/mapbox-gl-esri-sources";
 
 export default function ArcGISSearchPage({
   onResult,
+  requestManager,
 }: {
   onResult?: (e: {
     location: NormalizedArcGISServerLocation;
     version: string;
   }) => void;
+  requestManager: ArcGISRESTServiceRequestManager;
 }) {
   const [inputUrl, setInputUrl] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
@@ -38,16 +41,16 @@ export default function ArcGISSearchPage({
     } else {
       try {
         setLoading(true);
-        const serviceResponse = await fetch(
-          location.servicesRoot + "?f=json"
-        ).then((r) => r.json());
+        const serviceResponse = await requestManager.getCatalogItems(
+          location.servicesRoot
+        );
         setLoading(false);
         if (serviceResponse.currentVersion) {
           addServer({ location: location.baseUrl, type: "arcgis" });
           if (onResult) {
             onResult({
               location,
-              version: serviceResponse.currentVersion,
+              version: serviceResponse.currentVersion.toString(),
             });
           }
           // setVersion(serviceResponse.currentVersion);

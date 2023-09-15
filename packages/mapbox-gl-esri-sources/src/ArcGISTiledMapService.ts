@@ -202,16 +202,18 @@ export class ArcGISTiledMapService
    * @returns RasterLayer[]
    */
   async getGLStyleLayers() {
-    return [
-      {
-        type: "raster",
-        source: this.sourceId,
-        id: uuid(),
-        paint: {
-          "raster-fade-duration": 300,
+    return {
+      layers: [
+        {
+          type: "raster",
+          source: this.sourceId,
+          id: uuid(),
+          paint: {
+            "raster-fade-duration": 300,
+          },
         },
-      },
-    ] as RasterLayer[];
+      ] as RasterLayer[],
+    };
   }
 
   /**

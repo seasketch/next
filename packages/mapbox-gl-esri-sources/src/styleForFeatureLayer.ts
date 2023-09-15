@@ -209,7 +209,7 @@ async function styleForFeatureLayer(
         (b) => {
           const values = [b.classMinValue || minValue, b.classMaxValue] as [
             number,
-            number,
+            number
           ];
           minValue = values[1];
           return values;

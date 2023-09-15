@@ -48,6 +48,8 @@ import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
+import { getLegendForGLStyleLayers } from "./legends/glLegends";
+import { LegendItem } from "./Legend";
 
 const rejectAfter = (duration: number) =>
   new Promise((resolve, reject) => {
@@ -758,6 +760,7 @@ class MapContextManager {
     }
     this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
+    this.updateLegends();
   }
 
   /**
@@ -770,6 +773,7 @@ class MapContextManager {
         ? this.geoprocessingReferenceIds[id]
         : id;
     delete this.visibleLayers[stableId];
+    this.updateLegends();
   }
 
   /**
@@ -797,6 +801,7 @@ class MapContextManager {
         visible: true,
       };
     }
+    this.updateLegends();
   }
 
   /**
@@ -1574,12 +1579,14 @@ class MapContextManager {
 
   highlightLayer(layerId: string) {}
 
+  private tocItemLabels: { [id: string]: string } = {};
+
   reset(
     sources: DataSourceDetailsFragment[],
     layers: DataLayerDetailsFragment[],
     tocItems: Pick<
       OverlayFragment,
-      "id" | "stableId" | "dataLayerId" | "geoprocessingReferenceId"
+      "id" | "stableId" | "dataLayerId" | "geoprocessingReferenceId" | "title"
     >[]
   ) {
     this.clientDataSources = {};
@@ -1592,6 +1599,7 @@ class MapContextManager {
       // this.layers[layer.id] = layer;
     }
     for (const item of tocItems) {
+      this.tocItemLabels[item.stableId] = item.title;
       if (item.dataLayerId) {
         const layer = layersById[item.dataLayerId];
         if (layer) {
@@ -1619,6 +1627,7 @@ class MapContextManager {
     }
     this.debouncedUpdateStyle();
     this.updateInteractivitySettings();
+    this.updateLegends();
     return;
   }
 
@@ -2185,6 +2194,93 @@ class MapContextManager {
   getMissingSketches() {}
 
   isBasemapMissing() {}
+
+  private _updateLegends(clearCache = false) {
+    const newLegendState: { [layerId: string]: LegendItem | null } = {};
+    let changes = false;
+    for (const id in this.visibleLayers) {
+      if (clearCache === true && id in this.internalState.legends) {
+        newLegendState[id] = this.internalState.legends[id];
+      } else {
+        const layer = this.layers[id];
+        const source = this.clientDataSources[layer?.dataSourceId];
+        if (layer && source && layer.mapboxGlStyles) {
+          let sourceType:
+            | undefined
+            | "vector"
+            | "raster"
+            | "image"
+            | "video"
+            | "raster-dem"
+            | "geojson" = undefined;
+          switch (source.type) {
+            case DataSourceTypes.Geojson:
+            case DataSourceTypes.SeasketchVector:
+              sourceType = "geojson";
+              break;
+            case DataSourceTypes.Raster:
+            case DataSourceTypes.SeasketchRaster:
+              sourceType = "raster";
+              break;
+            case DataSourceTypes.Vector:
+            case DataSourceTypes.SeasketchMvt:
+              sourceType = "vector";
+              break;
+            case DataSourceTypes.RasterDem:
+              sourceType = "raster-dem";
+              break;
+            case DataSourceTypes.ArcgisDynamicMapserver:
+            case DataSourceTypes.Image:
+              sourceType = "image";
+              break;
+            case DataSourceTypes.Video:
+              sourceType = "video";
+              break;
+          }
+
+          if (sourceType) {
+            try {
+              const legend = getLegendForGLStyleLayers(
+                layer.mapboxGlStyles,
+                sourceType
+              );
+
+              const itemLabel = layer.tocId;
+              if (legend) {
+                newLegendState[id] = {
+                  id,
+                  type: "GLStyleLegendItem",
+                  legend,
+                  label: this.tocItemLabels[layer.tocId] || "",
+                };
+                changes = true;
+              } else {
+                newLegendState[id] = null;
+                changes = true;
+              }
+            } catch (e) {
+              console.error(e);
+              newLegendState[id] = {
+                id,
+                type: "GLStyleLegendItem",
+                label: this.tocItemLabels[layer.tocId] || "",
+              };
+              changes = true;
+            }
+          }
+        }
+      }
+    }
+    if (changes) {
+      this.setState((prev) => ({
+        ...prev,
+        legends: newLegendState,
+      }));
+      // console.log(newLegendState);
+    }
+  }
+
+  updateLegends = debounce(this._updateLegends, 20);
 }
 
 export default MapContextManager;
@@ -2227,6 +2323,9 @@ export interface MapContextInterface {
     supportsUndo: boolean;
   };
   languageCode?: string;
+  legends: {
+    [layerId: string]: LegendItem | null;
+  };
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
@@ -2261,6 +2360,7 @@ export function useMapContext(options?: MapContextOptions) {
     basemapOptionalLayerStates: {},
     styleHash: "",
     containerPortal: containerPortal || null,
+    legends: {},
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -2347,6 +2447,7 @@ export const MapContext = createContext<MapContextInterface>({
       basemapOptionalLayerStates: {},
       styleHash: "",
       containerPortal: null,
+      legends: {},
     },
     (state) => {}
   ),
@@ -2356,6 +2457,7 @@ export const MapContext = createContext<MapContextInterface>({
   terrainEnabled: false,
   basemapOptionalLayerStates: {},
   containerPortal: null,
+  legends: {},
 });
 
 async function loadImage(

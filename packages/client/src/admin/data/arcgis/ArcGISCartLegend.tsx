@@ -7,10 +7,20 @@ import {
 import {
   DataTableOfContentsItem,
   FolderTableOfContentsItem,
+  ImageList,
   LegendItem,
 } from "@seasketch/mapbox-gl-esri-sources";
 import * as Accordion from "@radix-ui/react-accordion";
 import Spinner from "../../../components/Spinner";
+import { Layer, Map } from "mapbox-gl";
+import {
+  LegendForGLLayers,
+  getLegendForGLStyleLayers,
+  hasGetExpression,
+  isExpression,
+} from "../../../dataLayers/legends/glLegends";
+import { memo } from "react";
+import SimpleSymbol from "../../../dataLayers/legends/SimpleSymbol";
 require("./Accordion.css");
 
 export default function ArcGISCartLegend({
@@ -19,12 +29,14 @@ export default function ArcGISCartLegend({
   loading,
   visibleLayerIds,
   toggleLayer,
+  map,
 }: {
   className?: string;
   items: (FolderTableOfContentsItem | DataTableOfContentsItem)[];
   loading?: boolean;
   visibleLayerIds?: string[];
   toggleLayer?: (id: string) => void;
+  map: Map;
 }) {
   function onChangeVisibility(id: string) {
     if (toggleLayer) {
@@ -45,7 +57,7 @@ export default function ArcGISCartLegend({
         }}
         className={`${className} shadow rounded bg-white bg-opacity-90 w-64 text-sm flex flex-col overflow-hidden`}
       >
-        <Accordion.Root type="single" collapsible>
+        <Accordion.Root type="single" collapsible defaultValue="legend">
           <Accordion.Item value="legend">
             <Accordion.Header className="flex-none flex p-2">
               <Accordion.Trigger className="flex w-full AccordionTrigger">
@@ -78,22 +90,78 @@ export default function ArcGISCartLegend({
                     );
                   } else {
                     if (!item.legend) {
-                      return (
-                        <li
-                          className={`${
-                            visible ? "text-black" : "text-gray-400"
-                          }`}
-                        >
-                          {item.label}
-                        </li>
-                      );
+                      if (item.glStyle) {
+                        if (styleHasDataExpression(item.glStyle.layers)) {
+                          return (
+                            <li
+                              key={item.id}
+                              className={`max-w-full ${
+                                visible ? "opacity-100" : "opacity-50"
+                              }`}
+                            >
+                              <div className="flex items-center space-x-1 mb-0.5">
+                                <span className="truncate flex-1">
+                                  {item.label}
+                                </span>
+                                <Toggle
+                                  onChange={onChangeVisibility(item.id)}
+                                  visible={visible}
+                                />
+                              </div>
+                              <ul className="pl-2 text-sm mb-1">
+                                <li
+                                  className="flex items-center space-x-2"
+                                  // key={legendItem.id}
+                                ></li>
+                              </ul>
+                            </li>
+                          );
+                        } else {
+                          return (
+                            <li
+                              className={`flex items-center space-x-2 max-w-full ${
+                                visible ? "opacity-100" : "opacity-50"
+                              }`}
+                            >
+                              <SimpleLegendIconFromStyle
+                                style={item.glStyle}
+                                map={map}
+                              />
+                              <span className="truncate flex-1">
+                                {item.label}
+                              </span>
+                              <Toggle
+                                onChange={onChangeVisibility(item.id)}
+                                visible={visible}
+                              />
+                            </li>
+                          );
+                        }
+                      } else {
+                        return (
+                          <li
+                            key={item.id}
+                            className={`flex items-center space-x-2 max-w-full ${
+                              visible ? "opacity-100" : "opacity-50"
+                            }`}
+                          >
+                            <span className="truncate flex-1">
+                              {item.label}
+                            </span>
+                            <Toggle
+                              onChange={onChangeVisibility(item.id)}
+                              visible={visible}
+                            />
+                          </li>
+                        );
+                      }
                     } else if (item.legend && item.legend.length === 1) {
                       const legendItem = item.legend[0];
                       return (
                         <li
                           key={item.id}
                           className={`flex items-center space-x-2 max-w-full ${
-                            visible ? "text-black" : "text-gray-400"
+                            visible ? "opacity-100" : "opacity-50"
                           }`}
                         >
                           <LegendImage item={legendItem} />
@@ -109,7 +177,7 @@ export default function ArcGISCartLegend({
                         <li
                           key={item.id}
                           className={`max-w-full ${
-                            visible ? "text-black" : "text-gray-400"
+                            visible ? "opacity-100" : "opacity-50"
                           }`}
                         >
                           <div className="flex items-center space-x-1 mb-0.5">
@@ -162,6 +230,7 @@ function LegendImage({
   return (
     <img
       className={`${className}`}
+      alt={item.label}
       src={item.imageUrl}
       width={
         (item.imageWidth || 20) /
@@ -193,3 +262,56 @@ function Toggle({
     </button>
   );
 }
+
+export function styleHasDataExpression(style: Layer[]) {
+  for (const layer of style) {
+    if (
+      style.length > 1 &&
+      layer.filter &&
+      isExpression(layer.filter) &&
+      hasGetExpression(layer.filter)
+    ) {
+      return true;
+    } else if (layer.paint) {
+      for (const key in layer.paint) {
+        if (isExpression((layer.paint as any)[key])) {
+          return hasGetExpression((layer.paint as any)[key]);
+        }
+      }
+    } else if (layer.layout) {
+      for (const key in layer.layout) {
+        if (isExpression((layer.layout as any)[key])) {
+          return hasGetExpression((layer.layout as any)[key]);
+        }
+      }
+    }
+  }
+  return false;
+}
+
+type Expression = [string, Expression | string | number | boolean | null];
+
+const SimpleLegendIconFromStyle = memo(
+  function _SimpleLegendIconFromStyle(props: {
+    style: {
+      layers: Layer[];
+      imageList?: ImageList;
+    };
+    map: Map;
+  }) {
+    let data: LegendForGLLayers | undefined;
+    try {
+      data = getLegendForGLStyleLayers(props.style.layers, "vector");
+    } catch (e) {
+      // Do nothing
+    }
+    const simpleSymbol = data?.type === "SimpleGLLegend" ? data.symbol : null;
+    return (
+      <div className="w-5 h-5 flex items-center justify-center bg-transparent">
+        {simpleSymbol ? (
+          <SimpleSymbol map={props.map} data={simpleSymbol} />
+        ) : null}
+      </div>
+    );
+  }
+);

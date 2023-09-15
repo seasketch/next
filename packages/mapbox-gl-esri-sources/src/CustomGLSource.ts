@@ -1,4 +1,5 @@
-import { AnyLayer, Map } from "mapbox-gl";
+import { AnyLayer, Layer, Map } from "mapbox-gl";
+import { ImageList } from "./ImageList";
 
 export interface CustomGLSourceOptions {
   /** Optional. If not provided a uuid will be used. */
@@ -50,6 +51,7 @@ export interface DataTableOfContentsItem {
     content: ({ type: string } & any)[];
   };
   legend?: LegendItem[];
+  glStyle?: { layers: Layer[]; imageList?: ImageList };
   parentId?: string;
 }
 export interface ComputedMetadata {
@@ -110,7 +112,7 @@ export interface CustomGLSource<
    * options are changed.
    * */
   getLegend?(): Promise<SingleImageLegend>;
-  getGLStyleLayers(): Promise<AnyLayer[]>;
+  getGLStyleLayers(): Promise<{ layers: Layer[]; imageList?: ImageList }>;
   getComputedMetadata(): Promise<ComputedMetadata>;
   updateLayers(layers: OrderedLayerSettings): void;
 }

@@ -1,4 +1,5 @@
 import {
+  FeatureServerMetadata,
   LayerLegendData,
   LayersMetadata,
   MapServiceMetadata,
@@ -58,6 +59,45 @@ export class ArcGISRESTServiceRequestManager {
 
     const requestUrl = `${url}?${params.toString()}`;
     const serviceMetadata = await this.fetch<MapServiceMetadata>(
+      requestUrl,
+      options?.signal
+    );
+    const layers = await this.fetch<LayersMetadata>(
+      `${url}/layers?${params.toString()}`
+    );
+    if ((layers as any).error) {
+      throw new Error((layers as any).error.message);
+    }
+    return { serviceMetadata, layers };
+  }
+
+  async getFeatureServerMetadata(url: string, options: FetchOptions) {
+    // remove trailing slash if present
+    url = url.replace(/\/$/, "");
+    if (!/rest\/services/.test(url)) {
+      throw new Error("Invalid ArcGIS REST Service URL");
+    }
+    if (!/FeatureServer/.test(url)) {
+      throw new Error("Invalid FeatureServer URL");
+    }
+    // make sure the url does not include a feature layer id
+    if (/\d+$/.test(url)) {
+      throw new Error("Invalid FeatureServer URL");
+    }
+    // remove url params if present
+    url = url.replace(/\?.*$/, "");
+    const params = new URLSearchParams();
+    params.set("f", "json");
+    if (options?.credentials) {
+      const token = await this.getToken(
+        url.replace(/rest\/services\/.*/, "/rest/services/"),
+        options.credentials
+      );
+      params.set("token", token);
+    }
+
+    const requestUrl = `${url}?${params.toString()}`;
+    const serviceMetadata = await this.fetch<FeatureServerMetadata>(
       requestUrl,
       options?.signal
     );
@@ -148,8 +188,8 @@ export class ArcGISRESTServiceRequestManager {
     if (!/rest\/services/.test(url)) {
       throw new Error("Invalid ArcGIS REST Service URL");
     }
-    if (!/MapServer/.test(url)) {
-      throw new Error("Invalid MapServer URL");
+    if (!/MapServer/.test(url) && !/FeatureServer/.test(url)) {
+      throw new Error("Invalid MapServer or FeatureServer URL");
     }
     // remove trailing slash if present
     url = url.replace(/\/$/, "");
@@ -200,6 +240,7 @@ async function fetchWithTTL(
       Promise.reject("aborted");
     }
     let cachedResponse = await cache.match(request);
+
     if (cachedResponse && cachedResponseIsExpired(cachedResponse)) {
       cache.delete(request);
       cachedResponse = undefined;

@@ -1,7 +1,8 @@
-import { AnySourceData, Map } from "mapbox-gl";
+import { AnySourceData, Layer, Map } from "mapbox-gl";
 import {
   DetailedLayerMetadata,
   Extent,
+  FeatureServerMetadata,
   MapServiceMetadata,
 } from "./ServiceMetadata";
 import { SpatialReference } from "arcgis-rest-api";
@@ -134,7 +135,7 @@ export function contentOrFalse(str?: string) {
 }
 
 function pickDescription(
-  info: MapServiceMetadata,
+  info: MapServiceMetadata | FeatureServerMetadata,
   layer?: DetailedLayerMetadata
 ) {
   return (
@@ -155,7 +156,7 @@ function pickDescription(
  */
 export function generateMetadataForLayer(
   url: string,
-  mapServerInfo: MapServiceMetadata,
+  mapServerInfo: MapServiceMetadata | FeatureServerMetadata,
   layer: DetailedLayerMetadata
 ) {
   const attribution =

@@ -469,16 +469,18 @@ export class ArcGISDynamicMapService {
         }
     }
     async getGLStyleLayers() {
-        return [
-            {
-                id: uuid(),
-                type: "raster",
-                source: this.sourceId,
-                paint: {
-                    "raster-fade-duration": this.options.useTiles ? 300 : 0,
+        return {
+            layers: [
+                {
+                    id: uuid(),
+                    type: "raster",
+                    source: this.sourceId,
+                    paint: {
+                        "raster-fade-duration": this.options.useTiles ? 300 : 0,
+                    },
                 },
-            },
-        ];
+            ],
+        };
     }
 }
 /** @hidden */

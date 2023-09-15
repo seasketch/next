@@ -158,10 +158,8 @@ var MapBoxGLEsriSources = (function (exports) {
           contentOrFalse(mapServerInfo.copyrightText) ||
           contentOrFalse((_a = mapServerInfo.documentInfo) === null || _a === void 0 ? void 0 : _a.Author);
       const description = pickDescription(mapServerInfo, layer);
-      let keywords = ((_b = mapServerInfo.documentInfo) === null || _b === void 0 ? void 0 : _b.Keywords) &&
-          ((_c = mapServerInfo.documentInfo) === null || _c === void 0 ? void 0 : _c.Keywords.length)
-          ? (_d = mapServerInfo.documentInfo) === null || _d === void 0 ? void 0 : _d.Keywords.split(",")
-          : [];
+      let keywords = ((_b = mapServerInfo.documentInfo) === null || _b === void 0 ? void 0 : _b.Keywords) && ((_c = mapServerInfo.documentInfo) === null || _c === void 0 ? void 0 : _c.Keywords.length)
+          ? (_d = mapServerInfo.documentInfo) === null || _d === void 0 ? void 0 : _d.Keywords.split(",") : [];
       return {
           type: "doc",
           content: [
@@ -264,8 +262,7 @@ var MapBoxGLEsriSources = (function (exports) {
                       : legendLayer.legend.length === 1
                           ? legendLayer.layerName
                           : "",
-                  imageUrl: (legend === null || legend === void 0 ? void 0 : legend.imageData)
-                      ? `data:${legend.contentType};base64,${legend.imageData}`
+                  imageUrl: (legend === null || legend === void 0 ? void 0 : legend.imageData) ? `data:${legend.contentType};base64,${legend.imageData}`
                       : blankDataUri,
                   imageWidth: 20,
                   imageHeight: 20,
@@ -656,16 +653,18 @@ var MapBoxGLEsriSources = (function (exports) {
           }
       }
       async getGLStyleLayers() {
-          return [
-              {
-                  id: v4(),
-                  type: "raster",
-                  source: this.sourceId,
-                  paint: {
-                      "raster-fade-duration": this.options.useTiles ? 300 : 0,
+          return {
+              layers: [
+                  {
+                      id: v4(),
+                      type: "raster",
+                      source: this.sourceId,
+                      paint: {
+                          "raster-fade-duration": this.options.useTiles ? 300 : 0,
+                      },
                   },
-              },
-          ];
+              ],
+          };
       }
   }
   function lat2meters(lat) {
@@ -729,7 +728,7 @@ var MapBoxGLEsriSources = (function (exports) {
               isSourceLoaded: false,
               sourceDataType: "content",
           });
-          fetchFeatureLayerData(this.baseUrl, this.outFields, onError, (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision, null, null, false, 1000, options === null || options === void 0 ? void 0 : options.bytesLimit)
+          fetchFeatureLayerData$1(this.baseUrl, this.outFields, onError, (_a = this.options) === null || _a === void 0 ? void 0 : _a.geometryPrecision, null, null, false, 1000, options === null || options === void 0 ? void 0 : options.bytesLimit)
               .then((fc) => {
               this._loading = false;
               if (!hadError) {
@@ -748,7 +747,7 @@ var MapBoxGLEsriSources = (function (exports) {
           this.map.removeSource(this._id);
       }
   }
-  async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
+  async function fetchFeatureLayerData$1(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
       const featureCollection = {
           type: "FeatureCollection",
           features: [],
@@ -763,10 +762,10 @@ var MapBoxGLEsriSources = (function (exports) {
           returnIdsOnly: "false",
           f: "geojson",
       });
-      await fetchData(url, params, featureCollection, onError, abortController || new AbortController(), onPageReceived, disablePagination, pageSize, bytesLimit);
+      await fetchData$1(url, params, featureCollection, onError, abortController || new AbortController(), onPageReceived, disablePagination, pageSize, bytesLimit);
       return featureCollection;
   }
-  async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
+  async function fetchData$1(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
       bytesReceived = bytesReceived || 0;
       new TextDecoder("utf-8");
       params.set("returnIdsOnly", "false");
@@ -783,7 +782,7 @@ var MapBoxGLEsriSources = (function (exports) {
           signal: abortController.signal,
       });
       const str = await response.text();
-      bytesReceived += byteLength(str);
+      bytesReceived += byteLength$1(str);
       if (bytesLimit && bytesReceived >= bytesLimit) {
           const e = new Error(`Exceeded bytesLimit. ${bytesReceived} >= ${bytesLimit}`);
           return onError(e);
@@ -814,12 +813,12 @@ var MapBoxGLEsriSources = (function (exports) {
               if (onPageReceived) {
                   onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
               }
-              await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
+              await fetchData$1(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
           }
       }
       return bytesReceived;
   }
-  function byteLength(str) {
+  function byteLength$1(str) {
       var s = str.length;
       for (var i = str.length - 1; i >= 0; i--) {
           var code = str.charCodeAt(i);
@@ -850,6 +849,32 @@ var MapBoxGLEsriSources = (function (exports) {
               throw new Error("Invalid MapServer URL");
           }
           url = url.replace(/\/$/, "");
+          url = url.replace(/\?.*$/, "");
+          const params = new URLSearchParams();
+          params.set("f", "json");
+          if (options === null || options === void 0 ? void 0 : options.credentials) {
+              const token = await this.getToken(url.replace(/rest\/services\/.*/, "/rest/services/"), options.credentials);
+              params.set("token", token);
+          }
+          const requestUrl = `${url}?${params.toString()}`;
+          const serviceMetadata = await this.fetch(requestUrl, options === null || options === void 0 ? void 0 : options.signal);
+          const layers = await this.fetch(`${url}/layers?${params.toString()}`);
+          if (layers.error) {
+              throw new Error(layers.error.message);
+          }
+          return { serviceMetadata, layers };
+      }
+      async getFeatureServerMetadata(url, options) {
+          url = url.replace(/\/$/, "");
+          if (!/rest\/services/.test(url)) {
+              throw new Error("Invalid ArcGIS REST Service URL");
+          }
+          if (!/FeatureServer/.test(url)) {
+              throw new Error("Invalid FeatureServer URL");
+          }
+          if (/\d+$/.test(url)) {
+              throw new Error("Invalid FeatureServer URL");
+          }
           url = url.replace(/\?.*$/, "");
           const params = new URLSearchParams();
           params.set("f", "json");
@@ -913,8 +938,8 @@ var MapBoxGLEsriSources = (function (exports) {
           if (!/rest\/services/.test(url)) {
               throw new Error("Invalid ArcGIS REST Service URL");
           }
-          if (!/MapServer/.test(url)) {
-              throw new Error("Invalid MapServer URL");
+          if (!/MapServer/.test(url) && !/FeatureServer/.test(url)) {
+              throw new Error("Invalid MapServer or FeatureServer URL");
           }
           url = url.replace(/\/$/, "");
           url = url.replace(/\?.*$/, "");
@@ -1091,16 +1116,18 @@ var MapBoxGLEsriSources = (function (exports) {
           return this.sourceId;
       }
       async getGLStyleLayers() {
-          return [
-              {
-                  type: "raster",
-                  source: this.sourceId,
-                  id: v4(),
-                  paint: {
-                      "raster-fade-duration": 300,
+          return {
+              layers: [
+                  {
+                      type: "raster",
+                      source: this.sourceId,
+                      id: v4(),
+                      paint: {
+                          "raster-fade-duration": 300,
+                      },
                   },
-              },
-          ];
+              ],
+          };
       }
       removeFromMap(map) {
           if (map.getSource(this.sourceId)) {
@@ -1120,6 +1147,291 @@ var MapBoxGLEsriSources = (function (exports) {
           }
       }
       updateLayers(layers) { }
+  }
+
+  function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100) {
+      return new Promise((resolve, reject) => {
+          fetchFeatureLayerData(url, outFields, reject, geometryPrecision, null, null, undefined, undefined, bytesLimit)
+              .then((data) => resolve(data))
+              .catch((e) => reject(e));
+      });
+  }
+  async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
+      const featureCollection = {
+          type: "FeatureCollection",
+          features: [],
+      };
+      const params = new URLSearchParams({
+          inSR: "4326",
+          outSR: "4326",
+          where: "1>0",
+          outFields,
+          returnGeometry: "true",
+          geometryPrecision: geometryPrecision.toString(),
+          returnIdsOnly: "false",
+          f: "geojson",
+      });
+      await fetchData(url, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit);
+      return featureCollection;
+  }
+  async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
+      var _a;
+      bytesReceived = bytesReceived || 0;
+      new TextDecoder("utf-8");
+      params.set("returnIdsOnly", "false");
+      if (featureCollection.features.length > 0) {
+          params.delete("where");
+          params.delete("resultOffset");
+          params.delete("resultRecordCount");
+          params.set("orderByFields", objectIdFieldName);
+          const lastFeature = featureCollection.features[featureCollection.features.length - 1];
+          params.set("where", `${objectIdFieldName}>${lastFeature.id}`);
+      }
+      const response = await fetch(`${baseUrl}/query?${params.toString()}`, {
+          ...(abortController ? { signal: abortController.signal } : {}),
+      });
+      const str = await response.text();
+      bytesReceived += byteLength(str);
+      if (bytesLimit && bytesReceived > bytesLimit) {
+          const e = new Error(`Exceeded bytesLimit. ${bytesReceived} > ${bytesLimit}`);
+          return onError(e);
+      }
+      const fc = JSON.parse(str);
+      if (fc.error) {
+          return onError(new Error(fc.error.message));
+      }
+      else {
+          featureCollection.features.push(...fc.features);
+          if (fc.exceededTransferLimit || ((_a = fc.properties) === null || _a === void 0 ? void 0 : _a.exceededTransferLimit)) {
+              if (!objectIdFieldName) {
+                  params.set("returnIdsOnly", "true");
+                  try {
+                      const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
+                          ...(abortController ? { signal: abortController.signal } : {}),
+                      });
+                      const featureIds = featureCollection.features.map((f) => f.id);
+                      let objectIdParameters = await r.json();
+                      if (objectIdParameters.properties) {
+                          objectIdParameters = objectIdParameters.properties;
+                      }
+                      expectedFeatureCount = objectIdParameters.objectIds.length;
+                      objectIdFieldName = objectIdParameters.objectIdFieldName;
+                  }
+                  catch (e) {
+                      return onError(e);
+                  }
+              }
+              if (onPageReceived) {
+                  onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
+              }
+              await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
+          }
+      }
+      return bytesReceived;
+  }
+  function byteLength(str) {
+      var s = str.length;
+      for (var i = str.length - 1; i >= 0; i--) {
+          var code = str.charCodeAt(i);
+          if (code > 0x7f && code <= 0x7ff)
+              s++;
+          else if (code > 0x7ff && code <= 0xffff)
+              s += 2;
+          if (code >= 0xdc00 && code <= 0xdfff)
+              i--;
+      }
+      return s;
+  }
+
+  class ArcGISFeatureLayerSource {
+      constructor(requestManager, options) {
+          var _a;
+          this._loading = true;
+          this.rawFeaturesHaveBeenFetched = false;
+          this.exceededBytesLimit = false;
+          this.sourceId = options.sourceId || v4();
+          this.options = options;
+          this.requestManager = requestManager;
+          options.url = options.url.replace(/\/$/, "");
+          if (!/rest\/services/.test(options.url) ||
+              (!/MapServer/.test(options.url) && !/FeatureServer/.test(options.url))) {
+              throw new Error("Invalid ArcGIS REST Service URL");
+          }
+          if (!/\d+$/.test(options.url)) {
+              throw new Error("URL must end in /FeatureServer/{layerId} or /MapServer/{layerId}");
+          }
+          this.layerId = parseInt(((_a = options.url.match(/\d+$/)) === null || _a === void 0 ? void 0 : _a[0]) || "0");
+      }
+      async getComputedMetadata() {
+          const { serviceMetadata, layers } = await this.getMetadata();
+          const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+          const layer = layers.layers.find((l) => l.id === this.layerId);
+          const glStyle = await this.getGLStyleLayers();
+          if (!layer) {
+              throw new Error("Layer not found");
+          }
+          return {
+              bounds,
+              minzoom,
+              maxzoom,
+              attribution,
+              supportsDynamicRendering: {
+                  layerOpacity: false,
+                  layerVisibility: false,
+                  layerOrder: false,
+              },
+              tableOfContentsItems: [
+                  {
+                      type: "data",
+                      defaultVisibility: true,
+                      id: this.sourceId,
+                      label: layer.name,
+                      metadata: generateMetadataForLayer(this.options.url.replace(/\/\d+$/, ""), serviceMetadata, layer),
+                      glStyle: glStyle,
+                  },
+              ],
+          };
+      }
+      async getComputedProperties() {
+          const { serviceMetadata, layers } = await this.getMetadata();
+          const attribution = contentOrFalse(serviceMetadata.copyrightText) || undefined;
+          const layer = layers.layers.find((l) => l.id === this.layerId);
+          if (!layer) {
+              throw new Error(`Sublayer ${this.layerId} not found`);
+          }
+          return {
+              minzoom: 0,
+              maxzoom: 24,
+              bounds: (await extentToLatLngBounds((layer === null || layer === void 0 ? void 0 : layer.extent) || serviceMetadata.fullExtent)) || undefined,
+              attribution,
+          };
+      }
+      fireError(e) {
+          var _a;
+          (_a = this.map) === null || _a === void 0 ? void 0 : _a.fire("error", {
+              sourceId: this.sourceId,
+              error: e.message,
+          });
+      }
+      getMetadata() {
+          if (this.serviceMetadata && this.layerMetadata) {
+              return Promise.resolve({
+                  serviceMetadata: this.serviceMetadata,
+                  layers: this.layerMetadata,
+              });
+          }
+          else {
+              if (/FeatureServer/.test(this.options.url)) {
+                  return this.requestManager
+                      .getFeatureServerMetadata(this.options.url.replace(/\/\d+$/, ""), {
+                      credentials: this.options.credentials,
+                  })
+                      .then(({ serviceMetadata, layers }) => {
+                      this.serviceMetadata = serviceMetadata;
+                      this.layerMetadata = layers;
+                      return { serviceMetadata, layers };
+                  });
+              }
+              else {
+                  return this.requestManager
+                      .getMapServiceMetadata(this.options.url, {
+                      credentials: this.options.credentials,
+                  })
+                      .then(({ serviceMetadata, layers }) => {
+                      this.serviceMetadata = serviceMetadata;
+                      this.layerMetadata = layers;
+                      return { serviceMetadata, layers };
+                  });
+              }
+          }
+      }
+      get loading() {
+          return this._loading;
+      }
+      async getGLStyleLayers() {
+          if (this._glStylePromise) {
+              console.log("return promise");
+              return this._glStylePromise;
+          }
+          else {
+              console.log("make promise");
+              this._glStylePromise = new Promise(async (resolve, reject) => {
+                  const { serviceMetadata, layers } = await this.getMetadata();
+                  const layer = layers.layers.find((l) => l.id === this.layerId);
+                  if (!layer) {
+                      throw new Error("Layer not found");
+                  }
+                  resolve(styleForFeatureLayer(this.options.url.replace(/\/\d+$/, ""), this.layerId, this.sourceId, layer));
+              });
+              return this._glStylePromise;
+          }
+      }
+      async addToMap(map) {
+          this.map = map;
+          await this.getMetadata();
+          const { attribution } = await this.getComputedProperties();
+          map.addSource(this.sourceId, {
+              type: "geojson",
+              data: this.featureData || {
+                  type: "FeatureCollection",
+                  features: [],
+              },
+              attribution: attribution ? attribution : "",
+          });
+          this._loading = this.featureData ? false : true;
+          if (!this.rawFeaturesHaveBeenFetched) {
+              this.fetchFeatures();
+          }
+          return this.sourceId;
+      }
+      async fetchFeatures() {
+          var _a;
+          if (this.exceededBytesLimit) {
+              return;
+          }
+          try {
+              const data = await fetchFeatureCollection(this.options.url, 6, "*", this.options.fetchStrategy === "raw"
+                  ? 120000000
+                  : this.options.autoFetchByteLimit || 2000000);
+              this.featureData = data;
+              const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
+              if (source && source.type === "geojson") {
+                  source.setData(data);
+              }
+              this._loading = false;
+              this.rawFeaturesHaveBeenFetched = true;
+          }
+          catch (e) {
+              if ("message" in e && /bytesLimit/.test(e.message)) {
+                  this.exceededBytesLimit = true;
+              }
+              this.fireError(e);
+              console.error(e);
+              this._loading = false;
+          }
+      }
+      async updateLayers() {
+      }
+      async removeFromMap(map) {
+          if (this.map) {
+              const source = map.getSource(this.sourceId);
+              if (source) {
+                  const layers = map.getStyle().layers || [];
+                  for (const layer of layers) {
+                      if ("source" in layer && layer.source === this.sourceId) {
+                          map.removeLayer(layer.id);
+                      }
+                  }
+                  map.removeSource(this.sourceId);
+              }
+              this.map = undefined;
+          }
+      }
+      destroy() {
+          if (this.map) {
+              this.removeFromMap(this.map);
+          }
+      }
   }
 
   function generateId() {
@@ -1873,6 +2185,7 @@ var MapBoxGLEsriSources = (function (exports) {
   };
 
   exports.ArcGISDynamicMapService = ArcGISDynamicMapService;
+  exports.ArcGISFeatureLayerSource = ArcGISFeatureLayerSource;
   exports.ArcGISRESTServiceRequestManager = ArcGISRESTServiceRequestManager;
   exports.ArcGISTiledMapService = ArcGISTiledMapService;
   exports.ArcGISVectorSource = ArcGISVectorSource;
