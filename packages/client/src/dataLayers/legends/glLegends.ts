@@ -165,7 +165,7 @@ const SIGNIFICANT_PAINT_PROPS = [
   "circle-opacity",
 ];
 
-const SIGNIFICANT_LAYOUT_PROPS = ["icon-image", "icon-size", "text-size"];
+const SIGNIFICANT_LAYOUT_PROPS = ["icon-image", "icon-size"];
 
 /**
  * While building the legend, it is important to keep track of what style props
@@ -620,9 +620,18 @@ export function getLegendForGLStyleLayers(
       }
     }
 
+    console.log("legend", legend);
     // TODO: if no panels have been added yet, try inserting a single symbol
     // legend as a fallback
-    return legend;
+    if (legend.panels.length === 0) {
+      console.log("no panels", legend);
+      return {
+        type: "SimpleGLLegend",
+        symbol: getSingleSymbolForVectorLayers(layers),
+      };
+    } else {
+      return legend;
+    }
   }
 }
 
@@ -729,7 +738,10 @@ function getPaintProp(
   if (representedProperties && representedProperties.has(propName)) {
     return defaultIfAlreadyRepresented;
   }
-  const type = propName.split("-")[0];
+  let type = propName.split("-")[0];
+  if (type === "text") {
+    type = "symbol";
+  }
   if (propName in paint) {
     const value = paint[propName];
     if (isExpression(value)) {
