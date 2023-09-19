@@ -18,6 +18,8 @@ import LegendGradientPanel from "./legends/LegendGradientPanel";
 import { stopsToLinearGradient } from "./legends/utils";
 import LegendHeatmapPanel from "./legends/LegendHeatmapPanel";
 import LegendListPanel from "./legends/LegendListPanel";
+import LegendMarkerSizePanel from "./legends/LegendMarkerSizePanel";
+import LegendStepPanel from "./legends/LegendStepPanel";
 require("../admin/data/arcgis/Accordion.css");
 
 interface SingleImageLegendItem {
@@ -174,6 +176,17 @@ export default function Legend({
                               case "GLLegendListPanel":
                                 return (
                                   <LegendListPanel map={map} panel={panel} />
+                                );
+                              case "GLMarkerSizePanel":
+                                return (
+                                  <LegendMarkerSizePanel
+                                    map={map}
+                                    panel={panel}
+                                  />
+                                );
+                              case "GLLegendStepPanel":
+                                return (
+                                  <LegendStepPanel panel={panel} map={map} />
                                 );
                               default:
                                 // eslint-disable-next-line i18next/no-literal-string

@@ -48,7 +48,7 @@ import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
-import { getLegendForGLStyleLayers } from "./legends/glLegends";
+import { buildLegendForGLStyleLayers } from "./legends/glLegends";
 import { LegendItem } from "./Legend";
 
 const rejectAfter = (duration: number) =>
@@ -2240,12 +2240,13 @@ class MapContextManager {
 
           if (sourceType) {
             try {
-              const legend = getLegendForGLStyleLayers(
+              // TODO: get geostats here from graphql api before requesting
+              // legend
+              const legend = buildLegendForGLStyleLayers(
                 layer.mapboxGlStyles,
                 sourceType
               );
 
-              const itemLabel = layer.tocId;
               if (legend) {
                 newLegendState[id] = {
                   id,

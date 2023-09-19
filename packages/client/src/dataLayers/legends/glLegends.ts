@@ -45,6 +45,7 @@ export interface GLLegendCircleSymbol {
   radius: number;
 }
 
+// TODO: icon-color
 export interface GLLegendMarkerSymbol {
   type: "marker";
   imageId: string;
@@ -109,6 +110,29 @@ export type GLLegendBubblePanel = {
   }[];
 };
 
+export type GLMarkerSizePanel = {
+  id: string;
+  type: "GLMarkerSizePanel";
+  label?: string;
+  stops: {
+    id: string;
+    imageId: string;
+    value: number;
+    iconSize: number;
+    color?: string;
+    haloColor?: string;
+    haloWidth?: number;
+    rotation?: number;
+  }[];
+};
+
+export type GLLegendStepPanel = {
+  id: string;
+  type: "GLLegendStepPanel";
+  label?: string;
+  steps: { id: string; label: string; symbol: GLLegendSymbol }[];
+};
+
 export type GLLegendHeatmapPanel = {
   id: string;
   type: "GLLegendHeatmapPanel";
@@ -126,7 +150,9 @@ export type GLLegendPanel =
   | GLLegendListPanel
   | GLLegendBubblePanel
   | GLLegendHeatmapPanel
-  | GLLegendGradientPanel;
+  | GLLegendGradientPanel
+  | GLMarkerSizePanel
+  | GLLegendStepPanel;
 
 export type SimpleLegendForGLLayers = {
   type: "SimpleGLLegend";
@@ -161,7 +187,6 @@ const SIGNIFICANT_PAINT_PROPS = [
   "circle-stroke-width",
   "line-dasharray",
   "line-opacity",
-  "text-halo-color",
   "circle-opacity",
 ];
 
@@ -327,7 +352,7 @@ function createStyleValueOrExpressionForContextFn(
   return styleValueOrExpressionForContext;
 }
 
-export function getLegendForGLStyleLayers(
+export function buildLegendForGLStyleLayers(
   layers: SeaSketchGlLayer[],
   sourceType:
     | "vector"
@@ -357,8 +382,8 @@ export function getLegendForGLStyleLayers(
       },
     };
   }
-  const context = extractLegendContext(layers);
-  console.log("context", context);
+  const context = createLegendContext(layers);
+  console.log("context", context, layers);
   if (context.significantExpressions.length === 0 && !context.includesHeatmap) {
     // is simple
     return {
@@ -390,6 +415,8 @@ export function getLegendForGLStyleLayers(
     }
 
     for (const expression of context.significantExpressions) {
+      // Commit representedProperties so they aren't duplicated in other panels
+      representedProperties.commit();
       const styleValueOrExpressionForContext =
         createStyleValueOrExpressionForContextFn(
           context,
@@ -413,13 +440,13 @@ export function getLegendForGLStyleLayers(
       const layerType = layers[expression.layerIndex].type;
       switch (expression.usageType) {
         case "rampScaleOrCurve":
+          const panelId = `${expression.layerIndex}-${expression.styleProp}`;
           const propType = getPropType(expression.styleProp, layerType);
           // # Detect Color Gradients
           if (propType === "color" && /interpolate/.test(expression.fnName)) {
             // gradient
             legend.panels.push({
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `${expression.layerIndex}-${expression.styleProp}-gradient`,
+              id: panelId,
               label: expression.getProp,
               type: "GLLegendGradientPanel",
               stops: interpolationExpressionToStops(
@@ -445,8 +472,28 @@ export function getLegendForGLStyleLayers(
             }
           } else if (
             propType === "number" &&
-            expression.fnName === "interpolate"
+            (expression.fnName === "interpolate" ||
+              (expression.fnName === "step" &&
+                (expression.styleProp === "circle-radius" ||
+                  expression.styleProp === "icon-size")))
           ) {
+            // Any numeric interpolation can benefit from a mid-point if it's
+            // possible to add one.
+            let stops = expression.stops;
+            if (
+              stops.length === 2 &&
+              expression.interpolationType === "linear" &&
+              "input" in stops[0] &&
+              "input" in stops[1] &&
+              typeof stops[0].output === "number" &&
+              typeof stops[1].output === "number"
+            ) {
+              // add intermediate
+              stops.splice(1, 0, {
+                input: (stops[0].input + stops[1].input) / 2,
+                output: (stops[0].output + stops[1].output) / 2,
+              });
+            }
             // Potential props here:
             // - circle-radius
             // - line-width
@@ -464,22 +511,6 @@ export function getLegendForGLStyleLayers(
               expression.styleProp === "circle-radius"
             ) {
               // # Bubble Chart
-              const stops = expression.stops;
-              if (
-                stops.length === 2 &&
-                expression.interpolationType === "linear" &&
-                "input" in stops[0] &&
-                "input" in stops[1] &&
-                typeof stops[0].output === "number" &&
-                typeof stops[1].output === "number"
-              ) {
-                // add intermediate
-                stops.splice(1, 0, {
-                  input: (stops[0].input + stops[1].input) / 2,
-                  output: (stops[0].output + stops[1].output) / 2,
-                });
-              }
-
               const stroke = styleValueOrExpressionForContext(
                 "circle-stroke-color",
                 "rgba(0, 0, 0, 0.25)"
@@ -495,12 +526,19 @@ export function getLegendForGLStyleLayers(
                 1
               );
 
+              // limit stops to 3 for bubble charts
+              if (stops.length > 3) {
+                stops = [
+                  stops[0],
+                  stops[Math.floor(stops.length / 2)],
+                  stops[stops.length - 1],
+                ];
+              }
               legend.panels.push({
-                // eslint-disable-next-line i18next/no-literal-string
-                id: `${expression.layerIndex}-${expression.styleProp}-bubble`,
+                id: panelId,
                 type: "GLLegendBubblePanel",
                 label: expression.getProp,
-                stops: expression.stops.map((s) => {
+                stops: stops.map((s) => {
                   const value = "input" in s ? s.input : 0;
                   return {
                     value,
@@ -515,24 +553,145 @@ export function getLegendForGLStyleLayers(
                   };
                 }),
               });
-            } else if (/opacity/.test(expression.styleProp)) {
-              // Only create a panel just for opacity if there are no other
-              // interesting things to represent.
-              // TODO:
+            } else if (expression.styleProp === "icon-size") {
+              // # Icon Size, pretty similar to a bubble chart
+              const layer = layers[expression.layerIndex];
+              legend.panels.push({
+                id: panelId,
+                type: "GLMarkerSizePanel",
+                label: expression.getProp,
+                stops: stops.map((s) => {
+                  const value = "input" in s ? s.input : 0;
+                  return {
+                    // eslint-disable-next-line i18next/no-literal-string
+                    id: `stop-${value}`,
+                    value,
+                    iconSize: s.output as number,
+                    imageId: getLayoutProp(
+                      layer.layout || {},
+                      layer.type,
+                      "icon-image",
+                      {
+                        [expression.getProp]: value,
+                      },
+                      representedProperties
+                    ),
+                    color: getPaintProp(
+                      layer.paint || {},
+                      "icon-color",
+                      {
+                        [expression.getProp]: value,
+                      },
+                      representedProperties,
+                      "#000"
+                    ),
+                    haloColor: getPaintProp(
+                      layer.paint || {},
+                      "icon-halo-color",
+                      {
+                        [expression.getProp]: value,
+                      },
+                      representedProperties
+                    ),
+                    haloWidth: getPaintProp(
+                      layer.paint || {},
+                      "icon-halo-width",
+                      {
+                        [expression.getProp]: value,
+                      },
+                      representedProperties
+                    ),
+                    rotation: getLayoutProp(
+                      layer.layout || {},
+                      layer.type,
+                      "icon-rotate",
+                      {
+                        [expression.getProp]: value,
+                      },
+                      representedProperties
+                    ),
+                  };
+                }),
+              });
             } else {
-              // test for
+              // for any other prop, create a list panel
+              legend.panels.push({
+                id: panelId,
+                type: "GLLegendListPanel",
+                label: expression.getProp,
+                items: stops.map((s) => {
+                  if ("input" in s) {
+                    return {
+                      // eslint-disable-next-line i18next/no-literal-string
+                      id: `stop-${s.input.toString()}`,
+                      label: s.input.toLocaleString(),
+                      symbol: createSymbol(
+                        expression.layerIndex,
+                        layers,
+                        {
+                          [expression.getProp]: s.input,
+                        },
+                        representedProperties
+                      ),
+                    };
+                  } else {
+                    throw new Error("no input on stop");
+                  }
+                }),
+              });
             }
           } else if (expression.fnName === "step") {
+            const firstInput = expression.stops.find((s) => "input" in s);
+            // Previous code will handle step functions if for circle-radius or
+            // icon-size. This is for any other step function.
+            // These will behave very similarly to a list panel
             // Create a step panel
+            legend.panels.push({
+              id: panelId,
+              type: "GLLegendStepPanel",
+              label: expression.getProp,
+              steps: expression.stops.map((s) => {
+                if ("input" in s) {
+                  return {
+                    id: s.input.toString(),
+                    label: s.input.toLocaleString(),
+                    symbol: createSymbol(
+                      expression.layerIndex,
+                      layers,
+                      {
+                        [expression.getProp]: s.input,
+                      },
+                      representedProperties
+                    ),
+                  };
+                } else {
+                  return {
+                    id: s.isDefault ? "Default" : "other",
+                    label:
+                      s.isDefault && firstInput && "input" in firstInput
+                        ? `< ${firstInput.input}`
+                        : "other",
+                    symbol: createSymbol(
+                      expression.layerIndex,
+                      layers,
+                      {
+                        [expression.getProp]:
+                          firstInput && "input" in firstInput
+                            ? firstInput.input - 99999
+                            : -99999999999,
+                      },
+                      representedProperties
+                    ),
+                  };
+                }
+              }),
+            });
           }
           break;
         case "decision":
-          let layer = layers[expression.layerIndex];
-          const fillLayer = layers.find((l) => l.type === "fill");
-          if (layer.type === "line" && fillLayer) {
-            layer = fillLayer;
-          }
+        case "filter":
           const domains = [...expression.domains];
+          console.log("decision or filter", expression);
           // Merge domains from other expressions which have the same getProp
           for (const otherExpression of context.significantExpressions) {
             if (otherExpression === expression) {
@@ -540,7 +699,8 @@ export function getLegendForGLStyleLayers(
             }
             if (
               otherExpression.getProp === expression.getProp &&
-              otherExpression.usageType === "decision"
+              (otherExpression.usageType === "decision" ||
+                otherExpression.usageType === "filter")
             ) {
               for (const entry of otherExpression.domains) {
                 const key = entry.comparators.join(",");
@@ -561,62 +721,121 @@ export function getLegendForGLStyleLayers(
             type: "GLLegendListPanel",
             label: expression.getProp,
             items: domains.map((d) => {
-              let symbol: GLLegendSymbol;
-
-              switch (layer.type) {
-                case "fill":
-                  symbol = createFillSymbol(
-                    layer as FillLayer,
-                    layers.filter((l) => l !== layer),
-                    {
-                      [expression.getProp]: d.comparators[0],
-                    },
-                    representedProperties
-                  );
-                  break;
-                case "circle":
-                  symbol = createCircleSymbol(
-                    layers[expression.layerIndex],
-                    [],
-                    {
-                      [expression.getProp]: d.comparators[0],
-                    },
-                    representedProperties
-                  );
-                  break;
-                case "line":
-                  symbol = createLineSymbol(
-                    layers[expression.layerIndex],
-                    [],
-                    {
-                      [expression.getProp]: d.comparators[0],
-                    },
-                    representedProperties
-                  );
-                  break;
-              }
               return {
                 id: d.operator + d.comparators.join(","),
                 label: d.isFallback
                   ? "Default"
                   : (((d.operator === "==" ? "" : d.operator) +
-                      d.comparators.join(", ")) as string),
-                symbol: symbol!,
+                      " " +
+                      d.comparators
+                        .map((c) => c.toLocaleString())
+                        .join(", ")) as string),
+                symbol: createSymbol(
+                  expression.layerIndex,
+                  layers,
+                  {
+                    [expression.getProp]: valueForDomain(
+                      d,
+                      domains.filter((domain) => domain !== d)
+                    ),
+                  },
+                  representedProperties
+                ),
               };
             }),
           });
-          representedProperties.commit();
           break;
         case "literal":
-          {
-            console.log("literal");
+          // With literal values our options are limited. If geostats are
+          // available for the layer, we can use those to create useful panels.
+          // Otherwise, it may depend on default values being present in the
+          // expression
+          const dataType = getPropType(expression.styleProp, layerType);
+          const info = geostatsLayerForSource(geostats);
+          const attr = info?.attributes.find(
+            (a) => a.attribute === expression.getProp
+          );
+          const geostatsValues = attr?.values;
+          switch (dataType) {
+            case "color":
+            case "enum":
+              // if geostats values are present, create a list from those.
+              // otherwise, create a simple symbol and rely on default values
+              if (attr && attr.values) {
+                let values = attr.values;
+                if (values.length > 6) {
+                  values = values.slice(0, 6);
+                }
+                legend.panels.push({
+                  // eslint-disable-next-line i18next/no-literal-string
+                  id: `${expression.layerIndex}-${expression.styleProp}-list`,
+                  type: "GLLegendListPanel",
+                  label: expression.getProp,
+                  items: values.map((v) => {
+                    return {
+                      id: v?.toString() || "null",
+                      label: v?.toString() || "",
+                      symbol: createSymbol(
+                        expression.layerIndex,
+                        layers,
+                        {
+                          [expression.getProp]: v,
+                        },
+                        representedProperties
+                      ),
+                    };
+                  }),
+                });
+              } else {
+                // Do nothing and expect SimpleGLLegend to be generated when
+                // panel list is empty
+              }
+              break;
+            case "number":
+              // if geostats values are present, create a list from min/max
+              // otherwise, create a simple symbol and rely on default values
+              if (attr && attr.min !== undefined && attr.max !== undefined) {
+                legend.panels.push({
+                  // eslint-disable-next-line i18next/no-literal-string
+                  id: `${expression.layerIndex}-${expression.styleProp}-list`,
+                  type: "GLLegendListPanel",
+                  label: expression.getProp,
+                  items: [
+                    {
+                      id: "min",
+                      label: attr.min.toLocaleString(),
+                      symbol: createSymbol(
+                        expression.layerIndex,
+                        layers,
+                        {
+                          [expression.getProp]: attr.min,
+                        },
+                        representedProperties
+                      ),
+                    },
+                    {
+                      id: "max",
+                      label: attr.max.toLocaleString(),
+                      symbol: createSymbol(
+                        expression.layerIndex,
+                        layers,
+                        {
+                          [expression.getProp]: attr.max,
+                        },
+                        representedProperties
+                      ),
+                    },
+                  ],
+                });
+              }
+              break;
           }
           break;
-        case "filter":
-          {
-            console.log("filter");
-          }
-          break;
+        // case "filter":
+        //   {
+        //     console.log("filter");
+        //   }
+        //   break;
       }
     }
 
@@ -624,7 +843,7 @@ export function getLegendForGLStyleLayers(
     // TODO: if no panels have been added yet, try inserting a single symbol
     // legend as a fallback
     if (legend.panels.length === 0) {
-      console.log("no panels", legend);
+      console.log("using single-symbol fallback");
       return {
         type: "SimpleGLLegend",
         symbol: getSingleSymbolForVectorLayers(layers),
@@ -633,6 +852,57 @@ export function getLegendForGLStyleLayers(
       return legend;
     }
   }
+}
+
+function valueForDomain(
+  domain: SignificantExpressionDomain,
+  relatedDomains: SignificantExpressionDomain[] = []
+) {
+  if (domain.isFallback) {
+    // Need to find a value that doesn't fall within any of the other domains
+    if (relatedDomains.length === 1) {
+      return 0;
+    }
+  }
+  switch (domain.operator) {
+    case "==":
+      return domain.comparators[0];
+    // For >=, <=, change the comparator a tiny, tiny amount in case there is a
+    // mistake in the expressions that allows for a little overlay in domains
+    case ">=":
+      return domain.comparators[0] + 0.0000001;
+    case "<=":
+      return domain.comparators[0] - 0.0000001;
+    case "!=":
+      return typeof domain.comparators[0] === "number"
+        ? domain.comparators[0] + 1
+        : "__legend_placeholder_other__";
+    case ">":
+      return domain.comparators[0] + 0.001;
+    case "<":
+      return domain.comparators[0] - 0.001;
+    case "!":
+      return false;
+    case "in":
+      return domain.comparators[0];
+    case "!in":
+      return typeof domain.comparators[0] === "number";
+    default:
+      return domain.comparators[0];
+  }
+}
+
+// TODO: update to handle multiple source layers in the same tableOfContentsItem
+// some day.
+function geostatsLayerForSource(geostats?: Geostats, sourceId?: string) {
+  if (geostats) {
+    if (sourceId) {
+      return geostats.layers.find((l) => l.layer === sourceId);
+    } else {
+      return geostats.layers[0];
+    }
+  }
+  return undefined;
 }
 
 function evaluate(
@@ -739,7 +1009,7 @@ function getPaintProp(
     return defaultIfAlreadyRepresented;
   }
   let type = propName.split("-")[0];
-  if (type === "text") {
+  if (type === "text" || type === "icon") {
     type = "symbol";
   }
   if (propName in paint) {
@@ -806,7 +1076,7 @@ interface SignificantLiteralExpression {
   rank: number;
 }
 
-type Operator = "<" | "<=" | ">" | ">=" | "==" | "!=" | "!";
+type Operator = "<" | "<=" | ">" | ">=" | "==" | "!=" | "!" | "in" | "!in";
 
 interface SignificantExpressionDomain {
   operator: Operator;
@@ -845,7 +1115,7 @@ interface SignificantFilterExpression {
   getProp: string;
   usageType: "filter";
   domains: SignificantExpressionDomain[];
-  rank: 0;
+  rank: number;
 }
 
 type SignificantExpression =
@@ -864,7 +1134,7 @@ interface LegendContext {
   includesHeatmap: boolean;
 }
 
-function extractLegendContext(
+function createLegendContext(
   layers: SeaSketchGlLayer[],
   geostats?: Geostats
 ): LegendContext {
@@ -879,10 +1149,8 @@ function extractLegendContext(
     if (layer.type === "heatmap") {
       results.includesHeatmap = true;
     }
-    // First, find all the filter expressions since they are easy
-    // TODO: implement
-    if (layer.filter && isExpression(layer.filter)) {
-    }
+    // TODO: support legacy filters as well
+    const filterDetails = extractFilterDetails(layer.filter);
     if (layer.paint) {
       for (const prop of SIGNIFICANT_PAINT_PROPS) {
         if (prop in layer.paint) {
@@ -896,6 +1164,15 @@ function extractLegendContext(
             if (expressionDetails) {
               results.significantExpressions.push(expressionDetails);
             }
+          } else if (filterDetails) {
+            results.significantExpressions.push({
+              usageType: "filter",
+              layerIndex: layers.indexOf(layer),
+              styleProp: prop,
+              getProp: filterDetails.getProp,
+              domains: filterDetails.domains,
+              rank: SIGNIFICANT_PAINT_PROPS.indexOf(prop),
+            });
           }
         }
       }
@@ -920,6 +1197,69 @@ function extractLegendContext(
   }
   results.significantExpressions.sort((a, b) => a.rank - b.rank);
   return results;
+}
+
+function extractFilterDetails(
+  filter: any
+): { domains: SignificantExpressionDomain[]; getProp: string } | null {
+  if (isExpression(filter) && hasGetExpression(filter)) {
+    const getExpression = findGetExpression(filter);
+    if (getExpression) {
+      const domains: SignificantExpressionDomain[] = [];
+      const getProp = getExpression.property;
+      const operator = filter[0] as Operator;
+      domains.push({
+        operator,
+        comparators: filter.slice(2),
+      });
+      const fallback = findFallbackForDomain(domains);
+      if (fallback) {
+        domains.push(fallback);
+      }
+      return { domains, getProp };
+    }
+  }
+  return null;
+
+  //   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  //   const [_case, ...args] = context.parentExpression;
+  //   const conditionsAndOutputs = args.slice(0, args.length - 1);
+  //   const domains: SignificantExpressionDomain[] = [];
+  //   for (let i = 0; i < conditionsAndOutputs.length; i++) {
+  //     if (i % 2 === 0) {
+  //       const condition = conditionsAndOutputs[i];
+  //       if (isExpression(condition)) {
+  //         const { isSimple, comparatorIndex } = isSimpleCondition(
+  //           condition,
+  //           getProp
+  //         );
+  //         const [conditionFnName, ...conditionArgs] = condition;
+  //         if (isSimple) {
+  //           domains.push({
+  //             operator: conditionFnName as Operator,
+  //             comparators:
+  //               comparatorIndex !== undefined && comparatorIndex > -1
+  //                 ? [conditionArgs[comparatorIndex!]]
+  //                 : [],
+  //           });
+  //         }
+  //       }
+  //     }
+  //   }
+
+  //   const fallback = findFallbackForDomain(domains);
+  //   console.log("find fallback", domains, fallback);
+  //   if (fallback) {
+  //     domains.push(fallback);
+  //   }
+  //   return {
+  //     ...knownProps,
+  //     usageType: context.usageType,
+  //     getProp,
+  //     fnName: "case",
+  //     domains,
+  //   };
+  // }
 }
 
 interface ParentExpressionContext {
@@ -977,11 +1317,14 @@ function stopsFromInterpolation(expression: Expression) {
 function stopsFromStepExpression(expression: Expression) {
   if (expression[0] === "step") {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [fnName, input, firstOutput, ...inputOutputPairs] = expression;
+    const [fnName, input, ...inputOutputPairs] = expression;
     const stops: Stop[] = [];
-    stops.push({ output: firstOutput, isDefault: true });
-    for (const pair of inputOutputPairs) {
-      stops.push({ input: pair[0], output: pair[1] });
+    stops.push({ output: inputOutputPairs[0], isDefault: true });
+    for (var i = 1; i < inputOutputPairs.length; i += 2) {
+      stops.push({
+        input: inputOutputPairs[i],
+        output: inputOutputPairs[i + 1],
+      });
     }
     return stops;
   } else {
@@ -1113,18 +1456,12 @@ function extractExpressionDetails(
               }
             }
           }
-          // Add fallback
-          const lastValueInDomain = domains[domains.length - 1].comparators[0];
 
-          domains.push({
-            operator: "==",
-            comparators: [
-              typeof lastValueInDomain === "number"
-                ? lastValueInDomain + 99999
-                : "__glLegendDefaultValue",
-            ],
-            isFallback: true,
-          });
+          const fallback = findFallbackForDomain(domains);
+          console.log("find fallback", domains, fallback);
+          if (fallback) {
+            domains.push(fallback);
+          }
           return {
             ...knownProps,
             usageType: context.usageType,
@@ -1155,6 +1492,260 @@ function extractExpressionDetails(
     }
   }
   return null;
+}
+
+function findFallbackForDomain(
+  domains: SignificantExpressionDomain[]
+): SignificantExpressionDomain | null {
+  if (domains.length === 0) {
+    return null;
+  }
+  const isNumeric = typeof domains[0].comparators[0] === "number";
+  const isBoolean = typeof domains[0].comparators[0] === "boolean";
+  if (!isNumeric && !isBoolean) {
+    // String value, easy
+    return {
+      operator: "==",
+      comparators: ["__glLegendDefaultValue"],
+      isFallback: true,
+    };
+  }
+
+  const possibleFallbacks: {
+    domain: SignificantExpressionDomain;
+    value: number;
+  }[] = [];
+  const excludedValues: (number | boolean)[] = [];
+  const includedValues: (number | boolean)[] = [];
+  for (const domain of domains) {
+    // This shouldn't be encountered, but just in case
+    if (domain.isFallback) {
+      return domain;
+    } else {
+      if (isNumeric) {
+        // numeric domain
+        if (domain.operator === "!=") {
+          excludedValues.push(...domain.comparators);
+        } else if (domain.operator === "==") {
+          includedValues.push(...domain.comparators);
+        } else if (domain.operator === "<") {
+          possibleFallbacks.push({ domain, value: domain.comparators[0] });
+        } else if (domain.operator === "<=") {
+          possibleFallbacks.push({
+            domain,
+            value: domain.comparators[0] + 0.001,
+          });
+        } else if (domain.operator === ">") {
+          possibleFallbacks.push({ domain, value: domain.comparators[0] });
+        } else if (domain.operator === ">=") {
+          possibleFallbacks.push({
+            domain,
+            value: domain.comparators[0] - 0.001,
+          });
+        } else if (domain.operator === "in") {
+          includedValues.push(...domain.comparators);
+        } else if (domain.operator === "!in") {
+          excludedValues.push(...domain.comparators);
+        }
+      } else if (isBoolean) {
+        // boolean domain
+        if (domain.operator === "!=") {
+          excludedValues.push(...domain.comparators);
+        } else if (domain.operator === "==") {
+          includedValues.push(...domain.comparators);
+        } else if (domain.operator === "!") {
+          includedValues.push(!domain.comparators[0]);
+        }
+      }
+    }
+  }
+  if (isBoolean) {
+    const allValues = [...excludedValues, ...includedValues];
+    if (!allValues.includes(false)) {
+      return { operator: "==", comparators: [false], isFallback: true };
+    } else if (!allValues.includes(true)) {
+      return { operator: "==", comparators: [true], isFallback: true };
+    } else {
+      return null;
+    }
+  } else if (isNumeric) {
+    // First, see if any of the possible fallbacks are not in the included in
+    // any of the existing domains.
+    if (possibleFallbacks.length === 1 && domains.length === 1) {
+      return {
+        operator: "==",
+        comparators: [possibleFallbacks[0].value],
+        isFallback: true,
+      };
+    }
+    for (const fallback of possibleFallbacks) {
+      if (includedValues.includes(fallback.value)) {
+        break;
+      }
+      for (const domain of domains) {
+        if (domain === fallback.domain) {
+          // skip
+          continue;
+        } else {
+          if (
+            domain.operator === "==" &&
+            fallback.value === domain.comparators[0]
+          ) {
+            continue;
+          } else if (
+            domain.operator === "<" &&
+            fallback.value < domain.comparators[0]
+          ) {
+            continue;
+          } else if (
+            domain.operator === "<=" &&
+            fallback.value <= domain.comparators[0]
+          ) {
+            continue;
+          } else if (
+            domain.operator === ">" &&
+            fallback.value > domain.comparators[0]
+          ) {
+            continue;
+          } else if (
+            domain.operator === ">=" &&
+            fallback.value >= domain.comparators[0]
+          ) {
+            continue;
+          } else if (
+            domain.operator === "!=" &&
+            fallback.value !== domain.comparators[0]
+          ) {
+            continue;
+          } else if (
+            domain.operator === "in" &&
+            domain.comparators.includes(fallback.value)
+          ) {
+            continue;
+          } else if (
+            domain.operator === "!in" &&
+            !domain.comparators.includes(fallback.value)
+          ) {
+            continue;
+          }
+        }
+        // if you get to this point, the fallback is a good choice
+        return {
+          operator: "==",
+          comparators: [fallback.value],
+          isFallback: true,
+        };
+      }
+    }
+    // If none of those work, find the max of included and excluded values
+    // and add 1
+    const allValues = [...includedValues, ...excludedValues] as number[];
+    if (allValues.length) {
+      const max = Math.max(...allValues);
+      return { operator: "==", comparators: [max + 1], isFallback: true };
+    }
+  }
+  return null;
+}
+
+function numericMetadataForDomain(domains: SignificantExpressionDomain[]) {
+  // Track what is handled by the existing domains. So if we have two
+  // domains, [">=", 5], [">=", 10], then the range covered is:
+  // {min: 5, max: Infinity}
+  // Or ["==", 3], ["<=", 7] then {min: Infinity, max: 7}
+  // Or [">=", 10], ["<=", 20] then {min: Infinity, max: Infinity}
+  // Or ["==", 1], ["==", 2], [">=", 3] then {min: 1, max: Infinity}
+  const state: {
+    min: null | number;
+    max: null | number;
+    includedValues: number[];
+    excludedValues: number[];
+    goodFallbackValue?: number;
+  } = {
+    min: null,
+    max: null,
+    includedValues: [],
+    excludedValues: [],
+  };
+  if (domains.length > 0 && typeof domains[0].comparators[0] === "number") {
+    for (const domain of domains) {
+      const value = domain.comparators[0];
+      switch (domain.operator) {
+        case "==":
+          state.includedValues.push(value);
+          if (state.min === null || value < state.min) {
+            state.min = value;
+          }
+          if (state.max === null || value > state.max) {
+            state.max = value;
+          }
+          break;
+        case ">=":
+          if (state.min === null || value < state.min) {
+            state.min = value;
+          }
+          state.max = Infinity;
+          break;
+        case "<=":
+          if (state.max === null || value > state.max) {
+            state.max = value;
+          }
+          state.min = -Infinity;
+          break;
+        case ">":
+          if (state.min === null || value < state.min) {
+            state.min = value - 0.001;
+          }
+          state.max = Infinity;
+          break;
+        case "<":
+          if (state.max === null || value > state.max) {
+            state.max = value + 0.001;
+          }
+          state.min = -Infinity;
+          break;
+        case "!=":
+          state.excludedValues.push(value);
+          break;
+        case "in":
+          state.includedValues.push(...domain.comparators);
+          break;
+        case "!in":
+          state.excludedValues.push(...domain.comparators);
+          break;
+        default:
+          // do nothing
+          break;
+      }
+    }
+  } else {
+    throw new Error("Domain is not numeric");
+  }
+  if (state.min !== null && state.min > -Infinity) {
+    state.goodFallbackValue = state.min - 0.001;
+  } else if (state.max !== null && state.max < Infinity) {
+    state.goodFallbackValue = state.max + 0.001;
+  } else if (state.min === Infinity && state.max === Infinity) {
+    // everything is covered, can't calculate a fallback
+  } else {
+    // domain appears to be based on just included and excluded values
+    // easiest if if there is an excluded value that is not in included
+    for (const excluded of state.excludedValues) {
+      if (!state.includedValues.includes(excluded)) {
+        state.goodFallbackValue = excluded;
+        break;
+      }
+    }
+    if (state.goodFallbackValue === undefined) {
+      // get the max of included and excluded values
+      const maxIncluded = Math.max(
+        ...state.includedValues,
+        ...state.excludedValues
+      );
+      state.goodFallbackValue = maxIncluded + 1;
+    }
+  }
+  return state;
 }
 
 /**
@@ -1248,7 +1839,7 @@ function getSingleSymbolForVectorLayers(
   }
   const lineLayer = layers.find((layer) => layer.type === "line") as LineLayer;
   if (lineLayer && layerIsVisible(lineLayer)) {
-    return createLineLayer(
+    return createLineSymbol(
       lineLayer,
       layers.filter((l) => l !== lineLayer),
       {}
@@ -1269,7 +1860,8 @@ function getSingleSymbolForVectorLayers(
     if (iconImage) {
       return createMarkerSymbol(
         symbolLayer,
-        layers.filter((l) => l !== symbolLayer)
+        layers.filter((l) => l !== symbolLayer),
+        {}
       );
     } else if (layout["text-field"]) {
       return createTextSymbol(
@@ -1282,17 +1874,56 @@ function getSingleSymbolForVectorLayers(
   throw new Error("Not implemented");
 }
 
+function layerIsVisible(layer: SeaSketchGlLayer) {
+  return !layer.layout?.visibility || layer.layout.visibility !== "none";
+}
+
 function createMarkerSymbol(
   symbolLayer: SeaSketchGlLayer,
-  otherLayers: SeaSketchGlLayer[]
+  otherLayers: SeaSketchGlLayer[],
+  featureData: { [propName: string]: any },
+  representedProperties?: RepresentedProperties
 ): GLLegendMarkerSymbol {
   const paint = (symbolLayer.paint || {}) as any;
   const layout = (symbolLayer.layout || {}) as any;
-  const iconImage = layout["icon-image"];
-  const iconSize = layout["icon-size"] || 1;
-  const rotation = layout["icon-rotate"];
-  const haloColor = paint["text-halo-color"];
-  const haloWidth = paint["text-halo-width"];
+  const iconImage = getLayoutProp(
+    layout,
+    "symbol",
+    "icon-image",
+    featureData,
+    representedProperties
+  );
+  const iconSize = getLayoutProp(
+    layout,
+    "symbol",
+    "icon-size",
+    featureData,
+    representedProperties,
+    1
+  );
+  const rotation = getLayoutProp(
+    layout,
+    "symbol",
+    "icon-rotate",
+    featureData,
+    representedProperties,
+    0
+  );
+  const haloColor = getPaintProp(
+    paint,
+    "text-halo-color",
+    featureData,
+    representedProperties,
+    "transparent"
+  );
+  const haloWidth = getPaintProp(
+    paint,
+    "text-halo-width",
+    featureData,
+    representedProperties,
+    0
+  );
+
   return {
     type: "marker",
     imageId: iconImage,
@@ -1466,8 +2097,76 @@ function isRepresented(
   }
 }
 
+function createSymbol(
+  layerIndex: number,
+  layers: SeaSketchGlLayer[],
+  featureProps: { [key: string]: any },
+  representedProperties: RepresentedProperties
+) {
+  const primaryLayer = layers[layerIndex];
+  if (!primaryLayer) {
+    throw new Error("No primary layer: " + layerIndex);
+  }
+  const otherLayers = layers.filter((l) => l !== primaryLayer);
+  switch (primaryLayer.type) {
+    case "fill":
+    case "fill-extrusion":
+      return createFillSymbol(
+        primaryLayer,
+        otherLayers,
+        featureProps,
+        representedProperties
+      );
+    case "line":
+      // TODO: evaluate filters?
+      const visibleFillLayer = otherLayers.find(
+        (l) => l.type === "fill" && layerIsVisible(l)
+      );
+      if (visibleFillLayer) {
+        return createFillSymbol(
+          visibleFillLayer,
+          layers.filter((l) => l !== visibleFillLayer),
+          featureProps,
+          representedProperties
+        );
+      } else {
+        return createLineSymbol(
+          primaryLayer,
+          otherLayers,
+          featureProps,
+          representedProperties
+        );
+      }
+    case "circle":
+      return createCircleSymbol(
+        primaryLayer,
+        otherLayers,
+        featureProps,
+        representedProperties
+      );
+    case "symbol":
+      const layout = (primaryLayer.layout || {}) as any;
+      const iconImage = layout["icon-image"];
+      if (iconImage) {
+        return createMarkerSymbol(primaryLayer, otherLayers, featureProps);
+      }
+      const textField = layout["text-field"];
+      if (textField) {
+        return createTextSymbol(
+          primaryLayer,
+          otherLayers,
+          featureProps,
+          representedProperties
+        );
+      }
+      throw new Error("Not implemented");
+    default:
+      throw new Error("Not implemented");
+  }
+}
+
 function createFillSymbol(
-  fillLayer: FillLayer | FillExtrusionLayer,
+  fillLayer: SeaSketchGlLayer,
   otherLayers: SeaSketchGlLayer[],
   featureData: { [propName: string]: any },
   representedProperties?: RepresentedProperties
@@ -1573,35 +2272,6 @@ function createFillSymbol(
           undefined
         ),
   };
-}
-
-function createLineLayer(
-  lineLayer: LineLayer,
-  otherLayers: SeaSketchGlLayer[],
-  featureData: { [propName: string]: any }
-): GLLegendLineSymbol {
-  const paint = (lineLayer.paint || {}) as any;
-  const opacity = getPaintProp(paint, "line-opacity", featureData);
-  const strokeWidth = getPaintProp(paint, "line-width", featureData);
-  const strokeColor = getPaintProp(paint, "line-color", featureData);
-  const dashedLine = paint["line-dasharray"] || false;
-
-  return {
-    type: "line",
-    color: strokeColor,
-    strokeWidth,
-    dashed: dashedLine,
-    opacity,
-    patternImageId: getPaintProp(paint, "line-pattern", featureData),
-  };
-}
-
-function layerIsVisible(layer: Pick<Layer, "layout">) {
-  if ("layout" in layer && layer.layout?.visibility) {
-    return layer.layout.visibility !== "none";
-  } else {
-    return true;
-  }
 }
 
 // type can be "woodland", "scrub", or "desert"

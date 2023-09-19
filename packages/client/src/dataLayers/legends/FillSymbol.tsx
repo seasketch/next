@@ -54,6 +54,7 @@ export default function FillSymbol({
 
   return (
     <div
+      className="rounded-sm"
       style={{
         width: 15,
         height: 15,

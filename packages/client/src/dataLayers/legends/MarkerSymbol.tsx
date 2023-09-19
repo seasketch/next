@@ -1,28 +1,29 @@
 import { Map } from "mapbox-gl";
-import { GLLegendMarkerSymbol } from "./glLegends";
 import { useEffect, useState } from "react";
 import { blankDataUri } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISDynamicMapService";
-import { colord, extend } from "colord";
-import namesPlugin from "colord/plugins/names";
-extend([namesPlugin]);
 
+// TODO: icon-color
 export default function MarkerSymbol({
   map,
-  data,
+  imageId,
+  fullSize,
+  iconSize,
 }: {
-  data: GLLegendMarkerSymbol;
+  imageId: string;
   map: Map;
+  fullSize?: boolean;
+  iconSize?: number;
 }) {
   const [imageData, setImageData] = useState<LegendResolvedImage | undefined>();
 
   useEffect(() => {
-    if (!imageData && data.imageId) {
-      const resolvedImage = getImage(data.imageId, map);
+    if (!imageData && imageId) {
+      const resolvedImage = getImage(imageId, map);
       if (resolvedImage) {
         setImageData(resolvedImage);
       } else {
         const handler = () => {
-          const resolvedImage = getImage(data.imageId, map);
+          const resolvedImage = getImage(imageId, map);
           if (resolvedImage) {
             setImageData(resolvedImage);
             map.off("styledata", handler);
@@ -34,10 +35,23 @@ export default function MarkerSymbol({
         };
       }
     }
-  }, [setImageData, map, data.imageId, imageData]);
+  }, [setImageData, map, imageId, imageData]);
 
   if (imageData) {
-    return <img className="max-w-3/4" src={imageData.url} />;
+    return (
+      <img
+        style={
+          iconSize !== undefined
+            ? {
+                width: (iconSize * imageData.width) / imageData.pixelRatio,
+                height: (iconSize * imageData.height) / imageData.pixelRatio,
+              }
+            : {}
+        }
+        className={iconSize !== undefined ? "w-5 h-5" : ""}
+        src={imageData.url}
+      />
+    );
   } else {
     // eslint-disable-next-line i18next/no-literal-string
     return null;

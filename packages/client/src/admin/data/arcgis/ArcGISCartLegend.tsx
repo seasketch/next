@@ -15,7 +15,7 @@ import Spinner from "../../../components/Spinner";
 import { Layer, Map } from "mapbox-gl";
 import {
   LegendForGLLayers,
-  getLegendForGLStyleLayers,
+  buildLegendForGLStyleLayers,
   hasGetExpression,
   isExpression,
 } from "../../../dataLayers/legends/glLegends";
@@ -301,7 +301,7 @@ const SimpleLegendIconFromStyle = memo(
   }) {
     let data: LegendForGLLayers | undefined;
     try {
-      data = getLegendForGLStyleLayers(props.style.layers, "vector");
+      data = buildLegendForGLStyleLayers(props.style.layers, "vector");
     } catch (e) {
       // Do nothing
     }

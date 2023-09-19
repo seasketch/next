@@ -7,7 +7,6 @@ extend([namesPlugin]);
 // but how??
 export default function LineSymbol(props: { data: GLLegendLineSymbol }) {
   const simpleSymbol = props.data;
-  console.log("dashed?", simpleSymbol.dashed);
   return (
     <div
       style={{
@@ -16,7 +15,9 @@ export default function LineSymbol(props: { data: GLLegendLineSymbol }) {
         height: 0,
         borderBottom: simpleSymbol.strokeWidth
           ? `${Math.min(simpleSymbol.strokeWidth, 3)}px ${
-              simpleSymbol.dashed !== false ? "dashed" : "solid"
+              simpleSymbol.dashed !== undefined && simpleSymbol.dashed !== false
+                ? "dashed"
+                : "solid"
             } ${simpleSymbol.color}`
           : undefined,
       }}
