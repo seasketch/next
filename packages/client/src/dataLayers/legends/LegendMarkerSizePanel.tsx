@@ -1,6 +1,6 @@
 import MarkerSymbol from "./MarkerSymbol";
 import SimpleSymbol from "./SimpleSymbol";
-import { GLLegendListPanel, GLMarkerSizePanel } from "./glLegends";
+import { GLLegendListPanel, GLMarkerSizePanel } from "./LegendDataModel";
 import { Map } from "mapbox-gl";
 
 export default function LegendMarkerSizePanel({

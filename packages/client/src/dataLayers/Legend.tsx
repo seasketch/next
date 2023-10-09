@@ -2,7 +2,7 @@ import {
   DynamicRenderingSupportOptions,
   LegendItem as LegendSymbolItem,
 } from "@seasketch/mapbox-gl-esri-sources";
-import { LegendForGLLayers } from "./legends/glLegends";
+import { LegendForGLLayers } from "./legends/LegendDataModel";
 import * as Accordion from "@radix-ui/react-accordion";
 import {
   CaretDownIcon,
@@ -15,7 +15,6 @@ import SimpleSymbol from "./legends/SimpleSymbol";
 import { Map } from "mapbox-gl";
 import LegendBubblePanel from "./legends/LegendBubblePanel";
 import LegendGradientPanel from "./legends/LegendGradientPanel";
-import { stopsToLinearGradient } from "./legends/utils";
 import LegendHeatmapPanel from "./legends/LegendHeatmapPanel";
 import LegendListPanel from "./legends/LegendListPanel";
 import LegendMarkerSizePanel from "./legends/LegendMarkerSizePanel";

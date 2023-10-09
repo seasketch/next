@@ -1,5 +1,5 @@
 import { VideoCameraIcon } from "@heroicons/react/solid";
-import { GLLegendSymbol } from "./glLegends";
+import { GLLegendSymbol } from "./LegendDataModel";
 import FillSymbol from "./FillSymbol";
 import LineSymbol from "./LineSymbol";
 import MarkerSymbol from "./MarkerSymbol";

@@ -13,14 +13,14 @@ import {
 import * as Accordion from "@radix-ui/react-accordion";
 import Spinner from "../../../components/Spinner";
 import { Layer, Map } from "mapbox-gl";
-import {
-  LegendForGLLayers,
-  buildLegendForGLStyleLayers,
-  hasGetExpression,
-  isExpression,
-} from "../../../dataLayers/legends/glLegends";
+import { compileLegendFromGLStyleLayers } from "../../../dataLayers/legends/compileLegend";
 import { memo } from "react";
 import SimpleSymbol from "../../../dataLayers/legends/SimpleSymbol";
+import { LegendForGLLayers } from "../../../dataLayers/legends/LegendDataModel";
+import {
+  hasGetExpression,
+  isExpression,
+} from "../../../dataLayers/legends/utils";
 require("./Accordion.css");
 
 export default function ArcGISCartLegend({
@@ -269,19 +269,19 @@ export function styleHasDataExpression(style: Layer[]) {
       style.length > 1 &&
       layer.filter &&
       isExpression(layer.filter) &&
-      hasGetExpression(layer.filter)
+      hasGetExpression(layer.filter, true)
     ) {
       return true;
     } else if (layer.paint) {
       for (const key in layer.paint) {
         if (isExpression((layer.paint as any)[key])) {
-          return hasGetExpression((layer.paint as any)[key]);
+          return hasGetExpression((layer.paint as any)[key], key === "filter");
         }
       }
     } else if (layer.layout) {
       for (const key in layer.layout) {
         if (isExpression((layer.layout as any)[key])) {
-          return hasGetExpression((layer.layout as any)[key]);
+          return hasGetExpression((layer.layout as any)[key], key === "filter");
         }
       }
     }
@@ -301,7 +301,7 @@ const SimpleLegendIconFromStyle = memo(
   }) {
     let data: LegendForGLLayers | undefined;
     try {
-      data = buildLegendForGLStyleLayers(props.style.layers, "vector");
+      data = compileLegendFromGLStyleLayers(props.style.layers, "vector");
     } catch (e) {
       // Do nothing
     }

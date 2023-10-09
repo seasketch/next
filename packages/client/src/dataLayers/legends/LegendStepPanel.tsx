@@ -1,6 +1,5 @@
-import MarkerSymbol from "./MarkerSymbol";
 import { Map } from "mapbox-gl";
-import { GLLegendStepPanel } from "./glLegends";
+import { GLLegendStepPanel } from "./LegendDataModel";
 import SimpleSymbol from "./SimpleSymbol";
 
 export default function LegendStepPanel({

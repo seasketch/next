@@ -119,6 +119,7 @@ async function styleForFeatureLayer(
   let layers: Layer[] = [];
   const imageList = new ImageList(serviceMetadata.currentVersion);
   let legendItemIndex = 0;
+  console.log("type", renderer.type);
   switch (renderer.type) {
     case "uniqueValue": {
       const fields = [renderer.field1];
@@ -152,6 +153,9 @@ async function styleForFeatureLayer(
             sublayer,
             legendItemIndex++
           ).map((lyr) => {
+            if (info.label?.length) {
+              lyr.metadata = { label: info.label };
+            }
             if (fields.length === 1) {
               lyr.filter = ["==", field, values[0]];
               filters.push(lyr.filter);
@@ -181,6 +185,7 @@ async function styleForFeatureLayer(
             0
           ).map((lyr) => {
             lyr.filter = ["none", ...filters];
+            lyr.metadata = { label: "Default" };
             return lyr;
           })
         );
@@ -188,6 +193,7 @@ async function styleForFeatureLayer(
       break;
     }
     case "classBreaks":
+      console.log("class breaks", renderer.classBreakInfos);
       // TODO: look for test dataset for backgroundFillSymbol
       if (renderer.backgroundFillSymbol) {
         layers.push(
@@ -205,6 +211,7 @@ async function styleForFeatureLayer(
       const filters: any[] = [];
       legendItemIndex = renderer.classBreakInfos.length - 1;
       let minValue = 0;
+      console.log("renderer", renderer);
       const minMaxValues: [number, number][] = renderer.classBreakInfos.map(
         (b) => {
           const values = [b.classMinValue || minValue, b.classMaxValue] as [
@@ -233,6 +240,9 @@ async function styleForFeatureLayer(
             } else {
               lyr.filter = ["all", [">", field, min], ["<=", field, max]];
             }
+            if (info.label?.length) {
+              lyr.metadata = { label: info.label };
+            }
             filters.push(lyr.filter);
             return lyr;
           })
@@ -250,6 +260,7 @@ async function styleForFeatureLayer(
         );
         for (const index in defaultLayers) {
           defaultLayers[index].filter = ["none", filters];
+          defaultLayers[index].metadata = { label: "Default" };
         }
         layers.push(...defaultLayers);
       }

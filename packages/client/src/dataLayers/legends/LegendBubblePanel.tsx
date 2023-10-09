@@ -1,4 +1,4 @@
-import { GLLegendBubblePanel } from "./glLegends";
+import { GLLegendBubblePanel } from "./LegendDataModel";
 
 export default function LegendBubblePanel({
   panel,

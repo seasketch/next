@@ -1,5 +1,5 @@
 import SimpleSymbol from "./SimpleSymbol";
-import { GLLegendListPanel } from "./glLegends";
+import { GLLegendListPanel } from "./LegendDataModel";
 import { Map } from "mapbox-gl";
 
 export default function LegendListPanel({

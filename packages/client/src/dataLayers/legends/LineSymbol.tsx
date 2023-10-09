@@ -1,7 +1,4 @@
-import { GLLegendLineSymbol } from "./glLegends";
-import { colord, extend } from "colord";
-import namesPlugin from "colord/plugins/names";
-extend([namesPlugin]);
+import { GLLegendLineSymbol } from "./LegendDataModel";
 
 // TODO: support line patterns
 // but how??

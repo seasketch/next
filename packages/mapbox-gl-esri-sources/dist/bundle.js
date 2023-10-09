@@ -2056,6 +2056,7 @@ var MapBoxGLEsriSources = (function (exports) {
       let layers = [];
       const imageList = new ImageList(serviceMetadata.currentVersion);
       let legendItemIndex = 0;
+      console.log("type", renderer.type);
       switch (renderer.type) {
           case "uniqueValue": {
               const fields = [renderer.field1];
@@ -2075,6 +2076,10 @@ var MapBoxGLEsriSources = (function (exports) {
               for (const info of renderer.uniqueValueInfos) {
                   const values = normalizeValuesForFieldTypes(info.value, renderer.fieldDelimiter, fieldTypes);
                   layers.push(...symbolToLayers(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex++).map((lyr) => {
+                      var _a;
+                      if ((_a = info.label) === null || _a === void 0 ? void 0 : _a.length) {
+                          lyr.metadata = { label: info.label };
+                      }
                       if (fields.length === 1) {
                           lyr.filter = ["==", field, values[0]];
                           filters.push(lyr.filter);
@@ -2096,12 +2101,14 @@ var MapBoxGLEsriSources = (function (exports) {
               if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
                   layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
                       lyr.filter = ["none", ...filters];
+                      lyr.metadata = { label: "Default" };
                       return lyr;
                   }));
               }
               break;
           }
           case "classBreaks":
+              console.log("class breaks", renderer.classBreakInfos);
               if (renderer.backgroundFillSymbol) {
                   layers.push(...symbolToLayers(renderer.backgroundFillSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0));
               }
@@ -2109,6 +2116,7 @@ var MapBoxGLEsriSources = (function (exports) {
               const filters = [];
               legendItemIndex = renderer.classBreakInfos.length - 1;
               let minValue = 0;
+              console.log("renderer", renderer);
               const minMaxValues = renderer.classBreakInfos.map((b) => {
                   const values = [b.classMinValue || minValue, b.classMaxValue];
                   minValue = values[1];
@@ -2116,12 +2124,16 @@ var MapBoxGLEsriSources = (function (exports) {
               });
               for (const info of [...renderer.classBreakInfos].reverse()) {
                   layers.push(...symbolToLayers(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex--).map((lyr) => {
+                      var _a;
                       const [min, max] = minMaxValues[renderer.classBreakInfos.indexOf(info)];
                       if (renderer.classBreakInfos.indexOf(info) === 0) {
                           lyr.filter = ["all", ["<=", field, max]];
                       }
                       else {
                           lyr.filter = ["all", [">", field, min], ["<=", field, max]];
+                      }
+                      if ((_a = info.label) === null || _a === void 0 ? void 0 : _a.length) {
+                          lyr.metadata = { label: info.label };
                       }
                       filters.push(lyr.filter);
                       return lyr;
@@ -2131,6 +2143,7 @@ var MapBoxGLEsriSources = (function (exports) {
                   const defaultLayers = await symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0);
                   for (const index in defaultLayers) {
                       defaultLayers[index].filter = ["none", filters];
+                      defaultLayers[index].metadata = { label: "Default" };
                   }
                   layers.push(...defaultLayers);
               }

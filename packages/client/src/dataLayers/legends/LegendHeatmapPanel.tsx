@@ -1,4 +1,4 @@
-import { GLLegendHeatmapPanel } from "./glLegends";
+import { GLLegendHeatmapPanel } from "./LegendDataModel";
 import { stopsToLinearGradient } from "./utils";
 
 export default function LegendHeatmapPanel({

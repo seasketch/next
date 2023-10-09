@@ -1,4 +1,4 @@
-import { GLLegendGradientPanel } from "./glLegends";
+import { GLLegendGradientPanel } from "./LegendDataModel";
 import { stopsToLinearGradient } from "./utils";
 
 export default function LegendGradientPanel({

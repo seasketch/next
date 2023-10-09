@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { GLLegendFillSymbol } from "./glLegends";
+import { GLLegendFillSymbol } from "./LegendDataModel";
 import { LegendResolvedImage, getImage } from "./MarkerSymbol";
 import { Map } from "mapbox-gl";
 import { colord, extend } from "colord";
