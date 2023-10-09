@@ -550,7 +550,7 @@ describe("Data validation", () => {
   });
   describe("seasketch-vector", () => {
     // before-insert trigger
-    test("bucket and key are auto-populated and tiles and url properties are cleared when inserting a new seasketch-vector source", async () => {
+    test("bucket and key are auto-populated and tiles property is cleared when inserting a new seasketch-vector source", async () => {
       await projectTransaction(
         pool,
         "public",
@@ -564,7 +564,6 @@ describe("Data validation", () => {
           expect(bucket_id).toBe("geojson-1.seasketch-data.org");
           expect((object_key as string).length).toBeGreaterThan(20);
           expect(tiles).toBe(null);
-          expect(url).toBe(null);
         }
       );
     });

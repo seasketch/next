@@ -103,7 +103,12 @@ function SurveyApp() {
    */
   async function updateState(
     formElement: { id: number },
-    state: Partial<FormElementState>
+    state: Partial<FormElementState>,
+    rootProps?: {
+      facilitated?: boolean;
+      groupResponse?: boolean;
+      groupParticipantCount?: number;
+    }
   ) {
     return setResponseState((prev) => {
       return {
@@ -112,6 +117,7 @@ function SurveyApp() {
           ...prev[formElement.id],
           ...state,
         },
+        ...rootProps,
       };
     });
   }
@@ -144,10 +150,17 @@ function SurveyApp() {
     [id: number]: FormElementState;
     facilitated: boolean;
     submitted: boolean;
+    groupResponse: boolean;
+    groupParticipantCount: number;
   }>(
     // eslint-disable-next-line i18next/no-literal-string
     `survey-${surveyId}`,
-    { facilitated: false, submitted: false }
+    {
+      facilitated: false,
+      submitted: false,
+      groupResponse: false,
+      groupParticipantCount: 1,
+    }
   );
 
   const [stage, setStage] = useState(0);
@@ -173,7 +186,12 @@ function SurveyApp() {
         elements,
         data.survey.form.logicRules || [],
         Object.keys(responseState).reduce((answers, id) => {
-          if (id !== "facilitated" && id !== "submitted") {
+          if (
+            id !== "facilitated" &&
+            id !== "submitted" &&
+            id !== "groupResponse" &&
+            id !== "groupParticipantCount"
+          ) {
             const n = parseInt(id);
             answers[n] = responseState[n].value;
           }
@@ -238,7 +256,8 @@ function SurveyApp() {
       if (components[el.typeId].getInitialStage) {
         stage = components[el.typeId].getInitialStage!(
           responseState[el.id]?.value,
-          el.componentSettings
+          el.componentSettings,
+          responseState.groupResponse
         );
       }
       setStage(stage);
@@ -284,12 +303,15 @@ function SurveyApp() {
           data.currentProject.id,
           responseState.facilitated,
           !!practice,
+          responseState.groupResponse,
           answers
         );
       }
       await setResponseState((prev) => ({
         facilitated: false,
         submitted: false,
+        groupResponse: false,
+        groupParticipantCount: 1,
       }));
     }
   }, [
@@ -359,7 +381,12 @@ function SurveyApp() {
       elements,
       data.survey.form.logicRules || [],
       Object.keys(responseState).reduce((answers, id) => {
-        if (id !== "facilitated" && id !== "submitted") {
+        if (
+          id !== "facilitated" &&
+          id !== "submitted" &&
+          id !== "groupResponse" &&
+          id !== "groupParticipantCount"
+        ) {
           const n = parseInt(id);
           answers[n] = responseState[n].value;
         }
@@ -425,6 +452,8 @@ function SurveyApp() {
                     // eslint-disable-next-line i18next/no-literal-string
                     facilitated: false,
                     submitted: false,
+                    groupResponse: false,
+                    groupParticipantCount: 1,
                   }));
                   history.push(
                     // eslint-disable-next-line i18next/no-literal-string
@@ -563,6 +592,9 @@ function SurveyApp() {
                         stage={stage}
                         featureNumber={1}
                         isLastQuestion={lastPage}
+                        surveyParticipantCount={
+                          responseState.groupParticipantCount
+                        }
                         isSpatial={
                           formElement.current?.type?.isSpatial || false
                         }
@@ -576,6 +608,8 @@ function SurveyApp() {
                             setResponseState((prev) => ({
                               submitted: false,
                               facilitated: !!responseState.facilitated,
+                              groupResponse: false,
+                              groupParticipantCount: 1,
                             }));
                             if (practice) {
                               history.push(
@@ -585,10 +619,21 @@ function SurveyApp() {
                               history.push(`/${slug}/surveys/${surveyId}/1`);
                             }
                           } else {
-                            updateState(formElement.current!, {
-                              value,
-                              errors,
-                            }).then(() => {
+                            updateState(
+                              formElement.current!,
+                              {
+                                value,
+                                errors,
+                              },
+                              formElement.current?.typeId === "ParticipantCount"
+                                ? {
+                                    groupResponse:
+                                      parseInt(value as string) > 1,
+                                    groupParticipantCount:
+                                      parseInt(value as string) || 1,
+                                  }
+                                : {}
+                            ).then(() => {
                               if (advanceAutomatically) {
                                 setTimeout(() => {
                                   setAutoAdvance(true);
@@ -612,7 +657,10 @@ function SurveyApp() {
                     </SurveyButtonFooterPortalContext.Provider>
                     {!formElement.current?.type?.isSpatial &&
                       !components[formElement.current?.typeId].hideNav &&
-                      (!advancesAutomatically(formElement.current) ||
+                      (!advancesAutomatically(
+                        formElement.current,
+                        responseState.groupResponse
+                      ) ||
                         !formElement.current.isRequired) && (
                         <div
                           className={`${
@@ -744,7 +792,8 @@ function SurveyApp() {
 }
 
 export function advancesAutomatically(
-  formElement: SurveyAppFormElementFragment
+  formElement: SurveyAppFormElementFragment,
+  isGroupResponse: boolean
 ): boolean {
   let advanceAutomatically = false;
   if (
@@ -753,7 +802,7 @@ export function advancesAutomatically(
   ) {
     const aa = components[formElement.typeId].advanceAutomatically;
     if (typeof aa === "function") {
-      advanceAutomatically = aa(formElement.componentSettings);
+      advanceAutomatically = aa(formElement.componentSettings, isGroupResponse);
     } else {
       advanceAutomatically = aa || false;
     }

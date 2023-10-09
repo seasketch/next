@@ -165,6 +165,32 @@ CREATE TYPE public.cursor_type AS ENUM (
 
 
 --
+-- Name: data_upload_output_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.data_upload_output_type AS ENUM (
+    'GeoJSON',
+    'FlatGeobuf',
+    'ZippedShapefile',
+    'PMTiles',
+    'GeoTIFF',
+    'PNG'
+);
+
+
+--
+-- Name: data_upload_output_type_replacement; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.data_upload_output_type_replacement AS ENUM (
+    'GeoJSON',
+    'FlatGeobuf',
+    'ZippedShapefile',
+    'PMTiles'
+);
+
+
+--
 -- Name: data_upload_state; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -180,7 +206,9 @@ CREATE TYPE public.data_upload_state AS ENUM (
     'uploading_products',
     'complete',
     'failed',
-    'failed_dismissed'
+    'failed_dismissed',
+    'cartography',
+    'worker_complete'
 );
 
 
@@ -229,6 +257,21 @@ CREATE TYPE public.email_summary_frequency AS ENUM (
 
 
 --
+-- Name: extended_geostats_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.extended_geostats_type AS ENUM (
+    'string',
+    'number',
+    'boolean',
+    'null',
+    'mixed',
+    'array',
+    'object'
+);
+
+
+--
 -- Name: field_rule_operator; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -240,6 +283,33 @@ CREATE TYPE public.field_rule_operator AS ENUM (
     'is blank',
     'contains'
 );
+
+
+--
+-- Name: file_upload_location; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.file_upload_location AS ENUM (
+    'r2',
+    'cloudflare_images'
+);
+
+
+--
+-- Name: file_upload_usage; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.file_upload_usage AS ENUM (
+    'forum_attachment',
+    'survey_response'
+);
+
+
+--
+-- Name: TYPE file_upload_usage; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TYPE public.file_upload_usage IS '@enum';
 
 
 --
@@ -1219,7 +1289,8 @@ CREATE TABLE public.sketch_classes (
     preprocessing_project_url text,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
-    CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+    CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
+    CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
 );
 
 
@@ -1677,6 +1748,24 @@ COMMENT ON FUNCTION public.account_exists(email text) IS '@omit';
 
 
 --
+-- Name: acl_update_draft_toc_has_changes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acl_update_draft_toc_has_changes() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  begin
+    update projects set draft_table_of_contents_has_changes = true where id = (
+      select project_id from table_of_contents_items where id = (
+        select table_of_contents_item_id from access_control_lists where id = NEW.id
+      )
+    );
+    return NEW;
+  end;
+  $$;
+
+
+--
 -- Name: add_group_to_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -1874,17 +1963,72 @@ Add a SketchClass to the list of valid children for a Collection-type SketchClas
 
 
 --
--- Name: after_deleted__data_sources(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: after_data_layers_update_or_delete_set_draft_table_of_contents_(); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.after_deleted__data_sources() RETURNS trigger
+CREATE FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_contents_() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
+begin
+  update projects
+  set draft_table_of_contents_has_changes = true
+  where id in (
+    select 
+      tocs.project_id
+    from 
+      table_of_contents_items as tocs
+    where 
+      tocs.data_layer_id = old.id
+  );
+  return NEW;
+end;
+$$;
+
+
+--
+-- Name: after_data_sources_update_or_delete_set_draft_table_of_contents(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_contents() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+begin
+  update projects
+  set draft_table_of_contents_has_changes = true
+  where id in (
+    select 
+      tocs.project_id
+    from 
+      table_of_contents_items as tocs
+    where 
+      tocs.data_layer_id in (
+        select data_layers.id from data_layers where data_layers.data_source_id = old.id
+      )
+    );
+  return NEW;
+end;
+$$;
+
+
+--
+-- Name: after_data_upload_task_insert_or_update_notify_subscriptions(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_data_upload_task_insert_or_update_notify_subscriptions() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  DECLARE
+    slug text;
+    event_topic text;
   BEGIN
-    if OLD.bucket_id is not null and OLD.object_key is not null and OLD.upload_task_id is null then
-      insert into deleted_geojson_objects (object_key, bucket) values (OLD.object_key, OLD.bucket_id);
-    end if;
-    return OLD;
+  select projects.slug into slug from projects where id = NEW.project_id;
+  select concat('graphql:project:', slug, ':dataUploadTasks') into event_topic;
+  if OLD is null then
+    perform pg_notify(event_topic, json_build_object('dataUploadTaskId', NEW.id, 'projectId', NEW.project_id, 'previousState', null)::text);
+  else
+    perform pg_notify(event_topic, json_build_object('dataUploadTaskId', NEW.id, 'projectId', NEW.project_id, 'previousState', OLD.state)::text);
+  end if;
+  return NEW;
   END;
 $$;
 
@@ -2269,6 +2413,20 @@ $$;
 
 
 --
+-- Name: assign_file_upload_node_post_ids(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_file_upload_node_post_ids() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  perform assign_post_id_to_attached_file_uploads(NEW.message_contents, NEW.id);
+	RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: assign_map_bookmark_node_post_ids(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2280,6 +2438,23 @@ BEGIN
 	RETURN NEW;
 END;
 $$;
+
+
+--
+-- Name: assign_post_id_to_attached_file_uploads(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_post_id_to_attached_file_uploads(body jsonb, post_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      file_upload_ids text[];
+    begin
+      select collect_attachment_ids_from_prosemirror_body(body, 'FileUpload') into file_upload_ids;
+      update file_uploads set post_id = assign_post_id_to_attached_file_uploads.post_id where id::text = any(file_upload_ids);
+      return true;
+    end;
+  $$;
 
 
 --
@@ -2760,39 +2935,6 @@ CREATE FUNCTION public.before_delete_sketch_class_check_form_element_id() RETURN
 
 
 --
--- Name: before_deleted__data_layers(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.before_deleted__data_layers() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-  BEGIN
-    insert into deleted_data_layers (
-      data_source_id,
-      data_layer_id,
-      project_id,
-      data_upload_task_id,
-      bucket_id,
-      object_key,
-      outputs
-    ) select 
-        OLD.data_source_id,
-        data_layers.id, 
-        data_layers.project_id, 
-        data_sources.upload_task_id, 
-        data_sources.bucket_id, 
-        data_sources.object_key, 
-        data_upload_tasks.outputs
-      from data_layers 
-      inner join data_sources on data_sources.id = OLD.data_source_id 
-      inner join data_upload_tasks on data_upload_tasks.id = data_sources.upload_task_id 
-      where data_layers.id = OLD.id;
-      return OLD;
-    END;
-  $$;
-
-
---
 -- Name: before_insert_form_elements_func(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2828,9 +2970,9 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
       if new.source_layer is null then
         raise 'Layers with "vector" data sources must specify a source_layer';
       end if;
-    elsif source_type != 'seasketch-mvt' then
+    elsif source_type != 'seasketch-mvt' and source_type != 'seasketch-raster' then
       if new.source_layer is not null then
-        raise 'Only Layers with data_sources of type "vector" or "seasketch-mvt should specify a source_layer';
+        raise 'Only Layers with data_sources of type "vector", "seasketch-mvt", or "seasketch-raster" should specify a source_layer';
       end if;
     end if;
     if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector' or source_type = 'seasketch-mvt') then
@@ -2838,7 +2980,7 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
         raise 'Vector layers must specify mapbox_gl_styles';
       end if;
     else
-      if new.mapbox_gl_styles is not null then
+      if new.mapbox_gl_styles is not null and source_type != 'seasketch-raster' and source_type != 'raster' then
         raise 'Layers with data_sources of type % should not specify mapbox_gl_styles', (source_type);
       end if;
     end if;
@@ -2865,7 +3007,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
   declare
     bucket_id text;
   begin
-    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' ) then
+    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' ) then
       raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
     end if;
     if new.coordinates is null and (new.type = 'video' or new.type = 'image') then
@@ -2889,14 +3031,14 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.encoding is not null and new.type != 'raster-dem' then
       raise 'encoding property only allowed on raster-dem sources';
     end if;
-    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt') then
+    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster') then
       raise 'tile_size property is not allowed for "%" sources', (new.type);
     end if;
     if (new.type != 'geojson' and new.type != 'seasketch-vector') and (new.buffer is not null or new.cluster is not null or new.cluster_max_zoom is not null or new.cluster_properties is not null or new.cluster_radius is not null or new.generate_id is not null or new.line_metrics is not null or new.promote_id is not null or new.tolerance is not null) then
       raise 'geojson props such as buffer, cluster, generate_id, etc not allowed on % sources', (new.type);
     end if;
-    if (new.byte_length is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt') then
-      raise 'byte_length can only be set on seasketch-vector sources';
+    if (new.byte_length is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster') then
+      raise 'byte_length can only be set on seasketch-vector, seasketch_mvt and seasketch-raster sources';
     end if;
     if (new.type = 'seasketch-vector' and new.type != 'seasketch-mvt' and new.byte_length is null) then
       raise 'seasketch-vector and mvt sources must have byte_length set to an approximate value';
@@ -2910,8 +3052,8 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.use_device_pixel_ratio is not null and new.type != 'arcgis-dynamic-mapserver' then
       raise 'use_device_pixel_ratio property not allowed on % sources', (new.type);
     end if;
-    if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' then
-      raise 'import_type property is only allowed for seasketch-vector sources';
+    if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' then
+      raise 'import_type property is only allowed for seasketch-vector, seasketch-mvt, and seasketch-raster sources';
     end if;
     if new.import_type is null and (new.type = 'seasketch-vector' or new.type = 'seasketch-mvt') then
       raise 'import_type property is required for seasketch-vector sources';
@@ -2930,7 +3072,6 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
         new.object_key = (select gen_random_uuid());
       end if;
       new.tiles = null;
-      new.url = null;
     end if;
     return new;
   end;
@@ -3022,9 +3163,6 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
       if new.data_layer_id is not null then
         raise 'Folders cannot have data_layer_id set';
       end if;
-      if new.metadata is not null then
-        raise 'Folders cannot have metadata set';
-      end if;
       if new.bounds is not null then
         raise 'Folders cannot have bounds set';
       end if;
@@ -3038,6 +3176,9 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
       if new.is_click_off_only then
         raise 'is_click_off_only must be false if is_folder=false';
       end if;
+    end if;
+    if length(trim(new.title)) = 0 then
+      raise 'title cannot be empty';
     end if;
     return new;
   end;
@@ -3288,6 +3429,30 @@ CREATE FUNCTION public.before_sketch_insert_or_update() RETURNS trigger
 
 
 --
+-- Name: before_sketch_update_touch_parent_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_sketch_update_touch_parent_updated_at() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+      declare
+        sketch_collection_id int;
+        new_sketch_collection_id int;
+      begin
+        -- get parent collection if exists
+        select get_parent_collection_id(OLD) into sketch_collection_id;
+        select get_parent_collection_id(NEW) into new_sketch_collection_id;
+        raise notice 'sketch_collection_id: %, new_sketch_collection_id: %', sketch_collection_id, new_sketch_collection_id;
+        if new_sketch_collection_id != sketch_collection_id or (new_sketch_collection_id is null and sketch_collection_id is not null) or (new_sketch_collection_id is not null and sketch_collection_id is null) then
+          raise notice 'passes!';
+          update sketches set updated_at = now() where id = sketch_collection_id;
+        end if;
+        return NEW;
+      end;
+    $$;
+
+
+--
 -- Name: before_survey_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3449,6 +3614,13 @@ CREATE TABLE public.map_bookmarks (
     sketch_names jsonb,
     client_generated_thumbnail text
 );
+
+
+--
+-- Name: TABLE map_bookmarks; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.map_bookmarks IS '@omit create';
 
 
 --
@@ -3660,6 +3832,38 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
     LANGUAGE sql
     AS $$
     update form_elements set background_image = null, background_color = null, layout = null, background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
+  $$;
+
+
+--
+-- Name: collect_attachment_ids_from_prosemirror_body(jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.collect_attachment_ids_from_prosemirror_body(body jsonb, type text) RETURNS text[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      output text[];
+      i jsonb;
+      attachment jsonb;
+    begin
+      output = '{}';
+      if body ? 'attrs' and (body -> 'attrs') ? 'type' then
+        if type is null or (body -> 'attrs') ->> 'type' = type then
+          select body ->> 'attrs' into attachment;
+          if attachment is not null and attachment->>'id' is not null then
+            output = (attachment->>'id')::text || output;
+          end if;
+        end if;
+      end if;
+      if body ? 'content' and (body ->> 'type' = 'attachments' or body ->> 'type' = 'doc') then
+        for i in (select * from jsonb_array_elements((body->'content')))
+        loop
+          output = output || collect_attachment_ids_from_prosemirror_body(i, type);
+        end loop;
+      end if;
+      return output;
+    end;
   $$;
 
 
@@ -4967,7 +5171,8 @@ CREATE TABLE public.posts (
     message_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     hidden_by_moderator boolean DEFAULT false NOT NULL,
     html text NOT NULL,
-    bookmark_attachment_ids uuid[] GENERATED ALWAYS AS (public.extract_post_bookmark_attachments(message_contents)) STORED NOT NULL
+    bookmark_attachment_ids uuid[] GENERATED ALWAYS AS (public.extract_post_bookmark_attachments(message_contents)) STORED NOT NULL,
+    ordered_attachment_ids text[] GENERATED ALWAYS AS (public.collect_attachment_ids_from_prosemirror_body(message_contents, NULL::text)) STORED
 );
 
 
@@ -5103,6 +5308,8 @@ CREATE TABLE public.projects (
     data_hosting_quota bigint DEFAULT 524288000 NOT NULL,
     supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    draft_table_of_contents_has_changes boolean DEFAULT false NOT NULL,
+    table_of_contents_last_published timestamp without time zone,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -6178,8 +6385,6 @@ CREATE TABLE public.data_sources (
     import_type text,
     original_source_url text,
     enhanced_security boolean,
-    bucket_id text,
-    object_key uuid,
     byte_length integer,
     supports_dynamic_layers boolean DEFAULT true NOT NULL,
     uploaded_source_filename text,
@@ -6189,6 +6394,8 @@ CREATE TABLE public.data_sources (
     geostats jsonb,
     upload_task_id uuid,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    object_key uuid,
+    bucket_id text,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -6407,20 +6614,6 @@ COMMENT ON COLUMN public.data_sources.enhanced_security IS 'SEASKETCH_VECTOR sou
 
 
 --
--- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
-
-
---
--- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
-
-
---
 -- Name: COLUMN data_sources.byte_length; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -6470,6 +6663,20 @@ COMMENT ON COLUMN public.data_sources.upload_task_id IS 'UUID of the upload proc
 
 
 --
+-- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
+
+
+--
+-- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
+
+
+--
 -- Name: data_sources_uploaded_by(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6514,6 +6721,21 @@ CREATE FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks)
 --
 
 COMMENT ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_tasks) IS '@simpleCollections only';
+
+
+--
+-- Name: data_upload_tasks_table_of_contents_item_stable_ids(public.data_upload_tasks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_upload_tasks_table_of_contents_item_stable_ids(task public.data_upload_tasks) RETURNS text[]
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select array(select stable_id from table_of_contents_items where data_layer_id in (
+      select id from data_layers where data_source_id in (
+        (select id from data_sources where upload_task_id = task.id)
+      )
+    ));
+  $$;
 
 
 --
@@ -6699,6 +6921,22 @@ CREATE FUNCTION public.dismiss_failed_upload(id uuid) RETURNS public.data_upload
 
 
 --
+-- Name: draft_table_of_contents_has_changes_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.draft_table_of_contents_has_changes_notify() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    if NEW.draft_table_of_contents_has_changes != OLD.draft_table_of_contents_has_changes then
+      perform pg_notify(concat('graphql:project:', NEW.slug, ':toc_draft_changed'), json_build_object('projectId', NEW.id, 'hasChanges', NEW.draft_table_of_contents_has_changes)::text);
+    end if;
+    return NEW;
+  end;
+  $$;
+
+
+--
 -- Name: email_unsubscribed(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6872,7 +7110,9 @@ CREATE TABLE public.form_element_types (
     is_spatial boolean DEFAULT false NOT NULL,
     sketch_class_template_id integer,
     is_required_for_sketch_classes boolean DEFAULT false NOT NULL,
-    allow_admin_updates boolean DEFAULT true NOT NULL
+    allow_admin_updates boolean DEFAULT true NOT NULL,
+    geostats_type public.extended_geostats_type,
+    geostats_array_of public.extended_geostats_type
 );
 
 
@@ -7541,6 +7781,35 @@ $$;
 
 
 --
+-- Name: get_parent_collection_id(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_parent_collection_id(sketch public.sketches) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      col int;
+      folder int;
+    begin
+      if sketch.collection_id is not null then
+        return sketch.collection_id;
+      elsif sketch.folder_id is not null then
+        return get_parent_collection_id('sketch_folder', sketch.folder_id);
+      else
+        return null;
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_parent_collection_id(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_parent_collection_id(sketch public.sketches) IS '@omit';
+
+
+--
 -- Name: get_parent_collection_id(public.sketch_child_type, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7571,7 +7840,7 @@ CREATE FUNCTION public.get_parent_collection_id(type public.sketch_child_type, p
 -- Name: FUNCTION get_parent_collection_id(type public.sketch_child_type, parent_id integer); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) IS 'omit';
+COMMENT ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) IS '@omit';
 
 
 --
@@ -7643,6 +7912,13 @@ CREATE FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookma
       )
     );
   $$;
+
+
+--
+-- Name: FUNCTION get_sprite_data_for_screenshot(bookmark public.map_bookmarks); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) IS '@omit';
 
 
 --
@@ -8475,6 +8751,58 @@ CREATE FUNCTION public.posts_blurb(post public.posts) RETURNS text
     AS $$
     select collect_text_from_prosemirror_body(post.message_contents, 52);
   $$;
+
+
+--
+-- Name: file_uploads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.file_uploads (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    filename text NOT NULL,
+    file_size_bytes bigint NOT NULL,
+    content_type text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    post_id integer,
+    user_id integer NOT NULL,
+    usage public.file_upload_usage NOT NULL,
+    project_id integer NOT NULL,
+    is_spatial boolean DEFAULT false NOT NULL,
+    tilejson_endpoint text,
+    cloudflare_images_id text
+);
+
+
+--
+-- Name: TABLE file_uploads; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.file_uploads IS '@omit create';
+
+
+--
+-- Name: COLUMN file_uploads.content_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.file_uploads.content_type IS 'Use a listed media type from https://www.iana.org/assignments/media-types/media-types.xhtml';
+
+
+--
+-- Name: posts_file_uploads(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.posts_file_uploads(p public.posts) RETURNS SETOF public.file_uploads
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from file_uploads where post_id = p.id;
+  $$;
+
+
+--
+-- Name: FUNCTION posts_file_uploads(p public.posts); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.posts_file_uploads(p public.posts) IS '@simpleCollections only';
 
 
 --
@@ -10070,7 +10398,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer,
             render_under,
             mapbox_gl_styles,
-            interactivity_settings_id
+            interactivity_settings_id,
+            z_index
           )
           select "projectId", 
             data_source_id, 
@@ -10078,7 +10407,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             sublayer, 
             render_under, 
             mapbox_gl_styles,
-            new_interactivity_settings_id
+            new_interactivity_settings_id,
+            z_index
           from 
             data_layers
           where 
@@ -10201,8 +10531,6 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           import_type,
           original_source_url,
           enhanced_security,
-          bucket_id,
-          object_key,
           byte_length,
           supports_dynamic_layers,
           uploaded_source_filename,
@@ -10241,8 +10569,6 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           import_type,
           original_source_url,
           enhanced_security,
-          bucket_id,
-          object_key,
           byte_length,
           supports_dynamic_layers,
           uploaded_source_filename,
@@ -10269,6 +10595,13 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             is_folder = false
           ));
       end loop;
+      update 
+        projects 
+      set 
+        draft_table_of_contents_has_changes = false, 
+        table_of_contents_last_published = now() 
+      where 
+        id = "projectId";
       -- return items
       return query select * from table_of_contents_items 
         where project_id = "projectId" and is_draft = false;
@@ -11915,6 +12248,71 @@ $$;
 
 
 --
+-- Name: table_of_contents_items_has_metadata(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select metadata is not null from table_of_contents_items where id = toc.id;
+  $$;
+
+
+--
+-- Name: table_of_contents_items_primary_download_url(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) RETURNS text
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select 
+      case
+        when item.enable_download = false then null
+        when item.data_layer_id is null then null
+        else
+          (
+            select data_upload_outputs.url
+            from data_upload_outputs
+            where data_upload_outputs.data_source_id = (
+              select data_layers.data_source_id
+              from data_layers
+              where data_layers.id = item.data_layer_id
+            )
+            and data_upload_outputs.is_original = true
+            limit 1
+          )
+      end;
+  $$;
+
+
+--
+-- Name: table_of_contents_items_project(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) RETURNS public.projects
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from projects where id = t.project_id;
+  $$;
+
+
+--
+-- Name: table_of_contents_items_project_update(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if tg_op = 'INSERT' or tg_op = 'UPDATE' or tg_op = 'DELETE' then
+        update projects set draft_table_of_contents_has_changes = true where id = NEW.project_id;
+      end if;
+      return NEW;
+    end;
+  $$;
+
+
+--
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12212,11 +12610,19 @@ CREATE FUNCTION public.trigger_update_collection_updated_at() RETURNS trigger
     AS $$
 DECLARE
   sketch_collection_id int;
+  previous_sketch_collection_id int;
 BEGIN
   -- get parent collection if exists
-  select get_parent_collection_id('sketch', NEW.id) into sketch_collection_id;
+  select get_parent_collection_id(NEW) into sketch_collection_id;
+  select get_parent_collection_id(OLD) into previous_sketch_collection_id;
+  -- raise notice 'sketch_collection_id: %, previous_sketch_collection_id: %', sketch_collection_id, previous_sketch_collection_id;
   if sketch_collection_id is not null then
+    -- raise exception 'passes! %, %', sketch_collection_id, now();
     update sketches set updated_at = now() where id = sketch_collection_id;
+  end if;
+  if previous_sketch_collection_id is not null and ((sketch_collection_id is null) or (previous_sketch_collection_id != sketch_collection_id)) then
+    -- raise exception 'passes! b %', previous_sketch_collection_id;
+    update sketches set updated_at = now() where id = previous_sketch_collection_id;
   end if;
   RETURN NEW;
 END;
@@ -12308,6 +12714,20 @@ CREATE FUNCTION public.update_basemap_offline_tile_settings("projectId" integer,
         raise exception 'Permission denied';
       end if;
     end;
+  $$;
+
+
+--
+-- Name: update_data_hosting_quota(integer, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) RETURNS public.projects
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update projects
+    set data_hosting_quota = quota
+    where id = project_id
+    returning *;
   $$;
 
 
@@ -13191,6 +13611,38 @@ COMMENT ON COLUMN public.data_sources_buckets.offline IS 'Indicates the DataHost
 
 ALTER TABLE public.data_sources ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.data_sources_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: data_upload_outputs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_upload_outputs (
+    id integer NOT NULL,
+    data_source_id integer,
+    project_id integer,
+    type public.data_upload_output_type NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    url text NOT NULL,
+    remote text NOT NULL,
+    is_original boolean DEFAULT false NOT NULL,
+    size bigint NOT NULL,
+    filename text NOT NULL
+);
+
+
+--
+-- Name: data_upload_outputs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.data_upload_outputs ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME public.data_upload_outputs_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -14223,6 +14675,14 @@ ALTER TABLE ONLY public.data_sources
 
 
 --
+-- Name: data_upload_outputs data_upload_outputs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_outputs
+    ADD CONSTRAINT data_upload_outputs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: data_upload_tasks data_upload_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -14252,6 +14712,14 @@ ALTER TABLE ONLY public.email_notification_preferences
 
 ALTER TABLE ONLY public.survey_invites
     ADD CONSTRAINT email_unique UNIQUE (email);
+
+
+--
+-- Name: file_uploads file_uploads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_pkey PRIMARY KEY (id);
 
 
 --
@@ -14840,6 +15308,13 @@ CREATE INDEX data_upload_tasks_state_project_id_idx ON public.data_upload_tasks 
 --
 
 CREATE INDEX email_notification_preferences_user_id_idx ON public.email_notification_preferences USING btree (user_id);
+
+
+--
+-- Name: file_uploads_post_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX file_uploads_post_id_idx ON public.file_uploads USING btree (post_id);
 
 
 --
@@ -15795,13 +16270,6 @@ CREATE TRIGGER _002_set_survey_response_last_updated_by BEFORE UPDATE ON public.
 
 
 --
--- Name: data_sources _500_gql_after_deleted__data_sources; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER _500_gql_after_deleted__data_sources AFTER DELETE ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.after_deleted__data_sources();
-
-
---
 -- Name: invite_emails _500_gql_insert_or_update_or_delete_project_invite_email; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -15809,10 +16277,31 @@ CREATE TRIGGER _500_gql_insert_or_update_or_delete_project_invite_email AFTER IN
 
 
 --
+-- Name: access_control_lists acl_update_draft_toc_has_changes_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER acl_update_draft_toc_has_changes_trigger AFTER UPDATE ON public.access_control_lists FOR EACH ROW EXECUTE FUNCTION public.acl_update_draft_toc_has_changes();
+
+
+--
 -- Name: project_group_members after_add_user_to_group_update_survey_invites; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER after_add_user_to_group_update_survey_invites AFTER INSERT ON public.project_group_members FOR EACH ROW EXECUTE FUNCTION public.add_user_to_group_update_survey_invites_trigger();
+
+
+--
+-- Name: data_layers after_data_layers_update_or_delete_set_draft_table_of_contents_; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_data_layers_update_or_delete_set_draft_table_of_contents_ AFTER DELETE OR UPDATE ON public.data_layers FOR EACH ROW EXECUTE FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_contents_();
+
+
+--
+-- Name: data_sources after_data_sources_update_or_delete_set_draft_table_of_contents; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_data_sources_update_or_delete_set_draft_table_of_contents AFTER DELETE OR UPDATE ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_contents();
 
 
 --
@@ -15841,6 +16330,13 @@ CREATE TRIGGER after_remove_user_from_group_update_survey_invites AFTER DELETE O
 --
 
 CREATE TRIGGER after_response_submission AFTER INSERT OR UPDATE ON public.survey_responses FOR EACH ROW EXECUTE FUNCTION public.after_response_submission();
+
+
+--
+-- Name: posts assign_file_upload_attachment_post_ids_from_message_contents; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER assign_file_upload_attachment_post_ids_from_message_contents AFTER INSERT OR UPDATE ON public.posts FOR EACH ROW EXECUTE FUNCTION public.assign_file_upload_node_post_ids();
 
 
 --
@@ -15998,6 +16494,20 @@ CREATE TRIGGER before_valid_children_insert_or_update_trigger BEFORE INSERT OR U
 
 
 --
+-- Name: data_upload_tasks data_upload_task_notify_subscriptions; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER data_upload_task_notify_subscriptions AFTER INSERT OR UPDATE ON public.data_upload_tasks FOR EACH ROW EXECUTE FUNCTION public.after_data_upload_task_insert_or_update_notify_subscriptions();
+
+
+--
+-- Name: projects draft_table_of_contents_has_changes_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER draft_table_of_contents_has_changes_trigger AFTER UPDATE OF draft_table_of_contents_has_changes ON public.projects FOR EACH ROW EXECUTE FUNCTION public.draft_table_of_contents_has_changes_notify();
+
+
+--
 -- Name: form_elements form_element_associated_sketch_class; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -16093,6 +16603,13 @@ CREATE TRIGGER survey_invites_before_insert BEFORE INSERT ON public.survey_invit
 --
 
 CREATE TRIGGER survey_invites_before_update BEFORE UPDATE ON public.survey_invites FOR EACH ROW EXECUTE FUNCTION public.survey_invite_before_update_trigger();
+
+
+--
+-- Name: table_of_contents_items table_of_contents_items_project_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER table_of_contents_items_project_update AFTER INSERT OR DELETE OR UPDATE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.table_of_contents_items_project_update();
 
 
 --
@@ -16274,14 +16791,6 @@ COMMENT ON CONSTRAINT data_layers_project_id_fkey ON public.data_layers IS '@omi
 
 
 --
--- Name: data_sources data_sources_bucket_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.data_sources
-    ADD CONSTRAINT data_sources_bucket_id_fkey FOREIGN KEY (bucket_id) REFERENCES public.data_sources_buckets(url) ON DELETE CASCADE;
-
-
---
 -- Name: data_sources data_sources_import_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16321,6 +16830,22 @@ ALTER TABLE ONLY public.data_sources
 
 
 --
+-- Name: data_upload_outputs data_upload_outputs_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_outputs
+    ADD CONSTRAINT data_upload_outputs_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id) ON DELETE SET NULL;
+
+
+--
+-- Name: data_upload_outputs data_upload_outputs_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_outputs
+    ADD CONSTRAINT data_upload_outputs_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL;
+
+
+--
 -- Name: data_upload_tasks data_upload_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16342,6 +16867,30 @@ ALTER TABLE ONLY public.data_upload_tasks
 
 ALTER TABLE ONLY public.email_notification_preferences
     ADD CONSTRAINT email_notification_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_uploads file_uploads_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_uploads file_uploads_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: file_uploads file_uploads_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.file_uploads
+    ADD CONSTRAINT file_uploads_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -18461,13 +19010,6 @@ GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seaske
 
 
 --
--- Name: COLUMN sketch_classes.mapbox_gl_style; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(mapbox_gl_style) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
 -- Name: COLUMN sketch_classes.template_description; Type: ACL; Schema: public; Owner: -
 --
 
@@ -19056,6 +19598,13 @@ GRANT ALL ON FUNCTION public.account_exists(email text) TO anon;
 
 
 --
+-- Name: FUNCTION acl_update_draft_toc_has_changes(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acl_update_draft_toc_has_changes() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION add_group_to_acl("aclId" integer, "groupId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19130,10 +19679,24 @@ REVOKE ALL ON FUNCTION public.addgeometrycolumn(catalog_name character varying, 
 
 
 --
--- Name: FUNCTION after_deleted__data_sources(); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION after_data_layers_update_or_delete_set_draft_table_of_contents_(); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.after_deleted__data_sources() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_contents_() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_data_sources_update_or_delete_set_draft_table_of_contents(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_contents() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_data_upload_task_insert_or_update_notify_subscriptions(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_data_upload_task_insert_or_update_notify_subscriptions() FROM PUBLIC;
 
 
 --
@@ -19252,10 +19815,24 @@ GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boo
 
 
 --
+-- Name: FUNCTION assign_file_upload_node_post_ids(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_file_upload_node_post_ids() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION assign_map_bookmark_node_post_ids(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.assign_map_bookmark_node_post_ids() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION assign_post_id_to_attached_file_uploads(body jsonb, post_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_post_id_to_attached_file_uploads(body jsonb, post_id integer) FROM PUBLIC;
 
 
 --
@@ -19460,13 +20037,6 @@ REVOKE ALL ON FUNCTION public.before_delete_sketch_class_check_form_element_id()
 
 
 --
--- Name: FUNCTION before_deleted__data_layers(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.before_deleted__data_layers() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION before_insert_form_elements_func(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19551,6 +20121,13 @@ REVOKE ALL ON FUNCTION public.before_sketch_insert_or_update() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION before_sketch_update_touch_parent_updated_at(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_sketch_update_touch_parent_updated_at() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION before_survey_delete(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -19605,6 +20182,7 @@ GRANT ALL ON FUNCTION public.uuid_generate_v4() TO graphile;
 --
 
 GRANT SELECT ON TABLE public.map_bookmarks TO anon;
+GRANT INSERT ON TABLE public.map_bookmarks TO seasketch_superuser;
 
 
 --
@@ -19711,6 +20289,7 @@ GRANT SELECT(sketch_names) ON TABLE public.map_bookmarks TO anon;
 
 REVOKE ALL ON FUNCTION public.bookmark_by_id(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.bookmark_by_id(id uuid) TO seasketch_user;
+GRANT ALL ON FUNCTION public.bookmark_by_id(id uuid) TO anon;
 
 
 --
@@ -20009,6 +20588,14 @@ GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) T
 
 
 --
+-- Name: FUNCTION collect_attachment_ids_from_prosemirror_body(body jsonb, type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.collect_attachment_ids_from_prosemirror_body(body jsonb, type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.collect_attachment_ids_from_prosemirror_body(body jsonb, type text) TO anon;
+
+
+--
 -- Name: FUNCTION collect_map_bookmark_ids_from_prosemirror_body(body jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20266,6 +20853,13 @@ GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry) TO anon;
 
 REVOKE ALL ON FUNCTION public.create_consent_document(fid integer, version integer, url text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_consent_document(fid integer, version integer, url text) TO seasketch_user;
+
+
+--
+-- Name: TABLE data_upload_tasks; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_upload_tasks TO seasketch_user;
 
 
 --
@@ -20597,6 +21191,20 @@ GRANT SELECT(supported_languages) ON TABLE public.projects TO anon;
 
 GRANT SELECT(translated_props) ON TABLE public.projects TO anon;
 GRANT UPDATE(translated_props) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.draft_table_of_contents_has_changes; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(draft_table_of_contents_has_changes) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.table_of_contents_last_published; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(table_of_contents_last_published) ON TABLE public.projects TO anon;
 
 
 --
@@ -21037,6 +21645,14 @@ GRANT ALL ON FUNCTION public.data_upload_tasks_layers(upload public.data_upload_
 
 
 --
+-- Name: FUNCTION data_upload_tasks_table_of_contents_item_stable_ids(task public.data_upload_tasks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_upload_tasks_table_of_contents_item_stable_ids(task public.data_upload_tasks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_upload_tasks_table_of_contents_item_stable_ids(task public.data_upload_tasks) TO anon;
+
+
+--
 -- Name: TABLE offline_tile_packages; Type: ACL; Schema: public; Owner: -
 --
 
@@ -21096,6 +21712,13 @@ REVOKE ALL ON FUNCTION public.disablelongtransactions() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.dismiss_failed_upload(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.dismiss_failed_upload(id uuid) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION draft_table_of_contents_has_changes_notify(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.draft_table_of_contents_has_changes_notify() FROM PUBLIC;
 
 
 --
@@ -22182,6 +22805,13 @@ GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, OUT user_id in
 
 REVOKE ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, OUT user_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_parent_collection_id(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_parent_collection_id(sketch public.sketches) FROM PUBLIC;
 
 
 --
@@ -23368,6 +23998,23 @@ GRANT ALL ON FUNCTION public.posts_author_profile(post public.posts) TO anon;
 
 REVOKE ALL ON FUNCTION public.posts_blurb(post public.posts) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.posts_blurb(post public.posts) TO anon;
+
+
+--
+-- Name: TABLE file_uploads; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT ON TABLE public.file_uploads TO seasketch_superuser;
+GRANT SELECT ON TABLE public.file_uploads TO anon;
+GRANT SELECT ON TABLE public.file_uploads TO seasketch_user;
+
+
+--
+-- Name: FUNCTION posts_file_uploads(p public.posts); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.posts_file_uploads(p public.posts) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.posts_file_uploads(p public.posts) TO anon;
 
 
 --
@@ -27355,6 +28002,37 @@ GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surv
 
 
 --
+-- Name: FUNCTION table_of_contents_items_has_metadata(toc public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_primary_download_url(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_project(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_project_update(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_project_update() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -27609,6 +28287,14 @@ GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
 
 REVOKE ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" integer, "basemapId" integer, use_default boolean, "maxZ" integer, "maxShorelineZ" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_data_hosting_quota(project_id integer, quota bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) TO seasketch_superuser;
 
 
 --

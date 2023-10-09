@@ -25,6 +25,28 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
     }
   ) {
     super(scope, id, props);
+    if (!process.env.UPLOADS_BASE_URL) {
+      throw new Error("UPLOADS_BASE_URL must be set in environment");
+    }
+    if (!process.env.RESOURCES_REMOTE) {
+      throw new Error("RESOURCES_REMOTE must be set in environment");
+    }
+    if (!process.env.TILES_REMOTE) {
+      throw new Error("TILES_REMOTE must be set in environment");
+    }
+    if (!process.env.TILES_BASE_URL) {
+      throw new Error("TILES_BASE_URL must be set in environment");
+    }
+
+    const {
+      UPLOADS_BASE_URL,
+      RESOURCES_REMOTE,
+      TILES_REMOTE,
+      TILES_BASE_URL,
+      DEBUGGING_AWS_ACCESS_KEY_ID,
+      DEBUGGING_AWS_SECRET_ACCESS_KEY,
+    } = process.env;
+
     const fn = new lambda.DockerImageFunction(this, "SpatialUploadHandler", {
       functionName: "SpatialUploadsHandler",
       vpc: props.vpc,
@@ -47,6 +69,12 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
         SLACK_TOKEN: process.env.SLACK_TOKEN!,
         SLACK_CHANNEL: process.env.SLACK_CHANNEL!,
+        UPLOADS_BASE_URL,
+        RESOURCES_REMOTE,
+        TILES_REMOTE,
+        TILES_BASE_URL,
+        DEBUGGING_AWS_ACCESS_KEY_ID: DEBUGGING_AWS_ACCESS_KEY_ID || "",
+        DEBUGGING_AWS_SECRET_ACCESS_KEY: DEBUGGING_AWS_SECRET_ACCESS_KEY || "",
       },
       memorySize: 10240,
       reservedConcurrentExecutions: 100,

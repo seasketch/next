@@ -16,6 +16,8 @@
   "Untitled": "Untitled",
   "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting.": "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting.",
   "Your participation in the forum is pending admin approval.": "Your participation in the forum is pending admin approval.",
+  "close": "close",
+  "download": "download",
   "lastReply": "Last reply {{timeAgo}}. Started by {{lastAuthor}}",
   "participantCount": "{{count}} people",
   "participantCount_plural": "participantCount_plural",

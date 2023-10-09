@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Izveidojiet projektu",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Izveidojiet savu<1></1><2>SeaSketch projektu</2>",
+  "Create your project": "Izveidojiet savu projektu",
+  "Developer API": "Izstrādātāja API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Lūdzu, sazinieties ar mums pa e-pastu <2>support@seasketch.org</2>, lai sarunātu, kā SeaSketch var izmantot jūsu plānošanas atbalstam.",
+  "Project name": "Projekta nosaukums",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketch projektus var pielāgot, izmantojot mūsu atvērtā koda <2>ģeoapstrādes ietvaru</2>. Projektos var definēt pārskatus, kas vizualizē iespējamo zonu ietekmi, izmantojot Typescript, React un AWS Lambda.",
+  "Trusted by": "Uzticas",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Izmantojiet mūsu sadarbības ģeodizaina un uzmērīšanas rīkus jūras telpiskajai plānošanai savā reģionā. Jūsu projektā būs iekļauti rīki karšu vizualizēšanai, diskusiju forumu veidošanai, plānu skiču veidošanai un datu apkopošanai, izmantojot aptaujas — <i>bez maksas!</i> Analītiskās atskaites var izstrādāt un pielāgot, izmantojot mūsu <5>ģeoapstrādes sistēmu</5>. ."
+}

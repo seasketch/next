@@ -1,0 +1,17 @@
+{
+  "Accept as": "Принять как {{email}}",
+  "An account with this email address already exists.": "Аккаунт с таким адресом электронной почты уже существует.",
+  "Confirming invite": "Подтверждение приглашения",
+  "Contact {{supportEmail}} to request a new invitation.": "Свяжитесь с {{supportEmail}}, чтобы запросить новое приглашение.",
+  "Create an Account": "Завести аккаунт",
+  "Logout and sign in as ": "Выйти и войти как ",
+  "Sign In": "Войти",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Это приглашение уже принято.<1> Перейдите к проекту </1> или <5>свяжитесь со службой поддержки</5>, если считаете, что это ошибка.",
+  "This invitation was originally sent to <2></2>.": "Это приглашение изначально было отправлено по адресу <2></2>.",
+  "Use another account": "Использовать другую учетную запись",
+  "Verifying invitation code": "Проверка кода приглашения",
+  "Welcome, !": "Добро пожаловать, !",
+  "Welcome!": "Добро пожаловать!",
+  "You have been invited to participate in a SeaSketch project.": "Вас пригласили принять участие в проекте SeaSketch.",
+  "Your invitation to this project has expired.": "Срок действия вашего приглашения в этот проект истек."
+}

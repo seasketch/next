@@ -188,7 +188,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
 
   if (bottomToolbar) {
     return (
-      <div>
+      <>
         <BowtieInstructions
           open={showInvalidShapeModal}
           onRequestClose={() => setShowInvalidShapeModal(false)}
@@ -230,7 +230,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         <div className="flex-shrink-0 tall:p-2 space-x-2 items-center flex absolute z-10 bottom-0 w-full bg-gray-200 p-1 px-2 space-x-2 rtl:space-x-reverse justify-center">
           {buttons}
         </div>
-      </div>
+      </>
     );
   } else {
     return (

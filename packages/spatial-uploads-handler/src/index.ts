@@ -26,17 +26,29 @@ const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
 export { SpatialUploadsHandlerRequest };
 
-enum SupportedTypes {
-  GeoJSON,
-  FlatGeobuf,
-  ZippedShapefile,
-}
+type SupportedTypes = "GeoJSON" | "FlatGeobuf" | "ZippedShapefile" | "GeoTIFF";
 
 export interface ResponseOutput {
+  /** Remote location string as used in rclone */
   remote: string;
-  type: "FlatGeobuf" | "GeoJSON" | "PMTiles";
+  filename: string;
+  /**
+   * Note, these should be kept in sync with the postgres data_upload_output_type enum
+   */
+  type:
+    | SupportedTypes
+    | "PMTiles"
+    // geotif may be converted to normalized png when processing gray -> rgb
+    | "PNG";
+  /** URL of the tile service (or geojson if really small) */
   url?: string;
+  /** in bytes */
   size: number;
+  /** Original file uploaded by the user. Kept for export */
+  isOriginal?: boolean;
+  /** "normalized" outputs are all in a uniform projection and can be used to
+   * created alternative export files in the future */
+  isNormalizedOutput?: boolean;
 }
 
 export interface ProcessedUploadLayer {
@@ -45,6 +57,8 @@ export interface ProcessedUploadLayer {
   geostats: GeostatsLayer | null;
   outputs: ResponseOutput[];
   bounds?: number[];
+  url: string;
+  isSingleBandRaster?: boolean;
 }
 
 export interface ProcessedUploadResponse {
@@ -53,23 +67,36 @@ export interface ProcessedUploadResponse {
   error?: string;
 }
 
-// Don't create geojson archives if flatgeobuf is over 15mb
-const GEOJSON_BYTE_LIMIT = 15000000;
-// Create a tileset if flatgeobuf is > 1MB
-const MVT_THRESHOLD = 1000000;
+// Create a tileset if flatgeobuf is > 100kb (~1mb geojson)
+const MVT_THRESHOLD = 100000;
 // Outputs should not exceed 1 GB
 const MAX_OUTPUT_SIZE = 1000000000;
+
+enum ColorInterp {
+  RGB,
+  RGBA,
+  GRAY,
+  PALETTE,
+}
+
+const DEFAULT_RASTER_INFO = {
+  colorInterp: ColorInterp.GRAY,
+  isCorrectProjection: false,
+  stats: [] as { min: number; max: number; mean: number; std: number }[],
+  bounds: [-180.0, -85.06, 180.0, 85.06] as [number, number, number, number],
+  resolution: 100,
+};
 
 export default async function handleUpload(
   uuid: string,
   objectKey: string,
-  dataSourcesBucket: string,
-  dataSourcesUrl: string,
   suffix: string,
   requestingUser: string,
   skipLoggingProgress?: boolean
 ): Promise<ProcessedUploadResponse> {
+  console.log("handle");
   const pgClient = await getClient();
+  console.log("got client");
 
   /**
    * Updates progress of the upload task
@@ -86,7 +113,8 @@ export default async function handleUpload(
       | "tiling"
       | "uploading_products"
       | "complete"
-      | "failed",
+      | "failed"
+      | "worker_complete",
     progress?: number
   ) {
     if (skipLoggingProgress) {
@@ -110,6 +138,8 @@ export default async function handleUpload(
   // completes (error or none using try..finally)
   const tmpobj = dirSync({
     unsafeCleanup: true,
+    keep: true,
+    prefix: "uploads-",
   });
 
   // Logger/task executor which tracks all stdout/stderr outputs so they can be
@@ -124,46 +154,144 @@ export default async function handleUpload(
     );
   });
 
+  /** Final url that should be assigned to mapbox-gl-style source */
+  let sourceUrl: string | undefined;
+
   const s3LogPath = `s3://${process.env.BUCKET}/${uuid}.log.txt`;
   let { name, ext, base } = path.parse(objectKey);
   name = sanitize(name);
   const originalName = name;
   name = `${uuid}`;
+  const isZip = ext === ".zip";
+  const isTif = ext === ".tif";
 
   try {
     // Step 1) Fetch the uploaded file from S3
-    const filepath = `${path.join(tmpobj.name, objectKey.split("/")[1])}`;
+    let workingFilePath = `${path.join(tmpobj.name, objectKey.split("/")[1])}`;
+    let originalFilePath = workingFilePath;
     await updateProgress("fetching", 0.0);
     await getObject(
-      filepath,
+      workingFilePath,
       `s3://${path.join(process.env.BUCKET!, objectKey)}`,
       logger
     );
     logger.updateProgress(1 / 20);
 
+    if (isZip) {
+      const workingDir = tmpobj.name;
+      // // Unzip the file
+      await logger.exec(
+        ["unzip", ["-o", workingFilePath, "-d", workingDir]],
+        "Problem unzipping file",
+        1 / 20
+      );
+
+      // Find the first shapefile (.shp) in the working Dir
+      const shapefile = await logger.exec(
+        [
+          "find",
+          [
+            workingDir,
+            "-type",
+            "f",
+            "-not",
+            "-path",
+            "*/.*",
+            "-not",
+            "-path",
+            "*/__",
+            "-name",
+            "*.shp",
+          ],
+        ],
+        "Problem finding shapefile in zip archive",
+        1 / 20
+      );
+      workingFilePath = shapefile.trim();
+    }
+
     // Step 2) Use ogr/gdal to see if it is a supported file format
     await updateProgress("validating");
     let type: SupportedTypes;
     let wgs84 = false;
-    const ogrInfo = await logger.exec(
-      `ogrinfo -al -so ${ext === ".zip" ? "/vsizip/" : ""}${filepath}`,
-      ext === ".shp"
-        ? "Could not read file. Shapefiles should be uploaded as a zip archive with related sidecar files"
-        : "Could not run ogrinfo on file",
-      1 / 20
-    );
-    if (/GeoJSON/.test(ogrInfo)) {
-      type = SupportedTypes.GeoJSON;
-    } else if (/FlatGeobuf/.test(ogrInfo)) {
-      type = SupportedTypes.FlatGeobuf;
-    } else if (/ESRI Shapefile/.test(ogrInfo)) {
-      type = SupportedTypes.ZippedShapefile;
+    const rasterInfo = {
+      ...DEFAULT_RASTER_INFO,
+    };
+    if (isTif) {
+      type = "GeoTIFF";
+      const rioInfo = await logger.exec(
+        ["rio", ["info", "-v", workingFilePath]],
+        "Problem reading file. Rasters should be uploaded as GeoTIFF.",
+        1 / 20
+      );
+      const rioData = JSON.parse(rioInfo);
+      if (rioData.driver !== "GTiff") {
+        throw new Error(`Unrecognized raster driver "${rioData.driver}"`);
+      }
+      if (rioData.colorinterp[0] === "gray") {
+        // It seems Arc Desktop exports rgb files in a format that gdal/rio info
+        // doesn't interpret correctly. Hopefully guessing this way is ok.
+        if (
+          rioData.colorinterp.length === 3 &&
+          rioData.colorinterp[1] === "undefined"
+        ) {
+          rasterInfo.colorInterp = ColorInterp.RGB;
+        } else {
+          rasterInfo.colorInterp = ColorInterp.GRAY;
+        }
+      } else if (
+        // Sam Arc Desktop hueristic here for rgba
+        rioData.colorinterp.length === 4 &&
+        rioData.colorinterp[3] === "alpha" &&
+        rioData.colorinterp[0] === "undefined"
+      ) {
+        rasterInfo.colorInterp = ColorInterp.RGBA;
+      } else if (rioData.colorinterp[0] === "red") {
+        if (rioData.colorinterp[3] === "alpha") {
+          rasterInfo.colorInterp = ColorInterp.RGBA;
+        } else {
+          rasterInfo.colorInterp = ColorInterp.RGB;
+        }
+      } else if (rioData.colorinterp[0] === "palette") {
+        rasterInfo.colorInterp = ColorInterp.PALETTE;
+      } else {
+        throw new Error(
+          `Unrecognized colorinterp [${rioData.colorinterp.join(",")}]`
+        );
+      }
+      rasterInfo.isCorrectProjection = rioData.crs === "EPSG:3857";
+      rasterInfo.stats = rioData.stats;
+      rasterInfo.bounds = rioData.bounds;
+      rasterInfo.resolution = rioData.transform[0];
+
+      const fc = await logger.exec(
+        ["rio", ["bounds", workingFilePath]],
+        "Problem determining bounds of raster",
+        1 / 20
+      );
+      rasterInfo.bounds = JSON.parse(fc).bbox;
     } else {
-      throw new Error("Not a recognized file type");
-    }
-    // Might be useful to know. All files are normalized to WGS84
-    if (/WGS 84/.test(ogrInfo)) {
-      wgs84 = true;
+      const ogrInfo = await logger.exec(
+        ["ogrinfo", ["-al", "-so", workingFilePath]],
+        // `ogrinfo -al -so ${workingFilePath}`,
+        ext === ".shp"
+          ? "Could not read file. Shapefiles should be uploaded as a zip archive with related sidecar files"
+          : "Could not run ogrinfo on file",
+        1 / 20
+      );
+      if (/GeoJSON/.test(ogrInfo)) {
+        type = "GeoJSON";
+      } else if (/FlatGeobuf/.test(ogrInfo)) {
+        type = "FlatGeobuf";
+      } else if (/ESRI Shapefile/.test(ogrInfo)) {
+        type = "ZippedShapefile";
+      } else {
+        throw new Error("Not a recognized file type");
+      }
+      // Might be useful to know. All files are normalized to WGS84
+      if (/WGS 84/.test(ogrInfo)) {
+        wgs84 = true;
+      }
     }
 
     /**
@@ -172,126 +300,446 @@ export default async function handleUpload(
      * Vector files are converted to FGB and GeoJSON depending on file size,
      * and if over a certain threshold tiled to mbtiles and then pmtiles.
      *
-     * Raster TBD, but likely COG and/or pmtiles
+     * Rasters are converted to pmtiles with no intermediate format
      */
     await updateProgress("converting_format");
-    const outputs: {
-      type: "GeoJSON" | "PMTiles" | "FlatGeobuf";
-      remote: string;
-      local: string;
-      url?: string;
-      size: number;
-    }[] = [];
-    const dist = path.join(tmpobj.name, "dist");
-    await logger.exec(`mkdir ${dist}`, "Failed to create directory", 0);
-    const normalizedVectorPath = path.join(dist, name + ".fgb");
+    const outputs: (ResponseOutput & { local: string })[] = [];
+    const baseKey = `projects/${suffix}/public`;
 
-    // All vector files are normalized to a WGS84 FlatGeobuf for long-term
-    // storage. Using this format we can easily tile and convert to other
-    // formats, and fgb doesn't take up too much storage capacity.
-    try {
-      await logger.exec(
-        `ogr2ogr -skipfailures -t_srs EPSG:4326 ${normalizedVectorPath} ${
-          type === SupportedTypes.ZippedShapefile ? "/vsizip/" : ""
-        }${filepath} `,
-        "Problem converting to FlatGeobuf",
-        1 / 20
-      );
-    } catch (e) {
-      if (
-        "message" in (e as Error) &&
-        /Mismatched geometry type/.test((e as Error).message)
-      ) {
-        logger.output +=
-          "Mixed geometry types. Attempting to run ogr2ogr again using PROMOTE_TO_MULTI.\n";
-        await logger.exec(
-          `ogr2ogr -skipfailures -t_srs EPSG:4326 -nlt PROMOTE_TO_MULTI ${normalizedVectorPath} ${
-            type === SupportedTypes.ZippedShapefile ? "/vsizip/" : ""
-          }${filepath} `,
-          "Problem converting to FlatGeobuf",
-          1 / 20
-        );
-      }
-    }
-    const normalizedVectorFileSize = statSync(normalizedVectorPath).size;
     outputs.push({
-      type: "FlatGeobuf",
-      remote: `s3://${process.env.NORMALIZED_OUTPUTS_BUCKET}/projects/${suffix}/${uuid}.fgb`,
-      local: normalizedVectorPath,
-      size: normalizedVectorFileSize,
+      type: type,
+      filename: name + ext,
+      remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${name}${ext}`,
+      local: originalFilePath,
+      size: statSync(originalFilePath).size,
+      url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${name}${ext}`,
+      isOriginal: true,
     });
 
+    const dist = path.join(tmpobj.name, "dist");
+    await logger.exec(["mkdir", [dist]], "Failed to create directory", 0);
     let stats: GeostatsLayer | null = null;
     let bounds: number[] | null = null;
+    bounds = rasterInfo.bounds;
+    if (isTif) {
+      let inputPath = workingFilePath;
+      if (!rasterInfo.isCorrectProjection) {
+        // use rio warp to reproject tif
+        const warpedPath = path.join(dist, name + ".warped.tif");
+        await logger.exec(
+          ["rio", ["warp", inputPath, warpedPath, "--dst-crs", "EPSG:3857"]],
+          "Problem reprojecting raster",
+          1 / 20
+        );
+        inputPath = warpedPath;
+      }
+      if (rasterInfo.colorInterp === ColorInterp.PALETTE) {
+        // use pct2rgb.py to convert to rgb
+        const rgbPath = path.join(dist, name + ".rgb.tif");
+        await logger.exec(
+          ["gdal_translate", ["-expand", "rgb", inputPath, rgbPath]],
+          "Problem converting palletized raster to RGB",
+          1 / 20
+        );
+        inputPath = rgbPath;
+      } else if (rasterInfo.colorInterp === ColorInterp.GRAY) {
+        // If singleband, determine scale ratio. Otherwise set to 1
+        // An example of using the scale ratio is a single-band raster with 8-bit
+        // float values 0 - 1. We want to scale these to 0 - 255 so they can be
+        // displayed in grayscale.
+        let scaleRatio = 255 / rasterInfo.stats[0].max;
+        // use rio to convert to rgb
+        const rgbPath = path.join(dist, name + "-rgb.png");
+        await logger.exec(
+          [
+            "rio",
+            [
+              "convert",
+              "--scale-ratio",
+              scaleRatio.toString(),
+              "-f",
+              "PNG",
+              "--rgb",
+              "--dtype",
+              "uint8",
+              inputPath,
+              rgbPath,
+            ],
+          ],
+          "Problem converting raster to RGB",
+          1 / 20
+        );
+        inputPath = rgbPath;
+      }
 
-    // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
-    // from the normalized fgb dynamically if someone wants to download it as
-    // GeoJSON or shapefile.
-    if (normalizedVectorFileSize <= GEOJSON_BYTE_LIMIT) {
-      const geojsonPath = path.join(dist, name + ".geojson.json");
-      await logger.exec(
-        `ogr2ogr -skipfailures -t_srs EPSG:4326 -f GeoJSON -nlt PROMOTE_TO_MULTI ${geojsonPath} ${normalizedVectorPath} `,
-        "Problem converting to GeoJSON",
-        1 / 20
-      );
+      const ext = path.parse(inputPath).ext;
       outputs.push({
-        type: "GeoJSON",
-        remote: `s3://${dataSourcesBucket}/${uuid}`,
-        local: geojsonPath,
-        url: `${dataSourcesUrl}/${uuid}`,
-        size: statSync(geojsonPath).size,
+        type: ext === ".tif" ? "GeoTIFF" : "PNG",
+        remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}${ext}`,
+        local: inputPath,
+        size: statSync(inputPath).size,
+        url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}${ext}`,
+        filename: `${uuid}${ext}`,
+        isNormalizedOutput: true,
       });
-    }
 
-    /**
-     * Tiling only happens if the file is over a certain size. If very small
-     * just loading the raw GeoJSON in mapbox-gl-js should be sufficient.
-     *
-     * Here we are just using default tippecanoe settings and then running the
-     * mbtiles through `pmtiles convert`. PMTiles archives are much more compact
-     * than mbtiles and much easier to create a serverless tile server for.
-     *
-     * At some point we may need to customize the settings of tippecanoe but it
-     * seems the Felt is doing a lot of work on improving the default behavior.
-     */
-    if (normalizedVectorFileSize > MVT_THRESHOLD) {
-      const mvtPath = path.join(dist, name + ".mbtiles");
-      const pmtilesPath = path.join(dist, name + ".pmtiles");
+      // Convert to mbtiles
       await updateProgress("tiling");
+      const mbtilesPath = path.join(dist, name + ".mbtiles");
+
+      // Not necessary when using gdal_translate & gdaladdo
+      // Using resolution output from rio info and some hints from:
+      // https://gis.stackexchange.com/questions/268107/gdal2tiles-py-how-to-find-optimal-zoom-level-for-leaflet
+      // const radius = 6378137;
+      // const equator = 2 * Math.PI * radius;
+      // const tileSize = 512;
+      // const minzoom = 0;
+      // const maxzoom = Math.min(
+      //   // At most, tile to zoom level 16
+      //   16,
+      //   Math.ceil(Math.log2(equator / tileSize / rasterInfo.resolution))
+      // );
+
+      // await logger.exec(
+      //   [
+      //     "rio",
+      //     [
+      //       "mbtiles",
+      //       inputPath,
+      //       mbtilesPath,
+      //       "--format",
+      //       "PNG",
+      //       "--include-empty-tiles",
+      //       "--title",
+      //       name,
+      //       "--description",
+      //       name + ext,
+      //       "--zoom-levels",
+      //       `${minzoom}..${maxzoom}`,
+      //       "--tile-size",
+      //       tileSize.toString(),
+      //       "--resampling",
+      //       rasterInfo.colorInterp === ColorInterp.GRAY ? "nearest" : "cubic",
+      //       ...(rasterInfo.colorInterp === ColorInterp.RGBA ? ["--rgba"] : []),
+      //       "--progress-bar",
+      //       "--implementation",
+      //       "cf",
+      //     ],
+      //   ],
+      //   "Problem converting raster to mbtiles",
+      //   5 / 20
+      // );
+
       await logger.exec(
-        `tippecanoe -n "${originalName}" -zg -L'{"file":"${normalizedVectorPath}", "layer":"${originalName}"}' -o ${mvtPath}`,
-        "Tippecanoe failed",
-        10 / 20
+        [
+          "gdal_translate",
+          [
+            "-of",
+            "mbtiles",
+            "-co",
+            "BLOCKSIZE=512",
+            "-co",
+            "RESAMPLING=NEAREST",
+            "-co",
+            `NAME=${name}`,
+            inputPath,
+            mbtilesPath,
+          ],
+        ],
+        "Problem converting raster to mbtiles",
+        3 / 20
       );
+
       await logger.exec(
-        `pmtiles convert ${mvtPath} ${pmtilesPath}`,
-        "PMTiles conversion failed",
+        ["gdaladdo", ["-minsize", "8", "-r", "cubic", mbtilesPath]],
+        "Problem adding overviews to mbtiles",
         2 / 20
+      );
+
+      // Convert to pmtiles
+      const pmtilesPath = path.join(dist, name + ".pmtiles");
+      await logger.exec(
+        [`pmtiles`, ["convert", mbtilesPath, pmtilesPath]],
+        "PMTiles conversion failed",
+        5 / 20
       );
       outputs.push({
         type: "PMTiles",
-        remote: `r2://ssn-tiles/projects/${suffix}/public/${uuid}.pmtiles`,
+        remote: `${process.env.TILES_REMOTE}/${baseKey}/${uuid}.pmtiles`,
         local: pmtilesPath,
         size: statSync(pmtilesPath).size,
-        url: `https://tiles.seasketchdata.com/projects/${suffix}/public/${uuid}`,
+        url: `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}.pmtiles`,
+        filename: `${uuid}.pmtiles`,
+      });
+      sourceUrl = `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}.json`;
+    } else {
+      const normalizedVectorPath = path.join(dist, name + ".fgb");
+
+      // All vector files are normalized to a WGS84 FlatGeobuf for long-term
+      // storage. Using this format we can easily tile and convert to other
+      // formats, and fgb doesn't take up too much storage capacity.
+      try {
+        await logger.exec(
+          [
+            "ogr2ogr",
+            [
+              "-skipfailures",
+              "-t_srs",
+              "EPSG:4326",
+              "-oo",
+              "FLATTEN_NESTED_ATTRIBUTES=yes",
+              "-splitlistfields",
+              normalizedVectorPath,
+              workingFilePath,
+              "-nln",
+              originalName,
+            ],
+          ],
+          "Problem converting to FlatGeobuf",
+          1 / 20
+        );
+      } catch (e) {
+        if (
+          "message" in (e as Error) &&
+          /Mismatched geometry type/.test((e as Error).message)
+        ) {
+          logger.output +=
+            "Mixed geometry types. Attempting to run ogr2ogr again using PROMOTE_TO_MULTI.\n";
+          await logger.exec(
+            [
+              "ogr2ogr",
+              [
+                "-skipfailures",
+                "-t_srs",
+                "EPSG:4326",
+                "-nlt",
+                "PROMOTE_TO_MULTI",
+                normalizedVectorPath,
+                workingFilePath,
+                "-nln",
+                originalName,
+              ],
+            ],
+            "Problem converting to FlatGeobuf",
+            1 / 20
+          );
+        }
+      }
+
+      const normalizedVectorFileSize = statSync(normalizedVectorPath).size;
+      outputs.push({
+        type: "FlatGeobuf",
+        filename: `${uuid}.fgb`,
+        remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}.fgb`,
+        local: normalizedVectorPath,
+        size: normalizedVectorFileSize,
+        url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.fgb`,
+        isNormalizedOutput: true,
       });
 
-      // Collect mapbox-geostats from mbtiles archive
-      // (generated automatically by tippecanoe)
-      const info = await statsFromMBTiles(mvtPath);
-      stats = info.geostats;
-      bounds = info.bounds;
-    }
+      // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
+      // from the normalized fgb dynamically if someone wants to download it as
+      // GeoJSON or shapefile.
+      if (normalizedVectorFileSize <= MVT_THRESHOLD) {
+        const geojsonPath = path.join(dist, name + ".geojson.json");
+        await logger.exec(
+          [
+            "ogr2ogr",
+            [
+              "-skipfailures",
+              "-t_srs",
+              "EPSG:4326",
+              "-f",
+              "GeoJSON",
+              "-nlt",
+              "PROMOTE_TO_MULTI",
+              geojsonPath,
+              normalizedVectorPath,
+            ],
+          ],
+          "Problem converting to GeoJSON",
+          1 / 20
+        );
+        outputs.push({
+          type: "GeoJSON",
+          remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}.geojson.json`,
+          local: geojsonPath,
+          url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`,
+          size: statSync(geojsonPath).size,
+          filename: `${uuid}.geojson.json`,
+        });
+        sourceUrl = `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`;
+      }
 
-    // If mapbox-geostats weren't extracted from mbtiles, get them from GeoJSON
-    // if available
-    if (!stats && outputs.find((output) => output.type === "GeoJSON")) {
-      const path = outputs.find((output) => output.type === "GeoJSON")!.local;
-      const geojson = JSON.parse(readFileSync(path).toString()) as
-        | Feature
-        | FeatureCollection;
-      stats = geostats(geojson, originalName);
-      bounds = bbox(geojson);
+      // For some reason tippecanoe often converts numeric columns from fgb
+      // to mixed and stringifies the values. To avoid that, detect numeric
+      // columns using fiona (fio info) and then use the -T command to
+      // manually specify the types.
+      const fioInfo = await logger.exec(
+        ["fio", ["info", normalizedVectorPath]],
+        "Problem detecting numeric properties using fiona.",
+        1 / 20
+      );
+      const fioData = JSON.parse(fioInfo);
+      const schema = fioData?.schema?.properties || {};
+      const numericAttributes: {
+        name: string;
+        type: "int" | "float";
+        quantiles?: number[];
+      }[] = [];
+      for (const key in schema) {
+        const type = schema[key];
+        if (/int/i.test(type)) {
+          numericAttributes.push({ name: key, type: "int" });
+        } else if (/float/i.test(type)) {
+          numericAttributes.push({ name: key, type: "float" });
+        }
+      }
+      try {
+        // If there are numeric attributes, calculate quantiles
+        if (numericAttributes.length) {
+          for (const attribute of numericAttributes) {
+            if (
+              !/fid/i.test(attribute.name) &&
+              !/objectid/i.test(attribute.name) &&
+              !/^id$/i.test(attribute.name)
+            ) {
+              const attrDataFname = path.join(
+                dist,
+                `details-${numericAttributes.indexOf(attribute)}.json`
+              );
+              const data = await logger.exec(
+                [
+                  "ogr2ogr",
+                  [
+                    attrDataFname,
+                    normalizedVectorPath,
+                    "-dialect",
+                    "sqlite",
+                    "-sql",
+                    `
+                    SELECT 
+                      quantile, 
+                      max(VALUE) as max 
+                    from (
+                      SELECT 
+                        "${attribute.name}" as VALUE, 
+                        NTILE(20) OVER (ORDER BY "${attribute.name}") as quantile 
+                      FROM 
+                        "${originalName}"
+                    ) group by quantile
+                  `,
+                  ],
+                ],
+                "Problem calculating quantiles",
+                1 / 20
+              );
+              const attrData = JSON.parse(
+                readFileSync(attrDataFname).toString()
+              );
+              if (attrData && attrData.features.length) {
+                attribute.quantiles = [];
+                for (const feature of attrData.features) {
+                  if (
+                    attribute.quantiles.indexOf(feature.properties.max) === -1
+                  ) {
+                    attribute.quantiles.push(feature.properties.max);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // Don't do anything if quantiles fail
+        console.error("Failed to generate quantiles");
+      }
+
+      /**
+       * Tiling only happens if the file is over a certain size. If very small
+       * just loading the raw GeoJSON in mapbox-gl-js should be sufficient.
+       *
+       * Here we are just using default tippecanoe settings and then running the
+       * mbtiles through `pmtiles convert`. PMTiles archives are much more compact
+       * than mbtiles and much easier to create a serverless tile server for.
+       *
+       * At some point we may need to customize the settings of tippecanoe but it
+       * seems the Felt is doing a lot of work on improving the default behavior.
+       */
+      if (normalizedVectorFileSize > MVT_THRESHOLD) {
+        const mvtPath = path.join(dist, name + ".mbtiles");
+        const pmtilesPath = path.join(dist, name + ".pmtiles");
+        await updateProgress("tiling");
+        await logger.exec(
+          [
+            "tippecanoe",
+            [
+              ...numericAttributes
+                .map((a) => [`-T`, `${a.name}:${a.type}`])
+                .flat(),
+              "-n",
+              `"${originalName}"`,
+              "-zg",
+              "--drop-densest-as-needed",
+              "-l",
+              `${originalName}`,
+              "-o",
+              mvtPath,
+              normalizedVectorPath,
+            ],
+          ],
+          "Tippecanoe failed",
+          10 / 20
+        );
+        await logger.exec(
+          [`pmtiles`, ["convert", mvtPath, pmtilesPath]],
+          "PMTiles conversion failed",
+          2 / 20
+        );
+        outputs.push({
+          type: "PMTiles",
+          remote: `${process.env.TILES_REMOTE}/${baseKey}/${uuid}.pmtiles`,
+          local: pmtilesPath,
+          size: statSync(pmtilesPath).size,
+          url: `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}.pmtiles`,
+          filename: `${uuid}.pmtiles`,
+        });
+        sourceUrl = `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}`;
+
+        // Collect mapbox-geostats from mbtiles archive
+        // (generated automatically by tippecanoe)
+        const info = await statsFromMBTiles(mvtPath);
+        stats = info.geostats;
+        for (const attr of stats?.attributes || []) {
+          const numeric = numericAttributes.find(
+            (a) => a.name === attr.attribute
+          );
+          if (numeric && numeric.quantiles) {
+            attr.quantiles = numeric.quantiles;
+          }
+        }
+        bounds = info.bounds;
+      }
+
+      // If mapbox-geostats weren't extracted from mbtiles, get them from GeoJSON
+      // if available
+      if (!stats && outputs.find((output) => output.type === "GeoJSON")) {
+        const path = outputs.find((output) => output.type === "GeoJSON")!.local;
+        const geojson = JSON.parse(readFileSync(path).toString()) as
+          | Feature
+          | FeatureCollection;
+        stats = geostats(geojson, originalName);
+        bounds = bbox(geojson);
+      }
+
+      for (const attr of stats?.attributes || []) {
+        const numeric = numericAttributes.find(
+          (a) => a.name === attr.attribute
+        );
+        if (numeric && numeric.quantiles) {
+          attr.quantiles = numeric.quantiles;
+        }
+      }
     }
 
     // Step 4) Upload outputs to s3 and the tile server (cloudflare r2)
@@ -307,29 +755,50 @@ export default async function handleUpload(
     }
     for (const output of outputs) {
       if (/s3:/.test(output.remote)) {
-        await putObject(output.local, output.remote, logger, 1 / 20);
+        await putObject(output.local, output.remote, logger, 2 / 20);
       } else if (/r2:/.test(output.remote)) {
-        await putObject(output.local, output.remote, logger, 1 / 20);
+        await putObject(output.local, output.remote, logger, 2 / 20);
       } else {
         throw new Error(`Unrecognized remote ${output.remote}`);
       }
     }
-
+    await updateProgress("worker_complete", 1);
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
-    return {
+    if (!sourceUrl) {
+      throw new Error("sourceUrl not set");
+    }
+    const response = {
       layers: [
         {
           filename: originalName + ext,
           name: originalName,
           geostats: stats,
-          outputs: outputs.map((o) => ({ ...o, local: undefined })),
+          outputs: outputs.map((o) => ({
+            ...o,
+            local: undefined,
+            filename: o.filename,
+          })),
           bounds: bounds || undefined,
-        },
+          url: sourceUrl,
+          isSingleBandRaster:
+            isTif && rasterInfo.colorInterp === ColorInterp.GRAY,
+        } as ProcessedUploadLayer,
       ],
       logfile: s3LogPath,
     };
+    // Trigger the task to process the outputs
+    await pgClient.query(
+      `SELECT graphile_worker.add_job('processDataUploadOutputs', $1::json)`,
+      [
+        JSON.stringify({
+          uploadId: uuid,
+          data: response,
+        }),
+      ]
+    );
+    return response;
   } catch (e) {
     const error = e as Error;
     if (!skipLoggingProgress) {
@@ -343,9 +812,22 @@ export default async function handleUpload(
         Bucket: process.env.BUCKET,
         Key: objectKey,
       });
-      const presignedDownloadUrl = await getSignedUrl(s3Client, command, {
-        expiresIn: 172800,
-      });
+      const presignedDownloadUrl = await getSignedUrl(
+        process.env.DEBUGGING_AWS_ACCESS_KEY_ID &&
+          process.env.DEBUGGING_AWS_SECRET_ACCESS_KEY
+          ? new S3Client({
+              region: process.env.AWS_REGION!,
+              credentials: {
+                accessKeyId: process.env.DEBUGGING_AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.DEBUGGING_AWS_SECRET_ACCESS_KEY,
+              },
+            })
+          : s3Client,
+        command,
+        {
+          expiresIn: 172800,
+        }
+      );
 
       await notifySlackChannel(
         originalName + ext,
@@ -353,10 +835,10 @@ export default async function handleUpload(
         logger.output,
         process.env.BUCKET!,
         objectKey,
-        requestingUser
+        requestingUser,
+        error.message || error.name
       );
     }
-    console.log(logger.output);
     throw e;
   } finally {
     const logPath = path.join(tmpobj.name, "log.txt");
@@ -383,21 +865,23 @@ class Logger {
    * @returns
    */
   async exec(
-    command: string,
+    command: [string, string[]],
     throwMsg: string,
     progressFraction?: number
   ): Promise<string> {
+    // console.log("exec " + command[0] + " " + command[1].join(" "));
     let stdout = "";
     const self = this;
     return new Promise((resolve, reject) => {
       let progress = 0;
-      self.output += command + "\n";
-      const child = spawn(command, { shell: true });
+      self.output += `${command[0]} ${command[1].join(" ")}\n`;
+      const child = spawn(command[0], command[1]);
 
       const progressRegExp = /([\d\.]+)%/;
 
       child.stdout.setEncoding("utf8");
       child.stdout.on("data", function (data) {
+        // console.log(`stdout: ${data}`);
         if (progressFraction && progressRegExp.test(data.toString())) {
           const newProgress = parseFloat(
             data.toString().match(progressRegExp)[1]
@@ -407,11 +891,12 @@ class Logger {
           self.updateProgress((increment / 100) * progressFraction);
         }
         stdout += data.toString();
-        self.output += data.toString();
+        self.output += data.toString() + "\n";
       });
 
       child.stderr.setEncoding("utf8");
       child.stderr.on("data", function (data) {
+        // console.log(`stderr: ${data}`);
         if (
           data.indexOf("ERROR 1: ICreateFeature: Mismatched geometry type") !=
           -1
@@ -428,7 +913,7 @@ class Logger {
           progress = newProgress;
           self.updateProgress((increment / 100) * progressFraction);
         }
-        self.output += data.toString();
+        self.output += data.toString() + "\n";
       });
 
       child.on("close", async function (code) {
@@ -489,7 +974,7 @@ async function getObject(
   const parts = remote.replace("s3://", "").split("/");
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
-  logger.output += `getObject ${remote} to ${filepath}`;
+  logger.output += `getObject ${remote} to ${filepath}\n`;
   const response = await s3Client.send(
     new GetObjectCommand({
       Bucket,
@@ -515,7 +1000,8 @@ async function notifySlackChannel(
   logs: string,
   bucket: string,
   objectKey: string,
-  user: string
+  user: string,
+  error: string
 ) {
   const slack = new WebClient(process.env.SLACK_TOKEN!);
 
@@ -527,6 +1013,13 @@ async function notifySlackChannel(
         text: {
           type: "plain_text",
           text: "An Upload Failed",
+        },
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: error,
         },
       },
       {

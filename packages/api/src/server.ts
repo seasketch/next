@@ -331,7 +331,12 @@ app.use(
       await client.query("BEGIN");
       let token: string | undefined = req.query.reporting_access_token;
       let claims:
-        | { userId?: number; projectId?: number; canonicalEmail?: string }
+        | {
+            userId?: number;
+            projectId?: number;
+            canonicalEmail?: string;
+            isSuperuser?: boolean;
+          }
         | undefined;
       if (token) {
         claims = await verify(loadersPool, token, ISSUER);
@@ -343,7 +348,9 @@ app.use(
         claims.userId &&
         pgSettings.role === "anon"
       ) {
-        pgSettings.role = "seasketch_user";
+        pgSettings.role = claims.isSuperuser
+          ? "seasketch_superuser"
+          : "seasketch_user";
         pgSettings["session.user_id"] = claims.userId;
         pgSettings["session.email_verified"] = true;
         pgSettings["session.canonical_email"] = claims.canonicalEmail;
@@ -359,9 +366,17 @@ app.use(
           `,
         [id]
       );
-      const geojson = rows[0].sketch_or_collection_as_geojson;
-      await client.query("COMMIT");
-      await client.release();
+      const geojson = rows[0].sketch_or_collection_as_geojson || null;
+      if (geojson === null) {
+        res
+          .status(404)
+          .send(
+            `Sketch with id ${id} not found. It either does not exists or is not shared with "${
+              claims?.canonicalEmail || `anon`
+            }"`
+          );
+        return;
+      }
       res.setHeader("Content-Type", "application/json");
       const name = geojson?.properties?.name || `Sketch-${id}`;
       res.setHeader(
@@ -380,15 +395,13 @@ app.use(
         // geometry with the old exportid
         res.setHeader("Cache-Control", "public, max-age=1800");
       }
-      if (geojson === null) {
-        res.status(404);
-      }
       res.send(geojson);
     } catch (e: any) {
-      client.query("COMMIT");
-      client.release();
       res.status(500).send(`Problem generating geojson.\n${e.toString()}`);
       return;
+    } finally {
+      client.query("COMMIT");
+      client.release();
     }
   }
 );
@@ -404,7 +417,12 @@ app.use(
       await client.query("BEGIN");
       let token: string | undefined = req.query.token;
       let claims:
-        | { userId?: number; projectId?: number; canonicalEmail?: string }
+        | {
+            userId?: number;
+            projectId?: number;
+            canonicalEmail?: string;
+            isSuperuser?: boolean;
+          }
         | undefined;
       if (token) {
         claims = await verify(loadersPool, token, ISSUER);
@@ -416,7 +434,9 @@ app.use(
         claims.userId &&
         pgSettings.role === "anon"
       ) {
-        pgSettings.role = "seasketch_user";
+        pgSettings.role = claims.isSuperuser
+          ? "seasketch_superuser"
+          : "seasketch_user";
         pgSettings["session.user_id"] = claims.userId;
         pgSettings["session.email_verified"] = true;
         pgSettings["session.canonical_email"] = claims.canonicalEmail;
@@ -432,7 +452,7 @@ app.use(
           `,
         [id]
       );
-      const bookmark = rows[0].bookmark;
+      const bookmark = rows[0].bookmark || null;
       const { rows: spriteRows } = await client.query(
         `
         SELECT get_sprite_data_for_screenshot(map_bookmarks.*) as sprite_images from map_bookmarks where id = $1

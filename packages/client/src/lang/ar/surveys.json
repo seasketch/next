@@ -86,6 +86,7 @@
   "Take Survey": "شارك في الاستطلاع",
   "This survey either does not exist or your account does not have access to it. Surveys marked as draft require special permission to access.": "هذا الاستطلاع إما غير موجود أو أن حسابك ليس لديه حق الوصول إليه. الاستطلاعات التي تم وضع علامة عليها كمسودة تتطلب إذنًا خاصًا للوصول إليها.",
   "This will delete your entire shape. Are you sure?": "سيؤدي هذا إلى حذف الشكل بالكامل. هل أنت متأكد؟",
+  "Total": "المجموع",
   "UnsubmittedResponse": "استجابتك آمنة على هذا الجهاز ، ولكن يجب إرسالها إلى الخادم قبل احتسابها.",
   "View Map": "إعرض الخريطة",
   "Yes": "نعم",

@@ -1,0 +1,17 @@
+{
+  "Accept as": "Pieņemt kā {{email}}",
+  "An account with this email address already exists.": "Konts ar šo e-pasta adresi jau pastāv.",
+  "Confirming invite": "Uzaicinājuma apstiprināšana",
+  "Contact {{supportEmail}} to request a new invitation.": "Sazinieties ar {{supportEmail}}, lai pieprasītu jaunu ielūgumu.",
+  "Create an Account": "Izveidot kontu",
+  "Logout and sign in as ": "Atteikties un pierakstīties kā ",
+  "Sign In": "Ielogoties",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Šis uzaicinājums jau ir pieņemts. <1> Pārejiet uz projektu </1> vai <5>sazinieties ar atbalsta dienestu</5>, ja uzskatāt, ka tā ir kļūda.",
+  "This invitation was originally sent to <2></2>.": "Šis ielūgums sākotnēji tika nosūtīts uz <2></2>.",
+  "Use another account": "Izmantojiet citu kontu",
+  "Verifying invitation code": "Notiek ielūguma koda pārbaude",
+  "Welcome, !": "Laipni lūdzam,!",
+  "Welcome!": "Laipni lūdzam!",
+  "You have been invited to participate in a SeaSketch project.": "Jūs esat uzaicināts piedalīties SeaSketch projektā.",
+  "Your invitation to this project has expired.": "Jūsu uzaicinājumam uz šo projektu ir beidzies derīguma termiņš."
+}

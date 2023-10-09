@@ -40,6 +40,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     getMenuOptions,
     errors,
     loading: loadingSketches,
+    setSketchClasses,
   } = useContext(SketchUIStateContext);
 
   const getContextMenuItems = useCallback(
@@ -66,6 +67,15 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     onError,
     skip: !user,
   });
+
+  useEffect(() => {
+    if (
+      data?.projectBySlug?.sketchClasses &&
+      data?.projectBySlug?.sketchClasses.length > 0
+    ) {
+      setSketchClasses(data.projectBySlug.sketchClasses);
+    }
+  }, [data?.projectBySlug?.sketchClasses, setSketchClasses]);
 
   // Necesssary for SketchUIStateContext to display up-to-date sketches
   useEffect(() => {

@@ -609,13 +609,6 @@ describe("Data validation", () => {
             )}, data_layer_id) values (${projectId}, 'item1', false, ${id()}, ${val}, ${layerId}) returning id`
           );
           expect(tocId).toBeTruthy();
-          expect(
-            conn.oneFirst(
-              sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id, ${sql.identifier(
-                [prop]
-              )}) values (${projectId}, 'item1', true, ${id()}, ${val}) returning id`
-            )
-          ).rejects.toThrow(/Folders/);
           await conn.any(sql`ROLLBACK to before_thing`);
         }
         expect(

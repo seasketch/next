@@ -64,7 +64,7 @@ export default function OverlayLayers({
             },
           },
         ];
-        if (item.dataLayerId) {
+        if (item.dataLayerId || item.hasMetadata) {
           contextMenuOptions.push({
             id: "metadata",
             label: t("Metadata"),

@@ -1,0 +1,17 @@
+{
+  "Accept as": "Whakaae hei {{email}}",
+  "An account with this email address already exists.": "He putea kei tenei wahitau imeera kua noho.",
+  "Confirming invite": "Te whakaū i te pōhiri",
+  "Contact {{supportEmail}} to request a new invitation.": "Whakapa atu ki a {{supportEmail}} ki te tono powhiri hou.",
+  "Create an Account": "Waihangahia he Kaute",
+  "Logout and sign in as ": "Takiputa me te haina hei ",
+  "Sign In": "Waitohu Mai",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Kua whakaaetia kētia tēnei pōwhiri.<1> Haere ki te kaupapa </1> ranei <5>whakapā tautoko</5>ki te whakapono koe he hapa tenei.",
+  "This invitation was originally sent to <2></2>.": "I tukuna tuatahitia tenei powhiri ki <2></2>.",
+  "Use another account": "Whakamahia tetahi atu kaute",
+  "Verifying invitation code": "Manatoko waehere powhiri",
+  "Welcome, !": "Nau mai, haere mai!",
+  "Welcome!": "Nau mai haere mai!",
+  "You have been invited to participate in a SeaSketch project.": "Kua tonohia koe kia uru atu ki tetahi kaupapa SeaSketch.",
+  "Your invitation to this project has expired.": "Kua pau to tono ki tenei kaupapa."
+}

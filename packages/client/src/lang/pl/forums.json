@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Zaloguj się</0> lub <4>zarejestruj</4>, aby móc uczestniczyć w forum.",
   "Cancel": "Anulować",
+  "close": "zamknąć",
+  "download": "pobierać",
   "Forums": "Fora",
   "lastReply": "Ostatnia odpowiedź {{timeAgo}}. Rozpoczęty przez {{lastAuthor}}",
   "Map Bookmark Errors": "Błędy zakładek mapy",

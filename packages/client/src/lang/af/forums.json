@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Meld aan</0> of <4>registreer</4> vir 'n rekening om aan die forum deel te neem.",
   "Cancel": "Cancel",
+  "close": "naby",
+  "download": "Aflaai",
   "Forums": "Forums",
   "lastReply": "Laaste antwoord {{timeAgo}}. Begin deur {{lastAuthor}}",
   "Map Bookmark Errors": "Kaartboekmerkfoute",

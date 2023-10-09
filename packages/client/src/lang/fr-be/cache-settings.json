@@ -1,0 +1,15 @@
+{
+  "Cache Details": "Détails du cache",
+  "Cache Status": "État du cache",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "Met en cache plus de données et précharge les actifs pour de meilleures performances. Prend en charge l'utilisation hors ligne.",
+  "Data Caching": "Mise en cache des données",
+  "Default": "Défaut",
+  "Improved Performance": "Performance améliorée",
+  "Maximum": "Maximum",
+  "Minimum": "Le minimum",
+  "Only what's necessary to run SeaSketch": "Seulement ce qui est nécessaire pour exécuter SeaSketch",
+  "Query Cache": "Cache de requête",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "Enregistre certaines données d'application récemment utilisées pour améliorer les performances de démarrage et les utiliser sur de mauvaises connexions Internet",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Utilisez ce paramètre si vous êtes un animateur ou un planificateur qui utilise régulièrement SeaSketch. Prend en charge l'utilisation hors ligne.",
+  "Using  of your browser's storage quota": "Utilisation du quota de stockage de votre navigateur"
+}

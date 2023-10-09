@@ -1,7 +1,5 @@
-import { postgraphile } from "postgraphile";
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import * as S3 from "aws-sdk/clients/s3";
-import { FileUpload } from "graphql-upload";
 import stream from "stream";
 import { v4 as uuid } from "uuid";
 import { createHash } from "crypto";

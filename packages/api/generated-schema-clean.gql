@@ -2962,7 +2962,10 @@ enum DataSourceTypes {
   """SeaSketch-hosted vector tiles"""
   SEASKETCH_MVT
 
-  """Combination of geojson and vector sources hosted on SeaSketch CDN"""
+  """Raster data hosting on SeaSketch CDN"""
+  SEASKETCH_RASTER
+
+  """GeoJSON hosted on SeaSketch CDN"""
   SEASKETCH_VECTOR
 
   """MapBox GL Style "vector" source"""
@@ -2974,6 +2977,7 @@ enum DataSourceTypes {
 
 enum DataUploadState {
   AWAITING_UPLOAD
+  CARTOGRAPHY
   COMPLETE
   CONVERTING_FORMAT
   FAILED
@@ -2985,6 +2989,7 @@ enum DataUploadState {
   UPLOADED
   UPLOADING_PRODUCTS
   VALIDATING
+  WORKER_COMPLETE
 }
 
 type DataUploadTask implements Node {
@@ -3010,6 +3015,7 @@ type DataUploadTask implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  outputs: JSON
 
   """Use to upload source data to s3. Must be an admin."""
   presignedUploadUrl: String
@@ -3020,7 +3026,10 @@ type DataUploadTask implements Node {
   """Reads a single `Project` that is related to this `DataUploadTask`."""
   project: Project
   projectId: Int!
+  startedAt: Datetime
   state: DataUploadState!
+  tableOfContentsItemStableIds: [String]
+  userId: Int!
 }
 
 """
@@ -3075,6 +3084,14 @@ enum DataUploadTasksOrderBy {
   PROJECT_ID_DESC
   STATE_ASC
   STATE_DESC
+}
+
+type DataUploadTaskSubscriptionPayload {
+  dataUploadTask: DataUploadTask
+  dataUploadTaskId: UUID!
+  previousState: DataUploadState
+  project: Project!
+  projectId: Int!
 }
 
 """The day, does not include a time."""
@@ -4751,6 +4768,16 @@ type EnableOfflineSupportPayload {
   query: Query
 }
 
+enum ExtendedGeostatsType {
+  ARRAY
+  BOOLEAN
+  MIXED
+  NULL
+  NUMBER
+  OBJECT
+  STRING
+}
+
 """All input for the `failDataUpload` mutation."""
 input FailDataUploadInput {
   """
@@ -4793,6 +4820,101 @@ enum FieldRuleOperator {
   IS_BLANK
   LESS_THAN
   NOT_EQUAL
+}
+
+type FileUpload implements Node {
+  cloudflareImagesId: String
+
+  """
+  Use a listed media type from https://www.iana.org/assignments/media-types/media-types.xhtml
+  """
+  contentType: String!
+  createdAt: Datetime!
+
+  """
+  Includes a temporary token to enable download. Use
+  rel="download nofollow" so that it is not indexed by search engines.
+  """
+  downloadUrl: String!
+  filename: String!
+  fileSizeBytes: BigInt!
+  id: UUID!
+  isSpatial: Boolean!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Post` that is related to this `FileUpload`."""
+  post: Post
+  postId: Int
+
+  """Use to upload to cloud storage (PUT)."""
+  presignedUploadUrl: String
+  projectId: Int!
+  tilejsonEndpoint: String
+  usage: FileUploadUsage!
+  userId: Int!
+}
+
+"""
+A condition to be used against `FileUpload` object types. All fields are tested
+for equality and combined with a logical ‘and.’
+"""
+input FileUploadCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `postId` field."""
+  postId: Int
+}
+
+"""A connection to a list of `FileUpload` values."""
+type FileUploadsConnection {
+  """
+  A list of edges which contains the `FileUpload` and cursor to aid in pagination.
+  """
+  edges: [FileUploadsEdge!]!
+
+  """A list of `FileUpload` objects."""
+  nodes: [FileUpload!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `FileUpload` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `FileUpload` edge in the connection."""
+type FileUploadsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `FileUpload` at the end of the edge."""
+  node: FileUpload!
+}
+
+"""Methods to use when ordering `FileUpload`."""
+enum FileUploadsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  POST_ID_ASC
+  POST_ID_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+enum FileUploadUsage {
+  FORUM_ATTACHMENT
+  SURVEY_RESPONSE
+}
+
+enum FileUploadUsageInput {
+  forum_attachment
+  survey_response
 }
 
 """
@@ -5337,6 +5459,8 @@ type FormElementType implements Node {
   allowAdminUpdates: Boolean!
   allowedLayouts: [FormElementLayout]
   componentName: String!
+  geostatsArrayOf: ExtendedGeostatsType
+  geostatsType: ExtendedGeostatsType
   isHidden: Boolean!
 
   """
@@ -6098,32 +6222,6 @@ type GetChildFoldersRecursivePayload {
   """
   clientMutationId: String
   integers: [Int]
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
-"""All input for the `getParentCollectionId` mutation."""
-input GetParentCollectionIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  parentId: Int
-  type: SketchChildType
-}
-
-"""The output of our `getParentCollectionId` mutation."""
-type GetParentCollectionIdPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  integer: Int
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -7072,6 +7170,7 @@ type Mutation {
     """
     input: CreateDataUploadInput!
   ): CreateDataUploadPayload
+  createFileUpload(contentType: String!, filename: String!, fileSizeBytes: Int!, projectId: Int!, usage: FileUploadUsageInput!): UploaderResponse!
 
   """Creates a single `FormElement`."""
   createFormElement(
@@ -7827,14 +7926,6 @@ type Mutation {
     width: Int!
   ): Sprite
 
-  """omit"""
-  getParentCollectionId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: GetParentCollectionIdInput!
-  ): GetParentCollectionIdPayload
-
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
   """
@@ -8147,6 +8238,12 @@ type Mutation {
     """
     input: SubmitDataUploadInput!
   ): SubmitDataUploadPayload
+  tableOfContentsItemsPrimaryDownloadUrl(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: TableOfContentsItemsPrimaryDownloadUrlInput!
+  ): TableOfContentsItemsPrimaryDownloadUrlPayload
 
   """
   Toggle admin access for the given project and user. User must have already
@@ -8258,6 +8355,12 @@ type Mutation {
     """
     input: UpdateCommunityGuidelineByNodeIdInput!
   ): UpdateCommunityGuidelinePayload
+  updateDataHostingQuota(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateDataHostingQuotaInput!
+  ): UpdateDataHostingQuotaPayload
 
   """Updates a single `DataLayer` using a unique key and a patch."""
   updateDataLayer(
@@ -8626,6 +8729,9 @@ type Mutation {
     """
     input: UpdateSketchClassByNodeIdInput!
   ): UpdateSketchClassPayload
+
+  """Admin mutation for updating the mapbox gl style for a sketch class"""
+  updateSketchClassMapboxGLStyle(sketchClassId: Int!, style: JSON): SketchClass!
 
   """Updates a single `SketchFolder` using a unique key and a patch."""
   updateSketchFolder(
@@ -9171,6 +9277,44 @@ type Post implements Node {
   bookmarkAttachmentIds: [UUID]!
   createdAt: Datetime!
 
+  """Reads and enables pagination through a set of `FileUpload`."""
+  fileUploads(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [FileUpload!]
+
+  """Reads and enables pagination through a set of `FileUpload`."""
+  fileUploadsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: FileUploadCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `FileUpload`."""
+    orderBy: [FileUploadsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FileUploadsConnection!
+
   """
   If set, the post has been hidden by a project admin. Contents of the post will
   not be available to the client. Admins should update this field using
@@ -9205,6 +9349,7 @@ type Post implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  orderedAttachmentIds: [String]
   sketchIds: [Int]
 
   """Reads a single `Topic` that is related to this `Post`."""
@@ -9490,6 +9635,7 @@ type Project implements Node {
 
   """Should be a short length in order to fit in the project header."""
   description: String
+  draftTableOfContentsHasChanges: Boolean!
 
   """
   Draft layer lists, accessible only to admins. Make edits to the layer list and
@@ -9857,6 +10003,7 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [TableOfContentsItem!]
+  tableOfContentsLastPublished: Datetime
   translatedProps: JSON!
 
   """
@@ -9935,6 +10082,12 @@ input ProjectCondition {
 
   """Checks for equality with the object’s `slug` field."""
   slug: String
+}
+
+type ProjectDraftTableOfContentsStatusPayload {
+  hasChanges: Boolean!
+  project: Project
+  projectId: Int!
 }
 
 """
@@ -10415,6 +10568,7 @@ type Query implements Node {
   """
   build: String!
   camelCase(snakeCase: String): String
+  collectAttachmentIdsFromProsemirrorBody(body: JSON, type: String): [String]
   collectTextFromProsemirrorBodyForLabel(body: JSON): String
   communityGuideline(projectId: Int!): CommunityGuideline
 
@@ -10554,6 +10708,44 @@ type Query implements Node {
     orderBy: [EmailNotificationPreferencesOrderBy!] = [NATURAL]
   ): EmailNotificationPreferencesConnection
   extractSpriteIds(t: String): [Int]
+  fileUpload(id: UUID!): FileUpload
+
+  """Reads a single `FileUpload` using its globally unique `ID`."""
+  fileUploadByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `FileUpload`.
+    """
+    nodeId: ID!
+  ): FileUpload
+
+  """Reads and enables pagination through a set of `FileUpload`."""
+  fileUploadsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: FileUploadCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `FileUpload`."""
+    orderBy: [FileUploadsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): FileUploadsConnection
   form(id: Int!): Form
 
   """Reads a single `Form` using its globally unique `ID`."""
@@ -11950,14 +12142,6 @@ input SketchClassPatch {
   """
   isArchived: Boolean
 
-  """
-  [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to 
-  render features. Sketches can be styled based on attribute data by using 
-  [Expressions](https://docs.mapbox.com/help/glossary/expression/).
-  
-  """
-  mapboxGlStyle: JSON
-
   """Label chosen by project admins that is shown to users."""
   name: String
   preprocessingEndpoint: String
@@ -12222,6 +12406,9 @@ type SubmitDataUploadPayload {
 The root subscription type: contains realtime events you can subscribe to with the `subscription` operation.
 """
 type Subscription {
+  """Triggered on all updates to DataUploadTasks in a project"""
+  dataUploadTasks(slug: String!): DataUploadTaskSubscriptionPayload
+
   """Triggered when a new post is created in the subscribed topic"""
   forumActivity(slug: String!): ForumActivityPayload
 
@@ -12231,6 +12418,9 @@ type Subscription {
   x-ss-slug to determine appropriate project.
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
+
+  """Triggered when a project's draft table of contents status changes"""
+  updatedDraftTableOfContentsStatus(slug: String!): ProjectDraftTableOfContentsStatusPayload
 
   """Triggered when a map bookmark is updated"""
   updatedMapBookmark(id: UUID!): BookmarkPayload
@@ -12871,6 +13061,7 @@ type TableOfContentsItem implements Node {
   dataLayerId: Int
   enableDownload: Boolean!
   geoprocessingReferenceId: String
+  hasMetadata: Boolean
   hideChildren: Boolean!
   id: Int!
 
@@ -12909,6 +13100,7 @@ type TableOfContentsItem implements Node {
   
   """
   parentStableId: String
+  project: Project
   projectId: Int!
 
   """
@@ -13091,6 +13283,31 @@ enum TableOfContentsItemsOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
+}
+
+"""All input for the `tableOfContentsItemsPrimaryDownloadUrl` mutation."""
+input TableOfContentsItemsPrimaryDownloadUrlInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  item: TableOfContentsItemInput
+}
+
+"""The output of our `tableOfContentsItemsPrimaryDownloadUrl` mutation."""
+type TableOfContentsItemsPrimaryDownloadUrlPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  string: String
 }
 
 enum TileScheme {
@@ -13694,6 +13911,41 @@ type UpdateCommunityGuidelinePayload {
 
   """Reads a single `Project` that is related to this `CommunityGuideline`."""
   project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateDataHostingQuota` mutation."""
+input UpdateDataHostingQuotaInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  quota: BigInt
+}
+
+"""The output of our `updateDataHostingQuota` mutation."""
+type UpdateDataHostingQuotaPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `DataSourcesBucket` that is related to this `Project`."""
+  dataSourcesBucket: DataSourcesBucket
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -15402,6 +15654,11 @@ type UpdateZIndexesPayload {
 
 """The `Upload` scalar type represents a file upload."""
 scalar Upload
+
+type UploaderResponse {
+  cloudflareImagesUploadUrl: String
+  fileUpload: FileUpload!
+}
 
 """
 The SeaSketch User type is quite sparse since authentication is handled by Auth0

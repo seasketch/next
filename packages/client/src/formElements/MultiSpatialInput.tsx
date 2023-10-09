@@ -36,7 +36,6 @@ import {
   FormElementLayout,
   SketchGeometryType,
 } from "../generated/graphql";
-import FormElementFactory from "../surveys/FormElementFactory";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import SurveyButton from "../surveys/SurveyButton";
 import DigitizingTools from "./DigitizingTools";
@@ -46,7 +45,6 @@ import {
   FormElementEditorPortal,
   SurveyMapPortal,
 } from "./FormElement";
-import { sortFormElements } from "./sortFormElements";
 import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
 import bbox from "@turf/bbox";
 import DigitizingMiniMap from "./DigitizingMiniMap";
@@ -55,6 +53,7 @@ import MapPicker from "../components/MapPicker";
 import useDialog from "../components/useDialog";
 import { SketchClassDetailsFragment } from "../generated/queries";
 import { MeasureControlContext } from "../MeasureControl";
+import SketchForm from "../projects/Sketches/SketchForm";
 
 export enum STAGES {
   DRAWING_INTRO,
@@ -65,15 +64,17 @@ export enum STAGES {
   MOBILE_MAP_FEATURES,
 }
 
-interface FormElementState {
-  value: any;
-  errors: boolean;
-}
-
-interface ResponseState {
-  [id: number]: FormElementState;
+/**
+ * Holds SketchForm related state. This is state that is "local" to the
+ * input, and may not yet be hoisted up into props.value yet since it
+ * may contain invalid form data that needs to be corrected by the user
+ * before setting props.value using props.onChange.
+ */
+interface MultiSpatialInputLocalState {
+  [id: number]: any;
   submissionAttempted: boolean;
   featureId?: string;
+  hasValidationErrors?: boolean;
 }
 
 export type MultiSpatialInputProps = {
@@ -118,14 +119,14 @@ const MultiSpatialInput: FormElementComponent<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.value, props.onChange]);
 
-  const [miniMap, setMiniMap] = useState<Map | null>(null);
+  const [, setMiniMap] = useState<Map | null>(null);
   const [miniMapStyle, setMiniMapStyle] = useState<Style>();
 
   const [geometryEditingState, setGeometryEditingState] = useState<{
     isNew: boolean;
     feature?: Feature<any>;
   } | null>(null);
-  const [responseState, setResponseState] = useState<ResponseState>({
+  const [state, setState] = useState<MultiSpatialInputLocalState>({
     submissionAttempted: false,
   });
 
@@ -144,23 +145,7 @@ const MultiSpatialInput: FormElementComponent<
     [props.onChange, props.isRequired]
   );
 
-  // Calls updateFeatureValue whenever the property editing form is modified,
-  // as long as the feature is not new.
-  useEffect(() => {
-    if (responseState.featureId && geometryEditingState?.isNew !== true) {
-      onChange({
-        collection: updateFeatureInCollection(
-          responseState.featureId as string,
-          {
-            props: responseStateToProps(responseState),
-          },
-          props.value?.collection || EMPTY_FEATURE_COLLECTION
-        ),
-      });
-    }
-  }, [responseState, geometryEditingState?.isNew]);
-
-  // Clear value when in the Admin form editor and geometryType changes
+  // Admin interface: clear value when the geometryType changes
   useEffect(() => {
     if (props.editable) {
       props.onChange(
@@ -175,28 +160,8 @@ const MultiSpatialInput: FormElementComponent<
       }, 50);
       props.onRequestStageChange(STAGES.DRAWING_INTRO);
     }
-  }, [props.sketchClass?.geometryType]);
-
-  function updateResponseState(id: number) {
-    return (value: any, errors: boolean) => {
-      setResponseState((prev) => {
-        return {
-          ...prev,
-          [id]: {
-            ...prev[id],
-            value,
-            errors,
-          },
-        };
-      });
-    };
-  }
-
-  // formElements need to be sorted before display
-  const formElements = useMemo<FormElementFullDetailsFragment[]>(() => {
-    return sortFormElements(props.sketchClass!.form!.formElements!);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.sketchClass!.form?.formElements]);
+  }, [props.sketchClass?.geometryType, props.editable]);
 
   const { confirm } = useDialog();
 
@@ -306,15 +271,27 @@ const MultiSpatialInput: FormElementComponent<
   }, [props.stage, mapContext.manager?.map]);
 
   useEffect(() => {
+    if (state.featureId && selection?.id === state.featureId) {
+      return;
+    }
+    if (
+      state.featureId &&
+      state.hasValidationErrors &&
+      (!selection || selection.id !== state.featureId)
+    ) {
+      alert(t("Please fill in required fields", { ns: "surveys" }));
+      actions.selectFeature(state.featureId);
+      return;
+    }
     if (selection && geometryEditingState?.isNew !== true) {
-      if (responseState.featureId !== selection.id) {
+      if (state.featureId !== selection.id) {
         let properties = {};
         const feature = props.value!.collection.features.find(
           (f) => f.id === selection.id
         );
         properties = feature?.properties || {};
-        setResponseState(
-          propsToResponseState(selection.id as string, properties)
+        setState(
+          featurePropertiesToInputLocalState(selection.id as string, properties)
         );
         if (!style.isSmall) {
           if (props.stage === STAGES.LIST_SHAPES) {
@@ -328,11 +305,12 @@ const MultiSpatialInput: FormElementComponent<
           props.onRequestStageChange(STAGES.LIST_SHAPES);
         }
       }
-      setResponseState({
+      setState({
         submissionAttempted: false,
       });
     }
-  }, [selection]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, alert]);
 
   useEffect(() => {
     if (mapContext.manager && basemaps && mapContext.styleHash.length > 0) {
@@ -349,50 +327,47 @@ const MultiSpatialInput: FormElementComponent<
         t("Please fix problems with your shape first.", { ns: "surveys" })
       );
     }
-    if (geometryEditingState?.isNew !== true) {
-      // if (style.isSmall) {
-      props.onRequestStageChange(STAGES.LIST_SHAPES);
-      // }
-      return actions.clearSelection();
-    }
-    let errors = false;
-    for (const element of formElements) {
-      if (element.isRequired && element.type?.isInput) {
-        errors =
-          errors ||
-          responseState[element.id] === undefined ||
-          responseState[element.id].errors === true ||
-          responseState[element.id].value === undefined;
-      }
-    }
+    const errors = state.hasValidationErrors === true;
     if (errors) {
       // Check to see that all required fields are filled in and valid
-      setResponseState((prev) => ({
+      setState((prev) => ({
         ...prev,
         submissionAttempted: true,
       }));
       alert(t("Please fill in required fields", { ns: "surveys" }));
-    } else if (!geometryEditingState?.feature || selfIntersects) {
+    } else if (
+      // detect when no geometry edits have been attempted so there is no
+      // need to complete the shape
+      (geometryEditingState !== null && !geometryEditingState.feature) ||
+      selfIntersects
+    ) {
       return alert(
         t("Please complete your shape on the map", { ns: "surveys" })
       );
     } else {
-      const feature = { ...geometryEditingState.feature };
-      feature.properties = {
-        ...responseStateToProps(responseState),
-      };
-      onChange({
-        collection: {
-          ...props.value!.collection,
-          features: [...props.value!.collection.features, feature],
-        },
-      });
-      props.onRequestStageChange(STAGES.LIST_SHAPES);
-      setGeometryEditingState(null);
-      setResponseState({ submissionAttempted: false });
-      actions.clearSelection();
-      if (style.isSmall) {
+      if (geometryEditingState?.isNew !== true) {
+        // if (style.isSmall) {
         props.onRequestStageChange(STAGES.LIST_SHAPES);
+        // }
+        return actions.clearSelection();
+      }
+      if (geometryEditingState?.isNew === true) {
+        const feature = { ...geometryEditingState.feature! };
+        feature.properties = localStateToFeatureProperties(state);
+
+        onChange({
+          collection: {
+            ...props.value!.collection,
+            features: [...props.value!.collection.features, feature],
+          },
+        });
+        props.onRequestStageChange(STAGES.LIST_SHAPES);
+        setGeometryEditingState(null);
+        setState({ submissionAttempted: false });
+        actions.clearSelection();
+        if (style.isSmall) {
+          props.onRequestStageChange(STAGES.LIST_SHAPES);
+        }
       }
     }
   }
@@ -443,6 +418,12 @@ const MultiSpatialInput: FormElementComponent<
   }, [style.isSmall, props.componentSettings.startingBounds]);
 
   const onClickMapNonInteractive = useCallback(() => {
+    // First, check to make sure that the form has valid input
+    if (state.hasValidationErrors === true) {
+      alert(t("Please fill in required fields", { ns: "surveys" }));
+      return;
+    }
+
     props.onRequestStageChange(STAGES.SHAPE_EDITOR);
     setTimeout(() => {
       if (mapContext.manager?.map && selection) {
@@ -453,7 +434,13 @@ const MultiSpatialInput: FormElementComponent<
       }
     }, 10);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapContext?.manager?.map, props.onRequestStageChange, selection]);
+  }, [
+    mapContext.manager?.map,
+    props.onRequestStageChange,
+    selection,
+    state.hasValidationErrors,
+    t,
+  ]);
 
   const popupActions = (
     <>
@@ -651,7 +638,7 @@ const MultiSpatialInput: FormElementComponent<
                     </span>
                   }
                   onClick={() => {
-                    setResponseState({ submissionAttempted: false });
+                    setState({ submissionAttempted: false });
                     setGeometryEditingState({
                       isNew: true,
                     });
@@ -702,29 +689,47 @@ const MultiSpatialInput: FormElementComponent<
           {(props.stage === STAGES.SHAPE_EDITOR ||
             props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
             <div className="py-5 space-y-2">
-              {formElements.map((details, i) => {
-                // const Component = components[details.typeId];
-                return (
-                  <FormElementFactory
-                    key={`${details.id}`}
-                    {...details}
-                    onChange={updateResponseState(details.id)}
-                    onSubmit={() => null}
-                    isSpatial={false}
-                    onRequestStageChange={() => null}
-                    featureNumber={
-                      ((props.value?.collection.features || []).length || 0) + 1
-                    }
-                    stage={0}
-                    onRequestNext={() => null}
-                    onRequestPrevious={() => null}
-                    typeName={details.typeId}
-                    value={responseState[details.id]?.value}
-                    autoFocus={i === 0}
-                    submissionAttempted={responseState.submissionAttempted}
-                  />
-                );
-              })}
+              <SketchForm
+                key={state.featureId}
+                formElements={
+                  (props.sketchClass?.form?.formElements ||
+                    []) as FormElementFullDetailsFragment[]
+                }
+                logicRules={props.sketchClass?.form?.logicRules || []}
+                startingProperties={state}
+                submissionAttempted={state.submissionAttempted}
+                editable={props.editable}
+                featureNumber={
+                  ((props.value?.collection.features || []).length || 0) + 1
+                }
+                onSubmissionRequested={onClickSave}
+                onChange={(newProperties, hasValidationErrors) => {
+                  setState((prev) => {
+                    return {
+                      ...prev,
+                      ...newProperties,
+                      hasValidationErrors,
+                    };
+                  });
+                  // If editing an existing shape and there are no validation errors,
+                  // update the feature in the collection and props.value immediately
+                  if (
+                    !hasValidationErrors &&
+                    state.featureId &&
+                    geometryEditingState?.isNew !== true
+                  ) {
+                    onChange({
+                      collection: updateFeatureInCollection(
+                        state.featureId as string,
+                        {
+                          props: newProperties,
+                        },
+                        props.value?.collection || EMPTY_FEATURE_COLLECTION
+                      ),
+                    });
+                  }
+                }}
+              />
               <div className="space-x-2 rtl:space-x-reverse">
                 {geometryEditingState?.isNew && (
                   <SurveyButton
@@ -1113,31 +1118,21 @@ function Admin(props: {
   );
 }
 
-function propsToResponseState(
+function featurePropertiesToInputLocalState(
   featureId: string,
   props: GeoJsonProperties
-): ResponseState {
-  const responseState = {
+): MultiSpatialInputLocalState {
+  const state = {
     submissionAttempted: false,
     featureId,
-  } as ResponseState;
-  for (const key in props) {
-    responseState[parseInt(key)] = {
-      value: props[key],
-      errors: false,
-    };
-  }
-  return responseState;
+    ...props,
+  } as MultiSpatialInputLocalState;
+  return state;
 }
 
-function responseStateToProps(responseState: ResponseState) {
-  const properties: { [key: number]: any } = {};
-  for (const key in responseState) {
-    if (key !== "submissionAttempted") {
-      properties[parseInt(key)] = responseState[key].value;
-    }
-  }
-  return properties;
+function localStateToFeatureProperties(state: MultiSpatialInputLocalState) {
+  const { submissionAttempted, featureId, ...props } = state;
+  return props;
 }
 
 MultiSpatialInput.hideNav = (
@@ -1210,7 +1205,7 @@ export default MultiSpatialInput;
  * @param id
  * @param opts
  */
-function updateFeatureInCollection(
+export function updateFeatureInCollection(
   id: string,
   opts: { props?: any; geometry?: Feature<Point | Polygon | LineString> },
   collection: FC

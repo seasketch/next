@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "Los lêers hier om op te laai",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch ondersteun tans vektordata in GeoJSON, Shapefile (gezip), GeoTiff en FlatGeobuf formate.",
+  "Starting upload": "Begin tans oplaai",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Dit blyk 'n lêertipe te wees wat SeaSketch nie vir ruimtelike oplaaie ondersteun nie.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Dit blyk 'n nie-ondersteunde rasterlêertipe te wees. Vir rasterdata, laai 'n GeoTiff op.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Dit blyk net 'n deel van 'n vormlêer te wees. Om shapefiles op te laai, skep 'n .zip-lêer met alle verwante lêers (.shp, .prj, .shx, ens.) en laai daardie zip-lêer op."
+}

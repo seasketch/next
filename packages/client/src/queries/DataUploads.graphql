@@ -5,14 +5,7 @@ fragment DataUploadDetails on DataUploadTask {
   progress
   state
   errorMessage
-  layers {
-    id
-    tableOfContentsItem {
-      nodeId
-      id
-      stableId
-    }
-  }
+  tableOfContentsItemStableIds
 }
 
 mutation createDataUpload(
@@ -78,5 +71,30 @@ query ProjectDataQuotaRemaining($slug: String!) {
 mutation CancelUpload($projectId: Int!, $uploadId: UUID!) {
   cancelDataUpload(input: { projectId: $projectId, uploadId: $uploadId }) {
     clientMutationId
+  }
+}
+
+fragment DataUploadEvent on DataUploadTaskSubscriptionPayload {
+  projectId
+  dataUploadTaskId
+  previousState
+  dataUploadTask {
+    ...DataUploadDetails
+  }
+}
+
+subscription DataUploads($slug: String!) {
+  dataUploadTasks(slug: $slug) {
+    ...DataUploadEvent
+  }
+}
+
+mutation UpdateDataHostingQuota($projectId: Int!, $quota: BigInt!) {
+  updateDataHostingQuota(input: { projectId: $projectId, quota: $quota }) {
+    project {
+      id
+      dataHostingQuota
+      dataHostingQuotaUsed
+    }
   }
 }

@@ -1,0 +1,16 @@
+.RadixDropdownItem[data-state="open"]:not(:hover) {
+  background-color: rgba(0, 0, 100, 0.1);
+}
+
+.RadixDropdownItem[data-disabled] {
+  color: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.RadixDropdownItem[data-highlighted] {
+  @apply bg-primary-600 text-gray-100;
+}
+
+.MenubarTrigger[data-state="open"] {
+  @apply bg-gray-300 bg-opacity-70;
+}

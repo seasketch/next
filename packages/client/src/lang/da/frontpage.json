@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Opret et projekt",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Opret dit eget<1></1><2> SeaSketch-projekt</2>",
+  "Create your project": "Opret dit projekt",
+  "Developer API": "Udvikler API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Kontakt os venligst på <2>support@seasketch.org</2> for at arrangere en diskussion om, hvordan SeaSketch kan bruges til at understøtte din planlægningsindsats.",
+  "Project name": "Projekt navn",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketch-projekter kan tilpasses ved hjælp af vores open source <2>Geoprocessing Framework</2>. Projekter kan definere rapporter, der visualiserer virkningen af potentielle zoner ved hjælp af Typescript, React og AWS Lambda.",
+  "Trusted by": "Betroet af",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Brug vores kollaborative geodesign- og undersøgelsesværktøjer til havplanlægning i din region. Dit projekt vil omfatte værktøjer til at visualisere kort, oprette diskussionsfora, skitsere planer og indsamle data ved hjælp af undersøgelser - <i>gratis!</i> Analytiske rapporter kan udvikles og tilpasses ved hjælp af vores <5>geoprocessing-ramme</5> ."
+}

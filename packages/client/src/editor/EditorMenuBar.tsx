@@ -1,5 +1,13 @@
 import { EditorView } from "prosemirror-view";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
 import {
   Fragment,
@@ -21,6 +29,8 @@ import {
   MapBookmarkDetailsFragment,
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
+  FileUploadDetailsFragment,
+  UploaderResponse,
 } from "../generated/graphql";
 import { sketchType } from "./config";
 import { ChevronDownIcon } from "@heroicons/react/outline";
@@ -34,6 +44,7 @@ import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useIsSuperuser from "../useIsSuperuser";
 import { useAuth0 } from "@auth0/auth0-react";
+import axios from "axios";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -42,6 +53,11 @@ interface EditorMenuBarProps {
   style?: any;
   schema: Schema;
   createMapBookmark?: () => Promise<MapBookmarkDetailsFragment>;
+  createFileUpload?: (
+    filename: string,
+    sizeBytes: number,
+    contentType: string
+  ) => Promise<UploaderResponse | null>;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -60,6 +76,9 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const onError = useGlobalErrorHandler();
   const isSuperuser = useIsSuperuser();
   const { user } = useAuth0();
+  const { progress, updateProgress } = useContext(
+    EditorAttachmentProgressContext
+  );
 
   useEffect(() => {
     if (props.state) {
@@ -200,6 +219,104 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
               }
             }
           }
+        },
+      });
+    }
+    const createFileUpload = props.createFileUpload;
+    if (schema.marks.attachmentLink && createFileUpload) {
+      options.push({
+        label: t("File Upload"),
+        onClick: async () => {
+          var input = document.createElement("input");
+          input.type = "file";
+          input.click();
+          input.onchange = async () => {
+            if (input.files?.length) {
+              const file = input.files[0];
+              const response = await createFileUpload(
+                file.name,
+                file.size,
+                file.type
+              );
+              const uploadRecord = response?.fileUpload;
+              const view = props.view;
+              if (
+                !response?.cloudflareImagesUploadUrl &&
+                uploadRecord?.presignedUploadUrl &&
+                view
+              ) {
+                props.view!.focus();
+                updateProgress(uploadRecord.id, 0);
+                attachFileUpload(uploadRecord, view.state, view.dispatch);
+                axios({
+                  url: uploadRecord.presignedUploadUrl,
+                  method: "PUT",
+                  data: file,
+                  headers: {
+                    "Content-Type": file.type,
+                    "Content-Disposition": `attachment; filename="${uploadRecord.filename}"`,
+                    "Cache-Control": "public, immutable, max-age=31536000",
+                  },
+                  onUploadProgress: (progressEvent) => {
+                    updateProgress(
+                      uploadRecord.id,
+                      progressEvent.loaded / progressEvent.total
+                    );
+                  },
+                })
+                  .then((response) => {
+                    updateProgress(uploadRecord.id, 1);
+                  })
+                  .catch((e) => {
+                    onError(e);
+                    deleteAttachment(
+                      uploadRecord.id,
+                      view.state,
+                      view.dispatch
+                    );
+                  });
+              } else if (
+                view &&
+                uploadRecord &&
+                response?.cloudflareImagesUploadUrl
+              ) {
+                const formData = new FormData();
+                formData.append("file", file);
+                props.view!.focus();
+                updateProgress(uploadRecord.id, 0);
+                attachFileUpload(uploadRecord, view.state, view.dispatch);
+                axios({
+                  url: response.cloudflareImagesUploadUrl,
+                  method: "POST",
+                  data: formData,
+                  onUploadProgress: (progressEvent) => {
+                    const percentCompleted = Math.round(
+                      (progressEvent.loaded * 100) / progressEvent.total
+                    );
+                    if (progressEvent.loaded - progress.total < 0.95) {
+                      updateProgress(
+                        uploadRecord.id,
+                        progressEvent.loaded / progressEvent.total
+                      );
+                    } else {
+                      updateProgress(uploadRecord.id, 0.95);
+                    }
+                  },
+                })
+                  .then((response) => {
+                    updateProgress(uploadRecord.id, 1);
+                  })
+                  .catch((e) => {
+                    onError(e);
+                    deleteAttachment(
+                      uploadRecord.id,
+                      view.state,
+                      view.dispatch
+                    );
+                  });
+              }
+            }
+          };
         },
       });
     }
@@ -589,6 +706,41 @@ export function attachBookmark(
   dispatch(tr);
 }
 
+export function attachFileUpload(
+  upload: FileUploadDetailsFragment,
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) {
+  let tr = state.tr;
+  tr = tr.insert(
+    state.doc.content.size - 1,
+    forumPosts.schema.nodes.attachment.create({
+      type: "FileUpload",
+      id: upload.id,
+      data: {
+        id: upload.id,
+        filename: upload.filename,
+        filesize: upload.fileSizeBytes,
+        contentType: upload.contentType,
+        downloadUrl: upload.downloadUrl,
+        cloudflareImagesId: upload.cloudflareImagesId,
+      },
+    })
+  );
+  const selection = state.selection;
+  if (selection && selection.$from.pos < selection.$to.pos) {
+    tr.addMark(
+      selection.from,
+      selection.to,
+      forumPosts.schema.marks.attachmentLink.create({
+        "data-attachment-id": upload.id,
+        "data-type": "FileUpload",
+      })
+    );
+  }
+  dispatch(tr);
+}
+
 function getAttachmentsNode(state: EditorState) {
   let attachments: Node | null = null;
   state.doc.content.forEach((node) => {
@@ -603,7 +755,7 @@ function getAttachmentsNode(state: EditorState) {
   }
 }
 
-export function deleteBookmark(
+export function deleteAttachment(
   id: string,
   state: EditorState,
   dispatch: (tr: Transaction) => void
@@ -682,4 +834,49 @@ export function insertTocItems(
     0
   );
   dispatch(state.tr.replaceSelection(slice));
+}
+
+interface EditorAttachmentProgressContextValue {
+  progress: {
+    /** Value is progress, 0 to 1 */
+    [attachemntId: string]: number;
+  };
+  updateProgress: (attachmentId: string, progress: number) => void;
+}
+
+export const EditorAttachmentProgressContext =
+  createContext<EditorAttachmentProgressContextValue>({
+    progress: {},
+    updateProgress: () => {
+      throw new Error("Not implemented");
+    },
+  });
+
+export function EditorAttachmentProgressProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [state, setState] = useState<{ [attachmentId: string]: number }>({});
+
+  const updateProgress = useCallback(
+    (attachmentId: string, progress: number) => {
+      if (progress > 1) {
+        throw new Error("Progress should be an integer, 0 - 1");
+      }
+      setState((prev) => ({
+        ...prev,
+        [attachmentId]: progress,
+      }));
+    },
+    [setState]
+  );
+
+  return (
+    <EditorAttachmentProgressContext.Provider
+      value={{ progress: state, updateProgress }}
+    >
+      {children}
+    </EditorAttachmentProgressContext.Provider>
+  );
 }

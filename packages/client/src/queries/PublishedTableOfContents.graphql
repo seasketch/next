@@ -17,6 +17,7 @@ fragment Overlay on TableOfContentsItem {
   title
   geoprocessingReferenceId
   translatedProps
+  hasMetadata
 }
 
 query PublishedTableOfContents($slug: String!) {
@@ -32,7 +33,6 @@ fragment DataSourceDetails on DataSource {
   id
   attribution
   bounds
-  bucketId
   buffer
   byteLength
   cluster
@@ -46,7 +46,6 @@ fragment DataSourceDetails on DataSource {
   lineMetrics
   maxzoom
   minzoom
-  objectKey
   originalSourceUrl
   queryParameters
   scheme

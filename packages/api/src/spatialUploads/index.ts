@@ -2,11 +2,26 @@ import { Client, PoolClient } from "pg";
 import { ProcessedUploadLayer } from "spatial-uploads-handler";
 import { customAlphabet } from "nanoid";
 import { GeoJsonGeometryTypes } from "geojson";
+import { GeostatsLayer } from "spatial-uploads-handler/src/geostats";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
 
-export async function createTableOfContentsItemForLayer(
+/**
+ * Creates database records for a processed upload. This includes:
+ *  * data_sources
+ *  * data_layers
+ *  * table_of_contents_items
+ *
+ * For data layers this includes choosing a default cartographic style
+ *
+ * @param layer ProcessedUploadLayer
+ * @param projectId the project id
+ * @param client pg client
+ * @param uploadTaskId the upload task id
+ * @returns
+ */
+export async function createDBRecordsForProcessedUpload(
   layer: ProcessedUploadLayer,
   projectId: number,
   client: PoolClient | Client,
@@ -17,28 +32,32 @@ export async function createTableOfContentsItemForLayer(
     [projectId]
   );
   let uploadCount = uploadCountResult.rows[0].count;
-  if (layer.outputs.find((output) => output.type === "FlatGeobuf")) {
-    // vector
-    const geojson = layer.outputs.find((output) => output.type === "GeoJSON");
-    const fgb = layer.outputs.find((output) => output.type === "FlatGeobuf");
-    if (!fgb) {
-      throw new Error("FlatGeobuf not listed in outputs of vector source");
-    }
-    const pmtiles = layer.outputs.find((output) => output.type === "PMTiles");
-    let bucketId: string | null = null;
-    let objectKey: string | null = null;
-    if (geojson) {
-      bucketId = geojson.remote.replace("s3://", "").split("/")[0];
-      objectKey = geojson.remote
-        .replace("s3://", "")
-        .split("/")
-        .slice(1)
-        .join("/");
-    }
+  const isVector = layer.outputs.find((o) => o.type === "FlatGeobuf");
+  const normalizedOutput = layer.outputs.find((o) => o.isNormalizedOutput);
+  const geojson = layer.outputs.find((output) => output.type === "GeoJSON");
+  const fgb = layer.outputs.find((output) => output.type === "FlatGeobuf");
+  const original = layer.outputs.find((output) => output.isOriginal);
+  if (!normalizedOutput) {
+    throw new Error("Normalized output not listed in outputs");
+  }
+  if (!original) {
+    throw new Error("Original not listed in outputs");
+  }
+  const pmtiles = layer.outputs.find((output) => output.type === "PMTiles");
+  let bucketId: string | null = null;
+  let objectKey: string | null = null;
+  if (geojson && /s3:\/\//.test(geojson.remote)) {
+    bucketId = geojson.remote.replace("s3://", "").split("/")[0];
+    objectKey = geojson.remote
+      .replace("s3://", "")
+      .split("/")
+      .slice(1)
+      .join("/");
+  }
 
-    // create data source
-    const { rows } = await client.query(
-      `
+  // create data source
+  const { rows } = await client.query(
+    `
       insert into data_sources (
         upload_task_id,
         project_id,
@@ -53,31 +72,41 @@ export async function createTableOfContentsItemForLayer(
         uploaded_source_layername,
         normalized_source_object_key,
         normalized_source_bytes,
-        geostats
-      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14)
+        geostats,
+        tile_size
+      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14, $15)
       returning *
     `,
-      [
-        uploadTaskId,
-        projectId,
-        pmtiles ? "seasketch-mvt" : "seasketch-vector",
-        pmtiles ? null : layer.bounds,
-        pmtiles?.url || null,
-        "upload",
-        bucketId,
-        objectKey,
-        fgb.size,
-        layer.filename,
-        layer.name,
-        fgb.remote.replace("s3://", "").split("/").slice(1).join("/"),
-        fgb.size,
-        layer.geostats,
-      ]
-    );
-    const dataSourceId = rows[0].id;
-    const color = getColor(uploadCount);
-    const layerResult = await client.query(
-      `
+    [
+      uploadTaskId,
+      projectId,
+      pmtiles
+        ? isVector
+          ? "seasketch-mvt"
+          : "seasketch-raster"
+        : "seasketch-vector",
+      pmtiles ? null : layer.bounds,
+      layer.url,
+      "upload",
+      bucketId,
+      objectKey,
+      original.size,
+      layer.filename,
+      layer.name,
+      normalizedOutput.remote
+        .replace("s3://", "")
+        .split("/")
+        .slice(1)
+        .join("/"),
+      original.size,
+      layer.geostats,
+      pmtiles && !isVector ? 512 : null,
+    ]
+  );
+  const dataSourceId = rows[0].id;
+  const color = getColor(uploadCount);
+  const layerResult = await client.query(
+    `
       insert into data_layers (
         project_id,
         data_source_id,
@@ -87,20 +116,24 @@ export async function createTableOfContentsItemForLayer(
         $1, $2, $3, $4
       ) returning *
     `,
-      [
-        projectId,
-        dataSourceId,
-        pmtiles ? layer.name : undefined,
-        JSON.stringify(
-          getStyle(layer.geostats?.geometry || "Polygon", uploadCount)
-        ),
-      ]
-    );
+    [
+      projectId,
+      dataSourceId,
+      pmtiles ? layer.name : undefined,
+      JSON.stringify(
+        getStyle(
+          isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
+          uploadCount,
+          layer.geostats
+        )
+      ),
+    ]
+  );
 
-    const dataLayerId = layerResult.rows[0].id;
+  const dataLayerId = layerResult.rows[0].id;
 
-    const tocResult = await client.query(
-      `
+  const tocResult = await client.query(
+    `
       insert into table_of_contents_items (
         project_id,
         stable_id,
@@ -115,52 +148,78 @@ export async function createTableOfContentsItemForLayer(
         $1, $2, $3, $4, $5, $6, ((select count(*) from table_of_contents_items where project_id = $1 and is_draft = true)), $7, $8
       ) returning id
     `,
-      [
-        projectId,
-        nanoId(),
-        layer.name.replace("_", " "),
-        false,
-        layer.bounds,
-        dataLayerId,
-        // 0,
-        true,
-        JSON.stringify({
-          type: "doc",
-          content: [
-            {
-              type: "heading",
-              attrs: {
-                level: 1,
+    [
+      projectId,
+      nanoId(),
+      layer.name.replace("_", " "),
+      false,
+      layer.bounds,
+      dataLayerId,
+      // 0,
+      true,
+      JSON.stringify({
+        type: "doc",
+        content: [
+          {
+            type: "heading",
+            attrs: {
+              level: 1,
+            },
+            content: [
+              {
+                type: "text",
+                text: layer.name,
               },
-              content: [
-                {
-                  type: "text",
-                  text: layer.name,
-                },
-              ],
-            },
-            {
-              type: "paragraph",
-              content: [
-                {
-                  type: "text",
-                  text: `Uploaded ${new Date().toLocaleDateString()}`,
-                },
-              ],
-            },
-          ],
-        }),
+            ],
+          },
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: `Uploaded ${new Date().toLocaleDateString()}`,
+              },
+            ],
+          },
+        ],
+      }),
+    ]
+  );
+  const tableOfContentsItemId = tocResult.rows[0].id;
+
+  // Create data_upload_outputs for each output
+  for (const output of layer.outputs) {
+    await client.query(
+      `
+        insert into data_upload_outputs (
+          data_source_id,
+          type,
+          remote,
+          size,
+          filename,
+          url,
+          is_original,
+          project_id
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+      [
+        dataSourceId,
+        output.type,
+        output.remote,
+        output.size,
+        output.filename,
+        output.url,
+        Boolean(output.isOriginal),
+        projectId,
       ]
     );
-    const tableOfContentsItemId = tocResult.rows[0].id;
-    return {
-      dataSourceId,
-      dataLayerId,
-      tableOfContentsItemId,
-    };
-  } else {
-    throw new Error("Not implemented");
   }
+
+  return {
+    dataSourceId,
+    dataLayerId,
+    tableOfContentsItemId,
+  };
 }
 
 // Colors borrowed from https://github.com/mapbox/mbview/blob/master/views/vector.ejs#L75
@@ -185,9 +244,38 @@ function getColor(i: number) {
   return lightColors[i % (lightColors.length - 1)];
 }
 
-function getStyle(type: GeoJsonGeometryTypes, colorIndex: number) {
+function getStyle(
+  type: GeoJsonGeometryTypes | "Raster",
+  colorIndex: number,
+  geostats?: GeostatsLayer | null
+) {
   const color = getColor(colorIndex);
+  let labelAttribute: string | undefined;
+  if (geostats) {
+    for (const attr of geostats.attributes) {
+      if (
+        attr.attribute !== "OBJECTID" &&
+        attr.attribute !== "FEATURE_ID" &&
+        attr.type === "string"
+      ) {
+        labelAttribute = attr.attribute;
+        break;
+      }
+    }
+  }
   switch (type) {
+    case "Raster":
+      return [
+        {
+          type: "raster",
+          layout: {
+            visibility: "visible",
+          },
+          paint: {
+            "raster-resampling": "nearest",
+          },
+        },
+      ];
     case "Polygon":
     case "MultiPolygon":
       return [
@@ -231,15 +319,37 @@ function getStyle(type: GeoJsonGeometryTypes, colorIndex: number) {
       ];
     case "MultiPoint":
     case "Point":
-      [
-        {
-          type: "circle",
-          paint: {
-            "circle-radius": 12,
-            "circle-color": color,
-          },
+      const circleLayer = {
+        type: "circle",
+        paint: {
+          "circle-radius": 5,
+          "circle-color": color,
+          "circle-stroke-color": "#000000",
+          "circle-stroke-width": 1,
+          "circle-stroke-opacity": 0.5,
         },
-      ];
+      };
+      if (labelAttribute) {
+        return [
+          circleLayer,
+          {
+            type: "symbol",
+            paint: {
+              "text-halo-color": "white",
+              "text-halo-width": 1,
+            },
+            layout: {
+              "text-size": 12,
+              "text-field": ["get", "FEATURE_NA"],
+              "text-anchor": "left",
+              "symbol-placement": "point",
+              "text-offset": [0.5, 0.5],
+            },
+          },
+        ];
+      } else {
+        return [circleLayer];
+      }
     default:
       return [
         {

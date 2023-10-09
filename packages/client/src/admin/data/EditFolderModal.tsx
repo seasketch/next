@@ -237,7 +237,8 @@ export default function EditFolderModal({
                       <Trans ns="admin">
                         Folders of this type cannot be expanded to reveal the
                         layers within. This can be used to make multiple layers
-                        appear as one in the table of contents.
+                        appear as one in the table of contents. Only these
+                        folders can be assigned metadata.
                       </Trans>
                     </p>
                   </div>

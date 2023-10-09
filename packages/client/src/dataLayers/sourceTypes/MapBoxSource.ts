@@ -29,7 +29,7 @@ export function updateGeoJSONSource(
       attribution: next.attribution || undefined,
       type: "geojson",
       /* eslint-disable-next-line */
-      data: `https://${next.bucketId}/${next.objectKey}`,
+      data: next.url!,
     });
   }
 }

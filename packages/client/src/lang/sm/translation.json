@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "Tu'u faila i'inei e lafo ai",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "O lo'o lagolagoina nei e le SeaSketch fa'amaumauga ve'a ile GeoJSON, Shapefile (zipped), GeoTiff, ma FlatGeobuf formats.",
+  "Starting upload": "Amata la'uina",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "E foliga mai o se ituaiga faila lea e le lagolagoina e SeaSketch mo faʻasalalauga faʻapitoa.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "E foliga mai o se ituaiga faila faila e le lagolagoina. Mo faʻamatalaga faʻamaumauga, faʻapipiʻi se GeoTiff.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "E foliga mai ua na'o se vaega o se shapefile. Ina ia fa'apipi'i faila, fai se faila .zip ma faila uma e feso'ota'i (.shp, .prj, .shx, ma isi) ma tu'u i luga le zipfile."
+}

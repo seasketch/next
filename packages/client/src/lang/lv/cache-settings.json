@@ -1,0 +1,15 @@
+{
+  "Cache Details": "Kešatmiņas informācija",
+  "Cache Status": "Kešatmiņas statuss",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "Saglabā vairāk datu kešatmiņā un priekšielādē līdzekļus, lai nodrošinātu labāku veiktspēju. Atbalsta bezsaistes lietošanu.",
+  "Data Caching": "Datu kešatmiņa",
+  "Default": "Noklusējums",
+  "Improved Performance": "Uzlabota veiktspēja",
+  "Maximum": "Maksimums",
+  "Minimum": "Minimums",
+  "Only what's necessary to run SeaSketch": "Tikai tas, kas nepieciešams, lai palaistu SeaSketch",
+  "Query Cache": "Vaicājumu kešatmiņa",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "Saglabā dažus nesen izmantotos lietotņu datus, lai uzlabotu startēšanas veiktspēju un lietošanu vājā interneta savienojumā",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Izmantojiet šo iestatījumu, ja esat koordinators vai plānotājs, kurš regulāri lieto SeaSketch. Atbalsta bezsaistes lietošanu.",
+  "Using  of your browser's storage quota": "Jūsu pārlūkprogrammas krātuves kvotas izmantošana"
+}

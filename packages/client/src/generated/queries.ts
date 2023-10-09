@@ -2399,7 +2399,9 @@ export enum DataSourceTypes {
   RasterDem = 'RASTER_DEM',
   /** SeaSketch-hosted vector tiles */
   SeasketchMvt = 'SEASKETCH_MVT',
-  /** Combination of geojson and vector sources hosted on SeaSketch CDN */
+  /** Raster data hosting on SeaSketch CDN */
+  SeasketchRaster = 'SEASKETCH_RASTER',
+  /** GeoJSON hosted on SeaSketch CDN */
   SeasketchVector = 'SEASKETCH_VECTOR',
   /** MapBox GL Style "vector" source */
   Vector = 'VECTOR',
@@ -2496,6 +2498,7 @@ export enum DataSourcesOrderBy {
 
 export enum DataUploadState {
   AwaitingUpload = 'AWAITING_UPLOAD',
+  Cartography = 'CARTOGRAPHY',
   Complete = 'COMPLETE',
   ConvertingFormat = 'CONVERTING_FORMAT',
   Failed = 'FAILED',
@@ -2506,7 +2509,8 @@ export enum DataUploadState {
   Tiling = 'TILING',
   Uploaded = 'UPLOADED',
   UploadingProducts = 'UPLOADING_PRODUCTS',
-  Validating = 'VALIDATING'
+  Validating = 'VALIDATING',
+  WorkerComplete = 'WORKER_COMPLETE'
 }
 
 export type DataUploadTask = Node & {
@@ -2522,6 +2526,7 @@ export type DataUploadTask = Node & {
   layers?: Maybe<Array<DataLayer>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  outputs?: Maybe<Scalars['JSON']>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
   /** 0.0 to 1.0 scale, applies to tiling process. */
@@ -2529,7 +2534,10 @@ export type DataUploadTask = Node & {
   /** Reads a single `Project` that is related to this `DataUploadTask`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  startedAt?: Maybe<Scalars['Datetime']>;
   state: DataUploadState;
+  tableOfContentsItemStableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
+  userId: Scalars['Int'];
 };
 
 
@@ -2549,6 +2557,15 @@ export type DataUploadTaskCondition = {
   projectId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `state` field. */
   state?: Maybe<DataUploadState>;
+};
+
+export type DataUploadTaskSubscriptionPayload = {
+  __typename?: 'DataUploadTaskSubscriptionPayload';
+  dataUploadTask?: Maybe<DataUploadTask>;
+  dataUploadTaskId: Scalars['UUID'];
+  previousState?: Maybe<DataUploadState>;
+  project: Project;
+  projectId: Scalars['Int'];
 };
 
 /** A connection to a list of `DataUploadTask` values. */
@@ -4056,6 +4073,16 @@ export type EnableOfflineSupportPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
+export enum ExtendedGeostatsType {
+  Array = 'ARRAY',
+  Boolean = 'BOOLEAN',
+  Mixed = 'MIXED',
+  Null = 'NULL',
+  Number = 'NUMBER',
+  Object = 'OBJECT',
+  String = 'STRING'
+}
+
 /** All input for the `failDataUpload` mutation. */
 export type FailDataUploadInput = {
   /**
@@ -4097,6 +4124,88 @@ export enum FieldRuleOperator {
   IsBlank = 'IS_BLANK',
   LessThan = 'LESS_THAN',
   NotEqual = 'NOT_EQUAL'
+}
+
+export type FileUpload = Node & {
+  __typename?: 'FileUpload';
+  cloudflareImagesId?: Maybe<Scalars['String']>;
+  /** Use a listed media type from https://www.iana.org/assignments/media-types/media-types.xhtml */
+  contentType: Scalars['String'];
+  createdAt: Scalars['Datetime'];
+  /**
+   * Includes a temporary token to enable download. Use
+   * rel="download nofollow" so that it is not indexed by search engines.
+   */
+  downloadUrl: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['BigInt'];
+  id: Scalars['UUID'];
+  isSpatial: Scalars['Boolean'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Post` that is related to this `FileUpload`. */
+  post?: Maybe<Post>;
+  postId?: Maybe<Scalars['Int']>;
+  /** Use to upload to cloud storage (PUT). */
+  presignedUploadUrl?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+  tilejsonEndpoint?: Maybe<Scalars['String']>;
+  usage: FileUploadUsage;
+  userId: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `FileUpload` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type FileUploadCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `postId` field. */
+  postId?: Maybe<Scalars['Int']>;
+};
+
+export enum FileUploadUsage {
+  ForumAttachment = 'FORUM_ATTACHMENT',
+  SurveyResponse = 'SURVEY_RESPONSE'
+}
+
+export enum FileUploadUsageInput {
+  ForumAttachment = 'forum_attachment',
+  SurveyResponse = 'survey_response'
+}
+
+/** A connection to a list of `FileUpload` values. */
+export type FileUploadsConnection = {
+  __typename?: 'FileUploadsConnection';
+  /** A list of edges which contains the `FileUpload` and cursor to aid in pagination. */
+  edges: Array<FileUploadsEdge>;
+  /** A list of `FileUpload` objects. */
+  nodes: Array<FileUpload>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `FileUpload` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `FileUpload` edge in the connection. */
+export type FileUploadsEdge = {
+  __typename?: 'FileUploadsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `FileUpload` at the end of the edge. */
+  node: FileUpload;
+};
+
+/** Methods to use when ordering `FileUpload`. */
+export enum FileUploadsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PostIdAsc = 'POST_ID_ASC',
+  PostIdDesc = 'POST_ID_DESC',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
 /**
@@ -4500,6 +4609,8 @@ export type FormElementType = Node & {
   allowAdminUpdates: Scalars['Boolean'];
   allowedLayouts?: Maybe<Array<Maybe<FormElementLayout>>>;
   componentName: Scalars['String'];
+  geostatsArrayOf?: Maybe<ExtendedGeostatsType>;
+  geostatsType?: Maybe<ExtendedGeostatsType>;
   isHidden: Scalars['Boolean'];
   /**
    * Whether the element is an input that collects information from users or
@@ -5986,6 +6097,7 @@ export type Mutation = {
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
+  createFileUpload: UploaderResponse;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
   /** Creates a single `FormLogicCondition`. */
@@ -6306,6 +6418,7 @@ export type Mutation = {
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
+  tableOfContentsItemsPrimaryDownloadUrl?: Maybe<TableOfContentsItemsPrimaryDownloadUrlPayload>;
   /**
    * Toggle admin access for the given project and user. User must have already
    * joined the project and shared their user profile.
@@ -6334,6 +6447,7 @@ export type Mutation = {
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
   updateCommunityGuidelineByNodeId?: Maybe<UpdateCommunityGuidelinePayload>;
+  updateDataHostingQuota?: Maybe<UpdateDataHostingQuotaPayload>;
   /** Updates a single `DataLayer` using a unique key and a patch. */
   updateDataLayer?: Maybe<UpdateDataLayerPayload>;
   /** Updates a single `DataLayer` using a unique key and a patch. */
@@ -6425,6 +6539,8 @@ export type Mutation = {
   updateSketchClassByFormElementId?: Maybe<UpdateSketchClassPayload>;
   /** Updates a single `SketchClass` using its globally unique id and a patch. */
   updateSketchClassByNodeId?: Maybe<UpdateSketchClassPayload>;
+  /** Admin mutation for updating the mapbox gl style for a sketch class */
+  updateSketchClassMapboxGLStyle: SketchClass;
   /** Updates a single `SketchFolder` using a unique key and a patch. */
   updateSketchFolder?: Maybe<UpdateSketchFolderPayload>;
   /** Updates a single `SketchFolder` using its globally unique id and a patch. */
@@ -6620,6 +6736,16 @@ export type MutationCreateDataSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataUploadArgs = {
   input: CreateDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateFileUploadArgs = {
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+  usage: FileUploadUsageInput;
 };
 
 
@@ -7411,6 +7537,12 @@ export type MutationSubmitDataUploadArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationTableOfContentsItemsPrimaryDownloadUrlArgs = {
+  input: TableOfContentsItemsPrimaryDownloadUrlInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleAdminAccessArgs = {
   input: ToggleAdminAccessInput;
 };
@@ -7491,6 +7623,12 @@ export type MutationUpdateCommunityGuidelineArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateCommunityGuidelineByNodeIdArgs = {
   input: UpdateCommunityGuidelineByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataHostingQuotaArgs = {
+  input: UpdateDataHostingQuotaInput;
 };
 
 
@@ -7740,6 +7878,13 @@ export type MutationUpdateSketchClassByFormElementIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchClassByNodeIdArgs = {
   input: UpdateSketchClassByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchClassMapboxGlStyleArgs = {
+  sketchClassId: Scalars['Int'];
+  style?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -8189,6 +8334,10 @@ export type Post = Node & {
   blurb?: Maybe<Scalars['String']>;
   bookmarkAttachmentIds: Array<Maybe<Scalars['UUID']>>;
   createdAt: Scalars['Datetime'];
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploads?: Maybe<Array<FileUpload>>;
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploadsConnection: FileUploadsConnection;
   /**
    * If set, the post has been hidden by a project admin. Contents of the post will
    * not be available to the client. Admins should update this field using
@@ -8211,10 +8360,28 @@ export type Post = Node & {
   message?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  orderedAttachmentIds?: Maybe<Array<Maybe<Scalars['String']>>>;
   sketchIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** Reads a single `Topic` that is related to this `Post`. */
   topic?: Maybe<Topic>;
   topicId: Scalars['Int'];
+};
+
+
+export type PostFileUploadsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+export type PostFileUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<FileUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
 };
 
 
@@ -8368,6 +8535,7 @@ export type Project = Node & {
   dataUploadTasksConnection: DataUploadTasksConnection;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
    * then use the `publishTableOfContents` mutation when it is ready for end-users.
@@ -8492,6 +8660,7 @@ export type Project = Node & {
   surveys: Array<Survey>;
   /** Public layer list. Cannot be edited directly. */
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+  tableOfContentsLastPublished?: Maybe<Scalars['Datetime']>;
   translatedProps: Scalars['JSON'];
   /** Number of users who have outstanding access requests. Only relevant for invite-only projects. */
   unapprovedParticipantCount?: Maybe<Scalars['Int']>;
@@ -8860,6 +9029,13 @@ export type ProjectCondition = {
   name?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `slug` field. */
   slug?: Maybe<Scalars['String']>;
+};
+
+export type ProjectDraftTableOfContentsStatusPayload = {
+  __typename?: 'ProjectDraftTableOfContentsStatusPayload';
+  hasChanges: Scalars['Boolean'];
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
 };
 
 /**
@@ -9268,6 +9444,7 @@ export type Query = Node & {
    */
   build: Scalars['String'];
   camelCase?: Maybe<Scalars['String']>;
+  collectAttachmentIdsFromProsemirrorBody?: Maybe<Array<Maybe<Scalars['String']>>>;
   collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
   /** Reads a single `CommunityGuideline` using its globally unique `ID`. */
@@ -9298,6 +9475,11 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  fileUpload?: Maybe<FileUpload>;
+  /** Reads a single `FileUpload` using its globally unique `ID`. */
+  fileUploadByNodeId?: Maybe<FileUpload>;
+  /** Reads and enables pagination through a set of `FileUpload`. */
+  fileUploadsConnection?: Maybe<FileUploadsConnection>;
   form?: Maybe<Form>;
   /** Reads a single `Form` using its globally unique `ID`. */
   formByNodeId?: Maybe<Form>;
@@ -9535,6 +9717,13 @@ export type QueryCamelCaseArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryCollectAttachmentIdsFromProsemirrorBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+  type?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryCollectTextFromProsemirrorBodyForLabelArgs = {
   body?: Maybe<Scalars['JSON']>;
 };
@@ -9651,6 +9840,30 @@ export type QueryEmailNotificationPreferencesConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
   t?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryFileUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<FileUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<FileUploadsOrderBy>>;
 };
 
 
@@ -10919,12 +11132,6 @@ export type SketchClassPatch = {
    * class in order to render existing sketches of this type.
    */
   isArchived?: Maybe<Scalars['Boolean']>;
-  /**
-   * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
-   * render features. Sketches can be styled based on attribute data by using
-   * [Expressions](https://docs.mapbox.com/help/glossary/expression/).
-   */
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
   preprocessingEndpoint?: Maybe<Scalars['String']>;
@@ -11178,6 +11385,8 @@ export type SubmitDataUploadPayloadDataUploadTaskEdgeArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type Subscription = {
   __typename?: 'Subscription';
+  /** Triggered on all updates to DataUploadTasks in a project */
+  dataUploadTasks?: Maybe<DataUploadTaskSubscriptionPayload>;
   /** Triggered when a new post is created in the subscribed topic */
   forumActivity?: Maybe<ForumActivityPayload>;
   /**
@@ -11186,13 +11395,27 @@ export type Subscription = {
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+  /** Triggered when a project's draft table of contents status changes */
+  updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
   updatedMapBookmark?: Maybe<BookmarkPayload>;
 };
 
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionDataUploadTasksArgs = {
+  slug: Scalars['String'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
+  slug: Scalars['String'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionUpdatedDraftTableOfContentsStatusArgs = {
   slug: Scalars['String'];
 };
 
@@ -11691,6 +11914,7 @@ export type TableOfContentsItem = Node & {
   dataLayerId?: Maybe<Scalars['Int']>;
   enableDownload: Scalars['Boolean'];
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
+  hasMetadata?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
@@ -11716,6 +11940,7 @@ export type TableOfContentsItem = Node & {
    * `updateTableOfContentsItemParent` mutation.
    */
   parentStableId?: Maybe<Scalars['String']>;
+  project?: Maybe<Project>;
   projectId: Scalars['Int'];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
@@ -11848,6 +12073,29 @@ export enum TableOfContentsItemsOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
+
+/** All input for the `tableOfContentsItemsPrimaryDownloadUrl` mutation. */
+export type TableOfContentsItemsPrimaryDownloadUrlInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  item?: Maybe<TableOfContentsItemInput>;
+};
+
+/** The output of our `tableOfContentsItemsPrimaryDownloadUrl` mutation. */
+export type TableOfContentsItemsPrimaryDownloadUrlPayload = {
+  __typename?: 'TableOfContentsItemsPrimaryDownloadUrlPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  string?: Maybe<Scalars['String']>;
+};
 
 export enum TileScheme {
   Tms = 'TMS',
@@ -12340,6 +12588,40 @@ export type UpdateCommunityGuidelinePayload = {
   project?: Maybe<Project>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `updateDataHostingQuota` mutation. */
+export type UpdateDataHostingQuotaInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  quota?: Maybe<Scalars['BigInt']>;
+};
+
+/** The output of our `updateDataHostingQuota` mutation. */
+export type UpdateDataHostingQuotaPayload = {
+  __typename?: 'UpdateDataHostingQuotaPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateDataHostingQuota` mutation. */
+export type UpdateDataHostingQuotaPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `updateDataLayerByInteractivitySettingsId` mutation. */
@@ -13721,6 +14003,12 @@ export type UpdateZIndexesPayload = {
 };
 
 
+export type UploaderResponse = {
+  __typename?: 'UploaderResponse';
+  cloudflareImagesUploadUrl?: Maybe<Scalars['String']>;
+  fileUpload: FileUpload;
+};
+
 /**
  * The SeaSketch User type is quite sparse since authentication is handled by Auth0
  * and we store no personal information unless the user explicitly adds it to the
@@ -14380,7 +14668,7 @@ export type CreateSeaSketchVectorSourceMutation = (
     { __typename?: 'CreateDataSourcePayload' }
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url' | 'presignedUploadUrl' | 'bucketId' | 'enhancedSecurity' | 'objectKey'>
+      & Pick<DataSource, 'id' | 'projectId' | 'type' | 'url' | 'presignedUploadUrl' | 'enhancedSecurity'>
     )> }
   )> }
 );
@@ -14948,15 +15236,7 @@ export type VerifyEmailMutation = (
 
 export type DataUploadDetailsFragment = (
   { __typename?: 'DataUploadTask' }
-  & Pick<DataUploadTask, 'createdAt' | 'filename' | 'id' | 'progress' | 'state' | 'errorMessage'>
-  & { layers?: Maybe<Array<(
-    { __typename?: 'DataLayer' }
-    & Pick<DataLayer, 'id'>
-    & { tableOfContentsItem?: Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'nodeId' | 'id' | 'stableId'>
-    )> }
-  )>> }
+  & Pick<DataUploadTask, 'createdAt' | 'filename' | 'id' | 'progress' | 'state' | 'errorMessage' | 'tableOfContentsItemStableIds'>
 );
 
 export type CreateDataUploadMutationVariables = Exact<{
@@ -15071,6 +15351,45 @@ export type CancelUploadMutation = (
   )> }
 );
 
+export type DataUploadEventFragment = (
+  { __typename?: 'DataUploadTaskSubscriptionPayload' }
+  & Pick<DataUploadTaskSubscriptionPayload, 'projectId' | 'dataUploadTaskId' | 'previousState'>
+  & { dataUploadTask?: Maybe<(
+    { __typename?: 'DataUploadTask' }
+    & DataUploadDetailsFragment
+  )> }
+);
+
+export type DataUploadsSubscriptionVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DataUploadsSubscription = (
+  { __typename?: 'Subscription' }
+  & { dataUploadTasks?: Maybe<(
+    { __typename?: 'DataUploadTaskSubscriptionPayload' }
+    & DataUploadEventFragment
+  )> }
+);
+
+export type UpdateDataHostingQuotaMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  quota: Scalars['BigInt'];
+}>;
+
+
+export type UpdateDataHostingQuotaMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataHostingQuota?: Maybe<(
+    { __typename?: 'UpdateDataHostingQuotaPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
+    )> }
+  )> }
+);
+
 export type DownloadableOfflineTilePackagesQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -15139,8 +15458,11 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    & { region: (
+      { __typename?: 'GeometryPolygon' }
+      & Pick<GeometryPolygon, 'geojson'>
+    ), draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & OverlayFragment
     )>> }
@@ -15160,7 +15482,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
@@ -15298,7 +15620,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps'>
       )> }
     )> }
   )> }
@@ -15381,7 +15703,7 @@ export type UpdateDataSourceMutation = (
     { __typename?: 'UpdateDataSourcePayload' }
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
+      & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
     )> }
   )> }
 );
@@ -15432,7 +15754,7 @@ export type DataSourceUrlPropertiesQuery = (
   { __typename?: 'Query' }
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'type' | 'bucketId' | 'objectKey' | 'url' | 'originalSourceUrl' | 'queryParameters'>
+    & Pick<DataSource, 'id' | 'type' | 'url' | 'originalSourceUrl' | 'queryParameters'>
   )> }
 );
 
@@ -15575,6 +15897,23 @@ export type PublishTableOfContentsMutation = (
   )> }
 );
 
+export type DraftStatusSubscriptionVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DraftStatusSubscription = (
+  { __typename?: 'Subscription' }
+  & { updatedDraftTableOfContentsStatus?: Maybe<(
+    { __typename?: 'ProjectDraftTableOfContentsStatusPayload' }
+    & Pick<ProjectDraftTableOfContentsStatusPayload, 'hasChanges' | 'projectId'>
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    )> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -15663,13 +16002,16 @@ export type AuthorProfileFragment = (
 
 export type ForumPostFragment = (
   { __typename?: 'Post' }
-  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'topicId' | 'html' | 'sketchIds'>
+  & Pick<Post, 'id' | 'createdAt' | 'hiddenByModerator' | 'topicId' | 'html' | 'sketchIds' | 'orderedAttachmentIds'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & AuthorProfileFragment
   )>, mapBookmarks?: Maybe<Array<(
     { __typename?: 'MapBookmark' }
     & MapBookmarkDetailsFragment
+  )>>, fileUploads?: Maybe<Array<(
+    { __typename?: 'FileUpload' }
+    & FileUploadDetailsFragment
   )>> }
 );
 
@@ -15974,6 +16316,33 @@ export type MapBookmarkSubscription = (
 export type SketchPresentFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'name'>
+);
+
+export type FileUploadDetailsFragment = (
+  { __typename?: 'FileUpload' }
+  & Pick<FileUpload, 'id' | 'filename' | 'postId' | 'userId' | 'fileSizeBytes' | 'contentType' | 'downloadUrl' | 'createdAt' | 'usage' | 'cloudflareImagesId'>
+);
+
+export type CreateFileUploadForPostMutationVariables = Exact<{
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+  usage: FileUploadUsageInput;
+}>;
+
+
+export type CreateFileUploadForPostMutation = (
+  { __typename?: 'Mutation' }
+  & { createFileUpload: (
+    { __typename?: 'UploaderResponse' }
+    & Pick<UploaderResponse, 'cloudflareImagesUploadUrl'>
+    & { fileUpload: (
+      { __typename?: 'FileUpload' }
+      & Pick<FileUpload, 'presignedUploadUrl'>
+      & FileUploadDetailsFragment
+    ) }
+  ) }
 );
 
 export type SpriteDetailsFragment = (
@@ -16564,7 +16933,7 @@ export type ProjectSlugExistsQuery = (
 
 export type OverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps' | 'hasMetadata'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
@@ -16590,7 +16959,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'bucketId' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'objectKey' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
 );
 
 export type ClientSpriteFragment = (
@@ -16657,7 +17026,7 @@ export type SketchFormElementFragment = (
   & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'exportId' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
-    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden'>
+    & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isHidden' | 'geostatsType' | 'geostatsArrayOf'>
   )> }
 );
 
@@ -16977,6 +17346,20 @@ export type DeleteVisibilityRuleConditionMutation = (
       & Pick<FormLogicCondition, 'id'>
     )> }
   )> }
+);
+
+export type UpdateSketchClassStyleMutationVariables = Exact<{
+  id: Scalars['Int'];
+  style?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type UpdateSketchClassStyleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClassMapboxGLStyle: (
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'mapboxGlStyle'>
+  ) }
 );
 
 export type SketchTocDetailsFragment = (
@@ -17334,7 +17717,7 @@ export type AddFormElementTypeDetailsFragment = (
 
 export type FormElementDetailsFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
+  & Pick<FormElement, 'body' | 'componentSettings' | 'alternateLanguageSettings' | 'exportId' | 'formId' | 'id' | 'isRequired' | 'position' | 'jumpToId' | 'isInput' | 'typeId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'backgroundPalette' | 'textVariant' | 'unsplashAuthorUrl' | 'unsplashAuthorName' | 'backgroundWidth' | 'backgroundHeight' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & AddFormElementTypeDetailsFragment
@@ -17449,7 +17832,6 @@ export type UpdateFormElementSketchClassMutationVariables = Exact<{
   id: Scalars['Int'];
   geometryType?: Maybe<SketchGeometryType>;
   allowMulti?: Maybe<Scalars['Boolean']>;
-  mapboxGlStyle?: Maybe<Scalars['JSON']>;
   geoprocessingClientName?: Maybe<Scalars['String']>;
   geoprocessingClientUrl?: Maybe<Scalars['String']>;
   geoprocessingProjectUrl?: Maybe<Scalars['String']>;
@@ -18090,7 +18472,7 @@ export type SurveyAppRuleFragment = (
 
 export type SurveyAppFormElementFragment = (
   { __typename?: 'FormElement' }
-  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions'>
+  & Pick<FormElement, 'id' | 'componentSettings' | 'alternateLanguageSettings' | 'body' | 'isRequired' | 'isInput' | 'position' | 'typeId' | 'formId' | 'backgroundColor' | 'secondaryColor' | 'backgroundImage' | 'layout' | 'textVariant' | 'unsplashAuthorName' | 'unsplashAuthorUrl' | 'backgroundWidth' | 'backgroundHeight' | 'jumpToId' | 'subordinateTo' | 'mapBasemaps' | 'mapCameraOptions' | 'generatedExportId' | 'generatedLabel'>
   & { type?: Maybe<(
     { __typename?: 'FormElementType' }
     & Pick<FormElementType, 'componentName' | 'isInput' | 'isSingleUseOnly' | 'isSurveysOnly' | 'label' | 'isSpatial' | 'allowedLayouts' | 'supportedOperators' | 'isHidden'>
@@ -19119,16 +19501,19 @@ export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
   progress
   state
   errorMessage
-  layers {
-    id
-    tableOfContentsItem {
-      nodeId
-      id
-      stableId
-    }
-  }
+  tableOfContentsItemStableIds
 }
     `;
+export const DataUploadEventFragmentDoc = /*#__PURE__*/ gql`
+    fragment DataUploadEvent on DataUploadTaskSubscriptionPayload {
+  projectId
+  dataUploadTaskId
+  previousState
+  dataUploadTask {
+    ...DataUploadDetails
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
 export const ForumListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumListDetails on Forum {
   id
@@ -19195,6 +19580,20 @@ export const MapBookmarkDetailsFragmentDoc = /*#__PURE__*/ gql`
   clientGeneratedThumbnail
 }
     ${JobFragmentDoc}`;
+export const FileUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment FileUploadDetails on FileUpload {
+  id
+  filename
+  postId
+  userId
+  fileSizeBytes
+  contentType
+  downloadUrl
+  createdAt
+  usage
+  cloudflareImagesId
+}
+    `;
 export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumPost on Post {
   id
@@ -19209,9 +19608,14 @@ export const ForumPostFragmentDoc = /*#__PURE__*/ gql`
   mapBookmarks {
     ...MapBookmarkDetails
   }
+  fileUploads {
+    ...FileUploadDetails
+  }
+  orderedAttachmentIds
 }
     ${AuthorProfileFragmentDoc}
-${MapBookmarkDetailsFragmentDoc}`;
+${MapBookmarkDetailsFragmentDoc}
+${FileUploadDetailsFragmentDoc}`;
 export const RecentPostFragmentDoc = /*#__PURE__*/ gql`
     fragment RecentPost on Post {
   ...ForumPost
@@ -19458,6 +19862,7 @@ export const OverlayFragmentDoc = /*#__PURE__*/ gql`
   title
   geoprocessingReferenceId
   translatedProps
+  hasMetadata
 }
     `;
 export const DataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -19465,7 +19870,6 @@ export const DataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   id
   attribution
   bounds
-  bucketId
   buffer
   byteLength
   cluster
@@ -19479,7 +19883,6 @@ export const DataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   lineMetrics
   maxzoom
   minzoom
-  objectKey
   originalSourceUrl
   queryParameters
   scheme
@@ -19561,6 +19964,8 @@ export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
     isSurveysOnly
     label
     isHidden
+    geostatsType
+    geostatsArrayOf
   }
 }
     `;
@@ -19799,6 +20204,8 @@ export const FormElementDetailsFragmentDoc = /*#__PURE__*/ gql`
   subordinateTo
   mapBasemaps
   mapCameraOptions
+  generatedExportId
+  generatedLabel
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
 export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -19919,6 +20326,8 @@ export const SurveyAppFormElementFragmentDoc = /*#__PURE__*/ gql`
   subordinateTo
   mapBasemaps
   mapCameraOptions
+  generatedExportId
+  generatedLabel
 }
     ${SketchClassDetailsFragmentDoc}`;
 export const SurveyAppSurveyFragmentDoc = /*#__PURE__*/ gql`
@@ -20221,9 +20630,7 @@ export const CreateSeaSketchVectorSourceDocument = /*#__PURE__*/ gql`
       type
       url
       presignedUploadUrl
-      bucketId
       enhancedSecurity
-      objectKey
     }
   }
 }
@@ -20684,6 +21091,24 @@ export const CancelUploadDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const DataUploadsDocument = /*#__PURE__*/ gql`
+    subscription DataUploads($slug: String!) {
+  dataUploadTasks(slug: $slug) {
+    ...DataUploadEvent
+  }
+}
+    ${DataUploadEventFragmentDoc}`;
+export const UpdateDataHostingQuotaDocument = /*#__PURE__*/ gql`
+    mutation UpdateDataHostingQuota($projectId: Int!, $quota: BigInt!) {
+  updateDataHostingQuota(input: {projectId: $projectId, quota: $quota}) {
+    project {
+      id
+      dataHostingQuota
+      dataHostingQuotaUsed
+    }
+  }
+}
+    `;
 export const DownloadableOfflineTilePackagesDocument = /*#__PURE__*/ gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -20726,6 +21151,11 @@ export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    draftTableOfContentsHasChanges
+    tableOfContentsLastPublished
+    region {
+      geojson
+    }
     draftTableOfContentsItems {
       ...Overlay
     }
@@ -20739,7 +21169,6 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
     dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -20755,7 +21184,6 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       queryParameters
       scheme
@@ -20920,7 +21348,6 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
         id
         attribution
         bounds
-        bucketId
         buffer
         byteLength
         cluster
@@ -20936,7 +21363,6 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
         lineMetrics
         maxzoom
         minzoom
-        objectKey
         originalSourceUrl
         promoteId
         queryParameters
@@ -21019,7 +21445,6 @@ export const UpdateDataSourceDocument = /*#__PURE__*/ gql`
       id
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -21035,7 +21460,6 @@ export const UpdateDataSourceDocument = /*#__PURE__*/ gql`
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       promoteId
       queryParameters
@@ -21088,8 +21512,6 @@ export const DataSourceUrlPropertiesDocument = /*#__PURE__*/ gql`
   dataSource(id: $id) {
     id
     type
-    bucketId
-    objectKey
     url
     originalSourceUrl
     queryParameters
@@ -21184,6 +21606,19 @@ export const PublishTableOfContentsDocument = /*#__PURE__*/ gql`
   publishTableOfContents(input: {projectId: $projectId}) {
     tableOfContentsItems {
       id
+    }
+  }
+}
+    `;
+export const DraftStatusDocument = /*#__PURE__*/ gql`
+    subscription DraftStatus($slug: String!) {
+  updatedDraftTableOfContentsStatus(slug: $slug) {
+    hasChanges
+    projectId
+    project {
+      id
+      draftTableOfContentsHasChanges
+      tableOfContentsLastPublished
     }
   }
 }
@@ -21404,6 +21839,23 @@ export const MapBookmarkDocument = /*#__PURE__*/ gql`
   }
 }
     ${MapBookmarkDetailsFragmentDoc}`;
+export const CreateFileUploadForPostDocument = /*#__PURE__*/ gql`
+    mutation createFileUploadForPost($contentType: String!, $filename: String!, $fileSizeBytes: Int!, $projectId: Int!, $usage: FileUploadUsageInput!) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: $usage
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${FileUploadDetailsFragmentDoc}`;
 export const SpritesDocument = /*#__PURE__*/ gql`
     query Sprites($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21961,6 +22413,14 @@ export const DeleteVisibilityRuleConditionDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateSketchClassStyleDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketchClassStyle($id: Int!, $style: JSON) {
+  updateSketchClassMapboxGLStyle(sketchClassId: $id, style: $style) {
+    id
+    mapboxGlStyle
+  }
+}
+    `;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -22212,9 +22672,9 @@ export const UpdateSurveyBaseSettingsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateFormElementSketchClassDocument = /*#__PURE__*/ gql`
-    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $mapboxGlStyle: JSON, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
+    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
   updateSketchClass(
-    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, mapboxGlStyle: $mapboxGlStyle, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
+    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
   ) {
     sketchClass {
       id
@@ -23253,6 +23713,7 @@ export const namedOperations = {
     DismissFailedTask: 'DismissFailedTask',
     FailUpload: 'FailUpload',
     CancelUpload: 'CancelUpload',
+    UpdateDataHostingQuota: 'UpdateDataHostingQuota',
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
@@ -23275,6 +23736,7 @@ export const namedOperations = {
     CreateReply: 'CreateReply',
     CopyTocItemForForumPost: 'CopyTocItemForForumPost',
     CreateMapBookmark: 'CreateMapBookmark',
+    createFileUploadForPost: 'createFileUploadForPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     JoinProject: 'JoinProject',
@@ -23296,6 +23758,7 @@ export const namedOperations = {
     DeleteVisibilityRule: 'DeleteVisibilityRule',
     AddVisibilityCondition: 'AddVisibilityCondition',
     DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
+    UpdateSketchClassStyle: 'UpdateSketchClassStyle',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -23351,6 +23814,8 @@ export const namedOperations = {
     UpdateProfile: 'UpdateProfile'
   },
   Subscription: {
+    DataUploads: 'DataUploads',
+    DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
@@ -23385,6 +23850,7 @@ export const namedOperations = {
     BasemapDetails: 'BasemapDetails',
     BasemapAdminDetails: 'BasemapAdminDetails',
     DataUploadDetails: 'DataUploadDetails',
+    DataUploadEvent: 'DataUploadEvent',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',
@@ -23394,6 +23860,7 @@ export const namedOperations = {
     Job: 'Job',
     MapBookmarkDetails: 'MapBookmarkDetails',
     SketchPresent: 'SketchPresent',
+    FileUploadDetails: 'FileUploadDetails',
     SpriteDetails: 'SpriteDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',

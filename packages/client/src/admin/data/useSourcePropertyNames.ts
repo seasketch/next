@@ -20,16 +20,10 @@ export default function useSourcePropertyNames(
   useEffect(() => {
     if (!cache[sourceId]) {
       if (propsQuery.data?.dataSource) {
-        const {
-          type,
-          bucketId,
-          objectKey,
-          url,
-          originalSourceUrl,
-          queryParameters,
-        } = propsQuery.data.dataSource;
+        const { type, url, originalSourceUrl, queryParameters } =
+          propsQuery.data.dataSource;
         if (type === DataSourceTypes.SeasketchVector) {
-          fetch(`${bucketId}/${objectKey}`)
+          fetch(`${url}`)
             .then((r) => r.json())
             .then((data: GeoJSON) => {
               let example: Feature;

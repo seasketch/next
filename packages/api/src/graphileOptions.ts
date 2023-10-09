@@ -32,6 +32,13 @@ import MapBookmarkSubscriptionsPlugin from "./plugins/mapBookmarkSubscriptionsPl
 import MapBookmarkRateLimiterPlugin from "./plugins/mapBookmarkRateLimiterPlugin";
 import TranslatedPropsPlugin from "./plugins/translatedPropsPlugin";
 import VerifyEmailPlugin from "./plugins/verifyEmailPlugin";
+import {
+  FileUploadPlugin,
+  FileUploadRateLimiterPlugin,
+} from "./plugins/fileUploadPlugin";
+import SketchClassStylePlugin from "./plugins/sketchClassStylePlugin";
+import DataUploadTasksSubscriptionPlugin from "./plugins/dataUploadTasksSubscriptionPlugin";
+import DraftTocStatusPlugin from "./plugins/projectDraftTableOfContentsStatusSubscription";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -53,6 +60,8 @@ export default function graphileOptions(): PostGraphileOptions {
       PgSimplifyInflectorPlugin,
       PostGraphileUploadFieldPlugin,
       postgisPlugin,
+      FileUploadPlugin,
+      FileUploadRateLimiterPlugin,
       ProjectInvitesPlugin,
       SurveyInvitesPlugin,
       CanonicalEmailPlugin,
@@ -77,6 +86,9 @@ export default function graphileOptions(): PostGraphileOptions {
       MapBookmarkRateLimiterPlugin,
       TranslatedPropsPlugin,
       VerifyEmailPlugin,
+      SketchClassStylePlugin,
+      DataUploadTasksSubscriptionPlugin,
+      DraftTocStatusPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

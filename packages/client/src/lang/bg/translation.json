@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "Пуснете файлове тук за качване",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "Понастоящем SeaSketch поддържа векторни данни във формати GeoJSON, Shapefile (ципирани), GeoTiff и FlatGeobuf.",
+  "Starting upload": "Започва качване",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Това изглежда е файлов тип, който SeaSketch не поддържа за пространствени качвания.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Изглежда, че това е неподдържан тип растерен файл. За растерни данни качете GeoTiff.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Това изглежда е само част от шейп файл. За да качите шейп файлове, създайте .zip файл с всички свързани файлове (.shp, .prj, .shx и т.н.) и качете този zip файл."
+}

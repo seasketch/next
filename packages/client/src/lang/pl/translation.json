@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "Upuść pliki tutaj, aby przesłać",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch obecnie obsługuje dane wektorowe w formatach GeoJSON, Shapefile (zip), GeoTiff i FlatGeobuf.",
+  "Starting upload": "Rozpoczęcie przesyłania",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Wygląda na to, że jest to typ pliku, którego SeaSketch nie obsługuje w przypadku przesyłania przestrzennego.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Wygląda na to, że jest to nieobsługiwany typ pliku rastrowego. W przypadku danych rastrowych prześlij plik GeoTiff.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Wygląda na to, że jest to tylko część pliku kształtu. Aby przesłać pliki shape, utwórz plik .zip ze wszystkimi powiązanymi plikami (.shp, .prj, .shx itp.) i prześlij ten plik zip."
+}

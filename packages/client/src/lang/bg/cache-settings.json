@@ -1,0 +1,15 @@
+{
+  "Cache Details": "Подробности за кеша",
+  "Cache Status": "Състояние на кеша",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "Кешира повече данни и предварително зарежда активи за по-добра производителност. Поддържа офлайн употреба.",
+  "Data Caching": "Кеширане на данни",
+  "Default": "По подразбиране",
+  "Improved Performance": "Подобрена производителност",
+  "Maximum": "Максимум",
+  "Minimum": "минимум",
+  "Only what's necessary to run SeaSketch": "Само това, което е необходимо за стартиране на SeaSketch",
+  "Query Cache": "Кеш на заявките",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "Запазва някои наскоро използвани данни от приложения за подобрена производителност при стартиране и използване при лоши интернет връзки",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Използвайте тази настройка, ако сте фасилитатор или плановик, който използва редовно SeaSketch. Поддържа офлайн употреба.",
+  "Using  of your browser's storage quota": "Използване на квотата за съхранение на вашия браузър"
+}

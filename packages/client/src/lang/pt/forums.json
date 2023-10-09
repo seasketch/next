@@ -1,6 +1,8 @@
 {
   "<0>Sign in</0> or <4>register</4> for an account to participate in the forum.": "<0>Faça o seu Login </0> ou <4> crie </4>  a sua conta para participar no fórum.",
   "Cancel": "Cancelar",
+  "close": "fechar",
+  "download": "download",
   "Forums": "Fóruns",
   "lastReply": "Última resposta {{timeAgo}}. Iniciado por {{lastAuthor}}",
   "Map Bookmark Errors": "Erros de marcadores de mapa",
@@ -8,7 +10,7 @@
   "New Topic Title...": "Título do Novo Tópico...",
   "No forums have been configured for this project.": "Nenhum fórum foi configurado para este projeto.",
   "participantCount": "{{count}} pessoas",
-  "participantCount_plural": "participanteCount_plural",
+  "participantCount_plural": "{{count}} pessoas",
   "Post a topic": "Postar um tópico",
   "Post anyways": "Postar de qualquer forma",
   "Post New Topic": "Postar um novo tópico",

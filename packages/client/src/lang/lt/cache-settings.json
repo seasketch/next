@@ -1,0 +1,15 @@
+{
+  "Cache Details": "Išsami talpyklos informacija",
+  "Cache Status": "Talpyklos būsena",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "Saugo daugiau duomenų ir iš anksto įkelia išteklius, kad būtų geresnis našumas. Palaikomas naudojimas neprisijungus.",
+  "Data Caching": "Duomenų kaupimas talpykloje",
+  "Default": "Numatytas",
+  "Improved Performance": "Patobulintas našumas",
+  "Maximum": "Maksimalus",
+  "Minimum": "Minimumas",
+  "Only what's necessary to run SeaSketch": "Tik tai, ko reikia norint paleisti SeaSketch",
+  "Query Cache": "Užklausos talpykla",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "Išsaugo kai kuriuos neseniai naudotus programos duomenis, kad būtų pagerintas paleidimo našumas ir naudojimas prastu interneto ryšiu",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Naudokite šį nustatymą, jei esate tarpininkas arba planuotojas, kuris reguliariai naudojasi SeaSketch. Palaikomas naudojimas neprisijungus.",
+  "Using  of your browser's storage quota": "Naršyklės saugyklos kvotos naudojimas"
+}

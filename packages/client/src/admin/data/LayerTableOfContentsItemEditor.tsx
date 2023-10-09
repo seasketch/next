@@ -22,7 +22,7 @@ import InteractivitySettings from "./InteractivitySettings";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import InputBlock from "../../components/InputBlock";
-import GLStyleEditor from "./GLStyleEditor/Editor";
+import GLStyleEditor from "./GLStyleEditor/GLStyleEditor";
 import {
   ClipboardCopyIcon,
   DotsHorizontalIcon,
@@ -730,6 +730,7 @@ export default function LayerTableOfContentsItemEditor(
             (source.type === DataSourceTypes.Geojson ||
               source.type === DataSourceTypes.SeasketchVector ||
               source.type === DataSourceTypes.SeasketchMvt ||
+              source.type === DataSourceTypes.SeasketchRaster ||
               source.type === DataSourceTypes.Vector) && (
               <div className="h-full overflow-hidden flex flex-col">
                 <p className="text-sm text-gray-100 px-2 pb-2 pt-1 bg-gray-700">
@@ -745,7 +746,10 @@ export default function LayerTableOfContentsItemEditor(
                     </a>
                     . Don't specify a <code>source</code> or <code>id</code>{" "}
                     property on your layers, those will be managed for you by
-                    SeaSketch.
+                    SeaSketch. Press{" "}
+                    <span className="font-mono">Control+Space</span> to
+                    autocomplete string values and property names, and hover
+                    over properties to see documentation.
                   </Trans>
                 </p>
                 {updateGLStyleMutationState.error && (
@@ -755,8 +759,14 @@ export default function LayerTableOfContentsItemEditor(
                   </p>
                 )}
                 <GLStyleEditor
+                  tocItemId={item.stableId}
+                  geostats={source.geostats}
+                  type={
+                    source.type === DataSourceTypes.SeasketchRaster
+                      ? "raster"
+                      : "vector"
+                  }
                   className="flex-1 overflow-hidden"
-                  dataLayerId={layer?.id}
                   initialStyle={
                     typeof layer!.mapboxGlStyles! === "string"
                       ? layer!.mapboxGlStyles
@@ -776,6 +786,16 @@ export default function LayerTableOfContentsItemEditor(
                     });
                     setStyle(newStyle);
                   }}
+                  bounds={
+                    item.bounds
+                      ? (item.bounds.map((b) => parseFloat(b)) as [
+                          number,
+                          number,
+                          number,
+                          number
+                        ])
+                      : undefined
+                  }
                 />
               </div>
             )}

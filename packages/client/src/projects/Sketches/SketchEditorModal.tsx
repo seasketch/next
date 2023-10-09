@@ -33,8 +33,11 @@ import { MapMouseEvent } from "mapbox-gl";
 import area from "@turf/area";
 import bboxPolygon from "@turf/bbox-polygon";
 import { currentSidebarState } from "../ProjectAppSidebar";
-import SketchForm, { evaluateVisibilityRules } from "./SketchForm";
+import SketchForm from "./SketchForm";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
+import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
+import { defaultStyle } from "../../surveys/appearance";
+// import { extractRelevantPropsFromStyle } from "../../admin/sketchClasses/SketchClassStyleAdmin";
 
 export default function SketchEditorModal({
   sketch,
@@ -66,6 +69,34 @@ export default function SketchEditorModal({
   const [name, setName] = useState<string>();
   const [properties, setProperties] = useState<any>(sketch?.properties || {});
   const [hasValidationErrors, setHasValidationErrors] = useState(false);
+
+  //   const styleRelevantProps = useMemo(() => {
+  //     return extractRelevantPropsFromStyle(sketchClass.mapboxGlStyle || []);
+  //   }, [sketchClass]);
+  // //
+  //   console.log(styleRelevantProps, properties);
+
+  // useEffect(() => {
+  //   const elements = sketchClass.form?.formElements || [];
+  //   if (styleRelevantProps.length && elements.length && mapContext.manager) {
+  //     const newProperties: { [key: string]: any } = {};
+  //     styleRelevantProps.forEach((prop) => {
+  //       const element =
+  //         prop === "name"
+  //           ? elements.find((e) => e.type?.componentName === "FeatureName")
+  //           : elements.find((e) => e.generatedExportId === prop);
+  //       if (element) {
+  //         newProperties[prop] = properties[element.id];
+  //       }
+  //     });
+  //     mapContext.manager.updateSketchProperties(sketch?.id || 0, newProperties);
+  //   }
+  // }, [
+  //   styleRelevantProps,
+  //   properties,
+  //   sketchClass.form?.formElements,
+  //   mapContext.manager,
+  // ]);
 
   const formElements = useMemo(() => {
     const elements = sketchClass.form?.formElements || [];
@@ -234,6 +265,7 @@ export default function SketchEditorModal({
     } else {
       mapContext.manager?.clearSketchEditingState();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     mapContext.manager,
     mapContext.manager?.interactivityManager,
@@ -261,6 +293,8 @@ export default function SketchEditorModal({
     } else {
       draw.create(false, true);
     }
+    // If draw is added as a dependency, it will break shape editing
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sketch, setName, setProperties]);
 
   useEffect(() => {
@@ -332,21 +366,6 @@ export default function SketchEditorModal({
 
     if (!name) {
       throw new Error("Name not specified");
-    }
-
-    // Find hidden elements from visibility rules
-    const hiddenElements = evaluateVisibilityRules(
-      Object.keys(properties).reduce((acc, key) => {
-        acc[key] = {
-          value: properties[key],
-        };
-        return acc;
-      }, {} as { [key: string]: { value: any } }),
-      sketchClass.form?.logicRules || []
-    );
-    // delete properties that are hidden
-    for (const id of hiddenElements) {
-      delete properties[id];
     }
 
     let data: SketchCrudResponseFragment | undefined;
@@ -424,6 +443,8 @@ export default function SketchEditorModal({
     preprocessedGeometry,
     sketchClass.geometryType,
     hasValidationErrors,
+    sketchClass.preprocessingEndpoint,
+    collectionId,
   ]);
 
   useEffect(() => {
@@ -517,22 +538,43 @@ export default function SketchEditorModal({
                   </button>
                 )}
               </h1>
-              <div className="p-4 pt-0 flex-1 overflow-y-auto">
-                <SketchForm
-                  logicRules={sketchClass.form?.logicRules || []}
-                  onChange={(props, validationErrors) => {
-                    const nameValue = nameElementId
-                      ? props[nameElementId]
-                      : undefined;
-                    setName(nameValue);
-                    setProperties(props);
-                    setHasValidationErrors(validationErrors || !nameValue);
+              <div
+                className="p-4 pt-0 flex-1 overflow-y-auto SketchForm"
+                dir="ltr"
+              >
+                <FormElementLayoutContext.Provider
+                  value={{
+                    mapPortal: null,
+                    style: {
+                      ...defaultStyle,
+                      isDark: false,
+                      textClass: "text-black",
+                      backgroundColor: "#eee",
+                      secondaryColor: "#999",
+                      secondaryColor2: "#aaa",
+                      isSmall: false,
+                      compactAppearance: true,
+                    },
+                    navigatingBackwards: false,
                   }}
-                  formElements={formElements}
-                  submissionAttempted={submissionAttempted}
-                  startingProperties={startingProperties}
-                  onSubmissionRequested={() => onSubmit()}
-                />
+                >
+                  <SketchForm
+                    isSketchWorkflow={true}
+                    logicRules={sketchClass.form?.logicRules || []}
+                    onChange={(props, validationErrors) => {
+                      const nameValue = nameElementId
+                        ? props[nameElementId]
+                        : undefined;
+                      setName(nameValue);
+                      setProperties(props);
+                      setHasValidationErrors(validationErrors || !nameValue);
+                    }}
+                    formElements={formElements}
+                    submissionAttempted={submissionAttempted}
+                    startingProperties={startingProperties}
+                    onSubmissionRequested={() => onSubmit()}
+                  />
+                </FormElementLayoutContext.Provider>
                 {geometryErrors && <Warning>{geometryErrors}</Warning>}
                 {hasValidationErrors && submissionAttempted && (
                   <Warning>

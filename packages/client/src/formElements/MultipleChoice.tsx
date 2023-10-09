@@ -13,7 +13,6 @@ import {
   FormElementComponent,
   FormElementEditorPortal,
   FormLanguageContext,
-  SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
 import FormElementOptionsInput, {

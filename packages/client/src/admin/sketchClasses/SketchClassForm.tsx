@@ -22,6 +22,7 @@ import PreprocessorInput from "./PreprocessorInput";
 import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
 import GeoprocessingClientInput from "./GeoprocessingClientInput";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
+import SketchClassStyleAdmin from "./SketchClassStyleAdmin";
 
 export default function SketchClassForm({
   sketchClass,
@@ -145,7 +146,7 @@ export default function SketchClassForm({
             color="text-indigo-100"
           />
         </h1>
-        <div className="flex-0 mb-2 -mt-2 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+        <div className="flex-0 mb-2 -mt-2 bg-gray-700 text-primary-300 flex items-center">
           <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
         </div>
       </div>
@@ -233,6 +234,9 @@ export default function SketchClassForm({
         )}
         {selectedTab === "attributes" && sketchClass.form && (
           <SketchClassAttributesAdmin formId={sketchClass.form.id} />
+        )}
+        {selectedTab === "style" && (
+          <SketchClassStyleAdmin sketchClass={sketchClass} />
         )}
       </div>
     </div>

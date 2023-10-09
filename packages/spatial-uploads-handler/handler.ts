@@ -23,8 +23,6 @@ export const processUpload = async (event: SpatialUploadsHandlerRequest) => {
     const outputs = await handleUpload(
       event.taskId,
       event.objectKey,
-      event.dataSourcesBucket,
-      event.dataSourcesUrl,
       event.suffix,
       event.requestingUser,
       event.skipLoggingProgress

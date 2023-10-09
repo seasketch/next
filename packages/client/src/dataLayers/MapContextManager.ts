@@ -1,4 +1,5 @@
-import mapboxgl, {
+import {
+  default as mapboxgl,
   Map,
   MapDataEvent,
   ErrorEvent,
@@ -11,6 +12,7 @@ import mapboxgl, {
   AnySourceData,
   AnyLayer,
   Sources,
+  GeoJSONSource,
 } from "mapbox-gl";
 import {
   createContext,
@@ -52,6 +54,7 @@ import MeasureControl, {
   MeasureControlState,
   measureLayers,
 } from "../MeasureControl";
+import cloneDeep from "lodash.clonedeep";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -127,6 +130,10 @@ export interface LayerState {
   visible: true;
   loading: boolean;
   error?: Error;
+}
+
+export interface SketchLayerState extends LayerState {
+  sketchClassId?: number;
 }
 class MapContextManager extends EventEmitter {
   map?: Map;
@@ -842,7 +849,9 @@ class MapContextManager extends EventEmitter {
    *
    * @param sketches
    */
-  setVisibleSketches(sketches: { id: number; timestamp?: string }[]) {
+  setVisibleSketches(
+    sketches: { id: number; timestamp?: string; sketchClassId?: number }[]
+  ) {
     const sketchIds = sketches.map(({ id }) => id);
     // remove missing ids from internal state
     for (const id in this.internalState.sketchLayerStates) {
@@ -851,11 +860,12 @@ class MapContextManager extends EventEmitter {
       }
     }
     // add new sketches to internal state
-    for (const id of sketchIds) {
-      if (!this.internalState.sketchLayerStates[id]?.visible) {
-        this.internalState.sketchLayerStates[id] = {
+    for (const sketch of sketches) {
+      if (!this.internalState.sketchLayerStates[sketch.id]?.visible) {
+        this.internalState.sketchLayerStates[sketch.id] = {
           loading: true,
           visible: true,
+          sketchClassId: sketch.sketchClassId,
         };
       }
     }
@@ -872,6 +882,22 @@ class MapContextManager extends EventEmitter {
       }
     }
     // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  private sketchClassGLStyles: { [sketchClassId: number]: AnyLayer[] } = {};
+
+  getSketchClassGLStyles(sketchClassId: number): AnyLayer[] {
+    // Clone the style layers. Mapbox GL JS will freeze the objects after adding
+    // to the map, which will prevent us from modifying the style later and
+    // throw exceptions
+    return cloneDeep(
+      this.sketchClassGLStyles[sketchClassId] || this.defaultSketchLayers
+    );
+  }
+
+  setSketchClassGlStyles(styles: { [sketchClassId: number]: AnyLayer[] }) {
+    this.sketchClassGLStyles = styles;
     this.debouncedUpdateStyle();
   }
 
@@ -1075,14 +1101,22 @@ class MapContextManager extends EventEmitter {
                   case DataSourceTypes.Geojson:
                     baseStyle.sources[source.id.toString()] = {
                       type: "geojson",
-                      data:
-                        source.type === DataSourceTypes.SeasketchVector
-                          ? // eslint-disable-next-line
-                            `${source.bucketId}/${source.objectKey}`
-                          : source.url!,
+                      data: source.url!,
                       attribution: source.attribution || "",
                     };
                     sourceWasAdded = true;
+                    break;
+                  case DataSourceTypes.SeasketchRaster:
+                    if (source.url) {
+                      baseStyle.sources[source.id.toString()] = {
+                        type: "raster",
+                        url: source.url,
+                        attribution: source.attribution || "",
+                      };
+                      sourceWasAdded = true;
+                    } else {
+                      throw new Error("Not implemented");
+                    }
                     break;
                   case DataSourceTypes.ArcgisVector:
                     throw new Error("not supported");
@@ -1121,6 +1155,7 @@ class MapContextManager extends EventEmitter {
                   (source.type === DataSourceTypes.SeasketchVector ||
                     source.type === DataSourceTypes.Geojson ||
                     source.type === DataSourceTypes.Vector ||
+                    source.type === DataSourceTypes.SeasketchRaster ||
                     // source.type === DataSourceTypes.ArcgisVector ||
                     source.type === DataSourceTypes.SeasketchMvt) &&
                   layer.mapboxGlStyles?.length
@@ -1129,7 +1164,8 @@ class MapContextManager extends EventEmitter {
                     const layers = isUnderLabels ? underLabels : overLabels;
                     if (
                       source.type === DataSourceTypes.SeasketchMvt ||
-                      source.type === DataSourceTypes.Vector
+                      source.type === DataSourceTypes.Vector ||
+                      source.type === DataSourceTypes.SeasketchRaster
                     ) {
                       layers.push({
                         ...layer.mapboxGlStyles[i],
@@ -1298,6 +1334,8 @@ class MapContextManager extends EventEmitter {
     const sources: Sources = {};
     for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
       const id = parseInt(stringId);
+      const sketchClassId =
+        this.internalState.sketchLayerStates[id].sketchClassId;
       if (id !== this.hideEditableSketchId) {
         const timestamp = this.sketchTimestamps.get(id);
         const cache = LocalSketchGeometryCache.get(id);
@@ -1310,7 +1348,8 @@ class MapContextManager extends EventEmitter {
         };
         const layers = this.getLayersForSketch(
           id,
-          id === this.editableSketchId
+          id === this.editableSketchId,
+          sketchClassId
         );
         if (this.editableSketchId && id !== this.editableSketchId) {
           reduceOpacity(layers);
@@ -1321,80 +1360,84 @@ class MapContextManager extends EventEmitter {
     return { layers: allLayers, sources };
   }
 
-  getLayersForSketch(id: number, focusOfEditing?: boolean): AnyLayer[] {
-    const layers = [
-      {
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `sketch-${id}-fill`,
-        type: "fill",
-        // eslint-disable-next-line i18next/no-literal-string
-        source: `sketch-${id}`,
-        // Filter to type Polygon or Multipolygon
-        filter: [
-          "any",
-          ["==", ["geometry-type"], "Polygon"],
-          ["==", ["geometry-type"], "MultiPolygon"],
-        ],
-        paint: {
-          "fill-color": "orange",
-          "fill-outline-color": "red",
-          "fill-opacity": 0.5,
-        },
-        layout: {},
+  defaultSketchLayers = [
+    {
+      type: "fill",
+      // Filter to type Polygon or Multipolygon
+      filter: [
+        "any",
+        ["==", ["geometry-type"], "Polygon"],
+        ["==", ["geometry-type"], "MultiPolygon"],
+      ],
+      paint: {
+        "fill-color": "orange",
+        "fill-outline-color": "red",
+        "fill-opacity": 0.5,
       },
+      layout: {},
+    },
 
-      {
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `sketch-${id}-dblline`,
-        type: "line",
-        // eslint-disable-next-line i18next/no-literal-string
-        source: `sketch-${id}`,
-        filter: ["any", ["==", ["geometry-type"], "LineString"]],
-        paint: {
-          "line-color": "black",
-          "line-width": 4,
-        },
-        layout: {},
+    {
+      type: "line",
+      filter: ["any", ["==", ["geometry-type"], "LineString"]],
+      paint: {
+        "line-color": "black",
+        "line-width": 4,
       },
-      {
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `sketch-${id}-line`,
-        type: "line",
-        // eslint-disable-next-line i18next/no-literal-string
-        source: `sketch-${id}`,
-        filter: ["any", ["==", ["geometry-type"], "LineString"]],
-        paint: {
-          "line-color": "orange",
-          "line-width": 2,
-        },
-        layout: {},
+      layout: {},
+    },
+    {
+      type: "line",
+      filter: ["any", ["==", ["geometry-type"], "LineString"]],
+      paint: {
+        "line-color": "orange",
+        "line-width": 2,
       },
-      {
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `sketch-${id}-point`,
-        type: "circle",
-        // eslint-disable-next-line i18next/no-literal-string
-        source: `sketch-${id}`,
-        filter: ["any", ["==", ["geometry-type"], "Point"]],
-        paint: {
-          "circle-radius": 5,
-          "circle-color": "orange",
-        },
+      layout: {},
+    },
+    {
+      type: "circle",
+      filter: ["any", ["==", ["geometry-type"], "Point"]],
+      paint: {
+        "circle-radius": 5,
+        "circle-color": "orange",
       },
-      {
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `sketch-${id}-point-inner`,
-        type: "circle",
-        // eslint-disable-next-line i18next/no-literal-string
-        source: `sketch-${id}`,
-        filter: ["any", ["==", ["geometry-type"], "Point"]],
-        paint: {
-          "circle-radius": 3,
-          "circle-color": "white",
-          "circle-opacity": 0.75,
-        },
+    },
+    {
+      type: "circle",
+      filter: ["any", ["==", ["geometry-type"], "Point"]],
+      paint: {
+        "circle-radius": 3,
+        "circle-color": "white",
+        "circle-opacity": 0.75,
       },
-    ] as AnyLayer[];
+    },
+  ] as AnyLayer[];
+
+  assignSketchLayersToSketch(id: number, sourceId: string, layers: AnyLayer[]) {
+    let layerIdCount = 0;
+    return layers.map((lyr) => {
+      return {
+        ...lyr,
+        source: sourceId,
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `sketch-${id}-${layerIdCount++}`,
+      };
+    }) as AnyLayer[];
+  }
+
+  getLayersForSketch(
+    id: number,
+    focusOfEditing?: boolean,
+    sketchClassId?: number
+  ): AnyLayer[] {
+    // eslint-disable-next-line i18next/no-literal-string
+    const source = `sketch-${id}`;
+    const layers = this.assignSketchLayersToSketch(
+      id,
+      source,
+      this.getSketchClassGLStyles(sketchClassId || 99999)
+    );
     if (
       (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||
       focusOfEditing
@@ -1405,8 +1448,7 @@ class MapContextManager extends EventEmitter {
             // eslint-disable-next-line i18next/no-literal-string
             id: `sketch-${id}-selection-second-outline`,
             type: "line",
-            // eslint-disable-next-line i18next/no-literal-string
-            source: `sketch-${id}`,
+            source,
             paint: {
               "line-color": "white",
               "line-opacity": 0.25,
@@ -1420,8 +1462,7 @@ class MapContextManager extends EventEmitter {
             // eslint-disable-next-line i18next/no-literal-string
             id: `sketch-${id}-selection-outline`,
             type: "line",
-            // eslint-disable-next-line i18next/no-literal-string
-            source: `sketch-${id}`,
+            source,
             paint: {
               "line-color": "rgb(46, 115, 182)",
               "line-opacity": 1,
@@ -1473,6 +1514,11 @@ class MapContextManager extends EventEmitter {
   private onMapError = (event: ErrorEvent & { sourceId?: string }) => {
     if (event.sourceId && event.sourceId !== "composite") {
       let anySet = false;
+      // Questionable behavior from mapbox-gl-js here
+      // https://github.com/mapbox/mapbox-gl-js/issues/9304
+      if (/source image could not be decoded/.test(event.error.message)) {
+        return;
+      }
       if (/sketch-\d+$/.test(event.sourceId)) {
         const id = parseInt(event.sourceId.split("-")[1]);
         const state = this.internalState.sketchLayerStates[id];
@@ -2365,7 +2411,7 @@ export interface Tooltip {
 
 export interface MapContextInterface {
   layerStatesByTocStaticId: { [id: string]: LayerState };
-  sketchLayerStates: { [id: number]: LayerState };
+  sketchLayerStates: { [id: number]: SketchLayerState };
   manager?: MapContextManager;
   bannerMessages: string[];
   tooltip?: Tooltip;
@@ -2532,20 +2578,6 @@ export const MapContext = createContext<MapContextInterface>({
   digitizingLockState: DigitizingLockState.Free,
 });
 
-async function createImage(
-  width: number,
-  height: number,
-  dataURI: string
-): Promise<HTMLImageElement> {
-  return new Promise((resolve) => {
-    const image = new Image(width, height);
-    image.src = dataURI;
-    image.onload = () => {
-      resolve(image);
-    };
-  });
-}
-
 async function loadImage(
   width: number,
   height: number,
@@ -2662,9 +2694,9 @@ function sketchGeoJSONUrl(id: number, timestamp?: string | number) {
   return `${
     BASE_SERVER_ENDPOINT +
     // eslint-disable-next-line i18next/no-literal-string
-    `/sketches/${id}.geojson.json${timestamp ? `?timestamp=${timestamp}` : ""}`
+    `/sketches/${id}.geojson.json?${
+      // eslint-disable-next-line i18next/no-literal-string
+      timestamp ? `?timestamp=${timestamp}` : ""
+    }`
   }`;
-}
-function useTranslation(arg0: string): { t: any; i18n: any } {
-  throw new Error("Function not implemented.");
 }
