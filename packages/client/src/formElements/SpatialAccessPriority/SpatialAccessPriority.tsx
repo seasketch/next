@@ -218,6 +218,7 @@ const SpatialAccessPriority: FormElementComponent<
     resetFeature,
     dragTarget,
   } = useMapboxGLDraw(
+    mapContext,
     props.sketchClass!.geometryType,
     filteredFeatures,
     async (updatedFeature, hasKinks) => {

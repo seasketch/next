@@ -1826,6 +1826,11 @@ class MapContextManager extends EventEmitter {
       digitizingLockState: state,
       digitizingLockedBy: id || undefined,
     });
+    if (state === DigitizingLockState.CursorActive) {
+      this.interactivityManager?.pause();
+    } else {
+      this.interactivityManager?.resume();
+    }
   }
 
   hasLock(id: string) {

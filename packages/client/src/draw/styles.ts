@@ -15,6 +15,7 @@ const styles = [
       "fill-outline-color": "#3bb2d0",
       "fill-opacity": 0.1,
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-fill-inactive-kinks",
@@ -32,6 +33,7 @@ const styles = [
       "fill-outline-color": "#d03b3b",
       "fill-opacity": 0.2,
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-fill-active-no-kinks",
@@ -48,6 +50,7 @@ const styles = [
       "fill-outline-color": "#fbb03b",
       "fill-opacity": 0.1,
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-fill-active-kinks",
@@ -64,6 +67,7 @@ const styles = [
       "fill-outline-color": "#fb3e3b",
       "fill-opacity": 0.2,
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-midpoint",
@@ -79,6 +83,7 @@ const styles = [
       "circle-radius": 3,
       "circle-color": "#fbb03b",
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-stroke-inactive-no-kinks",
@@ -231,6 +236,7 @@ const styles = [
       "circle-radius": 5,
       "circle-color": "#fff",
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-and-line-vertex-inactive",
@@ -246,6 +252,7 @@ const styles = [
       "circle-radius": 3,
       "circle-color": "#fbb03b",
     },
+    layout: {},
   },
   {
     id: "gl-draw-ruler-tick-circle",
@@ -255,6 +262,7 @@ const styles = [
       "circle-radius": 2.5,
       "circle-color": "#fff",
     },
+    layout: {},
   },
   {
     id: "gl-draw-ruler-tick-inner-circle",
@@ -264,6 +272,7 @@ const styles = [
       "circle-radius": 1,
       "circle-color": "black",
     },
+    layout: {},
   },
   {
     id: "gl-draw-ruler-tick-label",
@@ -354,6 +363,7 @@ const styles = [
       "circle-opacity": 1,
       "circle-color": "#fff",
     },
+    layout: {},
   },
   {
     id: "gl-draw-point-inactive",
@@ -370,6 +380,7 @@ const styles = [
       "circle-radius": 3,
       "circle-color": "#3bb2d0",
     },
+    layout: {},
   },
   {
     id: "gl-draw-point-stroke-active",
@@ -384,6 +395,7 @@ const styles = [
       "circle-radius": 7,
       "circle-color": "#fff",
     },
+    layout: {},
   },
   {
     id: "gl-draw-point-active",
@@ -398,6 +410,7 @@ const styles = [
       "circle-radius": 5,
       "circle-color": "#fbb03b",
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-fill-static",
@@ -408,6 +421,7 @@ const styles = [
       "fill-outline-color": "#404040",
       "fill-opacity": 0.1,
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-stroke-static",
@@ -443,6 +457,7 @@ const styles = [
       "circle-radius": 5,
       "circle-color": "#404040",
     },
+    layout: {},
   },
   // Booting up gl-draw when sketching from my plans with this on always causes
   // an exception. Further, it can block cursor changes when hovering over a
@@ -483,6 +498,7 @@ const styles = [
       "line-width": ["-", 3, ["*", ["get", "animationFraction"], 0.8]],
       "line-dasharray": [1, 2, 1],
     },
+    layout: {},
   },
   {
     id: "gl-draw-polygon-preprocessing-fill",
@@ -497,6 +513,7 @@ const styles = [
       "fill-color": "white",
       "fill-opacity": ["*", 0.1, ["get", "animationFraction"]],
     },
+    layout: {},
   },
 ];
 

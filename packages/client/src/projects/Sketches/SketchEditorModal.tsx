@@ -161,6 +161,7 @@ export default function SketchEditorModal({
   const [updateSketch, updateSketchState] = useUpdateSketchMutation({});
 
   const draw = useMapboxGLDraw(
+    mapContext,
     sketchClass.geometryType,
     EMPTY_FEATURE_COLLECTION,
     (feature) => {
@@ -233,6 +234,7 @@ export default function SketchEditorModal({
         focusedFeature: Feature<any>,
         originalEvent: MapMouseEvent
       ) => {
+        console.log("focusedSketchClickHandler", sketch);
         manager.hideEditableSketch(sketch.id);
         draw.setCollection(
           toFeatureCollection([
@@ -275,6 +277,12 @@ export default function SketchEditorModal({
   useEffect(() => {
     if (sketch) {
       if (sketch.userGeom?.geojson) {
+        console.log("set feature", {
+          id: sketch.id.toString(),
+          type: "Feature",
+          properties: startingProperties,
+          geometry: sketch.userGeom.geojson,
+        });
         setFeature({
           id: sketch.id.toString(),
           type: "Feature",
@@ -287,6 +295,7 @@ export default function SketchEditorModal({
 
   useEffect(() => {
     if (sketch) {
+      console.log("clear selection");
       draw.actions.clearSelection();
       setName(sketch.name);
       setProperties(sketch.properties);

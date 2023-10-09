@@ -126,7 +126,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         placement={props.navigationControlsLocation || "top-right"}
       />
 
-      {
+      {props.mapSettingsPopupActions && (
         <button
           ref={mapSettingsPopupAnchor}
           style={{ zIndex: 1, padding: 5 }}
@@ -144,7 +144,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         >
           <CogIcon className="w-5 h-5" />
         </button>
-      }
+      )}
       <div
         className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
           mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"

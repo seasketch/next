@@ -92,6 +92,7 @@ export const EMPTY_FEATURE_COLLECTION = {
  * @returns
  */
 export default function useMapboxGLDraw(
+  mapContext: MapContextInterface,
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
   onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
@@ -99,9 +100,6 @@ export default function useMapboxGLDraw(
   preprocessingEndpoint?: string,
   onPreprocessedGeometry?: (geom: Geometry) => void
 ) {
-  const mapContext = useContext(MapContext);
-  const map = mapContext?.manager?.map;
-  const mapContextManager = mapContext?.manager;
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
@@ -136,7 +134,14 @@ export default function useMapboxGLDraw(
   }>({});
 
   useEffect(() => {
-    if (map && geometryType && !disabled && !handlerState.current.draw) {
+    if (
+      mapContext.manager?.map &&
+      geometryType &&
+      !disabled &&
+      !handlerState.current.draw
+    ) {
+      console.log("can initialize");
+      const map = mapContext.manager.map;
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -169,12 +174,21 @@ export default function useMapboxGLDraw(
         styles,
         userProperties: true,
       });
+      console.log(
+        "setting handlerState.current.draw",
+        draw,
+        handlerState.current
+      );
       handlerState.current.draw = draw;
       setDraw(draw);
 
       map.addControl(draw);
+      console.log("add control", draw);
+      // @ts-ignore
+      window.draw = draw;
 
       if (initialValue) {
+        console.log("set initialValue", initialValue);
         draw.set(initialValue);
         if (initialValue.features.length) {
           // TODO: only pan or fit if object is out of bounds or on mobile
@@ -196,12 +210,15 @@ export default function useMapboxGLDraw(
         }
       } else {
         // draw.changeMode(drawMode);
+        console.log("no initial value");
       }
 
+      console.log("set state");
       setState(DigitizingState.NO_SELECTION);
 
       const handlers = {
         create: function (e: any) {
+          console.log("create", e);
           const kinks = hasKinks(e.features[0]);
           if (kinks) {
             setSelfIntersects(true);
@@ -314,6 +331,8 @@ export default function useMapboxGLDraw(
         },
       };
 
+      console.log("created handlers");
+
       map.on("draw.create", handlers.create);
       map.on("draw.update", handlers.update);
       map.on("seasketch.drawing_started", handlers.drawingStarted);
@@ -323,7 +342,9 @@ export default function useMapboxGLDraw(
       // map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
+      console.log("registered");
       return () => {
+        console.log("removing mapbox-gl-draw");
         if (map && draw) {
           try {
             map.removeControl(draw);
@@ -340,12 +361,22 @@ export default function useMapboxGLDraw(
           // map.off("draw.delete", handlers.delete);
           map.off("draw.modechange", handlers.modeChange);
           map.off("draw.selectionchange", handlers.selectionChange);
-          mapContextManager?.releaseDigitizingLock(SketchDigitizingLockId);
+          mapContext.manager?.releaseDigitizingLock(SketchDigitizingLockId);
         }
       };
+    } else {
+      console.log(
+        "cant initialize",
+        mapContext.manager,
+        mapContext.manager?.map,
+        geometryType,
+        disabled,
+        handlerState.current.draw
+      );
     }
   }, [
-    map,
+    mapContext.manager,
+    mapContext.manager?.map,
     geometryType,
     disabled,
     preprocessingEndpoint,
@@ -420,6 +451,7 @@ export default function useMapboxGLDraw(
      * Puts the current feature into editing mode.
      */
     edit: () => {
+      console.log("edit");
       if (handlerState.current.draw) {
         const selected = handlerState.current.draw.getSelected();
         if (!selected.features.length) {
@@ -455,6 +487,7 @@ export default function useMapboxGLDraw(
       setState(DigitizingState.NO_SELECTION);
     },
     selectFeature: (featureId: string) => {
+      console.log("select feature");
       if (!handlerState.current.draw) {
         console.warn("Draw not yet initialized");
         return;
@@ -500,7 +533,8 @@ export default function useMapboxGLDraw(
    * @param requireProps
    */
   async function create(unfinished: boolean, isSketchWorkflow?: boolean) {
-    if (handlerState.current.draw && mapContextManager) {
+    console.log("create", handlerState.current);
+    if (handlerState.current.draw && mapContext.manager) {
       setState(DigitizingState.CREATE);
       let getNextMode: (
         featureId: string,
@@ -566,6 +600,7 @@ export default function useMapboxGLDraw(
     collection: FeatureCollection<any>,
     directSelectFirstFeature?: boolean
   ) {
+    console.log("set collection", collection);
     handlerState.current.draw?.set(collection);
     setState(DigitizingState.NO_SELECTION);
     setSelfIntersects(false);
@@ -640,7 +675,7 @@ export default function useMapboxGLDraw(
   }, [setDisabled]);
 
   useEffect(() => {
-    if (mapContextManager && draw) {
+    if (mapContext.manager && draw) {
       // disable measurement tools unless state is
       // * CREATE
       // * NO_SELECTION
@@ -656,17 +691,8 @@ export default function useMapboxGLDraw(
         mapContext.digitizingLockState !== DigitizingLockState.Free &&
         mapContext.digitizingLockedBy === SketchDigitizingLockId;
 
-      console.log({
-        state: DigitizingState[state],
-        needsLock,
-        hasLock,
-        digitizingLockState:
-          DigitizingLockState[mapContext.digitizingLockState],
-        digitizingLockedBy: mapContext.digitizingLockedBy,
-      });
       if (needsLock && !hasLock) {
-        console.log("request lock");
-        mapContextManager.requestDigitizingLock(
+        mapContext.manager?.requestDigitizingLock(
           SketchDigitizingLockId,
           DigitizingLockState.CursorActive,
           async (requester, state) => {
@@ -675,11 +701,10 @@ export default function useMapboxGLDraw(
           }
         );
       } else if (!needsLock && hasLock) {
-        console.log("release lock");
-        mapContextManager.releaseDigitizingLock(SketchDigitizingLockId);
+        mapContext.manager?.releaseDigitizingLock(SketchDigitizingLockId);
       }
     }
-  }, [mapContextManager, draw, state, mapContext]);
+  }, [mapContext.manager, draw, state, mapContext]);
 
   // useEffect(() => {
   //   console.log(DigitizingState[state]);

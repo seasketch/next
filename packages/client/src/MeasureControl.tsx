@@ -70,13 +70,13 @@ export const measureLayers: mapboxgl.AnyLayer[] = [
     paint: {
       "circle-radius": [
         "case",
-        ["boolean", ["feature-state", "halo"], true],
+        ["boolean", ["feature-state", "halo"], false],
         9,
         1,
       ],
       "circle-color": [
         "case",
-        ["boolean", ["feature-state", "halo"], true],
+        ["boolean", ["feature-state", "halo"], false],
         "rgba(255, 255, 255, 0.4)",
         "rgba(255, 255, 255, 0)",
       ],
@@ -241,17 +241,16 @@ class MeasureControl extends EventEmitter {
 
     const hasLock = this.mapContextManager.hasLock(MeasureControlLockId);
     if (state !== "disabled" && !hasLock) {
-      console.trace("requesting lock", state);
       const lock = await this.mapContextManager.requestDigitizingLock(
         MeasureControlLockId,
         state === "dragging" || state === "drawing"
           ? DigitizingLockState.CursorActive
           : DigitizingLockState.Editing,
         async (requester) => {
-          console.log("lock requested", requester, state);
           if (this.state === "editing") {
-            console.log("setting state to paused");
             this.setState("paused");
+          } else if (this.state === "drawing" || this.onMouseDownOnPoint) {
+            return false;
           } else {
             this.disable();
           }
@@ -259,7 +258,6 @@ class MeasureControl extends EventEmitter {
         }
       );
       if (!lock) {
-        console.log("lock request failed");
         return;
       }
     }
@@ -335,10 +333,12 @@ class MeasureControl extends EventEmitter {
     setTimeout(() => {
       this.map.doubleClickZoom.enable();
     }, 200);
+    if (this.points.features.length === 1) {
+      this.reset();
+    }
   };
 
   onMouseOverPoint = async (e: any) => {
-    console.log("onMouseOverPoint", this.state, e.features.length);
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
@@ -358,8 +358,8 @@ class MeasureControl extends EventEmitter {
         }
       }
     } else if (this.state === "editing") {
+      this.cursorOverRuler = false;
       if (e.features.length > 0) {
-        console.log("disable dragPan");
         // Lock before disabling dragpan so that mapbox-gl-draw isn't active and re-enabling dragpan
         const lock = await this.mapContextManager.requestDigitizingLock(
           MeasureControlLockId,
@@ -390,7 +390,7 @@ class MeasureControl extends EventEmitter {
             }
           );
         } else {
-          console.log("lock request denied");
+          // console.log("lock request denied");
         }
       }
     }
@@ -467,6 +467,7 @@ class MeasureControl extends EventEmitter {
     this.map.getCanvas().style.setProperty("cursor", type);
   }
 
+  private cursorOverRuler = false;
   onMouseOutPoint = (e: any) => {
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
@@ -481,7 +482,6 @@ class MeasureControl extends EventEmitter {
         this.clearHalos();
       }
     } else if (this.state === "editing") {
-      console.log("enable drag path from mouseout");
       this.mapContextManager.releaseDigitizingLock(MeasureControlLockId);
       this.map.dragPan.enable();
       this.setMouseCursor("default");
@@ -491,6 +491,7 @@ class MeasureControl extends EventEmitter {
     } else if (this.state === "dragging") {
       // this.clearHalos();
     }
+    this.cursorOverRuler = false;
   };
 
   reset = () => {
@@ -514,12 +515,15 @@ class MeasureControl extends EventEmitter {
     }
   }
 
+  private onMouseDownOnPoint = false;
+
   onMouseDownPoint = (e: any) => {
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
-    console.log("on mouse down point", this.state, this.draggedPointIndex);
+    this.onMouseDownOnPoint = true;
     if (this.state === "editing" && this.draggedPointIndex > -1) {
+      this.map.dragPan.disable();
       this.setState("dragging");
     }
   };
@@ -528,6 +532,7 @@ class MeasureControl extends EventEmitter {
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
+    this.onMouseDownOnPoint = false;
     if (this.state === "dragging") {
       this.setState("editing");
       this.draggedPointIndex = -1;
@@ -535,7 +540,6 @@ class MeasureControl extends EventEmitter {
   };
 
   handleDragPoint = (e: any) => {
-    console.log("handle drag point", this.draggedPointIndex);
     if (this.draggedPointIndex === -1) {
       throw new Error("draggedPointIndex is -1");
     }
@@ -590,16 +594,13 @@ class MeasureControl extends EventEmitter {
   };
 
   onMouseMove = (e: any) => {
-    console.log("on mouse move", this.state);
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
     if (this.state === "drawing") {
-      console.log("is drawing, handle cursor move");
       // update cursor
       this.handleCursorMove(e);
     } else if (this.state === "dragging") {
-      console.log("is dragging");
       this.handleDragPoint(e);
     }
   };
@@ -845,7 +846,7 @@ export function MeasurementToolsOverlay({
               length === 0 &&
               t("Click on the map to start measuring.")}
             {state === "drawing" &&
-              length &&
+              Boolean(length) &&
               length > 0 &&
               t("Double-click to finish measuring or click to draw a path.")}
             {(state === "editing" || state === "dragging") &&
