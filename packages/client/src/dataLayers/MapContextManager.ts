@@ -1772,7 +1772,8 @@ class MapContextManager extends EventEmitter {
     } else {
       // first, check if you can release the lock
       const released =
-        this.onLockReleaseRequested === null
+        this.onLockReleaseRequested === null ||
+        id === this.internalState.digitizingLockedBy
           ? true
           : await this.onLockReleaseRequested(
               id,

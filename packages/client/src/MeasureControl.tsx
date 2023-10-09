@@ -241,6 +241,7 @@ class MeasureControl extends EventEmitter {
 
     const hasLock = this.mapContextManager.hasLock(MeasureControlLockId);
     if (state !== "disabled" && !hasLock) {
+      console.trace("requesting lock", state);
       const lock = await this.mapContextManager.requestDigitizingLock(
         MeasureControlLockId,
         state === "dragging" || state === "drawing"
@@ -249,6 +250,7 @@ class MeasureControl extends EventEmitter {
         async (requester) => {
           console.log("lock requested", requester, state);
           if (this.state === "editing") {
+            console.log("setting state to paused");
             this.setState("paused");
           } else {
             this.disable();
@@ -257,6 +259,7 @@ class MeasureControl extends EventEmitter {
         }
       );
       if (!lock) {
+        console.log("lock request failed");
         return;
       }
     }
@@ -386,6 +389,8 @@ class MeasureControl extends EventEmitter {
               halo: true,
             }
           );
+        } else {
+          console.log("lock request denied");
         }
       }
     }
@@ -513,7 +518,7 @@ class MeasureControl extends EventEmitter {
     if (this.isDestroyed) {
       throw new Error("MeasureControl is destroyed");
     }
-    console.log("on mouse down point");
+    console.log("on mouse down point", this.state, this.draggedPointIndex);
     if (this.state === "editing" && this.draggedPointIndex > -1) {
       this.setState("dragging");
     }
@@ -590,9 +595,11 @@ class MeasureControl extends EventEmitter {
       throw new Error("MeasureControl is destroyed");
     }
     if (this.state === "drawing") {
+      console.log("is drawing, handle cursor move");
       // update cursor
       this.handleCursorMove(e);
     } else if (this.state === "dragging") {
+      console.log("is dragging");
       this.handleDragPoint(e);
     }
   };
