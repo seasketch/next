@@ -72,7 +72,7 @@ export function useCreate<Mutation, Variables>(
                   const newRef = cache.writeFragment(
                     getData(data, mutationName, subjectName, kind, selectionSet)
                   );
-                  return [...existingRefs, newRef];
+                  return [...(existingRefs as Reference[]), newRef];
                 },
               },
             });
