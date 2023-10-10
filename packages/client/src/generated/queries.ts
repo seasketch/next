@@ -5361,30 +5361,6 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
-/** All input for the `getParentCollectionId` mutation. */
-export type GetParentCollectionIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  parentId?: Maybe<Scalars['Int']>;
-  type?: Maybe<SketchChildType>;
-};
-
-/** The output of our `getParentCollectionId` mutation. */
-export type GetParentCollectionIdPayload = {
-  __typename?: 'GetParentCollectionIdPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  integer?: Maybe<Scalars['Int']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** All input for the `grantAdminAccess` mutation. */
 export type GrantAdminAccessInput = {
   /**
@@ -6305,8 +6281,6 @@ export type Mutation = {
    * project has a matching md5 hash no new Sprite will be created.
    */
   getOrCreateSprite?: Maybe<Sprite>;
-  /** omit */
-  getParentCollectionId?: Maybe<GetParentCollectionIdPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   /**
@@ -7317,12 +7291,6 @@ export type MutationGetOrCreateSpriteArgs = {
   smallestImage: Scalars['Upload'];
   type?: Maybe<Scalars['String']>;
   width: Scalars['Int'];
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetParentCollectionIdArgs = {
-  input: GetParentCollectionIdInput;
 };
 
 

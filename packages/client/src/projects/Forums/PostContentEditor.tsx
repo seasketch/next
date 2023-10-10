@@ -284,6 +284,7 @@ export default function PostContentEditor({
           if (
             data.errors &&
             typeof data.errors === "string" &&
+            // @ts-ignore
             /Rate limit/.test(data.errors)
           ) {
             throw new Error(
@@ -336,6 +337,7 @@ export default function PostContentEditor({
           return createReactNodeView({
             node,
             view,
+            // @ts-ignore
             getPos,
             // @ts-ignore
             decorations,

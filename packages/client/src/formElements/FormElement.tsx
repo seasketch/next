@@ -41,6 +41,7 @@ import set from "lodash.setwith";
 import deepCopy from "lodash.clonedeep";
 import { components } from ".";
 import SpatialAccessPriority from "./SpatialAccessPriority/SpatialAccessPriority";
+import { MeasureControlContextProvider } from "../MeasureControl";
 
 require("./prosemirror-body.css");
 require("../projects/Sketches/sketching.css");
@@ -248,7 +249,9 @@ export const SurveyMapPortal: FunctionComponent<{
   if (portalContext) {
     return createPortal(
       <MapContext.Provider value={props.mapContext}>
-        {props.children}
+        <MeasureControlContextProvider>
+          {props.children}
+        </MeasureControlContextProvider>
       </MapContext.Provider>,
       portalContext
     );

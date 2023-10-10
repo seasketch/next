@@ -6,7 +6,7 @@ import useMapEssentials from "../admin/surveys/useMapEssentials";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import MapboxMap from "../components/MapboxMap";
 import MapPicker from "../components/MapPicker";
-import { ResetCamera, ShowScaleBar } from "../draw/MapSettingsPopup";
+import { ResetCamera, ShowScaleBar, Measure } from "../draw/MapSettingsPopup";
 import { SurveyMapPortal } from "../formElements/FormElement";
 import { useUpdateFormElementMapCameraMutation } from "../generated/graphql";
 import useWindowSize from "../useWindowSize";

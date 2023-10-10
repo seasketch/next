@@ -853,11 +853,11 @@ export default function ResponseGrid(props: Props) {
         ) : (
           <CellEditorContext.Provider value={{ editing: editingCell }}>
             <AutoSizer disableWidth={true}>
-              {({ height }) => (
+              {(props: any) => (
                 <div
                   {...getTableProps()}
                   className="border-collapse border-2 border-t-0 inline-block"
-                  style={{ height }}
+                  style={{ height: props.height }}
                 >
                   <div className="bg-gray-50">
                     {
@@ -909,7 +909,7 @@ export default function ResponseGrid(props: Props) {
                     ref={scrollContainer}
                   >
                     <FixedSizeList
-                      height={height - 38}
+                      height={props.height - 38}
                       itemCount={rows.length}
                       itemSize={ITEM_SIZE}
                       width={totalColumnsWidth}

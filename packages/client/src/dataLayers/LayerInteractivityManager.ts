@@ -203,6 +203,23 @@ export default class LayerInteractivityManager extends EventEmitter {
     map.on("moveend", this.onMoveEnd);
   }
 
+  private paused = false;
+
+  /**
+   * Pause interactivity manager so that it doesn't interfere with other map
+   * interactions, such as when using the measure tool.
+   */
+  pause() {
+    this.paused = true;
+  }
+
+  /**
+   * Resume interactivity manager after pausing it.
+   */
+  resume() {
+    this.paused = false;
+  }
+
   private moving = false;
   private lastMouseEvent: MapMouseEvent | undefined = undefined;
 
@@ -238,6 +255,9 @@ export default class LayerInteractivityManager extends EventEmitter {
   }
 
   private onMoveStart = () => {
+    if (this.paused) {
+      return;
+    }
     this.setState((prev) => ({
       ...prev,
       bannerMessages: [],
@@ -249,6 +269,9 @@ export default class LayerInteractivityManager extends EventEmitter {
   };
 
   private onMoveEnd = () => {
+    if (this.paused) {
+      return;
+    }
     this.moving = false;
     if (this.lastMouseEvent) {
       this.mouseMoveListener(this.lastMouseEvent);
@@ -256,6 +279,9 @@ export default class LayerInteractivityManager extends EventEmitter {
   };
 
   private onMouseOut = () => {
+    if (this.paused) {
+      return;
+    }
     setTimeout(() => {
       delete this.previousInteractionTarget;
       this.setState((prev) => ({
@@ -268,6 +294,9 @@ export default class LayerInteractivityManager extends EventEmitter {
   };
 
   private onMouseClick = async (e: MapMouseEvent) => {
+    if (this.paused) {
+      return;
+    }
     if (this.popupAbortController) {
       this.popupAbortController.abort();
       delete this.popupAbortController;
@@ -411,6 +440,9 @@ export default class LayerInteractivityManager extends EventEmitter {
   // }
 
   private debouncedMouseMoveListener = (e: MapMouseEvent, backoff = 4) => {
+    if (this.paused) {
+      return;
+    }
     if (this.moving) {
       this.lastMouseEvent = e;
       return;
