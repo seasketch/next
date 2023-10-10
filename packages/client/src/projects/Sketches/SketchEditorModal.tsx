@@ -161,7 +161,7 @@ export default function SketchEditorModal({
   const [updateSketch, updateSketchState] = useUpdateSketchMutation({});
 
   const draw = useMapboxGLDraw(
-    mapContext.manager?.map,
+    mapContext,
     sketchClass.geometryType,
     EMPTY_FEATURE_COLLECTION,
     (feature) => {

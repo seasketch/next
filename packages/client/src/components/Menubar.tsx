@@ -96,7 +96,7 @@ export function MenuBarSubmenu({
           <ChevronRightIcon />
         </div>
       </Menubar.SubTrigger>
-      <Menubar.Portal className="z-50">
+      <Menubar.Portal>
         <Menubar.SubContent
           style={{ backdropFilter: "blur(3px)", minWidth: 180 }}
           className="z-50 bg-gray-100 bg-opacity-80 rounded shadow-md p-1 px-2 border border-black border-opacity-10"

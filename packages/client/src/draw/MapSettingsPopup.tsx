@@ -17,6 +17,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Icons } from "../components/SketchGeometryTypeSelector";
 import Switch from "../components/Switch";
 import MapContextManager, {
+  DigitizingLockState,
   MapContext,
   MapContextInterface,
 } from "../dataLayers/MapContextManager";
@@ -26,6 +27,7 @@ import {
   SketchGeometryType,
 } from "../generated/graphql";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
+import { MeasureControlContext, MeasureControlLockId } from "../MeasureControl";
 
 type PopupPosition = "top" | "bottom";
 
@@ -108,7 +110,7 @@ const MapSettingsPopup: FunctionComponent<{
       bottom = undefined;
     }
     return [left, top, right, bottom];
-  }, [anchor]);
+  }, [anchor, anchor?.getBoundingClientRect().top]);
 
   position = position || "top";
 
@@ -146,6 +148,7 @@ const MapSettingsPopup: FunctionComponent<{
             <div
               className="overflow-y-auto h-full p-2 pt-3 sm:pt-2"
               ref={scrollable}
+              onClick={onRequestClose}
               onScroll={handleScroll}
             >
               {children}
@@ -182,7 +185,8 @@ const MapSettingsPopup: FunctionComponent<{
 export default MapSettingsPopup;
 
 const Item: FunctionComponent<{
-  onClick: (e: React.MouseEvent<any, MouseEvent>) => void;
+  /** Return true to close the modal after clicking an item */
+  onClick: (e: React.MouseEvent<any, MouseEvent>) => any;
   title: string;
   Icon?: FunctionComponent<{ className?: string }>;
   disabled?: boolean;
@@ -203,9 +207,12 @@ const Item: FunctionComponent<{
           e.preventDefault();
           e.stopPropagation();
         } else {
-          onClick(e);
-          e.preventDefault();
-          e.stopPropagation();
+          const close = onClick(e);
+          if (close === true) {
+          } else {
+            e.preventDefault();
+            e.stopPropagation();
+          }
         }
       }}
     >
@@ -276,6 +283,23 @@ export function ResetView(
   );
 }
 
+export function ResetToProjectBounds(
+  props: MapSettingsActionItem<{ mapContextManager?: MapContextManager }>
+) {
+  const { t } = useTranslation("surveys");
+  return (
+    <Item
+      {...props}
+      Icon={ZoomOutIcon}
+      onClick={() => {
+        props.mapContextManager?.resetToProjectBounds();
+        return true;
+      }}
+      title={t("Reset view")}
+    />
+  );
+}
+
 export function ResetCamera(
   props: MapSettingsActionItem<{
     mapContextManager: MapContextManager;
@@ -291,6 +315,48 @@ export function ResetCamera(
         props.mapContextManager.setCamera(props.camera);
       }}
       title={t("Reset view")}
+    />
+  );
+}
+
+export function Measure(props: MapSettingsActionItem<{}>) {
+  const { t } = useTranslation("surveys");
+  const mapContext = useContext(MapContext);
+  const measureContext = useContext(MeasureControlContext);
+  return (
+    <Item
+      {...props}
+      disabled={
+        !measureContext ||
+        (mapContext?.digitizingLockState !== DigitizingLockState.Free &&
+          mapContext?.digitizingLockedBy !== MeasureControlLockId)
+      }
+      Icon={({ className }: { className?: string }) => (
+        <svg
+          viewBox="0 0 640 512"
+          height="48"
+          width="48"
+          focusable="false"
+          role="img"
+          fill="currentColor"
+          xmlns="http://www.w3.org/2000/svg"
+          className={className}
+        >
+          <path
+            fill="currentColor"
+            d="M635.7 167.2 556.1 31.7c-8.8-15-28.3-20.1-43.5-11.5l-69 39.1L503.3 161c2.2 3.8.9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7.9-10.9-2.9L416 75l-55.2 31.3 27.9 47.4c2.2 3.8.9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7.9-10.9-2.9L333.2 122 278 153.3 337.8 255c2.2 3.7.9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7.9-10.9-2.9l-59.7-101.7-55.2 31.3 27.9 47.4c2.2 3.8.9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7.9-10.9-2.9l-27.9-47.5-55.2 31.3 59.7 101.7c2.2 3.7.9 8.5-2.9 10.7l-13.8 7.8c-3.8 2.2-8.7.9-10.9-2.9L84.9 262.9l-69 39.1C.7 310.7-4.6 329.8 4.2 344.8l79.6 135.6c8.8 15 28.3 20.1 43.5 11.5L624.1 210c15.2-8.6 20.4-27.8 11.6-42.8z"
+          ></path>
+        </svg>
+      )}
+      onClick={() => {
+        if (measureContext.state === "disabled") {
+          measureContext.reset();
+        } else {
+          measureContext.close();
+        }
+        return true;
+      }}
+      title={t("Measure")}
     />
   );
 }

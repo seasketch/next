@@ -18,6 +18,7 @@ function detectMobileTouchDevice() {
       hasTouchScreen = true; // deprecated, but good fallback
     } else {
       // Only as a last resort, fall back to user agent sniffing
+      // @ts-ignore
       var UA = navigator.userAgent;
       hasTouchScreen =
         /\b(BlackBerry|webOS|iPhone|IEMobile)\b/i.test(UA) ||

@@ -1,5 +1,5 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { LngLatLike, Map } from "mapbox-gl";
+import { LngLatLike } from "mapbox-gl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
@@ -15,6 +15,10 @@ import styles from "./styles";
 import UnfinishedFeatureSelect from "./UnfinishedFeatureSelect";
 import UnfinishedSimpleSelect from "./UnfinishedSimpleSelect";
 import Preprocessing from "./Preprocessing";
+import {
+  DigitizingLockState,
+  MapContextInterface,
+} from "../dataLayers/MapContextManager";
 
 function hasKinks(feature?: Feature<any>) {
   if (feature && feature.geometry.type === "Polygon") {
@@ -23,6 +27,8 @@ function hasKinks(feature?: Feature<any>) {
   return false;
 }
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
+
+export const SketchDigitizingLockId = "Sketching";
 
 export enum DigitizingState {
   /** User has not yet started drawing */
@@ -61,6 +67,7 @@ export enum DigitizingState {
    * Preprocessing error can be accessed from returned `preprocessingError`
    */
   PREPROCESSING_ERROR,
+  PAUSED_FOR_MEASUREMENT,
 }
 
 export type DigitizingDragTarget = {
@@ -83,7 +90,7 @@ export const EMPTY_FEATURE_COLLECTION = {
  * @returns
  */
 export default function useMapboxGLDraw(
-  map: Map | null | undefined,
+  mapContext: MapContextInterface,
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
   onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
@@ -125,7 +132,13 @@ export default function useMapboxGLDraw(
   }>({});
 
   useEffect(() => {
-    if (map && geometryType && !disabled && !handlerState.current.draw) {
+    if (
+      mapContext.manager?.map &&
+      geometryType &&
+      !disabled &&
+      !handlerState.current.draw
+    ) {
+      const map = mapContext.manager.map;
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -162,6 +175,8 @@ export default function useMapboxGLDraw(
       setDraw(draw);
 
       map.addControl(draw);
+      // @ts-ignore
+      window.draw = draw;
 
       if (initialValue) {
         draw.set(initialValue);
@@ -185,6 +200,7 @@ export default function useMapboxGLDraw(
         }
       } else {
         // draw.changeMode(drawMode);
+        // console.log("no initial value");
       }
 
       setState(DigitizingState.NO_SELECTION);
@@ -284,12 +300,6 @@ export default function useMapboxGLDraw(
             setSelection(null);
           } else {
             setSelection({ ...e.features[0] });
-            if (
-              geometryType === SketchGeometryType.Point &&
-              handlerState.current.state === DigitizingState.NO_SELECTION
-            ) {
-              setState(DigitizingState.EDITING);
-            }
           }
         },
         dragTarget: function (e: any) {
@@ -335,11 +345,14 @@ export default function useMapboxGLDraw(
           // map.off("draw.delete", handlers.delete);
           map.off("draw.modechange", handlers.modeChange);
           map.off("draw.selectionchange", handlers.selectionChange);
+          mapContext.manager?.releaseDigitizingLock(SketchDigitizingLockId);
         }
       };
+    } else {
     }
   }, [
-    map,
+    mapContext.manager,
+    mapContext.manager?.map,
     geometryType,
     disabled,
     preprocessingEndpoint,
@@ -493,8 +506,8 @@ export default function useMapboxGLDraw(
    * be active. Set property validation state using actions.setPropsValid
    * @param requireProps
    */
-  function create(unfinished: boolean, isSketchWorkflow?: boolean) {
-    if (handlerState.current.draw) {
+  async function create(unfinished: boolean, isSketchWorkflow?: boolean) {
+    if (handlerState.current.draw && mapContext.manager) {
       setState(DigitizingState.CREATE);
       let getNextMode: (
         featureId: string,
@@ -632,6 +645,54 @@ export default function useMapboxGLDraw(
   const disable = useCallback(() => {
     setDisabled(true);
   }, [setDisabled]);
+
+  useEffect(() => {
+    if (mapContext.manager && draw) {
+      // disable measurement tools unless state is
+      // * CREATE
+      // * NO_SELECTION
+      // * UNFINISHED
+      // * or PAUSED_FOR_MEASUREMENT
+
+      const needsLock = ![
+        DigitizingState.NO_SELECTION,
+        DigitizingState.PAUSED_FOR_MEASUREMENT,
+        DigitizingState.UNFINISHED,
+      ].includes(state);
+      const hasLock =
+        mapContext.digitizingLockState !== DigitizingLockState.Free &&
+        mapContext.digitizingLockedBy === SketchDigitizingLockId;
+
+      if (needsLock && !hasLock) {
+        mapContext.manager?.requestDigitizingLock(
+          SketchDigitizingLockId,
+          DigitizingLockState.CursorActive,
+          async (requester, state) => {
+            // TODO: base response on current state
+            return false;
+          }
+        );
+      } else if (!needsLock && hasLock) {
+        mapContext.manager?.releaseDigitizingLock(SketchDigitizingLockId);
+      }
+    }
+  }, [mapContext.manager, draw, state, mapContext]);
+
+  // useEffect(() => {
+  //   console.log(DigitizingState[state]);
+  //   if (
+  //     state === DigitizingState.CREATE ||
+  //     state === DigitizingState.NO_SELECTION ||
+  //     state === DigitizingState.UNFINISHED ||
+  //     state === DigitizingState.PAUSED_FOR_MEASUREMENT
+  //   ) {
+  //     console.log("call enableMeasurementTools");
+  //     mapContextManager?.resumeMeasurementTools();
+  //   } else {
+  //     console.log("call disableMeasurementTools");
+  //     mapContextManager?.pauseMeasurementTools();
+  //   }
+  // }, [state, mapContextManager]);
 
   return {
     digitizingState: state,

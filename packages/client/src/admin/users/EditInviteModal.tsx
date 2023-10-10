@@ -55,15 +55,14 @@ export default function EditInviteModal({
       }
     },
   });
-  const [state, setState] =
-    useState<{
-      fullname: string;
-      email: string;
-      groups: { id: number; name: string }[];
-      makeAdmin: boolean;
-      error?: string;
-      hasChanged: boolean;
-    }>();
+  const [state, setState] = useState<{
+    fullname: string;
+    email: string;
+    groups: { id: number; name: string }[];
+    makeAdmin: boolean;
+    error?: string;
+    hasChanged: boolean;
+  }>();
   const [expandedEmails, setExpandedEmails] = useState<{
     [id: number]: boolean;
   }>({});
@@ -123,7 +122,7 @@ export default function EditInviteModal({
                   }
                 `,
               });
-              return [...existingEmails, newEmailRef];
+              return [...(existingEmails as InviteEmail[]), newEmailRef];
             },
             status: () => "QUEUED",
           },

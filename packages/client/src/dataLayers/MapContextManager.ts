@@ -53,6 +53,17 @@ import {
   compileLegendFromGLStyleLayers2,
 } from "./legends/compileLegend";
 import { LegendItem } from "./Legend";
+import { EventEmitter } from "eventemitter3";
+import MeasureControl, {
+  MeasureControlState,
+  measureLayers,
+} from "../MeasureControl";
+import cloneDeep from "lodash.clonedeep";
+
+export const MeasureEventTypes = {
+  Started: "measure_started",
+  Stopped: "measure_stopped",
+};
 
 const rejectAfter = (duration: number) =>
   new Promise((resolve, reject) => {
@@ -83,6 +94,39 @@ const LocalSketchGeometryCache = new LRU<
   max: 10,
 });
 
+/**
+ * Multiple "digitizing" tools active at once would compete for the same cursor
+ * events and conflict with each other. This enum is used to track the state of
+ * the digitizing tools and prevent conflicts.
+ */
+export enum DigitizingLockState {
+  /**
+   * No digitizing tools are active. Popups and other interactivity is enabled.
+   */
+  Free,
+  /**
+   * A digitizing tool is active and has locked the map. Popups and other
+   * interactivity is disabled. This is the most active state, with the
+   * mousemove events directly moving a "cursor" vertex until it is dropped.
+   */
+  CursorActive,
+  /**
+   * A digitizing tool is partially active, with a geometry ready to be edited
+   * when the user drags a vertex. Popups and other interactivity may be
+   * enabled, though this would require careful coordination with the digitizing
+   * tool.
+   */
+  Editing,
+}
+
+export const DigitizingLockStateChangeEventType =
+  "DigitizingLockStateChangeEvent";
+
+export type DigitizingLockStateChangeEventPayload = {
+  digitizingLockState: DigitizingLockState;
+  digitizingLockedBy: string | undefined;
+};
+
 // TODO: we're not using project settings for this yet
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
@@ -95,8 +139,7 @@ export interface LayerState {
 export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
 }
-
-class MapContextManager {
+class MapContextManager extends EventEmitter {
   map?: Map;
   interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
@@ -153,6 +196,7 @@ class MapContextManager {
     cacheSize?: number,
     initialBounds?: LngLatBoundsLike
   ) {
+    super();
     cacheSize = cacheSize || bytes("50mb");
     this._setState = setState;
     // @ts-ignore
@@ -329,6 +373,7 @@ class MapContextManager {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
     }
     this.map = new Map(mapOptions);
+
     this.addSprites(sprites, this.map);
 
     this.interactivityManager = new LayerInteractivityManager(
@@ -849,6 +894,15 @@ class MapContextManager {
 
   private sketchClassGLStyles: { [sketchClassId: number]: AnyLayer[] } = {};
 
+  getSketchClassGLStyles(sketchClassId: number): AnyLayer[] {
+    // Clone the style layers. Mapbox GL JS will freeze the objects after adding
+    // to the map, which will prevent us from modifying the style later and
+    // throw exceptions
+    return cloneDeep(
+      this.sketchClassGLStyles[sketchClassId] || this.defaultSketchLayers
+    );
+  }
+
   setSketchClassGlStyles(styles: { [sketchClassId: number]: AnyLayer[] }) {
     this.sketchClassGLStyles = styles;
     this.debouncedUpdateStyle();
@@ -1274,6 +1328,14 @@ class MapContextManager {
     return { style: baseStyle, sprites };
   }
 
+  resetToProjectBounds = () => {
+    if (this.initialBounds && this.map) {
+      this.map.fitBounds(this.initialBounds as LngLatBoundsLike, {
+        animate: true,
+      });
+    }
+  };
+
   computeSketchLayers() {
     const allLayers: AnyLayer[] = [];
     const sources: Sources = {};
@@ -1381,9 +1443,7 @@ class MapContextManager {
     const layers = this.assignSketchLayersToSketch(
       id,
       source,
-      sketchClassId && this.sketchClassGLStyles[sketchClassId]
-        ? this.sketchClassGLStyles[sketchClassId]
-        : this.defaultSketchLayers
+      this.getSketchClassGLStyles(sketchClassId || 99999)
     );
     if (
       (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||
@@ -1691,6 +1751,165 @@ class MapContextManager {
     this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
+
+  private onLockReleaseRequested:
+    | ((requester: string, state: DigitizingLockState) => Promise<Boolean>)
+    | null = null;
+
+  /**
+   * Used to manage conflicts between different digitizing tools. Tools can
+   * request a DigitizingLockState change. False is returned if the requested
+   * state is not available. Tools should provide a callback function that can
+   * release the lock if requested by other tools, cleaning up their internal
+   * state before doing so.
+   *
+   * @param id Unique identifier for the tool requesting the lock, such as "Sketching" or "MeasureControl"
+   * @param state CursorActive or Editing
+   * @param onReleaseRequested Callback function that can release the lock
+   */
+  async requestDigitizingLock(
+    id: string,
+    state: DigitizingLockState.CursorActive | DigitizingLockState.Editing,
+    onReleaseRequested: (
+      requester: string,
+      state: DigitizingLockState
+    ) => Promise<Boolean>
+  ) {
+    if (this.internalState.digitizingLockState === DigitizingLockState.Free) {
+      // can go ahead and activate tool
+      this.setDigitizingLockState(state, id);
+      this.onLockReleaseRequested = onReleaseRequested;
+      return true;
+    } else {
+      // first, check if you can release the lock
+      const released =
+        this.onLockReleaseRequested === null ||
+        id === this.internalState.digitizingLockedBy
+          ? true
+          : await this.onLockReleaseRequested(
+              id,
+              this.internalState.digitizingLockState
+            );
+      if (released) {
+        this.onLockReleaseRequested = onReleaseRequested;
+        this.setDigitizingLockState(state, id);
+        // activate tool
+        return true;
+      } else {
+        // notify tool that it can't be activated
+        return false;
+      }
+    }
+  }
+
+  /**
+   * Used to release a digitizing lock. If the lock is not held by the tool
+   * requesting the release, nothing happens.
+   * @param id Unique identifier for the tool requesting the release
+   */
+  releaseDigitizingLock(id: string) {
+    if (this.internalState.digitizingLockState !== DigitizingLockState.Free) {
+      if (this.internalState.digitizingLockedBy === id) {
+        this.setDigitizingLockState(DigitizingLockState.Free);
+        this.onLockReleaseRequested = null;
+      } else {
+        // TODO: Should I throw an error or do nothing here?
+      }
+    }
+  }
+
+  /**
+   * Used to release a digitizing lock. If the lock is not held by the tool
+   * requesting the release, nothing happens.
+   * @param id Unique identifier for the tool requesting the release
+   * @param state State to set the lock to
+   */
+  private setDigitizingLockState(state: DigitizingLockState, id?: string) {
+    if (!id && state !== DigitizingLockState.Free) {
+      throw new Error("Must provide id when setting non-free state");
+    }
+    this.setState((prev) => ({
+      ...prev,
+      digitizingLockState: state,
+      digitizingLockedBy: id || undefined,
+    }));
+    this.emit(DigitizingLockStateChangeEventType, {
+      digitizingLockState: state,
+      digitizingLockedBy: id || undefined,
+    });
+    if (state === DigitizingLockState.CursorActive) {
+      this.interactivityManager?.pause();
+    } else {
+      this.interactivityManager?.resume();
+    }
+  }
+
+  hasLock(id: string) {
+    return (
+      this.internalState.digitizingLockState !== DigitizingLockState.Free &&
+      this.internalState.digitizingLockedBy === id
+    );
+  }
+
+  // measure = () => {
+  //   if (this.interactivityManager) {
+  //     this.interactivityManager.pause();
+  //   }
+  //   this.emit(MeasureEventTypes.Started);
+  //   if (!this.map) {
+  //     throw new Error("Map not initialized");
+  //   }
+  //   if (this.MeasureControl) {
+  //     this.MeasureControl.destroy();
+  //   }
+  //   this.MeasureControl = new MeasureControl(this.map);
+  //   this.MeasureControl.on("update", (measureControlState: any) => {
+  //     this.setState((prev) => {
+  //       return {
+  //         ...prev,
+  //         measureControlState,
+  //       };
+  //     });
+  //   });
+  //   this.MeasureControl.start();
+  // };
+
+  // resetMeasurement = () => {
+  //   if (this.MeasureControl) {
+  //     this.MeasureControl.reset();
+  //   }
+  // };
+
+  // cancelMeasurement = () => {
+  //   this.MeasureControl?.destroy();
+  //   this.MeasureControl = undefined;
+  //   this.emit(MeasureEventTypes.Stopped);
+  //   this.setState((prev) => ({
+  //     ...prev,
+  //     measureControlState: undefined,
+  //   }));
+  //   if (this.interactivityManager) {
+  //     this.interactivityManager.resume();
+  //   }
+  // };
+
+  // pauseMeasurementTools = () => {
+  //   if (this.MeasureControl) {
+  //     this.MeasureControl.setPaused(true);
+  //   }
+  //   if (this.interactivityManager) {
+  //     this.interactivityManager.resume();
+  //   }
+  // };
+
+  // resumeMeasurementTools = () => {
+  //   if (this.MeasureControl) {
+  //     if (this.interactivityManager) {
+  //       this.interactivityManager.pause();
+  //     }
+  //     this.MeasureControl.setPaused(false);
+  //   }
+  // };
 
   private spritesById: { [id: string]: SpriteDetailsFragment } = {};
 
@@ -2337,6 +2556,9 @@ export interface MapContextInterface {
   legends: {
     [layerId: string]: LegendItem | null;
   };
+  measureControlState?: MeasureControlState;
+  digitizingLockState: DigitizingLockState;
+  digitizingLockedBy?: string;
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */
@@ -2372,6 +2594,7 @@ export function useMapContext(options?: MapContextOptions) {
     styleHash: "",
     containerPortal: containerPortal || null,
     legends: {},
+    digitizingLockState: DigitizingLockState.Free,
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -2459,6 +2682,7 @@ export const MapContext = createContext<MapContextInterface>({
       styleHash: "",
       containerPortal: null,
       legends: {},
+      digitizingLockState: DigitizingLockState.Free,
     },
     (state) => {}
   ),
@@ -2469,6 +2693,7 @@ export const MapContext = createContext<MapContextInterface>({
   basemapOptionalLayerStates: {},
   containerPortal: null,
   legends: {},
+  digitizingLockState: DigitizingLockState.Free,
 });
 
 async function loadImage(

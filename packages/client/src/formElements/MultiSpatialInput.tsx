@@ -22,6 +22,7 @@ import SketchGeometryTypeSelector, {
   Icons,
 } from "../components/SketchGeometryTypeSelector";
 import {
+  Measure,
   ResetView,
   ShowScaleBar,
   ZoomToFeature,
@@ -175,7 +176,7 @@ const MultiSpatialInput: FormElementComponent<
     resetFeature,
     dragTarget,
   } = useMapboxGLDraw(
-    mapContext.manager?.map,
+    mapContext,
     props.sketchClass!.geometryType,
     props.value?.collection || EMPTY_FEATURE_COLLECTION,
     async (updatedFeature, hasKinks) => {
@@ -467,6 +468,7 @@ const MultiSpatialInput: FormElementComponent<
         />
       ) : null}
       <ShowScaleBar mapContext={mapContext} />
+      <Measure />
     </>
   );
 

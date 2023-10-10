@@ -503,7 +503,7 @@ function DropdownTrigger({
 
 function DropdownMenuContent({ children }: { children: ReactNode }) {
   return (
-    <DropdownMenu.Portal className="z-50">
+    <DropdownMenu.Portal>
       <DropdownMenu.Content
         className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
         style={{ minWidth: 220 }}
@@ -585,7 +585,7 @@ function DropdownSubmenu({
           <ChevronRightIcon />
         </div>
       </DropdownMenu.SubTrigger>
-      <DropdownMenu.Portal className="z-50">
+      <DropdownMenu.Portal>
         <DropdownMenu.SubContent
           className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
           sideOffset={2}

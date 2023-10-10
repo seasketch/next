@@ -17,6 +17,7 @@ import BowtieInstructions from "../draw/BowtieInstructions";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import Spinner from "../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
+import { MeasureControlContext } from "../MeasureControl";
 
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
@@ -68,6 +69,10 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);
   const [showInvalidShapeModal, setShowInvalidShapeModal] = useState(false);
+
+  const measureContext = useContext(MeasureControlContext);
+
+  const onRequestCancelMeasurement = measureContext.close;
 
   if (state === DigitizingState.DISABLED) {
     return null;
@@ -166,6 +171,13 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         state === DigitizingState.CAN_COMPLETE ||
         state === DigitizingState.STARTED) &&
         createStateButtons}
+      {state === DigitizingState.PAUSED_FOR_MEASUREMENT && (
+        <Button
+          className="pointer-events-auto whitespace-nowrap"
+          label={t("Cancel measurement")}
+          onClick={onRequestCancelMeasurement}
+        />
+      )}
     </>
   );
 
@@ -330,6 +342,18 @@ export function DigitizingInstructions({
           </span>
         </span> */}
       </>
+    );
+  }
+
+  if (state === DigitizingState.PAUSED_FOR_MEASUREMENT) {
+    return (
+      <span className="flex items-center">
+        <span>
+          <Trans ns="sketching">
+            Finish using the measurement tool before continuing to sketch.
+          </Trans>
+        </span>
+      </span>
     );
   }
 

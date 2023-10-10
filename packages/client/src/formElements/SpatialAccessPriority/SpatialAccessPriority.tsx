@@ -29,6 +29,7 @@ import useMapEssentials from "../../admin/surveys/useMapEssentials";
 import Button from "../../components/Button";
 import MapboxMap from "../../components/MapboxMap";
 import {
+  Measure,
   ResetView,
   ShowScaleBar,
   ZoomToFeature,
@@ -216,7 +217,7 @@ const SpatialAccessPriority: FormElementComponent<
     resetFeature,
     dragTarget,
   } = useMapboxGLDraw(
-    mapContext.manager?.map,
+    mapContext,
     props.sketchClass!.geometryType,
     filteredFeatures,
     async (updatedFeature, hasKinks) => {
@@ -577,6 +578,7 @@ const SpatialAccessPriority: FormElementComponent<
           }
         />
       ) : null}
+      <Measure />
       <ShowScaleBar mapContext={mapContext} />
     </>
   );

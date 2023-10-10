@@ -1,16 +1,22 @@
 import mapboxgl, { Map, MapboxOptions } from "mapbox-gl";
 import ReactDOM from "react-dom";
-import React, { useEffect, useState, useRef, useContext } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useContext,
+  ReactNode,
+} from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Spinner from "./Spinner";
 import { Trans } from "react-i18next";
-import {
-  currentSidebarState,
-  ProjectAppSidebarContext,
-} from "../projects/ProjectAppSidebar";
+import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
+import MapSettingsPopup from "../draw/MapSettingsPopup";
+import { CogIcon } from "@heroicons/react/outline";
+import { MeasurementToolsOverlay } from "../MeasureControl";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -28,6 +34,8 @@ export interface OverlayMapProps {
     | "top-left"
     | "bottom-right"
     | "bottom-left";
+  mapSettingsPopupActions?: ReactNode;
+  onRequestSidebarClose?: () => void;
 }
 
 mapboxgl.prewarm();
@@ -37,6 +45,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
   const [showSpinner, setShowSpinner] = useState(true);
+  const [mapSettingsPopupOpen, setMapSettingsPopupOpen] = useState(false);
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
   >(null);
@@ -90,6 +99,16 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
     }
   }, [map, mapContext.manager, mapContext.selectedBasemap, mapContainer.current, mapContext.ready, props.lazyLoadReady]);
 
+  const mapSettingsPopupAnchor = useRef<HTMLButtonElement>(null);
+  const surveys = /surveys/.test(window.location.pathname);
+  let measurementToolsPlacement: string =
+    props.navigationControlsLocation || "top-right";
+  if (
+    !/surveys/.test(window.location.pathname) &&
+    measurementToolsPlacement === "top-right"
+  ) {
+    measurementToolsPlacement = "top-right-homepage";
+  }
   return (
     <div
       className={`flex-1 bg-gray-300 ${props.className} ${
@@ -98,6 +117,39 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       ref={mapContainer}
       onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
+      {props.mapSettingsPopupActions && (
+        <MapSettingsPopup
+          open={mapSettingsPopupOpen}
+          onRequestClose={() => setMapSettingsPopupOpen(false)}
+          anchor={mapSettingsPopupAnchor.current || undefined}
+        >
+          {props.mapSettingsPopupActions}
+        </MapSettingsPopup>
+      )}
+      <MeasurementToolsOverlay
+        // @ts-ignore
+        placement={measurementToolsPlacement}
+      />
+
+      {props.mapSettingsPopupActions && (
+        <button
+          ref={mapSettingsPopupAnchor}
+          style={{ zIndex: 1, padding: 5 }}
+          onClick={() => {
+            if (props.onRequestSidebarClose) {
+              props.onRequestSidebarClose();
+            }
+            setMapSettingsPopupOpen(true);
+          }}
+          className={`absolute bg-white ring-2 ring-black ring-opacity-10 rounded top-28 ${
+            props.navigationControlsLocation === "top-right"
+              ? "right-2.5"
+              : "left-2.5"
+          }`}
+        >
+          <CogIcon className="w-5 h-5" />
+        </button>
+      )}
       <div
         className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
           mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"
@@ -237,6 +289,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           </div>
         </div>
       )}
+
       <AnimatePresence>
         <Tooltip
           visible={!!mapContext.tooltip}
