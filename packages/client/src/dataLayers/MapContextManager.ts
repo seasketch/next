@@ -1,5 +1,4 @@
-import {
-  default as mapboxgl,
+import mapboxgl, {
   Map,
   MapDataEvent,
   ErrorEvent,
