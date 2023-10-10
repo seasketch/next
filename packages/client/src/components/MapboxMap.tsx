@@ -12,12 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Spinner from "./Spinner";
 import { Trans } from "react-i18next";
-import {
-  currentSidebarState,
-  ProjectAppSidebarContext,
-} from "../projects/ProjectAppSidebar";
+import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
-import { RssIcon } from "@heroicons/react/solid";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
@@ -104,7 +100,15 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   }, [map, mapContext.manager, mapContext.selectedBasemap, mapContainer.current, mapContext.ready, props.lazyLoadReady]);
 
   const mapSettingsPopupAnchor = useRef<HTMLButtonElement>(null);
-
+  const surveys = /surveys/.test(window.location.pathname);
+  let measurementToolsPlacement: string =
+    props.navigationControlsLocation || "top-right";
+  if (
+    !/surveys/.test(window.location.pathname) &&
+    measurementToolsPlacement === "top-right"
+  ) {
+    measurementToolsPlacement = "top-right-homepage";
+  }
   return (
     <div
       className={`flex-1 bg-gray-300 ${props.className} ${
@@ -123,7 +127,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         </MapSettingsPopup>
       )}
       <MeasurementToolsOverlay
-        placement={props.navigationControlsLocation || "top-right"}
+        // @ts-ignore
+        placement={measurementToolsPlacement}
       />
 
       {props.mapSettingsPopupActions && (

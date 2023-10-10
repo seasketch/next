@@ -2,7 +2,6 @@ import {
   FunctionComponent,
   ReactNode,
   useContext,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -78,8 +77,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   if (state === DigitizingState.DISABLED) {
     return null;
   }
-
-  console.log(DigitizingState[state]);
 
   const bottomToolbar = isMobile && style.isSmall;
 

@@ -49,7 +49,6 @@ const _clickOnVertex = DrawPolygon.clickOnVertex;
 // };
 
 DrawPolygon.clickAnywhere = function (state: any, e: any) {
-  console.log("DrawPolygon.clickAnywhere");
   if (
     state.currentVertexPosition > 0 &&
     isEventAtCoordinates(

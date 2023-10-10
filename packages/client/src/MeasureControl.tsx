@@ -20,6 +20,7 @@ import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import useLocalStorage from "./useLocalStorage";
+import { useMediaQuery } from "beautiful-react-hooks";
 
 // ID generator (featureId++)
 let featureId = 0;
@@ -719,7 +720,6 @@ export function MeasureControlContextProvider(props: { children: ReactNode }) {
   // get MapContextManager from context
   const mapContext = useContext(MapContext);
   const [value, setValue] = useState(defaultValue);
-
   useEffect(() => {
     if (mapContext.manager?.map) {
       const measureControl = new MeasureControl(mapContext.manager);
@@ -760,11 +760,19 @@ const formatter = new Intl.NumberFormat(undefined, {
 export function MeasurementToolsOverlay({
   placement,
 }: {
-  placement: "top-right" | "top-left" | "bottom-right" | "bottom-left";
+  placement:
+    | "top-right"
+    | "top-left"
+    | "bottom-right"
+    | "bottom-left"
+    | "top-right-homepage";
 }) {
   const mapContext = useContext(MapContext);
   const measureContext = useContext(MeasureControlContext);
   const { t } = useTranslation("homepage");
+
+  const mouseHoverNotAvailable = useMediaQuery("(any-hover: none)");
+
   const units: {
     id: string;
     label: string;
@@ -799,6 +807,7 @@ export function MeasurementToolsOverlay({
     "measure-unit",
     units[0].id
   );
+  const isSmall = useMediaQuery("(max-width: 767px)");
 
   const selectedUnit = useMemo(
     () => units.find((unit) => unit.id === selectedUnitValue) || units[0],
@@ -830,9 +839,17 @@ export function MeasurementToolsOverlay({
           transition={{
             duration: 0.15,
           }}
-          className={`${placement === "top-right" ? "right-20" : "left-20"} ${
+          className={`${
+            placement === "top-right"
+              ? isSmall
+                ? "right-20 top-5"
+                : "right-24 mr-1 top-5"
+              : placement === "top-right-homepage"
+              ? "right-14 top-2.5"
+              : "left-20 top-5"
+          } ${
             state === "paused" ? "pointer-events-none" : "pointer-events-auto"
-          } top-3 absolute z-10 bg-white shadow rounded border w-72`}
+          } absolute z-10 bg-white shadow rounded border w-72`}
         >
           <div className="flex mt-2">
             <div className="text-xl font-semibold flex-1 truncate text-center mx-5">
@@ -844,13 +861,23 @@ export function MeasurementToolsOverlay({
           <p className="px-2 py-1 text-center text-xs mb-1">
             {state === "drawing" &&
               length === 0 &&
-              t("Click on the map to start measuring.")}
+              (mouseHoverNotAvailable
+                ? t("Tap the map to start measuring.")
+                : t("Click on the map to start measuring."))}
             {state === "drawing" &&
               Boolean(length) &&
               length > 0 &&
-              t("Double-click to finish measuring or click to draw a path.")}
+              (mouseHoverNotAvailable
+                ? t(
+                    "Tap again to measure a path, or use the buttons below to finish or start over."
+                  )
+                : t(
+                    "Double-click to finish measuring or click to draw a path."
+                  ))}
             {(state === "editing" || state === "dragging") &&
-              t("Drag points to modify the measured distance.")}
+              (mouseHoverNotAvailable
+                ? t("")
+                : t("Drag points to modify the measured distance."))}
           </p>
           <div className="flex h-12 items-center gap-1 bg-gray-50 p-2 border-t">
             <select
@@ -881,7 +908,7 @@ export function MeasurementToolsOverlay({
               }}
               className={buttonClass}
             >
-              {t("close")}
+              {mouseHoverNotAvailable ? t("finish") : t("close")}
             </button>
           </div>
         </motion.div>

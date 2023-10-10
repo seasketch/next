@@ -70,7 +70,6 @@ import useDebounce from "../../useDebounce";
 import Badge from "../../components/Badge";
 import MapPicker from "../../components/MapPicker";
 import useDialog from "../../components/useDialog";
-import { MeasureEventTypes } from "../../dataLayers/MapContextManager";
 import SketchForm from "../../projects/Sketches/SketchForm";
 import { updateFeatureInCollection } from "../MultiSpatialInput";
 

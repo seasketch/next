@@ -110,7 +110,7 @@ const MapSettingsPopup: FunctionComponent<{
       bottom = undefined;
     }
     return [left, top, right, bottom];
-  }, [anchor]);
+  }, [anchor, anchor?.getBoundingClientRect().top]);
 
   position = position || "top";
 

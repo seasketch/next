@@ -52,10 +52,6 @@ import useDebounce from "../useDebounce";
 import MapPicker from "../components/MapPicker";
 import useDialog from "../components/useDialog";
 import { SketchClassDetailsFragment } from "../generated/queries";
-import {
-  MeasureControlContext,
-  MeasureControlContextProvider,
-} from "../MeasureControl";
 import SketchForm from "../projects/Sketches/SketchForm";
 
 export enum STAGES {
@@ -168,9 +164,6 @@ const MultiSpatialInput: FormElementComponent<
 
   const { confirm } = useDialog();
 
-  console.log(STAGES[props.stage]);
-
-  console.log("mapContext", mapContext);
   const {
     digitizingState,
     disable,
@@ -248,10 +241,8 @@ const MultiSpatialInput: FormElementComponent<
       }
     },
     () => {
-      console.log("selection", selection);
       if (!selection) {
         setTimeout(() => {
-          console.log("calling create", create);
           create(true);
         }, 50);
       } else {
@@ -271,7 +262,6 @@ const MultiSpatialInput: FormElementComponent<
         props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) &&
       mapContext.manager?.map
     ) {
-      console.log("calling create", create);
       create(true);
     }
     if (mapContext.manager?.map) {
