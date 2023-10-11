@@ -1,0 +1,8 @@
+{
+  "Drop Files Here to Upload": "วางไฟล์ที่นี่เพื่ออัปโหลด",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "ปัจจุบัน SeaSketch รองรับข้อมูลเวกเตอร์ในรูปแบบ GeoJSON, Shapefile (zipped), GeoTiff และ FlatGeobuf",
+  "Starting upload": "กำลังเริ่มอัปโหลด",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "ดูเหมือนว่าจะเป็นประเภทไฟล์ที่ SeaSketch ไม่รองรับการอัปโหลดเชิงพื้นที่",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "ดูเหมือนว่าจะเป็นไฟล์ประเภทแรสเตอร์ที่ไม่รองรับ สำหรับข้อมูลแรสเตอร์ ให้อัปโหลด GeoTiff",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "นี่ดูเหมือนจะเป็นเพียงส่วนหนึ่งของเชปไฟล์เท่านั้น หากต้องการอัปโหลดเชปไฟล์ ให้สร้างไฟล์ .zip พร้อมไฟล์ที่เกี่ยวข้องทั้งหมด (.shp, .prj, .shx ฯลฯ) แล้วอัปโหลดไฟล์ zip นั้น"
+}

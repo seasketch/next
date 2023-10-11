@@ -1,0 +1,17 @@
+{
+  "Accept as": "Chấp nhận với tên {{email}}",
+  "An account with this email address already exists.": "Một tài khoản có địa chỉ email này đã tồn tại.",
+  "Confirming invite": "Xác nhận lời mời",
+  "Contact {{supportEmail}} to request a new invitation.": "Hãy liên hệ với {{supportEmail}} để yêu cầu lời mời mới.",
+  "Create an Account": "Tạo một tài khoản",
+  "Logout and sign in as ": "Đăng xuất và đăng nhập với tư cách ",
+  "Sign In": "Đăng nhập",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Lời mời này đã được chấp nhận.<1> Tiếp tục dự án </1> hoặc <5>liên hệ với bộ phận hỗ trợ</5>nếu bạn cho rằng đây là lỗi.",
+  "This invitation was originally sent to <2></2>.": "Lời mời này ban đầu được gửi tới <2></2>.",
+  "Use another account": "Sử dụng tài khoản khác",
+  "Verifying invitation code": "Đang xác minh mã lời mời",
+  "Welcome, !": "Chào mừng, !",
+  "Welcome!": "Chào mừng!",
+  "You have been invited to participate in a SeaSketch project.": "Bạn đã được mời tham gia vào dự án SeaSketch.",
+  "Your invitation to this project has expired.": "Lời mời tham gia dự án này của bạn đã hết hạn."
+}

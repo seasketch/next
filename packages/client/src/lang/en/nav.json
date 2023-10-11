@@ -1,11 +1,8 @@
 {
   "About": "About",
   "Account settings": "Account settings",
-  "Add data": "Add data",
-  "Add folder": "Add folder",
   "Are you sure you want to delete {{name}}?": "Are you sure you want to delete {{name}}?",
   "Contact support": "Contact support",
-  "Default Visibility": "Default Visibility",
   "Delete": "Delete",
   "Delete Item": "Delete Item",
   "Developer API": "Developer API",
@@ -13,14 +10,10 @@
   "Edit metadata": "Edit metadata",
   "Metadata": "Metadata",
   "Projects": "Projects",
-  "Publish": "Publish",
   "SeaSketch logo": "SeaSketch logo",
   "Sign In": "Sign In",
   "Sign in": "Sign in",
   "Sign out": "Sign out",
   "Signed in as": "Signed in as",
-  "Tree Editor": "Tree Editor",
-  "Z-Order": "Z-Order",
-  "Zoom to bounds": "Zoom to bounds",
-  "view": "view"
+  "Zoom to bounds": "Zoom to bounds"
 }

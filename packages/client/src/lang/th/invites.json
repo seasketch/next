@@ -1,0 +1,17 @@
+{
+  "Accept as": "ยอมรับในชื่อ {{email}}",
+  "An account with this email address already exists.": "มีบัญชีที่ใช้ที่อยู่อีเมลนี้อยู่แล้ว",
+  "Confirming invite": "กำลังยืนยันคำเชิญ",
+  "Contact {{supportEmail}} to request a new invitation.": "ติดต่อ {{supportEmail}} เพื่อขอคำเชิญใหม่",
+  "Create an Account": "สร้างบัญชี",
+  "Logout and sign in as ": "ออกจากระบบและลงชื่อเข้าใช้ในฐานะ ",
+  "Sign In": "เข้าสู่ระบบ",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "คำเชิญนี้ได้รับการยอมรับแล้ว<1> ดำเนินการต่อไปยังโครงการ </1> หรือ <5>ติดต่อฝ่ายสนับสนุน</5>หากคุณเชื่อว่านี่เป็นข้อผิดพลาด",
+  "This invitation was originally sent to <2></2>.": "คำเชิญนี้เดิมถูกส่งไปที่ <2></2>",
+  "Use another account": "ใช้บัญชีอื่น",
+  "Verifying invitation code": "กำลังตรวจสอบรหัสเชิญ",
+  "Welcome, !": "ยินดีต้อนรับ, !",
+  "Welcome!": "ยินดีต้อนรับ!",
+  "You have been invited to participate in a SeaSketch project.": "คุณได้รับเชิญให้เข้าร่วมในโครงการ SeaSketch",
+  "Your invitation to this project has expired.": "คำเชิญของคุณสำหรับโครงการนี้หมดอายุแล้ว"
+}

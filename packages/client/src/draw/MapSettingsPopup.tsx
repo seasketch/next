@@ -28,6 +28,7 @@ import {
 } from "../generated/graphql";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import { MeasureControlContext, MeasureControlLockId } from "../MeasureControl";
+import useDialog from "../components/useDialog";
 
 type PopupPosition = "top" | "bottom";
 
@@ -192,7 +193,16 @@ const Item: FunctionComponent<{
   disabled?: boolean;
   phoneOnly?: boolean;
   selected?: boolean;
-}> = ({ onClick, title, Icon, disabled, phoneOnly, selected }) => {
+  onDisabledClick?: (e: React.MouseEvent<any, MouseEvent>) => any;
+}> = ({
+  onClick,
+  title,
+  Icon,
+  disabled,
+  phoneOnly,
+  selected,
+  onDisabledClick,
+}) => {
   const { isSmall } = useContext(FormElementLayoutContext).style;
   if (phoneOnly && !isSmall) {
     return null;
@@ -204,6 +214,9 @@ const Item: FunctionComponent<{
       } ${selected ? "font-semibold " : ""}`}
       onClick={(e) => {
         if (disabled) {
+          if (onDisabledClick) {
+            onDisabledClick(e);
+          }
           e.preventDefault();
           e.stopPropagation();
         } else {
@@ -323,6 +336,7 @@ export function Measure(props: MapSettingsActionItem<{}>) {
   const { t } = useTranslation("surveys");
   const mapContext = useContext(MapContext);
   const measureContext = useContext(MeasureControlContext);
+  const { alert } = useDialog();
   return (
     <Item
       {...props}
@@ -348,6 +362,13 @@ export function Measure(props: MapSettingsActionItem<{}>) {
           ></path>
         </svg>
       )}
+      onDisabledClick={() => {
+        alert(
+          t(
+            "Finish drawing your shape first. Afterwards you will be able to use the measure tool."
+          )
+        );
+      }}
       onClick={() => {
         if (measureContext.state === "disabled") {
           measureContext.reset();

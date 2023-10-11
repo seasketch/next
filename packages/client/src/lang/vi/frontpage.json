@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Tạo một dự án",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Tạo<1></1><2>Dự án SeaSketch</2> của riêng bạn",
+  "Create your project": "Tạo dự án của bạn",
+  "Developer API": "API nhà phát triển",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Vui lòng liên hệ với chúng tôi theo địa chỉ <2>support@seasketch.org</2> để sắp xếp một cuộc thảo luận về cách SeaSketch có thể được sử dụng để hỗ trợ nỗ lực lập kế hoạch của bạn.",
+  "Project name": "Tên dự án",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Các dự án SeaSketch có thể được tùy chỉnh bằng cách sử dụng <2>Khung xử lý địa lý</2> mã nguồn mở của chúng tôi. Các dự án có thể xác định các báo cáo trực quan hóa tác động của các khu vực tiềm năng bằng cách sử dụng Typescript, React và AWS Lambda.",
+  "Trusted by": "Được tin cậy bởi",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Sử dụng các công cụ khảo sát và thiết kế địa lý hợp tác của chúng tôi để quy hoạch không gian biển trong khu vực của bạn. Dự án của bạn sẽ bao gồm các công cụ để trực quan hóa bản đồ, tạo diễn đàn thảo luận, phác thảo kế hoạch và thu thập dữ liệu bằng khảo sát - <i>miễn phí!</i> Báo cáo phân tích có thể được phát triển và tùy chỉnh bằng <5>khuôn khổ xử lý địa lý</5> của chúng tôi ."
+}
