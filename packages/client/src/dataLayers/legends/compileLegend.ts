@@ -113,7 +113,6 @@ export function compileLegendFromGLStyleLayers2(
   }
 }
 
-// TODO: collect filters as you work
 function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
   const panels: { panel: GLLegendBubblePanel; filters: Expression[] }[] = [];
   // Look for circle layers with a circle-radius expression
@@ -121,6 +120,8 @@ function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
     (l) => l.type === "circle" && l.layout?.visibility !== "none"
   ) as CircleLayer[];
   for (const layer of circleLayers) {
+    // TODO: merge filter with facet
+    const filter = layer.filter;
     if (layer.paint) {
       const radius = layer.paint["circle-radius"];
       if (radius) {
