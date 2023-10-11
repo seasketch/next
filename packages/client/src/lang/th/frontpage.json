@@ -1,0 +1,11 @@
+{
+  "Create a Project": "สร้างโครงการ",
+  "Create your own<1></1><2> SeaSketch Project</2>": "สร้าง<1></1><2>โครงการ SeaSketch ของคุณเอง</2>",
+  "Create your project": "สร้างโครงการของคุณ",
+  "Developer API": "นักพัฒนา API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "โปรดติดต่อเราที่ <2>support@seasketch.org</2> เพื่อจัดเตรียมการสนทนาเกี่ยวกับวิธีการใช้ SeaSketch เพื่อสนับสนุนความพยายามในการวางแผนของคุณ",
+  "Project name": "ชื่อโครงการ",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "โครงการ SeaSketch สามารถปรับแต่งได้โดยใช้ <2>Geoprocessing Framework</2> แบบโอเพ่นซอร์สของเรา โปรเจ็กต์สามารถกำหนดรายงานที่แสดงภาพผลกระทบของโซนที่คาดหวังได้โดยใช้ Typescript, React และ AWS Lambda",
+  "Trusted by": "ได้รับความไว้วางใจจาก",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "ใช้เครื่องมือออกแบบภูมิศาสตร์และการสำรวจร่วมกันของเราสำหรับการวางแผนเชิงพื้นที่ทางทะเลในภูมิภาคของคุณ โครงการของคุณจะมีเครื่องมือในการแสดงภาพแผนที่ สร้างฟอรัมการสนทนา ร่างแผน และรวบรวมข้อมูลโดยใช้แบบสำรวจ - <i>ฟรี!</i> รายงานการวิเคราะห์อาจได้รับการพัฒนาและปรับแต่งโดยใช้ <5>กรอบงานการประมวลผลทางภูมิศาสตร์</5> ของเรา ."
+}

@@ -1,0 +1,15 @@
+{
+  "Cache Details": "รายละเอียดแคช",
+  "Cache Status": "สถานะแคช",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "แคชข้อมูลมากขึ้นและโหลดเนื้อหาล่วงหน้าเพื่อประสิทธิภาพที่ดีขึ้น รองรับการใช้งานแบบออฟไลน์",
+  "Data Caching": "การแคชข้อมูล",
+  "Default": "ค่าเริ่มต้น",
+  "Improved Performance": "ปรับปรุงประสิทธิภาพ",
+  "Maximum": "ขีดสุด",
+  "Minimum": "ขั้นต่ำ",
+  "Only what's necessary to run SeaSketch": "เฉพาะสิ่งที่จำเป็นในการรัน SeaSketch",
+  "Query Cache": "สอบถามแคช",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "บันทึกข้อมูลแอปที่ใช้ล่าสุดบางส่วนเพื่อปรับปรุงประสิทธิภาพการเริ่มต้นระบบและการใช้งานผ่านการเชื่อมต่ออินเทอร์เน็ตที่มีสัญญาณไม่ดี",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "ใช้การตั้งค่านี้หากคุณเป็นผู้อำนวยความสะดวกหรือนักวางแผนที่ใช้ SeaSketch เป็นประจำ รองรับการใช้งานแบบออฟไลน์",
+  "Using  of your browser's storage quota": "การใช้โควต้าพื้นที่เก็บข้อมูลของเบราว์เซอร์ของคุณ"
+}
