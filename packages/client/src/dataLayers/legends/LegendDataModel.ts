@@ -91,6 +91,7 @@ export type GLLegendBubblePanel = {
     value: number;
     radius: number;
     fill: string;
+    fillOpacity: number;
     stroke: string;
     strokeWidth: number;
   }[];

@@ -10,12 +10,13 @@ import {
 } from "mapbox-gl";
 import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
 import { Geostats } from "../../admin/data/GLStyleEditor/GeostatsModal";
-import { ExpressionEvaluator } from "./ExpressionEvaluator";
+import { ExpressionEvaluator, RGBA } from "./ExpressionEvaluator";
 import {
   GLLegendBubblePanel,
   GLLegendCircleSymbol,
   GLLegendFillSymbol,
   GLLegendGradientPanel,
+  GLLegendHeatmapPanel,
   GLLegendLineSymbol,
   GLLegendMarkerSymbol,
   GLLegendPanel,
@@ -32,6 +33,7 @@ import {
   isExpression,
   hasGetExpression,
   findGetExpression,
+  hasGetExpressionForProperty,
 } from "./utils";
 
 // ordered by rank of importance
@@ -88,6 +90,7 @@ export function compileLegendFromGLStyleLayers2(
       },
     };
   }
+  console.log("building legend panels...");
   const legendItems: { panel: GLLegendPanel; filters: Expression[] }[] = [];
 
   // Iterate through each of the possible complex panel types, creating them
@@ -97,7 +100,14 @@ export function compileLegendFromGLStyleLayers2(
   // to the filters array.
   const clonedLayers = cloneDeep(layers);
   const context = { layers: clonedLayers };
-  const bubblePanels = pluckBubblePanels(context);
+
+  legendItems.push(...pluckHeatmapPanels(context));
+  legendItems.push(...pluckBubblePanels(context));
+  // TODO: marker size panel. basically the same as bubble panel
+  legendItems.push(...pluckGradientPanels(context));
+  legendItems.push(...pluckStepPanels(context));
+  // TODO: list panels
+  // TODO: consolidate filters
 
   console.log("remaining layers", context.layers);
   if (legendItems.length === 0) {
@@ -113,7 +123,98 @@ export function compileLegendFromGLStyleLayers2(
   }
 }
 
-function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
+/**
+ * For a given facet, reads the filter expressions and produces
+ * a GeoJSON properties object that would pass all those filters
+ * @param facet
+ */
+export function propsForFacet(facet: {
+  expression: Expression;
+  filters: Expression[];
+}) {
+  // console.log("calculate props for facet", facet);
+  const featureProps: { [prop: string]: any } = {};
+  // Read filters and create props that would pass them all
+  for (const filter of facet.filters) {
+    // console.log("filter", filter);
+    if (filter[0] === "any") {
+      const filterProps = propsForSimpleFilter(filter[1][0]);
+      for (const prop in filterProps) {
+        featureProps[prop] = filterProps[prop];
+      }
+      throw new Error("Not supported");
+    } else if (filter[0] === "all") {
+      throw new Error("Not supported");
+    } else {
+      const filterProps = propsForSimpleFilter(filter);
+      for (const prop in filterProps) {
+        featureProps[prop] = filterProps[prop];
+      }
+    }
+  }
+  return featureProps;
+}
+
+function propsForSimpleFilter(filter: Expression) {
+  if (filter[0] === "all" || filter[0] === "any") {
+    throw new Error(
+      "propsForSimpleFilter should not be called with all or any expressions"
+    );
+  }
+  const featureProps: { [prop: string]: any } = {};
+  let getInfo = {
+    position: 0,
+    prop: "",
+  };
+  if (filter[0] === "has") {
+    featureProps[filter[1]] = "__has";
+    return featureProps;
+  }
+  if (isExpression(filter[1]) && filter[1][0] === "get") {
+    getInfo.position = 0;
+    getInfo.prop = filter[1][1];
+  } else if (isExpression(filter[2]) && filter[2][0] === "get") {
+    getInfo.position = 1;
+    getInfo.prop = filter[2][1];
+  } else {
+    throw new Error("Could not find get expression in filter");
+  }
+  let propType = typeof filter[getInfo.position === 0 ? 2 : 1];
+  switch (filter[0]) {
+    case "==":
+      featureProps[getInfo.prop] = filter[getInfo.position === 0 ? 2 : 1];
+      break;
+    case "!=":
+      featureProps[getInfo.prop] =
+        propType === "number" ? -38574326900913 : "___ne";
+      break;
+    // @ts-ignore
+    case "!has":
+      delete featureProps[getInfo.prop];
+      break;
+    case ">":
+    case ">=":
+      featureProps[getInfo.prop] =
+        filter[getInfo.position === 0 ? 2 : 1] + 0.00001;
+      break;
+    case "<":
+    case "<=":
+      featureProps[getInfo.prop] =
+        filter[getInfo.position === 0 ? 2 : 1] - 0.00001;
+      break;
+    case "!":
+      featureProps[getInfo.prop] = false;
+      break;
+    case "in":
+      featureProps[getInfo.prop] = filter[getInfo.position === 0 ? 2 : 1];
+      break;
+    default:
+      throw new Error(`Unsupported filter operator "${filter[0]}"`);
+  }
+  return featureProps;
+}
+
+export function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
   const panels: { panel: GLLegendBubblePanel; filters: Expression[] }[] = [];
   // Look for circle layers with a circle-radius expression
   const circleLayers = context.layers.filter(
@@ -121,19 +222,406 @@ function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
   ) as CircleLayer[];
   for (const layer of circleLayers) {
     // TODO: merge filter with facet
-    const filter = layer.filter;
     if (layer.paint) {
       const radius = layer.paint["circle-radius"];
       if (radius) {
         const exprData = pluckGetExpressionsOfType(radius, "interpolate");
         if (exprData.facets.length) {
-          console.log("found bubble layers", exprData);
+          const representedProperties = new RepresentedProperties();
+          // the "plucking" part, removes bubble chart related values from layer
           layer.paint["circle-radius"] = exprData.remainingValues;
+          representedProperties.add("circle-radius");
+          representedProperties.commit();
           for (const facet of exprData.facets) {
-            console.log("facet", facet);
+            const featureProps = propsForFacet(facet);
+            const facetFilters = isExpression(layer.filter)
+              ? [layer.filter, ...facet.filters]
+              : facet.filters;
+            const interpolate = facet.expression;
+            let stops = stopsFromInterpolation(interpolate);
+            // limit stops to 3 in bubble charts
+            if (stops.length > 3) {
+              stops = [
+                stops[0],
+                stops[Math.floor(stops.length / 2)],
+                stops[stops.length - 1],
+              ];
+            } else if (stops.length === 2) {
+              // add a midpoint stop
+              stops = [
+                stops[0],
+                {
+                  // @ts-ignore
+                  input: (stops[0].input + stops[1].input) / 2,
+                  // @ts-ignore
+                  output: (stops[0].output + stops[1].output) / 2,
+                },
+                stops[1],
+              ];
+            }
+            // construct a bubble panel
+            panels.push({
+              panel: {
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `bubble-${circleLayers.indexOf(
+                  layer
+                )}-${exprData.facets.indexOf(facet)}`,
+                type: "GLLegendBubblePanel",
+                label: interpolate[2][1],
+                stops: stops
+                  .filter((s) => "input" in s)
+                  .map((s) => {
+                    if (!("input" in s)) {
+                      throw new Error("Stop lacks input");
+                    }
+                    const featureData = {
+                      ...featureProps,
+                      [interpolate[2][1]]: s.input,
+                    };
+                    return {
+                      fill: evaluateLayerProperty(
+                        layer,
+                        "paint",
+                        "circle-color",
+                        featureData,
+                        "Point",
+                        representedProperties
+                      ),
+                      radius: s.output as number,
+                      stroke: evaluateLayerProperty(
+                        layer,
+                        "paint",
+                        "circle-stroke-color",
+                        featureData,
+                        "Point",
+                        representedProperties
+                      ),
+                      strokeWidth: evaluateLayerProperty(
+                        layer,
+                        "paint",
+                        "circle-stroke-width",
+                        featureData,
+                        "Point",
+                        representedProperties
+                      ),
+                      value: s.input,
+                      fillOpacity: evaluateLayerProperty(
+                        layer,
+                        "paint",
+                        "circle-opacity",
+                        featureData,
+                        "Point",
+                        representedProperties
+                      ),
+                    };
+                  }),
+              },
+              filters: facetFilters,
+            });
+          }
+          representedProperties.commit();
+          // remove the layer if it's been fully represented by the bubble chart
+          let hasRemainingGetExpressions = false;
+          const paint: any = layer.paint || {};
+          for (const prop of [
+            "circle-color",
+            "circle-stroke-width",
+            "circle-stroke-color",
+            "circle-opacity",
+          ]) {
+            if (
+              prop in paint &&
+              hasGetExpression(paint[prop]) &&
+              !representedProperties.has(prop)
+            ) {
+              hasRemainingGetExpressions = true;
+            }
+          }
+          if (!hasRemainingGetExpressions) {
+            context.layers = context.layers.filter((l) => l !== layer);
           }
         }
       }
+    }
+  }
+  return panels;
+}
+
+export function pluckHeatmapPanels(context: { layers: SeaSketchGlLayer[] }) {
+  const panels: { panel: GLLegendHeatmapPanel; filters: Expression[] }[] = [];
+  let newLayers = [...context.layers];
+  for (const layer of context.layers) {
+    if (layer.type === "heatmap") {
+      newLayers = newLayers.filter((l) => l !== layer);
+      const paint = layer.paint || ({} as any);
+      const exprData = pluckGetExpressionsOfType(
+        paint["heatmap-color"],
+        "interpolate",
+        { targetExpressionMustIncludeGet: false }
+      );
+      if (exprData.facets.length === 0) {
+        const filters =
+          layer.filter && isExpression(layer.filter) ? [layer.filter] : [];
+        panels.push({
+          panel: {
+            id: "heatmap",
+            type: "GLLegendHeatmapPanel",
+            stops: interpolationExpressionToStops(paint["heatmap-color"]),
+          },
+          filters,
+        });
+      } else {
+        for (const facet of exprData.facets) {
+          const facetFilters = isExpression(layer.filter)
+            ? [layer.filter, ...facet.filters]
+            : facet.filters;
+          panels.push({
+            panel: {
+              id: "heatmap",
+              type: "GLLegendHeatmapPanel",
+              stops: interpolationExpressionToStops(facet.expression),
+            },
+            filters: facetFilters,
+          });
+        }
+      }
+    }
+  }
+  context.layers = newLayers;
+  return panels;
+}
+
+export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
+  const panels: { panel: GLLegendGradientPanel; filters: Expression[] }[] = [];
+  let remainingLayers = [...context.layers];
+  for (const layer of context.layers) {
+    if (
+      ["fill", "line", "fill-extrusion", "circle", "symbol"].includes(
+        layer.type
+      )
+    ) {
+      // look for gradient expressions, ordered by priority
+      const paint = layer.paint || ({} as any);
+      for (const paintProp of [
+        "fill-color",
+        "fill-extrusion-color",
+        "circle-color",
+        "line-color",
+        "icon-color",
+        // fill outline color is so faint I can't see anyone using it
+        // as the primary means of communicating data, so I'm ommiting it
+        // "fill-outline-color",
+      ]) {
+        if (paintProp in paint && isExpression(paint[paintProp])) {
+          const exprData = pluckGetExpressionsOfType(
+            paint[paintProp],
+            /interpolate/
+          );
+          if (exprData.facets.length) {
+            for (const facet of exprData.facets) {
+              // @ts-ignore
+              layer.paint[paintProp] = exprData.remainingValues;
+              panels.push({
+                panel: {
+                  // eslint-disable-next-line i18next/no-literal-string
+                  id: `${context.layers.indexOf(
+                    layer
+                  )}-${paintProp}-${exprData.facets.indexOf(facet)}-gradient`,
+                  type: "GLLegendGradientPanel",
+                  label: paintProp,
+                  stops: interpolationExpressionToStops(facet.expression),
+                },
+                filters:
+                  layer.filter && isExpression(layer.filter)
+                    ? [layer.filter, ...facet.filters]
+                    : facet.filters,
+              });
+            }
+            // Look for unrelated get expressions in the remaining style props
+            // if none are present, remove the layer
+            let hasRemainingGetExpressions = false;
+            for (const prop of SIGNIFICANT_PAINT_PROPS) {
+              if (
+                prop in paint &&
+                hasGetExpression(paint[prop]) &&
+                prop !== paintProp
+              ) {
+                hasRemainingGetExpressions = true;
+              }
+            }
+            if (!hasRemainingGetExpressions) {
+              remainingLayers = remainingLayers.filter((l) => l !== layer);
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+  context.layers = remainingLayers;
+  return panels;
+}
+
+export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {
+  const panels: { panel: GLLegendStepPanel; filters: Expression[] }[] = [];
+  const pluckedLayers: SeaSketchGlLayer[] = [];
+  const getPropertiesUsed = new Set<string>();
+  // order layers so that fills come before lines
+  const layers = [...context.layers].sort((a, b) => {
+    if (a.type === "fill" && b.type === "line") {
+      return -1;
+    } else if (a.type === "line" && b.type === "fill") {
+      return 1;
+    } else {
+      return 0;
+    }
+  });
+  for (const layer of layers) {
+    // Line layers related to fills could be "plucked" before this point
+    if (!pluckedLayers.includes(layer)) {
+      // console.log("evaluating layer", layer.type);
+      const representedProperties = new RepresentedProperties();
+      const paint = layer.paint || ({} as any);
+      for (const paintProp of [
+        "fill-color",
+        "fill-extrusion-color",
+        "circle-color",
+        "line-color",
+        "icon-color",
+        "line-width",
+        "fill-opacity",
+        "circle-opacity",
+        "icon-size",
+      ]) {
+        if (
+          paintProp in paint &&
+          isExpression(paint[paintProp]) &&
+          !representedProperties.has(paintProp)
+        ) {
+          // console.log("found prop", paintProp);
+          const exprData = pluckGetExpressionsOfType(paint[paintProp], "step");
+          if (exprData.facets.length) {
+            for (const facet of exprData.facets) {
+              const prop = facet.expression[1][1];
+              getPropertiesUsed.add(prop);
+              for (const expression of facet.filters) {
+                findGetExpressionProperties(expression, (prop) => {
+                  getPropertiesUsed.add(prop);
+                });
+              }
+              // const firstOutput = facet.expression[2];
+              const inputOutputPairs = facet.expression.slice(3);
+              // eslint-disable-next-line i18next/no-literal-string
+              const id = `${layers.indexOf(
+                layer
+              )}-${paintProp}-${exprData.facets.indexOf(facet)}-step`;
+              // console.log("adding panel");
+              const featureProps = propsForFacet(facet);
+              // TODO: need to set featureProps to match the facet filters
+              panels.push({
+                panel: {
+                  // eslint-disable-next-line i18next/no-literal-string
+                  id,
+                  type: "GLLegendStepPanel",
+                  label: facet.expression[1][1],
+                  steps: [
+                    {
+                      id: id + "-first",
+                      label: "",
+                      symbol: createSymbol(
+                        layers.indexOf(layer),
+                        layers,
+                        {
+                          ...featureProps,
+                          [prop]: inputOutputPairs[0] - 1,
+                        },
+                        representedProperties
+                      ),
+                    },
+                    ...inputOutputPairs.reduce((steps, current, i) => {
+                      if (i % 2 === 0) {
+                        const input = current;
+                        const output = inputOutputPairs[i + 1];
+                        steps.push({
+                          id: id + "-" + i,
+                          label: `${input}`,
+                          symbol: createSymbol(
+                            layers.indexOf(layer),
+                            layers,
+                            {
+                              ...featureProps,
+                              [prop]: input,
+                            },
+                            representedProperties
+                          ),
+                        });
+                      }
+                      return steps;
+                    }, [] as { id: string; label: string; symbol: GLLegendSymbol }[]),
+                  ],
+                },
+                filters:
+                  layer.filter && isExpression(layer.filter)
+                    ? [layer.filter, ...facet.filters]
+                    : facet.filters,
+              });
+            }
+            // console.log("adding layer to pluckedLayers", layer.type);
+            pluckedLayers.push(layer);
+            representedProperties.commit();
+            // pluck line layers with matching expressions that have been used
+            const relatedLineLayers = layers.filter((l) => l.type === "line");
+            for (const layer of relatedLineLayers) {
+              if (!pluckedLayers.includes(layer)) {
+                // console.log("checking related layer", layer.type);
+                const paint = layer.paint || ({} as any);
+                for (const styleProp of [
+                  "line-color",
+                  "line-width",
+                  "line-opacity",
+                  "line-dasharray",
+                ]) {
+                  for (const getProp of getPropertiesUsed) {
+                    if (
+                      hasGetExpressionForProperty(paint[styleProp], getProp)
+                    ) {
+                      pluckedLayers.push(layer);
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+          // @ts-ignore
+          layer.paint[paintProp] = exprData.remainingValues;
+        }
+      }
+    } else {
+      // console.log("skipping plucked layer", layer.type);
+    }
+  }
+  // Look for unrelated get expressions in the plucked layers
+  // if none are present, remove the layer
+  for (const layer of pluckedLayers) {
+    let hasRemainingGetExpressions = false;
+    const paint = layer.paint || ({} as any);
+    for (const prop of SIGNIFICANT_PAINT_PROPS) {
+      if (prop in paint) {
+        const get = findGetExpression(paint[prop]);
+        if (get && !getPropertiesUsed.has(get.property)) {
+          // console.log(
+          //   "still has remaining get expressions",
+          //   get,
+          //   getPropertiesUsed
+          // );
+          hasRemainingGetExpressions = true;
+        }
+      }
+    }
+    if (!hasRemainingGetExpressions) {
+      // console.log("removing plucked layer", layer.type);
+      context.layers = context.layers.filter((l) => l !== layer);
     }
   }
   return panels;
@@ -169,9 +657,7 @@ export function compileLegendFromGLStyleLayers(
       },
     };
   }
-  console.log("create context...");
   const context = parseLegend(layers);
-  console.log("context", context, layers);
   if (context.significantExpressions.length === 0 && !context.includesHeatmap) {
     // is simple
     return {
@@ -310,6 +796,12 @@ export function compileLegendFromGLStyleLayers(
                     strokeWidth: evaluate(strokeWidth, {
                       [expression.getProp]: value,
                     }),
+                    fillOpacity: evaluate(
+                      styleValueOrExpressionForContext("circle-opacity", 1),
+                      {
+                        [expression.getProp]: value,
+                      }
+                    ),
                   };
                 }),
               });
@@ -515,7 +1007,7 @@ export function compileLegendFromGLStyleLayers(
                   items: values.map((v) => {
                     return {
                       id: v?.toString() || "null",
-                      label: v?.toString() || "",
+                      label: v?.toLocaleString() || "",
                       symbol: createSymbol(
                         expression.layerIndex,
                         layers,
@@ -826,6 +1318,74 @@ function evaluate(
   }
 }
 
+function evaluateLayerProperty(
+  layer: SeaSketchGlLayer,
+  type: "layout" | "paint",
+  propName: string,
+  featureProps: any,
+  geometryType?: "Point" | "Polygon" | "LineString",
+  representedProperties?: RepresentedProperties
+) {
+  const expression =
+    layer[type] && propName in layer[type]!
+      ? // @ts-ignore
+        (layer[type][propName] as number | Expression | string)
+      : undefined;
+  const defaultForProp =
+    // @ts-ignore
+    styleSpec[`${type}_${layer.type}`][propName]["default"];
+  if (isExpression(expression)) {
+    geometryType = geometryType || "Point";
+    const feature = {
+      type: "Feature",
+      properties: featureProps,
+      geometry: {
+        type: geometryType,
+        coordinates: [0, 0],
+      },
+    } as Feature;
+    const value = ExpressionEvaluator.parse(expression).evaluate(feature);
+    if (representedProperties) {
+      const getProperties = findGetProperties(expression);
+      const anyMissing = getProperties.some((prop) => !(prop in featureProps));
+      if (!anyMissing) {
+        representedProperties.add(propName);
+      }
+    }
+    if (isRGBA(value)) {
+      // eslint-disable-next-line i18next/no-literal-string
+      return `rgba(${value.r * 255},${value.g * 255},${value.b * 255},${
+        value.a
+      })`;
+    } else {
+      return value;
+    }
+  } else {
+    representedProperties?.add(propName);
+    return expression || defaultForProp;
+  }
+}
+
+function findGetProperties(expression: any, properties: string[] = []) {
+  if (isExpression(expression)) {
+    if (expression[0] === "get") {
+      const prop = expression[1];
+      if (!properties.includes(prop)) {
+        properties.push(prop);
+      }
+    } else {
+      for (const arg of expression.slice(1)) {
+        findGetProperties(arg, properties);
+      }
+    }
+  }
+  return properties;
+}
+
+function isRGBA(value: any): value is RGBA {
+  return typeof value === "object" && "r" in value;
+}
+
 function hasMatchingStops(a: Stop[], b: Stop[]) {
   if (a.length !== b.length) {
     return false;
@@ -890,7 +1450,7 @@ function interpolationExpressionToStops(expression?: any) {
         stops.push({
           value: stopPairs[i],
           color: stopPairs[i + 1],
-          label: stopPairs[i],
+          label: stopPairs[i].toLocaleString(),
         });
       }
     }
@@ -921,10 +1481,20 @@ function getPaintProp(
       ) {
         representedProperties.add(propName);
       }
+      const fnName = value[0];
+      featureData = featureData || {};
+      // ExpressionEvaluator will complain over console.log if a number is
+      // not provided to step functions
+      if (fnName === "step") {
+        const prop = value[1][1];
+        if (typeof prop === "string" && !(prop in featureData)) {
+          featureData[prop] = 0;
+        }
+      }
       // evaluate expression using featureData
       return ExpressionEvaluator.parse(value).evaluate({
         type: "Feature",
-        properties: featureData || {},
+        properties: featureData,
         geometry: {
           type: "Point",
           coordinates: [1, 2],
@@ -1065,7 +1635,7 @@ type SignificantExpression =
   | SignificantRampScaleOrCurveExpression
   | SignificantFilterExpression;
 
-type SeaSketchGlLayer = Omit<Layer, "id" | "source">;
+export type SeaSketchGlLayer = Omit<Layer, "id" | "source">;
 
 interface LegendContext {
   globalContext: {
@@ -1375,7 +1945,6 @@ function parseExpression(
           }
 
           const fallback = findFallbackForDomain(domains);
-          console.log("find fallback", domains, fallback);
           if (fallback) {
             domains.push(fallback);
           }
@@ -2251,4 +2820,20 @@ function createFillSymbol(
           undefined
         ),
   };
+}
+
+function findGetExpressionProperties(
+  expression: any,
+  callback: (propName: string) => void
+) {
+  if (isExpression(expression)) {
+    const [fnName, ...args] = expression;
+    if (fnName === "get") {
+      callback(args[0]);
+    } else {
+      for (const arg of args) {
+        findGetExpressionProperties(arg, callback);
+      }
+    }
+  }
 }

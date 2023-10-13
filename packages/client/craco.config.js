@@ -48,6 +48,11 @@ module.exports = {
             include: /node_modules/,
             type: "javascript/auto",
           },
+          {
+            test: /\.cjs/,
+            include: /node_modules/,
+            type: "javascript/auto",
+          },
         ],
       },
     },
@@ -93,6 +98,14 @@ module.exports = {
         "./node_modules/d3-scale-chromatic",
       ];
       return babelLoaderOptions;
+    },
+  },
+  jest: {
+    configure: {
+      moduleNameMapper: {
+        "mapbox-gl/dist/style-spec/index.es.js":
+          "mapbox-gl/dist/style-spec/index.cjs",
+      },
     },
   },
 };

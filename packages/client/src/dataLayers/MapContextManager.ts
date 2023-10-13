@@ -2469,18 +2469,19 @@ class MapContextManager extends EventEmitter {
                 sourceType
               );
 
-              console.log(
-                compileLegendFromGLStyleLayers2(
-                  layer.mapboxGlStyles,
-                  sourceType
-                )
+              console.time("legend2");
+              const legend2 = compileLegendFromGLStyleLayers2(
+                layer.mapboxGlStyles,
+                sourceType
               );
+              console.timeEnd("legend2");
+              console.log("legend2", legend2);
 
-              if (legend) {
+              if (legend2) {
                 newLegendState[id] = {
                   id,
                   type: "GLStyleLegendItem",
-                  legend,
+                  legend: legend2,
                   label: this.tocItemLabels[layer.tocId] || "",
                 };
                 changes = true;

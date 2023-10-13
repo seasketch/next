@@ -26,7 +26,10 @@ export function stopsToLinearGradient(
 
 export function pluckGetExpressionsOfType(
   expression: any,
-  type: string | RegExp
+  type: string | RegExp,
+  options?: {
+    targetExpressionMustIncludeGet?: boolean;
+  }
 ) {
   let remainingValues: any = expression;
   const expressions: { expression: Expression; filters: Expression[] }[] = [];
@@ -41,7 +44,8 @@ export function pluckGetExpressionsOfType(
     } else {
       // If a case or match expression, add any matching expressions but append
       // a filter. In theory these expressions could be deeply nested but I'm
-      // not going to support such pathological cases.
+      // not going to support such pathological cases unless an important
+      // use-case is identified.
       if (fnName === "case") {
         const newExpression: Expression = ["case"];
         const args = expression.slice(1);
@@ -52,7 +56,8 @@ export function pluckGetExpressionsOfType(
           if (
             isExpression(output) &&
             matchesType(output[0]) &&
-            hasGetExpression(output)
+            (hasGetExpression(output) ||
+              options?.targetExpressionMustIncludeGet === false)
           ) {
             expressions.push({
               expression: output,
@@ -66,11 +71,13 @@ export function pluckGetExpressionsOfType(
         if (
           isExpression(fallback) &&
           matchesType(fallback[0]) &&
-          hasGetExpression(fallback)
+          (hasGetExpression(fallback) ||
+            options?.targetExpressionMustIncludeGet === false)
         ) {
           // fallback is added without any filters. I'm not sure if that's right
           // TODO: it may be better to add the "inverse" of previous conditions
           expressions.push({ expression: fallback, filters: [] });
+          fallback = null;
           if (newExpression.length > 1) {
             // nullify fallback so that fallback isn't represented in later
             // panels
@@ -92,6 +99,53 @@ export function pluckGetExpressionsOfType(
           }
         }
       } else if (fnName === "match") {
+        const newExpression: Expression = ["match"];
+        const args = expression.slice(1);
+        const input = args[0];
+        const inputIsGetExpression = isExpression(input) && input[0] === "get";
+        newExpression.push(input);
+        const fallback = args[args.length - 1];
+        const matchAndOutputs = args.slice(1, args.length - 1);
+        for (var i = 0; i < matchAndOutputs.length; i += 2) {
+          const match = matchAndOutputs[i];
+          const output = matchAndOutputs[i + 1];
+          if (
+            isExpression(output) &&
+            matchesType(output[0]) &&
+            hasGetExpression(output)
+          ) {
+            expressions.push({
+              expression: output,
+              filters: inputIsGetExpression ? [["==", input, match]] : [],
+            });
+          } else {
+            newExpression.push(match, output);
+          }
+        }
+        let newExpressionIsEmpty = newExpression.length === 2;
+        if (
+          isExpression(fallback) &&
+          matchesType(fallback[0]) &&
+          hasGetExpression(fallback)
+        ) {
+          // fallback is added without any filters. I'm not sure if that's right
+          expressions.push({ expression: fallback, filters: [] });
+          if (!newExpressionIsEmpty) {
+            // nullify fallback so that fallback isn't represented in later
+            // panels
+            newExpression.push(null);
+            remainingValues = newExpression;
+          } else {
+            remainingValues = null;
+          }
+        } else {
+          if (newExpressionIsEmpty) {
+            remainingValues = fallback;
+          } else {
+            newExpression.push(fallback);
+            remainingValues = newExpression;
+          }
+        }
       }
     }
   }
@@ -137,4 +191,19 @@ export function findGetExpression(
     }
   }
   return null;
+}
+
+export function hasGetExpressionForProperty(expression: any, property: string) {
+  if (isExpression(expression)) {
+    if (expression[0] === "get" && expression[1] === property) {
+      return true;
+    } else {
+      for (const arg of expression.slice(1)) {
+        if (hasGetExpressionForProperty(arg, property)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
