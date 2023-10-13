@@ -107,7 +107,8 @@ export function compileLegendFromGLStyleLayers2(
   legendItems.push(...pluckGradientPanels(context));
   legendItems.push(...pluckStepPanels(context));
   // TODO: list panels
-  // TODO: consolidate filters
+  // TODO: remaining filter layers
+  // TODO: consolidate filters and nest into filter panels
 
   console.log("remaining layers", context.layers);
   if (legendItems.length === 0) {
