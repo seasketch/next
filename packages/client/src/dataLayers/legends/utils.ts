@@ -1,5 +1,8 @@
 import { Expression } from "mapbox-gl";
 
+export const NULLIFIED_EXPRESSION_OUTPUT_NUMBER = -999999999999999;
+export const NULLIFIED_EXPRESSION_OUTPUT_STRING = "__ssn__nullified";
+
 export function isExpression(e: any): e is Expression {
   return Array.isArray(e) && typeof e[0] === "string";
 }
@@ -27,6 +30,7 @@ export function stopsToLinearGradient(
 export function pluckGetExpressionsOfType(
   expression: any,
   type: string | RegExp,
+  styleValueType: "color" | "number" | "enum",
   options?: {
     targetExpressionMustIncludeGet?: boolean;
   }
@@ -68,6 +72,7 @@ export function pluckGetExpressionsOfType(
           }
         }
         let fallback = args[args.length - 1];
+        const originalFallback = fallback;
         if (
           isExpression(fallback) &&
           matchesType(fallback[0]) &&
@@ -81,7 +86,11 @@ export function pluckGetExpressionsOfType(
           if (newExpression.length > 1) {
             // nullify fallback so that fallback isn't represented in later
             // panels
-            newExpression.push(null);
+            newExpression.push(
+              styleValueType === "color" || styleValueType === "enum"
+                ? NULLIFIED_EXPRESSION_OUTPUT_STRING
+                : NULLIFIED_EXPRESSION_OUTPUT_NUMBER
+            );
           }
         } else {
           if (newExpression.length > 1) {
@@ -105,6 +114,7 @@ export function pluckGetExpressionsOfType(
         const inputIsGetExpression = isExpression(input) && input[0] === "get";
         newExpression.push(input);
         const fallback = args[args.length - 1];
+        const originalFallback = fallback;
         const matchAndOutputs = args.slice(1, args.length - 1);
         for (var i = 0; i < matchAndOutputs.length; i += 2) {
           const match = matchAndOutputs[i];
@@ -133,7 +143,11 @@ export function pluckGetExpressionsOfType(
           if (!newExpressionIsEmpty) {
             // nullify fallback so that fallback isn't represented in later
             // panels
-            newExpression.push(null);
+            newExpression.push(
+              styleValueType === "color" || styleValueType === "enum"
+                ? NULLIFIED_EXPRESSION_OUTPUT_STRING
+                : NULLIFIED_EXPRESSION_OUTPUT_NUMBER
+            );
             remainingValues = newExpression;
           } else {
             remainingValues = null;

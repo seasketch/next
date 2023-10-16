@@ -19,6 +19,7 @@ import LegendHeatmapPanel from "./legends/LegendHeatmapPanel";
 import LegendListPanel from "./legends/LegendListPanel";
 import LegendMarkerSizePanel from "./legends/LegendMarkerSizePanel";
 import LegendStepPanel from "./legends/LegendStepPanel";
+import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 require("../admin/data/arcgis/Accordion.css");
 
 interface SingleImageLegendItem {
@@ -186,6 +187,13 @@ export default function Legend({
                               case "GLLegendStepPanel":
                                 return (
                                   <LegendStepPanel panel={panel} map={map} />
+                                );
+                              case "GLLegendSimpleSymbolPanel":
+                                return (
+                                  <LegendSimpleSymbolPanel
+                                    map={map}
+                                    panel={panel}
+                                  />
                                 );
                               default:
                                 // eslint-disable-next-line i18next/no-literal-string

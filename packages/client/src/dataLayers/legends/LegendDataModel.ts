@@ -133,13 +133,24 @@ export type GLLegendGradientPanel = {
   stops: { value: number; label: string; color: string }[];
 };
 
+export type GLLegendSimpleSymbolPanel = {
+  id: string;
+  type: "GLLegendSimpleSymbolPanel";
+  label?: string;
+  items: {
+    id: string;
+    symbol: GLLegendSymbol;
+  }[];
+};
+
 export type GLLegendPanel =
   | GLLegendListPanel
   | GLLegendBubblePanel
   | GLLegendHeatmapPanel
   | GLLegendGradientPanel
   | GLMarkerSizePanel
-  | GLLegendStepPanel;
+  | GLLegendStepPanel
+  | GLLegendSimpleSymbolPanel;
 
 export type SimpleLegendForGLLayers = {
   type: "SimpleGLLegend";

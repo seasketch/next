@@ -1,8 +1,10 @@
-import { GLLegendFillSymbol } from "./LegendDataModel";
+import { GLLegendCircleSymbol, GLLegendFillSymbol } from "./LegendDataModel";
 import {
   pluckBubblePanels,
+  pluckFilterPanels,
   pluckGradientPanels,
   pluckHeatmapPanels,
+  pluckListPanels,
   pluckStepPanels,
   SeaSketchGlLayer,
 } from "./compileLegend";
@@ -1067,5 +1069,341 @@ describe("Step panels", () => {
     expect(fillSymbols[1].color).toBe("purple");
     expect(fillSymbols[0].strokeColor).toBe("red");
     expect(context.layers.length).toBe(0);
+  });
+});
+
+describe("List panels", () => {
+  test("Simple list panel based on match", () => {
+    const context: { layers: SeaSketchGlLayer[] } = {
+      layers: [
+        {
+          type: "circle",
+          paint: {
+            "circle-color": [
+              "match",
+              ["get", "type"],
+              "foo",
+              "purple",
+              "bar",
+              "green",
+              "black",
+            ],
+            "circle-radius": 6,
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": 0.5,
+          },
+        },
+      ],
+    };
+    const output = pluckListPanels(context);
+    expect(output.length).toBe(1);
+    const list = output[0];
+    expect(list.filters.length).toBe(0);
+    expect(list.panel.label).toBe("type");
+    const symbols = list.panel.items.map(
+      (i) => i.symbol as GLLegendCircleSymbol
+    );
+    expect(symbols[0].radius).toBe(6);
+    expect(symbols[0].color).toBe("purple");
+    expect(symbols[1].color).toBe("green");
+    expect(symbols[2].color).toBe("black");
+    expect(list.panel.items[0].label).toBe("foo");
+    expect(list.panel.items[1].label).toBe("bar");
+    expect(list.panel.items[2].label).toBe("default");
+    expect(context.layers.length).toBe(0);
+  });
+
+  test("Simple list panel based on case", () => {
+    const context: { layers: SeaSketchGlLayer[] } = {
+      layers: [
+        {
+          type: "circle",
+          paint: {
+            "circle-color": [
+              "case",
+              ["==", ["get", "type"], "foo"],
+              "purple",
+              ["==", ["get", "type"], "bar"],
+              "green",
+              "black",
+            ],
+            "circle-radius": 6,
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": 0.5,
+          },
+        },
+      ],
+    };
+    const output = pluckListPanels(context);
+    expect(output.length).toBe(1);
+    const list = output[0];
+    expect(list.filters.length).toBe(0);
+    expect(list.panel.label).toBe("type");
+    const symbols = list.panel.items.map(
+      (i) => i.symbol as GLLegendCircleSymbol
+    );
+    expect(symbols[0].radius).toBe(6);
+    expect(symbols[0].color).toBe("purple");
+    expect(symbols[1].color).toBe("green");
+    expect(symbols[2].color).toBe("black");
+    expect(list.panel.items[0].label).toBe("foo");
+    expect(list.panel.items[1].label).toBe("bar");
+    expect(list.panel.items[2].label).toBe("default");
+    expect(context.layers.length).toBe(0);
+  });
+
+  test("Combined match and case expressions to form list of fill symbols", () => {
+    const context: { layers: SeaSketchGlLayer[] } = {
+      layers: [
+        {
+          type: "circle",
+          paint: {
+            "circle-color": [
+              "case",
+              ["!=", ["get", "state"], "California"],
+              [
+                "match",
+                ["get", "type"],
+                "foo",
+                "purple",
+                "bar",
+                "green",
+                "black",
+              ],
+              "red",
+            ],
+            "circle-radius": 6,
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": 0.5,
+          },
+        },
+      ],
+    };
+    const output = pluckListPanels(context);
+    expect(output.length).toBe(1);
+    const list = output[0];
+    expect(list.filters.length).toBe(1);
+    expect(list.panel.label).toBe("type");
+    const symbols = list.panel.items.map(
+      (i) => i.symbol as GLLegendCircleSymbol
+    );
+    expect(symbols[0].radius).toBe(6);
+    expect(symbols[0].color).toBe("purple");
+    expect(symbols[1].color).toBe("green");
+    expect(symbols[2].color).toBe("black");
+    expect(list.panel.items[0].label).toBe("foo");
+    expect(list.panel.items[1].label).toBe("bar");
+    expect(list.panel.items[2].label).toBe("default");
+    // == California style should fall through
+    expect(context.layers.length).toBe(1);
+  });
+
+  test("Previous state filter with reversed order of expressions", () => {
+    const context: { layers: SeaSketchGlLayer[] } = {
+      layers: [
+        {
+          type: "circle",
+          paint: {
+            "circle-color": [
+              "case",
+              ["==", ["get", "state"], "California"],
+              "red",
+              [
+                "match",
+                ["get", "type"],
+                "foo",
+                "purple",
+                "bar",
+                "green",
+                "black",
+              ],
+            ],
+            "circle-radius": 6,
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": 0.5,
+          },
+        },
+      ],
+    };
+    const output = pluckListPanels(context);
+    expect(output.length).toBe(2);
+    const caPanel = output.find((p) => p.panel.label === "state")!;
+    const typePanel = output.find((o) => o !== caPanel)!;
+    // TODO: this might change?
+    expect(caPanel.filters.length).toBe(0);
+    expect(typePanel.filters.length).toBe(0);
+    expect(typePanel.panel.label).toBe("type");
+    const symbols = typePanel.panel.items.map(
+      (i) => i.symbol as GLLegendCircleSymbol
+    );
+    expect(symbols[0].radius).toBe(6);
+    expect(symbols[0].color).toBe("purple");
+    expect(symbols[1].color).toBe("green");
+    expect(symbols[2].color).toBe("black");
+    expect(typePanel.panel.items[0].label).toBe("foo");
+    expect(typePanel.panel.items[1].label).toBe("bar");
+    expect(typePanel.panel.items[2].label).toBe("default");
+    expect(context.layers.length).toBe(0);
+  });
+
+  test.todo("Mis-matched case and fill expressions");
+
+  test("Nested under filter", () => {
+    const context: { layers: SeaSketchGlLayer[] } = {
+      layers: [
+        {
+          type: "circle",
+          filter: ["==", ["get", "state"], "California"],
+          paint: {
+            "circle-color": [
+              "match",
+              ["get", "type"],
+              "foo",
+              "purple",
+              "bar",
+              "green",
+              "black",
+            ],
+            "circle-radius": 6,
+            "circle-stroke-width": 2,
+            "circle-stroke-opacity": 0.5,
+          },
+        },
+      ],
+    };
+    const output = pluckListPanels(context);
+    expect(output.length).toBe(1);
+    const list = output[0];
+    expect(list.filters.length).toBe(1);
+    expect(list.panel.label).toBe("type");
+    const symbols = list.panel.items.map(
+      (i) => i.symbol as GLLegendCircleSymbol
+    );
+    expect(symbols[0].radius).toBe(6);
+    expect(symbols[0].color).toBe("purple");
+    expect(symbols[1].color).toBe("green");
+    expect(symbols[2].color).toBe("black");
+    expect(list.panel.items[0].label).toBe("foo");
+    expect(list.panel.items[1].label).toBe("bar");
+    expect(list.panel.items[2].label).toBe("default");
+    // == California style should fall through
+    expect(context.layers.length).toBe(0);
+  });
+
+  test.todo("Mis-matched case+match and unrelated expression");
+  test.todo("Case expression with mixed get expressions");
+  test.todo("Case expression with 'all' expression");
+  test.todo("Case expression with 'any' expression");
+});
+
+describe("filter panels", () => {
+  test("Numeric filters creating a choropleth", () => {
+    const context: { layers: SeaSketchGlLayer[] } = {
+      layers: [
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(49,163,84,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 145993.6237613576],
+            ["<=", "EmpArts", 290160],
+          ],
+          metadata: {
+            label: "145,995 to 290,160",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(49,163,84,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 73652.57252191499],
+            ["<=", "EmpArts", 145993.6237613576],
+          ],
+          metadata: {
+            label: "37,354 to 145,994",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(116,196,118,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 37352.65411538615],
+            ["<=", "EmpArts", 73652.57252191499],
+          ],
+          metadata: {
+            label: "37,354 to 73,653",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(186,228,179,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 19137.767080371515],
+            ["<=", "EmpArts", 37352.65411538615],
+          ],
+          metadata: {
+            label: "19,138 to 37,353",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(186,228,179,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 9997.743513853795],
+            ["<=", "EmpArts", 19137.767080371515],
+          ],
+          metadata: {
+            label: "9,999 to 19,138",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(237,248,233,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 5411.383431800605],
+            ["<=", "EmpArts", 9997.743513853795],
+          ],
+          metadata: {
+            label: "5,412 to 9,998",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(237,248,233,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: ["all", ["<=", "EmpArts", 5411.383431800605]],
+          metadata: {
+            label: "3,110 to 5,411",
+          },
+        },
+      ],
+    };
+    const output = pluckFilterPanels(context);
+    expect(output.length).toBe(7);
   });
 });
