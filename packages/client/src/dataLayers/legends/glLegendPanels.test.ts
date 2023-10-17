@@ -1,5 +1,11 @@
-import { GLLegendCircleSymbol, GLLegendFillSymbol } from "./LegendDataModel";
 import {
+  GLLegendCircleSymbol,
+  GLLegendFillSymbol,
+  GLLegendListPanel,
+  MultipleSymbolLegendForGLLayers,
+} from "./LegendDataModel";
+import {
+  compileLegendFromGLStyleLayers2,
   pluckBubblePanels,
   pluckFilterPanels,
   pluckGradientPanels,
@@ -1405,5 +1411,306 @@ describe("filter panels", () => {
     };
     const output = pluckFilterPanels(context);
     expect(output.length).toBe(7);
+    expect(output[0].filters.length).toBe(1);
+    expect(output[0].filters[0]).toEqual([
+      "all",
+      [">", "EmpArts", 145993.6237613576],
+      ["<=", "EmpArts", 290160],
+    ]);
+    expect(output[0].panel.items.length).toBe(1);
+    expect(output[0].panel.items[0].label).toBe("145,995 to 290,160");
+    expect(output[0].panel.label).toBe("EmpArts");
+  });
+});
+
+describe("Kitchen sink examples", () => {
+  test.skip("Choropleth with california singled-out", () => {
+    const context: { layers: SeaSketchGlLayer[]; sourceType: "vector" } = {
+      sourceType: "vector",
+      layers: [
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(49,163,84,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 145993.6237613576],
+            ["<=", "EmpArts", 290160],
+            ["!=", "NAME", "California"],
+          ],
+          metadata: {
+            label: "145,995 to 290,160",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(49,163,84,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 73652.57252191499],
+            ["<=", "EmpArts", 145993.6237613576],
+            ["!=", "NAME", "California"],
+          ],
+          metadata: {
+            label: "37,354 to 145,994",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(116,196,118,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 37352.65411538615],
+            ["<=", "EmpArts", 73652.57252191499],
+            ["!=", "NAME", "California"],
+          ],
+          metadata: {
+            label: "37,354 to 73,653",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(186,228,179,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 19137.767080371515],
+            ["<=", "EmpArts", 37352.65411538615],
+            ["!=", "NAME", "California"],
+          ],
+          metadata: {
+            label: "19,138 to 37,353",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(186,228,179,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 9997.743513853795],
+            ["<=", "EmpArts", 19137.767080371515],
+            ["!=", "NAME", "California"],
+          ],
+          metadata: {
+            label: "9,999 to 19,138",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(237,248,233,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            [">", "EmpArts", 5411.383431800605],
+            ["<=", "EmpArts", 9997.743513853795],
+            ["!=", "NAME", "California"],
+          ],
+          metadata: {
+            label: "5,412 to 9,998",
+          },
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(237,248,233,1)",
+            "fill-outline-color": "rgba(0,0,0,1)",
+          },
+          filter: [
+            "all",
+            ["<=", "EmpArts", 5411.383431800605],
+            ["!=", "NAME", "California"],
+          ],
+          metadata: {
+            label: "3,110 to 5,411",
+          },
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": [
+              "case",
+              ["==", ["get", "SUB_REGION"], "Pacific"],
+              "blue",
+              "rgba(0,0,0,0.2)",
+            ],
+          },
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": "red",
+          },
+          filter: ["==", ["get", "NAME"], "California"],
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "#9c755f",
+            "fill-opacity": 0.5,
+          },
+          filter: ["==", "NAME", "California"],
+        },
+        {
+          type: "symbol",
+          layout: {
+            "icon-image": [
+              "match",
+              ["get", "NAME"],
+              "California",
+              "seasketch://sprites/1",
+              "seasketch://sprites/2",
+            ],
+          },
+        },
+      ],
+    };
+
+    const legend = compileLegendFromGLStyleLayers2(context.layers, "vector");
+    expect(legend.type).toBe("MultipleSymbolGLLegend");
+    if (legend.type === "MultipleSymbolGLLegend") {
+      expect(legend.panels.length).toBe(3);
+    }
+  });
+
+  test.only("EEZ with complex expressions", () => {
+    const legend = compileLegendFromGLStyleLayers2(
+      [
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "#FF0000",
+            "fill-opacity": [
+              "case",
+              ["==", ["get", "ISO_SOV1"], "MEX"],
+              0.15,
+              0,
+            ],
+          },
+          layout: {},
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": [
+              "case",
+              ["==", ["get", "ISO_SOV1"], "USA"],
+              "#FF0000",
+              "blue",
+            ],
+            "line-width": ["case", ["==", ["get", "ISO_SOV1"], "MEX"], 4, 1],
+            "line-opacity": 0.75,
+          },
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+        },
+      ],
+      "vector"
+    ) as MultipleSymbolLegendForGLLayers;
+    expect(legend.type).toBe("MultipleSymbolGLLegend");
+    expect(legend.panels.length).toBe(1);
+    const list = legend.panels[0] as GLLegendListPanel;
+    expect(list.type).toBe("GLLegendListPanel");
+    expect(list.items.find((l) => l.label === "USA")).toBeDefined();
+    expect(list.items.find((l) => l.label === "MEX")).toBeDefined();
+    expect(list.items.find((l) => l.label === "default")).toBeDefined();
+  });
+
+  test("EEZ with complex case+match expressions", () => {
+    const legend = compileLegendFromGLStyleLayers2(
+      [
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "#FF0000",
+            "fill-opacity": [
+              "case",
+              ["==", ["get", "ISO_SOV1"], "MEX"],
+              0.15,
+              0,
+            ],
+          },
+          layout: {},
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": [
+              "case",
+              ["==", ["get", "ISO_SOV1"], "USA"],
+              "#FF0000",
+              "blue",
+            ],
+            "line-width": ["match", ["get", "ISO_SOV1"], "MEX", 4, 1],
+            "line-opacity": 0.75,
+          },
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+        },
+      ],
+      "vector"
+    ) as MultipleSymbolLegendForGLLayers;
+    expect(legend.type).toBe("MultipleSymbolGLLegend");
+    expect(legend.panels.length).toBe(1);
+    const list = legend.panels[0] as GLLegendListPanel;
+    expect(list.type).toBe("GLLegendListPanel");
+    expect(list.items.find((l) => l.label === "USA")).toBeDefined();
+    expect(list.items.find((l) => l.label === "MEX")).toBeDefined();
+    expect(list.items.find((l) => l.label === "default")).toBeDefined();
+  });
+
+  test.skip("EEZ w/filter by country and default style", () => {
+    const legend = compileLegendFromGLStyleLayers2(
+      [
+        {
+          type: "line",
+          paint: {
+            "line-color": "rgb(110,110,110)",
+            "line-width": 1,
+            "line-opacity": 1,
+          },
+          layout: {},
+        },
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "rgba(252,215,215,1)",
+            "fill-outline-color": "rgba(110,110,110,1)",
+          },
+          filter: ["==", "ISO_SOV1", "USA"],
+        },
+      ],
+      "vector"
+    );
+    expect(legend.type).toBe("MultipleSymbolGLLegend");
+    if (legend.type === "MultipleSymbolGLLegend") {
+      expect(legend.panels.length).toBe(1);
+      expect(legend.panels[0].type).toBe("GLLegendListPanel");
+      const list = legend.panels[0] as GLLegendListPanel;
+      expect(list.items.length).toBe(2);
+      expect(list.items[0].label).toBe("USA");
+      expect(list.items[0].symbol.type).toBe("fill");
+      expect(list.items[1].label).toBe("default");
+    }
   });
 });

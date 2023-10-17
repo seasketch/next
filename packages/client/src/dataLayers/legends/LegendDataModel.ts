@@ -139,6 +139,7 @@ export type GLLegendSimpleSymbolPanel = {
   label?: string;
   items: {
     id: string;
+    label?: string;
     symbol: GLLegendSymbol;
   }[];
 };

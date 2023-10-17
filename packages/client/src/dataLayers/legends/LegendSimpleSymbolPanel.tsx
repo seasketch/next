@@ -29,6 +29,9 @@ export default function LegendSimpleSymbolPanel({
                   <SimpleSymbol map={map} data={item.symbol} />
                 ) : null}
               </div>
+              {item.label && (
+                <span className="truncate flex-1">{item.label}</span>
+              )}
             </li>
           );
         })}
