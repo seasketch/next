@@ -191,7 +191,6 @@ function consolidatePanels(
           isEqual(i.filters, item.filters)
       )
     ) {
-      console.log("creating list");
       // There are other simple symbol panels with the same filters, so
       // start a new list panel
       unfilteredPanels.push({
@@ -211,7 +210,6 @@ function consolidatePanels(
       });
       continue;
     }
-    // console.log("unhandled", item);
     unfilteredPanels.push({ panel: item.panel, filters: item.filters });
   }
   return unfilteredPanels.map((i) => i.panel);
@@ -604,7 +602,6 @@ function pluckLayersWithExpression<T extends GLLegendPanel>(
             styleSpec["paint_" + layer.type][paintProp].type
           );
           if (exprData.facets.length) {
-            console.log("evaluating paintprop", paintProp, exprData);
             for (const facet of exprData.facets) {
               const prop = facet.expression[1][1];
               representedProperties.addUsedFeatureProperty(prop);
@@ -871,7 +868,6 @@ export function pluckListPanels(context: { layers: SeaSketchGlLayer[] }) {
           });
         }
       }
-      console.log("values used", valuesUsed);
       // TODO: add related domain values so that if different
       // comparison values are referenced in matching fill/line layers
       // they can be represented.
@@ -925,7 +921,6 @@ export function pluckListPanels(context: { layers: SeaSketchGlLayer[] }) {
   );
   // then handle case expressions, since these can be used to achieve the same
   // type of results
-  console.log("moving on to case expressions", results, context.layers);
   const caseResults: { panel: GLLegendListPanel; filters: Expression[] }[] = [];
   const representedProperties = new RepresentedProperties();
   const pluckedLayers: SeaSketchGlLayer[] = [];
@@ -940,7 +935,6 @@ export function pluckListPanels(context: { layers: SeaSketchGlLayer[] }) {
   });
   for (const layer of layers) {
     if (!pluckedLayers.includes(layer)) {
-      console.log(`considering layer ${layer.type}`);
       representedProperties.reset();
       const paint = layer.paint || ({} as any);
       for (const paintProp of SIGNIFICANT_PAINT_PROPS) {

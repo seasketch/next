@@ -1424,7 +1424,7 @@ describe("filter panels", () => {
 });
 
 describe("Kitchen sink examples", () => {
-  test.skip("Choropleth with california singled-out", () => {
+  test("Choropleth with california singled-out", () => {
     const context: { layers: SeaSketchGlLayer[]; sourceType: "vector" } = {
       sourceType: "vector",
       layers: [
@@ -1587,7 +1587,7 @@ describe("Kitchen sink examples", () => {
     }
   });
 
-  test.only("EEZ with complex expressions", () => {
+  test("EEZ with complex expressions", () => {
     const legend = compileLegendFromGLStyleLayers2(
       [
         {
