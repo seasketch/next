@@ -195,12 +195,16 @@ export default function useMapboxGLDraw(
               number,
               number
             ];
-            if (bounds && !Number.isNaN(bounds[0])) {
-              map.fitBounds(bounds, {
-                padding: isSmall ? 100 : 200,
-                animate: true,
-                duration: 500,
-              });
+            try {
+              if (bounds && !Number.isNaN(bounds[0])) {
+                map.fitBounds(bounds, {
+                  padding: isSmall ? 100 : 200,
+                  animate: true,
+                  duration: 500,
+                });
+              }
+            } catch (e) {
+              // do nothing
             }
           }
         }
