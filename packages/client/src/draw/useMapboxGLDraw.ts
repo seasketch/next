@@ -134,6 +134,7 @@ export default function useMapboxGLDraw(
   useEffect(() => {
     if (
       mapContext.manager?.map &&
+      // mapContext.manager.map.loaded() &&
       geometryType &&
       !disabled &&
       !handlerState.current.draw
@@ -357,6 +358,7 @@ export default function useMapboxGLDraw(
     disabled,
     preprocessingEndpoint,
     preprocessingResults,
+    // mapContext.manager?.map?.loaded(),
   ]);
 
   useEffect(() => {

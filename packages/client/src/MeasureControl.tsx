@@ -187,10 +187,14 @@ class MeasureControl extends EventEmitter {
   private addSourcesAndLayers() {
     const sources = this.getSources();
     for (const id in sources) {
-      this.map.addSource(id, sources[id]);
+      if (!this.map.getSource(id)) {
+        this.map.addSource(id, sources[id]);
+      }
     }
     for (const layer of measureLayers) {
-      this.map.addLayer(layer);
+      if (!this.map.getLayer(layer.id)) {
+        this.map.addLayer(layer);
+      }
     }
   }
 
@@ -311,12 +315,13 @@ class MeasureControl extends EventEmitter {
       // unregister all event handlers
       this.removeEventListeners(this.map);
     }
+    document.body.removeEventListener("keydown", this.onKeyDown);
     this.isDestroyed = true;
   };
 
   onKeyDown = (e: KeyboardEvent) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      return;
     }
     if (e.key === "Escape" && this.state === "drawing") {
       this.stopEditing();
