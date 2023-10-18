@@ -134,6 +134,7 @@ export default function useMapboxGLDraw(
   useEffect(() => {
     if (
       mapContext.manager?.map &&
+      // mapContext.manager.map.loaded() &&
       geometryType &&
       !disabled &&
       !handlerState.current.draw
@@ -188,14 +189,23 @@ export default function useMapboxGLDraw(
                 .coordinates as [number, number]
             );
           } else {
-            map.fitBounds(
-              bbox(initialValue) as [number, number, number, number],
-              {
-                padding: isSmall ? 100 : 200,
-                animate: true,
-                duration: 500,
+            const bounds = bbox(initialValue) as [
+              number,
+              number,
+              number,
+              number
+            ];
+            try {
+              if (bounds && !Number.isNaN(bounds[0])) {
+                map.fitBounds(bounds, {
+                  padding: isSmall ? 100 : 200,
+                  animate: true,
+                  duration: 500,
+                });
               }
-            );
+            } catch (e) {
+              // do nothing
+            }
           }
         }
       } else {
@@ -357,6 +367,7 @@ export default function useMapboxGLDraw(
     disabled,
     preprocessingEndpoint,
     preprocessingResults,
+    // mapContext.manager?.map?.loaded(),
   ]);
 
   useEffect(() => {

@@ -187,10 +187,14 @@ class MeasureControl extends EventEmitter {
   private addSourcesAndLayers() {
     const sources = this.getSources();
     for (const id in sources) {
-      this.map.addSource(id, sources[id]);
+      if (!this.map.getSource(id)) {
+        this.map.addSource(id, sources[id]);
+      }
     }
     for (const layer of measureLayers) {
-      this.map.addLayer(layer);
+      if (!this.map.getLayer(layer.id)) {
+        this.map.addLayer(layer);
+      }
     }
   }
 
@@ -297,24 +301,27 @@ class MeasureControl extends EventEmitter {
    * map. Call before discarding this instance of MeasureControl.
    */
   destroy = () => {
-    for (const layer of measureLayers) {
-      this.map.removeLayer(layer.id);
-    }
-    const sources = this.getSources();
-    for (const id in sources) {
-      if (this.map.getSource(id)) {
-        this.map.removeSource(id);
+    if (this.map && this.map.loaded()) {
+      for (const layer of measureLayers) {
+        this.map.removeLayer(layer.id);
       }
+      const sources = this.getSources();
+      for (const id in sources) {
+        if (this.map.getSource(id)) {
+          this.map.removeSource(id);
+        }
+      }
+      this.map.doubleClickZoom.enable();
+      // unregister all event handlers
+      this.removeEventListeners(this.map);
     }
-    this.map.doubleClickZoom.enable();
-    // unregister all event handlers
-    this.removeEventListeners(this.map);
+    document.body.removeEventListener("keydown", this.onKeyDown);
     this.isDestroyed = true;
   };
 
   onKeyDown = (e: KeyboardEvent) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      return;
     }
     if (e.key === "Escape" && this.state === "drawing") {
       this.stopEditing();
