@@ -297,7 +297,7 @@ class MeasureControl extends EventEmitter {
    * map. Call before discarding this instance of MeasureControl.
    */
   destroy = () => {
-    if (this.map) {
+    if (this.map && this.map.loaded()) {
       for (const layer of measureLayers) {
         this.map.removeLayer(layer.id);
       }
