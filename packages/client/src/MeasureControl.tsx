@@ -297,18 +297,20 @@ class MeasureControl extends EventEmitter {
    * map. Call before discarding this instance of MeasureControl.
    */
   destroy = () => {
-    for (const layer of measureLayers) {
-      this.map.removeLayer(layer.id);
-    }
-    const sources = this.getSources();
-    for (const id in sources) {
-      if (this.map.getSource(id)) {
-        this.map.removeSource(id);
+    if (this.map) {
+      for (const layer of measureLayers) {
+        this.map.removeLayer(layer.id);
       }
+      const sources = this.getSources();
+      for (const id in sources) {
+        if (this.map.getSource(id)) {
+          this.map.removeSource(id);
+        }
+      }
+      this.map.doubleClickZoom.enable();
+      // unregister all event handlers
+      this.removeEventListeners(this.map);
     }
-    this.map.doubleClickZoom.enable();
-    // unregister all event handlers
-    this.removeEventListeners(this.map);
     this.isDestroyed = true;
   };
 
