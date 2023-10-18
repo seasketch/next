@@ -189,14 +189,19 @@ export default function useMapboxGLDraw(
                 .coordinates as [number, number]
             );
           } else {
-            map.fitBounds(
-              bbox(initialValue) as [number, number, number, number],
-              {
+            const bounds = bbox(initialValue) as [
+              number,
+              number,
+              number,
+              number
+            ];
+            if (bounds && !Number.isNaN(bounds[0])) {
+              map.fitBounds(bounds, {
                 padding: isSmall ? 100 : 200,
                 animate: true,
                 duration: 500,
-              }
-            );
+              });
+            }
           }
         }
       } else {
