@@ -2,7 +2,7 @@ import {
   DynamicRenderingSupportOptions,
   LegendItem as LegendSymbolItem,
 } from "@seasketch/mapbox-gl-esri-sources";
-import { LegendForGLLayers } from "./legends/LegendDataModel";
+import { GLLegendPanel, LegendForGLLayers } from "./legends/LegendDataModel";
 import * as Accordion from "@radix-ui/react-accordion";
 import {
   CaretDownIcon,
@@ -160,46 +160,13 @@ export default function Legend({
                           />
                         </div>
                         <ul className="text-sm mb-1">
-                          {legend.panels.map((panel) => {
-                            switch (panel.type) {
-                              case "GLLegendHeatmapPanel":
-                                return <LegendHeatmapPanel panel={panel} />;
-                              case "GLLegendGradientPanel":
-                                return <LegendGradientPanel panel={panel} />;
-                              case "GLLegendBubblePanel":
-                                return (
-                                  <LegendBubblePanel
-                                    panelWidth={PANEL_WIDTH}
-                                    panel={panel}
-                                  />
-                                );
-                              case "GLLegendListPanel":
-                                return (
-                                  <LegendListPanel map={map} panel={panel} />
-                                );
-                              case "GLMarkerSizePanel":
-                                return (
-                                  <LegendMarkerSizePanel
-                                    map={map}
-                                    panel={panel}
-                                  />
-                                );
-                              case "GLLegendStepPanel":
-                                return (
-                                  <LegendStepPanel panel={panel} map={map} />
-                                );
-                              case "GLLegendSimpleSymbolPanel":
-                                return (
-                                  <LegendSimpleSymbolPanel
-                                    map={map}
-                                    panel={panel}
-                                  />
-                                );
-                              default:
-                                // eslint-disable-next-line i18next/no-literal-string
-                                return <div>not implemented</div>;
-                            }
-                          })}
+                          {legend.panels.map((panel) => (
+                            <PanelFactory
+                              key={panel.id}
+                              map={map}
+                              panel={panel}
+                            />
+                          ))}
                         </ul>
                       </li>
                     );
@@ -214,6 +181,45 @@ export default function Legend({
           </Accordion.Content>
         </Accordion.Item>
       </Accordion.Root>
+    </div>
+  );
+}
+
+function PanelFactory({ panel, map }: { panel: GLLegendPanel; map?: Map }) {
+  return (
+    <div>
+      {(() => {
+        switch (panel.type) {
+          case "GLLegendHeatmapPanel":
+            return <LegendHeatmapPanel panel={panel} />;
+          case "GLLegendGradientPanel":
+            return <LegendGradientPanel panel={panel} />;
+          case "GLLegendBubblePanel":
+            return <LegendBubblePanel panelWidth={PANEL_WIDTH} panel={panel} />;
+          case "GLLegendListPanel":
+            return <LegendListPanel map={map} panel={panel} />;
+          case "GLMarkerSizePanel":
+            return <LegendMarkerSizePanel map={map} panel={panel} />;
+          case "GLLegendStepPanel":
+            return <LegendStepPanel panel={panel} map={map} />;
+          case "GLLegendSimpleSymbolPanel":
+            return <LegendSimpleSymbolPanel map={map} panel={panel} />;
+          case "GLLegendFilterPanel":
+            return (
+              <div key={panel.id} className="">
+                <h3 className="text-xs pl-2 mt-2 font-mono">{panel.label}</h3>
+                <ul className="">
+                  {panel.children.map((child) => (
+                    <PanelFactory key={child.id} panel={child} map={map} />
+                  ))}
+                </ul>
+              </div>
+            );
+          default:
+            // eslint-disable-next-line i18next/no-literal-string
+            return <div>not implemented</div>;
+        }
+      })()}
     </div>
   );
 }

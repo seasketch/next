@@ -1,3 +1,4 @@
+import { Expression } from "mapbox-gl";
 import {
   GLLegendCircleSymbol,
   GLLegendFillSymbol,
@@ -6,11 +7,16 @@ import {
 } from "./LegendDataModel";
 import {
   compileLegendFromGLStyleLayers2,
+  GroupByFilterNode,
+  groupByFilters,
+  isGroupByFilterNode,
+  PanelItem,
   pluckBubblePanels,
   pluckFilterPanels,
   pluckGradientPanels,
   pluckHeatmapPanels,
-  pluckListPanels,
+  pluckListPanelsForCaseAndFilterExpressions,
+  pluckListPanelsFromMatchExpressions,
   pluckStepPanels,
   SeaSketchGlLayer,
 } from "./compileLegend";
@@ -1101,13 +1107,13 @@ describe("List panels", () => {
         },
       ],
     };
-    const output = pluckListPanels(context);
+    const output = pluckListPanelsFromMatchExpressions(context);
     expect(output.length).toBe(1);
     const list = output[0];
     expect(list.filters.length).toBe(0);
     expect(list.panel.label).toBe("type");
     const symbols = list.panel.items.map(
-      (i) => i.symbol as GLLegendCircleSymbol
+      (i: any) => i.symbol as GLLegendCircleSymbol
     );
     expect(symbols[0].radius).toBe(6);
     expect(symbols[0].color).toBe("purple");
@@ -1140,13 +1146,13 @@ describe("List panels", () => {
         },
       ],
     };
-    const output = pluckListPanels(context);
+    const output = pluckListPanelsForCaseAndFilterExpressions(context);
     expect(output.length).toBe(1);
     const list = output[0];
     expect(list.filters.length).toBe(0);
     expect(list.panel.label).toBe("type");
     const symbols = list.panel.items.map(
-      (i) => i.symbol as GLLegendCircleSymbol
+      (i: any) => i.symbol as GLLegendCircleSymbol
     );
     expect(symbols[0].radius).toBe(6);
     expect(symbols[0].color).toBe("purple");
@@ -1185,13 +1191,13 @@ describe("List panels", () => {
         },
       ],
     };
-    const output = pluckListPanels(context);
+    const output = pluckListPanelsFromMatchExpressions(context);
     expect(output.length).toBe(1);
     const list = output[0];
     expect(list.filters.length).toBe(1);
     expect(list.panel.label).toBe("type");
     const symbols = list.panel.items.map(
-      (i) => i.symbol as GLLegendCircleSymbol
+      (i: any) => i.symbol as GLLegendCircleSymbol
     );
     expect(symbols[0].radius).toBe(6);
     expect(symbols[0].color).toBe("purple");
@@ -1231,16 +1237,19 @@ describe("List panels", () => {
         },
       ],
     };
-    const output = pluckListPanels(context);
+    const output = [
+      ...pluckListPanelsFromMatchExpressions(context),
+      ...pluckListPanelsForCaseAndFilterExpressions(context),
+    ];
     expect(output.length).toBe(2);
-    const caPanel = output.find((p) => p.panel.label === "state")!;
-    const typePanel = output.find((o) => o !== caPanel)!;
+    const caPanel = output.find((p: any) => p.panel.label === "state")!;
+    const typePanel = output.find((o: any) => o !== caPanel)!;
     // TODO: this might change?
     expect(caPanel.filters.length).toBe(0);
     expect(typePanel.filters.length).toBe(0);
     expect(typePanel.panel.label).toBe("type");
     const symbols = typePanel.panel.items.map(
-      (i) => i.symbol as GLLegendCircleSymbol
+      (i: any) => i.symbol as GLLegendCircleSymbol
     );
     expect(symbols[0].radius).toBe(6);
     expect(symbols[0].color).toBe("purple");
@@ -1277,13 +1286,13 @@ describe("List panels", () => {
         },
       ],
     };
-    const output = pluckListPanels(context);
+    const output = pluckListPanelsFromMatchExpressions(context);
     expect(output.length).toBe(1);
     const list = output[0];
     expect(list.filters.length).toBe(1);
     expect(list.panel.label).toBe("type");
     const symbols = list.panel.items.map(
-      (i) => i.symbol as GLLegendCircleSymbol
+      (i: any) => i.symbol as GLLegendCircleSymbol
     );
     expect(symbols[0].radius).toBe(6);
     expect(symbols[0].color).toBe("purple");
@@ -1679,7 +1688,63 @@ describe("Kitchen sink examples", () => {
     expect(list.items.find((l) => l.label === "default")).toBeDefined();
   });
 
-  test.skip("EEZ w/filter by country and default style", () => {
+  test("EEZ with complex case+filter expressions", () => {
+    const legend = compileLegendFromGLStyleLayers2(
+      [
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "#FF0000",
+            "fill-opacity": [
+              "case",
+              ["==", ["get", "ISO_SOV1"], "MEX"],
+              0.15,
+              0,
+            ],
+          },
+          layout: {},
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": "#FF0000",
+            "line-width": 1,
+            "line-opacity": 0.75,
+          },
+          filter: ["==", "ISO_SOV1", "USA"],
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": "blue",
+            "line-width": ["match", ["get", "ISO_SOV1"], "MEX", 4, 1],
+            "line-opacity": 0.75,
+          },
+          filter: ["!=", "ISO_SOV1", "USA"],
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+        },
+      ],
+      "vector"
+    ) as MultipleSymbolLegendForGLLayers;
+    expect(legend.type).toBe("MultipleSymbolGLLegend");
+    expect(legend.panels.length).toBe(1);
+    const list = legend.panels[0] as GLLegendListPanel;
+    expect(list.type).toBe("GLLegendListPanel");
+    expect(list.items.find((l) => l.label === "USA")).toBeDefined();
+    expect(list.items.find((l) => l.label === "MEX")).toBeDefined();
+    expect(list.items.find((l) => l.label === "default")).toBeDefined();
+  });
+
+  test("EEZ w/filter by country and default style", () => {
     const legend = compileLegendFromGLStyleLayers2(
       [
         {
@@ -1712,5 +1777,291 @@ describe("Kitchen sink examples", () => {
       expect(list.items[0].symbol.type).toBe("fill");
       expect(list.items[1].label).toBe("default");
     }
+  });
+});
+
+describe("groupByFilters", () => {
+  test("simple output", () => {
+    const items = [
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "foo" } as GLLegendListPanel,
+      },
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "bar" } as GLLegendListPanel,
+      },
+    ];
+    const output = groupByFilters(items);
+    expect(output.children.length).toBe(2);
+  });
+
+  test("a few filters", () => {
+    const items = [
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "foo" } as GLLegendListPanel,
+      },
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "bar" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: { type: "GLLegendListPanel", label: "baz" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "bang",
+        } as GLLegendListPanel,
+      },
+    ];
+    const output = groupByFilters(items);
+    expect(output.children.length).toBe(3);
+    const filterNode = output.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    expect(filterNode).not.toBeUndefined();
+    expect(filterNode.children.length).toBe(2);
+  });
+
+  test("deeply nested", () => {
+    const items = [
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "foo" } as GLLegendListPanel,
+      },
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "bar" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: { type: "GLLegendListPanel", label: "baz" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "bang",
+        } as GLLegendListPanel,
+      },
+      {
+        filters: [
+          ["==", ["get", "county"], "santa barbara"],
+          ["==", "state", "CA"] as Expression,
+        ],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "sb",
+        } as GLLegendListPanel,
+      },
+    ];
+    const output = groupByFilters(items as PanelItem[]);
+    expect(output.children.length).toBe(3);
+    const lists = output.children.filter(
+      (c) => !isGroupByFilterNode(c)
+    ) as GLLegendListPanel[];
+    expect(lists.length).toBe(2);
+    expect(lists.map((l) => l.label).sort()).toEqual(["bar", "foo"].sort());
+    const filterNode = output.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    const subLists = filterNode.children.filter(
+      (c) => !isGroupByFilterNode(c)
+    ) as GLLegendListPanel[];
+    expect(subLists.length).toBe(2);
+    expect(subLists.map((l) => l.label).sort()).toEqual(["baz", "bang"].sort());
+    expect(filterNode).not.toBeUndefined();
+    expect(filterNode.children.length).toBe(3);
+    const sbNode = filterNode.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    expect(sbNode).not.toBeUndefined();
+    expect(sbNode.children.length).toBe(1);
+    expect((sbNode.children[0] as GLLegendListPanel).label).toBe("sb");
+  });
+
+  test("more branches and deeply nested", () => {
+    const items = [
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "foo" } as GLLegendListPanel,
+      },
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "bar" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: { type: "GLLegendListPanel", label: "baz" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "bang",
+        } as GLLegendListPanel,
+      },
+      {
+        filters: [
+          ["==", ["get", "county"], "santa barbara"],
+          ["==", "state", "CA"] as Expression,
+        ],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "sb",
+        } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "AZ"] as Expression],
+        panel: { type: "GLLegendListPanel", label: "AZ" } as GLLegendListPanel,
+      },
+      {
+        filters: [
+          ["==", "state", "AZ"],
+          ["==", "county", "Maricopa County"],
+        ] as Expression[],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "Maricopa County",
+        } as GLLegendListPanel,
+      },
+    ];
+    const output = groupByFilters(items as PanelItem[]);
+    expect(output.children.length).toBe(4);
+    const lists = output.children.filter(
+      (c) => !isGroupByFilterNode(c)
+    ) as GLLegendListPanel[];
+    expect(lists.length).toBe(2);
+    expect(lists.map((l) => l.label).sort()).toEqual(["bar", "foo"].sort());
+    const filterNodes = output.children.filter((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode[];
+    const CA = filterNodes.find((n) => n.filters[0][2] === "CA")!;
+    expect(CA).not.toBeUndefined();
+    const subLists = CA.children.filter(
+      (c) => !isGroupByFilterNode(c)
+    ) as GLLegendListPanel[];
+    expect(subLists.length).toBe(2);
+    expect(subLists.map((l) => l.label).sort()).toEqual(["baz", "bang"].sort());
+    expect(CA.children.length).toBe(3);
+    const sbNode = CA.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    expect(sbNode).not.toBeUndefined();
+    expect(sbNode.children.length).toBe(1);
+    expect((sbNode.children[0] as GLLegendListPanel).label).toBe("sb");
+    const AZ = filterNodes.find((n) => n.filters[0][2] === "AZ")!;
+    expect(AZ).not.toBeUndefined();
+    expect(AZ.children.length).toBe(2);
+    const maricopa = AZ.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    expect(maricopa).not.toBeUndefined();
+    expect(maricopa.children.length).toBe(1);
+    expect((maricopa.children[0] as GLLegendListPanel).label).toBe(
+      "Maricopa County"
+    );
+  });
+
+  test("'all' expressions are 'exploded'", () => {
+    const items = [
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "foo" } as GLLegendListPanel,
+      },
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "bar" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: { type: "GLLegendListPanel", label: "baz" } as GLLegendListPanel,
+      },
+      {
+        filters: [["==", "state", "CA"] as Expression],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "bang",
+        } as GLLegendListPanel,
+      },
+      {
+        filters: [
+          [
+            "all",
+            ["==", ["get", "county"], "santa barbara"],
+            ["==", "state", "CA"],
+          ],
+        ] as Expression[],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "sb",
+        } as GLLegendListPanel,
+      },
+    ];
+    const output = groupByFilters(items as PanelItem[]);
+    expect(output.children.length).toBe(3);
+    const lists = output.children.filter(
+      (c) => !isGroupByFilterNode(c)
+    ) as GLLegendListPanel[];
+    expect(lists.length).toBe(2);
+    expect(lists.map((l) => l.label).sort()).toEqual(["bar", "foo"].sort());
+    const filterNode = output.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    const subLists = filterNode.children.filter(
+      (c) => !isGroupByFilterNode(c)
+    ) as GLLegendListPanel[];
+    expect(subLists.length).toBe(2);
+    expect(subLists.map((l) => l.label).sort()).toEqual(["baz", "bang"].sort());
+    expect(filterNode).not.toBeUndefined();
+    expect(filterNode.children.length).toBe(3);
+    const sbNode = filterNode.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    expect(sbNode).not.toBeUndefined();
+    expect(sbNode.children.length).toBe(1);
+    expect((sbNode.children[0] as GLLegendListPanel).label).toBe("sb");
+  });
+
+  test("related filters are grouped into the same node", () => {
+    const items = [
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "foo" } as GLLegendListPanel,
+      },
+      {
+        filters: [],
+        panel: { type: "GLLegendListPanel", label: "bar" } as GLLegendListPanel,
+      },
+      {
+        filters: [
+          ["==", "state", "CA"],
+          [">", ["get", "population"], 50000],
+        ] as Expression[],
+        panel: { type: "GLLegendListPanel", label: "baz" } as GLLegendListPanel,
+      },
+      {
+        filters: [
+          ["==", "state", "CA"],
+          [">", ["get", "population"], 50000],
+        ] as Expression[],
+        panel: {
+          type: "GLLegendListPanel",
+          label: "bang",
+        } as GLLegendListPanel,
+      },
+    ];
+    const output = groupByFilters(items);
+    expect(output.children.length).toBe(3);
+    const filterNode = output.children.find((c) =>
+      isGroupByFilterNode(c)
+    ) as GroupByFilterNode;
+    expect(filterNode).not.toBeUndefined();
+    expect(filterNode.filters.length).toBe(2);
+    expect(filterNode.children.length).toBe(2);
   });
 });

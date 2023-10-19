@@ -15,7 +15,8 @@ export default function LegendSimpleSymbolPanel({
   return (
     <li key={panel.id} className="w-full">
       {panel.label && (
-        <h3 className="text-xs font-mono pl-2 my-1">{panel.label}</h3>
+        // eslint-disable-next-line i18next/no-literal-string
+        <h3 className="text-xs font-mono pl-2 my-1">simple - {panel.label}</h3>
       )}
       <ul className="space-y-0.5 w-full pl-2">
         {panel.items.map((item) => {

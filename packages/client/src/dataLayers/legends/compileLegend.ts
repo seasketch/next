@@ -15,6 +15,7 @@ import {
   GLLegendBubblePanel,
   GLLegendCircleSymbol,
   GLLegendFillSymbol,
+  GLLegendFilterPanel,
   GLLegendGradientPanel,
   GLLegendHeatmapPanel,
   GLLegendLineSymbol,
@@ -110,10 +111,52 @@ export function compileLegendFromGLStyleLayers2(
   // TODO: marker size panel. basically the same as bubble panel
   legendItems.push(...pluckGradientPanels(context));
   legendItems.push(...pluckStepPanels(context));
-  legendItems.push(...pluckListPanels(context));
+  legendItems.push(...pluckListPanelsFromMatchExpressions(context));
+  legendItems.push(...pluckListPanelsForCaseAndFilterExpressions(context));
 
   legendItems.push(...pluckFilterPanels(context));
-  // TODO: consolidate filters and nest into filter panels
+
+  // Special case.. If there are only fill layers with filter expressions,
+  // and there is a line layer, that line layer will be "plucked" when rendering
+  // but should also be rendered as an empty outline if no filters evaluate to
+  // true
+  // const simpleLine = layers.find(
+  //   (lyr) => !hasAnySignificantGetExpressions(lyr)
+  // );
+  // if (simpleLine && !context.layers.includes(simpleLine)) {
+  //   // do all fill layers have a significant filter, and no case, match, step, or interpolate expressions?
+  //   const fill = layers.find((layer) => {
+  //     if (
+  //       layer.type === "fill" &&
+  //       layer.filter &&
+  //       isExpression(layer.filter) &&
+  //       hasGetExpression(layer.filter, true)
+  //     ) {
+  //       return true;
+  //     }
+  //     return false;
+  //   });
+  //   console.log("simple line", simpleLine, fill);
+  //   if (!fill) {
+  //     legendItems.push({
+  //       panel: {
+  //         type: "GLLegendSimpleSymbolPanel",
+  //         id: "simple-line-default",
+  //         items: [
+  //           {
+  //             id: "simple-line-default",
+  //             symbol: getSingleSymbolForVectorLayers([simpleLine]),
+  //             label: "default",
+  //           },
+  //         ],
+  //       },
+  //       filters: [],
+  //     });
+  //   }
+  // }
+
+  // TODO: render any remaining layers as simple symbols
+
   let panels = consolidatePanels(legendItems);
 
   // TODO: cull any empty panels with no items
@@ -135,6 +178,23 @@ export function compileLegendFromGLStyleLayers2(
   }
   panels = panels.filter((p) => !culled.includes(p));
 
+  // Where fill layers exist, convert all line layers to fill layers with a
+  // transparent fill
+  if (layers.find((l) => l.type === "fill")) {
+    transformLineSymbolsToFill(panels);
+  }
+
+  // sort panels. filter panels should go last
+  panels.sort((a, b) => {
+    if (a.type === "GLLegendFilterPanel") {
+      return 1;
+    } else if (b.type === "GLLegendFilterPanel") {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+
   if (legendItems.length === 0) {
     return {
       type: "SimpleGLLegend",
@@ -146,73 +206,6 @@ export function compileLegendFromGLStyleLayers2(
       panels,
     };
   }
-}
-
-function consolidatePanels(
-  items: {
-    panel: GLLegendPanel;
-    filters: Expression[];
-  }[]
-): GLLegendPanel[] {
-  const unfilteredPanels: { panel: GLLegendPanel; filters: Expression[] }[] =
-    [];
-  for (const item of items) {
-    // first, look to see if there are any existing panels that it can be
-    // merged into.
-    if (
-      item.panel.type === "GLLegendSimpleSymbolPanel" &&
-      item.panel.items[0].label &&
-      item.panel.items.length === 1
-    ) {
-      // look for existing list panels with matching filters and label
-      const existing = unfilteredPanels.find(
-        (i) =>
-          i.panel.type === "GLLegendListPanel" &&
-          isEqual(i.filters, item.filters) &&
-          i.panel.label === (item.panel as GLLegendListPanel).label
-      );
-      if (existing) {
-        (existing.panel as GLLegendListPanel).items.push({
-          id:
-            item.panel.id +
-            "-" +
-            (existing.panel as GLLegendListPanel).items.length,
-          label: item.panel.label!,
-          symbol: item.panel.items[0].symbol,
-        });
-        continue;
-      }
-    } else if (
-      item.panel.type === "GLLegendSimpleSymbolPanel" &&
-      item.panel.label &&
-      items.find(
-        (i) =>
-          i.panel.type === "GLLegendSimpleSymbolPanel" &&
-          isEqual(i.filters, item.filters)
-      )
-    ) {
-      // There are other simple symbol panels with the same filters, so
-      // start a new list panel
-      unfilteredPanels.push({
-        filters: item.filters,
-        panel: {
-          id: item.panel.id + "-list",
-          type: "GLLegendListPanel",
-          label: item.panel.label,
-          items: [
-            {
-              id: item.panel.id + "-0",
-              label: item.panel.label,
-              symbol: item.panel.items[0].symbol,
-            },
-          ],
-        },
-      });
-      continue;
-    }
-    unfilteredPanels.push({ panel: item.panel, filters: item.filters });
-  }
-  return unfilteredPanels.map((i) => i.panel);
 }
 
 /**
@@ -229,9 +222,13 @@ export function propsForFilterExpressions(filters: Expression[]) {
       for (const prop in filterProps) {
         featureProps[prop] = filterProps[prop];
       }
-      throw new Error("Not supported");
     } else if (filter[0] === "all") {
-      throw new Error("Not supported");
+      for (const arg of filter.slice(1)) {
+        const filterProps = propsForSimpleFilter(arg);
+        for (const prop in filterProps) {
+          featureProps[prop] = filterProps[prop];
+        }
+      }
     } else {
       const filterProps = propsForSimpleFilter(filter);
       for (const prop in filterProps) {
@@ -779,8 +776,9 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
     }
   });
 
-  for (const layer of context.layers) {
+  for (const layer of layers) {
     if (!pluckedLayers.includes(layer)) {
+      console.log("plucking filter panel", layer.type);
       if (layer.filter && isExpression(layer.filter)) {
         const labels = new Set<string>();
         findGetExpressionProperties(
@@ -797,7 +795,26 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
           items: [],
           label,
         };
-        const symbol = getSingleSymbolForVectorLayers([layer]);
+        let relatedLineLayers: SeaSketchGlLayer[] = [];
+        let featureProps = {};
+        if (layer.type === "fill" && layer.filter) {
+          for (const lyr of layers) {
+            if (layer !== lyr && lyr.type === "line") {
+              const filter = normalizeLegacyFilterExpression(layer.filter);
+              // next see if the values which would satisfy fill layer's filters
+              // would also satisfy the line layer's filters
+              featureProps = propsForFilterExpressions([filter]);
+              if (evaluateFilter(filter, featureProps)) {
+                relatedLineLayers.push(lyr);
+              }
+            }
+          }
+        }
+        // console.log("related", relatedLineLayers);
+        const symbol = getSingleSymbolForVectorLayers(
+          [layer, ...relatedLineLayers],
+          featureProps
+        );
         if (symbol) {
           panel.items.push({
             id: panel.id + "-only",
@@ -808,9 +825,12 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
           });
           panels.push({
             panel,
+            // Can clear filters here, since this is the last step and there
+            // should be no sub-expressions
             filters: [layer.filter],
           });
           pluckedLayers.push(layer);
+          pluckedLayers.push(...relatedLineLayers);
         }
       }
     }
@@ -819,9 +839,10 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
   return panels;
 }
 
-export function pluckListPanels(context: { layers: SeaSketchGlLayer[] }) {
-  // First handle match expressions. These are easiest to turn into lists
-  const results = pluckLayersWithExpression(
+export function pluckListPanelsFromMatchExpressions(context: {
+  layers: SeaSketchGlLayer[];
+}) {
+  return pluckLayersWithExpression(
     context,
     "match",
     (
@@ -919,6 +940,11 @@ export function pluckListPanels(context: { layers: SeaSketchGlLayer[] }) {
       return panel;
     }
   );
+}
+
+export function pluckListPanelsForCaseAndFilterExpressions(context: {
+  layers: SeaSketchGlLayer[];
+}) {
   // then handle case expressions, since these can be used to achieve the same
   // type of results
   const caseResults: { panel: GLLegendListPanel; filters: Expression[] }[] = [];
@@ -1103,13 +1129,13 @@ export function pluckListPanels(context: { layers: SeaSketchGlLayer[] }) {
       }
     }
   }
-  if (caseResults.length) {
-    results.push(...caseResults);
-  }
-  return results;
+  return caseResults;
 }
 
-function labelForExpression(expression: Expression) {
+function labelForExpression(
+  expression: Expression,
+  includePropertyName = false
+) {
   const fnName = expression[0];
   let comparisonPosition = 1;
   if (expression[1][0] === "get") {
@@ -1119,15 +1145,20 @@ function labelForExpression(expression: Expression) {
   } else {
     throw new Error("Could not find get expression in filter");
   }
+  const propLabel = includePropertyName
+    ? comparisonPosition === 2
+      ? expression[1][1] + " "
+      : expression[2][1] + " "
+    : "";
   switch (fnName) {
     case "==":
-      return expression[comparisonPosition];
+      return propLabel + expression[comparisonPosition];
     case "!=":
-      return `!= ${expression[comparisonPosition]}`;
+      return `${propLabel}!= ${expression[comparisonPosition]}`;
     case "!":
       return `!${expression[comparisonPosition]}`;
     default:
-      return `${fnName} ${expression[comparisonPosition]}`;
+      return `${propLabel}${fnName} ${expression[comparisonPosition]}`;
   }
 }
 
@@ -2708,7 +2739,8 @@ function isSimpleGetArg(arg: any): boolean {
 }
 
 function getSingleSymbolForVectorLayers(
-  layers: SeaSketchGlLayer[]
+  layers: SeaSketchGlLayer[],
+  featureProps = {} as { [propName: string]: any }
 ): GLLegendSymbol {
   // Last layer in the array is the top-most layer, so it should be the primary
   layers = [...layers].reverse();
@@ -2720,7 +2752,7 @@ function getSingleSymbolForVectorLayers(
     return createFillSymbol(
       fillLayer,
       layers.filter((l) => l !== fillLayer),
-      {}
+      featureProps
     );
   }
   const lineLayer = layers.find((layer) => layer.type === "line") as LineLayer;
@@ -2728,7 +2760,7 @@ function getSingleSymbolForVectorLayers(
     return createLineSymbol(
       lineLayer,
       layers.filter((l) => l !== lineLayer),
-      {}
+      featureProps
     );
   }
   const circleLayer = layers.find((layer) => layer.type === "circle");
@@ -2736,7 +2768,7 @@ function getSingleSymbolForVectorLayers(
     return createCircleSymbol(
       circleLayer,
       layers.filter((l) => l !== circleLayer),
-      {}
+      featureProps
     );
   }
   const symbolLayer = layers.find((layer) => layer.type === "symbol");
@@ -2747,21 +2779,30 @@ function getSingleSymbolForVectorLayers(
       return createMarkerSymbol(
         symbolLayer,
         layers.filter((l) => l !== symbolLayer),
-        {}
+        featureProps
       );
     } else if (layout["text-field"]) {
       return createTextSymbol(
         symbolLayer,
         layers.filter((l) => l !== symbolLayer),
-        {}
+        featureProps
       );
     }
   }
   throw new Error("Not implemented");
 }
 
-function layerIsVisible(layer: SeaSketchGlLayer) {
-  return !layer.layout?.visibility || layer.layout.visibility !== "none";
+function layerIsVisible(
+  layer: SeaSketchGlLayer,
+  featureData?: { [propName: string]: any }
+) {
+  const isVisible =
+    !layer.layout?.visibility || layer.layout.visibility !== "none";
+  const filterPasses =
+    !layer.filter ||
+    featureData === undefined ||
+    passesFilter(layer.filter, featureData);
+  return isVisible && filterPasses;
 }
 
 function createMarkerSymbol(
@@ -3181,16 +3222,16 @@ function createSymbol(
         representedProperties
       );
     case "line":
-      // TODO: evaluate filters?
       const visibleFillLayer = otherLayers.find(
-        (l) => l.type === "fill" && layerIsVisible(l)
+        (l) => l.type === "fill" && layerIsVisible(l, featureProps)
       );
       if (visibleFillLayer) {
         return createFillSymbol(
           visibleFillLayer,
           layers.filter((l) => l !== visibleFillLayer),
           featureProps,
-          representedProperties
+          representedProperties,
+          false
         );
       } else {
         return createLineSymbol(
@@ -3232,7 +3273,8 @@ function createFillSymbol(
   fillLayer: SeaSketchGlLayer,
   otherLayers: SeaSketchGlLayer[],
   featureData: { [propName: string]: any },
-  representedProperties?: RepresentedProperties
+  representedProperties?: RepresentedProperties,
+  skipFill = false
 ): GLLegendFillSymbol {
   const paint = (fillLayer.paint || {}) as any;
   const extruded = fillLayer.type === "fill-extrusion";
@@ -3259,13 +3301,13 @@ function createFillSymbol(
     representedProperties,
     "transparent"
   );
-  const lineLayer = otherLayers.find((layer) => layer.type === "line") as
-    | Layer
-    | undefined;
+  const lineLayers = otherLayers.filter(
+    (layer) => layer.type === "line" && passesFilter(layer.filter, featureData)
+  ) as Layer[];
   let dashedLine = false;
   let strokeOpacity: number | undefined;
-  if (lineLayer) {
-    const linePaint = (lineLayer.paint || {}) as any;
+  for (const layer of lineLayers) {
+    const linePaint = (layer.paint || {}) as any;
     strokeWidth = getPaintProp(
       linePaint,
       "line-width",
@@ -3312,7 +3354,7 @@ function createFillSymbol(
       );
   return {
     type: "fill",
-    color,
+    color: skipFill ? "transparent" : color,
     extruded: fillLayer.type === "fill-extrusion" ? true : false,
     fillOpacity: opacity,
     strokeWidth,
@@ -3335,6 +3377,31 @@ function createFillSymbol(
           undefined
         ),
   };
+}
+
+function passesFilter(filter: any, featureData: { [propName: string]: any }) {
+  if (!filter) {
+    return true;
+  } else {
+    return evaluateFilter(filter, featureData);
+  }
+}
+
+function evaluateFilter(
+  filter: Expression,
+  featureData: { [propName: string]: any }
+) {
+  filter = normalizeLegacyFilterExpression(filter);
+  return (
+    ExpressionEvaluator.parse(filter).evaluate({
+      type: "Feature",
+      properties: featureData,
+      geometry: {
+        type: "Point",
+        coordinates: [1, 2],
+      },
+    }) === true
+  );
 }
 
 function findGetExpressionProperties(
@@ -3473,4 +3540,386 @@ function forEachTerminatingCaseBranch(
       }
     }
   }
+}
+
+function transformLineSymbolsToFill(panels: GLLegendPanel[]) {
+  for (const panel of panels) {
+    switch (panel.type) {
+      case "GLLegendListPanel":
+      case "GLLegendStepPanel":
+      case "GLLegendSimpleSymbolPanel":
+        const items =
+          panel.type === "GLLegendStepPanel" ? panel.steps : panel.items;
+        const replacements = items.map((item) => {
+          let original = item.symbol;
+          return {
+            ...item,
+            symbol:
+              original.type === "line"
+                ? {
+                    type: "fill",
+                    color: "transparent",
+                    fillOpacity: 0,
+                    strokeWidth: original.strokeWidth,
+                    strokeColor: original.color,
+                    dashed: original.dashed,
+                    extruded: false,
+                    strokeOpacity: original.opacity,
+                  }
+                : original,
+          };
+        });
+        if (
+          panel.type === "GLLegendListPanel" ||
+          panel.type === "GLLegendSimpleSymbolPanel"
+        ) {
+          panel.items = replacements as any;
+        } else {
+          panel.steps = replacements as any;
+        }
+        break;
+    }
+  }
+}
+
+export interface GroupByFilterNode {
+  filters: Expression[];
+  children: (GroupByFilterNode | GLLegendPanel)[];
+}
+
+export function isGroupByFilterNode(
+  node: GroupByFilterNode | GLLegendPanel
+): node is GroupByFilterNode {
+  return "filters" in node && "children" in node;
+}
+
+export interface PanelItem {
+  panel: GLLegendPanel;
+  filters: Expression[];
+}
+
+/**
+ * Groups the given panels by the filters that are applied to them.
+ * Common filters are grouped together, and panels that have no filters
+ * are attached to the root node.
+ *
+ */
+export function groupByFilters(items: PanelItem[]): GroupByFilterNode {
+  const root: GroupByFilterNode = {
+    filters: [],
+    children: [],
+  };
+  // explode ALL expressions
+  items = [...items].map((item) => {
+    const filters: Expression[] = [];
+    for (const filter of item.filters) {
+      if (filter[0] === "all") {
+        filters.push(...filter.slice(1));
+      } else {
+        filters.push(filter);
+      }
+    }
+    return {
+      ...item,
+      filters,
+    };
+  });
+
+  populateNode(root, items);
+  // some branches might be something like
+  // filterNode(filter=a) -> filterNode(filter=b) -> panels
+  // consolidate into filterNode(filter=a,b) -> panels
+  consolidateFilterNodesWithNoPanels(root);
+  return root;
+}
+
+function consolidateFilterNodesWithNoPanels(node: GroupByFilterNode) {
+  const newChildren: (GLLegendPanel | GroupByFilterNode)[] = [];
+  for (const child of node.children) {
+    if (isGroupByFilterNode(child)) {
+      if (
+        child.children.length === 1 &&
+        isGroupByFilterNode(child.children[0])
+      ) {
+        // promote the child's children to this node
+        newChildren.push(child.children[0]);
+        child.children[0].filters = [
+          ...child.filters,
+          ...child.children[0].filters,
+        ];
+        consolidateFilterNodesWithNoPanels(child.children[0]);
+      } else {
+        newChildren.push(child);
+        consolidateFilterNodesWithNoPanels(child);
+      }
+    } else {
+      newChildren.push(child);
+    }
+    node.children = newChildren;
+  }
+}
+
+function populateNode(node: GroupByFilterNode, items: PanelItem[]) {
+  const groupByExpression: { [expression: string]: PanelItem[] } = {};
+  // add items that match the filter of the above node (exactly)
+  for (const item of items) {
+    let matches = true;
+    for (const filter of item.filters) {
+      if (
+        !node.filters.find((f) => JSON.stringify(f) === JSON.stringify(filter))
+      ) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) {
+      node.children.push(item.panel);
+    }
+  }
+  items = items.filter((i) => !node.children.includes(i.panel));
+  if (items.length === 0) {
+    return;
+  }
+  // cull "represented" filters from remaining items since they are nested under
+  // a filtered node
+  for (const item of items) {
+    item.filters = item.filters.filter(
+      (f) =>
+        !node.filters.find((f2) => JSON.stringify(f2) === JSON.stringify(f))
+    );
+  }
+  let iterationLimit = 999;
+  for (const item of items) {
+    for (const filter of item.filters) {
+      const stringified = JSON.stringify(filter);
+      if (!groupByExpression[stringified]) {
+        groupByExpression[stringified] = [];
+      }
+      groupByExpression[stringified].push(item);
+    }
+  }
+  while (Object.keys(groupByExpression).length) {
+    iterationLimit--;
+    if (iterationLimit < 0) {
+      throw new Error("Iteration limit exceeded");
+    }
+    // find the most common expression
+    let mostCommonExpression: string | undefined;
+    for (const key in groupByExpression) {
+      if (
+        !mostCommonExpression ||
+        groupByExpression[key].length >
+          groupByExpression[mostCommonExpression].length
+      ) {
+        mostCommonExpression = key;
+      }
+    }
+    if (!mostCommonExpression) {
+      throw new Error("No most common expression");
+    }
+    const child: GroupByFilterNode = {
+      filters: [JSON.parse(mostCommonExpression)],
+      children: [],
+    };
+    node.children.push(child);
+    populateNode(child, groupByExpression[mostCommonExpression]);
+    for (const item of groupByExpression[mostCommonExpression]) {
+      for (const key in groupByExpression) {
+        groupByExpression[key] = groupByExpression[key].filter(
+          (i) => i !== item
+        );
+        if (groupByExpression[key].length === 0) {
+          delete groupByExpression[key];
+        }
+      }
+    }
+    delete groupByExpression[mostCommonExpression];
+  }
+}
+
+function consolidatePanels(
+  items: {
+    panel: GLLegendPanel;
+    filters: Expression[];
+  }[]
+): GLLegendPanel[] {
+  // first, ensure all legacy filters are converted to get expressions so that
+  // related filters match
+  for (const item of items) {
+    item.filters = item.filters.map((filter) =>
+      normalizeLegacyFilterExpression(filter)
+    );
+  }
+  // Merge list panels with matching filters and labels
+  const grouped = groupByFilters(items);
+  consolidateNode(grouped);
+  const rootFilterPanel = consolidateFilterPanel(grouped);
+
+  // At each "level", perform a consolidation of panels
+  return rootFilterPanel.children;
+}
+
+function consolidateNode(node: GroupByFilterNode) {
+  // repeat recursively for all sub-nodes
+  // promote subNodes with single simple symbol panels which have matching
+  // get expression target properties into a single list panel
+  const listPanels: { [key: string]: GLLegendListPanel } = {};
+  for (const subNode of node.children.filter(isGroupByFilterNode)) {
+    if (
+      subNode.children.length === 1 &&
+      !isGroupByFilterNode(subNode.children[0]) &&
+      subNode.children[0].type === "GLLegendSimpleSymbolPanel"
+    ) {
+      const getProps = new Set<string>();
+      subNode.filters.forEach((f) => {
+        findGetExpressionProperties(f, (propName) => {
+          getProps.add(propName);
+        });
+      });
+      if (getProps.size === 1) {
+        const propName = getProps.values().next().value;
+        const panel = subNode.children[0] as GLLegendSimpleSymbolPanel;
+        const key = `${propName}%%${panel.items[0].symbol.type}`;
+        if (!listPanels[key]) {
+          listPanels[key] = {
+            id: key,
+            type: "GLLegendListPanel",
+            label: propName,
+            items: [],
+          };
+        }
+        const list = listPanels[key];
+        list.items.push({
+          id: panel.items[0].id,
+          label:
+            panel.items[0].label ||
+            subNode.filters
+              .map((f) => labelForExpression(f, true))
+              .join(" && "),
+          symbol: panel.items[0].symbol,
+        });
+        node.children = node.children.filter((c) => c !== subNode);
+      }
+    }
+  }
+  node.children.push(...Object.values(listPanels));
+
+  // Do another pass, looking for nodes with a single get filter prop that
+  // matches their child panel labels. If they match, delete the filter and
+  // promote the node
+  for (const child of node.children.filter(isGroupByFilterNode)) {
+    const filterProps = new Set<string>();
+    child.filters.forEach((f) => {
+      findGetExpressionProperties(f, (propName) => {
+        filterProps.add(propName);
+      });
+    });
+    if (filterProps.size === 1) {
+      const propName = filterProps.values().next().value;
+      for (const panel of child.children) {
+        if (!isGroupByFilterNode(panel)) {
+          if (
+            (panel.type === "GLLegendListPanel" ||
+              panel.type === "GLLegendSimpleSymbolPanel") &&
+            panel.label === propName
+          ) {
+            // promote to node
+            node.children.push(panel);
+            child.children = child.children.filter((c) => c !== panel);
+          }
+        }
+      }
+      if (child.children.length === 0) {
+        node.children = node.children.filter((c) => c !== child);
+      }
+    }
+  }
+
+  // Finally, merge all list and simple panels with matching labels and symbol
+  // types
+  const merged: { [key: string]: GLLegendListPanel } = {};
+  const plucked: GLLegendPanel[] = [];
+  for (const panel of node.children) {
+    if (!isGroupByFilterNode(panel)) {
+      if (
+        (panel.type === "GLLegendListPanel" ||
+          panel.type === "GLLegendSimpleSymbolPanel") &&
+        panel.items.length > 0
+      ) {
+        const key = `${panel.label}%%${
+          ["fill", "line"].includes(panel.items[0].symbol.type)
+            ? "fill-or-line"
+            : panel.items[0].symbol.type
+        }`;
+        if (!merged[key]) {
+          merged[key] = {
+            id: panel.id,
+            type: "GLLegendListPanel",
+            label: panel.label,
+            items: [],
+          };
+        }
+        const list = merged[key];
+        list.items.push(
+          ...panel.items.map((item) => ({
+            ...item,
+            label: item.label || panel.label || "",
+          }))
+        );
+        plucked.push(panel);
+      }
+    }
+  }
+
+  node.children = node.children.filter(
+    (n) => isGroupByFilterNode(n) || !plucked.includes(n)
+  );
+  for (const item of Object.values(merged)) {
+    node.children.push(item);
+  }
+
+  for (const subNode of node.children.filter(isGroupByFilterNode)) {
+    consolidateNode(subNode);
+  }
+}
+
+function consolidateFilterPanel(node: GroupByFilterNode) {
+  const filterPanel: GLLegendFilterPanel = {
+    id: node.filters.length === 0 ? "root" : JSON.stringify(node.filters),
+    type: "GLLegendFilterPanel",
+    // TODO: humanize this
+    label: node.filters.map((f) => labelForExpression(f, true)).join(", "),
+    children: [],
+  };
+  const panels: GLLegendPanel[] = [];
+  for (const nodeOrPanel of node.children) {
+    if (isGroupByFilterNode(nodeOrPanel)) {
+      filterPanel.children.push(consolidateFilterPanel(nodeOrPanel));
+    } else {
+      panels.push(nodeOrPanel);
+    }
+  }
+
+  // TODO: consolidate related panels
+  filterPanel.children.push(...panels);
+  return filterPanel;
+}
+
+function hasAnySignificantGetExpressions(layer: SeaSketchGlLayer) {
+  if (layer.filter && hasGetExpression(layer.filter, true)) {
+    return true;
+  }
+  const paint = layer.paint || ({} as any);
+  for (const prop of SIGNIFICANT_PAINT_PROPS) {
+    if (isExpression(paint[prop]) && hasGetExpression(paint[prop], false)) {
+      return true;
+    }
+  }
+  const layout = layer.layout || ({} as any);
+  for (const prop of SIGNIFICANT_LAYOUT_PROPS) {
+    if (isExpression(layout[prop]) && hasGetExpression(layout[prop], false)) {
+      return true;
+    }
+  }
+  return false;
 }

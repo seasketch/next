@@ -76,6 +76,13 @@ export type GLLegendListPanel = {
   items: { id: string; label: string; symbol: GLLegendSymbol }[];
 };
 
+export type GLLegendFilterPanel = {
+  id: string;
+  type: "GLLegendFilterPanel";
+  label: string;
+  children: GLLegendPanel[];
+};
+
 /**
  * Display should be stacked if bubbles are big and can nest together, otherwise
  * display as a list.
@@ -151,7 +158,8 @@ export type GLLegendPanel =
   | GLLegendGradientPanel
   | GLMarkerSizePanel
   | GLLegendStepPanel
-  | GLLegendSimpleSymbolPanel;
+  | GLLegendSimpleSymbolPanel
+  | GLLegendFilterPanel;
 
 export type SimpleLegendForGLLayers = {
   type: "SimpleGLLegend";
