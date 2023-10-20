@@ -48,10 +48,7 @@ import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
-import {
-  compileLegendFromGLStyleLayers,
-  compileLegendFromGLStyleLayers2,
-} from "./legends/compileLegend";
+import { compileLegendFromGLStyleLayers2 } from "./legends/compileLegend";
 import { LegendItem } from "./Legend";
 import { EventEmitter } from "eventemitter3";
 import MeasureControl, {
@@ -2462,20 +2459,12 @@ class MapContextManager extends EventEmitter {
 
           if (sourceType) {
             try {
-              // TODO: get geostats here from graphql api before requesting
-              // legend
-              const legend = compileLegendFromGLStyleLayers(
-                layer.mapboxGlStyles,
-                sourceType
-              );
-
               console.time("legend2");
               const legend2 = compileLegendFromGLStyleLayers2(
                 layer.mapboxGlStyles,
                 sourceType
               );
               console.timeEnd("legend2");
-              console.log("legend2", legend2);
 
               if (legend2) {
                 newLegendState[id] = {

@@ -13,7 +13,10 @@ import {
 import * as Accordion from "@radix-ui/react-accordion";
 import Spinner from "../../../components/Spinner";
 import { Layer, Map } from "mapbox-gl";
-import { compileLegendFromGLStyleLayers } from "../../../dataLayers/legends/compileLegend";
+import {
+  SeaSketchGlLayer,
+  compileLegendFromGLStyleLayers2,
+} from "../../../dataLayers/legends/compileLegend";
 import { memo } from "react";
 import SimpleSymbol from "../../../dataLayers/legends/SimpleSymbol";
 import { LegendForGLLayers } from "../../../dataLayers/legends/LegendDataModel";
@@ -263,7 +266,7 @@ function Toggle({
   );
 }
 
-export function styleHasDataExpression(style: Layer[]) {
+export function styleHasDataExpression(style: SeaSketchGlLayer[]) {
   for (const layer of style) {
     if (
       style.length > 1 &&
@@ -301,7 +304,7 @@ const SimpleLegendIconFromStyle = memo(
   }) {
     let data: LegendForGLLayers | undefined;
     try {
-      data = compileLegendFromGLStyleLayers(props.style.layers, "vector");
+      data = compileLegendFromGLStyleLayers2(props.style.layers, "vector");
     } catch (e) {
       // Do nothing
     }

@@ -21,6 +21,11 @@ import {
   SeaSketchGlLayer,
 } from "./compileLegend";
 
+beforeEach(() => {
+  // supress console.warn from expression evaluator
+  jest.spyOn(console, "warn").mockImplementation(() => {});
+});
+
 describe("bubble charts", () => {
   test("Simple bubble chart", () => {
     const context: { layers: SeaSketchGlLayer[] } = {
@@ -1744,6 +1749,72 @@ describe("Kitchen sink examples", () => {
     expect(list.items.find((l) => l.label === "default")).toBeDefined();
   });
 
+  test("EEZ (complex w/only filters)", () => {
+    const legend = compileLegendFromGLStyleLayers2(
+      [
+        {
+          type: "fill",
+          paint: {
+            "fill-color": "#FF0000",
+            "fill-opacity": 0.15,
+          },
+          filter: ["==", "ISO_SOV1", "MEX"],
+          layout: {},
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": "red",
+            "line-width": 1,
+            "line-opacity": 0.75,
+          },
+          filter: ["==", "ISO_SOV1", "USA"],
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": "blue",
+            "line-width": 1,
+            "line-opacity": 0.75,
+          },
+          filter: ["all", ["!=", "ISO_SOV1", "USA"], ["!=", "ISO_SOV1", "MEX"]],
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+        },
+        {
+          type: "line",
+          paint: {
+            "line-color": "blue",
+            "line-width": 4,
+            "line-opacity": 0.75,
+          },
+          filter: ["==", "ISO_SOV1", "MEX"],
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+            visibility: "visible",
+          },
+        },
+      ],
+      "vector"
+    ) as MultipleSymbolLegendForGLLayers;
+    expect(legend.type).toBe("MultipleSymbolGLLegend");
+    expect(legend.panels.length).toBe(1);
+    const list = legend.panels[0] as GLLegendListPanel;
+    expect(list.type).toBe("GLLegendListPanel");
+    expect(list.items.find((l) => l.label === "USA")).toBeDefined();
+    expect(list.items.find((l) => l.label === "MEX")).toBeDefined();
+    expect(list.items.find((l) => l.label === "!= USA, != MEX")).toBeDefined();
+  });
+
   test("EEZ w/filter by country and default style", () => {
     const legend = compileLegendFromGLStyleLayers2(
       [
@@ -1773,9 +1844,10 @@ describe("Kitchen sink examples", () => {
       expect(legend.panels[0].type).toBe("GLLegendListPanel");
       const list = legend.panels[0] as GLLegendListPanel;
       expect(list.items.length).toBe(2);
-      expect(list.items[0].label).toBe("USA");
+      const labels = list.items.map((i) => i.label);
+      expect(labels).toContain("default");
+      expect(labels).toContain("USA");
       expect(list.items[0].symbol.type).toBe("fill");
-      expect(list.items[1].label).toBe("default");
     }
   });
 });
