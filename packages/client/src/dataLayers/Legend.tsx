@@ -79,10 +79,12 @@ export default function Legend({
   maxHeight = maxHeight || undefined;
   return (
     <div
-      style={{
-        backdropFilter: "blur(10px)",
-      }}
-      className={`${className} shadow rounded bg-white bg-opacity-90 w-64 text-sm flex flex-col overflow-hidden`}
+      style={
+        {
+          // backdropFilter: "blur(10px)",
+        }
+      }
+      className={`${className} shadow rounded bg-white bg-opacity-95 w-64 text-sm flex flex-col overflow-hidden`}
     >
       <Accordion.Root type="single" collapsible defaultValue="legend">
         <Accordion.Item value="legend">
@@ -221,30 +223,6 @@ function PanelFactory({ panel, map }: { panel: GLLegendPanel; map?: Map }) {
         }
       })()}
     </div>
-  );
-}
-
-function LegendImage({
-  item,
-  className,
-}: {
-  item: LegendSymbolItem;
-  className?: string;
-}) {
-  return (
-    <img
-      className={`${className}`}
-      alt={item.label}
-      src={item.imageUrl}
-      width={
-        (item.imageWidth || 20) /
-        (window.devicePixelRatio > 1 ? window.devicePixelRatio / 1.5 : 1)
-      }
-      height={
-        (item.imageHeight || 20) /
-        (window.devicePixelRatio > 1 ? window.devicePixelRatio / 1.5 : 1)
-      }
-    />
   );
 }
 

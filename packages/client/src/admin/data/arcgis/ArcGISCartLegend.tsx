@@ -15,7 +15,7 @@ import Spinner from "../../../components/Spinner";
 import { Layer, Map } from "mapbox-gl";
 import {
   SeaSketchGlLayer,
-  compileLegendFromGLStyleLayers2,
+  compileLegendFromGLStyleLayers,
 } from "../../../dataLayers/legends/compileLegend";
 import { memo } from "react";
 import SimpleSymbol from "../../../dataLayers/legends/SimpleSymbol";
@@ -304,7 +304,7 @@ const SimpleLegendIconFromStyle = memo(
   }) {
     let data: LegendForGLLayers | undefined;
     try {
-      data = compileLegendFromGLStyleLayers2(props.style.layers, "vector");
+      data = compileLegendFromGLStyleLayers(props.style.layers, "vector");
     } catch (e) {
       // Do nothing
     }

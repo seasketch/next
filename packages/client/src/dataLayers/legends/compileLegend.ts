@@ -73,7 +73,7 @@ const SIGNIFICANT_STYLE_PROPS = [
   })) as StyleProp[]),
 ];
 
-export function compileLegendFromGLStyleLayers2(
+export function compileLegendFromGLStyleLayers(
   layers: SeaSketchGlLayer[],
   sourceType: "vector" | "raster" | "geojson" | "image" | "video" | "raster-dem"
 ): LegendForGLLayers {

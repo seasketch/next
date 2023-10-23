@@ -48,7 +48,7 @@ import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
-import { compileLegendFromGLStyleLayers2 } from "./legends/compileLegend";
+import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import { LegendItem } from "./Legend";
 import { EventEmitter } from "eventemitter3";
 import MeasureControl, {
@@ -2460,10 +2460,14 @@ class MapContextManager extends EventEmitter {
           if (sourceType) {
             try {
               console.time("legend2");
-              const legend2 = compileLegendFromGLStyleLayers2(
+              const legend2 = compileLegendFromGLStyleLayers(
                 layer.mapboxGlStyles,
                 sourceType
               );
+              console.log("items");
+              console.log(layer.mapboxGlStyles);
+              console.log("legend");
+              console.log(legend2);
               console.timeEnd("legend2");
 
               if (legend2) {

@@ -8,7 +8,7 @@ import CircleSymbol from "./CircleSymbol";
 
 export default function SimpleSymbol(props: {
   data: GLLegendSymbol;
-  map: Map;
+  map?: Map;
 }) {
   switch (props.data.type) {
     case "line":
@@ -16,7 +16,9 @@ export default function SimpleSymbol(props: {
     case "fill":
       return <FillSymbol data={props.data} map={props.map} />;
     case "marker":
-      return <MarkerSymbol {...props.data} map={props.map} />;
+      return props.map ? (
+        <MarkerSymbol {...props.data} map={props.map} />
+      ) : null;
     case "text":
       return (
         <svg

@@ -11,11 +11,11 @@ export default function FillSymbol({
   map,
 }: {
   data: GLLegendFillSymbol;
-  map: Map;
+  map?: Map;
 }) {
   const [imageData, setImageData] = useState<LegendResolvedImage | undefined>();
   useEffect(() => {
-    if (!imageData && data.patternImageId) {
+    if (map && !imageData && data.patternImageId) {
       const resolvedImage = getImage(data.patternImageId, map);
       if (resolvedImage) {
         setImageData(resolvedImage);

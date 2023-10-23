@@ -6,7 +6,7 @@ import {
   MultipleSymbolLegendForGLLayers,
 } from "./LegendDataModel";
 import {
-  compileLegendFromGLStyleLayers2,
+  compileLegendFromGLStyleLayers,
   GroupByFilterNode,
   groupByFilters,
   isGroupByFilterNode,
@@ -20,6 +20,7 @@ import {
   pluckStepPanels,
   SeaSketchGlLayer,
 } from "./compileLegend";
+import { testCases } from "./legendKitchenSinkTestCases";
 
 beforeEach(() => {
   // supress console.warn from expression evaluator
@@ -1437,7 +1438,7 @@ describe("filter panels", () => {
   });
 });
 
-describe("Kitchen sink examples", () => {
+describe("Complex test cases", () => {
   test("Choropleth with california singled-out", () => {
     const context: { layers: SeaSketchGlLayer[]; sourceType: "vector" } = {
       sourceType: "vector",
@@ -1594,7 +1595,7 @@ describe("Kitchen sink examples", () => {
       ],
     };
 
-    const legend = compileLegendFromGLStyleLayers2(context.layers, "vector");
+    const legend = compileLegendFromGLStyleLayers(context.layers, "vector");
     expect(legend.type).toBe("MultipleSymbolGLLegend");
     if (legend.type === "MultipleSymbolGLLegend") {
       expect(legend.panels.length).toBe(3);
@@ -1602,7 +1603,7 @@ describe("Kitchen sink examples", () => {
   });
 
   test("EEZ with complex expressions", () => {
-    const legend = compileLegendFromGLStyleLayers2(
+    const legend = compileLegendFromGLStyleLayers(
       [
         {
           type: "fill",
@@ -1648,7 +1649,7 @@ describe("Kitchen sink examples", () => {
   });
 
   test("EEZ with complex case+match expressions", () => {
-    const legend = compileLegendFromGLStyleLayers2(
+    const legend = compileLegendFromGLStyleLayers(
       [
         {
           type: "fill",
@@ -1694,7 +1695,7 @@ describe("Kitchen sink examples", () => {
   });
 
   test("EEZ with complex case+filter expressions", () => {
-    const legend = compileLegendFromGLStyleLayers2(
+    const legend = compileLegendFromGLStyleLayers(
       [
         {
           type: "fill",
@@ -1750,7 +1751,7 @@ describe("Kitchen sink examples", () => {
   });
 
   test("EEZ (complex w/only filters)", () => {
-    const legend = compileLegendFromGLStyleLayers2(
+    const legend = compileLegendFromGLStyleLayers(
       [
         {
           type: "fill",
@@ -1816,7 +1817,7 @@ describe("Kitchen sink examples", () => {
   });
 
   test("EEZ w/filter by country and default style", () => {
-    const legend = compileLegendFromGLStyleLayers2(
+    const legend = compileLegendFromGLStyleLayers(
       [
         {
           type: "line",
@@ -2135,5 +2136,14 @@ describe("groupByFilters", () => {
     expect(filterNode).not.toBeUndefined();
     expect(filterNode.filters.length).toBe(2);
     expect(filterNode.children.length).toBe(2);
+  });
+});
+
+describe("Kitchen sink", () => {
+  test.each(Object.keys(testCases))("Kitchen sink: %s", (name: string) => {
+    // @ts-ignore
+    const { input, output } = testCases[name];
+    const legendData = compileLegendFromGLStyleLayers(input, "vector");
+    expect(legendData).toMatchObject(output);
   });
 });
