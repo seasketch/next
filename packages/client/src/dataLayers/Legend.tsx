@@ -30,6 +30,7 @@ interface SingleImageLegendItem {
   /** Image URL */
   url: string;
   supportsDynamicRendering: DynamicRenderingSupportOptions;
+  id: string;
 }
 
 interface CustomGLSourceSymbolLegend {
@@ -37,6 +38,7 @@ interface CustomGLSourceSymbolLegend {
   type: "CustomGLSourceSymbolLegend";
   supportsDynamicRendering: DynamicRenderingSupportOptions;
   symbols: LegendSymbolItem[];
+  id: string;
 }
 
 interface GLStyleLegendItem {
@@ -62,7 +64,9 @@ export default function Legend({
   onHiddenItemsChange,
   map,
   maxHeight,
+  backdropBlur: blur,
 }: {
+  backdropBlur?: boolean;
   items: LegendItem[];
   zOrder: { [id: string]: number };
   opacity: { [id: string]: number };
@@ -80,11 +84,15 @@ export default function Legend({
   return (
     <div
       style={
-        {
-          // backdropFilter: "blur(10px)",
-        }
+        blur
+          ? {
+              backdropFilter: "blur(10px)",
+            }
+          : {}
       }
-      className={`${className} shadow rounded bg-white bg-opacity-95 w-64 text-sm flex flex-col overflow-hidden`}
+      className={`${
+        className || ""
+      } shadow rounded bg-white bg-opacity-90 w-64 text-sm flex flex-col overflow-hidden`}
     >
       <Accordion.Root type="single" collapsible defaultValue="legend">
         <Accordion.Item value="legend">
@@ -106,6 +114,7 @@ export default function Legend({
               style={{ maxHeight }}
             >
               {items.map((item, i) => {
+                const visible = !hiddenItems || !hiddenItems.includes(item.id);
                 if (item.type === "GLStyleLegendItem") {
                   const legend = item.legend;
                   if (!legend || legend.type === "SimpleGLLegend") {
@@ -141,8 +150,6 @@ export default function Legend({
                       </li>
                     );
                   } else if (legend.type === "MultipleSymbolGLLegend") {
-                    const visible =
-                      !hiddenItems || !hiddenItems.includes(item.id);
                     return (
                       <li
                         key={item.id}
@@ -155,7 +162,10 @@ export default function Legend({
                           <Toggle
                             onChange={() => {
                               if (onHiddenItemsChange) {
-                                onHiddenItemsChange(item.id, !visible);
+                                onHiddenItemsChange(
+                                  item.id,
+                                  !hiddenItems.includes(item.id)
+                                );
                               }
                             }}
                             visible={visible}
@@ -175,8 +185,78 @@ export default function Legend({
                   } else {
                     return null;
                   }
+                } else if (item.type === "CustomGLSourceSymbolLegend") {
+                  if (item.symbols.length <= 1) {
+                    return (
+                      <li
+                        key={item.id}
+                        className={`flex items-center space-x-2 max-w-full ${
+                          hiddenItems && hiddenItems.includes(item.id)
+                            ? "opacity-50"
+                            : "opacity-100"
+                        }`}
+                      >
+                        <div className="items-center justify-center bg-transparent">
+                          <LegendImage item={item.symbols[0]} />
+                        </div>
+
+                        <span className="truncate flex-1">{item.label}</span>
+                        <Toggle
+                          onChange={() => {
+                            if (onHiddenItemsChange) {
+                              onHiddenItemsChange(
+                                item.id,
+                                !hiddenItems.includes(item.id)
+                              );
+                            }
+                          }}
+                          visible={visible}
+                        />
+                      </li>
+                    );
+                  } else {
+                    return (
+                      <li
+                        key={item.id}
+                        className={`max-w-full ${
+                          visible ? "opacity-100" : "opacity-50"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-1 mb-0.5">
+                          <span className="truncate flex-1">{item.label}</span>
+                          <Toggle
+                            onChange={() => {
+                              if (onHiddenItemsChange) {
+                                onHiddenItemsChange(
+                                  item.id,
+                                  !hiddenItems.includes(item.id)
+                                );
+                              }
+                            }}
+                            visible={visible}
+                          />
+                        </div>
+                        <ul className="text-sm mb-1">
+                          {item.symbols.map((symbol) => {
+                            return (
+                              <li
+                                className="flex items-center space-x-2"
+                                key={symbol.id}
+                              >
+                                <LegendImage item={symbol} />
+                                <span className="truncate">{symbol.label}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </li>
+                    );
+                  }
+                } else if (item.type === "SingleImageLegendItem") {
+                  throw new Error("SingleImageLegendItem not implemented");
                 } else {
-                  return null;
+                  console.error("unsupported type", item);
+                  throw new Error("Unknown legend item type");
                 }
               })}
             </ul>
@@ -242,5 +322,29 @@ function Toggle({
     >
       {visible ? <EyeOpenIcon /> : <EyeClosedIcon />}
     </button>
+  );
+}
+
+function LegendImage({
+  item,
+  className,
+}: {
+  item: LegendSymbolItem;
+  className?: string;
+}) {
+  return (
+    <img
+      className={`${className}`}
+      alt={item.label}
+      src={item.imageUrl}
+      width={
+        (item.imageWidth || 20) /
+        (window.devicePixelRatio > 1 ? window.devicePixelRatio / 1.5 : 1)
+      }
+      height={
+        (item.imageHeight || 20) /
+        (window.devicePixelRatio > 1 ? window.devicePixelRatio / 1.5 : 1)
+      }
+    />
   );
 }

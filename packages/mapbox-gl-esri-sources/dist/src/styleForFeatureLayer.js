@@ -43,7 +43,6 @@ import { generateId } from "./symbols/utils";
  * @returns The {@link ImageList.addToMap} function should be called before adding the generated layers to the map.
  */
 async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceMetadata) {
-    console.log({ serviceMetadata });
     // remove trailing slash if present
     serviceBaseUrl = serviceBaseUrl.replace(/\/$/, "");
     const url = `${serviceBaseUrl}/${sublayer}`;
@@ -53,7 +52,6 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
     let layers = [];
     const imageList = new ImageList(serviceMetadata.currentVersion);
     let legendItemIndex = 0;
-    console.log("type", renderer.type);
     switch (renderer.type) {
         case "uniqueValue": {
             const fields = [renderer.field1];
@@ -97,7 +95,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
             }
             if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
                 layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
-                    lyr.filter = ["none", ...filters];
+                    lyr.filter = ["!", ["any", ...filters]];
                     lyr.metadata = { label: "Default" };
                     return lyr;
                 }));

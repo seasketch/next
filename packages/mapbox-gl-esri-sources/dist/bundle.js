@@ -1350,11 +1350,9 @@ var MapBoxGLEsriSources = (function (exports) {
       }
       async getGLStyleLayers() {
           if (this._glStylePromise) {
-              console.log("return promise");
               return this._glStylePromise;
           }
           else {
-              console.log("make promise");
               this._glStylePromise = new Promise(async (resolve, reject) => {
                   const { serviceMetadata, layers } = await this.getMetadata();
                   const layer = layers.layers.find((l) => l.id === this.layerId);
@@ -1410,7 +1408,16 @@ var MapBoxGLEsriSources = (function (exports) {
               this._loading = false;
           }
       }
-      async updateLayers() {
+      async updateLayers(layerSettings) {
+          if (this.map) {
+              const layers = this.map.getStyle().layers || [];
+              for (const layer of layers) {
+                  if ("source" in layer && layer.source === this.sourceId) {
+                      const visible = Boolean(layerSettings.find((l) => l.id === layer.source));
+                      this.map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+                  }
+              }
+          }
       }
       async removeFromMap(map) {
           if (this.map) {
@@ -2047,7 +2054,6 @@ var MapBoxGLEsriSources = (function (exports) {
   }
 
   async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceMetadata) {
-      console.log({ serviceMetadata });
       serviceBaseUrl = serviceBaseUrl.replace(/\/$/, "");
       const url = `${serviceBaseUrl}/${sublayer}`;
       serviceMetadata =
@@ -2056,7 +2062,6 @@ var MapBoxGLEsriSources = (function (exports) {
       let layers = [];
       const imageList = new ImageList(serviceMetadata.currentVersion);
       let legendItemIndex = 0;
-      console.log("type", renderer.type);
       switch (renderer.type) {
           case "uniqueValue": {
               const fields = [renderer.field1];
@@ -2100,7 +2105,7 @@ var MapBoxGLEsriSources = (function (exports) {
               }
               if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
                   layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
-                      lyr.filter = ["none", ...filters];
+                      lyr.filter = ["!", ["any", ...filters]];
                       lyr.metadata = { label: "Default" };
                       return lyr;
                   }));

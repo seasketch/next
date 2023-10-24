@@ -174,7 +174,7 @@ export default async function styleForFeatureLayer(
             sublayer,
             0
           ).map((lyr) => {
-            lyr.filter = ["none", ...filters];
+            lyr.filter = ["!", ["any", ...filters]];
             return lyr;
           })
         );
@@ -220,9 +220,8 @@ export default async function styleForFeatureLayer(
             sublayer,
             legendItemIndex--
           ).map((lyr) => {
-            const [min, max] = minMaxValues[
-              renderer.classBreakInfos.indexOf(info)
-            ];
+            const [min, max] =
+              minMaxValues[renderer.classBreakInfos.indexOf(info)];
             if (renderer.classBreakInfos.indexOf(info) === 0) {
               lyr.filter = ["all", ["<=", field, max]];
             } else {
@@ -244,7 +243,7 @@ export default async function styleForFeatureLayer(
           0
         );
         for (const index in defaultLayers) {
-          defaultLayers[index].filter = ["none", filters];
+          defaultLayers[index].filter = ["!", ["any", ...filters]];
         }
         layers.push(...defaultLayers);
       }

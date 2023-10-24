@@ -1,5 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import ArcGISSearchPage from "./ArcGISSearchPage";
 import {
@@ -11,7 +11,12 @@ import {
 import { AnyLayer, LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
 import Skeleton from "../../../components/Skeleton";
-import { ArrowLeftIcon } from "@radix-ui/react-icons";
+import {
+  ArrowLeftIcon,
+  ExternalLinkIcon,
+  Link1Icon,
+  Link2Icon,
+} from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/solid";
 import Spinner from "../../../components/Spinner";
 import Button from "../../../components/Button";
@@ -26,7 +31,8 @@ import {
 } from "@seasketch/mapbox-gl-esri-sources";
 import { Feature } from "geojson";
 import bbox from "@turf/bbox";
-import ArcGISCartLegend from "./ArcGISCartLegend";
+import Legend, { LegendItem } from "../../../dataLayers/Legend";
+import { compileLegendFromGLStyleLayers } from "../../../dataLayers/legends/compileLegend";
 
 const requestManager = new ArcGISRESTServiceRequestManager();
 
@@ -54,7 +60,6 @@ export default function ArcGISCartModal({
     null
   );
   const [map, setMap] = useState<Map | null>(null);
-  const [showLayerList, setShowLayerList] = useState(false);
   const { catalogInfo, error, loading } = useCatalogItems(
     location?.servicesRoot
       ? selectedFolder
@@ -64,14 +69,43 @@ export default function ArcGISCartModal({
     requestManager
   );
 
-  const [selectedLayerIds, setSelectedLayerIds] = useState<string[]>([]);
   const [sourceLoading, setSourceLoading] = useState(false);
 
   const [tableOfContentsItems, setTableOfContentsItems] = useState<
     (FolderTableOfContentsItem | DataTableOfContentsItem)[]
   >([]);
 
-  const [visibleLayers, setVisibleLayers] = useState<string[]>([]);
+  const legendItems = useMemo<LegendItem[]>(() => {
+    const items: LegendItem[] = [];
+    for (const item of tableOfContentsItems) {
+      if (item.type === "folder") {
+        continue;
+      }
+      if (item.type === "data" && item.glStyle) {
+        items.push({
+          type: "GLStyleLegendItem",
+          id: item.id.toString(),
+          label: item.label,
+          legend: compileLegendFromGLStyleLayers(item.glStyle.layers, "vector"),
+        });
+      } else if (item.type === "data" && item.legend) {
+        items.push({
+          type: "CustomGLSourceSymbolLegend",
+          label: item.label,
+          supportsDynamicRendering: {
+            layerOpacity: true,
+            layerOrder: true,
+            layerVisibility: true,
+          },
+          symbols: item.legend,
+          id: item.id.toString(),
+        });
+      }
+    }
+    return items;
+  }, [tableOfContentsItems]);
+
+  const [hiddenLayers, setHiddenLayers] = useState<string[]>([]);
 
   useEffect(() => {
     if (mapDiv) {
@@ -150,7 +184,7 @@ export default function ArcGISCartModal({
   useEffect(() => {
     setSourceLoading(false);
     setTableOfContentsItems([]);
-    setVisibleLayers([]);
+    setHiddenLayers([]);
     if (catalogItemDetailsQuery.data && map && selection) {
       const { type } = catalogItemDetailsQuery.data;
       setSourceLoading(true);
@@ -163,16 +197,16 @@ export default function ArcGISCartModal({
           .getComputedMetadata()
           .then(({ bounds, tableOfContentsItems }) => {
             setTableOfContentsItems(tableOfContentsItems);
-            setVisibleLayers(
+            setHiddenLayers(
               tableOfContentsItems
                 .filter(
                   (item) =>
-                    item.type === "data" && item.defaultVisibility === true
+                    item.type === "data" && item.defaultVisibility === false
                 )
                 .map((item) => item.id)
             );
             if (bounds && bounds[0]) {
-              map.fitBounds(bounds, { padding: 10 });
+              map.fitBounds(bounds, { padding: 10, animate: false });
             }
           });
         setCustomSources([tileSource]);
@@ -197,16 +231,16 @@ export default function ArcGISCartModal({
         dynamicSource.getComputedMetadata().then((data) => {
           const { bounds, tableOfContentsItems } = data;
           setTableOfContentsItems(tableOfContentsItems);
-          setVisibleLayers(
+          setHiddenLayers(
             tableOfContentsItems
               .filter(
                 (item) =>
-                  item.type === "data" && item.defaultVisibility === true
+                  item.type === "data" && item.defaultVisibility === false
               )
               .map((item) => item.id)
           );
           if (bounds && bounds[0]) {
-            map.fitBounds(bounds, { padding: 10 });
+            map.fitBounds(bounds, { padding: 10, animate: false });
           }
         });
         setCustomSources([dynamicSource]);
@@ -240,19 +274,19 @@ export default function ArcGISCartModal({
               ...prev,
               ...tableOfContentsItems,
             ]);
-            setVisibleLayers((prev) => {
+            setHiddenLayers((prev) => {
               return [
                 ...prev,
                 ...tableOfContentsItems
                   .filter(
                     (item) =>
-                      item.type === "data" && item.defaultVisibility === true
+                      item.type === "data" && item.defaultVisibility === false
                   )
                   .map((item) => item.id),
               ];
             });
             if (bounds && bounds[0]) {
-              map.fitBounds(bounds, { padding: 10 });
+              map.fitBounds(bounds, { padding: 10, animate: false });
             }
           });
           featureLayerSource.addToMap(map).then(() => {
@@ -338,8 +372,13 @@ export default function ArcGISCartModal({
   }, [catalogItemDetailsQuery.data, map]);
 
   useEffect(() => {
-    if (customSources.length === 1) {
-      const source = customSources[0];
+    for (const source of customSources) {
+      const visibleLayers: string[] = [];
+      for (const item of tableOfContentsItems) {
+        if (item.type === "data" && !hiddenLayers.includes(item.id)) {
+          visibleLayers.push(item.id);
+        }
+      }
       source.updateLayers(
         visibleLayers.map((id) => ({
           id: id.toString(),
@@ -347,7 +386,7 @@ export default function ArcGISCartModal({
         }))
       );
     }
-  }, [visibleLayers, customSources]);
+  }, [hiddenLayers, customSources, tableOfContentsItems]);
 
   return createPortal(
     <>
@@ -425,13 +464,19 @@ export default function ArcGISCartModal({
                     <button
                       key={item.url}
                       onClick={(e) => {
-                        console.log("onclick", item);
-                        if (item.type === "Folder") {
-                          setSelection(null);
-                          setSelectedFolder(item);
+                        console.log(e.target);
+                        if (
+                          selection?.url === item.url &&
+                          (e.target as HTMLElement).tagName === "IMG"
+                        ) {
+                          window.open(item.url, "_blank");
                         } else {
-                          console.log("setting selection", item);
-                          setSelection(item);
+                          if (item.type === "Folder") {
+                            setSelection(null);
+                            setSelectedFolder(item);
+                          } else {
+                            setSelection(item);
+                          }
                         }
                       }}
                       className={`border-b p-2 px-4 flex overflow-hidden w-full text-left ${
@@ -442,7 +487,20 @@ export default function ArcGISCartModal({
                     >
                       <div className="flex-1 overflow-hidden">
                         <h2 className="truncate">{item.name}</h2>
-                        <p className="text-sm">{item.type}</p>
+
+                        {selection?.url === item.url ? (
+                          <a
+                            className="text-sm underline"
+                            href={item.url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {item.type}
+                            <ExternalLinkIcon className="inline ml-1" />
+                          </a>
+                        ) : (
+                          <span className="text-sm">{item.type}</span>
+                        )}
                       </div>
                       {item.type === "Folder" ? (
                         <div
@@ -452,7 +510,7 @@ export default function ArcGISCartModal({
                           <FolderIcon className="w-10 h-10 text-primary-500" />
                         </div>
                       ) : (
-                        <div className="relative">
+                        <div className="relative group">
                           <img
                             src={`${item.url}/info/thumbnail`}
                             width={200 / 3}
@@ -474,22 +532,25 @@ export default function ArcGISCartModal({
                   ))}
                 </div>
               </div>
-              {map && (
-                <ArcGISCartLegend
-                  map={map}
-                  loading={sourceLoading}
-                  items={tableOfContentsItems}
-                  className="absolute left-96 bg-white top-0 z-50 mt-2 ml-2"
-                  visibleLayerIds={visibleLayers}
-                  toggleLayer={(id) => {
-                    setVisibleLayers((prev) => {
-                      if (prev.includes(id)) {
-                        return prev.filter((i) => i !== id);
-                      } else {
+              {map && legendItems.length > 0 && (
+                <Legend
+                  backdropBlur
+                  className="absolute left-96 top-0 z-50 mt-2 ml-2"
+                  items={legendItems}
+                  hiddenItems={hiddenLayers}
+                  onHiddenItemsChange={(id, visible) => {
+                    setHiddenLayers((prev) => {
+                      if (visible) {
                         return [...prev, id];
+                      } else {
+                        return prev.filter((i) => i !== id);
                       }
                     });
                   }}
+                  opacity={{}}
+                  zOrder={{}}
+                  map={map}
+                  maxHeight={600}
                 />
               )}
               <div ref={setMapDiv} className={`bg-gray-50 flex-1`}></div>

@@ -108,7 +108,6 @@ async function styleForFeatureLayer(
   sourceId: string,
   serviceMetadata?: any
 ): Promise<{ imageList: ImageList; layers: Layer[] }> {
-  console.log({ serviceMetadata });
   // remove trailing slash if present
   serviceBaseUrl = serviceBaseUrl.replace(/\/$/, "");
   const url = `${serviceBaseUrl}/${sublayer}`;
@@ -119,7 +118,6 @@ async function styleForFeatureLayer(
   let layers: Layer[] = [];
   const imageList = new ImageList(serviceMetadata.currentVersion);
   let legendItemIndex = 0;
-  console.log("type", renderer.type);
   switch (renderer.type) {
     case "uniqueValue": {
       const fields = [renderer.field1];
@@ -184,7 +182,7 @@ async function styleForFeatureLayer(
             sublayer,
             0
           ).map((lyr) => {
-            lyr.filter = ["none", ...filters];
+            lyr.filter = ["!", ["any", ...filters]];
             lyr.metadata = { label: "Default" };
             return lyr;
           })

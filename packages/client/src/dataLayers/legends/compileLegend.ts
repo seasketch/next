@@ -98,97 +98,136 @@ export function compileLegendFromGLStyleLayers(
   }
   let legendItems: { panel: GLLegendPanel; filters: Expression[] }[] = [];
 
-  // Iterate through each of the possible complex panel types, creating them
-  // as found. When creating these panels, layers and style properties are
-  // "plucked" from the list so that they aren't repeated.
-  // If panels require additional data conditions to be met, those are added
-  // to the filters array.
-  const clonedLayers = cloneDeep(layers);
-  const context = { layers: clonedLayers };
+  try {
+    // Iterate through each of the possible complex panel types, creating them
+    // as found. When creating these panels, layers and style properties are
+    // "plucked" from the list so that they aren't repeated.
+    // If panels require additional data conditions to be met, those are added
+    // to the filters array.
+    const clonedLayers = cloneDeep(layers);
+    const context = { layers: clonedLayers };
+    try {
+      legendItems.push(...pluckHeatmapPanels(context));
+    } catch (e) {
+      console.warn(e);
+    }
+    try {
+      legendItems.push(...pluckBubblePanels(context));
+    } catch (e) {
+      console.warn(e);
+    }
+    try {
+      legendItems.push(...pluckMarkerSizePanels(context));
+    } catch (e) {
+      console.warn(e);
+    }
+    try {
+      legendItems.push(...pluckGradientPanels(context));
+    } catch (e) {
+      console.warn(e);
+    }
+    try {
+      legendItems.push(...pluckStepPanels(context));
+    } catch (e) {
+      console.warn(e);
+    }
+    try {
+      legendItems.push(...pluckListPanelsFromMatchExpressions(context));
+    } catch (e) {
+      console.warn(e);
+    }
+    try {
+      legendItems.push(...pluckListPanelsForCaseAndFilterExpressions(context));
+    } catch (e) {
+      // do nothing
+      console.warn(e);
+    }
 
-  legendItems.push(...pluckHeatmapPanels(context));
-  legendItems.push(...pluckBubblePanels(context));
-  legendItems.push(...pluckMarkerSizePanels(context));
-  legendItems.push(...pluckGradientPanels(context));
-  legendItems.push(...pluckStepPanels(context));
-  legendItems.push(...pluckListPanelsFromMatchExpressions(context));
-  legendItems.push(...pluckListPanelsForCaseAndFilterExpressions(context));
+    try {
+      legendItems.push(...pluckFilterPanels(context));
+    } catch (e) {
+      console.warn(e);
+    }
 
-  legendItems.push(...pluckFilterPanels(context));
-
-  // render any remaining layers as simple symbols
-  if (legendItems.length > 0) {
-    for (const layer of context.layers) {
-      if (
-        layer.type !== "symbol" ||
-        (layer.paint || ({} as any))["icon-image"]
-      ) {
-        legendItems.push({
-          filters: [],
-          panel: {
-            // eslint-disable-next-line i18next/no-literal-string
-            id: `remaining-layer-${context.layers.indexOf(layer)}`,
-            type: "GLLegendSimpleSymbolPanel",
-            items: [
-              {
-                id: "remaining-layer-single-child",
-                symbol: getSingleSymbolForVectorLayers([layer]),
-              },
-            ],
-          },
-        });
+    // render any remaining layers as simple symbols
+    if (legendItems.length > 0) {
+      for (const layer of context.layers) {
+        if (
+          layer.type !== "symbol" ||
+          (layer.paint || ({} as any))["icon-image"]
+        ) {
+          legendItems.push({
+            filters: [],
+            panel: {
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `remaining-layer-${context.layers.indexOf(layer)}`,
+              type: "GLLegendSimpleSymbolPanel",
+              items: [
+                {
+                  id: "remaining-layer-single-child",
+                  symbol: getSingleSymbolForVectorLayers([layer]),
+                },
+              ],
+            },
+          });
+        }
       }
     }
-  }
 
-  let panels = consolidatePanels(legendItems);
+    let panels = consolidatePanels(legendItems);
 
-  const culled: GLLegendPanel[] = [];
-  for (const panel of panels) {
-    switch (panel.type) {
-      case "GLLegendListPanel":
-      case "GLLegendSimpleSymbolPanel":
-        if (panel.items.length === 0) {
-          culled.push(panel);
-        }
-        break;
-      case "GLLegendStepPanel":
-        if (panel.steps.length === 0) {
-          culled.push(panel);
-        }
-        break;
+    const culled: GLLegendPanel[] = [];
+    for (const panel of panels) {
+      switch (panel.type) {
+        case "GLLegendListPanel":
+        case "GLLegendSimpleSymbolPanel":
+          if (panel.items.length === 0) {
+            culled.push(panel);
+          }
+          break;
+        case "GLLegendStepPanel":
+          if (panel.steps.length === 0) {
+            culled.push(panel);
+          }
+          break;
+      }
     }
-  }
-  panels = panels.filter((p) => !culled.includes(p));
+    panels = panels.filter((p) => !culled.includes(p));
 
-  // Where fill layers exist, convert all line layers to fill layers with a
-  // transparent fill
-  if (layers.find((l) => l.type === "fill")) {
-    transformLineSymbolsToFill(panels);
-  }
+    // Where fill layers exist, convert all line layers to fill layers with a
+    // transparent fill
+    if (layers.find((l) => l.type === "fill")) {
+      transformLineSymbolsToFill(panels);
+    }
 
-  eliminateDuplicatesAndRenameDefaults(panels);
+    eliminateDuplicatesAndRenameDefaults(panels);
 
-  // sort panels. filter panels should go last
-  panels.sort((a, b) => {
-    if (a.type === "GLLegendFilterPanel") {
-      return 1;
-    } else if (b.type === "GLLegendFilterPanel") {
-      return -1;
+    // sort panels. filter panels should go last
+    panels.sort((a, b) => {
+      if (a.type === "GLLegendFilterPanel") {
+        return 1;
+      } else if (b.type === "GLLegendFilterPanel") {
+        return -1;
+      } else {
+        return 0;
+      }
+    });
+    if (legendItems.length === 0) {
+      return {
+        type: "SimpleGLLegend",
+        symbol: getSingleSymbolForVectorLayers(layers),
+      };
     } else {
-      return 0;
+      return {
+        type: "MultipleSymbolGLLegend",
+        panels,
+      };
     }
-  });
-
-  if (legendItems.length === 0) {
+  } catch (e) {
+    console.warn(e);
     return {
       type: "SimpleGLLegend",
       symbol: getSingleSymbolForVectorLayers(layers),
-    };
-  } else {
-    return {
-      type: "MultipleSymbolGLLegend",
-      panels,
     };
   }
 }

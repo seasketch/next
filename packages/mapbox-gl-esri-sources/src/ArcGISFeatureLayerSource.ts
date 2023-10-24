@@ -8,6 +8,7 @@ import {
   ComputedMetadata,
   CustomGLSourceOptions,
   LegendItem,
+  OrderedLayerSettings,
 } from "./CustomGLSource";
 import { v4 as uuid } from "uuid";
 import {
@@ -213,10 +214,8 @@ export default class ArcGISFeatureLayerSource
   private _glStylePromise?: Promise<{ layers: Layer[]; imageList: ImageList }>;
   async getGLStyleLayers() {
     if (this._glStylePromise) {
-      console.log("return promise");
       return this._glStylePromise;
     } else {
-      console.log("make promise");
       this._glStylePromise = new Promise(async (resolve, reject) => {
         const { serviceMetadata, layers } = await this.getMetadata();
         const layer = layers.layers.find((l) => l.id === this.layerId);
@@ -285,8 +284,23 @@ export default class ArcGISFeatureLayerSource
     }
   }
 
-  async updateLayers() {
+  async updateLayers(layerSettings: OrderedLayerSettings) {
     // throw new Error("Method not implemented.");
+    if (this.map) {
+      const layers = this.map.getStyle().layers || [];
+      for (const layer of layers) {
+        if ("source" in layer && layer.source === this.sourceId) {
+          const visible = Boolean(
+            layerSettings.find((l) => l.id === layer.source)
+          );
+          this.map.setLayoutProperty(
+            layer.id,
+            "visibility",
+            visible ? "visible" : "none"
+          );
+        }
+      }
+    }
   }
 
   async removeFromMap(map: Map) {
