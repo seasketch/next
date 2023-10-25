@@ -11,13 +11,7 @@ import {
   OrderedLayerSettings,
 } from "./CustomGLSource";
 import { v4 as uuid } from "uuid";
-import {
-  AnyLayer,
-  GeoJSONSource,
-  GeoJSONSourceOptions,
-  Layer,
-  Map,
-} from "mapbox-gl";
+import { Layer, Map } from "mapbox-gl";
 import {
   FeatureServerMetadata,
   LayersMetadata,
@@ -27,11 +21,13 @@ import {
   contentOrFalse,
   extentToLatLngBounds,
   generateMetadataForLayer,
-  makeLegend,
 } from "./utils";
 import { FeatureCollection } from "geojson";
 import { fetchFeatureCollection } from "./fetchData";
-import { fetchFeatureLayerData } from "./ArcGISVectorSource";
+import {
+  QuantizedVectorRequestManager,
+  getOrCreateQuantizedVectorRequestManager,
+} from "./QuantizedVectorRequestManager";
 
 export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
   /**
@@ -81,6 +77,7 @@ export default class ArcGISFeatureLayerSource
   private featureData?: FeatureCollection;
   private rawFeaturesHaveBeenFetched = false;
   private exceededBytesLimit = false;
+  private QuantizedVectorRequestManager?: QuantizedVectorRequestManager;
 
   constructor(
     requestManager: ArcGISRESTServiceRequestManager,
@@ -237,6 +234,8 @@ export default class ArcGISFeatureLayerSource
 
   async addToMap(map: Map) {
     this.map = map;
+    this.QuantizedVectorRequestManager =
+      getOrCreateQuantizedVectorRequestManager(map);
     const { serviceMetadata, layers } = await this.getMetadata();
     const { attribution } = await this.getComputedProperties();
     map.addSource(this.sourceId, {
@@ -275,13 +274,38 @@ export default class ArcGISFeatureLayerSource
       this._loading = false;
       this.rawFeaturesHaveBeenFetched = true;
     } catch (e) {
+      let shouldFireError = true;
       if ("message" in (e as any) && /bytesLimit/.test((e as any).message)) {
         this.exceededBytesLimit = true;
+        if (this.options.fetchStrategy === "auto") {
+          shouldFireError = false;
+          this.options.fetchStrategy = "quantized";
+          this.QuantizedVectorRequestManager!.on(
+            "update",
+            this.fetchTiles.bind(this)
+          );
+          this.fetchTiles();
+        }
       }
-      this.fireError(e as Error);
-      console.error(e);
+      if (shouldFireError) {
+        this.fireError(e as Error);
+        console.error(e);
+      }
       this._loading = false;
     }
+  }
+
+  private async fetchTiles() {
+    if (!this.QuantizedVectorRequestManager) {
+      throw new Error("QuantizedVectorRequestManager not initialized");
+    } else if (this.options.fetchStrategy !== "quantized") {
+      throw new Error(
+        "fetchTiles called when fetchStrategy is not quantized. Was " +
+          this.options.fetchStrategy
+      );
+    }
+    const tiles = this.QuantizedVectorRequestManager.currentTiles;
+    console.log("fetchTiles", tiles);
   }
 
   async updateLayers(layerSettings: OrderedLayerSettings) {

@@ -264,7 +264,7 @@ export default function ArcGISCartModal({
             requestManager,
             {
               url: selection.url + "/" + layer.id,
-              fetchStrategy: "raw",
+              fetchStrategy: "auto",
             }
           );
           sources.push(featureLayerSource);

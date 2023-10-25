@@ -1243,6 +1243,140 @@ var MapBoxGLEsriSources = (function (exports) {
       return s;
   }
 
+  const EventEmitter = require("eventemitter3");
+  const tilebelt = require("@mapbox/tilebelt");
+  const debounce = require("lodash.debounce");
+  class QuantizedVectorRequestManager extends EventEmitter {
+      constructor(map) {
+          super();
+          this.removeEventListeners = (map) => {
+              map.off("moveend", this.updateSources);
+              map.off("move", this.debouncedUpdateSources);
+              map.off("remove", this.removeEventListeners);
+              try {
+                  this.removeDebugLayer();
+              }
+              catch (e) {
+              }
+          };
+          this.displayedTiles = "";
+          this.currentTiles = [];
+          this.updateSources = () => {
+              const tiles = this.getTilesForBounds(this.map.getBounds());
+              const key = tiles
+                  .map((t) => tilebelt.tileToQuadkey(t))
+                  .sort()
+                  .join(",");
+              if (key !== this.displayedTiles) {
+                  this.displayedTiles = key;
+                  this.currentTiles = tiles;
+                  this.emit("update", { tiles });
+              }
+              {
+                  this.updateDebugLayer(tiles);
+              }
+          };
+          this.debouncedUpdateSources = debounce(this.updateSources, 100, {
+              maxWait: 200,
+          });
+          this.map = map;
+          this.addEventListeners(map);
+          {
+              this.addDebugLayer();
+          }
+      }
+      addDebugLayer() {
+          this.map.addSource("debug-quantized-vector-request-manager", {
+              type: "geojson",
+              data: {
+                  type: "FeatureCollection",
+                  features: [],
+              },
+          });
+          this.map.addLayer({
+              id: "debug-quantized-vector-request-manager",
+              type: "line",
+              source: "debug-quantized-vector-request-manager",
+              paint: {
+                  "line-color": "red",
+                  "line-width": 2,
+              },
+          });
+      }
+      removeDebugLayer() {
+          this.map.removeLayer("debug-quantized-vector-request-manager");
+          this.map.removeSource("debug-quantized-vector-request-manager");
+      }
+      addEventListeners(map) {
+          map.on("moveend", this.updateSources);
+          map.on("move", this.debouncedUpdateSources);
+          map.on("remove", this.removeEventListeners);
+      }
+      updateDebugLayer(tiles) {
+          const source = this.map.getSource("debug-quantized-vector-request-manager");
+          const fc = {
+              type: "FeatureCollection",
+              features: tiles.map((t) => ({
+                  type: "Feature",
+                  properties: { label: `${t[2]}/${t[0]}/${1}` },
+                  geometry: tilebelt.tileToGeoJSON(t),
+              })),
+          };
+          console.log(fc);
+          source.setData(fc);
+      }
+      getTilesForBounds(bounds) {
+          const z = this.map.getZoom();
+          const boundsArray = bounds.toArray();
+          const primaryTile = tilebelt.bboxToTile([
+              boundsArray[0][0],
+              boundsArray[0][1],
+              boundsArray[1][0],
+              boundsArray[1][1],
+          ]);
+          const zoomLevel = 2 * Math.floor(z / 2);
+          const tilesToRequest = [];
+          if (primaryTile[2] < zoomLevel) {
+              let candidateTiles = tilebelt.getChildren(primaryTile);
+              let minZoomOfCandidates = candidateTiles[0][2];
+              while (minZoomOfCandidates < zoomLevel) {
+                  const newCandidateTiles = [];
+                  candidateTiles.forEach((t) => newCandidateTiles.push(...tilebelt.getChildren(t)));
+                  candidateTiles = newCandidateTiles;
+                  minZoomOfCandidates = candidateTiles[0][2];
+              }
+              for (let index = 0; index < candidateTiles.length; index++) {
+                  if (this.doesTileOverlapBbox(candidateTiles[index], boundsArray)) {
+                      tilesToRequest.push(candidateTiles[index]);
+                  }
+              }
+          }
+          else {
+              tilesToRequest.push(primaryTile);
+          }
+          return tilesToRequest;
+      }
+      doesTileOverlapBbox(tile, bbox) {
+          const tileBounds = tile.length === 4 ? tile : tilebelt.tileToBBOX(tile);
+          if (tileBounds[2] < bbox[0][0])
+              return false;
+          if (tileBounds[0] > bbox[1][0])
+              return false;
+          if (tileBounds[3] < bbox[0][1])
+              return false;
+          if (tileBounds[1] > bbox[1][1])
+              return false;
+          return true;
+      }
+  }
+  const managers = new WeakMap();
+  function getOrCreateQuantizedVectorRequestManager(map) {
+      if (!managers.has(map)) {
+          managers.set(map, new QuantizedVectorRequestManager(map));
+      }
+      return managers.get(map);
+  }
+
   class ArcGISFeatureLayerSource {
       constructor(requestManager, options) {
           var _a;
@@ -1366,6 +1500,8 @@ var MapBoxGLEsriSources = (function (exports) {
       }
       async addToMap(map) {
           this.map = map;
+          this.QuantizedVectorRequestManager =
+              getOrCreateQuantizedVectorRequestManager(map);
           await this.getMetadata();
           const { attribution } = await this.getComputedProperties();
           map.addSource(this.sourceId, {
@@ -1400,13 +1536,33 @@ var MapBoxGLEsriSources = (function (exports) {
               this.rawFeaturesHaveBeenFetched = true;
           }
           catch (e) {
+              let shouldFireError = true;
               if ("message" in e && /bytesLimit/.test(e.message)) {
                   this.exceededBytesLimit = true;
+                  if (this.options.fetchStrategy === "auto") {
+                      shouldFireError = false;
+                      this.options.fetchStrategy = "quantized";
+                      this.QuantizedVectorRequestManager.on("update", this.fetchTiles.bind(this));
+                      this.fetchTiles();
+                  }
               }
-              this.fireError(e);
-              console.error(e);
+              if (shouldFireError) {
+                  this.fireError(e);
+                  console.error(e);
+              }
               this._loading = false;
           }
+      }
+      async fetchTiles() {
+          if (!this.QuantizedVectorRequestManager) {
+              throw new Error("QuantizedVectorRequestManager not initialized");
+          }
+          else if (this.options.fetchStrategy !== "quantized") {
+              throw new Error("fetchTiles called when fetchStrategy is not quantized. Was " +
+                  this.options.fetchStrategy);
+          }
+          const tiles = this.QuantizedVectorRequestManager.currentTiles;
+          console.log("fetchTiles", tiles);
       }
       async updateLayers(layerSettings) {
           if (this.map) {
