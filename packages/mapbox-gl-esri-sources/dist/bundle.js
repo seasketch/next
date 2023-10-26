@@ -1244,7 +1244,7 @@ var MapBoxGLEsriSources = (function (exports) {
   }
 
   const EventEmitter = require("eventemitter3");
-  const tilebelt = require("@mapbox/tilebelt");
+  const tilebelt$1 = require("@mapbox/tilebelt");
   const debounce = require("lodash.debounce");
   class QuantizedVectorRequestManager extends EventEmitter {
       constructor(map) {
@@ -1260,16 +1260,26 @@ var MapBoxGLEsriSources = (function (exports) {
               }
           };
           this.displayedTiles = "";
-          this.currentTiles = [];
+          this.viewPortDetails = {
+              tiles: [],
+              tolerance: 0,
+          };
           this.updateSources = () => {
-              const tiles = this.getTilesForBounds(this.map.getBounds());
+              const bounds = this.map.getBounds();
+              const boundsArray = bounds.toArray();
+              const tiles = this.getTilesForBounds(bounds);
               const key = tiles
-                  .map((t) => tilebelt.tileToQuadkey(t))
+                  .map((t) => tilebelt$1.tileToQuadkey(t))
                   .sort()
                   .join(",");
               if (key !== this.displayedTiles) {
                   this.displayedTiles = key;
-                  this.currentTiles = tiles;
+                  const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
+                  const tolerance = (mapWidth / this.map.getCanvas().width) * 0.3;
+                  this.viewPortDetails = {
+                      tiles,
+                      tolerance,
+                  };
                   this.emit("update", { tiles });
               }
               {
@@ -1319,7 +1329,7 @@ var MapBoxGLEsriSources = (function (exports) {
               features: tiles.map((t) => ({
                   type: "Feature",
                   properties: { label: `${t[2]}/${t[0]}/${1}` },
-                  geometry: tilebelt.tileToGeoJSON(t),
+                  geometry: tilebelt$1.tileToGeoJSON(t),
               })),
           };
           console.log(fc);
@@ -1328,7 +1338,7 @@ var MapBoxGLEsriSources = (function (exports) {
       getTilesForBounds(bounds) {
           const z = this.map.getZoom();
           const boundsArray = bounds.toArray();
-          const primaryTile = tilebelt.bboxToTile([
+          const primaryTile = tilebelt$1.bboxToTile([
               boundsArray[0][0],
               boundsArray[0][1],
               boundsArray[1][0],
@@ -1337,11 +1347,11 @@ var MapBoxGLEsriSources = (function (exports) {
           const zoomLevel = 2 * Math.floor(z / 2);
           const tilesToRequest = [];
           if (primaryTile[2] < zoomLevel) {
-              let candidateTiles = tilebelt.getChildren(primaryTile);
+              let candidateTiles = tilebelt$1.getChildren(primaryTile);
               let minZoomOfCandidates = candidateTiles[0][2];
               while (minZoomOfCandidates < zoomLevel) {
                   const newCandidateTiles = [];
-                  candidateTiles.forEach((t) => newCandidateTiles.push(...tilebelt.getChildren(t)));
+                  candidateTiles.forEach((t) => newCandidateTiles.push(...tilebelt$1.getChildren(t)));
                   candidateTiles = newCandidateTiles;
                   minZoomOfCandidates = candidateTiles[0][2];
               }
@@ -1357,7 +1367,7 @@ var MapBoxGLEsriSources = (function (exports) {
           return tilesToRequest;
       }
       doesTileOverlapBbox(tile, bbox) {
-          const tileBounds = tile.length === 4 ? tile : tilebelt.tileToBBOX(tile);
+          const tileBounds = tile.length === 4 ? tile : tilebelt$1.tileToBBOX(tile);
           if (tileBounds[2] < bbox[0][0])
               return false;
           if (tileBounds[0] > bbox[1][0])
@@ -1377,6 +1387,150 @@ var MapBoxGLEsriSources = (function (exports) {
       return managers.get(map);
   }
 
+  var d2r = Math.PI / 180,
+      r2d = 180 / Math.PI;
+  function tileToBBOX(tile) {
+      var e = tile2lon(tile[0] + 1, tile[2]);
+      var w = tile2lon(tile[0], tile[2]);
+      var s = tile2lat(tile[1] + 1, tile[2]);
+      var n = tile2lat(tile[1], tile[2]);
+      return [w, s, e, n];
+  }
+  function tileToGeoJSON(tile) {
+      var bbox = tileToBBOX(tile);
+      var poly = {
+          type: 'Polygon',
+          coordinates: [[
+              [bbox[0], bbox[3]],
+              [bbox[0], bbox[1]],
+              [bbox[2], bbox[1]],
+              [bbox[2], bbox[3]],
+              [bbox[0], bbox[3]]
+          ]]
+      };
+      return poly;
+  }
+  function tile2lon(x, z) {
+      return x / Math.pow(2, z) * 360 - 180;
+  }
+  function tile2lat(y, z) {
+      var n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
+      return r2d * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+  }
+  function pointToTile(lon, lat, z) {
+      var tile = pointToTileFraction(lon, lat, z);
+      tile[0] = Math.floor(tile[0]);
+      tile[1] = Math.floor(tile[1]);
+      return tile;
+  }
+  function getChildren(tile) {
+      return [
+          [tile[0] * 2, tile[1] * 2, tile[2] + 1],
+          [tile[0] * 2 + 1, tile[1] * 2, tile[2 ] + 1],
+          [tile[0] * 2 + 1, tile[1] * 2 + 1, tile[2] + 1],
+          [tile[0] * 2, tile[1] * 2 + 1, tile[2] + 1]
+      ];
+  }
+  function getParent(tile) {
+      return [tile[0] >> 1, tile[1] >> 1, tile[2] - 1];
+  }
+  function getSiblings(tile) {
+      return getChildren(getParent(tile));
+  }
+  function hasSiblings(tile, tiles) {
+      var siblings = getSiblings(tile);
+      for (var i = 0; i < siblings.length; i++) {
+          if (!hasTile(tiles, siblings[i])) return false;
+      }
+      return true;
+  }
+  function hasTile(tiles, tile) {
+      for (var i = 0; i < tiles.length; i++) {
+          if (tilesEqual(tiles[i], tile)) return true;
+      }
+      return false;
+  }
+  function tilesEqual(tile1, tile2) {
+      return (
+          tile1[0] === tile2[0] &&
+          tile1[1] === tile2[1] &&
+          tile1[2] === tile2[2]
+      );
+  }
+  function tileToQuadkey(tile) {
+      var index = '';
+      for (var z = tile[2]; z > 0; z--) {
+          var b = 0;
+          var mask = 1 << (z - 1);
+          if ((tile[0] & mask) !== 0) b++;
+          if ((tile[1] & mask) !== 0) b += 2;
+          index += b.toString();
+      }
+      return index;
+  }
+  function quadkeyToTile(quadkey) {
+      var x = 0;
+      var y = 0;
+      var z = quadkey.length;
+      for (var i = z; i > 0; i--) {
+          var mask = 1 << (i - 1);
+          var q = +quadkey[z - i];
+          if (q === 1) x |= mask;
+          if (q === 2) y |= mask;
+          if (q === 3) {
+              x |= mask;
+              y |= mask;
+          }
+      }
+      return [x, y, z];
+  }
+  function bboxToTile(bboxCoords) {
+      var min = pointToTile(bboxCoords[0], bboxCoords[1], 32);
+      var max = pointToTile(bboxCoords[2], bboxCoords[3], 32);
+      var bbox = [min[0], min[1], max[0], max[1]];
+      var z = getBboxZoom(bbox);
+      if (z === 0) return [0, 0, 0];
+      var x = bbox[0] >>> (32 - z);
+      var y = bbox[1] >>> (32 - z);
+      return [x, y, z];
+  }
+  function getBboxZoom(bbox) {
+      var MAX_ZOOM = 28;
+      for (var z = 0; z < MAX_ZOOM; z++) {
+          var mask = 1 << (32 - (z + 1));
+          if (((bbox[0] & mask) !== (bbox[2] & mask)) ||
+              ((bbox[1] & mask) !== (bbox[3] & mask))) {
+              return z;
+          }
+      }
+      return MAX_ZOOM;
+  }
+  function pointToTileFraction(lon, lat, z) {
+      var sin = Math.sin(lat * d2r),
+          z2 = Math.pow(2, z),
+          x = z2 * (lon / 360 + 0.5),
+          y = z2 * (0.5 - 0.25 * Math.log((1 + sin) / (1 - sin)) / Math.PI);
+      x = x % z2;
+      if (x < 0) x = x + z2;
+      return [x, y, z];
+  }
+  var tilebelt = {
+      tileToGeoJSON: tileToGeoJSON,
+      tileToBBOX: tileToBBOX,
+      getChildren: getChildren,
+      getParent: getParent,
+      getSiblings: getSiblings,
+      hasTile: hasTile,
+      hasSiblings: hasSiblings,
+      tilesEqual: tilesEqual,
+      tileToQuadkey: tileToQuadkey,
+      quadkeyToTile: quadkeyToTile,
+      pointToTile: pointToTile,
+      bboxToTile: bboxToTile,
+      pointToTileFraction: pointToTileFraction
+  };
+
+  const tileDecode = require("arcgis-pbf-parser");
   class ArcGISFeatureLayerSource {
       constructor(requestManager, options) {
           var _a;
@@ -1554,6 +1708,8 @@ var MapBoxGLEsriSources = (function (exports) {
           }
       }
       async fetchTiles() {
+          var _a;
+          this._loading = true;
           if (!this.QuantizedVectorRequestManager) {
               throw new Error("QuantizedVectorRequestManager not initialized");
           }
@@ -1561,8 +1717,70 @@ var MapBoxGLEsriSources = (function (exports) {
               throw new Error("fetchTiles called when fetchStrategy is not quantized. Was " +
                   this.options.fetchStrategy);
           }
-          const tiles = this.QuantizedVectorRequestManager.currentTiles;
+          const { tiles, tolerance } = this.QuantizedVectorRequestManager.viewPortDetails;
           console.log("fetchTiles", tiles);
+          const fc = {
+              type: "FeatureCollection",
+              features: [],
+          };
+          const featureIds = new Set();
+          console.log({ tiles, tolerance });
+          await Promise.all(tiles.map((tile) => (async () => {
+              const tileBounds = tilebelt.tileToBBOX(tile);
+              const extent = {
+                  spatialReference: {
+                      latestWkid: 4326,
+                      wkid: 4326,
+                  },
+                  xmin: tileBounds[0],
+                  ymin: tileBounds[1],
+                  xmax: tileBounds[2],
+                  ymax: tileBounds[3],
+              };
+              const params = new URLSearchParams({
+                  f: "pbf",
+                  geometry: JSON.stringify(extent),
+                  outFields: "*",
+                  outSR: "4326",
+                  returnZ: "false",
+                  returnM: "false",
+                  precision: "8",
+                  where: "1=1",
+                  setAttributionFromService: "true",
+                  quantizationParameters: JSON.stringify({
+                      extent,
+                      tolerance,
+                      mode: "view",
+                  }),
+                  resultType: "tile",
+                  spatialRel: "esriSpatialRelIntersects",
+                  geometryType: "esriGeometryEnvelope",
+                  inSR: "4326",
+                  ...this.options.queryParameters,
+              });
+              console.log("making request", params);
+              return fetch(`${`${this.options.url}/query?${params.toString()}`}`)
+                  .then((response) => response.arrayBuffer())
+                  .then((data) => {
+                  const collection = tileDecode(new Uint8Array(data)).featureCollection;
+                  console.log("got response", collection);
+                  for (const feature of collection.features) {
+                      if (!featureIds.has(feature.id)) {
+                          featureIds.add(feature.id);
+                          fc.features.push(feature);
+                      }
+                  }
+              })
+                  .catch((e) => {
+                  console.error(e);
+              });
+          })()));
+          console.log("fetched tiles", fc);
+          const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
+          if (source && source.type === "geojson") {
+              source.setData(fc);
+          }
+          this._loading = false;
       }
       async updateLayers(layerSettings) {
           if (this.map) {

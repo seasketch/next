@@ -66,17 +66,27 @@ export class QuantizedVectorRequestManager extends EventEmitter {
   };
 
   private displayedTiles = "";
-  currentTiles: Tile[] = [];
+  viewPortDetails: { tiles: Tile[]; tolerance: number } = {
+    tiles: [],
+    tolerance: 0,
+  };
 
   private updateSources = () => {
-    const tiles = this.getTilesForBounds(this.map.getBounds());
+    const bounds = this.map.getBounds();
+    const boundsArray = bounds.toArray();
+    const tiles = this.getTilesForBounds(bounds);
     const key = tiles
       .map((t) => tilebelt.tileToQuadkey(t))
       .sort()
       .join(",");
     if (key !== this.displayedTiles) {
       this.displayedTiles = key;
-      this.currentTiles = tiles;
+      const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
+      const tolerance = (mapWidth / this.map.getCanvas().width) * 0.3;
+      this.viewPortDetails = {
+        tiles,
+        tolerance,
+      };
       this.emit("update", { tiles });
     }
     if (DEBUG) {

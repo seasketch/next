@@ -28,6 +28,8 @@ import {
   QuantizedVectorRequestManager,
   getOrCreateQuantizedVectorRequestManager,
 } from "./QuantizedVectorRequestManager";
+import * as tilebelt from "@mapbox/tilebelt";
+const tileDecode = require("arcgis-pbf-parser");
 
 export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
   /**
@@ -296,6 +298,7 @@ export default class ArcGISFeatureLayerSource
   }
 
   private async fetchTiles() {
+    this._loading = true;
     if (!this.QuantizedVectorRequestManager) {
       throw new Error("QuantizedVectorRequestManager not initialized");
     } else if (this.options.fetchStrategy !== "quantized") {
@@ -304,8 +307,78 @@ export default class ArcGISFeatureLayerSource
           this.options.fetchStrategy
       );
     }
-    const tiles = this.QuantizedVectorRequestManager.currentTiles;
+    const { tiles, tolerance } =
+      this.QuantizedVectorRequestManager.viewPortDetails;
     console.log("fetchTiles", tiles);
+    const fc = {
+      type: "FeatureCollection",
+      features: [],
+    } as FeatureCollection;
+    const featureIds = new Set<number>();
+    console.log({ tiles, tolerance });
+    await Promise.all(
+      tiles.map((tile) =>
+        (async () => {
+          const tileBounds = tilebelt.tileToBBOX(tile);
+
+          const extent = {
+            spatialReference: {
+              latestWkid: 4326,
+              wkid: 4326,
+            },
+            xmin: tileBounds[0],
+            ymin: tileBounds[1],
+            xmax: tileBounds[2],
+            ymax: tileBounds[3],
+          };
+          const params = new URLSearchParams({
+            f: "pbf",
+            geometry: JSON.stringify(extent),
+            outFields: "*",
+            outSR: "4326",
+            returnZ: "false",
+            returnM: "false",
+            precision: "8",
+            where: "1=1",
+            setAttributionFromService: "true",
+            quantizationParameters: JSON.stringify({
+              extent,
+              tolerance,
+              mode: "view",
+            }),
+            resultType: "tile",
+            spatialRel: "esriSpatialRelIntersects",
+            geometryType: "esriGeometryEnvelope",
+            inSR: "4326",
+            ...this.options.queryParameters,
+          });
+          console.log("making request", params);
+          return fetch(`${`${this.options.url}/query?${params.toString()}`}`)
+            .then((response) => response.arrayBuffer())
+            .then((data) => {
+              const collection = tileDecode(
+                new Uint8Array(data)
+              ).featureCollection;
+              console.log("got response", collection);
+              for (const feature of collection.features) {
+                if (!featureIds.has(feature.id)) {
+                  featureIds.add(feature.id);
+                  fc.features.push(feature);
+                }
+              }
+            })
+            .catch((e) => {
+              console.error(e);
+            });
+        })()
+      )
+    );
+    console.log("fetched tiles", fc);
+    const source = this.map?.getSource(this.sourceId);
+    if (source && source.type === "geojson") {
+      source.setData(fc);
+    }
+    this._loading = false;
   }
 
   async updateLayers(layerSettings: OrderedLayerSettings) {
