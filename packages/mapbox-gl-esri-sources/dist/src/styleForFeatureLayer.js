@@ -103,7 +103,6 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
             break;
         }
         case "classBreaks":
-            console.log("class breaks", renderer.classBreakInfos);
             // TODO: look for test dataset for backgroundFillSymbol
             if (renderer.backgroundFillSymbol) {
                 layers.push(...symbolToLayers(renderer.backgroundFillSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0));
@@ -112,7 +111,6 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
             const filters = [];
             legendItemIndex = renderer.classBreakInfos.length - 1;
             let minValue = 0;
-            console.log("renderer", renderer);
             const minMaxValues = renderer.classBreakInfos.map((b) => {
                 const values = [b.classMinValue || minValue, b.classMaxValue];
                 minValue = values[1];

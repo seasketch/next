@@ -72,15 +72,17 @@ export default function DataSettings() {
                   <LayerAdminSidebar />
                 </div>
                 <div className="flex-1 h-full">
-                  <Legend
-                    maxHeight={800}
-                    className="absolute ml-5 top-5 z-10"
-                    items={legendState.items}
-                    hiddenItems={[]}
-                    opacity={{}}
-                    zOrder={{}}
-                    map={mapContext.manager?.map}
-                  />
+                  {legendState.items.length > 0 && (
+                    <Legend
+                      maxHeight={800}
+                      className="absolute ml-5 top-5 z-10"
+                      items={legendState.items}
+                      hiddenItems={[]}
+                      opacity={{}}
+                      zOrder={{}}
+                      map={mapContext.manager?.map}
+                    />
+                  )}
                   {data?.projectBySlug && (
                     <MapboxMap
                       bounds={

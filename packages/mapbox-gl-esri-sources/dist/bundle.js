@@ -917,7 +917,9 @@ var MapBoxGLEsriSources = (function (exports) {
           if (!cache) {
               throw new Error("Cache not initialized");
           }
-          this.inFlightRequests[url] = fetchWithTTL(url, 60 * 300, cache, { signal });
+          this.inFlightRequests[url] = fetchWithTTL(url, 60 * 300, cache, {
+              signal,
+          }).then((r) => r.json());
           return new Promise((resolve, reject) => {
               this.inFlightRequests[url]
                   .then((json) => {
@@ -970,21 +972,20 @@ var MapBoxGLEsriSources = (function (exports) {
       }
       return false;
   }
-  async function fetchWithTTL(url, ttl, cache, options
-  ) {
+  async function fetchWithTTL(url, ttl, cache, options, cacheKey) {
       var _a, _b, _c;
       if (!((_a = options === null || options === void 0 ? void 0 : options.signal) === null || _a === void 0 ? void 0 : _a.aborted)) {
           const request = new Request(url, options);
           if ((_b = options === null || options === void 0 ? void 0 : options.signal) === null || _b === void 0 ? void 0 : _b.aborted) {
               Promise.reject("aborted");
           }
-          let cachedResponse = await cache.match(request);
+          let cachedResponse = await cache.match(cacheKey ? new URL(cacheKey) : request);
           if (cachedResponse && cachedResponseIsExpired(cachedResponse)) {
-              cache.delete(request);
+              cache.delete(cacheKey ? new URL(cacheKey) : request);
               cachedResponse = undefined;
           }
-          if (cachedResponse) {
-              return cachedResponse.json();
+          if (cachedResponse && cachedResponse.ok) {
+              return cachedResponse;
           }
           else {
               const response = await fetch(url, options);
@@ -997,9 +998,12 @@ var MapBoxGLEsriSources = (function (exports) {
                       status: response.status,
                       statusText: response.statusText,
                   });
-                  cache.put(url, clone);
+                  if (clone.ok && clone.status === 200) {
+                      cache.put(cacheKey || url, clone).catch((e) => {
+                      });
+                  }
               }
-              return await response.json();
+              return await response;
           }
       }
   }
@@ -1149,9 +1153,9 @@ var MapBoxGLEsriSources = (function (exports) {
       updateLayers(layers) { }
   }
 
-  function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100) {
+  function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100, abortController = null) {
       return new Promise((resolve, reject) => {
-          fetchFeatureLayerData(url, outFields, reject, geometryPrecision, null, null, undefined, undefined, bytesLimit)
+          fetchFeatureLayerData(url, outFields, reject, geometryPrecision, abortController, null, undefined, undefined, bytesLimit)
               .then((data) => resolve(data))
               .catch((e) => reject(e));
       });
@@ -1260,7 +1264,7 @@ var MapBoxGLEsriSources = (function (exports) {
               }
           };
           this.displayedTiles = "";
-          this.viewPortDetails = {
+          this._viewPortDetails = {
               tiles: [],
               tolerance: 0,
           };
@@ -1275,15 +1279,12 @@ var MapBoxGLEsriSources = (function (exports) {
               if (key !== this.displayedTiles) {
                   this.displayedTiles = key;
                   const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
-                  const tolerance = (mapWidth / this.map.getCanvas().width) * 0.3;
-                  this.viewPortDetails = {
+                  const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
+                  this._viewPortDetails = {
                       tiles,
                       tolerance,
                   };
                   this.emit("update", { tiles });
-              }
-              {
-                  this.updateDebugLayer(tiles);
               }
           };
           this.debouncedUpdateSources = debounce(this.updateSources, 100, {
@@ -1291,9 +1292,6 @@ var MapBoxGLEsriSources = (function (exports) {
           });
           this.map = map;
           this.addEventListeners(map);
-          {
-              this.addDebugLayer();
-          }
       }
       addDebugLayer() {
           this.map.addSource("debug-quantized-vector-request-manager", {
@@ -1322,6 +1320,30 @@ var MapBoxGLEsriSources = (function (exports) {
           map.on("move", this.debouncedUpdateSources);
           map.on("remove", this.removeEventListeners);
       }
+      get viewportDetails() {
+          if (!this._viewPortDetails.tiles.length) {
+              this.intializeViewportDetails();
+          }
+          return this._viewPortDetails;
+      }
+      intializeViewportDetails() {
+          if (!this._viewPortDetails.tiles.length) {
+              const bounds = this.map.getBounds();
+              const boundsArray = bounds.toArray();
+              const tiles = this.getTilesForBounds(bounds);
+              const key = tiles
+                  .map((t) => tilebelt$1.tileToQuadkey(t))
+                  .sort()
+                  .join(",");
+              this.displayedTiles = key;
+              const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
+              const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
+              this._viewPortDetails = {
+                  tiles,
+                  tolerance,
+              };
+          }
+      }
       updateDebugLayer(tiles) {
           const source = this.map.getSource("debug-quantized-vector-request-manager");
           const fc = {
@@ -1332,7 +1354,6 @@ var MapBoxGLEsriSources = (function (exports) {
                   geometry: tilebelt$1.tileToGeoJSON(t),
               })),
           };
-          console.log(fc);
           source.setData(fc);
       }
       getTilesForBounds(bounds) {
@@ -1537,6 +1558,8 @@ var MapBoxGLEsriSources = (function (exports) {
           this._loading = true;
           this.rawFeaturesHaveBeenFetched = false;
           this.exceededBytesLimit = false;
+          this.abortController = null;
+          this.tileFormat = "geojson";
           this.sourceId = options.sourceId || v4();
           this.options = options;
           this.requestManager = requestManager;
@@ -1549,6 +1572,11 @@ var MapBoxGLEsriSources = (function (exports) {
               throw new Error("URL must end in /FeatureServer/{layerId} or /MapServer/{layerId}");
           }
           this.layerId = parseInt(((_a = options.url.match(/\d+$/)) === null || _a === void 0 ? void 0 : _a[0]) || "0");
+          caches
+              .open((options === null || options === void 0 ? void 0 : options.cacheKey) || "seasketch-arcgis-rest-services")
+              .then((cache) => {
+              this.cache = cache;
+          });
       }
       async getComputedMetadata() {
           const { serviceMetadata, layers } = await this.getMetadata();
@@ -1587,11 +1615,16 @@ var MapBoxGLEsriSources = (function (exports) {
           if (!layer) {
               throw new Error(`Sublayer ${this.layerId} not found`);
           }
+          const supportedFormats = ((layer === null || layer === void 0 ? void 0 : layer.supportedQueryFormats) || "")
+              .split(",")
+              .map((f) => f.toUpperCase().trim());
+          this.tileFormat = supportedFormats.includes("PBF") ? "pbf" : "geojson";
           return {
               minzoom: 0,
               maxzoom: 24,
               bounds: (await extentToLatLngBounds((layer === null || layer === void 0 ? void 0 : layer.extent) || serviceMetadata.fullExtent)) || undefined,
               attribution,
+              supportedFormats,
           };
       }
       fireError(e) {
@@ -1674,13 +1707,17 @@ var MapBoxGLEsriSources = (function (exports) {
       }
       async fetchFeatures() {
           var _a;
+          if (this.abortController) {
+              this.abortController.abort();
+          }
+          this.abortController = new AbortController();
           if (this.exceededBytesLimit) {
               return;
           }
           try {
               const data = await fetchFeatureCollection(this.options.url, 6, "*", this.options.fetchStrategy === "raw"
                   ? 120000000
-                  : this.options.autoFetchByteLimit || 2000000);
+                  : this.options.autoFetchByteLimit || 2000000, this.abortController);
               this.featureData = data;
               const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
               if (source && source.type === "geojson") {
@@ -1708,7 +1745,11 @@ var MapBoxGLEsriSources = (function (exports) {
           }
       }
       async fetchTiles() {
-          var _a;
+          var _a, _b, _c;
+          if (this.abortController) {
+              this.abortController.abort();
+          }
+          this.abortController = new AbortController();
           this._loading = true;
           if (!this.QuantizedVectorRequestManager) {
               throw new Error("QuantizedVectorRequestManager not initialized");
@@ -1717,70 +1758,94 @@ var MapBoxGLEsriSources = (function (exports) {
               throw new Error("fetchTiles called when fetchStrategy is not quantized. Was " +
                   this.options.fetchStrategy);
           }
-          const { tiles, tolerance } = this.QuantizedVectorRequestManager.viewPortDetails;
-          console.log("fetchTiles", tiles);
+          const { tiles, tolerance } = this.QuantizedVectorRequestManager.viewportDetails;
           const fc = {
               type: "FeatureCollection",
               features: [],
           };
           const featureIds = new Set();
-          console.log({ tiles, tolerance });
-          await Promise.all(tiles.map((tile) => (async () => {
-              const tileBounds = tilebelt.tileToBBOX(tile);
-              const extent = {
-                  spatialReference: {
-                      latestWkid: 4326,
-                      wkid: 4326,
-                  },
-                  xmin: tileBounds[0],
-                  ymin: tileBounds[1],
-                  xmax: tileBounds[2],
-                  ymax: tileBounds[3],
-              };
-              const params = new URLSearchParams({
-                  f: "pbf",
-                  geometry: JSON.stringify(extent),
-                  outFields: "*",
-                  outSR: "4326",
-                  returnZ: "false",
-                  returnM: "false",
-                  precision: "8",
-                  where: "1=1",
-                  setAttributionFromService: "true",
-                  quantizationParameters: JSON.stringify({
-                      extent,
-                      tolerance,
-                      mode: "view",
-                  }),
-                  resultType: "tile",
-                  spatialRel: "esriSpatialRelIntersects",
-                  geometryType: "esriGeometryEnvelope",
-                  inSR: "4326",
-                  ...this.options.queryParameters,
-              });
-              console.log("making request", params);
-              return fetch(`${`${this.options.url}/query?${params.toString()}`}`)
-                  .then((response) => response.arrayBuffer())
-                  .then((data) => {
-                  const collection = tileDecode(new Uint8Array(data)).featureCollection;
-                  console.log("got response", collection);
-                  for (const feature of collection.features) {
-                      if (!featureIds.has(feature.id)) {
-                          featureIds.add(feature.id);
-                          fc.features.push(feature);
+          try {
+              let wasAborted = false;
+              await Promise.all(tiles.map((tile) => (async () => {
+                  var _a;
+                  const tileBounds = tilebelt.tileToBBOX(tile);
+                  const extent = {
+                      spatialReference: {
+                          latestWkid: 4326,
+                          wkid: 4326,
+                      },
+                      xmin: tileBounds[0],
+                      ymin: tileBounds[1],
+                      xmax: tileBounds[2],
+                      ymax: tileBounds[3],
+                  };
+                  const params = new URLSearchParams({
+                      f: this.tileFormat,
+                      geometry: JSON.stringify(extent),
+                      outFields: "*",
+                      outSR: "4326",
+                      returnZ: "false",
+                      returnM: "false",
+                      precision: "8",
+                      where: "1=1",
+                      setAttributionFromService: "true",
+                      quantizationParameters: JSON.stringify({
+                          extent,
+                          tolerance,
+                          mode: "view",
+                      }),
+                      resultType: "tile",
+                      spatialRel: "esriSpatialRelIntersects",
+                      maxAllowableOffset: this.tileFormat === "geojson" ? tolerance.toString() : "",
+                      geometryType: "esriGeometryEnvelope",
+                      inSR: "4326",
+                      ...this.options.queryParameters,
+                  });
+                  return fetchWithTTL(`${`${this.options.url}/query?${params.toString()}`}`, 60 * 10, this.cache, { signal: (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.signal }, `${this.options.url}/query/tiled/${tilebelt.tileToQuadkey(tile)}`)
+                      .then((response) => params.get("f") === "pbf"
+                      ? response.arrayBuffer()
+                      : response.json())
+                      .then((data) => {
+                      var _a, _b;
+                      if ((_b = (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.signal) === null || _b === void 0 ? void 0 : _b.aborted) {
+                          return;
                       }
-                  }
-              })
-                  .catch((e) => {
-                  console.error(e);
-              });
-          })()));
-          console.log("fetched tiles", fc);
-          const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
-          if (source && source.type === "geojson") {
-              source.setData(fc);
+                      const collection = params.get("f") === "pbf"
+                          ? tileDecode(new Uint8Array(data)).featureCollection
+                          : data;
+                      for (const feature of collection.features) {
+                          if (!featureIds.has(feature.id)) {
+                              featureIds.add(feature.id);
+                              fc.features.push(feature);
+                          }
+                      }
+                  })
+                      .catch((e) => {
+                      if (!/aborted/i.test(e.toString())) {
+                          this.fireError(e);
+                          console.error(e);
+                      }
+                      else {
+                          wasAborted = true;
+                      }
+                  });
+              })()));
+              if (((_b = (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.signal) === null || _b === void 0 ? void 0 : _b.aborted) || wasAborted) {
+                  return;
+              }
+              const source = (_c = this.map) === null || _c === void 0 ? void 0 : _c.getSource(this.sourceId);
+              if (source && source.type === "geojson") {
+                  source.setData(fc);
+              }
+              this._loading = false;
           }
-          this._loading = false;
+          catch (e) {
+              if (!/aborted/i.test(e.toString())) {
+                  this.fireError(e);
+                  console.error(e);
+              }
+              this._loading = false;
+          }
       }
       async updateLayers(layerSettings) {
           if (this.map) {
@@ -1809,9 +1874,14 @@ var MapBoxGLEsriSources = (function (exports) {
           }
       }
       destroy() {
+          var _a;
           if (this.map) {
               this.removeFromMap(this.map);
           }
+          if (this.abortController) {
+              this.abortController.abort();
+          }
+          (_a = this.QuantizedVectorRequestManager) === null || _a === void 0 ? void 0 : _a.off("update");
       }
   }
 
@@ -2487,7 +2557,6 @@ var MapBoxGLEsriSources = (function (exports) {
               break;
           }
           case "classBreaks":
-              console.log("class breaks", renderer.classBreakInfos);
               if (renderer.backgroundFillSymbol) {
                   layers.push(...symbolToLayers(renderer.backgroundFillSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0));
               }
@@ -2495,7 +2564,6 @@ var MapBoxGLEsriSources = (function (exports) {
               const filters = [];
               legendItemIndex = renderer.classBreakInfos.length - 1;
               let minValue = 0;
-              console.log("renderer", renderer);
               const minMaxValues = renderer.classBreakInfos.map((b) => {
                   const values = [b.classMinValue || minValue, b.classMaxValue];
                   minValue = values[1];

@@ -4,7 +4,8 @@ export function fetchFeatureCollection(
   url: string,
   geometryPrecision = 6,
   outFields = "*",
-  bytesLimit = 1000000 * 100
+  bytesLimit = 1000000 * 100,
+  abortController: AbortController | null = null
 ) {
   return new Promise<FeatureCollection>((resolve, reject) => {
     fetchFeatureLayerData(
@@ -12,7 +13,7 @@ export function fetchFeatureCollection(
       outFields,
       reject,
       geometryPrecision,
-      null,
+      abortController,
       null,
       undefined,
       undefined,

@@ -29,6 +29,7 @@ import {
   getOrCreateQuantizedVectorRequestManager,
 } from "./QuantizedVectorRequestManager";
 import * as tilebelt from "@mapbox/tilebelt";
+import { fetchWithTTL } from "./ArcGISRESTServiceRequestManager";
 const tileDecode = require("arcgis-pbf-parser");
 
 export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
@@ -62,6 +63,7 @@ export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
    * @default 2_000_000
    */
   autoFetchByteLimit?: number;
+  cacheKey?: string;
 }
 
 export default class ArcGISFeatureLayerSource
@@ -80,6 +82,7 @@ export default class ArcGISFeatureLayerSource
   private rawFeaturesHaveBeenFetched = false;
   private exceededBytesLimit = false;
   private QuantizedVectorRequestManager?: QuantizedVectorRequestManager;
+  private cache?: Cache;
 
   constructor(
     requestManager: ArcGISRESTServiceRequestManager,
@@ -102,6 +105,11 @@ export default class ArcGISFeatureLayerSource
       );
     }
     this.layerId = parseInt(options.url.match(/\d+$/)?.[0] || "0");
+    const cache = caches
+      .open(options?.cacheKey || "seasketch-arcgis-rest-services")
+      .then((cache) => {
+        this.cache = cache;
+      });
   }
 
   async getComputedMetadata(): Promise<ComputedMetadata> {
@@ -153,6 +161,10 @@ export default class ArcGISFeatureLayerSource
     if (!layer) {
       throw new Error(`Sublayer ${this.layerId} not found`);
     }
+    const supportedFormats = (layer?.supportedQueryFormats || "")
+      .split(",")
+      .map((f) => f.toUpperCase().trim());
+    this.tileFormat = supportedFormats.includes("PBF") ? "pbf" : "geojson";
     return {
       minzoom: 0,
       maxzoom: 24,
@@ -161,6 +173,7 @@ export default class ArcGISFeatureLayerSource
           layer?.extent || serviceMetadata.fullExtent
         )) || undefined,
       attribution,
+      supportedFormats,
     };
   }
 
@@ -255,7 +268,13 @@ export default class ArcGISFeatureLayerSource
     return this.sourceId;
   }
 
+  private abortController: AbortController | null = null;
+
   private async fetchFeatures() {
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
     if (this.exceededBytesLimit) {
       return;
     }
@@ -266,7 +285,8 @@ export default class ArcGISFeatureLayerSource
         "*",
         this.options.fetchStrategy === "raw"
           ? 120_000_000
-          : this.options.autoFetchByteLimit || 2_000_000
+          : this.options.autoFetchByteLimit || 2_000_000,
+        this.abortController
       );
       this.featureData = data;
       const source = this.map?.getSource(this.sourceId);
@@ -297,7 +317,13 @@ export default class ArcGISFeatureLayerSource
     }
   }
 
+  private tileFormat = "geojson";
+
   private async fetchTiles() {
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
     this._loading = true;
     if (!this.QuantizedVectorRequestManager) {
       throw new Error("QuantizedVectorRequestManager not initialized");
@@ -308,77 +334,106 @@ export default class ArcGISFeatureLayerSource
       );
     }
     const { tiles, tolerance } =
-      this.QuantizedVectorRequestManager.viewPortDetails;
-    console.log("fetchTiles", tiles);
+      this.QuantizedVectorRequestManager.viewportDetails;
+
     const fc = {
       type: "FeatureCollection",
       features: [],
     } as FeatureCollection;
     const featureIds = new Set<number>();
-    console.log({ tiles, tolerance });
-    await Promise.all(
-      tiles.map((tile) =>
-        (async () => {
-          const tileBounds = tilebelt.tileToBBOX(tile);
+    try {
+      let wasAborted = false;
+      await Promise.all(
+        tiles.map((tile) =>
+          (async () => {
+            const tileBounds = tilebelt.tileToBBOX(tile);
 
-          const extent = {
-            spatialReference: {
-              latestWkid: 4326,
-              wkid: 4326,
-            },
-            xmin: tileBounds[0],
-            ymin: tileBounds[1],
-            xmax: tileBounds[2],
-            ymax: tileBounds[3],
-          };
-          const params = new URLSearchParams({
-            f: "pbf",
-            geometry: JSON.stringify(extent),
-            outFields: "*",
-            outSR: "4326",
-            returnZ: "false",
-            returnM: "false",
-            precision: "8",
-            where: "1=1",
-            setAttributionFromService: "true",
-            quantizationParameters: JSON.stringify({
-              extent,
-              tolerance,
-              mode: "view",
-            }),
-            resultType: "tile",
-            spatialRel: "esriSpatialRelIntersects",
-            geometryType: "esriGeometryEnvelope",
-            inSR: "4326",
-            ...this.options.queryParameters,
-          });
-          console.log("making request", params);
-          return fetch(`${`${this.options.url}/query?${params.toString()}`}`)
-            .then((response) => response.arrayBuffer())
-            .then((data) => {
-              const collection = tileDecode(
-                new Uint8Array(data)
-              ).featureCollection;
-              console.log("got response", collection);
-              for (const feature of collection.features) {
-                if (!featureIds.has(feature.id)) {
-                  featureIds.add(feature.id);
-                  fc.features.push(feature);
-                }
-              }
-            })
-            .catch((e) => {
-              console.error(e);
+            const extent = {
+              spatialReference: {
+                latestWkid: 4326,
+                wkid: 4326,
+              },
+              xmin: tileBounds[0],
+              ymin: tileBounds[1],
+              xmax: tileBounds[2],
+              ymax: tileBounds[3],
+            };
+            const params = new URLSearchParams({
+              f: this.tileFormat,
+              geometry: JSON.stringify(extent),
+              outFields: "*",
+              outSR: "4326",
+              returnZ: "false",
+              returnM: "false",
+              precision: "8",
+              where: "1=1",
+              setAttributionFromService: "true",
+              quantizationParameters: JSON.stringify({
+                extent,
+                tolerance,
+                mode: "view",
+              }),
+              resultType: "tile",
+              spatialRel: "esriSpatialRelIntersects",
+              maxAllowableOffset:
+                this.tileFormat === "geojson" ? tolerance.toString() : "",
+              geometryType: "esriGeometryEnvelope",
+              inSR: "4326",
+              ...this.options.queryParameters,
             });
-        })()
-      )
-    );
-    console.log("fetched tiles", fc);
-    const source = this.map?.getSource(this.sourceId);
-    if (source && source.type === "geojson") {
-      source.setData(fc);
+            return fetchWithTTL(
+              `${`${this.options.url}/query?${params.toString()}`}`,
+              60 * 10,
+              this.cache!,
+              { signal: this.abortController?.signal },
+              `${this.options.url}/query/tiled/${tilebelt.tileToQuadkey(tile)}`
+            )
+              .then((response) =>
+                params.get("f") === "pbf"
+                  ? response.arrayBuffer()
+                  : response.json()
+              )
+              .then((data) => {
+                if (this.abortController?.signal?.aborted) {
+                  return;
+                }
+                const collection =
+                  params.get("f") === "pbf"
+                    ? tileDecode(new Uint8Array(data)).featureCollection
+                    : data;
+                for (const feature of collection.features) {
+                  if (!featureIds.has(feature.id)) {
+                    featureIds.add(feature.id);
+                    fc.features.push(feature);
+                  }
+                }
+              })
+              .catch((e) => {
+                if (!/aborted/i.test(e.toString())) {
+                  this.fireError(e as Error);
+                  console.error(e);
+                } else {
+                  wasAborted = true;
+                }
+              });
+          })()
+        )
+      );
+      if (this.abortController?.signal?.aborted || wasAborted) {
+        return;
+      }
+      const source = this.map?.getSource(this.sourceId);
+      if (source && source.type === "geojson") {
+        source.setData(fc);
+      }
+      this._loading = false;
+    } catch (e: any) {
+      if (!/aborted/i.test(e.toString())) {
+        this.fireError(e as Error);
+        console.error(e);
+      }
+      this._loading = false;
     }
-    this._loading = false;
   }
 
   async updateLayers(layerSettings: OrderedLayerSettings) {
@@ -420,5 +475,9 @@ export default class ArcGISFeatureLayerSource
     if (this.map) {
       this.removeFromMap(this.map);
     }
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.QuantizedVectorRequestManager?.off("update");
   }
 }

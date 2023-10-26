@@ -127,8 +127,37 @@ export default function ArcGISCartModal({
         setMap(m);
       });
     }
-  }, [mapDiv, setSourceLoading]);
+  }, [mapDiv]);
+
   const [customSources, setCustomSources] = useState<CustomGLSource<any>[]>([]);
+
+  useEffect(() => {
+    if (map && customSources.length) {
+      const handler = () => {
+        let isLoading = false;
+        for (const source of customSources) {
+          isLoading = source.loading || isLoading;
+        }
+        setSourceLoading(isLoading);
+        if (isLoading) {
+          setTimeout(() => {
+            let isLoading = false;
+            for (const source of customSources) {
+              isLoading = source.loading || isLoading;
+            }
+            setSourceLoading(isLoading);
+          }, 2000);
+        }
+      };
+      map.on("data", handler);
+      map.on("dataloading", handler);
+
+      return () => {
+        map.off("data", handler);
+        map.off("dataloading", handler);
+      };
+    }
+  }, [customSources, map, setSourceLoading]);
 
   useEffect(() => {
     if (map) {
@@ -302,7 +331,6 @@ export default function ArcGISCartModal({
               });
           });
         }
-
         setCustomSources(sources);
         return () => {
           setCustomSources([]);
@@ -312,62 +340,6 @@ export default function ArcGISCartModal({
         };
       }
       return;
-      // } else if (selection.type === "FeatureServer") {
-      //   const featureLayers = mapServerInfo.data.layerInfo.filter(
-      //     (l) => l.type === "Feature Layer"
-      //   );
-      //   const sources: { [sourceId: string]: FeatureService } = {};
-      //   // @ts-ignore
-      //   window.map = map;
-      //   for (const layer of featureLayers) {
-      //     if (layer.defaultVisibility === false) {
-      //       continue;
-      //     }
-      //     const sourceId = `${selection.name}-${layer.id}`;
-      //     const source = new FeatureService(sourceId, map, {
-      //       url: layer.url,
-      //       precision: 6,
-      //       simplifyFactor: 0.3,
-      //       setAttributionFromService: false,
-      //       minZoom: 0,
-      //     });
-
-      //     // const source = new ArcGISVectorSource(map, sourceId, layer.url, {
-      //     //   supportsPagination: true,
-      //     //   bytesLimit: 10000000, // 10 mb
-      //     // });
-      //     sources[sourceId] = source;
-      //     const imageList = layer.imageList;
-      //     if (layer.mapboxLayers) {
-      //       if (imageList) {
-      //         imageList.addToMap(map);
-      //       }
-      //       for (const glLayer of [...layer.mapboxLayers].reverse()) {
-      //         console.log("adding layer", glLayer, sourceId);
-      //         // @ts-ignore
-      //         map.addLayer({
-      //           ...glLayer,
-      //           source: sourceId,
-      //         });
-      //       }
-      //     }
-      //   }
-      //   return () => {
-      //     const layers = map.getStyle().layers || [];
-      //     for (const sourceId in sources) {
-      //       for (const layer of layers) {
-      //         // @ts-ignore
-      //         console.log("removing", layer.source, sourceId);
-      //         // @ts-ignore
-      //         if (layer.source === sourceId) {
-      //           map.removeLayer(layer.id);
-      //         }
-      //       }
-      //       // source.destroy();
-      //       sources[sourceId].destroySource();
-      //     }
-      //   };
-      // }
     }
   }, [catalogItemDetailsQuery.data, map]);
 
@@ -458,13 +430,17 @@ export default function ArcGISCartModal({
                     </>
                   )}
                   {items.length === 0 && !loading && selectedFolder && (
-                    <div className="p-4">No map services in this folder</div>
+                    <div className="p-4 italic">
+                      No map services in this folder
+                    </div>
+                  )}
+                  {items.length === 0 && !loading && !selectedFolder && (
+                    <div className="p-4 italic">No map services found</div>
                   )}
                   {items.map((item) => (
                     <button
                       key={item.url}
                       onClick={(e) => {
-                        console.log(e.target);
                         if (
                           selection?.url === item.url &&
                           (e.target as HTMLElement).tagName === "IMG"
@@ -534,6 +510,7 @@ export default function ArcGISCartModal({
               </div>
               {map && legendItems.length > 0 && (
                 <Legend
+                  loading={sourceLoading}
                   backdropBlur
                   className="absolute left-96 top-0 z-50 mt-2 ml-2"
                   items={legendItems}

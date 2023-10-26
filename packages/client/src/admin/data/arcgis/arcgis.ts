@@ -69,7 +69,7 @@ export function normalizeArcGISServerUrl(
     url = "https://" + url;
   }
   if (/arcgis\/rest\/services/i.test(url)) {
-    const parts = url.split("/arcgis/rest/services");
+    const parts = url.split(/\/arcgis\/rest\/services/i);
     const baseUrl = parts[0];
     const servicesRoot = baseUrl + "/arcgis/rest/services";
     const location = parts[1].replace(/\/$/, "") || "/";

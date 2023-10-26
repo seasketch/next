@@ -11,7 +11,7 @@ const EventEmitter = require("eventemitter3");
 const tilebelt = require("@mapbox/tilebelt");
 const debounce = require("lodash.debounce");
 
-const DEBUG = true;
+const DEBUG = false;
 
 export class QuantizedVectorRequestManager extends EventEmitter {
   map: Map;
@@ -66,10 +66,36 @@ export class QuantizedVectorRequestManager extends EventEmitter {
   };
 
   private displayedTiles = "";
-  viewPortDetails: { tiles: Tile[]; tolerance: number } = {
+  _viewPortDetails: { tiles: Tile[]; tolerance: number } = {
     tiles: [],
     tolerance: 0,
   };
+
+  get viewportDetails() {
+    if (!this._viewPortDetails.tiles.length) {
+      this.intializeViewportDetails();
+    }
+    return this._viewPortDetails;
+  }
+
+  intializeViewportDetails() {
+    if (!this._viewPortDetails.tiles.length) {
+      const bounds = this.map.getBounds();
+      const boundsArray = bounds.toArray();
+      const tiles = this.getTilesForBounds(bounds);
+      const key = tiles
+        .map((t) => tilebelt.tileToQuadkey(t))
+        .sort()
+        .join(",");
+      this.displayedTiles = key;
+      const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
+      const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
+      this._viewPortDetails = {
+        tiles,
+        tolerance,
+      };
+    }
+  }
 
   private updateSources = () => {
     const bounds = this.map.getBounds();
@@ -82,8 +108,8 @@ export class QuantizedVectorRequestManager extends EventEmitter {
     if (key !== this.displayedTiles) {
       this.displayedTiles = key;
       const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
-      const tolerance = (mapWidth / this.map.getCanvas().width) * 0.3;
-      this.viewPortDetails = {
+      const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
+      this._viewPortDetails = {
         tiles,
         tolerance,
       };
@@ -106,7 +132,6 @@ export class QuantizedVectorRequestManager extends EventEmitter {
         geometry: tilebelt.tileToGeoJSON(t),
       })),
     };
-    console.log(fc);
     source.setData(fc as FeatureCollection);
   }
 
