@@ -133,28 +133,29 @@ export default function ArcGISCartModal({
 
   useEffect(() => {
     if (map && customSources.length) {
-      const handler = () => {
+      let timeout: any = null;
+      const updateIsLoading = () => {
         let isLoading = false;
         for (const source of customSources) {
           isLoading = source.loading || isLoading;
         }
         setSourceLoading(isLoading);
         if (isLoading) {
-          setTimeout(() => {
-            let isLoading = false;
-            for (const source of customSources) {
-              isLoading = source.loading || isLoading;
-            }
-            setSourceLoading(isLoading);
-          }, 2000);
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+          timeout = setTimeout(updateIsLoading, 2000);
         }
       };
-      map.on("data", handler);
-      map.on("dataloading", handler);
+      map.on("data", updateIsLoading);
+      map.on("dataloading", updateIsLoading);
 
       return () => {
-        map.off("data", handler);
-        map.off("dataloading", handler);
+        map.off("data", updateIsLoading);
+        map.off("dataloading", updateIsLoading);
+        if (timeout) {
+          clearTimeout(timeout);
+        }
       };
     }
   }, [customSources, map, setSourceLoading]);
