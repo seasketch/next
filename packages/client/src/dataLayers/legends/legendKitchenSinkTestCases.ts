@@ -3953,4 +3953,186 @@ export const testCases = {
       ],
     },
   },
+  "Geology (filter-based arcgis server layer)": {
+    input: [
+      {
+        id: "e4564597-7f97-4cf5-90e7-06dea3a3c27d",
+        type: "fill",
+        source: "7fa8c2ef-5c23-4ace-993e-acd3b3fcf5ad",
+        paint: {
+          "fill-color": "rgba(202,252,192,1)",
+          "fill-outline-color": "rgba(110,110,110,1)",
+        },
+        metadata: {
+          label: "Alluvium",
+        },
+        filter: ["==", "Name", "Alluvium"],
+      },
+      {
+        id: "4b4e8dcc-f75e-45c8-a84e-5261c6f7b0d8",
+        type: "fill",
+        source: "7fa8c2ef-5c23-4ace-993e-acd3b3fcf5ad",
+        paint: {
+          "fill-color": "rgba(230,179,252,1)",
+          "fill-outline-color": "rgba(110,110,110,1)",
+        },
+        metadata: {
+          label: "Fanglomerate",
+        },
+        filter: ["==", "Name", "Fanglomerate"],
+      },
+      {
+        id: "860f809e-6391-49e9-a4a7-a5536bd282a9",
+        type: "fill",
+        source: "7fa8c2ef-5c23-4ace-993e-acd3b3fcf5ad",
+        paint: {
+          "fill-color": "rgba(252,193,184,1)",
+          "fill-outline-color": "rgba(110,110,110,1)",
+        },
+        metadata: {
+          label: "Rincon Shale",
+        },
+        filter: ["==", "Name", "Rincon Shale"],
+      },
+      {
+        id: "9419460d-dba4-4427-a355-c8ae08275f2b",
+        type: "fill",
+        source: "7fa8c2ef-5c23-4ace-993e-acd3b3fcf5ad",
+        paint: {
+          "fill-color": "rgba(179,230,252,1)",
+          "fill-outline-color": "rgba(110,110,110,1)",
+        },
+        metadata: {
+          label: "Sespe Formation",
+        },
+        filter: ["==", "Name", "Sespe Formation"],
+      },
+      {
+        id: "3d546844-3c43-4d5e-8dad-3b270c852c77",
+        type: "fill",
+        source: "7fa8c2ef-5c23-4ace-993e-acd3b3fcf5ad",
+        paint: {
+          "fill-color": "rgba(252,243,212,1)",
+          "fill-outline-color": "rgba(110,110,110,1)",
+        },
+        metadata: {
+          label: "Vaqueros Sandstone",
+        },
+        filter: ["==", "Name", "Vaqueros Sandstone"],
+      },
+      {
+        id: "42c50aaa-9757-4d49-b01d-05f583f117c9",
+        type: "fill",
+        source: "7fa8c2ef-5c23-4ace-993e-acd3b3fcf5ad",
+        paint: {
+          "fill-color": "rgba(130,130,130,1)",
+          "fill-outline-color": "rgba(110,110,110,1)",
+        },
+        filter: [
+          "!",
+          [
+            "any",
+            ["==", ["get", "Name"], "Alluvium"],
+            ["==", ["get", "Name"], "Fanglomerate"],
+            ["==", ["get", "Name"], "Rincon Shale"],
+            ["==", ["get", "Name"], "Sespe Formation"],
+            ["==", ["get", "Name"], "Vaqueros Sandstone"],
+          ],
+        ],
+        metadata: {
+          label: "Default",
+        },
+      },
+    ],
+    output: {
+      type: "MultipleSymbolGLLegend",
+      panels: [
+        {
+          id: "Name%%fill",
+          type: "GLLegendListPanel",
+          label: "Name",
+          items: [
+            {
+              id: "0-filter-only",
+              label: "Alluvium",
+              symbol: {
+                type: "fill",
+                color: "rgba(202,252,192,1)",
+                extruded: false,
+                fillOpacity: 1,
+                strokeWidth: 1,
+                dashed: false,
+                strokeColor: "rgba(110,110,110,1)",
+              },
+            },
+            {
+              id: "1-filter-only",
+              label: "Fanglomerate",
+              symbol: {
+                type: "fill",
+                color: "rgba(230,179,252,1)",
+                extruded: false,
+                fillOpacity: 1,
+                strokeWidth: 1,
+                dashed: false,
+                strokeColor: "rgba(110,110,110,1)",
+              },
+            },
+            {
+              id: "2-filter-only",
+              label: "Rincon Shale",
+              symbol: {
+                type: "fill",
+                color: "rgba(252,193,184,1)",
+                extruded: false,
+                fillOpacity: 1,
+                strokeWidth: 1,
+                dashed: false,
+                strokeColor: "rgba(110,110,110,1)",
+              },
+            },
+            {
+              id: "3-filter-only",
+              label: "Sespe Formation",
+              symbol: {
+                type: "fill",
+                color: "rgba(179,230,252,1)",
+                extruded: false,
+                fillOpacity: 1,
+                strokeWidth: 1,
+                dashed: false,
+                strokeColor: "rgba(110,110,110,1)",
+              },
+            },
+            {
+              id: "4-filter-only",
+              label: "Vaqueros Sandstone",
+              symbol: {
+                type: "fill",
+                color: "rgba(252,243,212,1)",
+                extruded: false,
+                fillOpacity: 1,
+                strokeWidth: 1,
+                dashed: false,
+                strokeColor: "rgba(110,110,110,1)",
+              },
+            },
+            {
+              id: "5-filter-only",
+              label: "Default",
+              symbol: {
+                type: "fill",
+                color: "rgba(130,130,130,1)",
+                extruded: false,
+                fillOpacity: 1,
+                strokeWidth: 1,
+                dashed: false,
+                strokeColor: "rgba(110,110,110,1)",
+              },
+            },
+          ],
+        },
+      ],
+    },
+  },
 };

@@ -317,7 +317,7 @@ function propsForSimpleFilter(filter: Expression) {
     getInfo.position = 1;
     getInfo.prop = filter[2][1];
   } else {
-    throw new Error("Could not find get expression in filter");
+    // throw new Error("Could not find get expression in filter");
   }
   let propType = typeof filter[getInfo.position === 0 ? 2 : 1];
   switch (filter[0]) {
@@ -1027,7 +1027,9 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
           label,
         };
         let relatedLayers: SeaSketchGlLayer[] = [];
-        let featureProps = {};
+        const featureProps = propsForFilterExpressions([
+          normalizeLegacyFilterExpression(layer.filter),
+        ]);
         if ((layer.type === "fill" || layer.type === "line") && layer.filter) {
           for (const lyr of layers) {
             if (layer !== lyr && (lyr.type === "line" || lyr.type === "fill")) {
@@ -1035,7 +1037,7 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
                 const filter = normalizeLegacyFilterExpression(lyr.filter);
                 // next see if the values which would satisfy fill layer's filters
                 // would also satisfy the line layer's filters
-                featureProps = propsForFilterExpressions([
+                const featureProps = propsForFilterExpressions([
                   normalizeLegacyFilterExpression(layer.filter),
                 ]);
                 if (evaluateFilter(filter, featureProps)) {
@@ -2294,7 +2296,9 @@ function getSingleSymbolForVectorLayers(
   layers = [...layers].reverse();
   // determine primary symbol type
   const fillLayer = layers.find(
-    (layer) => layer.type === "fill" || layer.type === "fill-extrusion"
+    (layer) =>
+      (layer.type === "fill" || layer.type === "fill-extrusion") &&
+      layerIsVisible(layer, featureProps)
   ) as FillLayer | FillExtrusionLayer | undefined;
   if (fillLayer && layerIsVisible(fillLayer)) {
     return createFillSymbol(

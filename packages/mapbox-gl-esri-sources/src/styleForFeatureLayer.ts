@@ -155,14 +155,14 @@ async function styleForFeatureLayer(
               lyr.metadata = { label: info.label };
             }
             if (fields.length === 1) {
-              lyr.filter = ["==", field, values[0]];
+              lyr.filter = ["==", ["get", field], values[0]];
               filters.push(lyr.filter);
             } else {
               lyr.filter = [
                 "all",
                 ...fields.map((field) => [
                   "==",
-                  field,
+                  ["get", field],
                   values[fields.indexOf(field)],
                 ]),
               ];
@@ -182,7 +182,7 @@ async function styleForFeatureLayer(
             sublayer,
             0
           ).map((lyr) => {
-            lyr.filter = ["!", ["any", ...filters]];
+            lyr.filter = ["!=", ["any", ...filters], true];
             lyr.metadata = { label: "Default" };
             return lyr;
           })
@@ -232,9 +232,13 @@ async function styleForFeatureLayer(
             const [min, max] =
               minMaxValues[renderer.classBreakInfos.indexOf(info)];
             if (renderer.classBreakInfos.indexOf(info) === 0) {
-              lyr.filter = ["all", ["<=", field, max]];
+              lyr.filter = ["all", ["<=", ["get", field], max]];
             } else {
-              lyr.filter = ["all", [">", field, min], ["<=", field, max]];
+              lyr.filter = [
+                "all",
+                [">", ["get", field], min],
+                ["<=", ["get", field], max],
+              ];
             }
             if (info.label?.length) {
               lyr.metadata = { label: info.label };
