@@ -2459,17 +2459,10 @@ class MapContextManager extends EventEmitter {
 
           if (sourceType) {
             try {
-              console.time("legend2");
               const legend2 = compileLegendFromGLStyleLayers(
                 layer.mapboxGlStyles,
                 sourceType
               );
-              console.log("items");
-              console.log(layer.mapboxGlStyles);
-              console.log("legend");
-              console.log(legend2);
-              console.timeEnd("legend2");
-
               if (legend2) {
                 newLegendState[id] = {
                   id,

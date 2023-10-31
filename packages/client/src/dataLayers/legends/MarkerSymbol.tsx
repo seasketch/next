@@ -39,19 +39,28 @@ export default function MarkerSymbol({
 
   if (imageData) {
     return (
-      <img
-        style={
-          iconSize !== undefined
-            ? {
-                width: (iconSize * imageData.width) / imageData.pixelRatio,
-                height: (iconSize * imageData.height) / imageData.pixelRatio,
-              }
-            : {}
-        }
-        className={iconSize !== undefined ? "w-5 h-5" : ""}
-        src={imageData.url}
+      <div
+        style={{
+          background: `url(${imageData.url})`,
+          backgroundSize: "cover",
+        }}
+        className={"w-5 h-5"}
       />
     );
+    // return (
+    //   <img
+    //     style={
+    //       iconSize !== undefined
+    //         ? {
+    //             width: (iconSize * imageData.width) / imageData.pixelRatio,
+    //             height: (iconSize * imageData.height) / imageData.pixelRatio,
+    //           }
+    //         : {}
+    //     }
+    //     className={iconSize !== undefined ? "w-5 h-5" : ""}
+    //     src={imageData.url}
+    //   />
+    // );
   } else {
     // eslint-disable-next-line i18next/no-literal-string
     return null;

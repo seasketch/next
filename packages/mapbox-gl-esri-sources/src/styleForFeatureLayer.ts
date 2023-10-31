@@ -114,7 +114,6 @@ async function styleForFeatureLayer(
   serviceMetadata =
     serviceMetadata || (await fetch(url + "?f=json").then((r) => r.json()));
   const renderer = serviceMetadata.drawingInfo.renderer as Renderer;
-
   let layers: Layer[] = [];
   const imageList = new ImageList(serviceMetadata.currentVersion);
   let legendItemIndex = 0;

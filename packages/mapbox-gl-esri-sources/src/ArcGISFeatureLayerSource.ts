@@ -251,7 +251,6 @@ export default class ArcGISFeatureLayerSource
     this.map = map;
     this.QuantizedVectorRequestManager =
       getOrCreateQuantizedVectorRequestManager(map);
-    const { serviceMetadata, layers } = await this.getMetadata();
     const { attribution } = await this.getComputedProperties();
     map.addSource(this.sourceId, {
       type: "geojson",
@@ -286,7 +285,8 @@ export default class ArcGISFeatureLayerSource
         this.options.fetchStrategy === "raw"
           ? 120_000_000
           : this.options.autoFetchByteLimit || 2_000_000,
-        this.abortController
+        this.abortController,
+        this.options.fetchStrategy === "auto"
       );
       this.featureData = data;
       const source = this.map?.getSource(this.sourceId);

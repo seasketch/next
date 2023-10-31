@@ -11,12 +11,7 @@ import {
 import { AnyLayer, LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
 import Skeleton from "../../../components/Skeleton";
-import {
-  ArrowLeftIcon,
-  ExternalLinkIcon,
-  Link1Icon,
-  Link2Icon,
-} from "@radix-ui/react-icons";
+import { ArrowLeftIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/solid";
 import Spinner from "../../../components/Spinner";
 import Button from "../../../components/Button";

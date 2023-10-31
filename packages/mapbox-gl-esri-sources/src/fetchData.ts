@@ -5,7 +5,8 @@ export function fetchFeatureCollection(
   geometryPrecision = 6,
   outFields = "*",
   bytesLimit = 1000000 * 100,
-  abortController: AbortController | null = null
+  abortController: AbortController | null = null,
+  disablePagination = false
 ) {
   return new Promise<FeatureCollection>((resolve, reject) => {
     fetchFeatureLayerData(
@@ -15,7 +16,7 @@ export function fetchFeatureCollection(
       geometryPrecision,
       abortController,
       null,
-      undefined,
+      disablePagination,
       undefined,
       bytesLimit
     )
@@ -140,7 +141,6 @@ async function fetchData(
             // mode: "cors",
             ...(abortController ? { signal: abortController.signal } : {}),
           });
-          const featureIds = featureCollection.features.map((f) => f.id);
           let objectIdParameters = await r.json();
           // FeatureServers (at least on ArcGIS Online) behave differently
           if (objectIdParameters.properties) {

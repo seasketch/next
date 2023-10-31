@@ -71,21 +71,44 @@ export async function extentToLatLngBounds(
 ): Promise<[number, number, number, number] | void> {
   if (extent) {
     const wkid = normalizeSpatialReference(extent.spatialReference);
+    let bounds: [number, number, number, number];
     if (wkid === 4326) {
-      return [extent.xmin, extent.ymin, extent.xmax, extent.ymax];
+      bounds = [extent.xmin, extent.ymin, extent.xmax, extent.ymax];
     } else if (wkid === 3857 || wkid === 102100) {
-      return [
+      bounds = [
         ...metersToDegrees(extent.xmin, extent.ymin),
         ...metersToDegrees(extent.xmax, extent.ymax),
       ];
     } else {
       try {
         const projected = await projectExtent(extent);
-        return [projected.xmin, projected.ymin, projected.xmax, projected.ymax];
+        bounds = [
+          projected.xmin,
+          projected.ymin,
+          projected.xmax,
+          projected.ymax,
+        ];
       } catch (e) {
         console.error(e);
         return;
       }
+    }
+    if (bounds) {
+      // check that bounds are valid, e.g. not a super small area around null
+      // island. these bad bounds can crash mapbox-gl-js
+      const [xmin, ymin, xmax, ymax] = bounds;
+      if (xmin === xmax || ymin === ymax) {
+        return;
+      } else if (
+        Math.abs(ymax - ymin) < 0.001 ||
+        Math.abs(xmax - xmin) < 0.001
+      ) {
+        return;
+      } else {
+        return bounds;
+      }
+    } else {
+      return;
     }
   }
 }

@@ -135,7 +135,9 @@ export default function Legend({
                           ) : null}
                         </div>
 
-                        <span className="truncate flex-1">{item.label}</span>
+                        <span title={item.label} className="truncate flex-1">
+                          {item.label}
+                        </span>
                         <Toggle
                           onChange={() => {
                             if (onHiddenItemsChange) {
@@ -158,7 +160,9 @@ export default function Legend({
                         }`}
                       >
                         <div className="flex items-center space-x-1 mb-0.5">
-                          <span className="truncate flex-1">{item.label}</span>
+                          <span title={item.label} className="truncate flex-1">
+                            {item.label}
+                          </span>
                           <Toggle
                             onChange={() => {
                               if (onHiddenItemsChange) {
@@ -200,7 +204,9 @@ export default function Legend({
                           <LegendImage item={item.symbols[0]} />
                         </div>
 
-                        <span className="truncate flex-1">{item.label}</span>
+                        <span title={item.label} className="truncate flex-1">
+                          {item.label}
+                        </span>
                         <Toggle
                           onChange={() => {
                             if (onHiddenItemsChange) {
@@ -223,7 +229,9 @@ export default function Legend({
                         }`}
                       >
                         <div className="flex items-center space-x-1 mb-0.5">
-                          <span className="truncate flex-1">{item.label}</span>
+                          <span title={item.label} className="truncate flex-1">
+                            {item.label}
+                          </span>
                           <Toggle
                             onChange={() => {
                               if (onHiddenItemsChange) {

@@ -81,11 +81,12 @@ var MapBoxGLEsriSources = (function (exports) {
   async function extentToLatLngBounds(extent) {
       if (extent) {
           const wkid = normalizeSpatialReference(extent.spatialReference);
+          let bounds;
           if (wkid === 4326) {
-              return [extent.xmin, extent.ymin, extent.xmax, extent.ymax];
+              bounds = [extent.xmin, extent.ymin, extent.xmax, extent.ymax];
           }
           else if (wkid === 3857 || wkid === 102100) {
-              return [
+              bounds = [
                   ...metersToDegrees(extent.xmin, extent.ymin),
                   ...metersToDegrees(extent.xmax, extent.ymax),
               ];
@@ -93,12 +94,33 @@ var MapBoxGLEsriSources = (function (exports) {
           else {
               try {
                   const projected = await projectExtent(extent);
-                  return [projected.xmin, projected.ymin, projected.xmax, projected.ymax];
+                  bounds = [
+                      projected.xmin,
+                      projected.ymin,
+                      projected.xmax,
+                      projected.ymax,
+                  ];
               }
               catch (e) {
                   console.error(e);
                   return;
               }
+          }
+          if (bounds) {
+              const [xmin, ymin, xmax, ymax] = bounds;
+              if (xmin === xmax || ymin === ymax) {
+                  return;
+              }
+              else if (Math.abs(ymax - ymin) < 0.001 ||
+                  Math.abs(xmax - xmin) < 0.001) {
+                  return;
+              }
+              else {
+                  return bounds;
+              }
+          }
+          else {
+              return;
           }
       }
   }
@@ -1153,9 +1175,9 @@ var MapBoxGLEsriSources = (function (exports) {
       updateLayers(layers) { }
   }
 
-  function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100, abortController = null) {
+  function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100, abortController = null, disablePagination = false) {
       return new Promise((resolve, reject) => {
-          fetchFeatureLayerData(url, outFields, reject, geometryPrecision, abortController, null, undefined, undefined, bytesLimit)
+          fetchFeatureLayerData(url, outFields, reject, geometryPrecision, abortController, null, disablePagination, undefined, bytesLimit)
               .then((data) => resolve(data))
               .catch((e) => reject(e));
       });
@@ -1213,7 +1235,6 @@ var MapBoxGLEsriSources = (function (exports) {
                       const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
                           ...(abortController ? { signal: abortController.signal } : {}),
                       });
-                      const featureIds = featureCollection.features.map((f) => f.id);
                       let objectIdParameters = await r.json();
                       if (objectIdParameters.properties) {
                           objectIdParameters = objectIdParameters.properties;
@@ -1689,7 +1710,6 @@ var MapBoxGLEsriSources = (function (exports) {
           this.map = map;
           this.QuantizedVectorRequestManager =
               getOrCreateQuantizedVectorRequestManager(map);
-          await this.getMetadata();
           const { attribution } = await this.getComputedProperties();
           map.addSource(this.sourceId, {
               type: "geojson",
@@ -1717,7 +1737,7 @@ var MapBoxGLEsriSources = (function (exports) {
           try {
               const data = await fetchFeatureCollection(this.options.url, 6, "*", this.options.fetchStrategy === "raw"
                   ? 120000000
-                  : this.options.autoFetchByteLimit || 2000000, this.abortController);
+                  : this.options.autoFetchByteLimit || 2000000, this.abortController, this.options.fetchStrategy === "auto");
               this.featureData = data;
               const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
               if (source && source.type === "geojson") {
@@ -2530,7 +2550,7 @@ var MapBoxGLEsriSources = (function (exports) {
                           lyr.metadata = { label: info.label };
                       }
                       if (fields.length === 1) {
-                          lyr.filter = ["==", field, values[0]];
+                          lyr.filter = ["==", ["get", field], values[0]];
                           filters.push(lyr.filter);
                       }
                       else {
@@ -2538,7 +2558,7 @@ var MapBoxGLEsriSources = (function (exports) {
                               "all",
                               ...fields.map((field) => [
                                   "==",
-                                  field,
+                                  ["get", field],
                                   values[fields.indexOf(field)],
                               ]),
                           ];
@@ -2549,7 +2569,7 @@ var MapBoxGLEsriSources = (function (exports) {
               }
               if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
                   layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
-                      lyr.filter = ["!", ["any", ...filters]];
+                      lyr.filter = ["!=", ["any", ...filters], true];
                       lyr.metadata = { label: "Default" };
                       return lyr;
                   }));
@@ -2574,10 +2594,14 @@ var MapBoxGLEsriSources = (function (exports) {
                       var _a;
                       const [min, max] = minMaxValues[renderer.classBreakInfos.indexOf(info)];
                       if (renderer.classBreakInfos.indexOf(info) === 0) {
-                          lyr.filter = ["all", ["<=", field, max]];
+                          lyr.filter = ["all", ["<=", ["get", field], max]];
                       }
                       else {
-                          lyr.filter = ["all", [">", field, min], ["<=", field, max]];
+                          lyr.filter = [
+                              "all",
+                              [">", ["get", field], min],
+                              ["<=", ["get", field], max],
+                          ];
                       }
                       if ((_a = info.label) === null || _a === void 0 ? void 0 : _a.length) {
                           lyr.metadata = { label: info.label };
