@@ -2550,7 +2550,7 @@ var MapBoxGLEsriSources = (function (exports) {
                           lyr.metadata = { label: info.label };
                       }
                       if (fields.length === 1) {
-                          lyr.filter = ["==", ["get", field], values[0]];
+                          lyr.filter = ["==", field, values[0]];
                           filters.push(lyr.filter);
                       }
                       else {
@@ -2558,7 +2558,7 @@ var MapBoxGLEsriSources = (function (exports) {
                               "all",
                               ...fields.map((field) => [
                                   "==",
-                                  ["get", field],
+                                  field,
                                   values[fields.indexOf(field)],
                               ]),
                           ];
@@ -2569,7 +2569,7 @@ var MapBoxGLEsriSources = (function (exports) {
               }
               if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
                   layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
-                      lyr.filter = ["!=", ["any", ...filters], true];
+                      lyr.filter = ["!", ["any", ...filters]];
                       lyr.metadata = { label: "Default" };
                       return lyr;
                   }));
@@ -2594,14 +2594,10 @@ var MapBoxGLEsriSources = (function (exports) {
                       var _a;
                       const [min, max] = minMaxValues[renderer.classBreakInfos.indexOf(info)];
                       if (renderer.classBreakInfos.indexOf(info) === 0) {
-                          lyr.filter = ["all", ["<=", ["get", field], max]];
+                          lyr.filter = ["all", ["<=", field, max]];
                       }
                       else {
-                          lyr.filter = [
-                              "all",
-                              [">", ["get", field], min],
-                              ["<=", ["get", field], max],
-                          ];
+                          lyr.filter = ["all", [">", field, min], ["<=", field, max]];
                       }
                       if ((_a = info.label) === null || _a === void 0 ? void 0 : _a.length) {
                           lyr.metadata = { label: info.label };
