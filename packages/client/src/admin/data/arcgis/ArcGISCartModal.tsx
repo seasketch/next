@@ -1,4 +1,3 @@
-/* eslint-disable i18next/no-literal-string */
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import ArcGISSearchPage from "./ArcGISSearchPage";
@@ -28,16 +27,21 @@ import { Feature } from "geojson";
 import bbox from "@turf/bbox";
 import Legend, { LegendItem } from "../../../dataLayers/Legend";
 import { compileLegendFromGLStyleLayers } from "../../../dataLayers/legends/compileLegend";
+import Switch from "../../../components/Switch";
+import { Trans, useTranslation } from "react-i18next";
 
 const requestManager = new ArcGISRESTServiceRequestManager();
 
 export default function ArcGISCartModal({
   onRequestClose,
   region,
+  importedArcGISServices,
 }: {
   onRequestClose: () => void;
   region?: Feature<any>;
+  importedArcGISServices: string[];
 }) {
+  const { t } = useTranslation("admin:data");
   let mapBounds: LngLatBoundsLike | undefined = undefined;
   if (region) {
     const box = region
@@ -197,6 +201,8 @@ export default function ArcGISCartModal({
 
   const [search, setSearch] = useState("");
 
+  const [useFeatureLayers, setUseFeatureLayers] = useState(false);
+
   const items = (catalogInfo || []).filter(
     (i) =>
       (i.type === "MapServer" ||
@@ -246,98 +252,111 @@ export default function ArcGISCartModal({
           setCustomSources([]);
           tileSource.destroy();
         };
-      } else if (type === "MapServer") {
-        const dynamicSource = new ArcGISDynamicMapService(requestManager, {
-          url: selection.url,
-          supportHighDpiDisplays: true,
-          tileSize: 512,
-          useTiles: false,
-        });
-        dynamicSource.getComputedMetadata().then((data) => {
-          const { bounds, tableOfContentsItems } = data;
-          setTableOfContentsItems(tableOfContentsItems);
-          setHiddenLayers(
-            tableOfContentsItems
-              .filter(
-                (item) =>
-                  item.type === "data" && item.defaultVisibility === false
-              )
-              .map((item) => item.id)
-          );
-          if (bounds && bounds[0]) {
-            map.fitBounds(bounds, { padding: 10, animate: false });
-          }
-        });
-        setCustomSources([dynamicSource]);
-        dynamicSource.addToMap(map).then(() => {
-          dynamicSource.getGLStyleLayers().then(({ layers }) => {
-            for (const layer of layers) {
-              map.addLayer(layer);
-            }
-          });
-        });
-        return () => {
-          setCustomSources([]);
-          dynamicSource.destroy();
-        };
-      } else if (type === "FeatureServer") {
-        const sources: ArcGISFeatureLayerSource[] = [];
-        for (const layer of [
-          ...catalogItemDetailsQuery.data.metadata?.layers,
-        ].reverse()) {
-          const featureLayerSource = new ArcGISFeatureLayerSource(
-            requestManager,
-            {
-              url: selection.url + "/" + layer.id,
-              fetchStrategy: "auto",
-            }
-          );
-          sources.push(featureLayerSource);
-          featureLayerSource.getComputedMetadata().then((data) => {
-            const { bounds, tableOfContentsItems } = data;
-            setTableOfContentsItems((prev) => [
-              ...prev,
-              ...tableOfContentsItems,
-            ]);
-            setHiddenLayers((prev) => {
-              return [
-                ...prev,
-                ...tableOfContentsItems
-                  .filter(
-                    (item) =>
-                      item.type === "data" && item.defaultVisibility === false
-                  )
-                  .map((item) => item.id),
-              ];
-            });
-            if (bounds && bounds[0]) {
-              map.fitBounds(bounds, { padding: 10, animate: false });
-            }
-          });
-          featureLayerSource.addToMap(map).then(() => {
-            featureLayerSource
-              .getGLStyleLayers()
-              .then(({ layers, imageList }) => {
-                if (imageList) {
-                  imageList.addToMap(map);
-                }
-                for (const layer of layers) {
-                  map.addLayer(layer as AnyLayer);
-                }
+      } else if (type === "MapServer" || type === "FeatureServer") {
+        const featureLayers =
+          type === "FeatureServer"
+            ? catalogItemDetailsQuery.data.metadata?.layers
+            : catalogItemDetailsQuery.data.layers.layers.filter((lyr: any) => {
+                return (
+                  lyr.type === "Feature Layer" &&
+                  /geojson/i.test(lyr.supportedQueryFormats)
+                );
               });
-          });
-        }
-        setCustomSources(sources);
-        return () => {
-          setCustomSources([]);
-          for (const source of sources) {
-            source.destroy();
+        if (type === "FeatureServer" || useFeatureLayers) {
+          const sources: ArcGISFeatureLayerSource[] = [];
+          for (const layer of featureLayers.reverse()) {
+            const featureLayerSource = new ArcGISFeatureLayerSource(
+              requestManager,
+              {
+                url: selection.url + "/" + layer.id,
+                fetchStrategy: "auto",
+              }
+            );
+            sources.push(featureLayerSource);
+            featureLayerSource.getComputedMetadata().then((data) => {
+              const { bounds, tableOfContentsItems } = data;
+              setTableOfContentsItems((prev) => [
+                ...prev,
+                ...tableOfContentsItems,
+              ]);
+              setHiddenLayers((prev) => {
+                return [
+                  ...prev,
+                  ...tableOfContentsItems
+                    .filter(
+                      (item) =>
+                        item.type === "data" && item.defaultVisibility === false
+                    )
+                    .map((item) => item.id),
+                ];
+              });
+              if (bounds && bounds[0]) {
+                map.fitBounds(bounds, { padding: 10, animate: false });
+              }
+            });
+            featureLayerSource.addToMap(map).then(() => {
+              featureLayerSource
+                .getGLStyleLayers()
+                .then(({ layers, imageList }) => {
+                  if (imageList) {
+                    imageList.addToMap(map);
+                  }
+                  for (const layer of layers) {
+                    map.addLayer(layer as AnyLayer);
+                  }
+                });
+            });
           }
-        };
+          setCustomSources(sources);
+          return () => {
+            setCustomSources([]);
+            for (const source of sources) {
+              source.destroy();
+            }
+          };
+        } else {
+          const dynamicSource = new ArcGISDynamicMapService(requestManager, {
+            url: selection.url,
+            supportHighDpiDisplays: true,
+            tileSize: 512,
+            useTiles: false,
+          });
+          dynamicSource.getComputedMetadata().then((data) => {
+            const { bounds, tableOfContentsItems } = data;
+            setTableOfContentsItems(tableOfContentsItems);
+            setHiddenLayers(
+              tableOfContentsItems
+                .filter(
+                  (item) =>
+                    item.type === "data" && item.defaultVisibility === false
+                )
+                .map((item) => item.id)
+            );
+            if (bounds && bounds[0]) {
+              map.fitBounds(bounds, {
+                padding: 10,
+                animate: true,
+                duration: 100,
+              });
+            }
+          });
+          setCustomSources([dynamicSource]);
+          dynamicSource.addToMap(map).then(() => {
+            dynamicSource.getGLStyleLayers().then(({ layers }) => {
+              for (const layer of layers) {
+                map.addLayer(layer);
+              }
+            });
+          });
+          return () => {
+            setCustomSources([]);
+            dynamicSource.destroy();
+          };
+        }
       }
       return;
     }
-  }, [catalogItemDetailsQuery.data, map]);
+  }, [catalogItemDetailsQuery.data, map, useFeatureLayers]);
 
   useEffect(() => {
     for (const source of customSources) {
@@ -427,11 +446,13 @@ export default function ArcGISCartModal({
                   )}
                   {items.length === 0 && !loading && selectedFolder && (
                     <div className="p-4 italic">
-                      No map services in this folder
+                      {t("No map services in this folder")}
                     </div>
                   )}
                   {items.length === 0 && !loading && !selectedFolder && (
-                    <div className="p-4 italic">No map services found</div>
+                    <div className="p-4 italic">
+                      {t("No map services found")}
+                    </div>
                   )}
                   {items.map((item) => (
                     <button
@@ -526,11 +547,53 @@ export default function ArcGISCartModal({
                   maxHeight={600}
                 />
               )}
+              {useFeatureLayers &&
+                legendItems.length === 0 &&
+                sourceLoading === false && (
+                  <div className="absolute left-96 top-0 z-50 mt-2 ml-2 bg-white rounded p-2 text-sm shadow bg-opacity-90 w-64">
+                    <h3 className="flex-1 text-left flex items-center w-full border-b pb-2">
+                      {t("Legend")}
+                    </h3>
+                    <p className="mt-2">
+                      {t(
+                        "No vector layers found. Disable vector request preference to see raster layers."
+                      )}
+                    </p>
+                  </div>
+                )}
               <div ref={setMapDiv} className={`bg-gray-50 flex-1`}></div>
             </div>
-            <div className="border-t border-gray-800 border-opacity-20 flex w-full bg-gray-200 p-4 rounded-b-md items-end justify-end gap-2">
-              <Button label="Done" onClick={onRequestClose} />
-              <Button disabled primary label="Add service to project" />
+            <div className="border-t border-gray-800 border-opacity-20 flex w-full bg-gray-200 p-4 rounded-b-md items-end justify-end gap-2 space-x-5">
+              <div
+                className={`${
+                  catalogItemDetailsQuery.data?.type === "MapServer"
+                    ? "opacity-100"
+                    : "opacity-0"
+                } h-full flex items-center justify-start space-x-2 text-sm flex-1`}
+              >
+                <div>
+                  <h5>
+                    <Trans ns="admin:data">
+                      Display vectors instead of requesting images from
+                      MapService
+                    </Trans>
+                  </h5>
+                  <p className="text-gray-500">
+                    <Trans ns="admin:data">
+                      Best option for smaller datasets, can cause problems for
+                      largest ones.
+                    </Trans>
+                  </p>
+                </div>
+                <Switch
+                  isToggled={useFeatureLayers}
+                  onClick={(val) => setUseFeatureLayers(val)}
+                />
+              </div>
+              <div className="flex items-center space-x-1 h-full">
+                <Button label={t("Done")} onClick={onRequestClose} />
+                <Button disabled primary label={t("Add service to project")} />
+              </div>
             </div>
           </div>
         )}

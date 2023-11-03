@@ -76,7 +76,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
                         lyr.metadata = { label: info.label };
                     }
                     if (fields.length === 1) {
-                        lyr.filter = ["==", field, values[0]];
+                        lyr.filter = ["==", ["get", field], values[0]];
                         filters.push(lyr.filter);
                     }
                     else {
@@ -84,7 +84,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
                             "all",
                             ...fields.map((field) => [
                                 "==",
-                                field,
+                                ["get", field],
                                 values[fields.indexOf(field)],
                             ]),
                         ];
@@ -95,7 +95,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
             }
             if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
                 layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
-                    lyr.filter = ["!", ["any", ...filters]];
+                    lyr.filter = ["!=", ["any", ...filters], true];
                     lyr.metadata = { label: "Default" };
                     return lyr;
                 }));
@@ -121,10 +121,14 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
                     var _a;
                     const [min, max] = minMaxValues[renderer.classBreakInfos.indexOf(info)];
                     if (renderer.classBreakInfos.indexOf(info) === 0) {
-                        lyr.filter = ["all", ["<=", field, max]];
+                        lyr.filter = ["all", ["<=", ["get", field], max]];
                     }
                     else {
-                        lyr.filter = ["all", [">", field, min], ["<=", field, max]];
+                        lyr.filter = [
+                            "all",
+                            [">", ["get", field], min],
+                            ["<=", ["get", field], max],
+                        ];
                     }
                     if ((_a = info.label) === null || _a === void 0 ? void 0 : _a.length) {
                         lyr.metadata = { label: info.label };

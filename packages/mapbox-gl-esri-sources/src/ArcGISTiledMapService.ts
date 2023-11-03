@@ -16,12 +16,11 @@ import {
   makeLegend,
   replaceSource,
 } from "./utils";
-import { blankDataUri } from "./ArcGISDynamicMapService";
 
 export interface ArcGISTiledMapServiceOptions extends CustomGLSourceOptions {
   url: string;
   supportHighDpiDisplays?: boolean;
-  credentials?: { username: string; password: string };
+  token?: string;
 }
 
 /**
@@ -72,7 +71,7 @@ export class ArcGISTiledMapService
     } else {
       return this.requestManager
         .getMapServiceMetadata(this.options.url, {
-          credentials: this.options.credentials,
+          token: this.options.token,
         })
         .then(({ serviceMetadata, layers }) => {
           this.serviceMetadata = serviceMetadata;

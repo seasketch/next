@@ -15,6 +15,7 @@ export {
 export {
   MapServiceMetadata,
   FeatureServerMetadata,
+  LayersMetadata,
 } from "./src/ServiceMetadata";
 export {
   CustomGLSource,

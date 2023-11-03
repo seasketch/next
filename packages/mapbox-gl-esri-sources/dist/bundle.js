@@ -375,7 +375,7 @@ var MapBoxGLEsriSources = (function (exports) {
           else {
               return this.requestManager
                   .getMapServiceMetadata(this.options.url, {
-                  credentials: this.options.credentials,
+                  token: this.options.token,
               })
                   .then(({ serviceMetadata, layers }) => {
                   this.serviceMetadata = serviceMetadata;
@@ -874,9 +874,8 @@ var MapBoxGLEsriSources = (function (exports) {
           url = url.replace(/\?.*$/, "");
           const params = new URLSearchParams();
           params.set("f", "json");
-          if (options === null || options === void 0 ? void 0 : options.credentials) {
-              const token = await this.getToken(url.replace(/rest\/services\/.*/, "/rest/services/"), options.credentials);
-              params.set("token", token);
+          if (options === null || options === void 0 ? void 0 : options.token) {
+              params.set("token", options.token);
           }
           const requestUrl = `${url}?${params.toString()}`;
           const serviceMetadata = await this.fetch(requestUrl, options === null || options === void 0 ? void 0 : options.signal);
@@ -900,9 +899,8 @@ var MapBoxGLEsriSources = (function (exports) {
           url = url.replace(/\?.*$/, "");
           const params = new URLSearchParams();
           params.set("f", "json");
-          if (options === null || options === void 0 ? void 0 : options.credentials) {
-              const token = await this.getToken(url.replace(/rest\/services\/.*/, "/rest/services/"), options.credentials);
-              params.set("token", token);
+          if (options === null || options === void 0 ? void 0 : options.token) {
+              params.set("token", options.token);
           }
           const requestUrl = `${url}?${params.toString()}`;
           const serviceMetadata = await this.fetch(requestUrl, options === null || options === void 0 ? void 0 : options.signal);
@@ -920,16 +918,12 @@ var MapBoxGLEsriSources = (function (exports) {
           url = url.replace(/\?.*$/, "");
           const params = new URLSearchParams();
           params.set("f", "json");
-          if (options === null || options === void 0 ? void 0 : options.credentials) {
-              const token = await this.getToken(url.replace(/rest\/services\/.*/, "/rest/services/"), options.credentials);
-              params.set("token", token);
+          if (options === null || options === void 0 ? void 0 : options.token) {
+              params.set("token", options === null || options === void 0 ? void 0 : options.token);
           }
           const requestUrl = `${url}?${params.toString()}`;
           const response = await this.fetch(requestUrl, options === null || options === void 0 ? void 0 : options.signal);
           return response;
-      }
-      async getToken(url, credentials) {
-          throw new Error("Not implemented");
       }
       async fetch(url, signal) {
           if (url in this.inFlightRequests) {
@@ -958,7 +952,7 @@ var MapBoxGLEsriSources = (function (exports) {
               });
           });
       }
-      async getLegendMetadata(url, credentials) {
+      async getLegendMetadata(url, token) {
           if (!/rest\/services/.test(url)) {
               throw new Error("Invalid ArcGIS REST Service URL");
           }
@@ -969,8 +963,7 @@ var MapBoxGLEsriSources = (function (exports) {
           url = url.replace(/\?.*$/, "");
           const params = new URLSearchParams();
           params.set("f", "json");
-          if (credentials) {
-              const token = await this.getToken(url.replace(/rest\/services\/.*/, "/rest/services/"), credentials);
+          if (token) {
               params.set("token", token);
           }
           const requestUrl = `${url}/legend?${params.toString()}`;
@@ -1050,7 +1043,7 @@ var MapBoxGLEsriSources = (function (exports) {
           else {
               return this.requestManager
                   .getMapServiceMetadata(this.options.url, {
-                  credentials: this.options.credentials,
+                  token: this.options.token,
               })
                   .then(({ serviceMetadata, layers }) => {
                   this.serviceMetadata = serviceMetadata;
@@ -1581,6 +1574,7 @@ var MapBoxGLEsriSources = (function (exports) {
           this.exceededBytesLimit = false;
           this.abortController = null;
           this.tileFormat = "geojson";
+          this.paused = false;
           this.sourceId = options.sourceId || v4();
           this.options = options;
           this.requestManager = requestManager;
@@ -1666,7 +1660,7 @@ var MapBoxGLEsriSources = (function (exports) {
               if (/FeatureServer/.test(this.options.url)) {
                   return this.requestManager
                       .getFeatureServerMetadata(this.options.url.replace(/\/\d+$/, ""), {
-                      credentials: this.options.credentials,
+                      token: this.options.token,
                   })
                       .then(({ serviceMetadata, layers }) => {
                       this.serviceMetadata = serviceMetadata;
@@ -1676,8 +1670,8 @@ var MapBoxGLEsriSources = (function (exports) {
               }
               else {
                   return this.requestManager
-                      .getMapServiceMetadata(this.options.url, {
-                      credentials: this.options.credentials,
+                      .getMapServiceMetadata(this.options.url.replace(/\d+[\/]*$/, ""), {
+                      token: this.options.token,
                   })
                       .then(({ serviceMetadata, layers }) => {
                       this.serviceMetadata = serviceMetadata;
@@ -1752,7 +1746,7 @@ var MapBoxGLEsriSources = (function (exports) {
                   this.exceededBytesLimit = true;
                   if (this.options.fetchStrategy === "auto") {
                       shouldFireError = false;
-                      this.options.fetchStrategy = "quantized";
+                      this.options.fetchStrategy = "tiled";
                       this.QuantizedVectorRequestManager.on("update", this.fetchTiles.bind(this));
                       this.fetchTiles();
                   }
@@ -1774,7 +1768,7 @@ var MapBoxGLEsriSources = (function (exports) {
           if (!this.QuantizedVectorRequestManager) {
               throw new Error("QuantizedVectorRequestManager not initialized");
           }
-          else if (this.options.fetchStrategy !== "quantized") {
+          else if (this.options.fetchStrategy !== "tiled") {
               throw new Error("fetchTiles called when fetchStrategy is not quantized. Was " +
                   this.options.fetchStrategy);
           }
@@ -1868,14 +1862,30 @@ var MapBoxGLEsriSources = (function (exports) {
           }
       }
       async updateLayers(layerSettings) {
+          const visible = Boolean(layerSettings.find((l) => l.id === this.sourceId));
           if (this.map) {
               const layers = this.map.getStyle().layers || [];
               for (const layer of layers) {
                   if ("source" in layer && layer.source === this.sourceId) {
-                      const visible = Boolean(layerSettings.find((l) => l.id === layer.source));
                       this.map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
                   }
               }
+          }
+          if (!visible) {
+              this.pauseUpdates();
+          }
+          else if (!visible) {
+              this.resumeUpdates();
+          }
+      }
+      pauseUpdates() {
+          if (this.paused === false) {
+              this.paused = true;
+          }
+      }
+      resumeUpdates() {
+          if (this.paused === true) {
+              this.paused = false;
           }
       }
       async removeFromMap(map) {
@@ -2550,7 +2560,7 @@ var MapBoxGLEsriSources = (function (exports) {
                           lyr.metadata = { label: info.label };
                       }
                       if (fields.length === 1) {
-                          lyr.filter = ["==", field, values[0]];
+                          lyr.filter = ["==", ["get", field], values[0]];
                           filters.push(lyr.filter);
                       }
                       else {
@@ -2558,7 +2568,7 @@ var MapBoxGLEsriSources = (function (exports) {
                               "all",
                               ...fields.map((field) => [
                                   "==",
-                                  field,
+                                  ["get", field],
                                   values[fields.indexOf(field)],
                               ]),
                           ];
@@ -2569,7 +2579,7 @@ var MapBoxGLEsriSources = (function (exports) {
               }
               if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
                   layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
-                      lyr.filter = ["!", ["any", ...filters]];
+                      lyr.filter = ["!=", ["any", ...filters], true];
                       lyr.metadata = { label: "Default" };
                       return lyr;
                   }));
@@ -2594,10 +2604,14 @@ var MapBoxGLEsriSources = (function (exports) {
                       var _a;
                       const [min, max] = minMaxValues[renderer.classBreakInfos.indexOf(info)];
                       if (renderer.classBreakInfos.indexOf(info) === 0) {
-                          lyr.filter = ["all", ["<=", field, max]];
+                          lyr.filter = ["all", ["<=", ["get", field], max]];
                       }
                       else {
-                          lyr.filter = ["all", [">", field, min], ["<=", field, max]];
+                          lyr.filter = [
+                              "all",
+                              [">", ["get", field], min],
+                              ["<=", ["get", field], max],
+                          ];
                       }
                       if ((_a = info.label) === null || _a === void 0 ? void 0 : _a.length) {
                           lyr.metadata = { label: info.label };

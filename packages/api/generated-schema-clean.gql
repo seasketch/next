@@ -203,6 +203,12 @@ type ApproveParticipantPayload {
   ): UsersEdge
 }
 
+enum ArcgisFeatureLayerFetchStrategy {
+  AUTO
+  RAW
+  TILED
+}
+
 """All input for the `archiveResponses` mutation."""
 input ArchiveResponsesInput {
   """
@@ -246,6 +252,7 @@ type Basemap implements Node {
   """
   interactivitySettings: InteractivitySetting
   interactivitySettingsId: Int!
+  isArcgisTiledMapservice: Boolean!
 
   """
   Used to indicate whether the basemap is included in the public basemap
@@ -440,6 +447,7 @@ input BasemapInput {
   attribution: String
   description: String
   id: Int
+  isArcgisTiledMapservice: Boolean
 
   """
   Used to indicate whether the basemap is included in the public basemap
@@ -511,6 +519,7 @@ input BasemapPatch {
   description: String
   id: Int
   interactivitySettingsId: Int
+  isArcgisTiledMapservice: Boolean
 
   """
   Used to indicate whether the basemap is included in the public basemap
@@ -2212,6 +2221,8 @@ When documentation is lacking for any of these properties, consult the [MapBox G
 
 """
 type DataSource implements Node {
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy!
+
   """
   Contains an attribution to be displayed when the map is shown to a user.
   """
@@ -2474,6 +2485,8 @@ enum DataSourceImportTypes {
 
 """An input for mutations affecting `DataSource`"""
 input DataSourceInput {
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy
+
   """
   Contains an attribution to be displayed when the map is shown to a user.
   """
@@ -2943,6 +2956,9 @@ enum DataSourcesOrderBy {
 enum DataSourceTypes {
   """Loads dynamic images for the entire viewport from arcgis server"""
   ARCGIS_DYNAMIC_MAPSERVER
+
+  """Tiled ArcGIS Map Service"""
+  ARCGIS_RASTER_TILES
 
   """Loads vector data from arcgis server for rendering as a geojson source"""
   ARCGIS_VECTOR
@@ -9679,6 +9695,7 @@ type Project implements Node {
     orderBy: [GroupsOrderBy!]
   ): [Group!]!
   id: Int!
+  importedArcgisServices: [String]
 
   """
   Returns the project invitation for the current user session, if any. Will not

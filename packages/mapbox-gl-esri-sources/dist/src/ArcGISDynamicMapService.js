@@ -94,7 +94,7 @@ export class ArcGISDynamicMapService {
         else {
             return this.requestManager
                 .getMapServiceMetadata(this.options.url, {
-                credentials: this.options.credentials,
+                token: this.options.token,
             })
                 .then(({ serviceMetadata, layers }) => {
                 this.serviceMetadata = serviceMetadata;

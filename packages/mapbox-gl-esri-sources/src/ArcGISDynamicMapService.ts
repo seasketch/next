@@ -55,7 +55,7 @@ export interface ArcGISDynamicMapServiceOptions extends CustomGLSourceOptions {
    * 256 or 512 would be most appropriate. default is 256
    */
   tileSize?: number;
-  credentials?: { username: string; password: string };
+  token?: string;
 }
 
 export class ArcGISDynamicMapService
@@ -123,7 +123,7 @@ export class ArcGISDynamicMapService
     } else {
       return this.requestManager
         .getMapServiceMetadata(this.options.url, {
-          credentials: this.options.credentials,
+          token: this.options.token,
         })
         .then(({ serviceMetadata, layers }) => {
           this.serviceMetadata = serviceMetadata;

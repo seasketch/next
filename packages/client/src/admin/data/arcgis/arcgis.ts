@@ -8,6 +8,7 @@ import {
   styleForFeatureLayer,
   MapServiceMetadata,
   FeatureServerMetadata,
+  LayersMetadata,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { v4 as uuid } from "uuid";
 import bboxPolygon from "@turf/bbox-polygon";
@@ -358,6 +359,7 @@ export interface MapServerCatalogItemDetails {
   type: "MapServer";
   tiled: boolean;
   metadata: MapServiceMetadata;
+  layers: LayersMetadata;
 }
 
 export interface FeatureServerCatalogItemDetails {
@@ -391,6 +393,7 @@ export function useCatalogItemDetails(
               type: "MapServer",
               tiled: !!data.serviceMetadata.singleFusedMapCache,
               metadata: data.serviceMetadata,
+              layers: data.layers,
             });
           }
         })

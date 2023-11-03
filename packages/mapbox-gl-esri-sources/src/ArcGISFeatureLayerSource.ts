@@ -45,7 +45,7 @@ export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
   queryParameters?: {
     [queryString: string]: string | number;
   };
-  credentials?: { username: string; password: string };
+  token?: string;
   /**
    * Indicates how to fetch feature geometry from the service.
    * - "raw": The entire dataset will be downloaded and rendered client-side. This
@@ -56,7 +56,7 @@ export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
    *   fall back to "quantized" if the limit is exceeded.
    * @default "auto"
    */
-  fetchStrategy?: "auto" | "raw" | "quantized";
+  fetchStrategy?: "auto" | "raw" | "tiled";
   /**
    * If fetchStrategy is "auto", this is the byte limit before switching from
    * "raw" to "quantized" mode. Default 2MB.
@@ -198,7 +198,7 @@ export default class ArcGISFeatureLayerSource
       if (/FeatureServer/.test(this.options.url)) {
         return this.requestManager
           .getFeatureServerMetadata(this.options.url.replace(/\/\d+$/, ""), {
-            credentials: this.options.credentials,
+            token: this.options.token,
           })
           .then(({ serviceMetadata, layers }) => {
             this.serviceMetadata = serviceMetadata;
@@ -207,8 +207,8 @@ export default class ArcGISFeatureLayerSource
           });
       } else {
         return this.requestManager
-          .getMapServiceMetadata(this.options.url, {
-            credentials: this.options.credentials,
+          .getMapServiceMetadata(this.options.url.replace(/\d+[\/]*$/, ""), {
+            token: this.options.token,
           })
           .then(({ serviceMetadata, layers }) => {
             this.serviceMetadata = serviceMetadata;
@@ -301,7 +301,7 @@ export default class ArcGISFeatureLayerSource
         this.exceededBytesLimit = true;
         if (this.options.fetchStrategy === "auto") {
           shouldFireError = false;
-          this.options.fetchStrategy = "quantized";
+          this.options.fetchStrategy = "tiled";
           this.QuantizedVectorRequestManager!.on(
             "update",
             this.fetchTiles.bind(this)
@@ -327,7 +327,7 @@ export default class ArcGISFeatureLayerSource
     this._loading = true;
     if (!this.QuantizedVectorRequestManager) {
       throw new Error("QuantizedVectorRequestManager not initialized");
-    } else if (this.options.fetchStrategy !== "quantized") {
+    } else if (this.options.fetchStrategy !== "tiled") {
       throw new Error(
         "fetchTiles called when fetchStrategy is not quantized. Was " +
           this.options.fetchStrategy
@@ -438,13 +438,11 @@ export default class ArcGISFeatureLayerSource
 
   async updateLayers(layerSettings: OrderedLayerSettings) {
     // throw new Error("Method not implemented.");
+    const visible = Boolean(layerSettings.find((l) => l.id === this.sourceId));
     if (this.map) {
       const layers = this.map.getStyle().layers || [];
       for (const layer of layers) {
         if ("source" in layer && layer.source === this.sourceId) {
-          const visible = Boolean(
-            layerSettings.find((l) => l.id === layer.source)
-          );
           this.map.setLayoutProperty(
             layer.id,
             "visibility",
@@ -452,6 +450,25 @@ export default class ArcGISFeatureLayerSource
           );
         }
       }
+    }
+    if (!visible) {
+      this.pauseUpdates();
+    } else if (!visible) {
+      this.resumeUpdates();
+    }
+  }
+
+  paused = false;
+
+  private pauseUpdates() {
+    if (this.paused === false) {
+      this.paused = true;
+    }
+  }
+
+  private resumeUpdates() {
+    if (this.paused === true) {
+      this.paused = false;
     }
   }
 

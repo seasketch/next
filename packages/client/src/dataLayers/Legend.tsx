@@ -200,9 +200,11 @@ export default function Legend({
                             : "opacity-100"
                         }`}
                       >
-                        <div className="items-center justify-center bg-transparent">
-                          <LegendImage item={item.symbols[0]} />
-                        </div>
+                        {item.symbols.length > 0 && (
+                          <div className="items-center justify-center bg-transparent">
+                            <LegendImage item={item.symbols[0]} />
+                          </div>
+                        )}
 
                         <span title={item.label} className="truncate flex-1">
                           {item.label}

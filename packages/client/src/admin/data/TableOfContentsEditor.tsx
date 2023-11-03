@@ -88,6 +88,8 @@ export default function TableOfContentsEditor() {
     },
   });
 
+  console.log(tocQuery);
+
   useEffect(() => {
     const layers = layersAndSources?.data?.projectBySlug?.dataLayersForItems;
     const sources = layersAndSources?.data?.projectBySlug?.dataSourcesForItems;
@@ -472,6 +474,10 @@ export default function TableOfContentsEditor() {
         <LazyArcGISCartModal
           region={tocQuery.data?.projectBySlug?.region.geojson}
           onRequestClose={() => setArcgisCartOpen(false)}
+          importedArcGISServices={
+            (tocQuery.data?.projectBySlug?.importedArcgisServices ||
+              []) as string[]
+          }
         />
       )}
     </>

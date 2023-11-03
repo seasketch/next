@@ -233,6 +233,12 @@ export type ApproveParticipantPayloadUserEdgeArgs = {
   orderBy?: Maybe<Array<UsersOrderBy>>;
 };
 
+export enum ArcgisFeatureLayerFetchStrategy {
+  Auto = 'AUTO',
+  Raw = 'RAW',
+  Tiled = 'TILED'
+}
+
 /** All input for the `archiveResponses` mutation. */
 export type ArchiveResponsesInput = {
   /**
@@ -271,6 +277,7 @@ export type Basemap = Node & {
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   interactivitySettingsId: Scalars['Int'];
+  isArcgisTiledMapservice: Scalars['Boolean'];
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
@@ -393,6 +400,7 @@ export type BasemapInput = {
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
+  isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
@@ -446,6 +454,7 @@ export type BasemapPatch = {
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   interactivitySettingsId?: Maybe<Scalars['Int']>;
+  isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
@@ -1961,6 +1970,7 @@ export enum DataLayersOrderBy {
  */
 export type DataSource = Node & {
   __typename?: 'DataSource';
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   /**
@@ -2143,6 +2153,7 @@ export enum DataSourceImportTypes {
 
 /** An input for mutations affecting `DataSource` */
 export type DataSourceInput = {
+  arcgisFetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   /**
@@ -2389,6 +2400,8 @@ export type DataSourcePatch = {
 export enum DataSourceTypes {
   /** Loads dynamic images for the entire viewport from arcgis server */
   ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  /** Tiled ArcGIS Map Service */
+  ArcgisRasterTiles = 'ARCGIS_RASTER_TILES',
   /** Loads vector data from arcgis server for rendering as a geojson source */
   ArcgisVector = 'ARCGIS_VECTOR',
   /** MapBox GL Style "geojson" source */
@@ -8516,6 +8529,7 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   id: Scalars['Int'];
+  importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
    * Returns the project invitation for the current user session, if any. Will not
    * appear until the invite has been sent. The system determines the relevant
@@ -15428,7 +15442,7 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'importedArcgisServices'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -22743,6 +22757,7 @@ export const DraftTableOfContentsDocument = gql`
     draftTableOfContentsItems {
       ...Overlay
     }
+    importedArcgisServices
   }
 }
     ${OverlayFragmentDoc}`;

@@ -36,10 +36,7 @@ export interface ArcGISDynamicMapServiceOptions extends CustomGLSourceOptions {
      * 256 or 512 would be most appropriate. default is 256
      */
     tileSize?: number;
-    credentials?: {
-        username: string;
-        password: string;
-    };
+    token?: string;
 }
 export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDynamicMapServiceOptions, LegendItem[]> {
     /** Source id used in the map style */

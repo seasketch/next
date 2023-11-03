@@ -5,14 +5,9 @@ import {
   MapServiceMetadata,
 } from "./ServiceMetadata";
 
-interface UserCredentials {
-  username: string;
-  password: string;
-}
-
 interface FetchOptions {
   signal?: AbortSignal;
-  credentials?: UserCredentials;
+  token?: string;
 }
 
 export interface MapServiceLegendMetadata {
@@ -49,12 +44,8 @@ export class ArcGISRESTServiceRequestManager {
     url = url.replace(/\?.*$/, "");
     const params = new URLSearchParams();
     params.set("f", "json");
-    if (options?.credentials) {
-      const token = await this.getToken(
-        url.replace(/rest\/services\/.*/, "/rest/services/"),
-        options.credentials
-      );
-      params.set("token", token);
+    if (options?.token) {
+      params.set("token", options.token);
     }
 
     const requestUrl = `${url}?${params.toString()}`;
@@ -88,12 +79,8 @@ export class ArcGISRESTServiceRequestManager {
     url = url.replace(/\?.*$/, "");
     const params = new URLSearchParams();
     params.set("f", "json");
-    if (options?.credentials) {
-      const token = await this.getToken(
-        url.replace(/rest\/services\/.*/, "/rest/services/"),
-        options.credentials
-      );
-      params.set("token", token);
+    if (options?.token) {
+      params.set("token", options.token);
     }
 
     const requestUrl = `${url}?${params.toString()}`;
@@ -120,12 +107,8 @@ export class ArcGISRESTServiceRequestManager {
     url = url.replace(/\?.*$/, "");
     const params = new URLSearchParams();
     params.set("f", "json");
-    if (options?.credentials) {
-      const token = await this.getToken(
-        url.replace(/rest\/services\/.*/, "/rest/services/"),
-        options.credentials
-      );
-      params.set("token", token);
+    if (options?.token) {
+      params.set("token", options?.token);
     }
 
     const requestUrl = `${url}?${params.toString()}`;
@@ -145,13 +128,6 @@ export class ArcGISRESTServiceRequestManager {
       }[];
     }>(requestUrl, options?.signal);
     return response;
-  }
-
-  async getToken(
-    url: string,
-    credentials: { username: string; password: string }
-  ): Promise<string> {
-    throw new Error("Not implemented");
   }
 
   private inFlightRequests: { [url: string]: Promise<any> } = {};
@@ -183,10 +159,7 @@ export class ArcGISRESTServiceRequestManager {
     });
   }
 
-  async getLegendMetadata(
-    url: string,
-    credentials?: { username: string; password: string }
-  ) {
+  async getLegendMetadata(url: string, token?: string) {
     if (!/rest\/services/.test(url)) {
       throw new Error("Invalid ArcGIS REST Service URL");
     }
@@ -199,11 +172,7 @@ export class ArcGISRESTServiceRequestManager {
     url = url.replace(/\?.*$/, "");
     const params = new URLSearchParams();
     params.set("f", "json");
-    if (credentials) {
-      const token = await this.getToken(
-        url.replace(/rest\/services\/.*/, "/rest/services/"),
-        credentials
-      );
+    if (token) {
       params.set("token", token);
     }
 

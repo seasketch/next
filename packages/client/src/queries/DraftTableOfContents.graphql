@@ -9,6 +9,7 @@ query DraftTableOfContents($slug: String!) {
     draftTableOfContentsItems {
       ...Overlay
     }
+    importedArcgisServices
   }
 }
 
