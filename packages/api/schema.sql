@@ -16152,13 +16152,6 @@ CREATE TRIGGER before_survey_invited_groups_insert_trigger BEFORE INSERT ON publ
 
 
 --
--- Name: survey_responses before_survey_response_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER before_survey_response_insert_trigger BEFORE INSERT ON public.survey_responses FOR EACH ROW EXECUTE FUNCTION public.before_survey_response_insert();
-
-
---
 -- Name: surveys before_survey_update_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
