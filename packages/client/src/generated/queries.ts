@@ -1715,6 +1715,35 @@ export type CreateSurveyResponsePayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the `createSurveyResponseV2` mutation. */
+export type CreateSurveyResponseV2Input = {
+  bypassedSubmissionControl?: Maybe<Scalars['Boolean']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draft?: Maybe<Scalars['Boolean']>;
+  facilitated?: Maybe<Scalars['Boolean']>;
+  offlineId?: Maybe<Scalars['UUID']>;
+  practice?: Maybe<Scalars['Boolean']>;
+  responseData?: Maybe<Scalars['JSON']>;
+  surveyId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createSurveyResponseV2` mutation. */
+export type CreateSurveyResponseV2Payload = {
+  __typename?: 'CreateSurveyResponseV2Payload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the create `TableOfContentsItem` mutation. */
 export type CreateTableOfContentsItemInput = {
   /**
@@ -6197,6 +6226,7 @@ export type Mutation = {
   /** Initializes a new FormLogicRule with a single condition and command=JUMP. */
   createSurveyJumpRule?: Maybe<CreateSurveyJumpRulePayload>;
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
+  createSurveyResponseV2?: Maybe<CreateSurveyResponseV2Payload>;
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   createTopic: Topic;
@@ -6928,6 +6958,12 @@ export type MutationCreateSurveyJumpRuleArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyResponseArgs = {
   input: CreateSurveyResponseInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateSurveyResponseV2Args = {
+  input: CreateSurveyResponseV2Input;
 };
 
 
@@ -18601,13 +18637,10 @@ export type CreateResponseMutationVariables = Exact<{
 
 export type CreateResponseMutation = (
   { __typename?: 'Mutation' }
-  & { createSurveyResponse?: Maybe<(
-    { __typename?: 'CreateSurveyResponsePayload' }
-    & Pick<CreateSurveyResponsePayload, 'clientMutationId'>
-    & { surveyResponse?: Maybe<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id'>
-    )> }
+  & { createSurveyResponseV2?: Maybe<(
+    { __typename?: 'CreateSurveyResponseV2Payload' }
+    & Pick<CreateSurveyResponseV2Payload, 'clientMutationId'>
+    & { id: CreateSurveyResponseV2Payload['integer'] }
   )> }
 );
 
@@ -23251,13 +23284,11 @@ ${ProjectMetadataFragmentDoc}
 ${SurveyAppSurveyFragmentDoc}`;
 export const CreateResponseDocument = /*#__PURE__*/ gql`
     mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!, $offlineId: UUID) {
-  createSurveyResponse(
+  createSurveyResponseV2(
     input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice, offlineId: $offlineId}
   ) {
     clientMutationId
-    surveyResponse {
-      id
-    }
+    id: integer
   }
 }
     `;

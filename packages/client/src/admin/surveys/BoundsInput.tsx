@@ -107,13 +107,19 @@ export default function BoundsInput({
 
   let encodedPolyline: string | null = null;
   if (value) {
-    const poly = bboxPolygon(value);
-    encodedPolyline = encode(
-      // @ts-ignore
-      truncate(poly, {
-        precision: 3,
-      }).geometry.coordinates[0].map((position) => position.reverse())
-    );
+    const [minX, minY, maxX, maxY] = value;
+    if (minX < -180 || minY < -90 || maxX > 180 || maxY > 90) {
+      console.warn("invalid bbox", value);
+      encodedPolyline = null;
+    } else {
+      const poly = bboxPolygon(value);
+      encodedPolyline = encode(
+        // @ts-ignore
+        truncate(poly, {
+          precision: 3,
+        }).geometry.coordinates[0].map((position) => position.reverse())
+      );
+    }
   }
 
   return (
@@ -157,23 +163,27 @@ export default function BoundsInput({
             </Trans>
           </span>
         )}
-        {encodedPolyline ? (
+        {
           <img
+            width={230}
+            height={100}
             alt="Region of interest"
             className={
               digitizing
                 ? "filter saturate-0 brightness-50 contrast-50 rounded"
                 : "rounded"
             }
-            src={`https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/path+ffa424+ffdd00-0.1(${encodeURIComponent(
+            src={
               encodedPolyline
-            )})/auto/230x100@2x?before_layer=admin-0-boundary&padding=18&access_token=${
-              process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
-            }`}
+                ? `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/path+ffa424+ffdd00-0.1(${encodeURIComponent(
+                    encodedPolyline
+                  )})/auto/230x100@2x?before_layer=admin-0-boundary&padding=18&access_token=${
+                    process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
+                  }`
+                : `https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/auto/230x100@2x?before_layer=admin-0-boundary&padding=18&access_token=${process.env.REACT_APP_MAPBOX_ACCESS_TOKEN}`
+            }
           />
-        ) : (
-          ""
-        )}
+        }
       </div>
       {/* {digitizing && (
         <Button
