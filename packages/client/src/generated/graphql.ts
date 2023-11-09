@@ -233,6 +233,37 @@ export type ApproveParticipantPayloadUserEdgeArgs = {
   orderBy?: Maybe<Array<UsersOrderBy>>;
 };
 
+export enum ArcgisFeatureLayerFetchStrategy {
+  Auto = 'AUTO',
+  Raw = 'RAW',
+  Tiled = 'TILED'
+}
+
+/** An input for mutations affecting `ArcgisImportItem` */
+export type ArcgisImportItemInput = {
+  id?: Maybe<Scalars['Int']>;
+  isFolder?: Maybe<Scalars['Boolean']>;
+  parentId?: Maybe<Scalars['Int']>;
+  sourceId?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
+  sublayerId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** An input for mutations affecting `ArcgisImportSource` */
+export type ArcgisImportSourceInput = {
+  fetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
+  id?: Maybe<Scalars['Int']>;
+  type?: Maybe<ArcgisSourceType>;
+  url?: Maybe<Scalars['String']>;
+};
+
+export enum ArcgisSourceType {
+  ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  ArcgisRasterTiles = 'ARCGIS_RASTER_TILES',
+  ArcgisVector = 'ARCGIS_VECTOR'
+}
+
 /** All input for the `archiveResponses` mutation. */
 export type ArchiveResponsesInput = {
   /**
@@ -271,6 +302,7 @@ export type Basemap = Node & {
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   interactivitySettingsId: Scalars['Int'];
+  isArcgisTiledMapservice: Scalars['Boolean'];
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
@@ -393,6 +425,7 @@ export type BasemapInput = {
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
+  isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
@@ -446,6 +479,7 @@ export type BasemapPatch = {
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   interactivitySettingsId?: Maybe<Scalars['Int']>;
+  isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
   /**
    * Used to indicate whether the basemap is included in the public basemap
    * listing. Useful for hiding an option temporarily, or adding a basemap to the
@@ -1683,6 +1717,35 @@ export type CreateSurveyResponsePayloadSurveyResponseEdgeArgs = {
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
 
+/** All input for the `createSurveyResponseV2` mutation. */
+export type CreateSurveyResponseV2Input = {
+  bypassedSubmissionControl?: Maybe<Scalars['Boolean']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draft?: Maybe<Scalars['Boolean']>;
+  facilitated?: Maybe<Scalars['Boolean']>;
+  offlineId?: Maybe<Scalars['UUID']>;
+  practice?: Maybe<Scalars['Boolean']>;
+  responseData?: Maybe<Scalars['JSON']>;
+  surveyId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createSurveyResponseV2` mutation. */
+export type CreateSurveyResponseV2Payload = {
+  __typename?: 'CreateSurveyResponseV2Payload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the create `TableOfContentsItem` mutation. */
 export type CreateTableOfContentsItemInput = {
   /**
@@ -1961,6 +2024,7 @@ export enum DataLayersOrderBy {
  */
 export type DataSource = Node & {
   __typename?: 'DataSource';
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   /**
@@ -2143,6 +2207,7 @@ export enum DataSourceImportTypes {
 
 /** An input for mutations affecting `DataSource` */
 export type DataSourceInput = {
+  arcgisFetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   /**
@@ -2389,6 +2454,8 @@ export type DataSourcePatch = {
 export enum DataSourceTypes {
   /** Loads dynamic images for the entire viewport from arcgis server */
   ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  /** Tiled ArcGIS Map Service */
+  ArcgisRasterTiles = 'ARCGIS_RASTER_TILES',
   /** Loads vector data from arcgis server for rendering as a geojson source */
   ArcgisVector = 'ARCGIS_VECTOR',
   /** MapBox GL Style "geojson" source */
@@ -5473,6 +5540,31 @@ export enum GroupsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+/** All input for the `importArcgisServices` mutation. */
+export type ImportArcgisServicesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  items?: Maybe<Array<Maybe<ArcgisImportItemInput>>>;
+  projectId?: Maybe<Scalars['Int']>;
+  sources?: Maybe<Array<Maybe<ArcgisImportSourceInput>>>;
+};
+
+/** The output of our `importArcgisServices` mutation. */
+export type ImportArcgisServicesPayload = {
+  __typename?: 'ImportArcgisServicesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
 export type InteractivitySetting = Node & {
   __typename?: 'InteractivitySetting';
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -6136,6 +6228,7 @@ export type Mutation = {
   /** Initializes a new FormLogicRule with a single condition and command=JUMP. */
   createSurveyJumpRule?: Maybe<CreateSurveyJumpRulePayload>;
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
+  createSurveyResponseV2?: Maybe<CreateSurveyResponseV2Payload>;
   /** Creates a single `TableOfContentsItem`. */
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   createTopic: Topic;
@@ -6285,6 +6378,7 @@ export type Mutation = {
   getOrCreateSprite?: Maybe<Sprite>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
+  importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
   /**
    * Adds current user to the list of participants for a project, sharing their
    * profile with administrators in user listings. Their profile will also be shared
@@ -6870,6 +6964,12 @@ export type MutationCreateSurveyResponseArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateSurveyResponseV2Args = {
+  input: CreateSurveyResponseV2Input;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateTableOfContentsItemArgs = {
   input: CreateTableOfContentsItemInput;
 };
@@ -7299,6 +7399,12 @@ export type MutationGetOrCreateSpriteArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGrantAdminAccessArgs = {
   input: GrantAdminAccessInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationImportArcgisServicesArgs = {
+  input: ImportArcgisServicesInput;
 };
 
 
@@ -8516,6 +8622,7 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   id: Scalars['Int'];
+  importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
    * Returns the project invitation for the current user session, if any. Will not
    * appear until the invite has been sent. The system determines the relevant
@@ -18514,13 +18621,10 @@ export type CreateResponseMutationVariables = Exact<{
 
 export type CreateResponseMutation = (
   { __typename?: 'Mutation' }
-  & { createSurveyResponse?: Maybe<(
-    { __typename?: 'CreateSurveyResponsePayload' }
-    & Pick<CreateSurveyResponsePayload, 'clientMutationId'>
-    & { surveyResponse?: Maybe<(
-      { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id'>
-    )> }
+  & { createSurveyResponseV2?: Maybe<(
+    { __typename?: 'CreateSurveyResponseV2Payload' }
+    & Pick<CreateSurveyResponseV2Payload, 'clientMutationId'>
+    & { id: CreateSurveyResponseV2Payload['integer'] }
   )> }
 );
 
@@ -28458,13 +28562,11 @@ export type SurveyLazyQueryHookResult = ReturnType<typeof useSurveyLazyQuery>;
 export type SurveyQueryResult = Apollo.QueryResult<SurveyQuery, SurveyQueryVariables>;
 export const CreateResponseDocument = gql`
     mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!, $offlineId: UUID) {
-  createSurveyResponse(
+  createSurveyResponseV2(
     input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice, offlineId: $offlineId}
   ) {
     clientMutationId
-    surveyResponse {
-      id
-    }
+    id: integer
   }
 }
     `;
