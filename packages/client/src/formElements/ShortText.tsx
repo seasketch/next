@@ -216,7 +216,7 @@ ShortText.ResponseGridCell = ({
       elementId={elementId}
       componentSettings={componentSettings}
     >
-      {value ? value : <SkippedQuestion />}
+      {value ? value.toString() : <SkippedQuestion />}
     </EditableResponseCell>
   );
 };
