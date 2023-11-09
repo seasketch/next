@@ -113,7 +113,7 @@ mutation CreateResponse(
   $practice: Boolean!
   $offlineId: UUID
 ) {
-  createSurveyResponse(
+  createSurveyResponseV2(
     input: {
       surveyId: $surveyId
       draft: $isDraft
@@ -125,8 +125,6 @@ mutation CreateResponse(
     }
   ) {
     clientMutationId
-    surveyResponse {
-      id
-    }
+    id: integer
   }
 }

@@ -203,6 +203,12 @@ type ApproveParticipantPayload {
   ): UsersEdge
 }
 
+enum ArcgisFeatureLayerFetchStrategy {
+  AUTO
+  RAW
+  TILED
+}
+
 """All input for the `archiveResponses` mutation."""
 input ArchiveResponsesInput {
   """
@@ -246,6 +252,7 @@ type Basemap implements Node {
   """
   interactivitySettings: InteractivitySetting
   interactivitySettingsId: Int!
+  isArcgisTiledMapservice: Boolean!
 
   """
   Used to indicate whether the basemap is included in the public basemap
@@ -440,6 +447,7 @@ input BasemapInput {
   attribution: String
   description: String
   id: Int
+  isArcgisTiledMapservice: Boolean
 
   """
   Used to indicate whether the basemap is included in the public basemap
@@ -511,6 +519,7 @@ input BasemapPatch {
   description: String
   id: Int
   interactivitySettingsId: Int
+  isArcgisTiledMapservice: Boolean
 
   """
   Used to indicate whether the basemap is included in the public basemap
@@ -1891,6 +1900,38 @@ type CreateSurveyResponsePayload {
   ): SurveyResponsesEdge
 }
 
+"""All input for the `createSurveyResponseV2` mutation."""
+input CreateSurveyResponseV2Input {
+  bypassedSubmissionControl: Boolean
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  draft: Boolean
+  facilitated: Boolean
+  offlineId: UUID
+  practice: Boolean
+  responseData: JSON
+  surveyId: Int
+}
+
+"""The output of our `createSurveyResponseV2` mutation."""
+type CreateSurveyResponseV2Payload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  integer: Int
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the create `TableOfContentsItem` mutation."""
 input CreateTableOfContentsItemInput {
   """
@@ -2212,6 +2253,8 @@ When documentation is lacking for any of these properties, consult the [MapBox G
 
 """
 type DataSource implements Node {
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy!
+
   """
   Contains an attribution to be displayed when the map is shown to a user.
   """
@@ -2474,6 +2517,8 @@ enum DataSourceImportTypes {
 
 """An input for mutations affecting `DataSource`"""
 input DataSourceInput {
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy
+
   """
   Contains an attribution to be displayed when the map is shown to a user.
   """
@@ -2943,6 +2988,9 @@ enum DataSourcesOrderBy {
 enum DataSourceTypes {
   """Loads dynamic images for the entire viewport from arcgis server"""
   ARCGIS_DYNAMIC_MAPSERVER
+
+  """Tiled ArcGIS Map Service"""
+  ARCGIS_RASTER_TILES
 
   """Loads vector data from arcgis server for rendering as a geojson source"""
   ARCGIS_VECTOR
@@ -7371,6 +7419,12 @@ type Mutation {
     """
     input: CreateSurveyResponseInput!
   ): CreateSurveyResponsePayload
+  createSurveyResponseV2(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateSurveyResponseV2Input!
+  ): CreateSurveyResponseV2Payload
 
   """Creates a single `TableOfContentsItem`."""
   createTableOfContentsItem(
@@ -9679,6 +9733,7 @@ type Project implements Node {
     orderBy: [GroupsOrderBy!]
   ): [Group!]!
   id: Int!
+  importedArcgisServices: [String]
 
   """
   Returns the project invitation for the current user session, if any. Will not
