@@ -20,6 +20,7 @@ export type FooterButtonProps = {
 };
 
 interface ModalProps {
+  panelClassName?: string;
   onRequestClose: () => void;
   disableBackdropClick?: boolean;
   footer?: FooterButtonProps[];
@@ -98,6 +99,7 @@ export default function Modal(props: ModalProps) {
               grid={grid}
               initialFocus={props.initialFocus}
               dark={props.dark}
+              className={props.panelClassName}
             >
               <div
                 className={`w-full justify-center ${
@@ -225,6 +227,7 @@ function Panel({
   zeroPadding,
   initialFocus,
   dark,
+  className,
 }: {
   children?: ReactNode;
   autoWidth?: boolean;
@@ -232,6 +235,7 @@ function Panel({
   zeroPadding: boolean;
   initialFocus?: React.RefObject<HTMLElement>;
   dark?: boolean;
+  className?: string;
 }) {
   const myRef = useRef(null);
   return (
@@ -267,7 +271,7 @@ function Panel({
         zeroPadding ? "" : "px-4"
       } pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-xl lg:max-w-2xl ${
         autoWidth ? "w-auto" : "w-full"
-      } sm:p-0`}
+      } sm:p-0 ${className}`}
       onAnimationComplete={() => {
         if (initialFocus && initialFocus.current) {
           initialFocus.current.focus();

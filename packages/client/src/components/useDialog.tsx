@@ -1,13 +1,43 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { createContext, ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "./Modal";
 import TextInput from "./TextInput";
+import Spinner from "./Spinner";
 
 export default function useDialog() {
   const context = useContext(UseDialogContext);
   return useMemo(
     () => ({
+      loadingMessage: (message: string) => {
+        context.setState({
+          type: "loading",
+          open: true,
+          message: null,
+          submitting: false,
+          description: message,
+        });
+        return {
+          hideLoadingMessage: () => {
+            context.setState(ResetState);
+          },
+          updateLoadingMessage: (message: string) => {
+            context.setState((prev) => {
+              return {
+                ...prev,
+                description: message,
+              };
+            });
+          },
+        };
+      },
       prompt: (options: {
         message: string;
         defaultValue?: string;
@@ -90,7 +120,7 @@ export default function useDialog() {
 }
 
 type DialogContextState = {
-  type: "prompt" | "alert" | "confirm";
+  type: "prompt" | "alert" | "confirm" | "loading";
   open: boolean;
   message: string | ReactNode;
   description?: string;
@@ -113,7 +143,7 @@ const ResetState: DialogContextState = {
 
 const UseDialogContext = createContext<{
   state: DialogContextState;
-  setState: (state: DialogContextState) => void;
+  setState: Dispatch<SetStateAction<DialogContextState>>;
 }>({
   state: ResetState,
   setState: () => {},
@@ -159,7 +189,9 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
     <UseDialogContext.Provider value={{ state, setState }}>
       {state.open && (
         <Modal
+          panelClassName="bg-opacity-70"
           tipyTop
+          zeroPadding={state.type === "loading"}
           icon={state.type === "alert" ? "alert" : state.icon}
           title={state.message}
           onRequestClose={() => {
@@ -170,7 +202,9 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
           disableBackdropClick={state.disableBackdropClick}
           autoWidth
           footer={
-            state.type === "alert"
+            state.type === "loading"
+              ? []
+              : state.type === "alert"
               ? [
                   {
                     disabled: false,
@@ -225,7 +259,13 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
           }
         >
           <div className="">
-            {state.description && (
+            {state.type === "loading" && (
+              <div className="flex items-center justify-center p-4 space-x-2">
+                <Spinner />
+                <div>{state.description}</div>
+              </div>
+            )}
+            {state.type !== "loading" && state.description && (
               <p className="text-gray-500 text-sm">{state.description}</p>
             )}
             {state.type === "prompt" && (

@@ -3,6 +3,7 @@ import {
   ComputedMetadata,
   CustomGLSource,
   CustomGLSourceOptions,
+  CustomSourceType,
   DynamicRenderingSupportOptions,
   LegendItem,
   OrderedLayerSettings,
@@ -16,7 +17,6 @@ import {
   generateMetadataForLayer,
   makeLegend,
 } from "./utils";
-import { ImageList } from "./ImageList";
 
 /** @hidden */
 export const blankDataUri =
@@ -74,6 +74,8 @@ export class ArcGISDynamicMapService
   private debounceTimeout?: NodeJS.Timeout;
   private _loading = true;
   private resolution?: string;
+  type: CustomSourceType;
+  url: string;
   // TODO: fetch metadata and calculate minzoom, maxzoom, and bounds
 
   /**
@@ -85,7 +87,9 @@ export class ArcGISDynamicMapService
     requestManager: ArcGISRESTServiceRequestManager,
     options: ArcGISDynamicMapServiceOptions
   ) {
+    this.type = "ArcGISDynamicMapService";
     this.options = options;
+    this.url = options.url;
     this.requestManager = requestManager;
     this.sourceId = options?.sourceId || uuid();
     // remove trailing slash if present
@@ -134,6 +138,8 @@ export class ArcGISDynamicMapService
     }
   }
 
+  _computedMetadata?: ComputedMetadata;
+
   /**
    * Returns computed metadata for the service, including bounds, minzoom, maxzoom, and attribution.
    * @returns ComputedMetadata
@@ -141,94 +147,99 @@ export class ArcGISDynamicMapService
    * @throws Error if tileInfo is not available
    * */
   async getComputedMetadata(): Promise<ComputedMetadata> {
-    const { serviceMetadata, layers } = await this.getMetadata();
-    const { bounds, minzoom, maxzoom, attribution } =
-      await this.getComputedProperties();
+    if (!this._computedMetadata) {
+      const { serviceMetadata, layers } = await this.getMetadata();
+      const { bounds, minzoom, maxzoom, attribution } =
+        await this.getComputedProperties();
 
-    const results = /\/.+\/MapServer/.exec(this.options.url);
-    let label = results ? results[0] : false;
-    if (!label) {
-      if (this.layerMetadata?.layers?.[0]) {
-        label = this.layerMetadata.layers[0].name;
+      const results = /\/.+\/MapServer/.exec(this.options.url);
+      let label = results ? results[0] : false;
+      if (!label) {
+        if (this.layerMetadata?.layers?.[0]) {
+          label = this.layerMetadata.layers[0].name;
+        }
       }
-    }
-    const legendData = await this.requestManager.getLegendMetadata(
-      this.options.url
-    );
+      const legendData = await this.requestManager.getLegendMetadata(
+        this.options.url
+      );
 
-    // find hidden layers
-    // Not as simple as just reading the defaultVisibility property, because
-    // if a parent layer is hidden, all children are hidden as well. Folders can
-    // be nested arbitrarily deep.
-    const hiddenIds = new Set<number>();
-    for (const layer of layers.layers) {
-      if (!layer.defaultVisibility) {
-        hiddenIds.add(layer.id);
-      } else {
-        // check if parents are hidden
-        if (layer.parentLayer) {
-          if (hiddenIds.has(layer.parentLayer.id)) {
-            hiddenIds.add(layer.id);
-          } else {
-            // may not be added yet
-            const parent = layers.layers.find(
-              (l) => l.id === layer.parentLayer?.id
-            );
-            if (parent && !parent.defaultVisibility) {
+      // find hidden layers
+      // Not as simple as just reading the defaultVisibility property, because
+      // if a parent layer is hidden, all children are hidden as well. Folders can
+      // be nested arbitrarily deep.
+      const hiddenIds = new Set<number>();
+      for (const layer of layers.layers) {
+        if (!layer.defaultVisibility) {
+          hiddenIds.add(layer.id);
+        } else {
+          // check if parents are hidden
+          if (layer.parentLayer) {
+            if (hiddenIds.has(layer.parentLayer.id)) {
               hiddenIds.add(layer.id);
-              hiddenIds.add(parent.id);
+            } else {
+              // may not be added yet
+              const parent = layers.layers.find(
+                (l) => l.id === layer.parentLayer?.id
+              );
+              if (parent && !parent.defaultVisibility) {
+                hiddenIds.add(layer.id);
+                hiddenIds.add(parent.id);
+              }
             }
           }
         }
       }
-    }
 
-    return {
-      bounds: bounds || undefined,
-      minzoom,
-      maxzoom,
-      attribution,
-      tableOfContentsItems: layers.layers.map((lyr) => {
-        const legendLayer = legendData.layers.find((l) => l.layerId === lyr.id);
-        const isFolder = lyr.type === "Group Layer";
-        if (isFolder) {
-          return {
-            type: "folder",
-            id: lyr.id.toString(),
-            label: lyr.name,
-            defaultVisibility: hiddenIds.has(lyr.id)
-              ? false
-              : lyr.defaultVisibility,
-            parentId: lyr.parentLayer
-              ? lyr.parentLayer.id.toString()
-              : undefined,
-          };
-        } else {
-          return {
-            type: "data",
-            id: lyr.id.toString(),
-            label: lyr.name,
-            defaultVisibility: hiddenIds.has(lyr.id)
-              ? false
-              : lyr.defaultVisibility,
-            metadata: generateMetadataForLayer(
-              this.options.url + "/" + lyr.id,
-              this.serviceMetadata!,
-              lyr
-            ),
-            parentId: lyr.parentLayer
-              ? lyr.parentLayer.id.toString()
-              : undefined,
-            legend: makeLegend(legendData, lyr.id),
-          };
-        }
-      }),
-      supportsDynamicRendering: {
-        layerOpacity: this.supportsDynamicLayers,
-        layerOrder: true,
-        layerVisibility: true,
-      },
-    };
+      this._computedMetadata = {
+        bounds: bounds || undefined,
+        minzoom,
+        maxzoom,
+        attribution,
+        tableOfContentsItems: layers.layers.map((lyr) => {
+          const legendLayer = legendData.layers.find(
+            (l) => l.layerId === lyr.id
+          );
+          const isFolder = lyr.type === "Group Layer";
+          if (isFolder) {
+            return {
+              type: "folder",
+              id: lyr.id.toString(),
+              label: lyr.name,
+              defaultVisibility: hiddenIds.has(lyr.id)
+                ? false
+                : lyr.defaultVisibility,
+              parentId: lyr.parentLayer
+                ? lyr.parentLayer.id.toString()
+                : undefined,
+            };
+          } else {
+            return {
+              type: "data",
+              id: lyr.id.toString(),
+              label: lyr.name,
+              defaultVisibility: hiddenIds.has(lyr.id)
+                ? false
+                : lyr.defaultVisibility,
+              metadata: generateMetadataForLayer(
+                this.options.url + "/" + lyr.id,
+                this.serviceMetadata!,
+                lyr
+              ),
+              parentId: lyr.parentLayer
+                ? lyr.parentLayer.id.toString()
+                : undefined,
+              legend: makeLegend(legendData, lyr.id),
+            };
+          }
+        }),
+        supportsDynamicRendering: {
+          layerOpacity: this.supportsDynamicLayers,
+          layerOrder: true,
+          layerVisibility: true,
+        },
+      };
+    }
+    return this._computedMetadata!;
   }
 
   /**
@@ -589,6 +600,15 @@ export class ArcGISDynamicMapService
         },
       ] as AnyLayer[],
     };
+  }
+
+  get ready() {
+    return Boolean(this._computedMetadata);
+  }
+
+  async prepare() {
+    await this.getComputedMetadata();
+    return;
   }
 }
 

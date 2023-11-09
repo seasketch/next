@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import ArcGISSearchPage from "./ArcGISSearchPage";
 import {
   CatalogItem,
   NormalizedArcGISServerLocation,
+  generateStableId,
   useCatalogItemDetails,
   useCatalogItems,
+  useImportArcGISService,
 } from "./arcgis";
 import { AnyLayer, LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
@@ -29,6 +31,16 @@ import Legend, { LegendItem } from "../../../dataLayers/Legend";
 import { compileLegendFromGLStyleLayers } from "../../../dataLayers/legends/compileLegend";
 import Switch from "../../../components/Switch";
 import { Trans, useTranslation } from "react-i18next";
+import useDialog from "../../../components/useDialog";
+import { isFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
+import {
+  ArcgisFeatureLayerFetchStrategy,
+  ArcgisImportItemInput,
+  ArcgisImportSourceInput,
+  ArcgisSourceType,
+  useImportArcGisServiceMutation,
+} from "../../../generated/graphql";
+import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 
 const requestManager = new ArcGISRESTServiceRequestManager();
 
@@ -36,10 +48,12 @@ export default function ArcGISCartModal({
   onRequestClose,
   region,
   importedArcGISServices,
+  projectId,
 }: {
   onRequestClose: () => void;
   region?: Feature<any>;
   importedArcGISServices: string[];
+  projectId: number;
 }) {
   const { t } = useTranslation("admin:data");
   let mapBounds: LngLatBoundsLike | undefined = undefined;
@@ -67,6 +81,11 @@ export default function ArcGISCartModal({
       : "",
     requestManager
   );
+
+  const onError = useGlobalErrorHandler();
+  const [importMutation, importState] = useImportArcGisServiceMutation({
+    onError,
+  });
 
   const [sourceLoading, setSourceLoading] = useState(false);
 
@@ -375,6 +394,134 @@ export default function ArcGISCartModal({
     }
   }, [hiddenLayers, customSources, tableOfContentsItems]);
 
+  const { loadingMessage } = useDialog();
+
+  const onAddService = useCallback(async () => {
+    const { hideLoadingMessage, updateLoadingMessage } = loadingMessage(
+      t(`Evaluating services (1 / ${customSources.length})...`)
+    );
+    const layers = catalogItemDetailsQuery.data?.metadata.layers || [];
+    console.log("on add service", layers);
+    if (layers.length && customSources.length) {
+      const items: ArcgisImportItemInput[] = [];
+      const sources: ArcgisImportSourceInput[] = [];
+      if (customSources[0].type === "ArcGISTiledMapService") {
+        items.push({
+          title: selection?.name,
+          isFolder: false,
+          id: 1,
+          sourceId: 1,
+        });
+        sources.push({
+          id: 1,
+          type: ArcgisSourceType.ArcgisRasterTiles,
+          url: customSources[0].url,
+        });
+      } else {
+        for (const layer of layers) {
+          if (
+            Array.isArray(layer.subLayerIds) &&
+            layer.subLayerIds.length > 0
+          ) {
+            // FOLDER
+            items.push({
+              id: layer.id,
+              isFolder: true,
+              title: layer.name,
+              ...("parentLayerId" in layer && layer.parentLayerId > -1
+                ? { parentId: layer.parentLayerId }
+                : {}),
+              stableId: generateStableId(),
+            });
+          } else if (
+            catalogItemDetailsQuery.data?.type === "FeatureServer" ||
+            useFeatureLayers
+          ) {
+            // add layers as individual feature layers
+            const source = customSources.find(
+              (s) => s.url === selection?.url + "/" + layer.id
+            );
+            if (!source) {
+              console.warn("cant find source", selection?.url + "/" + layer.id);
+              continue;
+              // throw new Error("Source not found");
+            }
+
+            items.push({
+              id: layer.id,
+              isFolder: false,
+              title: layer.name,
+              sourceId: layer.id,
+              ...("parentLayerId" in layer && layer.parentLayerId > -1
+                ? { parentId: layer.parentLayerId }
+                : {}),
+              stableId: generateStableId(),
+            });
+
+            const fetchStrategy = await (
+              source as ArcGISFeatureLayerSource
+            ).getFetchStrategy();
+
+            sources.push({
+              id: layer.id,
+              type: ArcgisSourceType.ArcgisVector,
+              url: selection?.url + "/" + layer.id,
+              fetchStrategy:
+                fetchStrategy === "auto"
+                  ? ArcgisFeatureLayerFetchStrategy.Auto
+                  : fetchStrategy === "tiled"
+                  ? ArcgisFeatureLayerFetchStrategy.Tiled
+                  : ArcgisFeatureLayerFetchStrategy.Raw,
+            });
+          } else {
+            // Dynamic Map Service
+            items.push({
+              id: layer.id,
+              isFolder: false,
+              title: layer.name,
+              sourceId: 1,
+              ...("parentLayerId" in layer && layer.parentLayerId > -1
+                ? { parentId: layer.parentLayerId }
+                : {}),
+              sublayerId: layer.id,
+              stableId: generateStableId(),
+            });
+          }
+        }
+      }
+      if (
+        catalogItemDetailsQuery.data?.type === "MapServer" &&
+        !useFeatureLayers
+      ) {
+        sources.push({
+          id: 1,
+          type: ArcgisSourceType.ArcgisDynamicMapserver,
+          url: selection?.url,
+        });
+      }
+      console.log({ items, sources });
+      // eslint-disable-next-line i18next/no-literal-string
+      updateLoadingMessage(`Adding ${items.length} layers to project...`);
+      await importMutation({
+        variables: {
+          projectId,
+          items,
+          sources,
+        },
+      });
+      hideLoadingMessage();
+    }
+  }, [
+    customSources,
+    useFeatureLayers,
+    selection,
+    catalogItemDetailsQuery.data,
+    t,
+    loadingMessage,
+    projectId,
+    importMutation,
+  ]);
+
   return createPortal(
     <>
       <div
@@ -592,7 +739,11 @@ export default function ArcGISCartModal({
               </div>
               <div className="flex items-center space-x-1 h-full">
                 <Button label={t("Done")} onClick={onRequestClose} />
-                <Button disabled primary label={t("Add service to project")} />
+                <Button
+                  onClick={onAddService}
+                  primary
+                  label={t("Add service to project")}
+                />
               </div>
             </div>
           </div>

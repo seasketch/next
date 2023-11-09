@@ -50,6 +50,7 @@ query layersAndSourcesForItems(
       supportsDynamicLayers
       uploadedSourceFilename
       translatedProps
+      arcgisFetchStrategy
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -538,6 +539,21 @@ subscription DraftStatus($slug: String!) {
       id
       draftTableOfContentsHasChanges
       tableOfContentsLastPublished
+    }
+  }
+}
+
+mutation ImportArcGISService(
+  $items: [ArcgisImportItemInput!]!
+  $sources: [ArcgisImportSourceInput!]!
+  $projectId: Int!
+) {
+  importArcgisServices(
+    input: { items: $items, sources: $sources, projectId: $projectId }
+  ) {
+    tableOfContentsItems {
+      id
+      title
     }
   }
 }

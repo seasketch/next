@@ -1,4 +1,4 @@
-import { AnyLayer, Layer, Map } from "mapbox-gl";
+import { AnyLayer, AnySourceData, Layer, Map } from "mapbox-gl";
 import { ImageList } from "./ImageList";
 
 export interface CustomGLSourceOptions {
@@ -69,6 +69,11 @@ export interface LayerSettings {
   opacity: number;
 }
 
+export type CustomSourceType =
+  | "ArcGISFeatureLayer"
+  | "ArcGISTiledMapService"
+  | "ArcGISDynamicMapService";
+
 export type OrderedLayerSettings = LayerSettings[];
 /**
  * CustomGLSources are used to add custom data sources to a Mapbox GL JS map.
@@ -79,7 +84,9 @@ export interface CustomGLSource<
   T extends CustomGLSourceOptions,
   LegendType = LegendItem[] | SingleImageLegend
 > {
+  url: string;
   sourceId: string;
+  type: CustomSourceType;
   /**
    * CustomGLSources should trigger data and dataload events on the Map, but
    * it won't be possible to call Map.isSourceLoaded(sourceId) on some custom
@@ -87,6 +94,11 @@ export interface CustomGLSource<
    * be used instead.
    */
   loading: boolean;
+
+  /**
+   * Present if there was a problem loading the source.
+   */
+  error?: string;
 
   // new (
   //   requestManager: ArcGISRESTServiceRequestManager,
@@ -112,7 +124,22 @@ export interface CustomGLSource<
    * options are changed.
    * */
   getLegend?(): Promise<SingleImageLegend>;
+  getGLSource(): Promise<AnySourceData>;
   getGLStyleLayers(): Promise<{ layers: Layer[]; imageList?: ImageList }>;
   getComputedMetadata(): Promise<ComputedMetadata>;
   updateLayers(layers: OrderedLayerSettings): void;
+  /**
+   * Whether computed metadata and layers are cached and ready to be used
+   * immediately.
+   * Used by SeaSketch's MapContextManager to determine whether to add
+   * layers to the map style immediately or wait for the source to be ready.
+   */
+  ready: boolean;
+  /**
+   * Make any necessary requests to gather metadata needed to add layers to the
+   * map. When this promise returns source.ready should be true.
+   */
+  prepare: () => Promise<void>;
+  addEventListeners: (map: Map) => void;
+  removeEventListeners: (map: Map) => void;
 }

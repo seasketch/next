@@ -69,7 +69,9 @@ export class ArcGISDynamicMapService {
                 this.updateSource();
             }, 5);
         };
+        this.type = "ArcGISDynamicMapService";
         this.options = options;
+        this.url = options.url;
         this.requestManager = requestManager;
         this.sourceId = (options === null || options === void 0 ? void 0 : options.sourceId) || uuid();
         // remove trailing slash if present
@@ -112,85 +114,88 @@ export class ArcGISDynamicMapService {
      * */
     async getComputedMetadata() {
         var _a, _b;
-        const { serviceMetadata, layers } = await this.getMetadata();
-        const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
-        const results = /\/.+\/MapServer/.exec(this.options.url);
-        let label = results ? results[0] : false;
-        if (!label) {
-            if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
-                label = this.layerMetadata.layers[0].name;
+        if (!this._computedMetadata) {
+            const { serviceMetadata, layers } = await this.getMetadata();
+            const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+            const results = /\/.+\/MapServer/.exec(this.options.url);
+            let label = results ? results[0] : false;
+            if (!label) {
+                if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
+                    label = this.layerMetadata.layers[0].name;
+                }
             }
-        }
-        const legendData = await this.requestManager.getLegendMetadata(this.options.url);
-        // find hidden layers
-        // Not as simple as just reading the defaultVisibility property, because
-        // if a parent layer is hidden, all children are hidden as well. Folders can
-        // be nested arbitrarily deep.
-        const hiddenIds = new Set();
-        for (const layer of layers.layers) {
-            if (!layer.defaultVisibility) {
-                hiddenIds.add(layer.id);
-            }
-            else {
-                // check if parents are hidden
-                if (layer.parentLayer) {
-                    if (hiddenIds.has(layer.parentLayer.id)) {
-                        hiddenIds.add(layer.id);
-                    }
-                    else {
-                        // may not be added yet
-                        const parent = layers.layers.find((l) => { var _a; return l.id === ((_a = layer.parentLayer) === null || _a === void 0 ? void 0 : _a.id); });
-                        if (parent && !parent.defaultVisibility) {
+            const legendData = await this.requestManager.getLegendMetadata(this.options.url);
+            // find hidden layers
+            // Not as simple as just reading the defaultVisibility property, because
+            // if a parent layer is hidden, all children are hidden as well. Folders can
+            // be nested arbitrarily deep.
+            const hiddenIds = new Set();
+            for (const layer of layers.layers) {
+                if (!layer.defaultVisibility) {
+                    hiddenIds.add(layer.id);
+                }
+                else {
+                    // check if parents are hidden
+                    if (layer.parentLayer) {
+                        if (hiddenIds.has(layer.parentLayer.id)) {
                             hiddenIds.add(layer.id);
-                            hiddenIds.add(parent.id);
+                        }
+                        else {
+                            // may not be added yet
+                            const parent = layers.layers.find((l) => { var _a; return l.id === ((_a = layer.parentLayer) === null || _a === void 0 ? void 0 : _a.id); });
+                            if (parent && !parent.defaultVisibility) {
+                                hiddenIds.add(layer.id);
+                                hiddenIds.add(parent.id);
+                            }
                         }
                     }
                 }
             }
+            this._computedMetadata = {
+                bounds: bounds || undefined,
+                minzoom,
+                maxzoom,
+                attribution,
+                tableOfContentsItems: layers.layers.map((lyr) => {
+                    const legendLayer = legendData.layers.find((l) => l.layerId === lyr.id);
+                    const isFolder = lyr.type === "Group Layer";
+                    if (isFolder) {
+                        return {
+                            type: "folder",
+                            id: lyr.id.toString(),
+                            label: lyr.name,
+                            defaultVisibility: hiddenIds.has(lyr.id)
+                                ? false
+                                : lyr.defaultVisibility,
+                            parentId: lyr.parentLayer
+                                ? lyr.parentLayer.id.toString()
+                                : undefined,
+                        };
+                    }
+                    else {
+                        return {
+                            type: "data",
+                            id: lyr.id.toString(),
+                            label: lyr.name,
+                            defaultVisibility: hiddenIds.has(lyr.id)
+                                ? false
+                                : lyr.defaultVisibility,
+                            metadata: generateMetadataForLayer(this.options.url + "/" + lyr.id, this.serviceMetadata, lyr),
+                            parentId: lyr.parentLayer
+                                ? lyr.parentLayer.id.toString()
+                                : undefined,
+                            legend: makeLegend(legendData, lyr.id),
+                        };
+                    }
+                }),
+                supportsDynamicRendering: {
+                    layerOpacity: this.supportsDynamicLayers,
+                    layerOrder: true,
+                    layerVisibility: true,
+                },
+            };
         }
-        return {
-            bounds: bounds || undefined,
-            minzoom,
-            maxzoom,
-            attribution,
-            tableOfContentsItems: layers.layers.map((lyr) => {
-                const legendLayer = legendData.layers.find((l) => l.layerId === lyr.id);
-                const isFolder = lyr.type === "Group Layer";
-                if (isFolder) {
-                    return {
-                        type: "folder",
-                        id: lyr.id.toString(),
-                        label: lyr.name,
-                        defaultVisibility: hiddenIds.has(lyr.id)
-                            ? false
-                            : lyr.defaultVisibility,
-                        parentId: lyr.parentLayer
-                            ? lyr.parentLayer.id.toString()
-                            : undefined,
-                    };
-                }
-                else {
-                    return {
-                        type: "data",
-                        id: lyr.id.toString(),
-                        label: lyr.name,
-                        defaultVisibility: hiddenIds.has(lyr.id)
-                            ? false
-                            : lyr.defaultVisibility,
-                        metadata: generateMetadataForLayer(this.options.url + "/" + lyr.id, this.serviceMetadata, lyr),
-                        parentId: lyr.parentLayer
-                            ? lyr.parentLayer.id.toString()
-                            : undefined,
-                        legend: makeLegend(legendData, lyr.id),
-                    };
-                }
-            }),
-            supportsDynamicRendering: {
-                layerOpacity: this.supportsDynamicLayers,
-                layerOrder: true,
-                layerVisibility: true,
-            },
-        };
+        return this._computedMetadata;
     }
     /**
      * Private method used as the basis for getComputedMetadata and also used
@@ -481,6 +486,13 @@ export class ArcGISDynamicMapService {
                 },
             ],
         };
+    }
+    get ready() {
+        return Boolean(this._computedMetadata);
+    }
+    async prepare() {
+        await this.getComputedMetadata();
+        return;
     }
 }
 /** @hidden */

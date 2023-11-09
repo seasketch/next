@@ -22,6 +22,7 @@ import {
 } from "react";
 import { BBox, Feature, Polygon } from "geojson";
 import {
+  ArcgisFeatureLayerFetchStrategy,
   BasemapDetailsFragment,
   DataLayerDetailsFragment,
   DataSourceDetailsFragment,
@@ -56,6 +57,11 @@ import MeasureControl, {
   measureLayers,
 } from "../MeasureControl";
 import cloneDeep from "lodash.clonedeep";
+import {
+  ArcGISFeatureLayerSource,
+  ArcGISRESTServiceRequestManager,
+  CustomGLSource,
+} from "@seasketch/mapbox-gl-esri-sources";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -81,6 +87,8 @@ export const withTimeout = (
 const graphqlURL = new URL(
   process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
 );
+
+const STALE_CUSTOM_SOURCE_SIZE = 1;
 
 export const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
 
@@ -165,6 +173,8 @@ class MapContextManager extends EventEmitter {
   private selectedSketches?: number[];
   private sketchTimestamps = new global.Map<number, string>();
   private hideEditableSketchId?: number;
+  private arcgisRequestManager: ArcGISRESTServiceRequestManager =
+    new ArcGISRESTServiceRequestManager();
   // Used to track previous map state before the application of a map bookmark
   // so that the map state change may be undone.
   private previousMapState:
@@ -184,6 +194,13 @@ class MapContextManager extends EventEmitter {
    * changed.
    */
   private geoprocessingReferenceIds: { [referenceId: string]: string } = {};
+  private customSources: {
+    [sourceId: number]: {
+      customSource: CustomGLSource<any>;
+      active: boolean;
+      lastUsedTimestamp: number;
+    };
+  } = {};
 
   constructor(
     initialState: MapContextInterface,
@@ -203,6 +220,10 @@ class MapContextManager extends EventEmitter {
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
     this.visibleLayers = initialState.layerStatesByTocStaticId;
+  }
+
+  getCustomGLSource(sourceId: number) {
+    return this.customSources[sourceId]?.customSource;
   }
 
   private setState = (action: SetStateAction<MapContextInterface>) => {
@@ -327,6 +348,7 @@ class MapContextManager extends EventEmitter {
         this.map.off("data", this.onMapDataEvent);
         this.map.off("dataloading", this.onMapDataEvent);
         this.map.off("moveend", this.onMapMove);
+        // TODO: remove event listeners for any CustomGLSources
         this.map.remove();
       }
     }
@@ -755,27 +777,31 @@ class MapContextManager extends EventEmitter {
     }, backoff);
   }
 
-  private updateStyleInfinitLoopDetector = 0;
+  private updateStyleInfiniteLoopDetector = 0;
 
   async updateStyle() {
     if (this.map && this.internalState.ready) {
-      this.updateStyleInfinitLoopDetector = 0;
+      this.updateStyleInfiniteLoopDetector = 0;
       const { style, sprites } = await this.getComputedStyle();
       const styleHash = md5(JSON.stringify(style));
       this.addSprites(sprites, this.map);
-      if (!this.mapIsLoaded) {
-        setTimeout(() => {
-          this.map!.setStyle(style);
-          this.setState((prev) => ({ ...prev, styleHash }));
-        }, 20);
-      } else {
-        this.map.setStyle(style);
+      const update = () => {
+        // add any custom sources event listeners
+        this.map!.setStyle(style);
+        for (const config of Object.values(this.customSources)) {
+          config.customSource.addEventListeners(this.map!);
+        }
         this.setState((prev) => ({ ...prev, styleHash }));
+      };
+      if (!this.mapIsLoaded) {
+        setTimeout(update, 20);
+      } else {
+        update();
       }
     } else {
-      this.updateStyleInfinitLoopDetector++;
-      if (this.updateStyleInfinitLoopDetector > 10) {
-        this.updateStyleInfinitLoopDetector = 0;
+      this.updateStyleInfiniteLoopDetector++;
+      if (this.updateStyleInfiniteLoopDetector > 10) {
+        this.updateStyleInfiniteLoopDetector = 0;
       } else {
         this.debouncedUpdateStyle();
       }
@@ -1070,6 +1096,7 @@ class MapContextManager extends EventEmitter {
     let overLabels: any[] = baseStyle.layers.slice(labelsLayerIndex);
     let isUnderLabels = true;
     let i = this.layersByZIndex.length;
+    const usedCustomSourceIds: number[] = [];
     while (i--) {
       const layerId = this.layersByZIndex[i];
       if (layerId === "LABELS") {
@@ -1123,27 +1150,67 @@ class MapContextManager extends EventEmitter {
                     }
                     break;
                   case DataSourceTypes.ArcgisVector:
-                    throw new Error("not supported");
-                    // const request = this.arcgisVectorSourceCache.get(source);
-                    // if (request.value) {
-                    //   baseStyle.sources[source.id.toString()] = {
-                    //     type: "geojson",
-                    //     data: request.value,
-                    //     attribution: source.attribution || "",
-                    //   };
-                    //   sourceWasAdded = true;
-                    // } else if (request.error) {
-                    //   // User will need to toggle the layer off
-                    //   // to clear the error and try again.
-                    // } else {
-                    //   request.promise
-                    //     .then((data) => {
-                    //       this.debouncedUpdateStyle();
-                    //     })
-                    //     .catch((e) => {
-                    //       // do nothing, this will be handled elsewhere
-                    //     });
-                    // }
+                  case DataSourceTypes.ArcgisRasterTiles:
+                  case DataSourceTypes.ArcgisDynamicMapserver:
+                    usedCustomSourceIds.push(source.id);
+                    if (!this.customSources[source.id]) {
+                      switch (source.type) {
+                        case DataSourceTypes.ArcgisVector:
+                          console.log("creating feature layer");
+                          const fetchStrategy =
+                            source.arcgisFetchStrategy ===
+                            ArcgisFeatureLayerFetchStrategy.Raw
+                              ? "raw"
+                              : source.arcgisFetchStrategy ===
+                                ArcgisFeatureLayerFetchStrategy.Tiled
+                              ? "tiled"
+                              : "auto";
+                          console.log({ fetchStrategy });
+                          this.customSources[source.id] = {
+                            active: true,
+                            lastUsedTimestamp: new Date().getTime(),
+                            customSource: new ArcGISFeatureLayerSource(
+                              this.arcgisRequestManager,
+                              {
+                                url: source.url!,
+                                fetchStrategy,
+                                sourceId: source.id.toString(),
+                              }
+                            ),
+                          };
+                          break;
+                        default:
+                          throw new Error(
+                            `CustomGLSource not yet supported for ${source.type}`
+                          );
+                      }
+                      // Initialize the source
+                      const cs = this.customSources[source.id].customSource;
+                      const { imageList } = await cs.getGLStyleLayers();
+                      if (imageList && this.map) {
+                        imageList.addToMap(this.map);
+                      }
+                      cs.prepare().then(() => {
+                        this.debouncedUpdateStyle();
+                      });
+                    }
+                    // add style if ready
+                    const { active, customSource, lastUsedTimestamp } =
+                      this.customSources[source.id];
+
+                    this.customSources[source.id].lastUsedTimestamp =
+                      new Date().getTime();
+                    if (customSource.ready) {
+                      if (
+                        source.type !== DataSourceTypes.ArcgisDynamicMapserver
+                      ) {
+                        baseStyle.sources[source.id.toString()] =
+                          await customSource.getGLSource();
+                        const styleData = await customSource.getGLStyleLayers();
+                        const layers = isUnderLabels ? underLabels : overLabels;
+                        layers.push(...styleData.layers);
+                      }
+                    }
                     break;
                   default:
                     break;
@@ -1239,6 +1306,53 @@ class MapContextManager extends EventEmitter {
           //     }
           //   }
           // }
+        }
+      }
+    }
+
+    // mark customSources that are not visible as inactive, and remove their
+    // event listeners
+    for (const id in this.customSources) {
+      // check if id is in the list of visible layers
+
+      if (!usedCustomSourceIds.includes(parseInt(id))) {
+        this.customSources[id].customSource.removeEventListeners(this.map!);
+        this.customSources[id].active = false;
+      } else {
+        this.customSources[id].active = true;
+      }
+    }
+
+    // prune customSources, removing non-active sources that haven't been used
+    // in a while
+    const now = new Date().getTime();
+    let inactiveSources: {
+      id: string;
+      customSource: CustomGLSource<any>;
+      timestamp: number;
+    }[] = [];
+    // collect inactive sources
+    for (const id in this.customSources) {
+      const { active, lastUsedTimestamp, customSource } =
+        this.customSources[id];
+      if (!active) {
+        inactiveSources.push({
+          id,
+          customSource,
+          timestamp: lastUsedTimestamp,
+        });
+      }
+    }
+
+    if (inactiveSources.length > STALE_CUSTOM_SOURCE_SIZE) {
+      // sort inactiveSources by lastUsedTimestamp, in descending order
+      inactiveSources.sort((a, b) => b.timestamp - a.timestamp);
+      inactiveSources = inactiveSources.slice(0, STALE_CUSTOM_SOURCE_SIZE);
+      for (const id in this.customSources) {
+        if (inactiveSources.find((s) => s.id === id)) {
+          console.log("pruning source", id);
+          this.customSources[id].customSource.destroy();
+          delete this.customSources[id];
         }
       }
     }
@@ -2804,4 +2918,12 @@ function sketchGeoJSONUrl(id: number, timestamp?: string | number) {
       timestamp ? `?timestamp=${timestamp}` : ""
     }`
   }`;
+}
+
+export function sourceTypeIsCustomGLSource(type: DataSourceTypes) {
+  return (
+    type === DataSourceTypes.ArcgisVector ||
+    type === DataSourceTypes.ArcgisRasterTiles ||
+    type === DataSourceTypes.ArcgisDynamicMapserver
+  );
 }

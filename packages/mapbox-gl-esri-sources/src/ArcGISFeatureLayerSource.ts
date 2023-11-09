@@ -7,11 +7,12 @@ import {
 import {
   ComputedMetadata,
   CustomGLSourceOptions,
+  CustomSourceType,
   LegendItem,
   OrderedLayerSettings,
 } from "./CustomGLSource";
 import { v4 as uuid } from "uuid";
-import { Layer, Map } from "mapbox-gl";
+import { GeoJSONSourceRaw, Layer, Map } from "mapbox-gl";
 import {
   FeatureServerMetadata,
   LayersMetadata,
@@ -66,6 +67,12 @@ export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
   cacheKey?: string;
 }
 
+export function isFeatureLayerSource(
+  source: CustomGLSource<any>
+): source is ArcGISFeatureLayerSource {
+  return source.type === "ArcGISFeatureLayer";
+}
+
 export default class ArcGISFeatureLayerSource
   implements CustomGLSource<ArcGISFeatureLayerSourceOptions, LegendItem[]>
 {
@@ -83,14 +90,19 @@ export default class ArcGISFeatureLayerSource
   private exceededBytesLimit = false;
   private QuantizedVectorRequestManager?: QuantizedVectorRequestManager;
   private cache?: Cache;
+  error?: string;
+  type: CustomSourceType;
+  url: string;
 
   constructor(
     requestManager: ArcGISRESTServiceRequestManager,
     options: ArcGISFeatureLayerSourceOptions
   ) {
+    this.type = "ArcGISFeatureLayer";
     this.sourceId = options.sourceId || uuid();
     this.options = options;
     this.requestManager = requestManager;
+    this.url = this.options.url;
     // remove trailing slash if present
     options.url = options.url.replace(/\/$/, "");
     if (
@@ -112,40 +124,50 @@ export default class ArcGISFeatureLayerSource
       });
   }
 
+  _computedMetadata?: ComputedMetadata;
+
   async getComputedMetadata(): Promise<ComputedMetadata> {
-    const { serviceMetadata, layers } = await this.getMetadata();
-    const { bounds, minzoom, maxzoom, attribution } =
-      await this.getComputedProperties();
-    const layer = layers.layers.find((l) => l.id === this.layerId);
-    const glStyle = await this.getGLStyleLayers();
-    if (!layer) {
-      throw new Error("Layer not found");
+    try {
+      if (!this._computedMetadata) {
+        const { serviceMetadata, layers } = await this.getMetadata();
+        const { bounds, minzoom, maxzoom, attribution } =
+          await this.getComputedProperties();
+        const layer = layers.layers.find((l) => l.id === this.layerId);
+        const glStyle = await this.getGLStyleLayers();
+        if (!layer) {
+          throw new Error("Layer not found");
+        }
+        this._computedMetadata = {
+          bounds,
+          minzoom,
+          maxzoom,
+          attribution,
+          supportsDynamicRendering: {
+            layerOpacity: false,
+            layerVisibility: false,
+            layerOrder: false,
+          },
+          tableOfContentsItems: [
+            {
+              type: "data",
+              defaultVisibility: true,
+              id: this.sourceId,
+              label: layer.name!,
+              metadata: generateMetadataForLayer(
+                this.options.url.replace(/\/\d+$/, ""),
+                serviceMetadata,
+                layer
+              ),
+              glStyle: glStyle,
+            },
+          ],
+        };
+      }
+      return this._computedMetadata;
+    } catch (e: any) {
+      this.error = e.toString();
+      throw e;
     }
-    return {
-      bounds,
-      minzoom,
-      maxzoom,
-      attribution,
-      supportsDynamicRendering: {
-        layerOpacity: false,
-        layerVisibility: false,
-        layerOrder: false,
-      },
-      tableOfContentsItems: [
-        {
-          type: "data",
-          defaultVisibility: true,
-          id: this.sourceId,
-          label: layer.name!,
-          metadata: generateMetadataForLayer(
-            this.options.url.replace(/\/\d+$/, ""),
-            serviceMetadata,
-            layer
-          ),
-          glStyle: glStyle,
-        },
-      ],
-    };
   }
 
   /**
@@ -224,6 +246,8 @@ export default class ArcGISFeatureLayerSource
   }
 
   private _glStylePromise?: Promise<{ layers: Layer[]; imageList: ImageList }>;
+
+  private _styleIsResolved = false;
   async getGLStyleLayers() {
     if (this._glStylePromise) {
       return this._glStylePromise;
@@ -234,46 +258,82 @@ export default class ArcGISFeatureLayerSource
         if (!layer) {
           throw new Error("Layer not found");
         }
-        resolve(
-          styleForFeatureLayer(
-            this.options.url.replace(/\/\d+$/, ""),
-            this.layerId,
-            this.sourceId,
-            layer
-          )
+        const styleInfo = styleForFeatureLayer(
+          this.options.url.replace(/\/\d+$/, ""),
+          this.layerId,
+          this.sourceId,
+          layer
         );
+        this._styleIsResolved = true;
+        resolve(styleInfo);
       });
       return this._glStylePromise;
     }
   }
 
-  async addToMap(map: Map) {
-    this.map = map;
-    this.QuantizedVectorRequestManager =
-      getOrCreateQuantizedVectorRequestManager(map);
+  async getGLSource() {
     const { attribution } = await this.getComputedProperties();
-    map.addSource(this.sourceId, {
+    return {
       type: "geojson",
       data: this.featureData || {
         type: "FeatureCollection",
-        features: [],
+        features: this.featureData || [],
       },
       attribution: attribution ? attribution : "",
-    });
+    } as GeoJSONSourceRaw;
+  }
+
+  addEventListeners(map: Map) {
+    if (this.map && this.map === map) {
+      return;
+    } else if (this.map) {
+      this.removeEventListeners(map);
+    }
+    this.map = map;
+    this.QuantizedVectorRequestManager =
+      getOrCreateQuantizedVectorRequestManager(map);
     this._loading = this.featureData ? false : true;
     if (!this.rawFeaturesHaveBeenFetched) {
+      console.log("calling get features", this.options.url);
       this.fetchFeatures();
     }
+  }
+
+  removeEventListeners(map: Map) {
+    this.QuantizedVectorRequestManager?.off("update");
+    delete this.QuantizedVectorRequestManager;
+    delete this.map;
+  }
+
+  async addToMap(map: Map) {
+    const source = await this.getGLSource();
+    map.addSource(this.sourceId, source);
+    this.addEventListeners(map);
     return this.sourceId;
   }
 
   private abortController: AbortController | null = null;
 
   private async fetchFeatures() {
+    if (
+      this.options?.fetchStrategy === "tiled" ||
+      this.getCachedAutoFetchStrategy() === "tiled"
+    ) {
+      this.options.fetchStrategy = "tiled";
+      this.QuantizedVectorRequestManager!.on(
+        "update",
+        this.fetchTiles.bind(this)
+      );
+      this.fetchTiles();
+      return;
+    }
     if (this.abortController) {
       this.abortController.abort();
     }
     this.abortController = new AbortController();
+    setTimeout(() => {
+      this.abortController?.abort("timeout");
+    }, 10000);
     if (this.exceededBytesLimit) {
       return;
     }
@@ -291,13 +351,17 @@ export default class ArcGISFeatureLayerSource
       this.featureData = data;
       const source = this.map?.getSource(this.sourceId);
       if (source && source.type === "geojson") {
+        this.options.fetchStrategy = "raw";
         source.setData(data);
       }
       this._loading = false;
       this.rawFeaturesHaveBeenFetched = true;
     } catch (e) {
       let shouldFireError = true;
-      if ("message" in (e as any) && /bytesLimit/.test((e as any).message)) {
+      if (
+        ("message" in (e as any) && /bytesLimit/.test((e as any).message)) ||
+        this.abortController?.signal?.reason === "timeout"
+      ) {
         this.exceededBytesLimit = true;
         if (this.options.fetchStrategy === "auto") {
           shouldFireError = false;
@@ -307,6 +371,7 @@ export default class ArcGISFeatureLayerSource
             this.fetchTiles.bind(this)
           );
           this.fetchTiles();
+          this.cacheAutoFetchStrategy("tiled");
         }
       }
       if (shouldFireError) {
@@ -314,6 +379,28 @@ export default class ArcGISFeatureLayerSource
         console.error(e);
       }
       this._loading = false;
+    }
+  }
+
+  private cacheAutoFetchStrategy(mode: "raw" | "tiled") {
+    localStorage.setItem(
+      `${this.options.url}/fetchStrategy`,
+      `${mode}-${new Date().getTime()}`
+    );
+  }
+
+  private getCachedAutoFetchStrategy() {
+    const value = localStorage.getItem(`${this.options.url}/fetchStrategy`);
+    if (!value || value.length === 0) {
+      return null;
+    } else {
+      const [mode, timestamp] = value.split("-");
+      if (new Date().getTime() - parseInt(timestamp) > 1000 * 60 * 60) {
+        localStorage.setItem(`${this.options.url}/fetchStrategy`, "");
+        return null;
+      } else {
+        return mode as "raw" | "tiled";
+      }
     }
   }
 
@@ -386,7 +473,9 @@ export default class ArcGISFeatureLayerSource
               60 * 10,
               this.cache!,
               { signal: this.abortController?.signal },
-              `${this.options.url}/query/tiled/${tilebelt.tileToQuadkey(tile)}`
+              `${this.options.url}/query/tiled/${tilebelt.tileToQuadkey(
+                tile
+              )}/${params.get("f")}`
             )
               .then((response) =>
                 params.get("f") === "pbf"
@@ -425,6 +514,7 @@ export default class ArcGISFeatureLayerSource
       const source = this.map?.getSource(this.sourceId);
       if (source && source.type === "geojson") {
         source.setData(fc);
+        this.featureData = fc;
       }
       this._loading = false;
     } catch (e: any) {
@@ -484,7 +574,7 @@ export default class ArcGISFeatureLayerSource
         }
         map.removeSource(this.sourceId);
       }
-      this.map = undefined;
+      this.removeEventListeners(map);
     }
   }
 
@@ -495,6 +585,37 @@ export default class ArcGISFeatureLayerSource
     if (this.abortController) {
       this.abortController.abort();
     }
-    this.QuantizedVectorRequestManager?.off("update");
+  }
+
+  async getFetchStrategy() {
+    if (this.options.fetchStrategy === "auto") {
+      if (this.featureData) {
+        return "raw";
+      } else if (this.options.fetchStrategy === "auto" && !this.error) {
+        // wait to finish loading then determine strategy
+        return new Promise((resolve) => {
+          const interval = setInterval(() => {
+            if (this.options.fetchStrategy !== "auto") {
+              clearInterval(interval);
+              resolve(this.options.fetchStrategy || "auto");
+            }
+          }, 500);
+        });
+      } else {
+        // not sure what to do here, punting
+        return "auto";
+      }
+    } else {
+      return this.options.fetchStrategy || "raw";
+    }
+  }
+
+  get ready() {
+    return this._styleIsResolved && Boolean(this._computedMetadata);
+  }
+
+  async prepare() {
+    await this.getComputedMetadata();
+    return;
   }
 }

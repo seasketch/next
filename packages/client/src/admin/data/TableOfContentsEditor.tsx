@@ -2,9 +2,13 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import {
+  MapContext,
+  sourceTypeIsCustomGLSource,
+} from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
 import {
+  DataSourceTypes,
   useDeleteBranchMutation,
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
@@ -42,6 +46,7 @@ import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import React from "react";
+import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -65,8 +70,15 @@ export default function TableOfContentsEditor() {
   const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
+  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
+    | undefined
+    | {
+        itemId: number;
+        sublayerId?: string;
+        customGLSource?: CustomGLSource<any>;
+      }
+  >();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
-  const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteItem] = useDeleteBranchMutation();
   const mapContext = useContext(MapContext);
@@ -87,8 +99,6 @@ export default function TableOfContentsEditor() {
         ) || [],
     },
   });
-
-  console.log(tocQuery);
 
   useEffect(() => {
     const layers = layersAndSources?.data?.projectBySlug?.dataLayersForItems;
@@ -137,7 +147,7 @@ export default function TableOfContentsEditor() {
           {
             id: "zoom-to",
             label: t("Zoom to bounds"),
-            onClick: () => {
+            onClick: async () => {
               let bounds: [number, number, number, number] | undefined;
               if (item.isFolder) {
                 bounds = createBoundsRecursive(item, items);
@@ -146,6 +156,26 @@ export default function TableOfContentsEditor() {
                   bounds = item.bounds.map((coord: string) =>
                     parseFloat(coord)
                   ) as [number, number, number, number];
+                } else {
+                  const layer =
+                    layersAndSources.data?.projectBySlug?.dataLayersForItems?.find(
+                      (l) => l.id === item.dataLayerId
+                    );
+                  if (layer && layer.dataSourceId) {
+                    const source =
+                      layersAndSources.data?.projectBySlug?.dataSourcesForItems?.find(
+                        (s) => s.id === layer.dataSourceId
+                      );
+                    if (source && sourceTypeIsCustomGLSource(source.type)) {
+                      const customSource =
+                        mapContext.manager?.getCustomGLSource(source.id);
+                      const metadata =
+                        await customSource?.getComputedMetadata();
+                      if (metadata?.bounds) {
+                        bounds = metadata.bounds;
+                      }
+                    }
+                  }
                 }
               }
               if (
@@ -184,16 +214,43 @@ export default function TableOfContentsEditor() {
             id: "metadata",
             label: t("Metadata"),
             onClick: () => {
-              setOpenMetadataViewerId(item.id);
+              const layer =
+                layersAndSources.data?.projectBySlug?.dataLayersForItems?.find(
+                  (l) => l.id === item.dataLayerId
+                );
+              const source =
+                layersAndSources.data?.projectBySlug?.dataSourcesForItems?.find(
+                  (s) => s.id === layer?.dataSourceId
+                );
+              if (source && sourceTypeIsCustomGLSource(source.type)) {
+                const customSource = mapContext.manager?.getCustomGLSource(
+                  source.id
+                );
+                if (customSource) {
+                  setOpenMetadataViewerState({
+                    itemId: item.id,
+                    customGLSource: customSource,
+                    sublayerId: layer?.sublayer
+                      ? layer.sublayer.toString()
+                      : undefined,
+                  });
+                }
+              } else {
+                setOpenMetadataViewerState({
+                  itemId: item.id,
+                });
+              }
             },
           });
-          contextMenuOptions.push({
-            id: "edit-metadata",
-            label: t("Edit metadata"),
-            onClick: () => {
-              setOpenMetadataItemId(item.id);
-            },
-          });
+          if (item.hasMetadata) {
+            contextMenuOptions.push({
+              id: "edit-metadata",
+              label: t("Edit metadata"),
+              onClick: () => {
+                setOpenMetadataItemId(item.id);
+              },
+            });
+          }
         }
         contextMenuOptions.push({
           id: "delete",
@@ -223,7 +280,15 @@ export default function TableOfContentsEditor() {
         return [];
       }
     },
-    [confirmDelete, deleteItem, manager, mapContext.manager?.map, t, tocQuery]
+    [
+      confirmDelete,
+      deleteItem,
+      manager,
+      mapContext.manager,
+      t,
+      tocQuery,
+      layersAndSources.data,
+    ]
   );
 
   const onSortEnd: (
@@ -464,14 +529,17 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setOpenMetadataItemId(undefined)}
         />
       )}
-      {openMetadataViewerId && (
+      {openMetadataViewerState && (
         <TableOfContentsMetadataModal
-          id={openMetadataViewerId}
-          onRequestClose={() => setOpenMetadataViewerId(undefined)}
+          id={openMetadataViewerState.itemId}
+          customGLSource={openMetadataViewerState.customGLSource}
+          onRequestClose={() => setOpenMetadataViewerState(undefined)}
+          sublayerId={openMetadataViewerState.sublayerId}
         />
       )}
       {arcgisCartOpen && (
         <LazyArcGISCartModal
+          projectId={tocQuery.data?.projectBySlug?.id as number}
           region={tocQuery.data?.projectBySlug?.region.geojson}
           onRequestClose={() => setArcgisCartOpen(false)}
           importedArcGISServices={

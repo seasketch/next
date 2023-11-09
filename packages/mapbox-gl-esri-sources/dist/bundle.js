@@ -355,7 +355,9 @@ var MapBoxGLEsriSources = (function (exports) {
                   this.updateSource();
               }, 5);
           };
+          this.type = "ArcGISDynamicMapService";
           this.options = options;
+          this.url = options.url;
           this.requestManager = requestManager;
           this.sourceId = (options === null || options === void 0 ? void 0 : options.sourceId) || v4();
           options.url = options.url.replace(/\/$/, "");
@@ -387,79 +389,82 @@ var MapBoxGLEsriSources = (function (exports) {
       }
       async getComputedMetadata() {
           var _a, _b;
-          const { serviceMetadata, layers } = await this.getMetadata();
-          const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
-          const results = /\/.+\/MapServer/.exec(this.options.url);
-          let label = results ? results[0] : false;
-          if (!label) {
-              if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
-                  label = this.layerMetadata.layers[0].name;
+          if (!this._computedMetadata) {
+              const { serviceMetadata, layers } = await this.getMetadata();
+              const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+              const results = /\/.+\/MapServer/.exec(this.options.url);
+              let label = results ? results[0] : false;
+              if (!label) {
+                  if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
+                      label = this.layerMetadata.layers[0].name;
+                  }
               }
-          }
-          const legendData = await this.requestManager.getLegendMetadata(this.options.url);
-          const hiddenIds = new Set();
-          for (const layer of layers.layers) {
-              if (!layer.defaultVisibility) {
-                  hiddenIds.add(layer.id);
-              }
-              else {
-                  if (layer.parentLayer) {
-                      if (hiddenIds.has(layer.parentLayer.id)) {
-                          hiddenIds.add(layer.id);
-                      }
-                      else {
-                          const parent = layers.layers.find((l) => { var _a; return l.id === ((_a = layer.parentLayer) === null || _a === void 0 ? void 0 : _a.id); });
-                          if (parent && !parent.defaultVisibility) {
+              const legendData = await this.requestManager.getLegendMetadata(this.options.url);
+              const hiddenIds = new Set();
+              for (const layer of layers.layers) {
+                  if (!layer.defaultVisibility) {
+                      hiddenIds.add(layer.id);
+                  }
+                  else {
+                      if (layer.parentLayer) {
+                          if (hiddenIds.has(layer.parentLayer.id)) {
                               hiddenIds.add(layer.id);
-                              hiddenIds.add(parent.id);
+                          }
+                          else {
+                              const parent = layers.layers.find((l) => { var _a; return l.id === ((_a = layer.parentLayer) === null || _a === void 0 ? void 0 : _a.id); });
+                              if (parent && !parent.defaultVisibility) {
+                                  hiddenIds.add(layer.id);
+                                  hiddenIds.add(parent.id);
+                              }
                           }
                       }
                   }
               }
+              this._computedMetadata = {
+                  bounds: bounds || undefined,
+                  minzoom,
+                  maxzoom,
+                  attribution,
+                  tableOfContentsItems: layers.layers.map((lyr) => {
+                      legendData.layers.find((l) => l.layerId === lyr.id);
+                      const isFolder = lyr.type === "Group Layer";
+                      if (isFolder) {
+                          return {
+                              type: "folder",
+                              id: lyr.id.toString(),
+                              label: lyr.name,
+                              defaultVisibility: hiddenIds.has(lyr.id)
+                                  ? false
+                                  : lyr.defaultVisibility,
+                              parentId: lyr.parentLayer
+                                  ? lyr.parentLayer.id.toString()
+                                  : undefined,
+                          };
+                      }
+                      else {
+                          return {
+                              type: "data",
+                              id: lyr.id.toString(),
+                              label: lyr.name,
+                              defaultVisibility: hiddenIds.has(lyr.id)
+                                  ? false
+                                  : lyr.defaultVisibility,
+                              metadata: generateMetadataForLayer(this.options.url + "/" + lyr.id, this.serviceMetadata, lyr),
+                              parentId: lyr.parentLayer
+                                  ? lyr.parentLayer.id.toString()
+                                  : undefined,
+                              legend: makeLegend(legendData, lyr.id),
+                          };
+                      }
+                  }),
+                  supportsDynamicRendering: {
+                      layerOpacity: this.supportsDynamicLayers,
+                      layerOrder: true,
+                      layerVisibility: true,
+                  },
+              };
           }
-          return {
-              bounds: bounds || undefined,
-              minzoom,
-              maxzoom,
-              attribution,
-              tableOfContentsItems: layers.layers.map((lyr) => {
-                  legendData.layers.find((l) => l.layerId === lyr.id);
-                  const isFolder = lyr.type === "Group Layer";
-                  if (isFolder) {
-                      return {
-                          type: "folder",
-                          id: lyr.id.toString(),
-                          label: lyr.name,
-                          defaultVisibility: hiddenIds.has(lyr.id)
-                              ? false
-                              : lyr.defaultVisibility,
-                          parentId: lyr.parentLayer
-                              ? lyr.parentLayer.id.toString()
-                              : undefined,
-                      };
-                  }
-                  else {
-                      return {
-                          type: "data",
-                          id: lyr.id.toString(),
-                          label: lyr.name,
-                          defaultVisibility: hiddenIds.has(lyr.id)
-                              ? false
-                              : lyr.defaultVisibility,
-                          metadata: generateMetadataForLayer(this.options.url + "/" + lyr.id, this.serviceMetadata, lyr),
-                          parentId: lyr.parentLayer
-                              ? lyr.parentLayer.id.toString()
-                              : undefined,
-                          legend: makeLegend(legendData, lyr.id),
-                      };
-                  }
-              }),
-              supportsDynamicRendering: {
-                  layerOpacity: this.supportsDynamicLayers,
-                  layerOrder: true,
-                  layerVisibility: true,
-              },
-          };
+          return this._computedMetadata;
       }
       async getComputedProperties() {
           var _a, _b;
@@ -687,6 +692,13 @@ var MapBoxGLEsriSources = (function (exports) {
                   },
               ],
           };
+      }
+      get ready() {
+          return Boolean(this._computedMetadata);
+      }
+      async prepare() {
+          await this.getComputedMetadata();
+          return;
       }
   }
   function lat2meters(lat) {
@@ -1025,7 +1037,9 @@ var MapBoxGLEsriSources = (function (exports) {
 
   class ArcGISTiledMapService {
       constructor(requestManager, options) {
+          this.type = "ArcGISTiledMapService";
           options.url = options.url.replace(/\/$/, "");
+          this.url = options.url;
           if (!/rest\/services/.test(options.url) || !/MapServer/.test(options.url)) {
               throw new Error("Invalid ArcGIS REST Service URL");
           }
@@ -1054,37 +1068,46 @@ var MapBoxGLEsriSources = (function (exports) {
       }
       async getComputedMetadata() {
           var _a, _b;
-          await this.getMetadata();
-          const { bounds, minzoom, maxzoom, tileSize, attribution } = await this.getComputedProperties();
-          const legendData = await this.requestManager.getLegendMetadata(this.options.url);
-          const results = /\/([^/]+)\/MapServer/.exec(this.options.url);
-          let label = results && results.length >= 1 ? results[1] : false;
-          if (!label) {
-              if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
-                  label = this.layerMetadata.layers[0].name;
+          try {
+              if (!this._computedMetadata) {
+                  const { serviceMetadata, layers } = await this.getMetadata();
+                  const { bounds, minzoom, maxzoom, tileSize, attribution } = await this.getComputedProperties();
+                  const legendData = await this.requestManager.getLegendMetadata(this.options.url);
+                  const results = /\/([^/]+)\/MapServer/.exec(this.options.url);
+                  let label = results && results.length >= 1 ? results[1] : false;
+                  if (!label) {
+                      if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
+                          label = this.layerMetadata.layers[0].name;
+                      }
+                  }
+                  this._computedMetadata = {
+                      bounds: bounds || undefined,
+                      minzoom,
+                      maxzoom,
+                      attribution,
+                      tableOfContentsItems: [
+                          {
+                              type: "data",
+                              id: this.sourceId,
+                              label: label || "Layer",
+                              defaultVisibility: true,
+                              metadata: generateMetadataForLayer(this.options.url, this.serviceMetadata, this.layerMetadata.layers[0]),
+                              legend: makeLegend(legendData, legendData.layers[0].layerId),
+                          },
+                      ],
+                      supportsDynamicRendering: {
+                          layerOrder: false,
+                          layerOpacity: false,
+                          layerVisibility: false,
+                      },
+                  };
               }
+              return this._computedMetadata;
           }
-          return {
-              bounds: bounds || undefined,
-              minzoom,
-              maxzoom,
-              attribution,
-              tableOfContentsItems: [
-                  {
-                      type: "data",
-                      id: this.sourceId,
-                      label: label || "Layer",
-                      defaultVisibility: true,
-                      metadata: generateMetadataForLayer(this.options.url, this.serviceMetadata, this.layerMetadata.layers[0]),
-                      legend: makeLegend(legendData, legendData.layers[0].layerId),
-                  },
-              ],
-              supportsDynamicRendering: {
-                  layerOrder: false,
-                  layerOpacity: false,
-                  layerVisibility: false,
-              },
-          };
+          catch (e) {
+              this.error = e.toString();
+              throw e;
+          }
       }
       get loading() {
           var _a, _b;
@@ -1166,6 +1189,13 @@ var MapBoxGLEsriSources = (function (exports) {
           }
       }
       updateLayers(layers) { }
+      get ready() {
+          return Boolean(this._computedMetadata);
+      }
+      async prepare() {
+          await this.getComputedMetadata();
+          return;
+      }
   }
 
   function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100, abortController = null, disablePagination = false) {
@@ -1572,12 +1602,15 @@ var MapBoxGLEsriSources = (function (exports) {
           this._loading = true;
           this.rawFeaturesHaveBeenFetched = false;
           this.exceededBytesLimit = false;
+          this._styleIsResolved = false;
           this.abortController = null;
           this.tileFormat = "geojson";
           this.paused = false;
+          this.type = "ArcGISFeatureLayer";
           this.sourceId = options.sourceId || v4();
           this.options = options;
           this.requestManager = requestManager;
+          this.url = this.options.url;
           options.url = options.url.replace(/\/$/, "");
           if (!/rest\/services/.test(options.url) ||
               (!/MapServer/.test(options.url) && !/FeatureServer/.test(options.url))) {
@@ -1594,34 +1627,43 @@ var MapBoxGLEsriSources = (function (exports) {
           });
       }
       async getComputedMetadata() {
-          const { serviceMetadata, layers } = await this.getMetadata();
-          const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
-          const layer = layers.layers.find((l) => l.id === this.layerId);
-          const glStyle = await this.getGLStyleLayers();
-          if (!layer) {
-              throw new Error("Layer not found");
+          try {
+              if (!this._computedMetadata) {
+                  const { serviceMetadata, layers } = await this.getMetadata();
+                  const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+                  const layer = layers.layers.find((l) => l.id === this.layerId);
+                  const glStyle = await this.getGLStyleLayers();
+                  if (!layer) {
+                      throw new Error("Layer not found");
+                  }
+                  this._computedMetadata = {
+                      bounds,
+                      minzoom,
+                      maxzoom,
+                      attribution,
+                      supportsDynamicRendering: {
+                          layerOpacity: false,
+                          layerVisibility: false,
+                          layerOrder: false,
+                      },
+                      tableOfContentsItems: [
+                          {
+                              type: "data",
+                              defaultVisibility: true,
+                              id: this.sourceId,
+                              label: layer.name,
+                              metadata: generateMetadataForLayer(this.options.url.replace(/\/\d+$/, ""), serviceMetadata, layer),
+                              glStyle: glStyle,
+                          },
+                      ],
+                  };
+              }
+              return this._computedMetadata;
           }
-          return {
-              bounds,
-              minzoom,
-              maxzoom,
-              attribution,
-              supportsDynamicRendering: {
-                  layerOpacity: false,
-                  layerVisibility: false,
-                  layerOrder: false,
-              },
-              tableOfContentsItems: [
-                  {
-                      type: "data",
-                      defaultVisibility: true,
-                      id: this.sourceId,
-                      label: layer.name,
-                      metadata: generateMetadataForLayer(this.options.url.replace(/\/\d+$/, ""), serviceMetadata, layer),
-                      glStyle: glStyle,
-                  },
-              ],
-          };
+          catch (e) {
+              this.error = e.toString();
+              throw e;
+          }
       }
       async getComputedProperties() {
           const { serviceMetadata, layers } = await this.getMetadata();
@@ -1695,36 +1737,69 @@ var MapBoxGLEsriSources = (function (exports) {
                   if (!layer) {
                       throw new Error("Layer not found");
                   }
-                  resolve(styleForFeatureLayer(this.options.url.replace(/\/\d+$/, ""), this.layerId, this.sourceId, layer));
+                  const styleInfo = styleForFeatureLayer(this.options.url.replace(/\/\d+$/, ""), this.layerId, this.sourceId, layer);
+                  this._styleIsResolved = true;
+                  resolve(styleInfo);
               });
               return this._glStylePromise;
           }
       }
-      async addToMap(map) {
-          this.map = map;
-          this.QuantizedVectorRequestManager =
-              getOrCreateQuantizedVectorRequestManager(map);
+      async getGLSource() {
           const { attribution } = await this.getComputedProperties();
-          map.addSource(this.sourceId, {
+          return {
               type: "geojson",
               data: this.featureData || {
                   type: "FeatureCollection",
-                  features: [],
+                  features: this.featureData || [],
               },
               attribution: attribution ? attribution : "",
-          });
+          };
+      }
+      addEventListeners(map) {
+          if (this.map && this.map === map) {
+              return;
+          }
+          else if (this.map) {
+              this.removeEventListeners(map);
+          }
+          this.map = map;
+          this.QuantizedVectorRequestManager =
+              getOrCreateQuantizedVectorRequestManager(map);
           this._loading = this.featureData ? false : true;
           if (!this.rawFeaturesHaveBeenFetched) {
+              console.log("calling get features", this.options.url);
               this.fetchFeatures();
           }
+      }
+      removeEventListeners(map) {
+          var _a;
+          (_a = this.QuantizedVectorRequestManager) === null || _a === void 0 ? void 0 : _a.off("update");
+          delete this.QuantizedVectorRequestManager;
+          delete this.map;
+      }
+      async addToMap(map) {
+          const source = await this.getGLSource();
+          map.addSource(this.sourceId, source);
+          this.addEventListeners(map);
           return this.sourceId;
       }
       async fetchFeatures() {
-          var _a;
+          var _a, _b, _c, _d;
+          if (((_a = this.options) === null || _a === void 0 ? void 0 : _a.fetchStrategy) === "tiled" ||
+              this.getCachedAutoFetchStrategy() === "tiled") {
+              this.options.fetchStrategy = "tiled";
+              this.QuantizedVectorRequestManager.on("update", this.fetchTiles.bind(this));
+              this.fetchTiles();
+              return;
+          }
           if (this.abortController) {
               this.abortController.abort();
           }
           this.abortController = new AbortController();
+          setTimeout(() => {
+              var _a;
+              (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.abort("timeout");
+          }, 10000);
           if (this.exceededBytesLimit) {
               return;
           }
@@ -1733,8 +1808,9 @@ var MapBoxGLEsriSources = (function (exports) {
                   ? 120000000
                   : this.options.autoFetchByteLimit || 2000000, this.abortController, this.options.fetchStrategy === "auto");
               this.featureData = data;
-              const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
+              const source = (_b = this.map) === null || _b === void 0 ? void 0 : _b.getSource(this.sourceId);
               if (source && source.type === "geojson") {
+                  this.options.fetchStrategy = "raw";
                   source.setData(data);
               }
               this._loading = false;
@@ -1742,13 +1818,15 @@ var MapBoxGLEsriSources = (function (exports) {
           }
           catch (e) {
               let shouldFireError = true;
-              if ("message" in e && /bytesLimit/.test(e.message)) {
+              if (("message" in e && /bytesLimit/.test(e.message)) ||
+                  ((_d = (_c = this.abortController) === null || _c === void 0 ? void 0 : _c.signal) === null || _d === void 0 ? void 0 : _d.reason) === "timeout") {
                   this.exceededBytesLimit = true;
                   if (this.options.fetchStrategy === "auto") {
                       shouldFireError = false;
                       this.options.fetchStrategy = "tiled";
                       this.QuantizedVectorRequestManager.on("update", this.fetchTiles.bind(this));
                       this.fetchTiles();
+                      this.cacheAutoFetchStrategy("tiled");
                   }
               }
               if (shouldFireError) {
@@ -1756,6 +1834,25 @@ var MapBoxGLEsriSources = (function (exports) {
                   console.error(e);
               }
               this._loading = false;
+          }
+      }
+      cacheAutoFetchStrategy(mode) {
+          localStorage.setItem(`${this.options.url}/fetchStrategy`, `${mode}-${new Date().getTime()}`);
+      }
+      getCachedAutoFetchStrategy() {
+          const value = localStorage.getItem(`${this.options.url}/fetchStrategy`);
+          if (!value || value.length === 0) {
+              return null;
+          }
+          else {
+              const [mode, timestamp] = value.split("-");
+              if (new Date().getTime() - parseInt(timestamp) > 1000 * 60 * 60) {
+                  localStorage.setItem(`${this.options.url}/fetchStrategy`, "");
+                  return null;
+              }
+              else {
+                  return mode;
+              }
           }
       }
       async fetchTiles() {
@@ -1815,7 +1912,7 @@ var MapBoxGLEsriSources = (function (exports) {
                       inSR: "4326",
                       ...this.options.queryParameters,
                   });
-                  return fetchWithTTL(`${`${this.options.url}/query?${params.toString()}`}`, 60 * 10, this.cache, { signal: (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.signal }, `${this.options.url}/query/tiled/${tilebelt.tileToQuadkey(tile)}`)
+                  return fetchWithTTL(`${`${this.options.url}/query?${params.toString()}`}`, 60 * 10, this.cache, { signal: (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.signal }, `${this.options.url}/query/tiled/${tilebelt.tileToQuadkey(tile)}/${params.get("f")}`)
                       .then((response) => params.get("f") === "pbf"
                       ? response.arrayBuffer()
                       : response.json())
@@ -1850,6 +1947,7 @@ var MapBoxGLEsriSources = (function (exports) {
               const source = (_c = this.map) === null || _c === void 0 ? void 0 : _c.getSource(this.sourceId);
               if (source && source.type === "geojson") {
                   source.setData(fc);
+                  this.featureData = fc;
               }
               this._loading = false;
           }
@@ -1900,18 +1998,46 @@ var MapBoxGLEsriSources = (function (exports) {
                   }
                   map.removeSource(this.sourceId);
               }
-              this.map = undefined;
+              this.removeEventListeners(map);
           }
       }
       destroy() {
-          var _a;
           if (this.map) {
               this.removeFromMap(this.map);
           }
           if (this.abortController) {
               this.abortController.abort();
           }
-          (_a = this.QuantizedVectorRequestManager) === null || _a === void 0 ? void 0 : _a.off("update");
+      }
+      async getFetchStrategy() {
+          if (this.options.fetchStrategy === "auto") {
+              if (this.featureData) {
+                  return "raw";
+              }
+              else if (this.options.fetchStrategy === "auto" && !this.error) {
+                  return new Promise((resolve) => {
+                      const interval = setInterval(() => {
+                          if (this.options.fetchStrategy !== "auto") {
+                              clearInterval(interval);
+                              resolve(this.options.fetchStrategy || "auto");
+                          }
+                      }, 500);
+                  });
+              }
+              else {
+                  return "auto";
+              }
+          }
+          else {
+              return this.options.fetchStrategy || "raw";
+          }
+      }
+      get ready() {
+          return this._styleIsResolved && Boolean(this._computedMetadata);
+      }
+      async prepare() {
+          await this.getComputedMetadata();
+          return;
       }
   }
 

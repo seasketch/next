@@ -237,6 +237,31 @@ export enum ArcgisFeatureLayerFetchStrategy {
   Tiled = 'TILED'
 }
 
+/** An input for mutations affecting `ArcgisImportItem` */
+export type ArcgisImportItemInput = {
+  id?: Maybe<Scalars['Int']>;
+  isFolder?: Maybe<Scalars['Boolean']>;
+  parentId?: Maybe<Scalars['Int']>;
+  sourceId?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
+  sublayerId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** An input for mutations affecting `ArcgisImportSource` */
+export type ArcgisImportSourceInput = {
+  fetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
+  id?: Maybe<Scalars['Int']>;
+  type?: Maybe<ArcgisSourceType>;
+  url?: Maybe<Scalars['String']>;
+};
+
+export enum ArcgisSourceType {
+  ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  ArcgisRasterTiles = 'ARCGIS_RASTER_TILES',
+  ArcgisVector = 'ARCGIS_VECTOR'
+}
+
 /** All input for the `archiveResponses` mutation. */
 export type ArchiveResponsesInput = {
   /**
@@ -5484,6 +5509,31 @@ export enum GroupsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+/** All input for the `importArcgisServices` mutation. */
+export type ImportArcgisServicesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  items?: Maybe<Array<Maybe<ArcgisImportItemInput>>>;
+  projectId?: Maybe<Scalars['Int']>;
+  sources?: Maybe<Array<Maybe<ArcgisImportSourceInput>>>;
+};
+
+/** The output of our `importArcgisServices` mutation. */
+export type ImportArcgisServicesPayload = {
+  __typename?: 'ImportArcgisServicesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
 export type InteractivitySetting = Node & {
   __typename?: 'InteractivitySetting';
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -6296,6 +6346,7 @@ export type Mutation = {
   getOrCreateSprite?: Maybe<Sprite>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
+  importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
   /**
    * Adds current user to the list of participants for a project, sharing their
    * profile with administrators in user listings. Their profile will also be shared
@@ -7310,6 +7361,12 @@ export type MutationGetOrCreateSpriteArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGrantAdminAccessArgs = {
   input: GrantAdminAccessInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationImportArcgisServicesArgs = {
+  input: ImportArcgisServicesInput;
 };
 
 
@@ -15464,7 +15521,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
@@ -15893,6 +15950,24 @@ export type DraftStatusSubscription = (
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
     )> }
+  )> }
+);
+
+export type ImportArcGisServiceMutationVariables = Exact<{
+  items: Array<ArcgisImportItemInput> | ArcgisImportItemInput;
+  sources: Array<ArcgisImportSourceInput> | ArcgisImportSourceInput;
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ImportArcGisServiceMutation = (
+  { __typename?: 'Mutation' }
+  & { importArcgisServices?: Maybe<(
+    { __typename?: 'ImportArcgisServicesPayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title'>
+    )>> }
   )> }
 );
 
@@ -16941,7 +17016,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy'>
 );
 
 export type ClientSpriteFragment = (
@@ -19877,6 +19952,7 @@ export const DataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   useDevicePixelRatio
   supportsDynamicLayers
   translatedProps
+  arcgisFetchStrategy
 }
     `;
 export const ClientSpriteFragmentDoc = /*#__PURE__*/ gql`
@@ -21180,6 +21256,7 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       supportsDynamicLayers
       uploadedSourceFilename
       translatedProps
+      arcgisFetchStrategy
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -21602,6 +21679,18 @@ export const DraftStatusDocument = /*#__PURE__*/ gql`
       id
       draftTableOfContentsHasChanges
       tableOfContentsLastPublished
+    }
+  }
+}
+    `;
+export const ImportArcGisServiceDocument = /*#__PURE__*/ gql`
+    mutation ImportArcGISService($items: [ArcgisImportItemInput!]!, $sources: [ArcgisImportSourceInput!]!, $projectId: Int!) {
+  importArcgisServices(
+    input: {items: $items, sources: $sources, projectId: $projectId}
+  ) {
+    tableOfContentsItems {
+      id
+      title
     }
   }
 }
@@ -23712,6 +23801,7 @@ export const namedOperations = {
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    ImportArcGISService: 'ImportArcGISService',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

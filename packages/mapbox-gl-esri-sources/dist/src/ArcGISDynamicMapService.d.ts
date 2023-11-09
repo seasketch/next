@@ -1,5 +1,5 @@
 import { Map, AnyLayer } from "mapbox-gl";
-import { ComputedMetadata, CustomGLSource, CustomGLSourceOptions, LegendItem, OrderedLayerSettings } from "./CustomGLSource";
+import { ComputedMetadata, CustomGLSource, CustomGLSourceOptions, CustomSourceType, LegendItem, OrderedLayerSettings } from "./CustomGLSource";
 import { ArcGISRESTServiceRequestManager } from "./ArcGISRESTServiceRequestManager";
 /** @hidden */
 export declare const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
@@ -51,6 +51,8 @@ export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDyn
     private debounceTimeout?;
     private _loading;
     private resolution?;
+    type: CustomSourceType;
+    url: string;
     /**
      * @param {string} sourceId ID to be used when adding refering to this source from layers
      * @param {string} baseUrl Location of the service. Should end in /MapServer
@@ -63,6 +65,7 @@ export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDyn
      * caching it on the instance for reuse.
      */
     private getMetadata;
+    _computedMetadata?: ComputedMetadata;
     /**
      * Returns computed metadata for the service, including bounds, minzoom, maxzoom, and attribution.
      * @returns ComputedMetadata
@@ -136,4 +139,6 @@ export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDyn
     getGLStyleLayers(): Promise<{
         layers: AnyLayer[];
     }>;
+    get ready(): boolean;
+    prepare(): Promise<void>;
 }

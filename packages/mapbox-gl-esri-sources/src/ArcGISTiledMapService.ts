@@ -4,6 +4,7 @@ import {
   ComputedMetadata,
   CustomGLSource,
   CustomGLSourceOptions,
+  CustomSourceType,
   LegendItem,
   OrderedLayerSettings,
 } from "./CustomGLSource";
@@ -29,12 +30,15 @@ export interface ArcGISTiledMapServiceOptions extends CustomGLSourceOptions {
 export class ArcGISTiledMapService
   implements CustomGLSource<ArcGISTiledMapServiceOptions, LegendItem[]>
 {
+  url: string;
   sourceId: string;
   options: ArcGISTiledMapServiceOptions;
   private map?: Map;
   private requestManager: ArcGISRESTServiceRequestManager;
   private serviceMetadata?: MapServiceMetadata;
   private layerMetadata?: LayersMetadata;
+  error?: string;
+  type: CustomSourceType;
 
   /**
    *
@@ -48,8 +52,10 @@ export class ArcGISTiledMapService
     requestManager: ArcGISRESTServiceRequestManager,
     options: ArcGISTiledMapServiceOptions
   ) {
+    this.type = "ArcGISTiledMapService";
     // remove trailing slash if present
     options.url = options.url.replace(/\/$/, "");
+    this.url = options.url;
     if (!/rest\/services/.test(options.url) || !/MapServer/.test(options.url)) {
       throw new Error("Invalid ArcGIS REST Service URL");
     }
@@ -81,6 +87,8 @@ export class ArcGISTiledMapService
     }
   }
 
+  private _computedMetadata?: ComputedMetadata;
+
   /**
    * Returns computed metadata for the service, including bounds, minzoom, maxzoom, and attribution.
    * @returns ComputedMetadata
@@ -88,45 +96,53 @@ export class ArcGISTiledMapService
    * @throws Error if tileInfo is not available
    * */
   async getComputedMetadata(): Promise<ComputedMetadata> {
-    const { serviceMetadata, layers } = await this.getMetadata();
-    const { bounds, minzoom, maxzoom, tileSize, attribution } =
-      await this.getComputedProperties();
-    const legendData = await this.requestManager.getLegendMetadata(
-      this.options.url
-    );
-    const results = /\/([^/]+)\/MapServer/.exec(this.options.url);
-    let label = results && results.length >= 1 ? results[1] : false;
-    if (!label) {
-      if (this.layerMetadata?.layers?.[0]) {
-        label = this.layerMetadata.layers[0].name;
-      }
-    }
+    try {
+      if (!this._computedMetadata) {
+        const { serviceMetadata, layers } = await this.getMetadata();
+        const { bounds, minzoom, maxzoom, tileSize, attribution } =
+          await this.getComputedProperties();
+        const legendData = await this.requestManager.getLegendMetadata(
+          this.options.url
+        );
+        const results = /\/([^/]+)\/MapServer/.exec(this.options.url);
+        let label = results && results.length >= 1 ? results[1] : false;
+        if (!label) {
+          if (this.layerMetadata?.layers?.[0]) {
+            label = this.layerMetadata.layers[0].name;
+          }
+        }
 
-    return {
-      bounds: bounds || undefined,
-      minzoom,
-      maxzoom,
-      attribution,
-      tableOfContentsItems: [
-        {
-          type: "data",
-          id: this.sourceId,
-          label: label || "Layer",
-          defaultVisibility: true,
-          metadata: generateMetadataForLayer(
-            this.options.url,
-            this.serviceMetadata!,
-            this.layerMetadata!.layers[0]
-          ),
-          legend: makeLegend(legendData, legendData.layers[0].layerId),
-        },
-      ],
-      supportsDynamicRendering: {
-        layerOrder: false,
-        layerOpacity: false,
-        layerVisibility: false,
-      },
-    };
+        this._computedMetadata = {
+          bounds: bounds || undefined,
+          minzoom,
+          maxzoom,
+          attribution,
+          tableOfContentsItems: [
+            {
+              type: "data",
+              id: this.sourceId,
+              label: label || "Layer",
+              defaultVisibility: true,
+              metadata: generateMetadataForLayer(
+                this.options.url,
+                this.serviceMetadata!,
+                this.layerMetadata!.layers[0]
+              ),
+              legend: makeLegend(legendData, legendData.layers[0].layerId),
+            },
+          ],
+          supportsDynamicRendering: {
+            layerOrder: false,
+            layerOpacity: false,
+            layerVisibility: false,
+          },
+        };
+      }
+      return this._computedMetadata;
+    } catch (e: any) {
+      this.error = e.toString();
+      throw e;
+    }
   }
 
   /**
@@ -244,4 +260,13 @@ export class ArcGISTiledMapService
 
   /** noop */
   updateLayers(layers: OrderedLayerSettings) {}
+
+  get ready() {
+    return Boolean(this._computedMetadata);
+  }
+
+  async prepare() {
+    await this.getComputedMetadata();
+    return;
+  }
 }

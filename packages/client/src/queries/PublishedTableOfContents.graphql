@@ -58,6 +58,7 @@ fragment DataSourceDetails on DataSource {
   useDevicePixelRatio
   supportsDynamicLayers
   translatedProps
+  arcgisFetchStrategy
 }
 
 fragment ClientSprite on Sprite {
