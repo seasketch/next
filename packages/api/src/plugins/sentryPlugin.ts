@@ -21,9 +21,10 @@ const SentryPlugin: PostGraphilePlugin = {
         );
         const errorCount = (result.errors || []).length;
         if (operations.length) {
+          console.log(operations[0]);
           const graphqlDetails = {
             operationType: operations[0].operation,
-            name: operations[0].name.value,
+            name: operations[0].name?.value || "Un-named operation",
             role: pgRole,
             errorCount,
             resultStatusCode: resultStatusCode || 200,
