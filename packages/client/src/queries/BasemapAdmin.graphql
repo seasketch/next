@@ -58,6 +58,7 @@ mutation CreateBasemap(
   $type: BasemapType!
   $url: String!
   $surveysOnly: Boolean
+  $isArcgisTiledMapservice: Boolean
 ) {
   createBasemap(
     input: {
@@ -69,6 +70,7 @@ mutation CreateBasemap(
         type: $type
         url: $url
         surveysOnly: $surveysOnly
+        isArcgisTiledMapservice: $isArcgisTiledMapservice
       }
     }
   ) {

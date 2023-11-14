@@ -11,7 +11,6 @@ import mapboxgl, {
   AnySourceData,
   AnyLayer,
   Sources,
-  GeoJSONSource,
 } from "mapbox-gl";
 import {
   createContext,
@@ -24,6 +23,7 @@ import { BBox, Feature, Polygon } from "geojson";
 import {
   ArcgisFeatureLayerFetchStrategy,
   BasemapDetailsFragment,
+  BasemapType,
   DataLayerDetailsFragment,
   DataSourceDetailsFragment,
   DataSourceTypes,
@@ -52,14 +52,13 @@ import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import { LegendItem } from "./Legend";
 import { EventEmitter } from "eventemitter3";
-import MeasureControl, {
-  MeasureControlState,
-  measureLayers,
-} from "../MeasureControl";
+import { MeasureControlState } from "../MeasureControl";
 import cloneDeep from "lodash.clonedeep";
 import {
+  ArcGISDynamicMapService,
   ArcGISFeatureLayerSource,
   ArcGISRESTServiceRequestManager,
+  ArcGISTiledMapService,
   CustomGLSource,
 } from "@seasketch/mapbox-gl-esri-sources";
 
@@ -88,7 +87,7 @@ const graphqlURL = new URL(
   process.env.REACT_APP_GRAPHQL_ENDPOINT || "http://localhost:3857/graphql"
 );
 
-const STALE_CUSTOM_SOURCE_SIZE = 1;
+const STALE_CUSTOM_SOURCE_SIZE = 3;
 
 export const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
 
@@ -978,23 +977,52 @@ class MapContextManager extends EventEmitter {
       basemap?.url ||
       "mapbox://styles/underbluewaters/cklb3vusx2dvs17pay6jp5q7e";
     let baseStyle: Style;
-    try {
-      baseStyle = await fetchGlStyle(url);
-      if (this.internalState.basemapError) {
+    if (basemap?.type === BasemapType.RasterUrlTemplate) {
+      baseStyle = {
+        version: 8,
+        sources: {
+          raster: {
+            type: "raster",
+            tiles: [basemap.url],
+            tileSize: 256 / window.devicePixelRatio,
+          },
+        },
+        layers: [
+          {
+            id: "bg",
+            type: "background",
+            paint: {
+              "background-color": "#efefef",
+            },
+          },
+          {
+            id: "raster-tiles",
+            type: "raster",
+            source: "raster",
+            minzoom: 0,
+            maxzoom: 22,
+          },
+        ],
+      };
+    } else {
+      try {
+        baseStyle = await fetchGlStyle(url);
+        if (this.internalState.basemapError) {
+          this.setState((prev) => ({
+            ...prev,
+            basemapError: undefined,
+          }));
+        }
+      } catch (e) {
         this.setState((prev) => ({
           ...prev,
-          basemapError: undefined,
+          basemapError: e,
         }));
+        console.warn(e);
+        baseStyle = await fetchGlStyle(
+          "mapbox://styles/underbluewaters/cklb5eho20sb817qhmzltsrpf"
+        );
       }
-    } catch (e) {
-      this.setState((prev) => ({
-        ...prev,
-        basemapError: e,
-      }));
-      console.warn(e);
-      baseStyle = await fetchGlStyle(
-        "mapbox://styles/underbluewaters/cklb5eho20sb817qhmzltsrpf"
-      );
     }
     baseStyle = {
       ...baseStyle,
@@ -1097,6 +1125,7 @@ class MapContextManager extends EventEmitter {
     let isUnderLabels = true;
     let i = this.layersByZIndex.length;
     const usedCustomSourceIds: number[] = [];
+    console.log("visible layers", this.visibleLayers, this.layersByZIndex);
     while (i--) {
       const layerId = this.layersByZIndex[i];
       if (layerId === "LABELS") {
@@ -1105,6 +1134,7 @@ class MapContextManager extends EventEmitter {
         if (this.visibleLayers[layerId]?.visible) {
           const layer = this.layers[layerId];
           // If layer or source are not set yet, they will be ignored
+          console.log("layer", layer);
           if (layer) {
             const source = this.clientDataSources[layer.dataSourceId];
             let sourceWasAdded = false;
@@ -1156,7 +1186,6 @@ class MapContextManager extends EventEmitter {
                     if (!this.customSources[source.id]) {
                       switch (source.type) {
                         case DataSourceTypes.ArcgisVector:
-                          console.log("creating feature layer");
                           const fetchStrategy =
                             source.arcgisFetchStrategy ===
                             ArcgisFeatureLayerFetchStrategy.Raw
@@ -1165,7 +1194,6 @@ class MapContextManager extends EventEmitter {
                                 ArcgisFeatureLayerFetchStrategy.Tiled
                               ? "tiled"
                               : "auto";
-                          console.log({ fetchStrategy });
                           this.customSources[source.id] = {
                             active: true,
                             lastUsedTimestamp: new Date().getTime(),
@@ -1179,6 +1207,32 @@ class MapContextManager extends EventEmitter {
                             ),
                           };
                           break;
+                        case DataSourceTypes.ArcgisRasterTiles:
+                          this.customSources[source.id] = {
+                            active: true,
+                            lastUsedTimestamp: new Date().getTime(),
+                            customSource: new ArcGISTiledMapService(
+                              this.arcgisRequestManager,
+                              {
+                                url: source.url!,
+                                sourceId: source.id.toString(),
+                              }
+                            ),
+                          };
+                          break;
+                        case DataSourceTypes.ArcgisDynamicMapserver:
+                          console.log("dynamic source");
+                          this.customSources[source.id] = {
+                            active: true,
+                            lastUsedTimestamp: new Date().getTime(),
+                            customSource: new ArcGISDynamicMapService(
+                              this.arcgisRequestManager,
+                              {
+                                url: source.url!,
+                                sourceId: source.id.toString(),
+                              }
+                            ),
+                          };
                         default:
                           throw new Error(
                             `CustomGLSource not yet supported for ${source.type}`
@@ -1195,8 +1249,7 @@ class MapContextManager extends EventEmitter {
                       });
                     }
                     // add style if ready
-                    const { active, customSource, lastUsedTimestamp } =
-                      this.customSources[source.id];
+                    const { customSource } = this.customSources[source.id];
 
                     this.customSources[source.id].lastUsedTimestamp =
                       new Date().getTime();
@@ -1350,7 +1403,6 @@ class MapContextManager extends EventEmitter {
       inactiveSources = inactiveSources.slice(0, STALE_CUSTOM_SOURCE_SIZE);
       for (const id in this.customSources) {
         if (inactiveSources.find((s) => s.id === id)) {
-          console.log("pruning source", id);
           this.customSources[id].customSource.destroy();
           delete this.customSources[id];
         }

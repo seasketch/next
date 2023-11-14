@@ -16,6 +16,22 @@ export default function useDialog() {
   const context = useContext(UseDialogContext);
   return useMemo(
     () => ({
+      makeChoice: (options: {
+        title: string;
+        choices: ReactNode[];
+      }): Promise<number | false> => {
+        return new Promise((resolve, reject) => {
+          context.setState({
+            type: "choice",
+            message: options.title,
+            open: true,
+            choices: options.choices,
+            onSubmit: (value) => resolve(parseInt(value)),
+            onCancel: () => resolve(false),
+            submitting: false,
+          });
+        });
+      },
       loadingMessage: (message: string) => {
         context.setState({
           type: "loading",
@@ -120,7 +136,7 @@ export default function useDialog() {
 }
 
 type DialogContextState = {
-  type: "prompt" | "alert" | "confirm" | "loading";
+  type: "prompt" | "alert" | "confirm" | "loading" | "choice";
   open: boolean;
   message: string | ReactNode;
   description?: string;
@@ -132,6 +148,7 @@ type DialogContextState = {
   primaryButtonVariant?: "primary" | "danger";
   primaryButtonText?: string;
   disableBackdropClick?: boolean;
+  choices?: ReactNode[];
 };
 
 const ResetState: DialogContextState = {
@@ -189,7 +206,6 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
     <UseDialogContext.Provider value={{ state, setState }}>
       {state.open && (
         <Modal
-          panelClassName="bg-opacity-70"
           tipyTop
           zeroPadding={state.type === "loading"}
           icon={state.type === "alert" ? "alert" : state.icon}
@@ -236,6 +252,19 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     },
                   },
                 ]
+              : state.type === "choice"
+              ? [
+                  {
+                    disabled: state.submitting,
+                    label: t("Cancel"),
+                    onClick: () => {
+                      if (state.onCancel) {
+                        state.onCancel();
+                      }
+                      reset();
+                    },
+                  },
+                ]
               : [
                   {
                     disabled: state.submitting,
@@ -267,6 +296,26 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
             )}
             {state.type !== "loading" && state.description && (
               <p className="text-gray-500 text-sm">{state.description}</p>
+            )}
+            {state.choices && state.type === "choice" && (
+              <div className="space-y-4">
+                {state.choices.map((node, i) => {
+                  return (
+                    <div
+                      key={i}
+                      className="cursor-pointer group"
+                      onClick={() => {
+                        if (state.onSubmit) {
+                          state.onSubmit(i.toString());
+                        }
+                        reset();
+                      }}
+                    >
+                      {node}
+                    </div>
+                  );
+                })}
+              </div>
             )}
             {state.type === "prompt" && (
               <TextInput

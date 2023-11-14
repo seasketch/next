@@ -219,38 +219,57 @@ export class ArcGISDynamicMapService {
             attribution,
         };
     }
-    async addToMap(map) {
-        var _a;
-        const { attribution, bounds } = await this.getComputedProperties();
-        this.map = map;
-        if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.useTiles)) {
-            this.map.on("moveend", this.updateSource);
-            this.map.on("data", this.onMapData);
-            this.map.on("error", this.onMapError);
-        }
+    async getGLSource() {
+        let { attribution, bounds } = await this.getComputedProperties();
+        bounds = bounds || [-90, -180, 90, 180];
         if (this.options.useTiles) {
-            this.map.addSource(this.sourceId, {
+            return {
                 type: "raster",
                 tiles: [this.getUrl()],
                 tileSize: this.options.tileSize || 256,
                 bounds: bounds,
                 attribution,
-            });
+            };
         }
         else {
-            const bounds = this.map.getBounds();
-            this.map.addSource(this.sourceId, {
+            // return a blank image until map event listeners are setup
+            return {
                 type: "image",
-                url: this.getUrl(),
+                url: blankDataUri,
                 coordinates: [
-                    [bounds.getWest(), bounds.getNorth()],
-                    [bounds.getEast(), bounds.getNorth()],
-                    [bounds.getEast(), bounds.getSouth()],
-                    [bounds.getWest(), bounds.getSouth()],
+                    [bounds[0], bounds[1]],
+                    [bounds[2], bounds[1]],
+                    [bounds[2], bounds[3]],
+                    [bounds[0], bounds[3]],
                 ],
-            });
+            };
+        }
+    }
+    async addToMap(map) {
+        this.map = map;
+        this.removeEventListeners(map);
+        const sourceData = await this.getGLSource();
+        this.map.addSource(this.sourceId, sourceData);
+        this.addEventListeners(map);
+        if (!this.options.useTiles) {
+            // Source is added as a blank image at first. Initialize it with
+            // proper bounds and image
+            this.updateSource();
         }
         return this.sourceId;
+    }
+    addEventListeners(map) {
+        var _a;
+        if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.useTiles)) {
+            map.on("moveend", this.updateSource);
+            map.on("data", this.onMapData);
+            map.on("error", this.onMapError);
+        }
+    }
+    removeEventListeners(map) {
+        map.off("moveend", this.updateSource);
+        map.off("data", this.onMapData);
+        map.off("error", this.onMapError);
     }
     removeFromMap(map) {
         if (map.getSource(this.sourceId)) {

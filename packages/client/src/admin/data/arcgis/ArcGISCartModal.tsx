@@ -12,7 +12,12 @@ import {
 import { AnyLayer, LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
 import Skeleton from "../../../components/Skeleton";
-import { ArrowLeftIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
+import {
+  ActivityLogIcon,
+  ArrowLeftIcon,
+  CheckCircledIcon,
+  ExternalLinkIcon,
+} from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/solid";
 import Spinner from "../../../components/Spinner";
 import Button from "../../../components/Button";
@@ -38,6 +43,10 @@ import {
   ArcgisImportItemInput,
   ArcgisImportSourceInput,
   ArcgisSourceType,
+  BasemapType,
+  DraftTableOfContentsDocument,
+  GetBasemapsDocument,
+  useCreateBasemapMutation,
   useImportArcGisServiceMutation,
 } from "../../../generated/graphql";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
@@ -83,9 +92,7 @@ export default function ArcGISCartModal({
   );
 
   const onError = useGlobalErrorHandler();
-  const [importMutation, importState] = useImportArcGisServiceMutation({
-    onError,
-  });
+  const [importMutation, importState] = useImportArcGisServiceMutation();
 
   const [sourceLoading, setSourceLoading] = useState(false);
 
@@ -337,8 +344,6 @@ export default function ArcGISCartModal({
           const dynamicSource = new ArcGISDynamicMapService(requestManager, {
             url: selection.url,
             supportHighDpiDisplays: true,
-            tileSize: 512,
-            useTiles: false,
           });
           dynamicSource.getComputedMetadata().then((data) => {
             const { bounds, tableOfContentsItems } = data;
@@ -394,29 +399,134 @@ export default function ArcGISCartModal({
     }
   }, [hiddenLayers, customSources, tableOfContentsItems]);
 
-  const { loadingMessage } = useDialog();
+  const { loadingMessage, confirm, alert, makeChoice } = useDialog();
+
+  const [createBasemap, createBaseMapState] = useCreateBasemapMutation();
+
+  const selectionAlreadyAdded =
+    selection && importedArcGISServices.includes(selection.url);
 
   const onAddService = useCallback(async () => {
+    if (importedArcGISServices.includes(selection?.url || "")) {
+      const answer = await confirm(
+        t(
+          "This service has already been added to your project's table of contents. Are you sure you want to import it again?"
+        )
+      );
+      if (!answer) {
+        return;
+      }
+    }
     const { hideLoadingMessage, updateLoadingMessage } = loadingMessage(
       t(`Evaluating services (1 / ${customSources.length})...`)
     );
     const layers = catalogItemDetailsQuery.data?.metadata.layers || [];
-    console.log("on add service", layers);
     if (layers.length && customSources.length) {
       const items: ArcgisImportItemInput[] = [];
       const sources: ArcgisImportSourceInput[] = [];
       if (customSources[0].type === "ArcGISTiledMapService") {
-        items.push({
-          title: selection?.name,
-          isFolder: false,
-          id: 1,
-          sourceId: 1,
+        let thumbnail: string = "";
+        try {
+          thumbnail = await (
+            customSources[0] as ArcGISTiledMapService
+          ).getThumbnailForCurrentExtent();
+        } catch (e) {
+          alert(
+            t("Error importing service. Could not generate thumbnail image"),
+            {
+              description: e.message,
+            }
+          );
+          return;
+        }
+        const choice = await makeChoice({
+          title: t("Import this tiled service as a..."),
+          choices: [
+            <div className="flex w-full items-center md:min-w-lg border rounded-lg p-4 group-hover:border-blue-500 group-hover:bg-blue-50 bg-opacity-30">
+              <img
+                src={thumbnail}
+                alt="Basemap thumbnail"
+                className="w-16 h-16 mr-3 rounded border border-gray-300"
+              />
+              <div className="flex-1">
+                <h3 className="font-semibold">{t("Basemap")}</h3>
+                <p className="text-sm">
+                  {t(
+                    "Map tiles will be displayed below all overlay layers, and the basemap is accessible from the Maps tab."
+                  )}
+                </p>
+              </div>
+            </div>,
+            <div className="flex w-full items-center md:min-w-lg border rounded-lg p-4 group-hover:border-blue-500 group-hover:bg-blue-50 bg-opacity-30">
+              <div className="flex items-center justify-center w-16 h-16 rounded bg-gray-100 mr-3 border border-gray-300">
+                <ActivityLogIcon className="w-8 h-8 text-gray-700" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold">{t("Overlay Layer")}</h3>
+                <p className="text-sm">
+                  {t(
+                    "Use this option if you would like to display these map tiles over an existing basemap. Best for tiled layers with alpha transparency."
+                  )}
+                </p>
+              </div>
+            </div>,
+          ],
         });
-        sources.push({
-          id: 1,
-          type: ArcgisSourceType.ArcgisRasterTiles,
-          url: customSources[0].url,
-        });
+        if (choice === false) {
+          return;
+        } else if (choice === 0) {
+          try {
+            updateLoadingMessage(t("Creating thumbnail..."));
+            const response = await fetch(thumbnail);
+            const blob = await response.blob();
+            updateLoadingMessage(t("Creating basemap..."));
+            const basemapResponse = await createBasemap({
+              variables: {
+                projectId,
+                name: (selection?.name || "Imported ArcGIS Service").replace(
+                  /_/g,
+                  " "
+                ),
+                // eslint-disable-next-line i18next/no-literal-string
+                url: customSources[0].url + `/tile/{z}/{y}/{x}`,
+                type: BasemapType.RasterUrlTemplate,
+                isArcgisTiledMapservice: true,
+                tileSize: 256,
+                surveysOnly: false,
+                thumbnail: blob,
+              },
+              refetchQueries: [
+                DraftTableOfContentsDocument,
+                GetBasemapsDocument,
+              ],
+            });
+            // load thumbnail as soon as saved to prevent flicker
+            const url = basemapResponse.data?.createBasemap?.basemap?.thumbnail;
+            if (url) {
+              fetch(url);
+            }
+            hideLoadingMessage();
+            return;
+          } catch (e) {
+            hideLoadingMessage();
+            alert(t("Error importing service"), {
+              description: e.message,
+            });
+          }
+        } else {
+          items.push({
+            title: selection?.name,
+            isFolder: false,
+            id: 1,
+            sourceId: 1,
+            stableId: generateStableId(),
+          });
+          sources.push({
+            id: 1,
+            type: ArcgisSourceType.ArcgisRasterTiles,
+            url: customSources[0].url,
+          });
+        }
       } else {
         for (const layer of layers) {
           if (
@@ -450,7 +560,11 @@ export default function ArcGISCartModal({
             items.push({
               id: layer.id,
               isFolder: false,
-              title: layer.name,
+              title:
+                catalogItemDetailsQuery.data?.type === "FeatureServer" &&
+                layers.length === 1
+                  ? selection?.name || layer.name
+                  : layer.name,
               sourceId: layer.id,
               ...("parentLayerId" in layer && layer.parentLayerId > -1
                 ? { parentId: layer.parentLayerId }
@@ -491,7 +605,8 @@ export default function ArcGISCartModal({
       }
       if (
         catalogItemDetailsQuery.data?.type === "MapServer" &&
-        !useFeatureLayers
+        !useFeatureLayers &&
+        !catalogItemDetailsQuery.data?.tiled
       ) {
         sources.push({
           id: 1,
@@ -499,17 +614,51 @@ export default function ArcGISCartModal({
           url: selection?.url,
         });
       }
-      console.log({ items, sources });
+
+      if (items.length > 1) {
+        // Stick everything in an enclosing folder
+        const enclosingFolder: ArcgisImportItemInput = {
+          id: 9999999,
+          isFolder: true,
+          stableId: generateStableId(),
+          title: selection?.name || "Imported ArcGIS Service",
+        };
+        for (const item of items) {
+          if (item.parentId === undefined) {
+            // @ts-ignore
+            item.parentId = enclosingFolder.id;
+          }
+        }
+        items.push(enclosingFolder);
+      }
+
+      // replace parentIds with stableIds
+      for (const item of items) {
+        if (item.parentId) {
+          item.parentId = items.find((i) => i.id === item.parentId)?.stableId;
+        }
+      }
+
+      console.log("items", items, sources);
+
       // eslint-disable-next-line i18next/no-literal-string
-      updateLoadingMessage(`Adding ${items.length} layers to project...`);
-      await importMutation({
-        variables: {
-          projectId,
-          items,
-          sources,
-        },
-      });
-      hideLoadingMessage();
+      updateLoadingMessage(`Adding ${items.length} items to project...`);
+      try {
+        await importMutation({
+          variables: {
+            projectId,
+            items,
+            sources,
+          },
+          refetchQueries: [DraftTableOfContentsDocument],
+        });
+        hideLoadingMessage();
+      } catch (e) {
+        hideLoadingMessage();
+        alert(t("Error importing service"), {
+          description: e.message,
+        });
+      }
     }
   }, [
     customSources,
@@ -520,6 +669,9 @@ export default function ArcGISCartModal({
     loadingMessage,
     projectId,
     importMutation,
+    importedArcGISServices,
+    alert,
+    confirm,
   ]);
 
   return createPortal(
@@ -626,20 +778,39 @@ export default function ArcGISCartModal({
                       }`}
                     >
                       <div className="flex-1 overflow-hidden">
-                        <h2 className="truncate">{item.name}</h2>
+                        <h2 className="truncate">
+                          <span>{item.name}</span>
+                        </h2>
 
                         {selection?.url === item.url ? (
-                          <a
-                            className="text-sm underline"
-                            href={item.url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {item.type}
-                            <ExternalLinkIcon className="inline ml-1" />
-                          </a>
+                          <>
+                            {importedArcGISServices.includes(item.url) && (
+                              <span className=" rounded-lg px-2 py-0.5 mr-2 text-sm bg-blue-100 text-black">
+                                <CheckCircledIcon className="inline mr-1" />
+                                <span>{t("Imported")}</span>
+                              </span>
+                            )}
+
+                            <a
+                              className="text-sm underline"
+                              href={item.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {item.type}
+                              <ExternalLinkIcon className="inline ml-1" />
+                            </a>
+                          </>
                         ) : (
-                          <span className="text-sm">{item.type}</span>
+                          <span className="text-sm">
+                            {importedArcGISServices.includes(item.url) && (
+                              <span className="bg-blue-100 rounded-lg px-2 py-0.5 mr-2">
+                                <CheckCircledIcon className="inline mr-1" />
+                                <span>{t("Imported")}</span>
+                              </span>
+                            )}
+                            {item.type}
+                          </span>
                         )}
                       </div>
                       {item.type === "Folder" ? (
@@ -713,7 +884,8 @@ export default function ArcGISCartModal({
             <div className="border-t border-gray-800 border-opacity-20 flex w-full bg-gray-200 p-4 rounded-b-md items-end justify-end gap-2 space-x-5">
               <div
                 className={`${
-                  catalogItemDetailsQuery.data?.type === "MapServer"
+                  catalogItemDetailsQuery.data?.type === "MapServer" &&
+                  !catalogItemDetailsQuery.data?.tiled
                     ? "opacity-100"
                     : "opacity-0"
                 } h-full flex items-center justify-start space-x-2 text-sm flex-1`}
@@ -738,12 +910,18 @@ export default function ArcGISCartModal({
                 />
               </div>
               <div className="flex items-center space-x-1 h-full">
-                <Button label={t("Done")} onClick={onRequestClose} />
-                <Button
-                  onClick={onAddService}
-                  primary
-                  label={t("Add service to project")}
-                />
+                <Button label={t("Close")} onClick={onRequestClose} />
+                {Boolean(selection) && (
+                  <Button
+                    onClick={onAddService}
+                    primary={!selectionAlreadyAdded}
+                    label={
+                      selectionAlreadyAdded
+                        ? t("Import service again")
+                        : t("Add service to project")
+                    }
+                  />
+                )}
               </div>
             </div>
           </div>

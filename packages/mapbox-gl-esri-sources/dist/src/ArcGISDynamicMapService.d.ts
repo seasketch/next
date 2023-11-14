@@ -1,4 +1,4 @@
-import { Map, AnyLayer } from "mapbox-gl";
+import { Map, AnyLayer, AnySourceData } from "mapbox-gl";
 import { ComputedMetadata, CustomGLSource, CustomGLSourceOptions, CustomSourceType, LegendItem, OrderedLayerSettings } from "./CustomGLSource";
 import { ArcGISRESTServiceRequestManager } from "./ArcGISRESTServiceRequestManager";
 /** @hidden */
@@ -81,7 +81,10 @@ export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDyn
     private getComputedProperties;
     private onMapData;
     private onMapError;
+    getGLSource(): Promise<AnySourceData>;
     addToMap(map: Map): Promise<string>;
+    addEventListeners(map: Map): void;
+    removeEventListeners(map: Map): void;
     removeFromMap(map: Map): void;
     /**
      * Clears all map event listeners setup by this instance.

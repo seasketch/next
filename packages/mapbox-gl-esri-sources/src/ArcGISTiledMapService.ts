@@ -17,6 +17,7 @@ import {
   makeLegend,
   replaceSource,
 } from "./utils";
+import * as tilebelt from "@mapbox/tilebelt";
 
 export interface ArcGISTiledMapServiceOptions extends CustomGLSourceOptions {
   url: string;
@@ -145,6 +146,37 @@ export class ArcGISTiledMapService
     }
   }
 
+  async getThumbnailForCurrentExtent() {
+    if (!this.map) {
+      throw new Error("Map not set");
+    }
+    const map = this.map;
+    const bounds = map.getBounds();
+    const boundsArray = bounds.toArray();
+    const primaryTile = tilebelt.bboxToTile([
+      boundsArray[0][0],
+      boundsArray[0][1],
+      boundsArray[1][0],
+      boundsArray[1][1],
+    ]);
+    let [x, y, z] = primaryTile;
+    const url = `${this.options.url}/tile/${z}/${y}/${x}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      return url;
+    } else {
+      const children = tilebelt.getChildren(primaryTile);
+      for (const child of children) {
+        let [x, y, z] = primaryTile;
+        const res = await fetch(url);
+        if (res.ok) {
+          return url;
+        }
+      }
+      throw new Error("Could not find valid thumbnail tile");
+    }
+  }
+
   /**
    * Returns true if the source is not yet loaded. Will return to false if tiles
    * are loading when the map is moved.
@@ -190,6 +222,17 @@ export class ArcGISTiledMapService
    */
   async addToMap(map: mapboxgl.Map) {
     this.map = map;
+    const sourceData = await this.getGLSource();
+    // It's possible that the map has changed since we started fetching metadata
+    if (this.map.getSource(this.sourceId)) {
+      replaceSource(this.sourceId, this.map, sourceData);
+    } else {
+      this.map.addSource(this.sourceId, sourceData);
+    }
+    return this.sourceId;
+  }
+
+  async getGLSource() {
     const { minzoom, maxzoom, bounds, tileSize, attribution } =
       await this.getComputedProperties();
     const sourceData = {
@@ -203,13 +246,7 @@ export class ArcGISTiledMapService
       attribution,
       ...(bounds ? { bounds } : {}),
     } as RasterSource;
-    // It's possible that the map has changed since we started fetching metadata
-    if (this.map.getSource(this.sourceId)) {
-      replaceSource(this.sourceId, this.map, sourceData);
-    } else {
-      this.map.addSource(this.sourceId, sourceData);
-    }
-    return this.sourceId;
+    return sourceData;
   }
 
   /**
@@ -269,4 +306,12 @@ export class ArcGISTiledMapService
     await this.getComputedMetadata();
     return;
   }
+
+  addEventListeners(map: Map) {
+    this.map = map;
+    this.getThumbnailForCurrentExtent().then((thumbnailUrl) => {
+      console.log(thumbnailUrl);
+    });
+  }
+  removeEventListeners(map: Map) {}
 }

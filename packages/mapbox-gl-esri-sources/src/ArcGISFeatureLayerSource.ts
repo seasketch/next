@@ -294,7 +294,6 @@ export default class ArcGISFeatureLayerSource
       getOrCreateQuantizedVectorRequestManager(map);
     this._loading = this.featureData ? false : true;
     if (!this.rawFeaturesHaveBeenFetched) {
-      console.log("calling get features", this.options.url);
       this.fetchFeatures();
     }
   }

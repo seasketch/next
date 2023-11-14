@@ -83,7 +83,12 @@ var MapBoxGLEsriSources = (function (exports) {
           const wkid = normalizeSpatialReference(extent.spatialReference);
           let bounds;
           if (wkid === 4326) {
-              bounds = [extent.xmin, extent.ymin, extent.xmax, extent.ymax];
+              bounds = [
+                  Math.max(-180, extent.xmin),
+                  Math.max(-90, extent.ymin),
+                  Math.min(180, extent.xmax),
+                  Math.min(90, extent.ymax),
+              ];
           }
           else if (wkid === 3857 || wkid === 102100) {
               bounds = [
@@ -116,6 +121,9 @@ var MapBoxGLEsriSources = (function (exports) {
                   return;
               }
               else {
+                  if (bounds) {
+                      bounds = enforceBoundsMinMax(bounds);
+                  }
                   return bounds;
               }
           }
@@ -123,6 +131,15 @@ var MapBoxGLEsriSources = (function (exports) {
               return;
           }
       }
+  }
+  function enforceBoundsMinMax(bounds) {
+      const [xmin, ymin, xmax, ymax] = bounds;
+      return [
+          Math.max(-180, xmin),
+          Math.max(-90, ymin),
+          Math.min(180, xmax),
+          Math.min(90, ymax),
+      ];
   }
   function normalizeSpatialReference(sr) {
       const wkid = "latestWkid" in sr ? sr.latestWkid : "wkid" in sr ? sr.wkid : -1;
@@ -483,38 +500,54 @@ var MapBoxGLEsriSources = (function (exports) {
               attribution,
           };
       }
-      async addToMap(map) {
-          var _a;
-          const { attribution, bounds } = await this.getComputedProperties();
-          this.map = map;
-          if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.useTiles)) {
-              this.map.on("moveend", this.updateSource);
-              this.map.on("data", this.onMapData);
-              this.map.on("error", this.onMapError);
-          }
+      async getGLSource() {
+          let { attribution, bounds } = await this.getComputedProperties();
+          bounds = bounds || [-90, -180, 90, 180];
           if (this.options.useTiles) {
-              this.map.addSource(this.sourceId, {
+              return {
                   type: "raster",
                   tiles: [this.getUrl()],
                   tileSize: this.options.tileSize || 256,
                   bounds: bounds,
                   attribution,
-              });
+              };
           }
           else {
-              const bounds = this.map.getBounds();
-              this.map.addSource(this.sourceId, {
+              return {
                   type: "image",
-                  url: this.getUrl(),
+                  url: blankDataUri,
                   coordinates: [
-                      [bounds.getWest(), bounds.getNorth()],
-                      [bounds.getEast(), bounds.getNorth()],
-                      [bounds.getEast(), bounds.getSouth()],
-                      [bounds.getWest(), bounds.getSouth()],
+                      [bounds[0], bounds[1]],
+                      [bounds[2], bounds[1]],
+                      [bounds[2], bounds[3]],
+                      [bounds[0], bounds[3]],
                   ],
-              });
+              };
+          }
+      }
+      async addToMap(map) {
+          this.map = map;
+          this.removeEventListeners(map);
+          const sourceData = await this.getGLSource();
+          this.map.addSource(this.sourceId, sourceData);
+          this.addEventListeners(map);
+          if (!this.options.useTiles) {
+              this.updateSource();
           }
           return this.sourceId;
+      }
+      addEventListeners(map) {
+          var _a;
+          if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.useTiles)) {
+              map.on("moveend", this.updateSource);
+              map.on("data", this.onMapData);
+              map.on("error", this.onMapError);
+          }
+      }
+      removeEventListeners(map) {
+          map.off("moveend", this.updateSource);
+          map.off("data", this.onMapData);
+          map.off("error", this.onMapError);
       }
       removeFromMap(map) {
           if (map.getSource(this.sourceId)) {
@@ -1035,423 +1068,6 @@ var MapBoxGLEsriSources = (function (exports) {
       }
   }
 
-  class ArcGISTiledMapService {
-      constructor(requestManager, options) {
-          this.type = "ArcGISTiledMapService";
-          options.url = options.url.replace(/\/$/, "");
-          this.url = options.url;
-          if (!/rest\/services/.test(options.url) || !/MapServer/.test(options.url)) {
-              throw new Error("Invalid ArcGIS REST Service URL");
-          }
-          this.requestManager = requestManager;
-          this.sourceId = options.sourceId || v4();
-          this.options = options;
-      }
-      getMetadata() {
-          if (this.serviceMetadata && this.layerMetadata) {
-              return Promise.resolve({
-                  serviceMetadata: this.serviceMetadata,
-                  layers: this.layerMetadata,
-              });
-          }
-          else {
-              return this.requestManager
-                  .getMapServiceMetadata(this.options.url, {
-                  token: this.options.token,
-              })
-                  .then(({ serviceMetadata, layers }) => {
-                  this.serviceMetadata = serviceMetadata;
-                  this.layerMetadata = layers;
-                  return { serviceMetadata, layers };
-              });
-          }
-      }
-      async getComputedMetadata() {
-          var _a, _b;
-          try {
-              if (!this._computedMetadata) {
-                  const { serviceMetadata, layers } = await this.getMetadata();
-                  const { bounds, minzoom, maxzoom, tileSize, attribution } = await this.getComputedProperties();
-                  const legendData = await this.requestManager.getLegendMetadata(this.options.url);
-                  const results = /\/([^/]+)\/MapServer/.exec(this.options.url);
-                  let label = results && results.length >= 1 ? results[1] : false;
-                  if (!label) {
-                      if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
-                          label = this.layerMetadata.layers[0].name;
-                      }
-                  }
-                  this._computedMetadata = {
-                      bounds: bounds || undefined,
-                      minzoom,
-                      maxzoom,
-                      attribution,
-                      tableOfContentsItems: [
-                          {
-                              type: "data",
-                              id: this.sourceId,
-                              label: label || "Layer",
-                              defaultVisibility: true,
-                              metadata: generateMetadataForLayer(this.options.url, this.serviceMetadata, this.layerMetadata.layers[0]),
-                              legend: makeLegend(legendData, legendData.layers[0].layerId),
-                          },
-                      ],
-                      supportsDynamicRendering: {
-                          layerOrder: false,
-                          layerOpacity: false,
-                          layerVisibility: false,
-                      },
-                  };
-              }
-              return this._computedMetadata;
-          }
-          catch (e) {
-              this.error = e.toString();
-              throw e;
-          }
-      }
-      get loading() {
-          var _a, _b;
-          return Boolean(((_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId)) &&
-              ((_b = this.map) === null || _b === void 0 ? void 0 : _b.isSourceLoaded(this.sourceId)) === false);
-      }
-      async getComputedProperties() {
-          var _a, _b, _c;
-          const { serviceMetadata, layers } = await this.getMetadata();
-          const levels = ((_a = serviceMetadata.tileInfo) === null || _a === void 0 ? void 0 : _a.lods.map((l) => l.level)) || [];
-          const attribution = contentOrFalse(layers.layers[0].copyrightText) ||
-              contentOrFalse(serviceMetadata.copyrightText) ||
-              contentOrFalse((_b = serviceMetadata.documentInfo) === null || _b === void 0 ? void 0 : _b.Author) ||
-              undefined;
-          const minzoom = Math.min(...levels);
-          const maxzoom = Math.max(...levels);
-          if (!((_c = serviceMetadata.tileInfo) === null || _c === void 0 ? void 0 : _c.rows)) {
-              throw new Error("Invalid tile info");
-          }
-          return {
-              minzoom,
-              maxzoom,
-              bounds: await extentToLatLngBounds(serviceMetadata.fullExtent),
-              tileSize: serviceMetadata.tileInfo.rows,
-              attribution,
-          };
-      }
-      async addToMap(map) {
-          this.map = map;
-          const { minzoom, maxzoom, bounds, tileSize, attribution } = await this.getComputedProperties();
-          const sourceData = {
-              type: "raster",
-              tiles: [`${this.options.url}/tile/{z}/{y}/{x}`],
-              tileSize: this.options.supportHighDpiDisplays
-                  ? tileSize / window.devicePixelRatio
-                  : tileSize,
-              minzoom,
-              maxzoom,
-              attribution,
-              ...(bounds ? { bounds } : {}),
-          };
-          if (this.map.getSource(this.sourceId)) {
-              replaceSource(this.sourceId, this.map, sourceData);
-          }
-          else {
-              this.map.addSource(this.sourceId, sourceData);
-          }
-          return this.sourceId;
-      }
-      async getGLStyleLayers() {
-          return {
-              layers: [
-                  {
-                      type: "raster",
-                      source: this.sourceId,
-                      id: v4(),
-                      paint: {
-                          "raster-fade-duration": 300,
-                      },
-                  },
-              ],
-          };
-      }
-      removeFromMap(map) {
-          if (map.getSource(this.sourceId)) {
-              const layers = map.getStyle().layers || [];
-              for (const layer of layers) {
-                  if ("source" in layer && layer.source === this.sourceId) {
-                      map.removeLayer(layer.id);
-                  }
-              }
-              map.removeSource(this.sourceId);
-              this.map = undefined;
-          }
-      }
-      destroy() {
-          if (this.map) {
-              this.removeFromMap(this.map);
-          }
-      }
-      updateLayers(layers) { }
-      get ready() {
-          return Boolean(this._computedMetadata);
-      }
-      async prepare() {
-          await this.getComputedMetadata();
-          return;
-      }
-  }
-
-  function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100, abortController = null, disablePagination = false) {
-      return new Promise((resolve, reject) => {
-          fetchFeatureLayerData(url, outFields, reject, geometryPrecision, abortController, null, disablePagination, undefined, bytesLimit)
-              .then((data) => resolve(data))
-              .catch((e) => reject(e));
-      });
-  }
-  async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
-      const featureCollection = {
-          type: "FeatureCollection",
-          features: [],
-      };
-      const params = new URLSearchParams({
-          inSR: "4326",
-          outSR: "4326",
-          where: "1>0",
-          outFields,
-          returnGeometry: "true",
-          geometryPrecision: geometryPrecision.toString(),
-          returnIdsOnly: "false",
-          f: "geojson",
-      });
-      await fetchData(url, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit);
-      return featureCollection;
-  }
-  async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
-      var _a;
-      bytesReceived = bytesReceived || 0;
-      new TextDecoder("utf-8");
-      params.set("returnIdsOnly", "false");
-      if (featureCollection.features.length > 0) {
-          params.delete("where");
-          params.delete("resultOffset");
-          params.delete("resultRecordCount");
-          params.set("orderByFields", objectIdFieldName);
-          const lastFeature = featureCollection.features[featureCollection.features.length - 1];
-          params.set("where", `${objectIdFieldName}>${lastFeature.id}`);
-      }
-      const response = await fetch(`${baseUrl}/query?${params.toString()}`, {
-          ...(abortController ? { signal: abortController.signal } : {}),
-      });
-      const str = await response.text();
-      bytesReceived += byteLength(str);
-      if (bytesLimit && bytesReceived > bytesLimit) {
-          const e = new Error(`Exceeded bytesLimit. ${bytesReceived} > ${bytesLimit}`);
-          return onError(e);
-      }
-      const fc = JSON.parse(str);
-      if (fc.error) {
-          return onError(new Error(fc.error.message));
-      }
-      else {
-          featureCollection.features.push(...fc.features);
-          if (fc.exceededTransferLimit || ((_a = fc.properties) === null || _a === void 0 ? void 0 : _a.exceededTransferLimit)) {
-              if (!objectIdFieldName) {
-                  params.set("returnIdsOnly", "true");
-                  try {
-                      const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
-                          ...(abortController ? { signal: abortController.signal } : {}),
-                      });
-                      let objectIdParameters = await r.json();
-                      if (objectIdParameters.properties) {
-                          objectIdParameters = objectIdParameters.properties;
-                      }
-                      expectedFeatureCount = objectIdParameters.objectIds.length;
-                      objectIdFieldName = objectIdParameters.objectIdFieldName;
-                  }
-                  catch (e) {
-                      return onError(e);
-                  }
-              }
-              if (onPageReceived) {
-                  onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
-              }
-              await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
-          }
-      }
-      return bytesReceived;
-  }
-  function byteLength(str) {
-      var s = str.length;
-      for (var i = str.length - 1; i >= 0; i--) {
-          var code = str.charCodeAt(i);
-          if (code > 0x7f && code <= 0x7ff)
-              s++;
-          else if (code > 0x7ff && code <= 0xffff)
-              s += 2;
-          if (code >= 0xdc00 && code <= 0xdfff)
-              i--;
-      }
-      return s;
-  }
-
-  const EventEmitter = require("eventemitter3");
-  const tilebelt$1 = require("@mapbox/tilebelt");
-  const debounce = require("lodash.debounce");
-  class QuantizedVectorRequestManager extends EventEmitter {
-      constructor(map) {
-          super();
-          this.removeEventListeners = (map) => {
-              map.off("moveend", this.updateSources);
-              map.off("move", this.debouncedUpdateSources);
-              map.off("remove", this.removeEventListeners);
-              try {
-                  this.removeDebugLayer();
-              }
-              catch (e) {
-              }
-          };
-          this.displayedTiles = "";
-          this._viewPortDetails = {
-              tiles: [],
-              tolerance: 0,
-          };
-          this.updateSources = () => {
-              const bounds = this.map.getBounds();
-              const boundsArray = bounds.toArray();
-              const tiles = this.getTilesForBounds(bounds);
-              const key = tiles
-                  .map((t) => tilebelt$1.tileToQuadkey(t))
-                  .sort()
-                  .join(",");
-              if (key !== this.displayedTiles) {
-                  this.displayedTiles = key;
-                  const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
-                  const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
-                  this._viewPortDetails = {
-                      tiles,
-                      tolerance,
-                  };
-                  this.emit("update", { tiles });
-              }
-          };
-          this.debouncedUpdateSources = debounce(this.updateSources, 100, {
-              maxWait: 200,
-          });
-          this.map = map;
-          this.addEventListeners(map);
-      }
-      addDebugLayer() {
-          this.map.addSource("debug-quantized-vector-request-manager", {
-              type: "geojson",
-              data: {
-                  type: "FeatureCollection",
-                  features: [],
-              },
-          });
-          this.map.addLayer({
-              id: "debug-quantized-vector-request-manager",
-              type: "line",
-              source: "debug-quantized-vector-request-manager",
-              paint: {
-                  "line-color": "red",
-                  "line-width": 2,
-              },
-          });
-      }
-      removeDebugLayer() {
-          this.map.removeLayer("debug-quantized-vector-request-manager");
-          this.map.removeSource("debug-quantized-vector-request-manager");
-      }
-      addEventListeners(map) {
-          map.on("moveend", this.updateSources);
-          map.on("move", this.debouncedUpdateSources);
-          map.on("remove", this.removeEventListeners);
-      }
-      get viewportDetails() {
-          if (!this._viewPortDetails.tiles.length) {
-              this.intializeViewportDetails();
-          }
-          return this._viewPortDetails;
-      }
-      intializeViewportDetails() {
-          if (!this._viewPortDetails.tiles.length) {
-              const bounds = this.map.getBounds();
-              const boundsArray = bounds.toArray();
-              const tiles = this.getTilesForBounds(bounds);
-              const key = tiles
-                  .map((t) => tilebelt$1.tileToQuadkey(t))
-                  .sort()
-                  .join(",");
-              this.displayedTiles = key;
-              const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
-              const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
-              this._viewPortDetails = {
-                  tiles,
-                  tolerance,
-              };
-          }
-      }
-      updateDebugLayer(tiles) {
-          const source = this.map.getSource("debug-quantized-vector-request-manager");
-          const fc = {
-              type: "FeatureCollection",
-              features: tiles.map((t) => ({
-                  type: "Feature",
-                  properties: { label: `${t[2]}/${t[0]}/${1}` },
-                  geometry: tilebelt$1.tileToGeoJSON(t),
-              })),
-          };
-          source.setData(fc);
-      }
-      getTilesForBounds(bounds) {
-          const z = this.map.getZoom();
-          const boundsArray = bounds.toArray();
-          const primaryTile = tilebelt$1.bboxToTile([
-              boundsArray[0][0],
-              boundsArray[0][1],
-              boundsArray[1][0],
-              boundsArray[1][1],
-          ]);
-          const zoomLevel = 2 * Math.floor(z / 2);
-          const tilesToRequest = [];
-          if (primaryTile[2] < zoomLevel) {
-              let candidateTiles = tilebelt$1.getChildren(primaryTile);
-              let minZoomOfCandidates = candidateTiles[0][2];
-              while (minZoomOfCandidates < zoomLevel) {
-                  const newCandidateTiles = [];
-                  candidateTiles.forEach((t) => newCandidateTiles.push(...tilebelt$1.getChildren(t)));
-                  candidateTiles = newCandidateTiles;
-                  minZoomOfCandidates = candidateTiles[0][2];
-              }
-              for (let index = 0; index < candidateTiles.length; index++) {
-                  if (this.doesTileOverlapBbox(candidateTiles[index], boundsArray)) {
-                      tilesToRequest.push(candidateTiles[index]);
-                  }
-              }
-          }
-          else {
-              tilesToRequest.push(primaryTile);
-          }
-          return tilesToRequest;
-      }
-      doesTileOverlapBbox(tile, bbox) {
-          const tileBounds = tile.length === 4 ? tile : tilebelt$1.tileToBBOX(tile);
-          if (tileBounds[2] < bbox[0][0])
-              return false;
-          if (tileBounds[0] > bbox[1][0])
-              return false;
-          if (tileBounds[3] < bbox[0][1])
-              return false;
-          if (tileBounds[1] > bbox[1][1])
-              return false;
-          return true;
-      }
-  }
-  const managers = new WeakMap();
-  function getOrCreateQuantizedVectorRequestManager(map) {
-      if (!managers.has(map)) {
-          managers.set(map, new QuantizedVectorRequestManager(map));
-      }
-      return managers.get(map);
-  }
-
   var d2r = Math.PI / 180,
       r2d = 180 / Math.PI;
   function tileToBBOX(tile) {
@@ -1579,7 +1195,7 @@ var MapBoxGLEsriSources = (function (exports) {
       if (x < 0) x = x + z2;
       return [x, y, z];
   }
-  var tilebelt = {
+  var tilebelt$1 = {
       tileToGeoJSON: tileToGeoJSON,
       tileToBBOX: tileToBBOX,
       getChildren: getChildren,
@@ -1594,6 +1210,464 @@ var MapBoxGLEsriSources = (function (exports) {
       bboxToTile: bboxToTile,
       pointToTileFraction: pointToTileFraction
   };
+
+  class ArcGISTiledMapService {
+      constructor(requestManager, options) {
+          this.type = "ArcGISTiledMapService";
+          options.url = options.url.replace(/\/$/, "");
+          this.url = options.url;
+          if (!/rest\/services/.test(options.url) || !/MapServer/.test(options.url)) {
+              throw new Error("Invalid ArcGIS REST Service URL");
+          }
+          this.requestManager = requestManager;
+          this.sourceId = options.sourceId || v4();
+          this.options = options;
+      }
+      getMetadata() {
+          if (this.serviceMetadata && this.layerMetadata) {
+              return Promise.resolve({
+                  serviceMetadata: this.serviceMetadata,
+                  layers: this.layerMetadata,
+              });
+          }
+          else {
+              return this.requestManager
+                  .getMapServiceMetadata(this.options.url, {
+                  token: this.options.token,
+              })
+                  .then(({ serviceMetadata, layers }) => {
+                  this.serviceMetadata = serviceMetadata;
+                  this.layerMetadata = layers;
+                  return { serviceMetadata, layers };
+              });
+          }
+      }
+      async getComputedMetadata() {
+          var _a, _b;
+          try {
+              if (!this._computedMetadata) {
+                  const { serviceMetadata, layers } = await this.getMetadata();
+                  const { bounds, minzoom, maxzoom, tileSize, attribution } = await this.getComputedProperties();
+                  const legendData = await this.requestManager.getLegendMetadata(this.options.url);
+                  const results = /\/([^/]+)\/MapServer/.exec(this.options.url);
+                  let label = results && results.length >= 1 ? results[1] : false;
+                  if (!label) {
+                      if ((_b = (_a = this.layerMetadata) === null || _a === void 0 ? void 0 : _a.layers) === null || _b === void 0 ? void 0 : _b[0]) {
+                          label = this.layerMetadata.layers[0].name;
+                      }
+                  }
+                  this._computedMetadata = {
+                      bounds: bounds || undefined,
+                      minzoom,
+                      maxzoom,
+                      attribution,
+                      tableOfContentsItems: [
+                          {
+                              type: "data",
+                              id: this.sourceId,
+                              label: label || "Layer",
+                              defaultVisibility: true,
+                              metadata: generateMetadataForLayer(this.options.url, this.serviceMetadata, this.layerMetadata.layers[0]),
+                              legend: makeLegend(legendData, legendData.layers[0].layerId),
+                          },
+                      ],
+                      supportsDynamicRendering: {
+                          layerOrder: false,
+                          layerOpacity: false,
+                          layerVisibility: false,
+                      },
+                  };
+              }
+              return this._computedMetadata;
+          }
+          catch (e) {
+              this.error = e.toString();
+              throw e;
+          }
+      }
+      async getThumbnailForCurrentExtent() {
+          if (!this.map) {
+              throw new Error("Map not set");
+          }
+          const map = this.map;
+          const bounds = map.getBounds();
+          const boundsArray = bounds.toArray();
+          const primaryTile = tilebelt$1.bboxToTile([
+              boundsArray[0][0],
+              boundsArray[0][1],
+              boundsArray[1][0],
+              boundsArray[1][1],
+          ]);
+          let [x, y, z] = primaryTile;
+          const url = `${this.options.url}/tile/${z}/${y}/${x}`;
+          const res = await fetch(url);
+          if (res.ok) {
+              return url;
+          }
+          else {
+              const children = tilebelt$1.getChildren(primaryTile);
+              for (const child of children) {
+                  const res = await fetch(url);
+                  if (res.ok) {
+                      return url;
+                  }
+              }
+              throw new Error("Could not find valid thumbnail tile");
+          }
+      }
+      get loading() {
+          var _a, _b;
+          return Boolean(((_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId)) &&
+              ((_b = this.map) === null || _b === void 0 ? void 0 : _b.isSourceLoaded(this.sourceId)) === false);
+      }
+      async getComputedProperties() {
+          var _a, _b, _c;
+          const { serviceMetadata, layers } = await this.getMetadata();
+          const levels = ((_a = serviceMetadata.tileInfo) === null || _a === void 0 ? void 0 : _a.lods.map((l) => l.level)) || [];
+          const attribution = contentOrFalse(layers.layers[0].copyrightText) ||
+              contentOrFalse(serviceMetadata.copyrightText) ||
+              contentOrFalse((_b = serviceMetadata.documentInfo) === null || _b === void 0 ? void 0 : _b.Author) ||
+              undefined;
+          const minzoom = Math.min(...levels);
+          const maxzoom = Math.max(...levels);
+          if (!((_c = serviceMetadata.tileInfo) === null || _c === void 0 ? void 0 : _c.rows)) {
+              throw new Error("Invalid tile info");
+          }
+          return {
+              minzoom,
+              maxzoom,
+              bounds: await extentToLatLngBounds(serviceMetadata.fullExtent),
+              tileSize: serviceMetadata.tileInfo.rows,
+              attribution,
+          };
+      }
+      async addToMap(map) {
+          this.map = map;
+          const sourceData = await this.getGLSource();
+          if (this.map.getSource(this.sourceId)) {
+              replaceSource(this.sourceId, this.map, sourceData);
+          }
+          else {
+              this.map.addSource(this.sourceId, sourceData);
+          }
+          return this.sourceId;
+      }
+      async getGLSource() {
+          const { minzoom, maxzoom, bounds, tileSize, attribution } = await this.getComputedProperties();
+          const sourceData = {
+              type: "raster",
+              tiles: [`${this.options.url}/tile/{z}/{y}/{x}`],
+              tileSize: this.options.supportHighDpiDisplays
+                  ? tileSize / window.devicePixelRatio
+                  : tileSize,
+              minzoom,
+              maxzoom,
+              attribution,
+              ...(bounds ? { bounds } : {}),
+          };
+          return sourceData;
+      }
+      async getGLStyleLayers() {
+          return {
+              layers: [
+                  {
+                      type: "raster",
+                      source: this.sourceId,
+                      id: v4(),
+                      paint: {
+                          "raster-fade-duration": 300,
+                      },
+                  },
+              ],
+          };
+      }
+      removeFromMap(map) {
+          if (map.getSource(this.sourceId)) {
+              const layers = map.getStyle().layers || [];
+              for (const layer of layers) {
+                  if ("source" in layer && layer.source === this.sourceId) {
+                      map.removeLayer(layer.id);
+                  }
+              }
+              map.removeSource(this.sourceId);
+              this.map = undefined;
+          }
+      }
+      destroy() {
+          if (this.map) {
+              this.removeFromMap(this.map);
+          }
+      }
+      updateLayers(layers) { }
+      get ready() {
+          return Boolean(this._computedMetadata);
+      }
+      async prepare() {
+          await this.getComputedMetadata();
+          return;
+      }
+      addEventListeners(map) {
+          this.map = map;
+          this.getThumbnailForCurrentExtent().then((thumbnailUrl) => {
+              console.log(thumbnailUrl);
+          });
+      }
+      removeEventListeners(map) { }
+  }
+
+  function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100, abortController = null, disablePagination = false) {
+      return new Promise((resolve, reject) => {
+          fetchFeatureLayerData(url, outFields, reject, geometryPrecision, abortController, null, disablePagination, undefined, bytesLimit)
+              .then((data) => resolve(data))
+              .catch((e) => reject(e));
+      });
+  }
+  async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
+      const featureCollection = {
+          type: "FeatureCollection",
+          features: [],
+      };
+      const params = new URLSearchParams({
+          inSR: "4326",
+          outSR: "4326",
+          where: "1>0",
+          outFields,
+          returnGeometry: "true",
+          geometryPrecision: geometryPrecision.toString(),
+          returnIdsOnly: "false",
+          f: "geojson",
+      });
+      await fetchData(url, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit);
+      return featureCollection;
+  }
+  async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
+      var _a;
+      bytesReceived = bytesReceived || 0;
+      new TextDecoder("utf-8");
+      params.set("returnIdsOnly", "false");
+      if (featureCollection.features.length > 0) {
+          params.delete("where");
+          params.delete("resultOffset");
+          params.delete("resultRecordCount");
+          params.set("orderByFields", objectIdFieldName);
+          const lastFeature = featureCollection.features[featureCollection.features.length - 1];
+          params.set("where", `${objectIdFieldName}>${lastFeature.id}`);
+      }
+      const response = await fetch(`${baseUrl}/query?${params.toString()}`, {
+          ...(abortController ? { signal: abortController.signal } : {}),
+      });
+      const str = await response.text();
+      bytesReceived += byteLength(str);
+      if (bytesLimit && bytesReceived > bytesLimit) {
+          const e = new Error(`Exceeded bytesLimit. ${bytesReceived} > ${bytesLimit}`);
+          return onError(e);
+      }
+      const fc = JSON.parse(str);
+      if (fc.error) {
+          return onError(new Error(fc.error.message));
+      }
+      else {
+          featureCollection.features.push(...fc.features);
+          if (fc.exceededTransferLimit || ((_a = fc.properties) === null || _a === void 0 ? void 0 : _a.exceededTransferLimit)) {
+              if (!objectIdFieldName) {
+                  params.set("returnIdsOnly", "true");
+                  try {
+                      const r = await fetch(`${baseUrl}/query?${params.toString()}`, {
+                          ...(abortController ? { signal: abortController.signal } : {}),
+                      });
+                      let objectIdParameters = await r.json();
+                      if (objectIdParameters.properties) {
+                          objectIdParameters = objectIdParameters.properties;
+                      }
+                      expectedFeatureCount = objectIdParameters.objectIds.length;
+                      objectIdFieldName = objectIdParameters.objectIdFieldName;
+                  }
+                  catch (e) {
+                      return onError(e);
+                  }
+              }
+              if (onPageReceived) {
+                  onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
+              }
+              await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
+          }
+      }
+      return bytesReceived;
+  }
+  function byteLength(str) {
+      var s = str.length;
+      for (var i = str.length - 1; i >= 0; i--) {
+          var code = str.charCodeAt(i);
+          if (code > 0x7f && code <= 0x7ff)
+              s++;
+          else if (code > 0x7ff && code <= 0xffff)
+              s += 2;
+          if (code >= 0xdc00 && code <= 0xdfff)
+              i--;
+      }
+      return s;
+  }
+
+  const EventEmitter = require("eventemitter3");
+  const tilebelt = require("@mapbox/tilebelt");
+  const debounce = require("lodash.debounce");
+  class QuantizedVectorRequestManager extends EventEmitter {
+      constructor(map) {
+          super();
+          this.removeEventListeners = (map) => {
+              map.off("moveend", this.updateSources);
+              map.off("move", this.debouncedUpdateSources);
+              map.off("remove", this.removeEventListeners);
+              try {
+                  this.removeDebugLayer();
+              }
+              catch (e) {
+              }
+          };
+          this.displayedTiles = "";
+          this._viewPortDetails = {
+              tiles: [],
+              tolerance: 0,
+          };
+          this.updateSources = () => {
+              const bounds = this.map.getBounds();
+              const boundsArray = bounds.toArray();
+              const tiles = this.getTilesForBounds(bounds);
+              const key = tiles
+                  .map((t) => tilebelt.tileToQuadkey(t))
+                  .sort()
+                  .join(",");
+              if (key !== this.displayedTiles) {
+                  this.displayedTiles = key;
+                  const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
+                  const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
+                  this._viewPortDetails = {
+                      tiles,
+                      tolerance,
+                  };
+                  this.emit("update", { tiles });
+              }
+          };
+          this.debouncedUpdateSources = debounce(this.updateSources, 100, {
+              maxWait: 200,
+          });
+          this.map = map;
+          this.addEventListeners(map);
+      }
+      addDebugLayer() {
+          this.map.addSource("debug-quantized-vector-request-manager", {
+              type: "geojson",
+              data: {
+                  type: "FeatureCollection",
+                  features: [],
+              },
+          });
+          this.map.addLayer({
+              id: "debug-quantized-vector-request-manager",
+              type: "line",
+              source: "debug-quantized-vector-request-manager",
+              paint: {
+                  "line-color": "red",
+                  "line-width": 2,
+              },
+          });
+      }
+      removeDebugLayer() {
+          this.map.removeLayer("debug-quantized-vector-request-manager");
+          this.map.removeSource("debug-quantized-vector-request-manager");
+      }
+      addEventListeners(map) {
+          map.on("moveend", this.updateSources);
+          map.on("move", this.debouncedUpdateSources);
+          map.on("remove", this.removeEventListeners);
+      }
+      get viewportDetails() {
+          if (!this._viewPortDetails.tiles.length) {
+              this.intializeViewportDetails();
+          }
+          return this._viewPortDetails;
+      }
+      intializeViewportDetails() {
+          if (!this._viewPortDetails.tiles.length) {
+              const bounds = this.map.getBounds();
+              const boundsArray = bounds.toArray();
+              const tiles = this.getTilesForBounds(bounds);
+              const key = tiles
+                  .map((t) => tilebelt.tileToQuadkey(t))
+                  .sort()
+                  .join(",");
+              this.displayedTiles = key;
+              const mapWidth = Math.abs(boundsArray[1][0] - boundsArray[0][0]);
+              const tolerance = (mapWidth / this.map.getCanvas().width) * 0.4;
+              this._viewPortDetails = {
+                  tiles,
+                  tolerance,
+              };
+          }
+      }
+      updateDebugLayer(tiles) {
+          const source = this.map.getSource("debug-quantized-vector-request-manager");
+          const fc = {
+              type: "FeatureCollection",
+              features: tiles.map((t) => ({
+                  type: "Feature",
+                  properties: { label: `${t[2]}/${t[0]}/${1}` },
+                  geometry: tilebelt.tileToGeoJSON(t),
+              })),
+          };
+          source.setData(fc);
+      }
+      getTilesForBounds(bounds) {
+          const z = this.map.getZoom();
+          const boundsArray = bounds.toArray();
+          const primaryTile = tilebelt.bboxToTile([
+              boundsArray[0][0],
+              boundsArray[0][1],
+              boundsArray[1][0],
+              boundsArray[1][1],
+          ]);
+          const zoomLevel = 2 * Math.floor(z / 2);
+          const tilesToRequest = [];
+          if (primaryTile[2] < zoomLevel) {
+              let candidateTiles = tilebelt.getChildren(primaryTile);
+              let minZoomOfCandidates = candidateTiles[0][2];
+              while (minZoomOfCandidates < zoomLevel) {
+                  const newCandidateTiles = [];
+                  candidateTiles.forEach((t) => newCandidateTiles.push(...tilebelt.getChildren(t)));
+                  candidateTiles = newCandidateTiles;
+                  minZoomOfCandidates = candidateTiles[0][2];
+              }
+              for (let index = 0; index < candidateTiles.length; index++) {
+                  if (this.doesTileOverlapBbox(candidateTiles[index], boundsArray)) {
+                      tilesToRequest.push(candidateTiles[index]);
+                  }
+              }
+          }
+          else {
+              tilesToRequest.push(primaryTile);
+          }
+          return tilesToRequest;
+      }
+      doesTileOverlapBbox(tile, bbox) {
+          const tileBounds = tile.length === 4 ? tile : tilebelt.tileToBBOX(tile);
+          if (tileBounds[2] < bbox[0][0])
+              return false;
+          if (tileBounds[0] > bbox[1][0])
+              return false;
+          if (tileBounds[3] < bbox[0][1])
+              return false;
+          if (tileBounds[1] > bbox[1][1])
+              return false;
+          return true;
+      }
+  }
+  const managers = new WeakMap();
+  function getOrCreateQuantizedVectorRequestManager(map) {
+      if (!managers.has(map)) {
+          managers.set(map, new QuantizedVectorRequestManager(map));
+      }
+      return managers.get(map);
+  }
 
   const tileDecode = require("arcgis-pbf-parser");
   class ArcGISFeatureLayerSource {
@@ -1767,7 +1841,6 @@ var MapBoxGLEsriSources = (function (exports) {
               getOrCreateQuantizedVectorRequestManager(map);
           this._loading = this.featureData ? false : true;
           if (!this.rawFeaturesHaveBeenFetched) {
-              console.log("calling get features", this.options.url);
               this.fetchFeatures();
           }
       }
@@ -1879,7 +1952,7 @@ var MapBoxGLEsriSources = (function (exports) {
               let wasAborted = false;
               await Promise.all(tiles.map((tile) => (async () => {
                   var _a;
-                  const tileBounds = tilebelt.tileToBBOX(tile);
+                  const tileBounds = tilebelt$1.tileToBBOX(tile);
                   const extent = {
                       spatialReference: {
                           latestWkid: 4326,
@@ -1912,7 +1985,7 @@ var MapBoxGLEsriSources = (function (exports) {
                       inSR: "4326",
                       ...this.options.queryParameters,
                   });
-                  return fetchWithTTL(`${`${this.options.url}/query?${params.toString()}`}`, 60 * 10, this.cache, { signal: (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.signal }, `${this.options.url}/query/tiled/${tilebelt.tileToQuadkey(tile)}/${params.get("f")}`)
+                  return fetchWithTTL(`${`${this.options.url}/query?${params.toString()}`}`, 60 * 10, this.cache, { signal: (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.signal }, `${this.options.url}/query/tiled/${tilebelt$1.tileToQuadkey(tile)}/${params.get("f")}`)
                       .then((response) => params.get("f") === "pbf"
                       ? response.arrayBuffer()
                       : response.json())

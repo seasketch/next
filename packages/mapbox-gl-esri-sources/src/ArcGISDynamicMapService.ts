@@ -1,4 +1,12 @@
-import { Map, ImageSource, RasterSource, AnyLayer } from "mapbox-gl";
+import {
+  Map,
+  ImageSource,
+  RasterSource,
+  AnyLayer,
+  AnySourceData,
+  ImageSourceOptions,
+  ImageSourceRaw,
+} from "mapbox-gl";
 import {
   ComputedMetadata,
   CustomGLSource,
@@ -151,7 +159,6 @@ export class ArcGISDynamicMapService
       const { serviceMetadata, layers } = await this.getMetadata();
       const { bounds, minzoom, maxzoom, attribution } =
         await this.getComputedProperties();
-
       const results = /\/.+\/MapServer/.exec(this.options.url);
       let label = results ? results[0] : false;
       if (!label) {
@@ -281,36 +288,58 @@ export class ArcGISDynamicMapService
     }
   };
 
-  async addToMap(map: Map) {
-    const { attribution, bounds } = await this.getComputedProperties();
-    this.map = map;
-    if (!this.options?.useTiles) {
-      this.map.on("moveend", this.updateSource);
-      this.map.on("data", this.onMapData);
-      this.map.on("error", this.onMapError);
-    }
+  async getGLSource(): Promise<AnySourceData> {
+    let { attribution, bounds } = await this.getComputedProperties();
+    bounds = bounds || [-90, -180, 90, 180];
     if (this.options.useTiles) {
-      this.map.addSource(this.sourceId, {
+      return {
         type: "raster",
         tiles: [this.getUrl()],
         tileSize: this.options.tileSize || 256,
         bounds: bounds as [number, number, number, number] | undefined,
         attribution,
-      });
+      };
     } else {
-      const bounds = this.map.getBounds();
-      this.map.addSource(this.sourceId, {
+      // return a blank image until map event listeners are setup
+      return {
         type: "image",
-        url: this.getUrl(),
+        url: blankDataUri,
         coordinates: [
-          [bounds.getWest(), bounds.getNorth()],
-          [bounds.getEast(), bounds.getNorth()],
-          [bounds.getEast(), bounds.getSouth()],
-          [bounds.getWest(), bounds.getSouth()],
+          [bounds[0], bounds[1]],
+          [bounds[2], bounds[1]],
+          [bounds[2], bounds[3]],
+          [bounds[0], bounds[3]],
         ],
-      });
+      } as ImageSourceRaw;
+    }
+  }
+
+  async addToMap(map: Map) {
+    this.map = map;
+    this.removeEventListeners(map);
+    const sourceData = await this.getGLSource();
+    this.map.addSource(this.sourceId, sourceData);
+    this.addEventListeners(map);
+    if (!this.options.useTiles) {
+      // Source is added as a blank image at first. Initialize it with
+      // proper bounds and image
+      this.updateSource();
     }
     return this.sourceId;
+  }
+
+  addEventListeners(map: Map) {
+    if (!this.options?.useTiles) {
+      map.on("moveend", this.updateSource);
+      map.on("data", this.onMapData);
+      map.on("error", this.onMapError);
+    }
+  }
+
+  removeEventListeners(map: Map) {
+    map.off("moveend", this.updateSource);
+    map.off("data", this.onMapData);
+    map.off("error", this.onMapError);
   }
 
   removeFromMap(map: Map) {

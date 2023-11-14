@@ -243,7 +243,7 @@ export enum ArcgisFeatureLayerFetchStrategy {
 export type ArcgisImportItemInput = {
   id?: Maybe<Scalars['Int']>;
   isFolder?: Maybe<Scalars['Boolean']>;
-  parentId?: Maybe<Scalars['Int']>;
+  parentId?: Maybe<Scalars['String']>;
   sourceId?: Maybe<Scalars['Int']>;
   stableId?: Maybe<Scalars['String']>;
   sublayerId?: Maybe<Scalars['Int']>;
@@ -14910,6 +14910,7 @@ export type CreateBasemapMutationVariables = Exact<{
   type: BasemapType;
   url: Scalars['String'];
   surveysOnly?: Maybe<Scalars['Boolean']>;
+  isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -21478,9 +21479,9 @@ export type GetBasemapsQueryHookResult = ReturnType<typeof useGetBasemapsQuery>;
 export type GetBasemapsLazyQueryHookResult = ReturnType<typeof useGetBasemapsLazyQuery>;
 export type GetBasemapsQueryResult = Apollo.QueryResult<GetBasemapsQuery, GetBasemapsQueryVariables>;
 export const CreateBasemapDocument = gql`
-    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
+    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean, $isArcgisTiledMapservice: Boolean) {
   createBasemap(
-    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
+    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly, isArcgisTiledMapservice: $isArcgisTiledMapservice}}
   ) {
     basemap {
       ...BasemapDetails
@@ -21510,6 +21511,7 @@ export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutat
  *      type: // value for 'type'
  *      url: // value for 'url'
  *      surveysOnly: // value for 'surveysOnly'
+ *      isArcgisTiledMapservice: // value for 'isArcgisTiledMapservice'
  *   },
  * });
  */

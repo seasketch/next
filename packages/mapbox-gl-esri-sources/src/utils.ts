@@ -73,7 +73,12 @@ export async function extentToLatLngBounds(
     const wkid = normalizeSpatialReference(extent.spatialReference);
     let bounds: [number, number, number, number];
     if (wkid === 4326) {
-      bounds = [extent.xmin, extent.ymin, extent.xmax, extent.ymax];
+      bounds = [
+        Math.max(-180, extent.xmin),
+        Math.max(-90, extent.ymin),
+        Math.min(180, extent.xmax),
+        Math.min(90, extent.ymax),
+      ];
     } else if (wkid === 3857 || wkid === 102100) {
       bounds = [
         ...metersToDegrees(extent.xmin, extent.ymin),
@@ -105,12 +110,25 @@ export async function extentToLatLngBounds(
       ) {
         return;
       } else {
+        if (bounds) {
+          bounds = enforceBoundsMinMax(bounds);
+        }
         return bounds;
       }
     } else {
       return;
     }
   }
+}
+
+function enforceBoundsMinMax(bounds: [number, number, number, number]) {
+  const [xmin, ymin, xmax, ymax] = bounds;
+  return [
+    Math.max(-180, xmin),
+    Math.max(-90, ymin),
+    Math.min(180, xmax),
+    Math.min(90, ymax),
+  ] as [number, number, number, number];
 }
 
 export function normalizeSpatialReference(sr: SpatialReference) {

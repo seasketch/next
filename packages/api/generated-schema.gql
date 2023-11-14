@@ -213,7 +213,7 @@ enum ArcgisFeatureLayerFetchStrategy {
 input ArcgisImportItemInput {
   id: Int
   isFolder: Boolean
-  parentId: Int
+  parentId: String
   sourceId: Int
   stableId: String
   sublayerId: Int
