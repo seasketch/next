@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Link,
   Route,
@@ -36,11 +36,7 @@ export default function DataSettings() {
     },
   });
 
-  const [legendState, setLegendState] = useState<{ items: LegendItem[] }>({
-    items: [],
-  });
-
-  useEffect(() => {
+  const legendState = useMemo<{ items: LegendItem[] }>(() => {
     if (mapContext.legends) {
       // TODO: this does't really handle WMS or dynamic map services
       const visibleLegends: LegendItem[] = [];
@@ -52,9 +48,12 @@ export default function DataSettings() {
           }
         }
       }
-      setLegendState({
-        items: visibleLegends,
+      visibleLegends.sort((a, b) => {
+        return (a.zOrder || 0) - (b.zOrder || 0);
       });
+      return { items: visibleLegends };
+    } else {
+      return { items: [] };
     }
   }, [mapContext.legends, mapContext.layerStatesByTocStaticId]);
 

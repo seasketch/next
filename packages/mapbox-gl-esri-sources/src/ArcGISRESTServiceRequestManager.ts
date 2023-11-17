@@ -137,9 +137,6 @@ export class ArcGISRESTServiceRequestManager {
       return this.inFlightRequests[url].then((json) => json as T);
     }
     const cache = await this.cache;
-    if (!cache) {
-      throw new Error("Cache not initialized");
-    }
     this.inFlightRequests[url] = fetchWithTTL(url, 60 * 300, cache, {
       signal,
     }).then((r) => r.json());
@@ -201,7 +198,7 @@ function cachedResponseIsExpired(response: Response) {
 export async function fetchWithTTL(
   url: string,
   ttl: number,
-  cache: Cache,
+  cache?: Cache,
   options?: RequestInit,
   cacheKey?: string
 ): Promise<any> {
@@ -210,12 +207,12 @@ export async function fetchWithTTL(
     if (options?.signal?.aborted) {
       Promise.reject("aborted");
     }
-    let cachedResponse = await cache.match(
+    let cachedResponse = await cache?.match(
       cacheKey ? new URL(cacheKey) : request
     );
 
     if (cachedResponse && cachedResponseIsExpired(cachedResponse)) {
-      cache.delete(cacheKey ? new URL(cacheKey) : request);
+      cache?.delete(cacheKey ? new URL(cacheKey) : request);
       cachedResponse = undefined;
     }
     if (cachedResponse && cachedResponse.ok) {
@@ -235,7 +232,7 @@ export async function fetchWithTTL(
           statusText: response.statusText,
         });
         if (clone.ok && clone.status === 200) {
-          cache.put(cacheKey || url, clone).catch((e) => {
+          cache?.put(cacheKey || url, clone).catch((e) => {
             // do nothing. can happen if request is aborted
           });
         }

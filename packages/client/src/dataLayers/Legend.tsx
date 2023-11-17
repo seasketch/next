@@ -31,6 +31,7 @@ interface SingleImageLegendItem {
   url: string;
   supportsDynamicRendering: DynamicRenderingSupportOptions;
   id: string;
+  zOrder?: number;
 }
 
 interface CustomGLSourceSymbolLegend {
@@ -39,6 +40,7 @@ interface CustomGLSourceSymbolLegend {
   supportsDynamicRendering: DynamicRenderingSupportOptions;
   symbols: LegendSymbolItem[];
   id: string;
+  zOrder?: number;
 }
 
 interface GLStyleLegendItem {
@@ -47,6 +49,7 @@ interface GLStyleLegendItem {
   /** Table of contents item id */
   id: string;
   legend?: LegendForGLLayers;
+  zOrder?: number;
 }
 
 export type LegendItem =

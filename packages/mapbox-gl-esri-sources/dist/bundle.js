@@ -975,9 +975,6 @@ var MapBoxGLEsriSources = (function (exports) {
               return this.inFlightRequests[url].then((json) => json);
           }
           const cache = await this.cache;
-          if (!cache) {
-              throw new Error("Cache not initialized");
-          }
           this.inFlightRequests[url] = fetchWithTTL(url, 60 * 300, cache, {
               signal,
           }).then((r) => r.json());
@@ -1039,9 +1036,9 @@ var MapBoxGLEsriSources = (function (exports) {
           if ((_b = options === null || options === void 0 ? void 0 : options.signal) === null || _b === void 0 ? void 0 : _b.aborted) {
               Promise.reject("aborted");
           }
-          let cachedResponse = await cache.match(cacheKey ? new URL(cacheKey) : request);
+          let cachedResponse = await (cache === null || cache === void 0 ? void 0 : cache.match(cacheKey ? new URL(cacheKey) : request));
           if (cachedResponse && cachedResponseIsExpired(cachedResponse)) {
-              cache.delete(cacheKey ? new URL(cacheKey) : request);
+              cache === null || cache === void 0 ? void 0 : cache.delete(cacheKey ? new URL(cacheKey) : request);
               cachedResponse = undefined;
           }
           if (cachedResponse && cachedResponse.ok) {
@@ -1059,7 +1056,7 @@ var MapBoxGLEsriSources = (function (exports) {
                       statusText: response.statusText,
                   });
                   if (clone.ok && clone.status === 200) {
-                      cache.put(cacheKey || url, clone).catch((e) => {
+                      cache === null || cache === void 0 ? void 0 : cache.put(cacheKey || url, clone).catch((e) => {
                       });
                   }
               }
