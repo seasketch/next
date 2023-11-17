@@ -281,8 +281,11 @@ export class ArcGISDynamicMapService
   private onMapError = (event: mapboxgl.ErrorEvent & mapboxgl.EventData) => {
     if (
       event.sourceId === this.sourceId &&
-      event.dataType === "source" &&
-      event.sourceDataType === "content"
+      ((event.dataType === "source" && event.sourceDataType === "content") ||
+        (event.type === "error" &&
+          event.error &&
+          "status" in event.error &&
+          event.error.status !== 404))
     ) {
       this._loading = false;
     }

@@ -1040,6 +1040,9 @@ class MapContextManager extends EventEmitter {
     if (basemap?.type === BasemapType.RasterUrlTemplate) {
       baseStyle = {
         version: 8,
+        // TODO: choose a ip un-encumbered alternative for these
+        glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+        sprite: "mapbox://sprites/mapbox/streets-v11",
         sources: {
           raster: {
             type: "raster",
@@ -1280,7 +1283,6 @@ class MapContextManager extends EventEmitter {
                             };
                             break;
                           case DataSourceTypes.ArcgisDynamicMapserver:
-                            console.warn("creating a new dynamic source");
                             this.customSources[source.id] = {
                               listenersAdded: false,
                               visible: true,
@@ -1718,6 +1720,8 @@ class MapContextManager extends EventEmitter {
     }
   }
 
+  _updateSourceStatesLoopDetector = 0;
+
   private updateSourceStates() {
     let anyChanges = false;
     let anyLoading = false;
@@ -1741,6 +1745,13 @@ class MapContextManager extends EventEmitter {
     }
     for (const sourceId in sources) {
       let loading = !this.map!.isSourceLoaded(sourceId);
+      if (sourceId in this.customSources) {
+        const customSource =
+          this.customSources[parseInt(sourceId)].customSource;
+        if (customSource) {
+          loading = customSource.loading;
+        }
+      }
       if (loading) {
         anyLoading = true;
       }
@@ -1779,9 +1790,15 @@ class MapContextManager extends EventEmitter {
     }
     // This is needed for geojson sources
     if (anyLoading) {
-      setTimeout(() => {
-        this.debouncedUpdateSourceStates();
-      }, 100);
+      this._updateSourceStatesLoopDetector++;
+      setTimeout(
+        () => {
+          this.debouncedUpdateSourceStates();
+        },
+        this._updateSourceStatesLoopDetector > 100 ? 1000 : 100
+      );
+    } else {
+      this._updateSourceStatesLoopDetector = 0;
     }
   }
 

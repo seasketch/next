@@ -14872,7 +14872,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -14945,7 +14945,7 @@ export type UploadBasemapMutation = (
 
 export type BasemapAdminDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
+  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'isArcgisTiledMapservice'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -19543,6 +19543,7 @@ export const BasemapDetailsFragmentDoc = gql`
   url
   surveysOnly
   translatedProps
+  isArcgisTiledMapservice
 }
     `;
 export const BasemapAdminDetailsFragmentDoc = gql`
@@ -19584,6 +19585,7 @@ export const BasemapAdminDetailsFragmentDoc = gql`
   type
   url
   surveysOnly
+  isArcgisTiledMapservice
 }
     ${BasemapDetailsFragmentDoc}`;
 export const DataUploadDetailsFragmentDoc = gql`

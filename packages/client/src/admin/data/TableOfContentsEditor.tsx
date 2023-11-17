@@ -143,8 +143,13 @@ export default function TableOfContentsEditor() {
       const item = items.find((item) => item.stableId === treeItem.id);
       if (item) {
         const sidebar = currentSidebarState();
-        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] = [
-          {
+        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] =
+          [];
+        if (
+          !item.isFolder ||
+          items.find((i) => i.parentStableId === item.stableId && i.bounds)
+        ) {
+          contextMenuOptions.push({
             id: "zoom-to",
             label: t("Zoom to bounds"),
             onClick: async () => {
@@ -193,22 +198,22 @@ export default function TableOfContentsEditor() {
                 });
               }
             },
-          },
-          {
-            id: "edit",
-            label: t("Edit"),
-            onClick: () => {
-              if (item?.isFolder) {
-                setFolderId(item.id);
-              } else {
-                if (item.dataLayerId) {
-                  manager?.showTocItems([item.stableId]);
-                }
-                setOpenLayerItemId(item.id);
+          });
+        }
+        contextMenuOptions.push({
+          id: "edit",
+          label: t("Edit"),
+          onClick: () => {
+            if (item?.isFolder) {
+              setFolderId(item.id);
+            } else {
+              if (item.dataLayerId) {
+                manager?.showTocItems([item.stableId]);
               }
-            },
+              setOpenLayerItemId(item.id);
+            }
           },
-        ];
+        });
         if (!item.isFolder || item.hideChildren) {
           contextMenuOptions.push({
             id: "metadata",

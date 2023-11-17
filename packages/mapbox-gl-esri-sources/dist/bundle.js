@@ -335,8 +335,11 @@ var MapBoxGLEsriSources = (function (exports) {
           };
           this.onMapError = (event) => {
               if (event.sourceId === this.sourceId &&
-                  event.dataType === "source" &&
-                  event.sourceDataType === "content") {
+                  ((event.dataType === "source" && event.sourceDataType === "content") ||
+                      (event.type === "error" &&
+                          event.error &&
+                          "status" in event.error &&
+                          event.error.status !== 404))) {
                   this._loading = false;
               }
           };
@@ -957,6 +960,16 @@ var MapBoxGLEsriSources = (function (exports) {
               .open((options === null || options === void 0 ? void 0 : options.cacheKey) || "seasketch-arcgis-rest-services")
               .then((cache) => {
               this.cache = cache;
+              cache.keys().then(async (keys) => {
+                  for (const key of keys) {
+                      const res = await cache.match(key);
+                      if (res) {
+                          if (cachedResponseIsExpired(res)) {
+                              cache.delete(key);
+                          }
+                      }
+                  }
+              });
           });
       }
       async getMapServiceMetadata(url, options) {

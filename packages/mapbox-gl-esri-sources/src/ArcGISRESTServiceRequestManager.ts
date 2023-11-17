@@ -22,12 +22,22 @@ export class ArcGISRESTServiceRequestManager {
   private cache?: Cache;
 
   constructor(options?: { cacheKey?: string }) {
-    // TODO: evict excess items from cache on startup
     // TODO: respect cache headers if they exist
     const cache = caches
       .open(options?.cacheKey || "seasketch-arcgis-rest-services")
       .then((cache) => {
         this.cache = cache;
+        // evict expired items from cache on startup
+        cache.keys().then(async (keys) => {
+          for (const key of keys) {
+            const res = await cache.match(key);
+            if (res) {
+              if (cachedResponseIsExpired(res)) {
+                cache.delete(key);
+              }
+            }
+          }
+        });
       });
   }
 

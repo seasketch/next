@@ -36,6 +36,7 @@ fragment BasemapDetails on Basemap {
   url
   surveysOnly
   translatedProps
+  isArcgisTiledMapservice
 }
 
 query GetBasemaps($slug: String!) {
@@ -138,6 +139,7 @@ fragment BasemapAdminDetails on Basemap {
   type
   url
   surveysOnly
+  isArcgisTiledMapservice
 }
 
 query GetBasemap($id: Int!) {
