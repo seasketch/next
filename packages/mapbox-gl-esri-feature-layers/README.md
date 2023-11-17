@@ -1,5 +1,0 @@
-# `mapbox-gl-esri-feature-layers`
-
-Load esri feature layers in mapbox-gl. This is a pared down version of [@seasketch/mapbox-gl-esri-sources](https://github.com/seasketch/mapbox-gl-esri-sources) and is intended to be a replacement. The older version included classes like ArcGISVectorSource & ArcGISDynamicMapService which could be used to load data and keep the map up to date. This turned out not to be useful in SeaSketch Next and I don't want to publish something we're not using since there won't be much incentive to maintain it.
-
-When it comes time to release this as open source, the library will have two main functions. #1 is a function to fetch feature data from the service as GeoJSON. #2 is a function which will extract style data from the service and translate it into a mapbox-gl style. It may be useful to include examples of how to load dynamic map services but [no library is really needed to do that](https://github.com/seasketch/next/blob/917bf4e2576aa07b91e6e8b1c9dc309058ebbb2c/packages/client/src/dataLayers/sourceTypes/ArcGISDynamicMapServiceSource.ts).
