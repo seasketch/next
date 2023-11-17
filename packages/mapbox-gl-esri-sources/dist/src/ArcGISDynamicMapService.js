@@ -3,7 +3,6 @@ import { contentOrFalse, extentToLatLngBounds, generateMetadataForLayer, makeLeg
 /** @hidden */
 export const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 export class ArcGISDynamicMapService {
-    // TODO: fetch metadata and calculate minzoom, maxzoom, and bounds
     /**
      * @param {string} sourceId ID to be used when adding refering to this source from layers
      * @param {string} baseUrl Location of the service. Should end in /MapServer
@@ -45,15 +44,46 @@ export class ArcGISDynamicMapService {
                 }
                 else if (source.type === "image") {
                     const bounds = this.map.getBounds();
-                    source.updateImage({
-                        url: this.getUrl(),
-                        coordinates: [
-                            [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                            [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                        ],
-                    });
+                    const coordinates = [
+                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                    ];
+                    const url = this.getUrl();
+                    if (
+                    // @ts-ignore
+                    source.url === url) {
+                        return;
+                    }
+                    // @ts-ignore Using a private member here
+                    if (source.image) {
+                        source.updateImage({
+                            url,
+                            coordinates,
+                        });
+                    }
+                    else {
+                        let tries = 0;
+                        const updater = () => {
+                            var _a;
+                            const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
+                            if (source && this.getUrl() === url) {
+                                // @ts-ignore
+                                if (source.image && source.type === "image") {
+                                    source.updateImage({
+                                        url,
+                                        coordinates,
+                                    });
+                                }
+                                else if (tries < 10) {
+                                    tries++;
+                                    setTimeout(updater, 50);
+                                }
+                            }
+                        };
+                        setTimeout(updater, 50);
+                    }
                 }
                 else {
                     // do nothing, source isn't added
@@ -232,41 +262,66 @@ export class ArcGISDynamicMapService {
             };
         }
         else {
+            let coordinates = [
+                [bounds[0], bounds[1]],
+                [bounds[2], bounds[1]],
+                [bounds[2], bounds[3]],
+                [bounds[0], bounds[3]],
+            ];
+            if (this.map) {
+                const bounds = this.map.getBounds();
+                coordinates = [
+                    [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+                    [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+                    [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
+                    [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+                ];
+            }
             // return a blank image until map event listeners are setup
             return {
                 type: "image",
-                url: blankDataUri,
-                coordinates: [
-                    [bounds[0], bounds[1]],
-                    [bounds[2], bounds[1]],
-                    [bounds[2], bounds[3]],
-                    [bounds[0], bounds[3]],
-                ],
+                url: this.getUrl(),
+                coordinates,
             };
         }
     }
     async addToMap(map) {
-        this.map = map;
-        this.removeEventListeners(map);
-        const sourceData = await this.getGLSource();
-        this.map.addSource(this.sourceId, sourceData);
-        this.addEventListeners(map);
-        if (!this.options.useTiles) {
-            // Source is added as a blank image at first. Initialize it with
-            // proper bounds and image
-            this.updateSource();
+        if (!map) {
+            throw new Error("Map not provided to addToMap");
         }
+        const sourceData = await this.getGLSource();
+        map.addSource(this.sourceId, sourceData);
+        this.addEventListeners(map);
         return this.sourceId;
     }
     addEventListeners(map) {
         var _a;
+        if (!map) {
+            throw new Error("Map not provided to addEventListeners");
+        }
         if (!((_a = this.options) === null || _a === void 0 ? void 0 : _a.useTiles)) {
-            map.on("moveend", this.updateSource);
-            map.on("data", this.onMapData);
-            map.on("error", this.onMapError);
+            if (!this.map || (this.map && this.map !== map)) {
+                if (this.map) {
+                    this.removeEventListeners(this.map);
+                }
+                this.map = map;
+                map.on("moveend", this.updateSource);
+                map.on("data", this.onMapData);
+                map.on("error", this.onMapError);
+                // Source is added as a blank image at first. Initialize it with
+                // proper bounds and image
+                this.updateSource();
+            }
         }
     }
     removeEventListeners(map) {
+        if (!this.map) {
+            throw new Error("Map not set");
+        }
+        else if (this.map !== map) {
+            throw new Error("Map does not match");
+        }
+        delete this.map;
         map.off("moveend", this.updateSource);
         map.off("data", this.onMapData);
         map.off("error", this.onMapError);
@@ -279,9 +334,7 @@ export class ArcGISDynamicMapService {
                     map.removeLayer(layer.id);
                 }
             }
-            map.off("moveend", this.updateSource);
-            map.off("data", this.onMapData);
-            map.off("error", this.onMapError);
+            this.removeEventListeners(map);
             map.removeSource(this.sourceId);
             this.map = undefined;
         }
@@ -297,12 +350,12 @@ export class ArcGISDynamicMapService {
     }
     getUrl() {
         if (!this.map) {
-            throw new Error("Map not set");
+            return blankDataUri;
         }
+        const bounds = this.map.getBounds();
         let url = new URL(this.options.url + "/export");
         url.searchParams.set("f", "image");
         url.searchParams.set("transparent", "true");
-        const bounds = this.map.getBounds();
         // create bbox in web mercator
         let bbox = [
             lon2meters(bounds.getWest()),
