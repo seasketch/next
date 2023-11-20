@@ -1,20 +1,22 @@
-import { createCanvas, rgba, ptToPx } from "./utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("./utils");
 /** @hidden */
-export default function (symbol, pixelRatio) {
+function default_1(symbol, pixelRatio) {
     var _a, _b;
-    const size = ptToPx(symbol.size || 13);
+    const size = (0, utils_1.ptToPx)(symbol.size || 13);
     const scale = 2 ** (pixelRatio - 1);
     const padding = 1;
     const width = (size + 1 * 2 + (((_a = symbol.outline) === null || _a === void 0 ? void 0 : _a.width) || 0) * 2) * scale;
     const height = width;
-    let canvas = createCanvas(width, height);
+    let canvas = (0, utils_1.createCanvas)(width, height);
     var ctx = canvas.getContext("2d");
     ctx.lineWidth =
-        ptToPx(!!symbol.outline ? symbol.outline.width || 1 : 1) * scale;
+        (0, utils_1.ptToPx)(!!symbol.outline ? symbol.outline.width || 1 : 1) * scale;
     ctx.strokeStyle = !!symbol.outline
-        ? rgba((_b = symbol.outline) === null || _b === void 0 ? void 0 : _b.color)
-        : rgba(symbol.color);
-    ctx.fillStyle = rgba(symbol.color);
+        ? (0, utils_1.rgba)((_b = symbol.outline) === null || _b === void 0 ? void 0 : _b.color)
+        : (0, utils_1.rgba)(symbol.color);
+    ctx.fillStyle = (0, utils_1.rgba)(symbol.color);
     switch (symbol.style) {
         case "esriSMSCircle":
             // canvas.style = "image-rendering: pixelated;";
@@ -32,7 +34,7 @@ export default function (symbol, pixelRatio) {
         case "esriSMSCross":
             var w = size * scale;
             ctx.lineWidth = Math.round(w / 4);
-            ctx.strokeStyle = rgba(symbol.color);
+            ctx.strokeStyle = (0, utils_1.rgba)(symbol.color);
             ctx.moveTo(width / 2, (height - w) / 2);
             ctx.lineTo(width / 2, height - (height - w) / 2);
             ctx.moveTo((width - w) / 2, height / 2);
@@ -94,3 +96,4 @@ export default function (symbol, pixelRatio) {
     }
     return { width, height, data: canvas.toDataURL() };
 }
+exports.default = default_1;

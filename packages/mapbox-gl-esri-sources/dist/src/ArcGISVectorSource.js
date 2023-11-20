@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.fetchFeatureLayerData = exports.ArcGISVectorSource = void 0;
 /**
  * Add ArcGIS Feature Layers to MapBox GL JS maps as a geojson source. These
  * data sources can be styled using output from
@@ -23,7 +26,7 @@
  * ```
  * @class ArcGISVectorSource
  */
-export class ArcGISVectorSource {
+class ArcGISVectorSource {
     /**
      * Creates an instance of ArcGISVectorSource.
      * @param {Map} map MapBox GL JS map instance where source will be added
@@ -96,7 +99,8 @@ export class ArcGISVectorSource {
         this.map.removeSource(this._id);
     }
 }
-export async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
+exports.ArcGISVectorSource = ArcGISVectorSource;
+async function fetchFeatureLayerData(url, outFields, onError, geometryPrecision = 6, abortController = null, onPageReceived = null, disablePagination = false, pageSize = 1000, bytesLimit) {
     const featureCollection = {
         type: "FeatureCollection",
         features: [],
@@ -114,6 +118,7 @@ export async function fetchFeatureLayerData(url, outFields, onError, geometryPre
     await fetchData(url, params, featureCollection, onError, abortController || new AbortController(), onPageReceived, disablePagination, pageSize, bytesLimit);
     return featureCollection;
 }
+exports.fetchFeatureLayerData = fetchFeatureLayerData;
 async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
     bytesReceived = bytesReceived || 0;
     const decoder = new TextDecoder("utf-8");

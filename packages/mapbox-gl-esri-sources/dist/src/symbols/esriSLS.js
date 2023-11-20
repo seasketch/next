@@ -1,17 +1,19 @@
-import { colorAndOpacity, ptToPx } from "./utils";
-import linePatterns from "./linePatterns";
-import { generateId } from "./utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("./utils");
+const linePatterns_1 = require("./linePatterns");
+const utils_2 = require("./utils");
 /** @hidden */
-export default (symbol, sourceId) => {
-    const { color, opacity } = colorAndOpacity(symbol.color);
-    let strokeWidth = ptToPx(symbol.width || 1);
+exports.default = (symbol, sourceId) => {
+    const { color, opacity } = (0, utils_1.colorAndOpacity)(symbol.color);
+    let strokeWidth = (0, utils_1.ptToPx)(symbol.width || 1);
     // No idea why... but this matches map service image output
     if (strokeWidth === -1) {
         strokeWidth = 1;
     }
     const style = symbol.style || "esriSLSSolid";
     const layer = {
-        id: generateId(),
+        id: (0, utils_2.generateId)(),
         type: "line",
         paint: {
             "line-color": color,
@@ -22,7 +24,7 @@ export default (symbol, sourceId) => {
         source: sourceId,
     };
     if (style !== "esriSLSSolid") {
-        layer.paint["line-dasharray"] = linePatterns[style](strokeWidth);
+        layer.paint["line-dasharray"] = linePatterns_1.default[style](strokeWidth);
     }
     return [layer];
 };

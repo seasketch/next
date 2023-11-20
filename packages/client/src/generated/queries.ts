@@ -11983,6 +11983,12 @@ export type TableOfContentsItem = Node & {
   acl?: Maybe<Acl>;
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /**
+   * Metadata will be returned as directly stored in the SeaSketch
+   * database or computed by fetching from a 3rd party service,
+   * depending on the data source type.
+   */
+  computedMetadata?: Maybe<Scalars['JSON']>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
@@ -15910,7 +15916,7 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'metadata'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata'>
   )> }
 );
 
@@ -21662,7 +21668,7 @@ export const GetMetadataDocument = /*#__PURE__*/ gql`
     query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
-    metadata
+    computedMetadata
   }
 }
     `;

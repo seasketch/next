@@ -13164,6 +13164,13 @@ type TableOfContentsItem implements Node {
   bounds: [BigFloat]
 
   """
+  Metadata will be returned as directly stored in the SeaSketch
+  database or computed by fetching from a 3rd party service,
+  depending on the data source type.
+  """
+  computedMetadata: JSON
+
+  """
   Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
   """
   dataLayer: DataLayer

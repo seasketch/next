@@ -489,7 +489,7 @@ mutation UpdateEnableHighDPIRequests(
 query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
-    metadata
+    computedMetadata
   }
 }
 

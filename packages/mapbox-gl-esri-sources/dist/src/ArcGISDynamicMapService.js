@@ -1,8 +1,11 @@
-import { v4 as uuid } from "uuid";
-import { contentOrFalse, extentToLatLngBounds, generateMetadataForLayer, makeLegend, } from "./utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ArcGISDynamicMapService = exports.blankDataUri = void 0;
+const uuid_1 = require("uuid");
+const utils_1 = require("./utils");
 /** @hidden */
-export const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
-export class ArcGISDynamicMapService {
+exports.blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+class ArcGISDynamicMapService {
     /**
      * @param {string} sourceId ID to be used when adding refering to this source from layers
      * @param {string} baseUrl Location of the service. Should end in /MapServer
@@ -106,7 +109,7 @@ export class ArcGISDynamicMapService {
         this.options = options;
         this.url = options.url;
         this.requestManager = requestManager;
-        this.sourceId = (options === null || options === void 0 ? void 0 : options.sourceId) || uuid();
+        this.sourceId = (options === null || options === void 0 ? void 0 : options.sourceId) || (0, uuid_1.v4)();
         // remove trailing slash if present
         options.url = options.url.replace(/\/$/, "");
         if (!/rest\/services/.test(options.url) || !/MapServer/.test(options.url)) {
@@ -213,11 +216,11 @@ export class ArcGISDynamicMapService {
                             defaultVisibility: hiddenIds.has(lyr.id)
                                 ? false
                                 : lyr.defaultVisibility,
-                            metadata: generateMetadataForLayer(this.options.url + "/" + lyr.id, this.serviceMetadata, lyr),
+                            metadata: (0, utils_1.generateMetadataForLayer)(this.options.url + "/" + lyr.id, this.serviceMetadata, lyr),
                             parentId: lyr.parentLayer
                                 ? lyr.parentLayer.id.toString()
                                 : undefined,
-                            legend: makeLegend(legendData, lyr.id),
+                            legend: (0, utils_1.makeLegend)(legendData, lyr.id),
                         };
                     }
                 }),
@@ -239,16 +242,16 @@ export class ArcGISDynamicMapService {
         var _a, _b;
         const { serviceMetadata, layers } = await this.getMetadata();
         const levels = ((_a = serviceMetadata.tileInfo) === null || _a === void 0 ? void 0 : _a.lods.map((l) => l.level)) || [];
-        const attribution = contentOrFalse(layers.layers[0].copyrightText) ||
-            contentOrFalse(serviceMetadata.copyrightText) ||
-            contentOrFalse((_b = serviceMetadata.documentInfo) === null || _b === void 0 ? void 0 : _b.Author) ||
+        const attribution = (0, utils_1.contentOrFalse)(layers.layers[0].copyrightText) ||
+            (0, utils_1.contentOrFalse)(serviceMetadata.copyrightText) ||
+            (0, utils_1.contentOrFalse)((_b = serviceMetadata.documentInfo) === null || _b === void 0 ? void 0 : _b.Author) ||
             undefined;
         const minzoom = Math.min(...levels);
         const maxzoom = Math.max(...levels);
         return {
             minzoom,
             maxzoom,
-            bounds: await extentToLatLngBounds(serviceMetadata.fullExtent),
+            bounds: await (0, utils_1.extentToLatLngBounds)(serviceMetadata.fullExtent),
             attribution,
         };
     }
@@ -353,7 +356,7 @@ export class ArcGISDynamicMapService {
     }
     getUrl() {
         if (!this.map) {
-            return blankDataUri;
+            return exports.blankDataUri;
         }
         const bounds = this.map.getBounds();
         let url = new URL(this.options.url + "/export");
@@ -423,7 +426,7 @@ export class ArcGISDynamicMapService {
         }
         if (Array.isArray(this.layers)) {
             if (this.layers.length === 0) {
-                return blankDataUri;
+                return exports.blankDataUri;
             }
             else {
                 url.searchParams.set("layers", `show:${this.layers.map((lyr) => lyr.id).join(",")}`);
@@ -552,7 +555,7 @@ export class ArcGISDynamicMapService {
         return {
             layers: [
                 {
-                    id: uuid(),
+                    id: (0, uuid_1.v4)(),
                     type: "raster",
                     source: this.sourceId,
                     paint: {
@@ -570,6 +573,7 @@ export class ArcGISDynamicMapService {
         return;
     }
 }
+exports.ArcGISDynamicMapService = ArcGISDynamicMapService;
 /** @hidden */
 function lat2meters(lat) {
     // thanks! https://gist.github.com/onderaltintas/6649521

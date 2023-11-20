@@ -1,7 +1,9 @@
-import { symbolToLayers } from "./symbols/index";
-import { ImageList } from "./ImageList";
-import esriTS from "./symbols/esriTS";
-import { generateId } from "./symbols/utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const index_1 = require("./symbols/index");
+const ImageList_1 = require("./ImageList");
+const esriTS_1 = require("./symbols/esriTS");
+const utils_1 = require("./symbols/utils");
 /**
  * This function retrieves rendering and style information from the ArcGIS REST
  * API for a given [Feature Layer](https://developers.arcgis.com/rest/services-reference/layer-table.htm)
@@ -50,7 +52,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
         serviceMetadata || (await fetch(url + "?f=json").then((r) => r.json()));
     const renderer = serviceMetadata.drawingInfo.renderer;
     let layers = [];
-    const imageList = new ImageList(serviceMetadata.currentVersion);
+    const imageList = new ImageList_1.ImageList(serviceMetadata.currentVersion);
     let legendItemIndex = 0;
     switch (renderer.type) {
         case "uniqueValue": {
@@ -70,7 +72,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
             });
             for (const info of renderer.uniqueValueInfos) {
                 const values = normalizeValuesForFieldTypes(info.value, renderer.fieldDelimiter, fieldTypes);
-                layers.push(...symbolToLayers(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex++).map((lyr) => {
+                layers.push(...(0, index_1.symbolToLayers)(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex++).map((lyr) => {
                     var _a;
                     if ((_a = info.label) === null || _a === void 0 ? void 0 : _a.length) {
                         lyr.metadata = { label: info.label };
@@ -94,7 +96,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
                 }));
             }
             if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
-                layers.push(...symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
+                layers.push(...(0, index_1.symbolToLayers)(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0).map((lyr) => {
                     lyr.filter = ["!=", ["any", ...filters], true];
                     lyr.metadata = { label: "Default" };
                     return lyr;
@@ -105,7 +107,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
         case "classBreaks":
             // TODO: look for test dataset for backgroundFillSymbol
             if (renderer.backgroundFillSymbol) {
-                layers.push(...symbolToLayers(renderer.backgroundFillSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0));
+                layers.push(...(0, index_1.symbolToLayers)(renderer.backgroundFillSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0));
             }
             const field = renderer.field;
             const filters = [];
@@ -117,7 +119,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
                 return values;
             });
             for (const info of [...renderer.classBreakInfos].reverse()) {
-                layers.push(...symbolToLayers(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex--).map((lyr) => {
+                layers.push(...(0, index_1.symbolToLayers)(info.symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendItemIndex--).map((lyr) => {
                     var _a;
                     const [min, max] = minMaxValues[renderer.classBreakInfos.indexOf(info)];
                     if (renderer.classBreakInfos.indexOf(info) === 0) {
@@ -138,7 +140,7 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
                 }));
             }
             if (renderer.defaultSymbol && renderer.defaultSymbol.type) {
-                const defaultLayers = await symbolToLayers(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0);
+                const defaultLayers = await (0, index_1.symbolToLayers)(renderer.defaultSymbol, sourceId, imageList, serviceBaseUrl, sublayer, 0);
                 for (const index in defaultLayers) {
                     defaultLayers[index].filter = ["none", filters];
                     defaultLayers[index].metadata = { label: "Default" };
@@ -148,15 +150,15 @@ async function styleForFeatureLayer(serviceBaseUrl, sublayer, sourceId, serviceM
             break;
         default:
             // simple
-            layers = symbolToLayers(renderer.symbol, sourceId, imageList, serviceBaseUrl, sublayer, 0);
+            layers = (0, index_1.symbolToLayers)(renderer.symbol, sourceId, imageList, serviceBaseUrl, sublayer, 0);
             break;
     }
     if (serviceMetadata.drawingInfo.labelingInfo) {
         for (const info of serviceMetadata.drawingInfo.labelingInfo) {
             if (info.labelExpression) {
-                const layer = esriTS(info, serviceMetadata.geometryType, serviceMetadata.fields.map((f) => f.name));
+                const layer = (0, esriTS_1.default)(info, serviceMetadata.geometryType, serviceMetadata.fields.map((f) => f.name));
                 layer.source = sourceId;
-                layer.id = generateId();
+                layer.id = (0, utils_1.generateId)();
                 layers.push(layer);
             }
         }
@@ -197,4 +199,4 @@ const FIELD_TYPES = {
     esriFieldTypeGlobalID: "string",
     esriFieldTypeXML: "string",
 };
-export default styleForFeatureLayer;
+exports.default = styleForFeatureLayer;

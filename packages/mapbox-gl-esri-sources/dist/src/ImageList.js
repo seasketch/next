@@ -1,8 +1,11 @@
-import { v4 as uuid } from "uuid";
-import drawSMS from "./symbols/drawSMS";
-import fillPatterns from "./symbols/fillPatterns";
-import { rgba, ptToPx } from "./symbols/utils";
-export class ImageList {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ImageList = void 0;
+const uuid_1 = require("uuid");
+const drawSMS_1 = require("./symbols/drawSMS");
+const fillPatterns_1 = require("./symbols/fillPatterns");
+const utils_1 = require("./symbols/utils");
+class ImageList {
     constructor(arcGISVersion, imageSets) {
         this.imageSets = [];
         this.supportsHighDPILegends = false;
@@ -29,15 +32,15 @@ export class ImageList {
      * @returns {string} imageid
      */
     addEsriPFS(symbol) {
-        const imageid = uuid();
+        const imageid = (0, uuid_1.v4)();
         this.imageSets.push({
             id: imageid,
             images: [
                 {
                     pixelRatio: 1,
                     dataURI: `data:${symbol.contentType};base64,${symbol.imageData}`,
-                    width: ptToPx(symbol.width),
-                    height: ptToPx(symbol.height),
+                    width: (0, utils_1.ptToPx)(symbol.width),
+                    height: (0, utils_1.ptToPx)(symbol.height),
                 },
             ],
         });
@@ -57,7 +60,7 @@ export class ImageList {
      * @hidden
      */
     addEsriPMS(symbol, serviceBaseUrl, sublayer, legendIndex) {
-        const imageid = uuid();
+        const imageid = (0, uuid_1.v4)();
         if (this.supportsHighDPILegends) {
             this.imageSets.push(new Promise(async (resolve) => {
                 const imageSet = {
@@ -66,8 +69,8 @@ export class ImageList {
                         {
                             pixelRatio: 1,
                             dataURI: `data:${symbol.contentType};base64,${symbol.imageData}`,
-                            width: ptToPx(symbol.width),
-                            height: ptToPx(symbol.height),
+                            width: (0, utils_1.ptToPx)(symbol.width),
+                            height: (0, utils_1.ptToPx)(symbol.height),
                         },
                     ],
                 };
@@ -87,8 +90,8 @@ export class ImageList {
                     {
                         pixelRatio: 1,
                         dataURI: `data:${symbol.contentType};base64,${symbol.imageData}`,
-                        width: ptToPx(symbol.width),
-                        height: ptToPx(symbol.height),
+                        width: (0, utils_1.ptToPx)(symbol.width),
+                        height: (0, utils_1.ptToPx)(symbol.height),
                     },
                 ],
             });
@@ -105,10 +108,10 @@ export class ImageList {
      * @hidden
      */
     addEsriSMS(symbol) {
-        const imageid = uuid();
+        const imageid = (0, uuid_1.v4)();
         let width = 0;
         const images = [1, 2, 3].map((pixelRatio) => {
-            const marker = drawSMS(symbol, pixelRatio);
+            const marker = (0, drawSMS_1.default)(symbol, pixelRatio);
             if (pixelRatio === 1)
                 width = marker.width;
             return {
@@ -131,8 +134,8 @@ export class ImageList {
      * @memberof ImageList
      */
     addEsriSFS(symbol) {
-        const imageId = uuid();
-        const pattern = fillPatterns[symbol.style](rgba(symbol.color));
+        const imageId = (0, uuid_1.v4)();
+        const pattern = fillPatterns_1.default[symbol.style]((0, utils_1.rgba)(symbol.color));
         this.imageSets.push({
             id: imageId,
             images: [
@@ -194,6 +197,7 @@ export class ImageList {
         }));
     }
 }
+exports.ImageList = ImageList;
 /** @hidden */
 async function createImage(width, height, dataURI) {
     return new Promise((resolve) => {

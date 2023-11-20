@@ -1,3 +1,5 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 /** @hidden */
 const patterns = {
     esriSLSDash: (strokeWidth) => [2, 0.5],
@@ -6,4 +8,4 @@ const patterns = {
     esriSLSNull: () => [0, 10],
     esriSLSDot: (strokeWidth) => [1, 1],
 };
-export default patterns;
+exports.default = patterns;

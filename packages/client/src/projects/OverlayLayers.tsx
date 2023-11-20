@@ -1,6 +1,11 @@
 import { useState, useContext, useCallback } from "react";
 import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
-import { OverlayFragment, TableOfContentsItem } from "../generated/graphql";
+import {
+  DataLayerDetailsFragment,
+  DataSourceDetailsFragment,
+  OverlayFragment,
+  TableOfContentsItem,
+} from "../generated/graphql";
 import { MapContext } from "../dataLayers/MapContextManager";
 import TreeView, { TreeItem, useOverlayState } from "../components/TreeView";
 import { DropdownDividerProps } from "../components/ContextMenuDropdown";
@@ -10,12 +15,18 @@ import { currentSidebarState } from "./ProjectAppSidebar";
 
 export default function OverlayLayers({
   items,
+  layers,
+  sources,
 }: {
   items: TableOfContentsItem[];
+  layers: DataLayerDetailsFragment[];
+  sources: DataSourceDetailsFragment[];
 }) {
   const { t } = useTranslation("homepage");
   const mapContext = useContext(MapContext);
-  const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
+  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
+    undefined | number
+  >();
 
   const {
     expandedIds,
@@ -69,7 +80,7 @@ export default function OverlayLayers({
             id: "metadata",
             label: t("Metadata"),
             onClick: () => {
-              setOpenMetadataViewerId(item.id);
+              setOpenMetadataViewerState(item.id);
             },
           });
         }
@@ -78,15 +89,15 @@ export default function OverlayLayers({
         return [];
       }
     },
-    [items, mapContext.manager?.map, t]
+    [items, mapContext.manager?.map, t, mapContext.manager]
   );
 
   return (
     <div className="mt-3 pl-3">
-      {openMetadataViewerId && (
+      {openMetadataViewerState && (
         <TableOfContentsMetadataModal
-          id={openMetadataViewerId}
-          onRequestClose={() => setOpenMetadataViewerId(undefined)}
+          id={openMetadataViewerState}
+          onRequestClose={() => setOpenMetadataViewerState(undefined)}
         />
       )}
       <TreeView

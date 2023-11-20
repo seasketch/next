@@ -2,9 +2,11 @@ import { ArcGISDynamicMapService, ArcGISDynamicMapServiceOptions } from "./src/A
 import { ArcGISVectorSource, ArcGISVectorSourceOptions } from "./src/ArcGISVectorSource";
 import { ArcGISRESTServiceRequestManager } from "./src/ArcGISRESTServiceRequestManager";
 export { ArcGISTiledMapService, ArcGISTiledMapServiceOptions, } from "./src/ArcGISTiledMapService";
-export { MapServiceMetadata, FeatureServerMetadata, LayersMetadata, } from "./src/ServiceMetadata";
+import { MapServiceMetadata, FeatureServerMetadata, LayersMetadata } from "./src/ServiceMetadata";
+export { MapServiceMetadata, FeatureServerMetadata, LayersMetadata };
 export { CustomGLSource, CustomGLSourceOptions, DynamicRenderingSupportOptions, LegendItem, SingleImageLegend, DataTableOfContentsItem, FolderTableOfContentsItem, } from "./src/CustomGLSource";
 export { ArcGISDynamicMapService, ArcGISVectorSource, ArcGISDynamicMapServiceOptions, ArcGISVectorSourceOptions, ArcGISRESTServiceRequestManager, };
 export { ArcGISFeatureLayerSourceOptions, default as ArcGISFeatureLayerSource, } from "./src/ArcGISFeatureLayerSource";
+export { generateMetadataForLayer } from "./src/utils";
 export { default as styleForFeatureLayer } from "./src/styleForFeatureLayer";
 export { ImageList } from "./src/ImageList";

@@ -1,31 +1,39 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.toTextAnchor = exports.ptToPx = exports.colorAndOpacity = exports.rgba = exports.createCanvas = exports.generateId = void 0;
 // @ts-ignore
-import { v4 as uuid } from "uuid";
+const uuid_1 = require("uuid");
 /** @hidden */
-export function generateId() {
-    return uuid();
+function generateId() {
+    return (0, uuid_1.v4)();
 }
+exports.generateId = generateId;
 /** @hidden */
-export function createCanvas(w, h) {
+function createCanvas(w, h) {
     const canvas = document.createElement("canvas");
     canvas.setAttribute("width", w.toString());
     canvas.setAttribute("height", h.toString());
     return canvas;
 }
+exports.createCanvas = createCanvas;
 /** @hidden */
-export const rgba = (color) => {
+const rgba = (color) => {
     color = color || [0, 0, 0, 0];
     return `rgba(${color[0]},${color[1]},${color[2]},${color[3] / 255})`;
 };
+exports.rgba = rgba;
 /** @hidden */
-export const colorAndOpacity = (color) => {
+const colorAndOpacity = (color) => {
     color = color || [0, 0, 0, 0];
     return {
         color: `rgb(${color[0]},${color[1]},${color[2]})`,
         opacity: color[3] / 255,
     };
 };
+exports.colorAndOpacity = colorAndOpacity;
 /** @hidden */
-export const ptToPx = (pt) => Math.round(pt * 1.33);
+const ptToPx = (pt) => Math.round(pt * 1.33);
+exports.ptToPx = ptToPx;
 /** @hidden */
 const ANCHORS = {
     // Note that these are essentially backwards from what you'd expect
@@ -61,4 +69,5 @@ const ANCHORS = {
     esriServerPolygonPlacementAlwaysHorizontal: "center",
 };
 /** @hidden */
-export const toTextAnchor = (labelPlacement) => ANCHORS[labelPlacement] || "center";
+const toTextAnchor = (labelPlacement) => ANCHORS[labelPlacement] || "center";
+exports.toTextAnchor = toTextAnchor;

@@ -219,32 +219,9 @@ export default function TableOfContentsEditor() {
             id: "metadata",
             label: t("Metadata"),
             onClick: () => {
-              const layer =
-                layersAndSources.data?.projectBySlug?.dataLayersForItems?.find(
-                  (l) => l.id === item.dataLayerId
-                );
-              const source =
-                layersAndSources.data?.projectBySlug?.dataSourcesForItems?.find(
-                  (s) => s.id === layer?.dataSourceId
-                );
-              if (source && sourceTypeIsCustomGLSource(source.type)) {
-                const customSource = mapContext.manager?.getCustomGLSource(
-                  source.id
-                );
-                if (customSource) {
-                  setOpenMetadataViewerState({
-                    itemId: item.id,
-                    customGLSource: customSource,
-                    sublayerId: layer?.sublayer
-                      ? layer.sublayer.toString()
-                      : undefined,
-                  });
-                }
-              } else {
-                setOpenMetadataViewerState({
-                  itemId: item.id,
-                });
-              }
+              setOpenMetadataViewerState({
+                itemId: item.id,
+              });
             },
           });
           if (item.hasMetadata) {
@@ -537,9 +514,7 @@ export default function TableOfContentsEditor() {
       {openMetadataViewerState && (
         <TableOfContentsMetadataModal
           id={openMetadataViewerState.itemId}
-          customGLSource={openMetadataViewerState.customGLSource}
           onRequestClose={() => setOpenMetadataViewerState(undefined)}
-          sublayerId={openMetadataViewerState.sublayerId}
         />
       )}
       {arcgisCartOpen && (

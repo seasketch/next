@@ -539,7 +539,7 @@ export default function ArcGISCartModal({
               isFolder: true,
               title: layer.name,
               ...("parentLayerId" in layer && layer.parentLayerId > -1
-                ? { parentId: layer.parentLayerId }
+                ? { parentId: layer.parentLayerId.toString() }
                 : {}),
               stableId: generateStableId(),
             });
@@ -567,7 +567,7 @@ export default function ArcGISCartModal({
                   : layer.name,
               sourceId: layer.id,
               ...("parentLayerId" in layer && layer.parentLayerId > -1
-                ? { parentId: layer.parentLayerId }
+                ? { parentId: layer.parentLayerId.toString() }
                 : {}),
               stableId: generateStableId(),
             });
@@ -595,7 +595,7 @@ export default function ArcGISCartModal({
               title: layer.name,
               sourceId: 1,
               ...("parentLayerId" in layer && layer.parentLayerId > -1
-                ? { parentId: layer.parentLayerId }
+                ? { parentId: layer.parentLayerId.toString() }
                 : {}),
               sublayerId: layer.id,
               stableId: generateStableId(),

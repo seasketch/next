@@ -1,5 +1,7 @@
-import esriSLS from "./esriSLS";
-import { generateId } from "./utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const esriSLS_1 = require("./esriSLS");
+const utils_1 = require("./utils");
 // TODO: Add support for lesser-used options
 // height
 // width
@@ -9,11 +11,11 @@ import { generateId } from "./utils";
 // xscale
 // yscale
 /** @hidden */
-export default (symbol, sourceId, imageList) => {
+exports.default = (symbol, sourceId, imageList) => {
     const imageId = imageList.addEsriPFS(symbol);
     const layers = [
         {
-            id: generateId(),
+            id: (0, utils_1.generateId)(),
             source: sourceId,
             type: "fill",
             paint: {
@@ -23,7 +25,7 @@ export default (symbol, sourceId, imageList) => {
         },
     ];
     if ("outline" in symbol) {
-        let outline = esriSLS(symbol.outline, sourceId);
+        let outline = (0, esriSLS_1.default)(symbol.outline, sourceId);
         layers.push(...outline);
     }
     return layers;

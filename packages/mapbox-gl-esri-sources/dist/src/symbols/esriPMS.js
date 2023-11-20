@@ -1,10 +1,12 @@
-import { generateId } from "./utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("./utils");
 /** @hidden */
-export default (symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendIndex) => {
+exports.default = (symbol, sourceId, imageList, serviceBaseUrl, sublayer, legendIndex) => {
     const imageId = imageList.addEsriPMS(symbol, serviceBaseUrl, sublayer, legendIndex);
     return [
         {
-            id: generateId(),
+            id: (0, utils_1.generateId)(),
             source: sourceId,
             type: "symbol",
             paint: {},

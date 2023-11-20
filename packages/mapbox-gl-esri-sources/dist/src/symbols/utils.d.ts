@@ -1,13 +1,13 @@
 /** @hidden */
-declare type RGBA = [number, number, number, number];
+type RGBA = [number, number, number, number];
 /** @hidden */
 export declare function generateId(): string;
 /** @hidden */
 export declare function createCanvas(w: number, h: number): HTMLCanvasElement;
 /** @hidden */
-export declare const rgba: (color?: RGBA | undefined) => string;
+export declare const rgba: (color?: RGBA) => string;
 /** @hidden */
-export declare const colorAndOpacity: (color?: RGBA | undefined) => {
+export declare const colorAndOpacity: (color?: RGBA) => {
     color: string;
     opacity: number;
 };

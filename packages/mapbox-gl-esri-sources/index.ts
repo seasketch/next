@@ -12,11 +12,12 @@ export {
   ArcGISTiledMapService,
   ArcGISTiledMapServiceOptions,
 } from "./src/ArcGISTiledMapService";
-export {
+import {
   MapServiceMetadata,
   FeatureServerMetadata,
   LayersMetadata,
 } from "./src/ServiceMetadata";
+export { MapServiceMetadata, FeatureServerMetadata, LayersMetadata };
 export {
   CustomGLSource,
   CustomGLSourceOptions,
@@ -37,5 +38,6 @@ export {
   ArcGISFeatureLayerSourceOptions,
   default as ArcGISFeatureLayerSource,
 } from "./src/ArcGISFeatureLayerSource";
+export { generateMetadataForLayer } from "./src/utils";
 export { default as styleForFeatureLayer } from "./src/styleForFeatureLayer";
 export { ImageList } from "./src/ImageList";

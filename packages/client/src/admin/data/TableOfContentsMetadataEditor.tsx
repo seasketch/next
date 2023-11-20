@@ -34,7 +34,7 @@ export default function TableOfContentsMetadataEditor({
       mutationState={mutationState}
       loading={loading}
       error={error}
-      startingDocument={data?.tableOfContentsItem?.metadata}
+      startingDocument={data?.tableOfContentsItem?.computedMetadata}
     />
   );
 }

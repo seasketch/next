@@ -78,7 +78,8 @@ export default function ProjectApp() {
     forums: t("Discussion Forums"),
     settings: t("Cache Settings"),
   };
-  const { basemaps, tableOfContentsItems } = useMapData(mapContext);
+  const { basemaps, tableOfContentsItems, dataLayers, dataSources } =
+    useMapData(mapContext);
   // Disabling until I can see some Divehi translations -cb 3/29/23
   // Might need to just enable this for forum content and attribute forms
   // const { selectedLang } = getSelectedLanguage(i18n);
@@ -184,6 +185,8 @@ export default function ProjectApp() {
                       </Route>
                       <Route path={`/${slug}/app/overlays`}>
                         <LazyOverlays
+                          layers={dataLayers || []}
+                          sources={dataSources || []}
                           items={tableOfContentsItems as TableOfContentsItem[]}
                         />
                       </Route>

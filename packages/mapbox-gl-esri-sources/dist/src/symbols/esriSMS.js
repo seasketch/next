@@ -1,10 +1,12 @@
-import { generateId } from "./utils";
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const utils_1 = require("./utils");
 /** @hidden */
-export default (symbol, sourceId, imageList) => {
+exports.default = (symbol, sourceId, imageList) => {
     const imageId = imageList.addEsriSMS(symbol);
     return [
         {
-            id: generateId(),
+            id: (0, utils_1.generateId)(),
             type: "symbol",
             source: sourceId,
             paint: {},

@@ -93,95 +93,102 @@ export default function Modal(props: ModalProps) {
           }}
         >
           <div className="flex items-end sm:items-center justify-center min-h-full p-4 text-center sm:p-0">
-            <Panel
-              zeroPadding={props.zeroPadding || false}
-              autoWidth={props.autoWidth}
-              grid={grid}
-              initialFocus={props.initialFocus}
-              dark={props.dark}
-              className={props.panelClassName}
-            >
-              <div
-                className={`w-full justify-center ${
-                  props.icon && "sm:pl-4 sm:flex sm:items-start"
-                }`}
+            {props.loading && (
+              <div>
+                <Spinner large color="white" />
+              </div>
+            )}
+            {!props.loading && (
+              <Panel
+                zeroPadding={props.zeroPadding || false}
+                autoWidth={props.autoWidth}
+                grid={grid}
+                initialFocus={props.initialFocus}
+                dark={props.dark}
+                className={props.panelClassName}
               >
-                {props.icon && props.icon === "delete" && (
-                  <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <ExclamationIcon
-                      className="h-6 w-6 text-red-600"
-                      aria-hidden="true"
-                    />
-                  </div>
-                )}
-                {props.icon && props.icon === "alert" && (
-                  <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-300 bg-opacity-10 sm:mx-0 sm:h-10 sm:w-10">
-                    <ExclamationCircleIcon
-                      className="h-6 w-6 text-gray-500"
-                      aria-hidden="true"
-                    />
-                  </div>
-                )}
                 <div
-                  className={`sm:flex sm:flex-col mt-3 text-center sm:mt-0 ${
-                    props.icon && "sm:ml-4"
-                  } sm:text-left sm:max-h-almost-full`}
+                  className={`w-full justify-center ${
+                    props.icon && "sm:pl-4 sm:flex sm:items-start"
+                  }`}
                 >
-                  {hasTitle && (
-                    <Dialog.Title
-                      tabIndex={-1}
-                      as="h3"
-                      className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
-                        props.tabs !== undefined ? "pb-0" : "pb-4"
-                      } ${
-                        (props.tabs !== undefined || props.scrollable) &&
-                        "border-b"
-                      } ${props.icon && "pl-0"}`}
-                    >
-                      {props.title}
-
-                      {props.tabs && props.tabs.length > 0 && (
-                        <>
-                          <Tabs
-                            selectedIndex={selectedIndex}
-                            labels={props.tabs}
-                            setSelectedIndex={setSelectedIndex}
-                          />
-                        </>
-                      )}
-                    </Dialog.Title>
-                  )}
-
-                  <div
-                    className={`sm:flex-1 mt-0 ${
-                      props.zeroPadding ? "" : "p-6"
-                    } ${
-                      props.scrollable ? "py-4" : "py-0"
-                    } sm:overflow-y-auto ${props.icon && "pl-0"}`}
-                  >
-                    {props.children}
-                  </div>
-                  {((props.footer && props.footer.length > 0) ||
-                    !props.zeroPadding) && (
-                    <div
-                      className={`${
-                        ""
-                        // props.icon && "sm:ml-10 sm:pl-4"
-                      } sm:flex space-y-2 sm:space-y-0 sm:space-x-2 px-6 py-4 ${
-                        props.scrollable && "sm:bg-gray-100"
-                      } ${props.icon && "pl-0"}`}
-                    >
-                      {(props.footer || []).map((footerProps) => (
-                        <FooterButton
-                          key={footerProps.label!.toString()}
-                          {...footerProps}
-                        />
-                      ))}
+                  {props.icon && props.icon === "delete" && (
+                    <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                      <ExclamationIcon
+                        className="h-6 w-6 text-red-600"
+                        aria-hidden="true"
+                      />
                     </div>
                   )}
+                  {props.icon && props.icon === "alert" && (
+                    <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-300 bg-opacity-10 sm:mx-0 sm:h-10 sm:w-10">
+                      <ExclamationCircleIcon
+                        className="h-6 w-6 text-gray-500"
+                        aria-hidden="true"
+                      />
+                    </div>
+                  )}
+                  <div
+                    className={`sm:flex sm:flex-col mt-3 text-center sm:mt-0 ${
+                      props.icon && "sm:ml-4"
+                    } sm:text-left sm:max-h-almost-full`}
+                  >
+                    {hasTitle && (
+                      <Dialog.Title
+                        tabIndex={-1}
+                        as="h3"
+                        className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
+                          props.tabs !== undefined ? "pb-0" : "pb-4"
+                        } ${
+                          (props.tabs !== undefined || props.scrollable) &&
+                          "border-b"
+                        } ${props.icon && "pl-0"}`}
+                      >
+                        {props.title}
+
+                        {props.tabs && props.tabs.length > 0 && (
+                          <>
+                            <Tabs
+                              selectedIndex={selectedIndex}
+                              labels={props.tabs}
+                              setSelectedIndex={setSelectedIndex}
+                            />
+                          </>
+                        )}
+                      </Dialog.Title>
+                    )}
+
+                    <div
+                      className={`sm:flex-1 mt-0 ${
+                        props.zeroPadding ? "" : "p-6"
+                      } ${
+                        props.scrollable ? "py-4" : "py-0"
+                      } sm:overflow-y-auto ${props.icon && "pl-0"}`}
+                    >
+                      {props.children}
+                    </div>
+                    {((props.footer && props.footer.length > 0) ||
+                      !props.zeroPadding) && (
+                      <div
+                        className={`${
+                          ""
+                          // props.icon && "sm:ml-10 sm:pl-4"
+                        } sm:flex space-y-2 sm:space-y-0 sm:space-x-2 px-6 py-4 ${
+                          props.scrollable && "sm:bg-gray-100"
+                        } ${props.icon && "pl-0"}`}
+                      >
+                        {(props.footer || []).map((footerProps) => (
+                          <FooterButton
+                            key={footerProps.label!.toString()}
+                            {...footerProps}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Panel>
+              </Panel>
+            )}
           </div>
         </Tab.Group>
       </div>
