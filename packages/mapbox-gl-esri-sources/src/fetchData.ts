@@ -70,6 +70,26 @@ export async function fetchFeatureLayerData(
   return featureCollection;
 }
 
+export function urlForRawGeoJSONData(
+  baseUrl: string,
+  outFields = "*",
+  geometryPrecision = 6,
+  queryOptions?: { [key: string]: string }
+) {
+  const params = new URLSearchParams({
+    inSR: "4326",
+    outSR: "4326",
+    where: "1>0",
+    outFields,
+    returnGeometry: "true",
+    geometryPrecision: geometryPrecision.toString(),
+    returnIdsOnly: "false",
+    f: "geojson",
+    ...(queryOptions || {}),
+  });
+  return `${baseUrl}/query?${params.toString()}`;
+}
+
 async function fetchData(
   baseUrl: string,
   params: URLSearchParams,
@@ -133,6 +153,9 @@ async function fetchData(
   } else {
     featureCollection.features.push(...fc.features);
     if (fc.exceededTransferLimit || fc.properties?.exceededTransferLimit) {
+      if (disablePagination) {
+        throw new Error("Exceeded transfer limit. Pagination disabled.");
+      }
       if (!objectIdFieldName) {
         // Fetch objectIds to do manual paging
         params.set("returnIdsOnly", "true");

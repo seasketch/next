@@ -81,7 +81,8 @@ export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDyn
     private getComputedProperties;
     private onMapData;
     private onMapError;
-    getGLSource(): Promise<AnySourceData>;
+    getGLSource(map: Map): Promise<AnySourceData>;
+    private getCoordinates;
     addToMap(map: Map): Promise<string>;
     addEventListeners(map: Map): void;
     removeEventListeners(map: Map): void;

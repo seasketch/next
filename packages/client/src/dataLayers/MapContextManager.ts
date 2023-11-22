@@ -784,7 +784,12 @@ class MapContextManager extends EventEmitter {
 
   async updateStyle() {
     if (this.map && this.internalState.ready) {
+      this.updateStyleInfiniteLoopDetector++;
       this.updateStyleInfiniteLoopDetector = 0;
+      if (this.updateStyleInfiniteLoopDetector > 10) {
+        this.updateStyleInfiniteLoopDetector = 0;
+        throw new Error("Infinite loop");
+      }
       const { style, sprites } = await this.getComputedStyle(() => {
         this.debouncedUpdateStyle();
       });
@@ -807,10 +812,6 @@ class MapContextManager extends EventEmitter {
           } else if (!visible && listenersAdded) {
             customSource.removeEventListeners(this.map);
             this.customSources[id].listenersAdded = false;
-          }
-          // update sublayers
-          if (visible && sublayers !== undefined) {
-            customSource.updateLayers(sublayers);
           }
         }
         this.pruneInactiveCustomSources();
@@ -1315,10 +1316,8 @@ class MapContextManager extends EventEmitter {
                       // add style if ready
                       const { customSource, visible, listenersAdded } =
                         this.customSources[source.id];
-
+                      // Adding the source is skipped until later when sublayers are setup
                       if (customSource.ready) {
-                        baseStyle.sources[source.id.toString()] =
-                          await customSource.getGLSource();
                         const styleData = await customSource.getGLStyleLayers();
                         if (styleData.imageList && this.map) {
                           styleData.imageList.addToMap(this.map);
@@ -1396,6 +1395,18 @@ class MapContextManager extends EventEmitter {
     for (const id in this.customSources) {
       if (!insertedCustomSourceIds.includes(parseInt(id))) {
         this.customSources[id].visible = false;
+      } else {
+        const { customSource, sublayers } = this.customSources[id];
+        if (customSource.ready) {
+          // Update sublayers first so that sources that rely on a dynamically
+          // updated raster url can be initialized with proper data.
+          if (sublayers) {
+            customSource.updateLayers(sublayers);
+          }
+          const glSource = await customSource.getGLSource(this.map);
+          console.log(glSource);
+          baseStyle.sources[id] = glSource;
+        }
       }
     }
 

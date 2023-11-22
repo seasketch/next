@@ -151,6 +151,7 @@ export default function TableOfContentsEditor() {
         ) {
           contextMenuOptions.push({
             id: "zoom-to",
+            disabled: !item.bounds && !checkedItems.includes(item.stableId),
             label: t("Zoom to bounds"),
             onClick: async () => {
               let bounds: [number, number, number, number] | undefined;
@@ -270,6 +271,7 @@ export default function TableOfContentsEditor() {
       t,
       tocQuery,
       layersAndSources.data,
+      checkedItems,
     ]
   );
 

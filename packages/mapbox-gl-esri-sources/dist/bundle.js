@@ -785,44 +785,21 @@ var MapBoxGLEsriSources = (function () {
 	                    source.setTiles([this.getUrl()]);
 	                }
 	                else if (source.type === "image") {
-	                    const bounds = this.map.getBounds();
-	                    const coordinates = [
-	                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-	                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-	                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-	                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-	                    ];
-	                    const url = this.getUrl();
-	                    if (
-	                    source.url === url) {
+	                    const coordinates = this.getCoordinates(this.map);
+	                    const url = this.getUrl(this.map);
+	                    const currentUrl = source.url;
+	                    if (currentUrl === url) {
+	                        console.log("skipping, urls match", currentUrl, url);
 	                        return;
 	                    }
-	                    if (source.image) {
-	                        source.updateImage({
-	                            url,
-	                            coordinates,
-	                        });
+	                    console.log("updating image", url, source);
+	                    if (source.url === url) {
+	                        return;
 	                    }
-	                    else {
-	                        let tries = 0;
-	                        const updater = () => {
-	                            var _a;
-	                            const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
-	                            if (source && this.getUrl() === url) {
-	                                if (source.image && source.type === "image") {
-	                                    source.updateImage({
-	                                        url,
-	                                        coordinates,
-	                                    });
-	                                }
-	                                else if (tries < 10) {
-	                                    tries++;
-	                                    setTimeout(updater, 50);
-	                                }
-	                            }
-	                        };
-	                        setTimeout(updater, 50);
-	                    }
+	                    source.updateImage({
+	                        url,
+	                        coordinates,
+	                    });
 	                }
 	                else ;
 	            }
@@ -964,46 +941,57 @@ var MapBoxGLEsriSources = (function () {
 	            attribution,
 	        };
 	    }
-	    async getGLSource() {
+	    async getGLSource(map) {
 	        let { attribution, bounds } = await this.getComputedProperties();
-	        bounds = bounds || [-90, -180, 90, 180];
+	        bounds = bounds || [-89, -179, 89, 179];
 	        if (this.options.useTiles) {
 	            return {
 	                type: "raster",
-	                tiles: [this.getUrl()],
+	                tiles: [this.getUrl(map)],
 	                tileSize: this.options.tileSize || 256,
 	                bounds: bounds,
 	                attribution,
 	            };
 	        }
 	        else {
-	            let coordinates = [
-	                [bounds[0], bounds[1]],
-	                [bounds[2], bounds[1]],
-	                [bounds[2], bounds[3]],
-	                [bounds[0], bounds[3]],
-	            ];
-	            if (this.map) {
-	                const bounds = this.map.getBounds();
-	                coordinates = [
-	                    [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-	                    [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-	                    [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-	                    [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-	                ];
-	            }
+	            const coordinates = this.getCoordinates(map);
+	            const url = this.getUrl(map);
+	            console.log("initializing with this url", url);
 	            return {
 	                type: "image",
-	                url: this.getUrl(),
+	                url,
 	                coordinates,
 	            };
 	        }
+	    }
+	    getCoordinates(map) {
+	        const bounds = map.getBounds();
+	        const coordinates = [
+	            [
+	                Math.max(bounds.getNorthWest().lng, -179),
+	                Math.min(bounds.getNorthWest().lat, 89),
+	            ],
+	            [
+	                Math.min(bounds.getNorthEast().lng, 179),
+	                Math.min(bounds.getNorthEast().lat, 89),
+	            ],
+	            [
+	                Math.min(bounds.getSouthEast().lng, 179),
+	                Math.max(bounds.getSouthEast().lat, -89),
+	            ],
+	            [
+	                Math.max(bounds.getSouthWest().lng, -179),
+	                Math.max(bounds.getSouthWest().lat, -89),
+	            ],
+	        ];
+	        console.log(coordinates.join(","));
+	        return coordinates;
 	    }
 	    async addToMap(map) {
 	        if (!map) {
 	            throw new Error("Map not provided to addToMap");
 	        }
-	        const sourceData = await this.getGLSource();
+	        const sourceData = await this.getGLSource(map);
 	        map.addSource(this.sourceId, sourceData);
 	        this.addEventListeners(map);
 	        return this.sourceId;
@@ -1022,7 +1010,6 @@ var MapBoxGLEsriSources = (function () {
 	                map.on("moveend", this.updateSource);
 	                map.on("data", this.onMapData);
 	                map.on("error", this.onMapError);
-	                this.updateSource();
 	            }
 	        }
 	    }
@@ -1057,21 +1044,23 @@ var MapBoxGLEsriSources = (function () {
 	            this.removeFromMap(this.map);
 	        }
 	    }
-	    getUrl() {
-	        if (!this.map) {
+	    getUrl(map) {
+	        var _a;
+	        map = this.map || map;
+	        if (!map) {
 	            return exports.blankDataUri;
 	        }
-	        const bounds = this.map.getBounds();
 	        let url = new URL(this.options.url + "/export");
 	        url.searchParams.set("f", "image");
 	        url.searchParams.set("transparent", "true");
+	        const coordinates = this.getCoordinates(map);
 	        let bbox = [
-	            lon2meters(bounds.getWest()),
-	            lat2meters(bounds.getSouth()),
-	            lon2meters(bounds.getEast()),
-	            lat2meters(bounds.getNorth()),
+	            lon2meters(coordinates[0][0]),
+	            lat2meters(coordinates[2][1]),
+	            lon2meters(coordinates[2][0]),
+	            lat2meters(coordinates[0][1]),
 	        ];
-	        const groundResolution = getGroundResolution(this.map.getZoom() +
+	        const groundResolution = getGroundResolution(map.getZoom() +
 	            (this.options.supportHighDpiDisplays ? window.devicePixelRatio - 1 : 0));
 	        const width = Math.round((bbox[2] - bbox[0]) / groundResolution);
 	        const height = Math.round((bbox[3] - bbox[1]) / groundResolution);
@@ -1100,7 +1089,7 @@ var MapBoxGLEsriSources = (function () {
 	        url.searchParams.set("imageSR", "102100");
 	        url.searchParams.set("bboxSR", "102100");
 	        if (Math.abs(bbox[0]) > 20037508.34 || Math.abs(bbox[2]) > 20037508.34) {
-	            const centralMeridian = bounds.getCenter().lng;
+	            const centralMeridian = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getCenter().lng;
 	            if (this.options.supportHighDpiDisplays && window.devicePixelRatio > 1) {
 	                bbox[0] = -(width * groundResolution) / (window.devicePixelRatio * 2);
 	                bbox[2] = (width * groundResolution) / (window.devicePixelRatio * 2);
@@ -1181,6 +1170,7 @@ var MapBoxGLEsriSources = (function () {
 	        }
 	    }
 	    updateLayers(layers) {
+	        console.log("update layers", layers);
 	        if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
 	            this.layers = layers;
 	            this.debouncedUpdateSource();
@@ -1948,7 +1938,7 @@ var MapBoxGLEsriSources = (function () {
 
 	var fetchData_1 = createCommonjsModule(function (module, exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.fetchFeatureLayerData = exports.fetchFeatureCollection = void 0;
+	exports.urlForRawGeoJSONData = exports.fetchFeatureLayerData = exports.fetchFeatureCollection = void 0;
 	function fetchFeatureCollection(url, geometryPrecision = 6, outFields = "*", bytesLimit = 1000000 * 100, abortController = null, disablePagination = false) {
 	    return new Promise((resolve, reject) => {
 	        fetchFeatureLayerData(url, outFields, reject, geometryPrecision, abortController, null, disablePagination, undefined, bytesLimit)
@@ -1976,6 +1966,21 @@ var MapBoxGLEsriSources = (function () {
 	    return featureCollection;
 	}
 	exports.fetchFeatureLayerData = fetchFeatureLayerData;
+	function urlForRawGeoJSONData(baseUrl, outFields = "*", geometryPrecision = 6, queryOptions) {
+	    const params = new URLSearchParams({
+	        inSR: "4326",
+	        outSR: "4326",
+	        where: "1>0",
+	        outFields,
+	        returnGeometry: "true",
+	        geometryPrecision: geometryPrecision.toString(),
+	        returnIdsOnly: "false",
+	        f: "geojson",
+	        ...(queryOptions || {}),
+	    });
+	    return `${baseUrl}/query?${params.toString()}`;
+	}
+	exports.urlForRawGeoJSONData = urlForRawGeoJSONData;
 	async function fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination = false, pageSize = 1000, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount) {
 	    var _a;
 	    bytesReceived = bytesReceived || 0;
@@ -2005,6 +2010,9 @@ var MapBoxGLEsriSources = (function () {
 	    else {
 	        featureCollection.features.push(...fc.features);
 	        if (fc.exceededTransferLimit || ((_a = fc.properties) === null || _a === void 0 ? void 0 : _a.exceededTransferLimit)) {
+	            if (disablePagination) {
+	                throw new Error("Exceeded transfer limit. Pagination disabled.");
+	            }
 	            if (!objectIdFieldName) {
 	                params.set("returnIdsOnly", "true");
 	                try {
@@ -3945,7 +3953,14 @@ var MapBoxGLEsriSources = (function () {
 	        }
 	    }
 	    get loading() {
-	        return this._loading;
+	        var _a, _b;
+	        if (this.options.fetchStrategy === "raw") {
+	            return Boolean(((_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId)) &&
+	                ((_b = this.map) === null || _b === void 0 ? void 0 : _b.isSourceLoaded(this.sourceId)) === false);
+	        }
+	        else {
+	            return this._loading;
+	        }
 	    }
 	    async getGLStyleLayers() {
 	        if (this._glStylePromise) {
@@ -3967,14 +3982,23 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    async getGLSource() {
 	        const { attribution } = await this.getComputedProperties();
-	        return {
-	            type: "geojson",
-	            data: this.featureData || {
-	                type: "FeatureCollection",
-	                features: this.featureData || [],
-	            },
-	            attribution: attribution ? attribution : "",
-	        };
+	        if (this.options.fetchStrategy === "raw") {
+	            return {
+	                type: "geojson",
+	                data: (0, fetchData.urlForRawGeoJSONData)(this.options.url, "*", 6),
+	                attribution: attribution ? attribution : "",
+	            };
+	        }
+	        else {
+	            return {
+	                type: "geojson",
+	                data: this.featureData || {
+	                    type: "FeatureCollection",
+	                    features: this.featureData || [],
+	                },
+	                attribution: attribution ? attribution : "",
+	            };
+	        }
 	    }
 	    addEventListeners(map) {
 	        if (this.map && this.map === map) {
@@ -3984,6 +4008,9 @@ var MapBoxGLEsriSources = (function () {
 	            this.removeEventListeners(map);
 	        }
 	        this.map = map;
+	        if (this.options.fetchStrategy === "raw") {
+	            return;
+	        }
 	        this.QuantizedVectorRequestManager =
 	            (0, QuantizedVectorRequestManager.getOrCreateQuantizedVectorRequestManager)(map);
 	        this._loading = this.featureData ? false : true;
@@ -3993,9 +4020,12 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    removeEventListeners(map) {
 	        var _a;
+	        delete this.map;
+	        if (this.options.fetchStrategy === "raw") {
+	            return;
+	        }
 	        (_a = this.QuantizedVectorRequestManager) === null || _a === void 0 ? void 0 : _a.off("update");
 	        delete this.QuantizedVectorRequestManager;
-	        delete this.map;
 	    }
 	    async addToMap(map) {
 	        const source = await this.getGLSource();
@@ -4037,8 +4067,9 @@ var MapBoxGLEsriSources = (function () {
 	            this.rawFeaturesHaveBeenFetched = true;
 	        }
 	        catch (e) {
+	            console.log("caught error", e);
 	            let shouldFireError = true;
-	            if (("message" in e && /bytesLimit/.test(e.message)) ||
+	            if (("message" in e && /limit/i.test(e.message)) ||
 	                ((_d = (_c = this.abortController) === null || _c === void 0 ? void 0 : _c.signal) === null || _d === void 0 ? void 0 : _d.reason) === "timeout") {
 	                this.exceededBytesLimit = true;
 	                if (this.options.fetchStrategy === "auto") {
@@ -4231,7 +4262,7 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    async getFetchStrategy() {
 	        if (this.options.fetchStrategy === "auto") {
-	            if (this.featureData) {
+	            if (this.rawFeaturesHaveBeenFetched) {
 	                return "raw";
 	            }
 	            else if (this.options.fetchStrategy === "auto" && !this.error) {

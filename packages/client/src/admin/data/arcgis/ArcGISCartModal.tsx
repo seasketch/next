@@ -576,6 +576,7 @@ export default function ArcGISCartModal({
               source as ArcGISFeatureLayerSource
             ).getFetchStrategy();
 
+            console.log("fetch strategy", fetchStrategy);
             sources.push({
               id: layer.id,
               type: ArcgisSourceType.ArcgisVector,

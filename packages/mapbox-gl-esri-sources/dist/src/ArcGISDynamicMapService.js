@@ -49,47 +49,24 @@ class ArcGISDynamicMapService {
                     source.setTiles([this.getUrl()]);
                 }
                 else if (source.type === "image") {
-                    const bounds = this.map.getBounds();
-                    const coordinates = [
-                        [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                        [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                        [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                        [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                    ];
-                    const url = this.getUrl();
-                    if (
+                    const coordinates = this.getCoordinates(this.map);
+                    const url = this.getUrl(this.map);
                     // @ts-ignore
-                    source.url === url) {
+                    const currentUrl = source.url;
+                    if (currentUrl === url) {
+                        console.log("skipping, urls match", currentUrl, url);
                         return;
                     }
                     // @ts-ignore Using a private member here
-                    if (source.image) {
-                        source.updateImage({
-                            url,
-                            coordinates,
-                        });
+                    console.log("updating image", url, source);
+                    // @ts-ignore
+                    if (source.url === url) {
+                        return;
                     }
-                    else {
-                        let tries = 0;
-                        const updater = () => {
-                            var _a;
-                            const source = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId);
-                            if (source && this.getUrl() === url) {
-                                // @ts-ignore
-                                if (source.image && source.type === "image") {
-                                    source.updateImage({
-                                        url,
-                                        coordinates,
-                                    });
-                                }
-                                else if (tries < 10) {
-                                    tries++;
-                                    setTimeout(updater, 50);
-                                }
-                            }
-                        };
-                        setTimeout(updater, 50);
-                    }
+                    source.updateImage({
+                        url,
+                        coordinates,
+                    });
                 }
                 else {
                     // do nothing, source isn't added
@@ -255,47 +232,62 @@ class ArcGISDynamicMapService {
             attribution,
         };
     }
-    async getGLSource() {
+    async getGLSource(map) {
         let { attribution, bounds } = await this.getComputedProperties();
-        bounds = bounds || [-90, -180, 90, 180];
+        bounds = bounds || [-89, -179, 89, 179];
         if (this.options.useTiles) {
             return {
                 type: "raster",
-                tiles: [this.getUrl()],
+                tiles: [this.getUrl(map)],
                 tileSize: this.options.tileSize || 256,
                 bounds: bounds,
                 attribution,
             };
         }
         else {
-            let coordinates = [
-                [bounds[0], bounds[1]],
-                [bounds[2], bounds[1]],
-                [bounds[2], bounds[3]],
-                [bounds[0], bounds[3]],
-            ];
-            if (this.map) {
-                const bounds = this.map.getBounds();
-                coordinates = [
-                    [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
-                    [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
-                    [bounds.getSouthEast().lng, bounds.getSouthEast().lat],
-                    [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
-                ];
-            }
+            const coordinates = this.getCoordinates(map);
             // return a blank image until map event listeners are setup
+            const url = this.getUrl(map);
+            console.log("initializing with this url", url);
             return {
                 type: "image",
-                url: this.getUrl(),
+                url,
                 coordinates,
             };
         }
+    }
+    getCoordinates(map) {
+        const bounds = map.getBounds();
+        // bbox's rubbing up against max extents appear to cause exceptions
+        // to be repeatedly thrown in mapbox-gl in globe projection
+        // TODO: this might be better solved by limiting image to the max
+        // bounds of the dataset returned by the service
+        const coordinates = [
+            [
+                Math.max(bounds.getNorthWest().lng, -179),
+                Math.min(bounds.getNorthWest().lat, 89),
+            ],
+            [
+                Math.min(bounds.getNorthEast().lng, 179),
+                Math.min(bounds.getNorthEast().lat, 89),
+            ],
+            [
+                Math.min(bounds.getSouthEast().lng, 179),
+                Math.max(bounds.getSouthEast().lat, -89),
+            ],
+            [
+                Math.max(bounds.getSouthWest().lng, -179),
+                Math.max(bounds.getSouthWest().lat, -89),
+            ],
+        ];
+        console.log(coordinates.join(","));
+        return coordinates;
     }
     async addToMap(map) {
         if (!map) {
             throw new Error("Map not provided to addToMap");
         }
-        const sourceData = await this.getGLSource();
+        const sourceData = await this.getGLSource(map);
         map.addSource(this.sourceId, sourceData);
         this.addEventListeners(map);
         return this.sourceId;
@@ -316,7 +308,7 @@ class ArcGISDynamicMapService {
                 map.on("error", this.onMapError);
                 // Source is added as a blank image at first. Initialize it with
                 // proper bounds and image
-                this.updateSource();
+                // this.updateSource();
             }
         }
     }
@@ -354,22 +346,24 @@ class ArcGISDynamicMapService {
             this.removeFromMap(this.map);
         }
     }
-    getUrl() {
-        if (!this.map) {
+    getUrl(map) {
+        var _a;
+        map = this.map || map;
+        if (!map) {
             return exports.blankDataUri;
         }
-        const bounds = this.map.getBounds();
         let url = new URL(this.options.url + "/export");
         url.searchParams.set("f", "image");
         url.searchParams.set("transparent", "true");
         // create bbox in web mercator
+        const coordinates = this.getCoordinates(map);
         let bbox = [
-            lon2meters(bounds.getWest()),
-            lat2meters(bounds.getSouth()),
-            lon2meters(bounds.getEast()),
-            lat2meters(bounds.getNorth()),
+            lon2meters(coordinates[0][0]),
+            lat2meters(coordinates[2][1]),
+            lon2meters(coordinates[2][0]),
+            lat2meters(coordinates[0][1]),
         ];
-        const groundResolution = getGroundResolution(this.map.getZoom() +
+        const groundResolution = getGroundResolution(map.getZoom() +
             (this.options.supportHighDpiDisplays ? window.devicePixelRatio - 1 : 0));
         // Width and height can't be based on container width if the map is rotated
         const width = Math.round((bbox[2] - bbox[0]) / groundResolution);
@@ -409,7 +403,7 @@ class ArcGISDynamicMapService {
         // * https://github.com/Esri/esri-leaflet/issues/672#issuecomment-160691149
         // * https://gist.github.com/perrygeo/4478844
         if (Math.abs(bbox[0]) > 20037508.34 || Math.abs(bbox[2]) > 20037508.34) {
-            const centralMeridian = bounds.getCenter().lng;
+            const centralMeridian = (_a = this.map) === null || _a === void 0 ? void 0 : _a.getCenter().lng;
             if (this.options.supportHighDpiDisplays && window.devicePixelRatio > 1) {
                 bbox[0] = -(width * groundResolution) / (window.devicePixelRatio * 2);
                 bbox[2] = (width * groundResolution) / (window.devicePixelRatio * 2);
@@ -509,6 +503,7 @@ class ArcGISDynamicMapService {
      *
      */
     updateLayers(layers) {
+        console.log("update layers", layers);
         // do a deep comparison of layers to detect whether there are any changes
         if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
             this.layers = layers;

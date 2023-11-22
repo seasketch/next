@@ -6,7 +6,10 @@ import {
   OverlayFragment,
   TableOfContentsItem,
 } from "../generated/graphql";
-import { MapContext } from "../dataLayers/MapContextManager";
+import {
+  MapContext,
+  sourceTypeIsCustomGLSource,
+} from "../dataLayers/MapContextManager";
 import TreeView, { TreeItem, useOverlayState } from "../components/TreeView";
 import { DropdownDividerProps } from "../components/ContextMenuDropdown";
 import { DropdownOption } from "../components/DropdownButton";
@@ -47,7 +50,8 @@ export default function OverlayLayers({
           {
             id: "zoom-to",
             label: t("Zoom to bounds"),
-            onClick: () => {
+            disabled: !item.bounds && !checkedItems.includes(item.stableId),
+            onClick: async () => {
               let bounds: [number, number, number, number] | undefined;
               if (item.isFolder) {
                 bounds = createBoundsRecursive(item, items);
@@ -56,6 +60,22 @@ export default function OverlayLayers({
                   bounds = item.bounds.map((coord: string) =>
                     parseFloat(coord)
                   ) as [number, number, number, number];
+                } else {
+                  const layer = layers?.find((l) => l.id === item.dataLayerId);
+                  if (layer && layer.dataSourceId) {
+                    const source = sources?.find(
+                      (s) => s.id === layer.dataSourceId
+                    );
+                    if (source && sourceTypeIsCustomGLSource(source.type)) {
+                      const customSource =
+                        mapContext.manager?.getCustomGLSource(source.id);
+                      const metadata =
+                        await customSource?.getComputedMetadata();
+                      if (metadata?.bounds) {
+                        bounds = metadata.bounds;
+                      }
+                    }
+                  }
                 }
               }
               if (
@@ -89,7 +109,15 @@ export default function OverlayLayers({
         return [];
       }
     },
-    [items, mapContext.manager?.map, t, mapContext.manager]
+    [
+      items,
+      mapContext.manager?.map,
+      t,
+      mapContext.manager,
+      layers,
+      sources,
+      checkedItems,
+    ]
   );
 
   return (

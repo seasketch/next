@@ -24,7 +24,7 @@ import {
   generateMetadataForLayer,
 } from "./utils";
 import { FeatureCollection } from "geojson";
-import { fetchFeatureCollection } from "./fetchData";
+import { fetchFeatureCollection, urlForRawGeoJSONData } from "./fetchData";
 import {
   QuantizedVectorRequestManager,
   getOrCreateQuantizedVectorRequestManager,
@@ -101,6 +101,7 @@ export default class ArcGISFeatureLayerSource
     this.type = "ArcGISFeatureLayer";
     this.sourceId = options.sourceId || uuid();
     this.options = options;
+    // options.fetchStrategy = "raw";
     this.requestManager = requestManager;
     this.url = this.options.url;
     // remove trailing slash if present
@@ -242,7 +243,14 @@ export default class ArcGISFeatureLayerSource
   }
 
   get loading() {
-    return this._loading;
+    if (this.options.fetchStrategy === "raw") {
+      return Boolean(
+        this.map?.getSource(this.sourceId) &&
+          this.map?.isSourceLoaded(this.sourceId) === false
+      );
+    } else {
+      return this._loading;
+    }
   }
 
   private _glStylePromise?: Promise<{ layers: Layer[]; imageList: ImageList }>;
@@ -273,14 +281,22 @@ export default class ArcGISFeatureLayerSource
 
   async getGLSource() {
     const { attribution } = await this.getComputedProperties();
-    return {
-      type: "geojson",
-      data: this.featureData || {
-        type: "FeatureCollection",
-        features: this.featureData || [],
-      },
-      attribution: attribution ? attribution : "",
-    } as GeoJSONSourceRaw;
+    if (this.options.fetchStrategy === "raw") {
+      return {
+        type: "geojson",
+        data: urlForRawGeoJSONData(this.options.url, "*", 6),
+        attribution: attribution ? attribution : "",
+      } as GeoJSONSourceRaw;
+    } else {
+      return {
+        type: "geojson",
+        data: this.featureData || {
+          type: "FeatureCollection",
+          features: this.featureData || [],
+        },
+        attribution: attribution ? attribution : "",
+      } as GeoJSONSourceRaw;
+    }
   }
 
   addEventListeners(map: Map) {
@@ -290,6 +306,9 @@ export default class ArcGISFeatureLayerSource
       this.removeEventListeners(map);
     }
     this.map = map;
+    if (this.options.fetchStrategy === "raw") {
+      return;
+    }
     this.QuantizedVectorRequestManager =
       getOrCreateQuantizedVectorRequestManager(map);
     this._loading = this.featureData ? false : true;
@@ -299,9 +318,12 @@ export default class ArcGISFeatureLayerSource
   }
 
   removeEventListeners(map: Map) {
+    delete this.map;
+    if (this.options.fetchStrategy === "raw") {
+      return;
+    }
     this.QuantizedVectorRequestManager?.off("update");
     delete this.QuantizedVectorRequestManager;
-    delete this.map;
   }
 
   async addToMap(map: Map) {
@@ -356,9 +378,10 @@ export default class ArcGISFeatureLayerSource
       this._loading = false;
       this.rawFeaturesHaveBeenFetched = true;
     } catch (e) {
+      console.log("caught error", e);
       let shouldFireError = true;
       if (
-        ("message" in (e as any) && /bytesLimit/.test((e as any).message)) ||
+        ("message" in (e as any) && /limit/i.test((e as any).message)) ||
         this.abortController?.signal?.reason === "timeout"
       ) {
         this.exceededBytesLimit = true;
@@ -588,7 +611,7 @@ export default class ArcGISFeatureLayerSource
 
   async getFetchStrategy() {
     if (this.options.fetchStrategy === "auto") {
-      if (this.featureData) {
+      if (this.rawFeaturesHaveBeenFetched) {
         return "raw";
       } else if (this.options.fetchStrategy === "auto" && !this.error) {
         // wait to finish loading then determine strategy

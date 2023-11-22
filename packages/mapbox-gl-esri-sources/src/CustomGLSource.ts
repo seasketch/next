@@ -124,8 +124,9 @@ export interface CustomGLSource<
    * options are changed.
    * */
   getLegend?(): Promise<SingleImageLegend>;
-  getGLSource(): Promise<AnySourceData>;
+  getGLSource(map: Map): Promise<AnySourceData>;
   getGLStyleLayers(): Promise<{ layers: Layer[]; imageList?: ImageList }>;
+  // handling on the server now
   getComputedMetadata(): Promise<ComputedMetadata>;
   updateLayers(layers: OrderedLayerSettings): void;
   /**
