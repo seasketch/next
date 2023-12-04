@@ -1396,21 +1396,23 @@ var MapBoxGLEsriSources = (function () {
 	class ArcGISRESTServiceRequestManager {
 	    constructor(options) {
 	        this.inFlightRequests = {};
-	        caches
-	            .open((options === null || options === void 0 ? void 0 : options.cacheKey) || "seasketch-arcgis-rest-services")
-	            .then((cache) => {
-	            this.cache = cache;
-	            cache.keys().then(async (keys) => {
-	                for (const key of keys) {
-	                    const res = await cache.match(key);
-	                    if (res) {
-	                        if (cachedResponseIsExpired(res)) {
-	                            cache.delete(key);
+	        if (window.caches) {
+	            window.caches
+	                .open((options === null || options === void 0 ? void 0 : options.cacheKey) || "seasketch-arcgis-rest-services")
+	                .then((cache) => {
+	                this.cache = cache;
+	                cache.keys().then(async (keys) => {
+	                    for (const key of keys) {
+	                        const res = await cache.match(key);
+	                        if (res) {
+	                            if (cachedResponseIsExpired(res)) {
+	                                cache.delete(key);
+	                            }
 	                        }
 	                    }
-	                }
+	                });
 	            });
-	        });
+	        }
 	    }
 	    async getMapServiceMetadata(url, options) {
 	        if (!/rest\/services/.test(url)) {

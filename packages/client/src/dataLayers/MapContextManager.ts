@@ -1403,8 +1403,7 @@ class MapContextManager extends EventEmitter {
           if (sublayers) {
             customSource.updateLayers(sublayers);
           }
-          const glSource = await customSource.getGLSource(this.map);
-          console.log(glSource);
+          const glSource = await customSource.getGLSource(this.map!);
           baseStyle.sources[id] = glSource;
         }
       }

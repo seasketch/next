@@ -23,22 +23,24 @@ export class ArcGISRESTServiceRequestManager {
 
   constructor(options?: { cacheKey?: string }) {
     // TODO: respect cache headers if they exist
-    const cache = caches
-      .open(options?.cacheKey || "seasketch-arcgis-rest-services")
-      .then((cache) => {
-        this.cache = cache;
-        // evict expired items from cache on startup
-        cache.keys().then(async (keys) => {
-          for (const key of keys) {
-            const res = await cache.match(key);
-            if (res) {
-              if (cachedResponseIsExpired(res)) {
-                cache.delete(key);
+    if (window.caches) {
+      const cache = window.caches
+        .open(options?.cacheKey || "seasketch-arcgis-rest-services")
+        .then((cache) => {
+          this.cache = cache;
+          // evict expired items from cache on startup
+          cache.keys().then(async (keys) => {
+            for (const key of keys) {
+              const res = await cache.match(key);
+              if (res) {
+                if (cachedResponseIsExpired(res)) {
+                  cache.delete(key);
+                }
               }
             }
-          }
+          });
         });
-      });
+    }
   }
 
   async getMapServiceMetadata(url: string, options: FetchOptions) {

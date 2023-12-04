@@ -2,7 +2,7 @@ import { pluckGetExpressionsOfType } from "./utils";
 
 test("no expression present", () => {
   // looking for interpolation of circle-radius
-  const output = pluckGetExpressionsOfType(5, "interpolate");
+  const output = pluckGetExpressionsOfType(5, "interpolate", "color");
   expect(output.facets.length).toBe(0);
   expect(output.remainingValues).toBe(5);
 });
@@ -11,7 +11,8 @@ test("single get expression present", () => {
   // looking for interpolation of circle-radius
   const output = pluckGetExpressionsOfType(
     ["interpolate", ["linear"], ["get", "population"], 0, 200, 0, 20],
-    "interpolate"
+    "interpolate",
+    "number"
   );
   expect(output.facets.length).toBe(1);
   const facet = output.facets[0];
@@ -24,7 +25,8 @@ test("single non-get expression present", () => {
   // looking for interpolation of circle-radius
   const output = pluckGetExpressionsOfType(
     ["interpolate", ["linear"], ["zoom"], 0, 5, 16, 10],
-    "interpolate"
+    "interpolate",
+    "number"
   );
   expect(output.facets.length).toBe(0);
   expect(output.remainingValues).toEqual([
@@ -45,7 +47,7 @@ test("multiple get expressions conditional to a case statement", () => {
     ["interpolate", ["linear"], ["get", "population"], 1, 0, 5, 200_000],
     ["interpolate", ["linear"], ["get", "population"], 10, 0, 20, 200_000],
   ];
-  const output = pluckGetExpressionsOfType(expression, "interpolate");
+  const output = pluckGetExpressionsOfType(expression, "interpolate", "number");
   expect(output.facets.length).toBe(2);
   expect(output.facets[0].filters.length).toBe(1);
   // fallback does not get a filter, but this behavior may change in the future
@@ -62,7 +64,7 @@ test("multiple get expressions conditional to a case statement with a static fal
     ["interpolate", ["linear"], ["get", "population"], 10, 0, 20, 200_000],
     5,
   ];
-  const output = pluckGetExpressionsOfType(expression, "interpolate");
+  const output = pluckGetExpressionsOfType(expression, "interpolate", "number");
   expect(output.facets.length).toBe(2);
   expect(output.facets[0].filters.length).toBe(1);
   const facet1 = output.facets[0];
@@ -81,7 +83,7 @@ test("conditional static value falling back to the interpolation of interest", (
     12,
     ["interpolate", ["linear"], ["get", "population"], 1, 0, 5, 200_000],
   ];
-  const output = pluckGetExpressionsOfType(expression, "interpolate");
+  const output = pluckGetExpressionsOfType(expression, "interpolate", "number");
   expect(output.facets.length).toBe(1);
   expect(output.facets[0].filters.length).toBe(0);
   expect(output.remainingValues).toEqual([
@@ -104,7 +106,7 @@ test("match expression with multiple interpolations", () => {
     ["interpolate", ["linear"], ["get", "population"], 10, 0, 20, 200_000],
     ["interpolate", ["linear"], ["get", "population"], 20, 0, 50, 500_000],
   ];
-  const output = pluckGetExpressionsOfType(expression, "interpolate");
+  const output = pluckGetExpressionsOfType(expression, "interpolate", "number");
   expect(output.facets.length).toBe(3);
   expect(output.facets[0].filters.length).toBe(1);
   expect(output.facets[1].filters.length).toBe(1);
@@ -121,7 +123,7 @@ test("match expression with multiple interpolations and a static fallback", () =
     ["interpolate", ["linear"], ["get", "population"], 10, 0, 20, 200_000],
     5,
   ];
-  const output = pluckGetExpressionsOfType(expression, "interpolate");
+  const output = pluckGetExpressionsOfType(expression, "interpolate", "number");
   expect(output.facets.length).toBe(2);
   expect(output.facets[0].filters.length).toBe(1);
   expect(output.facets[1].filters.length).toBe(1);
@@ -142,7 +144,7 @@ test("match expression with fallback set to null", () => {
     5,
     ["interpolate", ["linear"], ["get", "population"], 20, 0, 50, 500_000],
   ];
-  const output = pluckGetExpressionsOfType(expression, "interpolate");
+  const output = pluckGetExpressionsOfType(expression, "interpolate", "number");
   expect(output.facets.length).toBe(2);
   expect(output.facets[0].filters.length).toBe(1);
   const facet1 = output.facets[0];
@@ -198,7 +200,7 @@ test.only("targetExpressionMustIncludeGet option", () => {
       "red",
     ],
   ];
-  const output = pluckGetExpressionsOfType(expression, "interpolate", {
+  const output = pluckGetExpressionsOfType(expression, "interpolate", "color", {
     targetExpressionMustIncludeGet: false,
   });
   expect(output.facets.length).toBe(2);

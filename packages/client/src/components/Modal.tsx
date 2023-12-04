@@ -96,6 +96,13 @@ export default function Modal(props: ModalProps) {
             {props.loading && (
               <div>
                 <Spinner large color="white" />
+                <Panel
+                  initialFocus={props.initialFocus}
+                  zeroPadding={true}
+                  autoWidth={true}
+                  grid={grid}
+                  className="hidden"
+                />
               </div>
             )}
             {!props.loading && (
