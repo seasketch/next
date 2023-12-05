@@ -157,8 +157,9 @@ export class ArcGISDynamicMapService
   async getComputedMetadata(): Promise<ComputedMetadata> {
     if (!this._computedMetadata) {
       const { serviceMetadata, layers } = await this.getMetadata();
-      const { bounds, minzoom, maxzoom, attribution } =
+      let { bounds, minzoom, maxzoom, attribution } =
         await this.getComputedProperties();
+      attribution = this.options.attributionOverride || attribution;
       const results = /\/.+\/MapServer/.exec(this.options.url);
       let label = results ? results[0] : false;
       if (!label) {
@@ -306,7 +307,6 @@ export class ArcGISDynamicMapService
       const coordinates = this.getCoordinates(map);
       // return a blank image until map event listeners are setup
       const url = this.getUrl(map);
-      console.log("initializing with this url", url);
       return {
         type: "image",
         url,
@@ -339,7 +339,6 @@ export class ArcGISDynamicMapService
         Math.max(bounds.getSouthWest().lat, -89),
       ],
     ];
-    console.log(coordinates.join(","));
     return coordinates;
   }
 
@@ -571,12 +570,9 @@ export class ArcGISDynamicMapService
         // @ts-ignore
         const currentUrl = source.url;
         if (currentUrl === url) {
-          console.log("skipping, urls match", currentUrl, url);
           return;
         }
         // @ts-ignore Using a private member here
-        console.log("updating image", url, source);
-        // @ts-ignore
         if (source.url === url) {
           return;
         }
@@ -618,7 +614,6 @@ export class ArcGISDynamicMapService
    *
    */
   updateLayers(layers: OrderedLayerSettings) {
-    console.log("update layers", layers);
     // do a deep comparison of layers to detect whether there are any changes
     if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
       this.layers = layers;
@@ -717,3 +712,9 @@ function getGroundResolution(level: number) {
 
 /** @hidden */
 const resolutions: { [level: number]: number } = {};
+
+export function isArcGISDynamicMapService(
+  source: any
+): source is ArcGISDynamicMapService {
+  return source.type === "ArcGISDynamicMapService";
+}

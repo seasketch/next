@@ -264,6 +264,7 @@ query GetLayerItem($id: Int!) {
         uploadedBy
         geostats
         translatedProps
+        arcgisFetchStrategy
       }
     }
   }
@@ -465,6 +466,20 @@ mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
     dataSource {
       id
       queryParameters
+    }
+  }
+}
+
+mutation UpdateFetchStrategy(
+  $sourceId: Int!
+  $fetchStrategy: ArcgisFeatureLayerFetchStrategy!
+) {
+  updateDataSource(
+    input: { id: $sourceId, patch: { arcgisFetchStrategy: $fetchStrategy } }
+  ) {
+    dataSource {
+      id
+      arcgisFetchStrategy
     }
   }
 }

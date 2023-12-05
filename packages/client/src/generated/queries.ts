@@ -2356,6 +2356,7 @@ export type DataSourceInput = {
 
 /** Represents an update to a `DataSource`. Fields that are set will be updated. */
 export type DataSourcePatch = {
+  arcgisFetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   /**
@@ -8375,6 +8376,13 @@ export enum OptionalBasemapLayersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+export type OutstandingSurveyInvites = {
+  __typename?: 'OutstandingSurveyInvites';
+  projectId: Scalars['Int'];
+  surveyId: Scalars['Int'];
+  token: Scalars['String'];
+};
+
 /** Information about pagination in a connection. */
 export type PageInfo = {
   __typename?: 'PageInfo';
@@ -12183,6 +12191,12 @@ export enum TileScheme {
   Xyz = 'XYZ'
 }
 
+export type TocItemDetails = {
+  __typename?: 'TocItemDetails';
+  id: Scalars['Int'];
+  type: SketchChildType;
+};
+
 /** All input for the `toggleAdminAccess` mutation. */
 export type ToggleAdminAccessInput = {
   /**
@@ -14395,16 +14409,6 @@ export type UpdateProjectStorageBucketMutation = (
   )> }
 );
 
-export type NewQueryParametersFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
-
-export type UpdateHighDpiFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'useDevicePixelRatio'>
-);
-
 export type UpdateFormatFragment = (
   { __typename?: 'DataSource' }
   & Pick<DataSource, 'queryParameters'>
@@ -15702,7 +15706,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy'>
       )> }
     )> }
   )> }
@@ -15886,6 +15890,23 @@ export type UpdateQueryParametersMutation = (
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
       & Pick<DataSource, 'id' | 'queryParameters'>
+    )> }
+  )> }
+);
+
+export type UpdateFetchStrategyMutationVariables = Exact<{
+  sourceId: Scalars['Int'];
+  fetchStrategy: ArcgisFeatureLayerFetchStrategy;
+}>;
+
+
+export type UpdateFetchStrategyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'arcgisFetchStrategy'>
     )> }
   )> }
 );
@@ -19301,16 +19322,6 @@ export const NewBasemapFragmentDoc = /*#__PURE__*/ gql`
   surveysOnly
 }
     `;
-export const NewQueryParametersFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewQueryParameters on DataSource {
-  queryParameters
-}
-    `;
-export const UpdateHighDpiFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateHighDPI on DataSource {
-  useDevicePixelRatio
-}
-    `;
 export const UpdateFormatFragmentDoc = /*#__PURE__*/ gql`
     fragment UpdateFormat on DataSource {
   queryParameters
@@ -21481,6 +21492,7 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
         uploadedBy
         geostats
         translatedProps
+        arcgisFetchStrategy
       }
     }
   }
@@ -21648,6 +21660,18 @@ export const UpdateQueryParametersDocument = /*#__PURE__*/ gql`
     dataSource {
       id
       queryParameters
+    }
+  }
+}
+    `;
+export const UpdateFetchStrategyDocument = /*#__PURE__*/ gql`
+    mutation UpdateFetchStrategy($sourceId: Int!, $fetchStrategy: ArcgisFeatureLayerFetchStrategy!) {
+  updateDataSource(
+    input: {id: $sourceId, patch: {arcgisFetchStrategy: $fetchStrategy}}
+  ) {
+    dataSource {
+      id
+      arcgisFetchStrategy
     }
   }
 }
@@ -23838,6 +23862,7 @@ export const namedOperations = {
     UpdateZIndexes: 'UpdateZIndexes',
     UpdateRenderUnderType: 'UpdateRenderUnderType',
     UpdateQueryParameters: 'UpdateQueryParameters',
+    UpdateFetchStrategy: 'UpdateFetchStrategy',
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
@@ -23938,8 +23963,6 @@ export const namedOperations = {
     NewLabelsLayer: 'NewLabelsLayer',
     NewTerrain: 'NewTerrain',
     NewBasemap: 'NewBasemap',
-    NewQueryParameters: 'NewQueryParameters',
-    UpdateHighDPI: 'UpdateHighDPI',
     UpdateFormat: 'UpdateFormat',
     NewGLStyle: 'NewGLStyle',
     NewRenderUnder: 'NewRenderUnder',

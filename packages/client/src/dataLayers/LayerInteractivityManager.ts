@@ -129,26 +129,31 @@ export default class LayerInteractivityManager extends EventEmitter {
               let GLStyles: Layer[];
               if (layer.mapboxGlStyles && Array.isArray(layer.mapboxGlStyles)) {
                 GLStyles = layer.mapboxGlStyles;
+                newInteractiveVectorLayerIds = [
+                  ...newInteractiveVectorLayerIds,
+                  ...GLStyles.map((s, i) => idForLayer(layer, i)),
+                ];
+                newActiveLayers[layer.id] = layer;
               } else {
-                if (source.type === DataSourceTypes.ArcgisVector) {
-                  throw new Error("Not Implemented");
-                  // const { layers } = await getDynamicArcGISStyle(
-                  //   source.url!,
-                  //   source.id.toString()
-                  // );
-                  // GLStyles = layers;
-                } else {
-                  throw new Error(
-                    /* eslint-disable-next-line */
-                    `Could not find mapbox layer ids for client layer id=${layer.id}`
-                  );
-                }
+                // TODO: Support other source types
+                // console.warn(
+                //   "Interactivity not supported for source type",
+                //   source.type
+                // );
+                // if (source.type === DataSourceTypes.ArcgisVector) {
+                //   throw new Error("Not Implemented");
+                //   // const { layers } = await getDynamicArcGISStyle(
+                //   //   source.url!,
+                //   //   source.id.toString()
+                //   // );
+                //   // GLStyles = layers;
+                // } else {
+                //   throw new Error(
+                //     /* eslint-disable-next-line */
+                //     `Could not find mapbox layer ids for client layer id=${layer.id}`
+                //   );
+                // }
               }
-              newInteractiveVectorLayerIds = [
-                ...newInteractiveVectorLayerIds,
-                ...GLStyles.map((s, i) => idForLayer(layer, i)),
-              ];
-              newActiveLayers[layer.id] = layer;
             }
           }
         }

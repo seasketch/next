@@ -139,17 +139,22 @@ async function fetchData(baseUrl, params, featureCollection, onError, abortContr
     });
     const str = await response.text();
     bytesReceived += byteLength(str);
+    console.log("got", bytesReceived, response);
     if (bytesLimit && bytesReceived >= bytesLimit) {
         const e = new Error(`Exceeded bytesLimit. ${bytesReceived} >= ${bytesLimit}`);
         return onError(e);
     }
     const fc = JSON.parse(str);
+    console.log("fc", fc);
     if (fc.error) {
+        console.log("fc.error found", fc.error);
         return onError(new Error(fc.error.message));
     }
     else {
         featureCollection.features.push(...fc.features);
-        if (fc.exceededTransferLimit) {
+        if (fc.exceededTransferLimit ||
+            // @ts-ignore
+            ("properties" in fc && fc.properties.exceededTransferLimit)) {
             if (!objectIdFieldName) {
                 // Fetch objectIds to do manual paging
                 params.set("returnIdsOnly", "true");
@@ -160,18 +165,27 @@ async function fetchData(baseUrl, params, featureCollection, onError, abortContr
                     });
                     const featureIds = featureCollection.features.map((f) => f.id);
                     const objectIdParameters = await r.json();
-                    expectedFeatureCount = objectIdParameters.objectIds.length;
-                    objectIdFieldName = objectIdParameters.objectIdFieldName;
+                    expectedFeatureCount = objectIdParameters.objectIds
+                        ? objectIdParameters.objectIds.length
+                        : objectIdParameters.properties.objectIds.length;
+                    objectIdFieldName =
+                        "properties" in objectIdParameters
+                            ? objectIdParameters.properties.objectIdFieldName
+                            : objectIdParameters.objectIdFieldName;
                 }
                 catch (e) {
                     return onError(e);
                 }
             }
+            console.log("on page receivved", onPageReceived);
             if (onPageReceived) {
                 onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
             }
             await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
         }
+    }
+    if (onPageReceived) {
+        onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
     }
     return bytesReceived;
 }

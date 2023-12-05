@@ -4,6 +4,7 @@ import { ImageList } from "./ImageList";
 export interface CustomGLSourceOptions {
   /** Optional. If not provided a uuid will be used. */
   sourceId?: string;
+  attributionOverride?: string;
 }
 
 /**

@@ -233,8 +233,9 @@ export class ArcGISTiledMapService
   }
 
   async getGLSource() {
-    const { minzoom, maxzoom, bounds, tileSize, attribution } =
+    let { minzoom, maxzoom, bounds, tileSize, attribution } =
       await this.getComputedProperties();
+    attribution = this.options.attributionOverride || attribution;
     const sourceData = {
       type: "raster",
       tiles: [`${this.options.url}/tile/{z}/{y}/{x}`],
@@ -309,9 +310,6 @@ export class ArcGISTiledMapService
 
   addEventListeners(map: Map) {
     this.map = map;
-    this.getThumbnailForCurrentExtent().then((thumbnailUrl) => {
-      console.log(thumbnailUrl);
-    });
   }
   removeEventListeners(map: Map) {}
 }

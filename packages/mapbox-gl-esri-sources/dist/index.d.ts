@@ -10,3 +10,4 @@ export { ArcGISFeatureLayerSourceOptions, default as ArcGISFeatureLayerSource, }
 export { generateMetadataForLayer } from "./src/utils";
 export { default as styleForFeatureLayer } from "./src/styleForFeatureLayer";
 export { ImageList } from "./src/ImageList";
+export { fetchFeatureLayerData } from "./src/ArcGISVectorSource";

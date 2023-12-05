@@ -7,7 +7,6 @@ import {
   generateStableId,
   useCatalogItemDetails,
   useCatalogItems,
-  useImportArcGISService,
 } from "./arcgis";
 import { AnyLayer, LngLatBounds, LngLatBoundsLike, Map } from "mapbox-gl";
 import { SearchIcon } from "@heroicons/react/outline";
@@ -37,7 +36,6 @@ import { compileLegendFromGLStyleLayers } from "../../../dataLayers/legends/comp
 import Switch from "../../../components/Switch";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../../../components/useDialog";
-import { isFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
 import {
   ArcgisFeatureLayerFetchStrategy,
   ArcgisImportItemInput,
@@ -49,9 +47,10 @@ import {
   useCreateBasemapMutation,
   useImportArcGisServiceMutation,
 } from "../../../generated/graphql";
-import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 
 const requestManager = new ArcGISRESTServiceRequestManager();
+
+const FEATURE_LAYERS_DEFAULT_VISIBLE_LAYERS_LIMIT = 3;
 
 export default function ArcGISCartModal({
   onRequestClose,
@@ -91,7 +90,6 @@ export default function ArcGISCartModal({
     requestManager
   );
 
-  const onError = useGlobalErrorHandler();
   const [importMutation, importState] = useImportArcGisServiceMutation();
 
   const [sourceLoading, setSourceLoading] = useState(false);
@@ -183,7 +181,7 @@ export default function ArcGISCartModal({
         }
       };
     }
-  }, [customSources, map, setSourceLoading]);
+  }, [customSources, map, setSourceLoading, hiddenLayers]);
 
   useEffect(() => {
     if (map) {
@@ -290,6 +288,18 @@ export default function ArcGISCartModal({
               });
         if (type === "FeatureServer" || useFeatureLayers) {
           const sources: ArcGISFeatureLayerSource[] = [];
+          const layerStaticIdsToHide: string[] = [];
+          let defaultVisibleLayers = featureLayers
+            .filter((item) => item.defaultVisibility === true)
+            .map((item) => item.id);
+          if (
+            defaultVisibleLayers.length >
+            FEATURE_LAYERS_DEFAULT_VISIBLE_LAYERS_LIMIT
+          ) {
+            defaultVisibleLayers = defaultVisibleLayers
+              .reverse()
+              .slice(0, FEATURE_LAYERS_DEFAULT_VISIBLE_LAYERS_LIMIT);
+          }
           for (const layer of featureLayers.reverse()) {
             const featureLayerSource = new ArcGISFeatureLayerSource(
               requestManager,
@@ -301,21 +311,23 @@ export default function ArcGISCartModal({
             sources.push(featureLayerSource);
             featureLayerSource.getComputedMetadata().then((data) => {
               const { bounds, tableOfContentsItems } = data;
+              if (!defaultVisibleLayers.includes(layer.id)) {
+                for (const item of tableOfContentsItems) {
+                  layerStaticIdsToHide.push(item.id);
+                }
+                featureLayerSource.updateLayers([]);
+              } else {
+                featureLayerSource.updateLayers([
+                  {
+                    id: layer.id.toString(),
+                    opacity: 1,
+                  },
+                ]);
+              }
               setTableOfContentsItems((prev) => [
                 ...prev,
                 ...tableOfContentsItems,
               ]);
-              setHiddenLayers((prev) => {
-                return [
-                  ...prev,
-                  ...tableOfContentsItems
-                    .filter(
-                      (item) =>
-                        item.type === "data" && item.defaultVisibility === false
-                    )
-                    .map((item) => item.id),
-                ];
-              });
               if (bounds && bounds[0]) {
                 map.fitBounds(bounds, { padding: 10, animate: false });
               }
@@ -333,6 +345,8 @@ export default function ArcGISCartModal({
                 });
             });
           }
+          setHiddenLayers(layerStaticIdsToHide);
+
           setCustomSources(sources);
           return () => {
             setCustomSources([]);
@@ -418,7 +432,7 @@ export default function ArcGISCartModal({
       }
     }
     const { hideLoadingMessage, updateLoadingMessage } = loadingMessage(
-      t(`Evaluating services (1 / ${customSources.length})...`)
+      t(`Evaluating services (1/${customSources.length})...`)
     );
     const layers = catalogItemDetailsQuery.data?.metadata.layers || [];
     if (layers.length && customSources.length) {
@@ -528,6 +542,7 @@ export default function ArcGISCartModal({
           });
         }
       } else {
+        let importedCount = 0;
         for (const layer of layers) {
           if (
             Array.isArray(layer.subLayerIds) &&
@@ -556,6 +571,13 @@ export default function ArcGISCartModal({
               continue;
               // throw new Error("Source not found");
             }
+            updateLoadingMessage(
+              t(
+                `Evaluating services (${importedCount++}/${
+                  customSources.length
+                })...`
+              )
+            );
 
             items.push({
               id: layer.id,
@@ -576,7 +598,6 @@ export default function ArcGISCartModal({
               source as ArcGISFeatureLayerSource
             ).getFetchStrategy();
 
-            console.log("fetch strategy", fetchStrategy);
             sources.push({
               id: layer.id,
               type: ArcgisSourceType.ArcgisVector,
@@ -636,11 +657,12 @@ export default function ArcGISCartModal({
       // replace parentIds with stableIds
       for (const item of items) {
         if (item.parentId) {
-          item.parentId = items.find((i) => i.id === item.parentId)?.stableId;
+          const parentId = items.find(
+            (i) => i.id?.toString() === item.parentId?.toString()
+          )?.stableId;
+          item.parentId = parentId;
         }
       }
-
-      console.log("items", items, sources);
 
       // eslint-disable-next-line i18next/no-literal-string
       updateLoadingMessage(`Adding ${items.length} items to project...`);
@@ -673,6 +695,8 @@ export default function ArcGISCartModal({
     importedArcGISServices,
     alert,
     confirm,
+    createBasemap,
+    makeChoice,
   ]);
 
   return createPortal(
@@ -688,6 +712,12 @@ export default function ArcGISCartModal({
               requestManager={requestManager}
               onResult={(result) => {
                 setLocation(result.location);
+                if (result.selectedFolder) {
+                  setSelectedFolder(result.selectedFolder);
+                }
+                if (result.catalogItem) {
+                  setSelection(result.catalogItem);
+                }
               }}
             />
           </div>
@@ -900,14 +930,16 @@ export default function ArcGISCartModal({
                   </h5>
                   <p className="text-gray-500">
                     <Trans ns="admin:data">
-                      Best option for smaller datasets, can cause problems for
-                      largest ones.
+                      Best option for smaller services, can cause problems for
+                      larger ones.
                     </Trans>
                   </p>
                 </div>
                 <Switch
                   isToggled={useFeatureLayers}
-                  onClick={(val) => setUseFeatureLayers(val)}
+                  onClick={(val) => {
+                    setUseFeatureLayers(val);
+                  }}
                 />
               </div>
               <div className="flex items-center space-x-1 h-full">

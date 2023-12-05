@@ -62,6 +62,8 @@ import {
   CustomGLSource,
 } from "@seasketch/mapbox-gl-esri-sources";
 import { OrderedLayerSettings } from "@seasketch/mapbox-gl-esri-sources/dist/src/CustomGLSource";
+import { isArcGISDynamicMapService } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISDynamicMapService";
+import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -815,6 +817,30 @@ class MapContextManager extends EventEmitter {
           }
         }
         this.pruneInactiveCustomSources();
+        for (const id in this.customSources) {
+          const sourceConfig = this.clientDataSources[id];
+          const { customSource, visible } = this.customSources[id];
+          if (visible) {
+            if (isArcGISDynamicMapService(customSource)) {
+              customSource.updateUseDevicePixelRatio(
+                sourceConfig.useDevicePixelRatio || false
+              );
+              customSource.updateQueryParameters(
+                sourceConfig.queryParameters || {}
+              );
+            } else if (isArcgisFeatureLayerSource(customSource)) {
+              customSource.updateFetchStrategy(
+                sourceConfig.arcgisFetchStrategy ===
+                  ArcgisFeatureLayerFetchStrategy.Raw
+                  ? "raw"
+                  : sourceConfig.arcgisFetchStrategy ===
+                    ArcgisFeatureLayerFetchStrategy.Tiled
+                  ? "tiled"
+                  : "auto"
+              );
+            }
+          }
+        }
         this.setState((prev) => ({ ...prev, styleHash }));
       };
       if (!this.mapIsLoaded) {
@@ -1265,6 +1291,10 @@ class MapContextManager extends EventEmitter {
                                   url: source.url!,
                                   fetchStrategy,
                                   sourceId: source.id.toString(),
+                                  attributionOverride:
+                                    (source.attribution || "").trim().length > 0
+                                      ? source.attribution!
+                                      : undefined,
                                 }
                               ),
                             };
@@ -1279,6 +1309,10 @@ class MapContextManager extends EventEmitter {
                                 {
                                   url: source.url!,
                                   sourceId: source.id.toString(),
+                                  attributionOverride:
+                                    (source.attribution || "").trim().length > 0
+                                      ? source.attribution!
+                                      : undefined,
                                 }
                               ),
                             };
@@ -1293,6 +1327,13 @@ class MapContextManager extends EventEmitter {
                                 {
                                   url: source.url!,
                                   sourceId: source.id.toString(),
+                                  supportHighDpiDisplays:
+                                    source.useDevicePixelRatio || false,
+                                  queryParameters: source.queryParameters || {},
+                                  attributionOverride:
+                                    (source.attribution || "").trim().length > 0
+                                      ? source.attribution!
+                                      : undefined,
                                 }
                               ),
                             };

@@ -146,3 +146,4 @@ export declare class ArcGISDynamicMapService implements CustomGLSource<ArcGISDyn
     get ready(): boolean;
     prepare(): Promise<void>;
 }
+export declare function isArcGISDynamicMapService(source: any): source is ArcGISDynamicMapService;

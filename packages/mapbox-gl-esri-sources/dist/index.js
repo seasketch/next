@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ImageList = exports.styleForFeatureLayer = exports.generateMetadataForLayer = exports.ArcGISFeatureLayerSource = exports.ArcGISRESTServiceRequestManager = exports.ArcGISVectorSource = exports.ArcGISDynamicMapService = exports.ArcGISTiledMapService = void 0;
+exports.fetchFeatureLayerData = exports.ImageList = exports.styleForFeatureLayer = exports.generateMetadataForLayer = exports.ArcGISFeatureLayerSource = exports.ArcGISRESTServiceRequestManager = exports.ArcGISVectorSource = exports.ArcGISDynamicMapService = exports.ArcGISTiledMapService = void 0;
 const ArcGISDynamicMapService_1 = require("./src/ArcGISDynamicMapService");
 Object.defineProperty(exports, "ArcGISDynamicMapService", { enumerable: true, get: function () { return ArcGISDynamicMapService_1.ArcGISDynamicMapService; } });
 const ArcGISVectorSource_1 = require("./src/ArcGISVectorSource");
@@ -17,3 +17,5 @@ var styleForFeatureLayer_1 = require("./src/styleForFeatureLayer");
 Object.defineProperty(exports, "styleForFeatureLayer", { enumerable: true, get: function () { return styleForFeatureLayer_1.default; } });
 var ImageList_1 = require("./src/ImageList");
 Object.defineProperty(exports, "ImageList", { enumerable: true, get: function () { return ImageList_1.ImageList; } });
+var ArcGISVectorSource_2 = require("./src/ArcGISVectorSource");
+Object.defineProperty(exports, "fetchFeatureLayerData", { enumerable: true, get: function () { return ArcGISVectorSource_2.fetchFeatureLayerData; } });

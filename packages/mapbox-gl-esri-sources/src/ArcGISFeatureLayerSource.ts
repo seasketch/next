@@ -12,7 +12,7 @@ import {
   OrderedLayerSettings,
 } from "./CustomGLSource";
 import { v4 as uuid } from "uuid";
-import { GeoJSONSourceRaw, Layer, Map } from "mapbox-gl";
+import { AnyLayer, GeoJSONSourceRaw, Layer, Map } from "mapbox-gl";
 import {
   FeatureServerMetadata,
   LayersMetadata,
@@ -33,6 +33,7 @@ import * as tilebelt from "@mapbox/tilebelt";
 import { fetchWithTTL } from "./ArcGISRESTServiceRequestManager";
 const tileDecode = require("arcgis-pbf-parser");
 
+export const FEATURE_LAYER_RECOMMENDED_BYTE_LIMIT = 2_000_000;
 export interface ArcGISFeatureLayerSourceOptions extends CustomGLSourceOptions {
   /**
    * URL for the service. Should end in /FeatureServer/{layerId} or /MapServer/{layerId}.
@@ -90,6 +91,7 @@ export default class ArcGISFeatureLayerSource
   private exceededBytesLimit = false;
   private QuantizedVectorRequestManager?: QuantizedVectorRequestManager;
   private cache?: Cache;
+  private initialFetchStrategy?: "auto" | "tiled" | "raw";
   error?: string;
   type: CustomSourceType;
   url: string;
@@ -118,6 +120,7 @@ export default class ArcGISFeatureLayerSource
       );
     }
     this.layerId = parseInt(options.url.match(/\d+$/)?.[0] || "0");
+    this.initialFetchStrategy = options.fetchStrategy || "auto";
     const cache = caches
       .open(options?.cacheKey || "seasketch-arcgis-rest-services")
       .then((cache) => {
@@ -179,7 +182,9 @@ export default class ArcGISFeatureLayerSource
   private async getComputedProperties() {
     const { serviceMetadata, layers } = await this.getMetadata();
     const attribution =
-      contentOrFalse(serviceMetadata.copyrightText) || undefined;
+      this.options.attributionOverride ||
+      contentOrFalse(serviceMetadata.copyrightText) ||
+      undefined;
     const layer = layers.layers.find((l) => l.id === this.layerId);
     if (!layer) {
       throw new Error(`Sublayer ${this.layerId} not found`);
@@ -198,6 +203,23 @@ export default class ArcGISFeatureLayerSource
       attribution,
       supportedFormats,
     };
+  }
+
+  async updateFetchStrategy(fetchStrategy: "auto" | "tiled" | "raw") {
+    const map = this.map;
+    if (this.initialFetchStrategy !== fetchStrategy && map) {
+      this.initialFetchStrategy = fetchStrategy;
+      this.abortController?.abort();
+      const layers = await this.removeFromMap(map);
+      this.options.fetchStrategy = fetchStrategy;
+      delete this.featureData;
+      this.rawFeaturesHaveBeenFetched = false;
+      await this.addToMap(map);
+      for (const layer of layers) {
+        map.addLayer(layer);
+      }
+      this.exceededBytesLimit = false;
+    }
   }
 
   private fireError(e: Error) {
@@ -243,6 +265,9 @@ export default class ArcGISFeatureLayerSource
   }
 
   get loading() {
+    if (this.paused) {
+      return false;
+    }
     if (this.options.fetchStrategy === "raw") {
       return Boolean(
         this.map?.getSource(this.sourceId) &&
@@ -336,6 +361,9 @@ export default class ArcGISFeatureLayerSource
   private abortController: AbortController | null = null;
 
   private async fetchFeatures() {
+    if (this.paused) {
+      return;
+    }
     if (
       this.options?.fetchStrategy === "tiled" ||
       this.getCachedAutoFetchStrategy() === "tiled"
@@ -365,7 +393,8 @@ export default class ArcGISFeatureLayerSource
         "*",
         this.options.fetchStrategy === "raw"
           ? 120_000_000
-          : this.options.autoFetchByteLimit || 2_000_000,
+          : this.options.autoFetchByteLimit ||
+              FEATURE_LAYER_RECOMMENDED_BYTE_LIMIT,
         this.abortController,
         this.options.fetchStrategy === "auto"
       );
@@ -378,7 +407,6 @@ export default class ArcGISFeatureLayerSource
       this._loading = false;
       this.rawFeaturesHaveBeenFetched = true;
     } catch (e) {
-      console.log("caught error", e);
       let shouldFireError = true;
       if (
         ("message" in (e as any) && /limit/i.test((e as any).message)) ||
@@ -429,6 +457,9 @@ export default class ArcGISFeatureLayerSource
   private tileFormat = "geojson";
 
   private async fetchTiles() {
+    if (this.paused) {
+      return;
+    }
     if (this.abortController) {
       this.abortController.abort();
     }
@@ -452,6 +483,7 @@ export default class ArcGISFeatureLayerSource
     const featureIds = new Set<number>();
     try {
       let wasAborted = false;
+      let errorCount = 0;
       await Promise.all(
         tiles.map((tile) =>
           (async () => {
@@ -522,6 +554,7 @@ export default class ArcGISFeatureLayerSource
               .catch((e) => {
                 if (!/aborted/i.test(e.toString())) {
                   this.fireError(e as Error);
+                  errorCount++;
                   console.error(e);
                 } else {
                   wasAborted = true;
@@ -534,7 +567,7 @@ export default class ArcGISFeatureLayerSource
         return;
       }
       const source = this.map?.getSource(this.sourceId);
-      if (source && source.type === "geojson") {
+      if (source && source.type === "geojson" && errorCount < tiles.length) {
         source.setData(fc);
         this.featureData = fc;
       }
@@ -549,7 +582,7 @@ export default class ArcGISFeatureLayerSource
   }
 
   async updateLayers(layerSettings: OrderedLayerSettings) {
-    // throw new Error("Method not implemented.");
+    // TODO: opacity changes
     const visible = Boolean(layerSettings.find((l) => l.id === this.sourceId));
     if (this.map) {
       const layers = this.map.getStyle().layers || [];
@@ -565,7 +598,7 @@ export default class ArcGISFeatureLayerSource
     }
     if (!visible) {
       this.pauseUpdates();
-    } else if (!visible) {
+    } else if (visible) {
       this.resumeUpdates();
     }
   }
@@ -581,16 +614,27 @@ export default class ArcGISFeatureLayerSource
   private resumeUpdates() {
     if (this.paused === true) {
       this.paused = false;
+      if (
+        (this.options.fetchStrategy === "raw" ||
+          this.options.fetchStrategy === "auto") &&
+        !this.rawFeaturesHaveBeenFetched
+      ) {
+        this.fetchFeatures();
+      } else if (this.options.fetchStrategy === "tiled") {
+        this.fetchTiles();
+      }
     }
   }
 
   async removeFromMap(map: Map) {
+    const removedLayers: AnyLayer[] = [];
     if (this.map) {
       const source = map.getSource(this.sourceId);
       if (source) {
         const layers = map.getStyle().layers || [];
         for (const layer of layers) {
           if ("source" in layer && layer.source === this.sourceId) {
+            removedLayers.push(layer);
             map.removeLayer(layer.id);
           }
         }
@@ -598,6 +642,7 @@ export default class ArcGISFeatureLayerSource
       }
       this.removeEventListeners(map);
     }
+    return removedLayers;
   }
 
   destroy() {
@@ -610,6 +655,9 @@ export default class ArcGISFeatureLayerSource
   }
 
   async getFetchStrategy() {
+    if (this.paused) {
+      this.resumeUpdates();
+    }
     if (this.options.fetchStrategy === "auto") {
       if (this.rawFeaturesHaveBeenFetched) {
         return "raw";
@@ -640,4 +688,10 @@ export default class ArcGISFeatureLayerSource
     await this.getComputedMetadata();
     return;
   }
+}
+
+export function isArcgisFeatureLayerSource(
+  source: CustomGLSource<any>
+): source is ArcGISFeatureLayerSource {
+  return source.type === "ArcGISFeatureLayer";
 }

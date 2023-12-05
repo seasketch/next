@@ -16,11 +16,6 @@ var MapBoxGLEsriSources = (function () {
 		return Object.freeze(n);
 	}
 
-	var ArcGISDynamicMapService = /*#__PURE__*/_mergeNamespaces({
-		__proto__: null,
-		get default () { return ArcGISDynamicMapService_1; },
-		get __moduleExports () { return ArcGISDynamicMapService_1; }
-	}, [ArcGISDynamicMapService_1]);
 	var dist$1 = /*#__PURE__*/_mergeNamespaces({
 		__proto__: null,
 		get default () { return dist; }
@@ -459,6 +454,7 @@ var MapBoxGLEsriSources = (function () {
 	var utils$2 = createCommonjsModule(function (module, exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.makeLegend = exports.generateMetadataForLayer = exports.contentOrFalse = exports.projectExtent = exports.normalizeSpatialReference = exports.extentToLatLngBounds = exports.metersToDegrees = exports.replaceSource = void 0;
+	const blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 	function replaceSource(sourceId, map, sourceData) {
 	    var _a;
 	    const existingSource = map.getSource(sourceId);
@@ -724,7 +720,7 @@ var MapBoxGLEsriSources = (function () {
 	                        : "",
 	                imageUrl: (legend === null || legend === void 0 ? void 0 : legend.imageData)
 	                    ? `data:${legend.contentType};base64,${legend.imageData}`
-	                    : ArcGISDynamicMapService.blankDataUri,
+	                    : blankDataUri,
 	                imageWidth: 20,
 	                imageHeight: 20,
 	            };
@@ -745,7 +741,7 @@ var MapBoxGLEsriSources = (function () {
 
 	var ArcGISDynamicMapService_1 = createCommonjsModule(function (module, exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.ArcGISDynamicMapService = exports.blankDataUri = void 0;
+	exports.isArcGISDynamicMapService = exports.ArcGISDynamicMapService = exports.blankDataUri = void 0;
 	exports.blankDataUri = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 	class ArcGISDynamicMapService {
 	    constructor(requestManager, options) {
@@ -789,10 +785,8 @@ var MapBoxGLEsriSources = (function () {
 	                    const url = this.getUrl(this.map);
 	                    const currentUrl = source.url;
 	                    if (currentUrl === url) {
-	                        console.log("skipping, urls match", currentUrl, url);
 	                        return;
 	                    }
-	                    console.log("updating image", url, source);
 	                    if (source.url === url) {
 	                        return;
 	                    }
@@ -849,7 +843,8 @@ var MapBoxGLEsriSources = (function () {
 	        var _a, _b;
 	        if (!this._computedMetadata) {
 	            const { serviceMetadata, layers } = await this.getMetadata();
-	            const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+	            let { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+	            attribution = this.options.attributionOverride || attribution;
 	            const results = /\/.+\/MapServer/.exec(this.options.url);
 	            let label = results ? results[0] : false;
 	            if (!label) {
@@ -956,7 +951,6 @@ var MapBoxGLEsriSources = (function () {
 	        else {
 	            const coordinates = this.getCoordinates(map);
 	            const url = this.getUrl(map);
-	            console.log("initializing with this url", url);
 	            return {
 	                type: "image",
 	                url,
@@ -984,7 +978,6 @@ var MapBoxGLEsriSources = (function () {
 	                Math.max(bounds.getSouthWest().lat, -89),
 	            ],
 	        ];
-	        console.log(coordinates.join(","));
 	        return coordinates;
 	    }
 	    async addToMap(map) {
@@ -1170,7 +1163,6 @@ var MapBoxGLEsriSources = (function () {
 	        }
 	    }
 	    updateLayers(layers) {
-	        console.log("update layers", layers);
 	        if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
 	            this.layers = layers;
 	            this.debouncedUpdateSource();
@@ -1228,7 +1220,17 @@ var MapBoxGLEsriSources = (function () {
 	    return groundResolution;
 	}
 	const resolutions = {};
+	function isArcGISDynamicMapService(source) {
+	    return source.type === "ArcGISDynamicMapService";
+	}
+	exports.isArcGISDynamicMapService = isArcGISDynamicMapService;
 	});
+
+	var ArcGISDynamicMapService = /*#__PURE__*/_mergeNamespaces({
+		__proto__: null,
+		'default': ArcGISDynamicMapService_1,
+		__moduleExports: ArcGISDynamicMapService_1
+	}, [ArcGISDynamicMapService_1]);
 
 	var ArcGISVectorSource_1 = createCommonjsModule(function (module, exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
@@ -1334,17 +1336,21 @@ var MapBoxGLEsriSources = (function () {
 	    });
 	    const str = await response.text();
 	    bytesReceived += byteLength(str);
+	    console.log("got", bytesReceived, response);
 	    if (bytesLimit && bytesReceived >= bytesLimit) {
 	        const e = new Error(`Exceeded bytesLimit. ${bytesReceived} >= ${bytesLimit}`);
 	        return onError(e);
 	    }
 	    const fc = JSON.parse(str);
+	    console.log("fc", fc);
 	    if (fc.error) {
+	        console.log("fc.error found", fc.error);
 	        return onError(new Error(fc.error.message));
 	    }
 	    else {
 	        featureCollection.features.push(...fc.features);
-	        if (fc.exceededTransferLimit) {
+	        if (fc.exceededTransferLimit ||
+	            ("properties" in fc && fc.properties.exceededTransferLimit)) {
 	            if (!objectIdFieldName) {
 	                params.set("returnIdsOnly", "true");
 	                try {
@@ -1354,18 +1360,27 @@ var MapBoxGLEsriSources = (function () {
 	                    });
 	                    const featureIds = featureCollection.features.map((f) => f.id);
 	                    const objectIdParameters = await r.json();
-	                    expectedFeatureCount = objectIdParameters.objectIds.length;
-	                    objectIdFieldName = objectIdParameters.objectIdFieldName;
+	                    expectedFeatureCount = objectIdParameters.objectIds
+	                        ? objectIdParameters.objectIds.length
+	                        : objectIdParameters.properties.objectIds.length;
+	                    objectIdFieldName =
+	                        "properties" in objectIdParameters
+	                            ? objectIdParameters.properties.objectIdFieldName
+	                            : objectIdParameters.objectIdFieldName;
 	                }
 	                catch (e) {
 	                    return onError(e);
 	                }
 	            }
+	            console.log("on page receivved", onPageReceived);
 	            if (onPageReceived) {
 	                onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
 	            }
 	            await fetchData(baseUrl, params, featureCollection, onError, abortController, onPageReceived, disablePagination, pageSize, bytesLimit, bytesReceived, objectIdFieldName, expectedFeatureCount);
 	        }
+	    }
+	    if (onPageReceived) {
+	        onPageReceived(bytesReceived, featureCollection.features.length, expectedFeatureCount);
 	    }
 	    return bytesReceived;
 	}
@@ -1868,7 +1883,8 @@ var MapBoxGLEsriSources = (function () {
 	        return this.sourceId;
 	    }
 	    async getGLSource() {
-	        const { minzoom, maxzoom, bounds, tileSize, attribution } = await this.getComputedProperties();
+	        let { minzoom, maxzoom, bounds, tileSize, attribution } = await this.getComputedProperties();
+	        attribution = this.options.attributionOverride || attribution;
 	        const sourceData = {
 	            type: "raster",
 	            tiles: [`${this.options.url}/tile/{z}/{y}/{x}`],
@@ -1923,9 +1939,6 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    addEventListeners(map) {
 	        this.map = map;
-	        this.getThumbnailForCurrentExtent().then((thumbnailUrl) => {
-	            console.log(thumbnailUrl);
-	        });
 	    }
 	    removeEventListeners(map) { }
 	}
@@ -3822,7 +3835,8 @@ var MapBoxGLEsriSources = (function () {
 
 	var ArcGISFeatureLayerSource_1 = createCommonjsModule(function (module, exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.isFeatureLayerSource = void 0;
+	exports.isArcgisFeatureLayerSource = exports.isFeatureLayerSource = exports.FEATURE_LAYER_RECOMMENDED_BYTE_LIMIT = void 0;
+	exports.FEATURE_LAYER_RECOMMENDED_BYTE_LIMIT = 2000000;
 	function isFeatureLayerSource(source) {
 	    return source.type === "ArcGISFeatureLayer";
 	}
@@ -3851,6 +3865,7 @@ var MapBoxGLEsriSources = (function () {
 	            throw new Error("URL must end in /FeatureServer/{layerId} or /MapServer/{layerId}");
 	        }
 	        this.layerId = parseInt(((_a = options.url.match(/\d+$/)) === null || _a === void 0 ? void 0 : _a[0]) || "0");
+	        this.initialFetchStrategy = options.fetchStrategy || "auto";
 	        caches
 	            .open((options === null || options === void 0 ? void 0 : options.cacheKey) || "seasketch-arcgis-rest-services")
 	            .then((cache) => {
@@ -3898,7 +3913,9 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    async getComputedProperties() {
 	        const { serviceMetadata, layers } = await this.getMetadata();
-	        const attribution = (0, utils$3.contentOrFalse)(serviceMetadata.copyrightText) || undefined;
+	        const attribution = this.options.attributionOverride ||
+	            (0, utils$3.contentOrFalse)(serviceMetadata.copyrightText) ||
+	            undefined;
 	        const layer = layers.layers.find((l) => l.id === this.layerId);
 	        if (!layer) {
 	            throw new Error(`Sublayer ${this.layerId} not found`);
@@ -3914,6 +3931,23 @@ var MapBoxGLEsriSources = (function () {
 	            attribution,
 	            supportedFormats,
 	        };
+	    }
+	    async updateFetchStrategy(fetchStrategy) {
+	        var _a;
+	        const map = this.map;
+	        if (this.initialFetchStrategy !== fetchStrategy && map) {
+	            this.initialFetchStrategy = fetchStrategy;
+	            (_a = this.abortController) === null || _a === void 0 ? void 0 : _a.abort();
+	            const layers = await this.removeFromMap(map);
+	            this.options.fetchStrategy = fetchStrategy;
+	            delete this.featureData;
+	            this.rawFeaturesHaveBeenFetched = false;
+	            await this.addToMap(map);
+	            for (const layer of layers) {
+	                map.addLayer(layer);
+	            }
+	            this.exceededBytesLimit = false;
+	        }
 	    }
 	    fireError(e) {
 	        var _a;
@@ -3956,6 +3990,9 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    get loading() {
 	        var _a, _b;
+	        if (this.paused) {
+	            return false;
+	        }
 	        if (this.options.fetchStrategy === "raw") {
 	            return Boolean(((_a = this.map) === null || _a === void 0 ? void 0 : _a.getSource(this.sourceId)) &&
 	                ((_b = this.map) === null || _b === void 0 ? void 0 : _b.isSourceLoaded(this.sourceId)) === false);
@@ -4037,6 +4074,9 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    async fetchFeatures() {
 	        var _a, _b, _c, _d;
+	        if (this.paused) {
+	            return;
+	        }
 	        if (((_a = this.options) === null || _a === void 0 ? void 0 : _a.fetchStrategy) === "tiled" ||
 	            this.getCachedAutoFetchStrategy() === "tiled") {
 	            this.options.fetchStrategy = "tiled";
@@ -4058,7 +4098,8 @@ var MapBoxGLEsriSources = (function () {
 	        try {
 	            const data = await (0, fetchData.fetchFeatureCollection)(this.options.url, 6, "*", this.options.fetchStrategy === "raw"
 	                ? 120000000
-	                : this.options.autoFetchByteLimit || 2000000, this.abortController, this.options.fetchStrategy === "auto");
+	                : this.options.autoFetchByteLimit ||
+	                    exports.FEATURE_LAYER_RECOMMENDED_BYTE_LIMIT, this.abortController, this.options.fetchStrategy === "auto");
 	            this.featureData = data;
 	            const source = (_b = this.map) === null || _b === void 0 ? void 0 : _b.getSource(this.sourceId);
 	            if (source && source.type === "geojson") {
@@ -4069,7 +4110,6 @@ var MapBoxGLEsriSources = (function () {
 	            this.rawFeaturesHaveBeenFetched = true;
 	        }
 	        catch (e) {
-	            console.log("caught error", e);
 	            let shouldFireError = true;
 	            if (("message" in e && /limit/i.test(e.message)) ||
 	                ((_d = (_c = this.abortController) === null || _c === void 0 ? void 0 : _c.signal) === null || _d === void 0 ? void 0 : _d.reason) === "timeout") {
@@ -4110,6 +4150,9 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	    async fetchTiles() {
 	        var _a, _b, _c;
+	        if (this.paused) {
+	            return;
+	        }
 	        if (this.abortController) {
 	            this.abortController.abort();
 	        }
@@ -4130,6 +4173,7 @@ var MapBoxGLEsriSources = (function () {
 	        const featureIds = new Set();
 	        try {
 	            let wasAborted = false;
+	            let errorCount = 0;
 	            await Promise.all(tiles.map((tile) => (async () => {
 	                var _a;
 	                const tileBounds = tilebelt.tileToBBOX(tile);
@@ -4187,6 +4231,7 @@ var MapBoxGLEsriSources = (function () {
 	                    .catch((e) => {
 	                    if (!/aborted/i.test(e.toString())) {
 	                        this.fireError(e);
+	                        errorCount++;
 	                        console.error(e);
 	                    }
 	                    else {
@@ -4198,7 +4243,7 @@ var MapBoxGLEsriSources = (function () {
 	                return;
 	            }
 	            const source = (_c = this.map) === null || _c === void 0 ? void 0 : _c.getSource(this.sourceId);
-	            if (source && source.type === "geojson") {
+	            if (source && source.type === "geojson" && errorCount < tiles.length) {
 	                source.setData(fc);
 	                this.featureData = fc;
 	            }
@@ -4225,7 +4270,7 @@ var MapBoxGLEsriSources = (function () {
 	        if (!visible) {
 	            this.pauseUpdates();
 	        }
-	        else if (!visible) {
+	        else if (visible) {
 	            this.resumeUpdates();
 	        }
 	    }
@@ -4237,15 +4282,25 @@ var MapBoxGLEsriSources = (function () {
 	    resumeUpdates() {
 	        if (this.paused === true) {
 	            this.paused = false;
+	            if ((this.options.fetchStrategy === "raw" ||
+	                this.options.fetchStrategy === "auto") &&
+	                !this.rawFeaturesHaveBeenFetched) {
+	                this.fetchFeatures();
+	            }
+	            else if (this.options.fetchStrategy === "tiled") {
+	                this.fetchTiles();
+	            }
 	        }
 	    }
 	    async removeFromMap(map) {
+	        const removedLayers = [];
 	        if (this.map) {
 	            const source = map.getSource(this.sourceId);
 	            if (source) {
 	                const layers = map.getStyle().layers || [];
 	                for (const layer of layers) {
 	                    if ("source" in layer && layer.source === this.sourceId) {
+	                        removedLayers.push(layer);
 	                        map.removeLayer(layer.id);
 	                    }
 	                }
@@ -4253,6 +4308,7 @@ var MapBoxGLEsriSources = (function () {
 	            }
 	            this.removeEventListeners(map);
 	        }
+	        return removedLayers;
 	    }
 	    destroy() {
 	        if (this.map) {
@@ -4263,6 +4319,9 @@ var MapBoxGLEsriSources = (function () {
 	        }
 	    }
 	    async getFetchStrategy() {
+	        if (this.paused) {
+	            this.resumeUpdates();
+	        }
 	        if (this.options.fetchStrategy === "auto") {
 	            if (this.rawFeaturesHaveBeenFetched) {
 	                return "raw";
@@ -4294,6 +4353,10 @@ var MapBoxGLEsriSources = (function () {
 	    }
 	}
 	exports.default = ArcGISFeatureLayerSource;
+	function isArcgisFeatureLayerSource(source) {
+	    return source.type === "ArcGISFeatureLayer";
+	}
+	exports.isArcgisFeatureLayerSource = isArcgisFeatureLayerSource;
 	});
 
 	var utils = createCommonjsModule(function (module, exports) {
@@ -5136,7 +5199,7 @@ var MapBoxGLEsriSources = (function () {
 
 	var dist = createCommonjsModule(function (module, exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.ImageList = exports.styleForFeatureLayer = exports.generateMetadataForLayer = exports.ArcGISFeatureLayerSource = exports.ArcGISRESTServiceRequestManager = exports.ArcGISVectorSource = exports.ArcGISDynamicMapService = exports.ArcGISTiledMapService = void 0;
+	exports.fetchFeatureLayerData = exports.ImageList = exports.styleForFeatureLayer = exports.generateMetadataForLayer = exports.ArcGISFeatureLayerSource = exports.ArcGISRESTServiceRequestManager = exports.ArcGISVectorSource = exports.ArcGISDynamicMapService = exports.ArcGISTiledMapService = void 0;
 	Object.defineProperty(exports, "ArcGISDynamicMapService", { enumerable: true, get: function () { return ArcGISDynamicMapService.ArcGISDynamicMapService; } });
 	Object.defineProperty(exports, "ArcGISVectorSource", { enumerable: true, get: function () { return ArcGISVectorSource.ArcGISVectorSource; } });
 	Object.defineProperty(exports, "ArcGISRESTServiceRequestManager", { enumerable: true, get: function () { return ArcGISRESTServiceRequestManager.ArcGISRESTServiceRequestManager; } });
@@ -5145,6 +5208,8 @@ var MapBoxGLEsriSources = (function () {
 	Object.defineProperty(exports, "generateMetadataForLayer", { enumerable: true, get: function () { return utils$3.generateMetadataForLayer; } });
 	Object.defineProperty(exports, "styleForFeatureLayer", { enumerable: true, get: function () { return styleForFeatureLayer_1.default; } });
 	Object.defineProperty(exports, "ImageList", { enumerable: true, get: function () { return ImageList.ImageList; } });
+	var ArcGISVectorSource_2 = ArcGISVectorSource;
+	Object.defineProperty(exports, "fetchFeatureLayerData", { enumerable: true, get: function () { return ArcGISVectorSource_2.fetchFeatureLayerData; } });
 	});
 
 	return dist;

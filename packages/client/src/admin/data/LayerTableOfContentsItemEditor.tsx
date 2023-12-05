@@ -10,6 +10,8 @@ import {
   useUpdateEnableDownloadMutation,
   useUpdateQueryParametersMutation,
   useUpdateEnableHighDpiRequestsMutation,
+  ArcgisFeatureLayerFetchStrategy,
+  useUpdateFetchStrategyMutation,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
@@ -36,6 +38,13 @@ import {
 import { copyTextToClipboard } from "../../projects/Forums/InlineAuthorDetails";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
+import {
+  SettingsDLListItem,
+  SettingsDefinitionList,
+} from "../SettingsDefinitionList";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import FeatureLayerPerformanceDetailsModal from "./FeatureLayerPerformanceDetailsModal";
+import { ChartBarIcon } from "@heroicons/react/solid";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -65,7 +74,24 @@ export default function LayerTableOfContentsItemEditor(
       }
     },
   });
-  const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation();
+  const onError = useGlobalErrorHandler();
+  const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation({
+    onError,
+    // @ts-ignore
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateDataSource: {
+          __typename: "UpdateDataSourcePayload",
+          dataSource: {
+            __typename: "DataSource",
+            attribution: data.attribution,
+            ...data,
+          },
+        },
+      };
+    },
+  });
   const [updateQueryParameters, updateQueryParametersState] =
     useUpdateQueryParametersMutation();
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
@@ -73,8 +99,38 @@ export default function LayerTableOfContentsItemEditor(
     useUpdateLayerMutation();
   const [updateEnableDownload, updateEnableDownloadState] =
     useUpdateEnableDownloadMutation();
-  const [updateEnableHighDpiRequests] =
-    useUpdateEnableHighDpiRequestsMutation();
+  const [updateEnableHighDpiRequests] = useUpdateEnableHighDpiRequestsMutation({
+    onError,
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateDataSource: {
+          __typename: "UpdateDataSourcePayload",
+          dataSource: {
+            __typename: "DataSource",
+            id: data.sourceId,
+            useDevicePixelRatio: data.useDevicePixelRatio,
+          },
+        },
+      };
+    },
+  });
+  const [updateFetchStrategy] = useUpdateFetchStrategyMutation({
+    onError,
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateDataSource: {
+          __typename: "UpdateDataSourcePayload",
+          dataSource: {
+            __typename: "DataSource",
+            id: data.sourceId,
+            arcgisFetchStrategy: data.fetchStrategy,
+          },
+        },
+      };
+    },
+  });
 
   const item = data?.tableOfContentsItem;
   const [downloadEnabled, setDownloadEnabled] = useState<boolean>();
@@ -146,6 +202,13 @@ export default function LayerTableOfContentsItemEditor(
 
   const [referenceCopied, setReferenceCopied] = useState(false);
 
+  const isArcGISCustomSource =
+    source?.type === DataSourceTypes.ArcgisDynamicMapserver ||
+    source?.type === DataSourceTypes.ArcgisRasterTiles ||
+    source?.type === DataSourceTypes.ArcgisVector;
+
+  const [perfModalOpen, setPerfModalOpen] = useState<string | false>(false);
+
   const copyReference = useCallback(() => {
     if (item) {
       copyTextToClipboard(item.stableId);
@@ -214,9 +277,58 @@ export default function LayerTableOfContentsItemEditor(
               mutationStatus={mutateSourceState}
               value={source?.attribution || ""}
               label={t("Attribution")}
-              description={t(
-                "If set, a short attribution string will be shown at the bottom of the map."
-              )}
+              onChange={async (value) => {
+                const sourceObj = source?.id
+                  ? mapContext.manager?.map?.getSource(source.id.toString())
+                  : undefined;
+                if (!sourceObj) {
+                  return;
+                }
+                // Danger Danger! Private method used here!
+                // https://gis.stackexchange.com/questions/407876/how-to-update-source-property-attribution-in-mapbox-gl
+                // @ts-ignore
+                const controls = mapContext.manager?.map?._controls;
+                let updateAttribution: undefined | Function;
+                if (controls && Array.isArray(controls)) {
+                  for (const control of controls) {
+                    if (
+                      "_updateAttributions" in control &&
+                      typeof control._updateAttributions === "function"
+                    ) {
+                      updateAttribution = (attr: string) => {
+                        // @ts-ignore
+                        sourceObj.attribution = attr;
+                        // @ts-ignore
+                        control._updateAttributions();
+                      };
+                    }
+                  }
+                }
+                if (updateAttribution) {
+                  if (value?.trim().length === 0 && source?.id) {
+                    const customSource = mapContext.manager?.getCustomGLSource(
+                      source?.id
+                    );
+                    if (!customSource) {
+                      updateAttribution("");
+                    } else {
+                      const metadata = await customSource.getComputedMetadata();
+                      updateAttribution(metadata.attribution || " ");
+                    }
+                  } else {
+                    updateAttribution(value);
+                  }
+                }
+              }}
+              description={
+                isArcGISCustomSource
+                  ? t(
+                      "Leave blank to display attribution dynamically from ArcGIS service, or provide attribution to override the service metadata."
+                    )
+                  : t(
+                      "If set, a short attribution string will be shown at the bottom of the map."
+                    )
+              }
               variables={{ id: source?.id }}
             />
             {/* TODO: Disabled for now because working it into MapContextManager is tricky */}
@@ -271,6 +383,7 @@ export default function LayerTableOfContentsItemEditor(
               <AccessControlListEditor nodeId={item.acl?.nodeId} />
             )}
           </div>
+
           {(source?.type === DataSourceTypes.Geojson ||
             source?.type === DataSourceTypes.SeasketchVector ||
             source?.type === DataSourceTypes.SeasketchMvt) && (
@@ -459,22 +572,15 @@ export default function LayerTableOfContentsItemEditor(
                 )}
                 {source?.type === DataSourceTypes.ArcgisVector && (
                   <>
-                    <dl className="sm:divide-y sm:divide-gray-200">
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Source Type</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          <Trans ns={["admin"]}>
-                            Vector data hosted on ArcGIS Server
-                          </Trans>
-                        </dd>
-                      </div>
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Source Server</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 truncate">
+                    <SettingsDefinitionList>
+                      <SettingsDLListItem
+                        term={t("Source Type")}
+                        description={t("ArcGIS Vector Feature Layer")}
+                      />
+                      <SettingsDLListItem
+                        truncate
+                        term={t("Source Server")}
+                        description={
                           <a
                             target="_blank"
                             className="text-primary-600 underline"
@@ -485,194 +591,188 @@ export default function LayerTableOfContentsItemEditor(
                               .url!.replace("https://", "")
                               .replace("http://", "")}
                           </a>
-                        </dd>
-                      </div>
-                    </dl>
+                        }
+                      />
+                      <InputBlock
+                        className="py-4 text-sm font-medium text-gray-500"
+                        title={t("Fetch Strategy")}
+                        input={
+                          <select
+                            id="imageFormat"
+                            className="rounded form-select block w-full pl-3 pr-7 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5"
+                            value={
+                              source.arcgisFetchStrategy ||
+                              ArcgisFeatureLayerFetchStrategy.Auto
+                            }
+                            onChange={(e) => {
+                              updateFetchStrategy({
+                                variables: {
+                                  sourceId: source.id,
+                                  fetchStrategy: e.target
+                                    .value as ArcgisFeatureLayerFetchStrategy,
+                                },
+                              });
+                            }}
+                          >
+                            <option
+                              value={ArcgisFeatureLayerFetchStrategy.Auto}
+                            >
+                              Auto
+                            </option>
+                            <option value={ArcgisFeatureLayerFetchStrategy.Raw}>
+                              GeoJSON
+                            </option>
+                            <option
+                              value={ArcgisFeatureLayerFetchStrategy.Tiled}
+                            >
+                              Tiled
+                            </option>
+                          </select>
+                        }
+                      >
+                        <Trans ns="admin">
+                          SeaSketch determines an appropriate strategy for
+                          retrieving vector data at import time. <br />
+                          <em>GeoJSON</em> requests offer best performance when
+                          datasets can be downloaded in a single request.{" "}
+                          <em>Tiled</em> requests can be used for datasets that
+                          are too large or contain &gt; 2000 features.{" "}
+                          <em>Auto</em> is not recommended other than for
+                          debugging.
+                          <br />
+                          <button
+                            className="underline text-primary-500 mt-1"
+                            onClick={() => setPerfModalOpen(source!.url!)}
+                          >
+                            <ChartBarIcon className=" w-4 h-4 inline mr-1" />
+                            {t("Analyze layer performance details")}
+                          </button>
+                        </Trans>
+                      </InputBlock>
+                    </SettingsDefinitionList>
+                    {perfModalOpen && (
+                      <FeatureLayerPerformanceDetailsModal
+                        url={source.url!}
+                        sourceName={item.title}
+                        onRequestClose={() => setPerfModalOpen(false)}
+                      />
+                    )}
                   </>
                 )}
                 {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
-                  <>
-                    <dl className="sm:divide-y sm:divide-gray-200">
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Source Type</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <SettingsDefinitionList>
+                    <SettingsDLListItem
+                      term={t("Source Type")}
+                      description={t("ArcGIS Dynamic Map Service")}
+                    />
+                    <SettingsDLListItem
+                      truncate
+                      term={t("Source Server")}
+                      description={
+                        <a
+                          target="_blank"
+                          className="text-primary-600 underline"
+                          href={source.url!}
+                          rel="noreferrer"
+                        >
+                          {source
+                            .url!.replace("https://", "")
+                            .replace("http://", "")}
+                        </a>
+                      }
+                    />
+                    <SettingsDLListItem
+                      term={t("Dynamic Layers")}
+                      description={
+                        source.supportsDynamicLayers ? (
                           <Trans ns={["admin"]}>
-                            ArcGIS Dynamic Map Service
+                            Supported. Users can control layer visibility,
+                            opacity, and ordering.
                           </Trans>
-                        </dd>
-                      </div>
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Source Server</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 truncate">
-                          <a
-                            target="_blank"
-                            className="text-primary-600 underline"
-                            href={source.url!}
-                            rel="noreferrer"
-                          >
-                            {source
-                              .url!.replace("https://", "")
-                              .replace("http://", "")}
-                          </a>
-                        </dd>
-                      </div>
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Dynamic Layers</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          {source.supportsDynamicLayers ? (
-                            <Trans ns={["admin"]}>
-                              Supported. Users can control layer visibility,
-                              opacity, and ordering.
-                            </Trans>
-                          ) : (
-                            <Trans ns={["admin"]}>
-                              <b>Unsupported</b>. Users will not be able to
-                              control the visibility and ordering of individual
-                              layers.
-                            </Trans>
+                        ) : (
+                          <Trans ns={["admin"]}>
+                            <b>Unsupported</b>. Users will not be able to
+                            control the visibility and ordering of individual
+                            layers.
+                          </Trans>
+                        )
+                      }
+                    />
+                    <InputBlock
+                      title={t("Enable High-DPI Requests")}
+                      className="py-4 text-sm font-medium text-gray-500"
+                      input={
+                        <Switch
+                          isToggled={!!source.useDevicePixelRatio}
+                          onClick={(value) => {
+                            updateEnableHighDpiRequests({
+                              variables: {
+                                sourceId: source.id,
+                                useDevicePixelRatio: value,
+                              },
+                            });
+                          }}
+                        />
+                      }
+                    >
+                      <Trans ns="admin">
+                        Request higher resolution images when the user has a
+                        "Retina" or 4k display. Maps will be much more detailed,
+                        but it demands more of the data server.
+                      </Trans>
+                    </InputBlock>
+                    <InputBlock
+                      className="py-4 text-sm font-medium text-gray-500"
+                      title={t("Image Format")}
+                      input={
+                        <select
+                          id="imageFormat"
+                          className="rounded form-select block w-full pl-3 pr-4 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5"
+                          value={source.queryParameters?.format || "PNG"}
+                          onChange={(e) => {
+                            client.writeFragment({
+                              id: `DataSource:${source.id}`,
+                              fragment: gql`
+                                fragment UpdateFormat on DataSource {
+                                  queryParameters
+                                }
+                              `,
+                              data: {
+                                queryParameters: {
+                                  ...source.queryParameters,
+                                  format: e.target.value,
+                                },
+                              },
+                            });
+                            updateQueryParameters({
+                              variables: {
+                                sourceId: source.id,
+                                queryParameters: {
+                                  ...source.queryParameters,
+                                  format: e.target.value,
+                                },
+                              },
+                            });
+                          }}
+                        >
+                          {["PNG", "PNG8", "PNG24", "PNG32", "GIF", "JPG"].map(
+                            (f) => (
+                              <option key={f} value={f}>
+                                {f.toLocaleLowerCase()}
+                              </option>
+                            )
                           )}
-                        </dd>
-                      </div>
-                    </dl>
-                  </>
+                        </select>
+                      }
+                    >
+                      <Trans ns="admin">
+                        Imagery data looks best using <code>jpg</code>, for all
+                        others <code>png</code> is usually the right choice.
+                      </Trans>
+                    </InputBlock>
+                  </SettingsDefinitionList>
                 )}
               </div>
-              {source?.type === DataSourceTypes.ArcgisVector && (
-                <InputBlock
-                  className="mt-4 text-sm"
-                  title={t("Geometry Precision")}
-                  input={
-                    <select
-                      id="geometryPrecision"
-                      // className="form-select rounded block w-full pl-3 pr-8 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5"
-                      className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500 pr-8"
-                      value={source.queryParameters.geometryPrecision}
-                      disabled={updateQueryParametersState.loading}
-                      onChange={(e) => {
-                        const queryParameters = {
-                          ...source.queryParameters,
-                          geometryPrecision: e.target.value,
-                        };
-                        client.writeFragment({
-                          id: `DataSource:${source.id}`,
-                          fragment: gql`
-                            fragment NewQueryParameters on DataSource {
-                              queryParameters
-                            }
-                          `,
-                          data: {
-                            queryParameters,
-                          },
-                        });
-                        updateQueryParameters({
-                          variables: {
-                            sourceId: source.id,
-                            queryParameters,
-                          },
-                        });
-                      }}
-                    >
-                      <option value="5">1 m</option>
-                      <option value="6">10 cm</option>
-                    </select>
-                  }
-                >
-                  {t("Using a lower level of precision reduces download size")}
-                </InputBlock>
-              )}
-              {source?.type === DataSourceTypes.ArcgisDynamicMapserver && (
-                <>
-                  <InputBlock
-                    title={t("Enable High-DPI Requests")}
-                    className="mt-4 text-sm"
-                    input={
-                      <Switch
-                        isToggled={!!source.useDevicePixelRatio}
-                        onClick={(value) => {
-                          client.writeFragment({
-                            id: `DataSource:${source.id}`,
-                            fragment: gql`
-                              fragment UpdateHighDPI on DataSource {
-                                useDevicePixelRatio
-                              }
-                            `,
-                            data: {
-                              useDevicePixelRatio: value,
-                            },
-                          });
-                          updateEnableHighDpiRequests({
-                            variables: {
-                              sourceId: source.id,
-                              useDevicePixelRatio: value,
-                            },
-                          });
-                        }}
-                      />
-                    }
-                  >
-                    <Trans ns="admin">
-                      Request higher resolution images when the user has a
-                      "Retina" or 4k display. Maps will be much more detailed,
-                      but it demands more of the data server.
-                    </Trans>
-                  </InputBlock>
-                  <InputBlock
-                    className="mt-4 text-sm"
-                    title={t("Image Format")}
-                    input={
-                      <select
-                        id="imageFormat"
-                        className="rounded form-select block w-full pl-3 pr-4 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5"
-                        value={source.queryParameters?.format || "PNG"}
-                        onChange={(e) => {
-                          client.writeFragment({
-                            id: `DataSource:${source.id}`,
-                            fragment: gql`
-                              fragment UpdateFormat on DataSource {
-                                queryParameters
-                              }
-                            `,
-                            data: {
-                              queryParameters: {
-                                ...source.queryParameters,
-                                format: e.target.value,
-                              },
-                            },
-                          });
-                          updateQueryParameters({
-                            variables: {
-                              sourceId: source.id,
-                              queryParameters: {
-                                ...source.queryParameters,
-                                format: e.target.value,
-                              },
-                            },
-                          });
-                        }}
-                      >
-                        {["PNG", "PNG8", "PNG24", "PNG32", "GIF", "JPG"].map(
-                          (f) => (
-                            <option key={f} value={f}>
-                              {f.toLocaleLowerCase()}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    }
-                  >
-                    <Trans ns="admin">
-                      Imagery data looks best using <code>jpg</code>, for others{" "}
-                      <code>png</code> is a good choice.
-                    </Trans>
-                  </InputBlock>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -704,13 +804,6 @@ export default function LayerTableOfContentsItemEditor(
                     "Display this layer under any text labels on the basemap."
                   ),
                 },
-                // {
-                //   value: RenderUnderType.Land,
-                //   label: t("Show Under Land"),
-                //   description: t(
-                //     "Useful when you want to present data that may not have a matching shoreline."
-                //   ),
-                // },
                 {
                   value: RenderUnderType.None,
                   label: t("Cover Basemap"),

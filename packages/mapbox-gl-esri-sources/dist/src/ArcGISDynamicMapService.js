@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ArcGISDynamicMapService = exports.blankDataUri = void 0;
+exports.isArcGISDynamicMapService = exports.ArcGISDynamicMapService = exports.blankDataUri = void 0;
 const uuid_1 = require("uuid");
 const utils_1 = require("./utils");
 /** @hidden */
@@ -54,12 +54,9 @@ class ArcGISDynamicMapService {
                     // @ts-ignore
                     const currentUrl = source.url;
                     if (currentUrl === url) {
-                        console.log("skipping, urls match", currentUrl, url);
                         return;
                     }
                     // @ts-ignore Using a private member here
-                    console.log("updating image", url, source);
-                    // @ts-ignore
                     if (source.url === url) {
                         return;
                     }
@@ -129,7 +126,8 @@ class ArcGISDynamicMapService {
         var _a, _b;
         if (!this._computedMetadata) {
             const { serviceMetadata, layers } = await this.getMetadata();
-            const { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+            let { bounds, minzoom, maxzoom, attribution } = await this.getComputedProperties();
+            attribution = this.options.attributionOverride || attribution;
             const results = /\/.+\/MapServer/.exec(this.options.url);
             let label = results ? results[0] : false;
             if (!label) {
@@ -248,7 +246,6 @@ class ArcGISDynamicMapService {
             const coordinates = this.getCoordinates(map);
             // return a blank image until map event listeners are setup
             const url = this.getUrl(map);
-            console.log("initializing with this url", url);
             return {
                 type: "image",
                 url,
@@ -280,7 +277,6 @@ class ArcGISDynamicMapService {
                 Math.max(bounds.getSouthWest().lat, -89),
             ],
         ];
-        console.log(coordinates.join(","));
         return coordinates;
     }
     async addToMap(map) {
@@ -503,7 +499,6 @@ class ArcGISDynamicMapService {
      *
      */
     updateLayers(layers) {
-        console.log("update layers", layers);
         // do a deep comparison of layers to detect whether there are any changes
         if (JSON.stringify(layers) !== JSON.stringify(this.layers)) {
             this.layers = layers;
@@ -590,3 +585,7 @@ function getGroundResolution(level) {
 }
 /** @hidden */
 const resolutions = {};
+function isArcGISDynamicMapService(source) {
+    return source.type === "ArcGISDynamicMapService";
+}
+exports.isArcGISDynamicMapService = isArcGISDynamicMapService;

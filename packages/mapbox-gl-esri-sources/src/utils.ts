@@ -7,7 +7,9 @@ import {
 } from "./ServiceMetadata";
 import { SpatialReference } from "arcgis-rest-api";
 import { MapServiceLegendMetadata } from "./ArcGISRESTServiceRequestManager";
-import { blankDataUri } from "./ArcGISDynamicMapService";
+
+const blankDataUri =
+  "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
 /**
  * Replaced an existing source, preserving layers and their order by temporarily

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import {
+  CatalogItem,
   normalizeArcGISServerUrl,
   NormalizedArcGISServerLocation,
 } from "./arcgis";
@@ -15,6 +16,8 @@ export default function ArcGISSearchPage({
   onResult?: (e: {
     location: NormalizedArcGISServerLocation;
     version: string;
+    catalogItem?: CatalogItem;
+    selectedFolder?: CatalogItem;
   }) => void;
   requestManager: ArcGISRESTServiceRequestManager;
 }) {
@@ -48,9 +51,34 @@ export default function ArcGISSearchPage({
         if (serviceResponse.currentVersion) {
           addServer({ location: location.baseUrl, type: "arcgis" });
           if (onResult) {
+            let catalogItem: CatalogItem | undefined;
+            let folder: CatalogItem | undefined;
+            if (location.location.split("/").length > 2) {
+              const folderName = location.location.split("/")[1];
+              folder = {
+                name: folderName,
+                type: "Folder",
+                url: location.servicesRoot + "/" + folderName,
+              };
+            }
+            if (/MapServer/.test(location.location)) {
+              catalogItem = {
+                name: location.location.split("/")[1],
+                type: "MapServer",
+                url: location.servicesRoot + location.location,
+              };
+            } else if (/FeatureServer/.test(location.location)) {
+              catalogItem = {
+                name: location.location.split("/")[1],
+                type: "FeatureServer",
+                url: location.servicesRoot + location.location,
+              };
+            }
             onResult({
               location,
               version: serviceResponse.currentVersion.toString(),
+              catalogItem,
+              selectedFolder: folder,
             });
           }
           // setVersion(serviceResponse.currentVersion);
