@@ -1075,6 +1075,7 @@ class MapContextManager extends EventEmitter {
             type: "raster",
             tiles: [basemap.url],
             tileSize: 256 / window.devicePixelRatio,
+            ...(basemap.maxzoom ? { maxzoom: basemap.maxzoom } : {}),
           },
         },
         layers: [
@@ -1313,6 +1314,9 @@ class MapContextManager extends EventEmitter {
                                     (source.attribution || "").trim().length > 0
                                       ? source.attribution!
                                       : undefined,
+                                  maxZoom: source.maxzoom
+                                    ? source.maxzoom
+                                    : undefined,
                                 }
                               ),
                             };

@@ -225,15 +225,15 @@ export default function TableOfContentsEditor() {
               });
             },
           });
-          if (item.hasMetadata) {
-            contextMenuOptions.push({
-              id: "edit-metadata",
-              label: t("Edit metadata"),
-              onClick: () => {
-                setOpenMetadataItemId(item.id);
-              },
-            });
-          }
+          // if (item.isFolder) {
+          contextMenuOptions.push({
+            id: "edit-metadata",
+            label: t("Edit metadata"),
+            onClick: () => {
+              setOpenMetadataItemId(item.id);
+            },
+          });
+          // }
         }
         contextMenuOptions.push({
           id: "delete",

@@ -311,6 +311,7 @@ export type Basemap = Node & {
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `MapBookmark`. */
   mapBookmarksBySelectedBasemapConnection: MapBookmarksConnection;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -432,6 +433,7 @@ export type BasemapInput = {
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /**
@@ -486,6 +488,7 @@ export type BasemapPatch = {
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name?: Maybe<Scalars['String']>;
   /**
@@ -12011,6 +12014,7 @@ export type TableOfContentsItem = Node & {
    * their children. Toggles can only be used to toggle children off
    */
   isClickOffOnly: Scalars['Boolean'];
+  isCustomGlSource?: Maybe<Scalars['Boolean']>;
   /**
    * Identifies whether this item is part of the draft table of contents edited by
    * admin or the static public version. This property cannot be changed. Rather,
@@ -12047,6 +12051,7 @@ export type TableOfContentsItem = Node & {
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
   translatedProps: Scalars['JSON'];
+  usesDynamicMetadata?: Maybe<Scalars['Boolean']>;
 };
 
 /**
@@ -14880,7 +14885,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice' | 'maxzoom'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -15290,6 +15295,23 @@ export type MapboxKeysQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+  )> }
+);
+
+export type SetBasemapMaxZoomMutationVariables = Exact<{
+  id: Scalars['Int'];
+  maxzoom?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type SetBasemapMaxZoomMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemap?: Maybe<(
+    { __typename?: 'UpdateBasemapPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'maxzoom'>
+    )> }
   )> }
 );
 
@@ -15937,13 +15959,13 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'computedMetadata'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource'>
   )> }
 );
 
 export type UpdateMetadataMutationVariables = Exact<{
   itemId: Scalars['Int'];
-  metadata: Scalars['JSON'];
+  metadata?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -15953,7 +15975,7 @@ export type UpdateMetadataMutation = (
     { __typename?: 'UpdateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'metadata'>
+      & Pick<TableOfContentsItem, 'id' | 'metadata' | 'usesDynamicMetadata' | 'computedMetadata'>
     )> }
   )> }
 );
@@ -16032,6 +16054,23 @@ export type ImportArcGisServiceMutation = (
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title'>
     )>> }
+  )> }
+);
+
+export type SetMaxZoomMutationVariables = Exact<{
+  sourceId: Scalars['Int'];
+  maxzoom?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type SetMaxZoomMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'maxzoom'>
+    )> }
   )> }
 );
 
@@ -19559,6 +19598,7 @@ export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
   surveysOnly
   translatedProps
   isArcgisTiledMapservice
+  maxzoom
 }
     `;
 export const BasemapAdminDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -21121,6 +21161,16 @@ export const MapboxKeysDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SetBasemapMaxZoomDocument = /*#__PURE__*/ gql`
+    mutation SetBasemapMaxZoom($id: Int!, $maxzoom: Int) {
+  updateBasemap(input: {id: $id, patch: {maxzoom: $maxzoom}}) {
+    basemap {
+      id
+      maxzoom
+    }
+  }
+}
+    `;
 export const CreateProjectDocument = /*#__PURE__*/ gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -21693,15 +21743,19 @@ export const GetMetadataDocument = /*#__PURE__*/ gql`
   tableOfContentsItem(id: $itemId) {
     id
     computedMetadata
+    usesDynamicMetadata
+    isCustomGlSource
   }
 }
     `;
 export const UpdateMetadataDocument = /*#__PURE__*/ gql`
-    mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+    mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
     tableOfContentsItem {
       id
       metadata
+      usesDynamicMetadata
+      computedMetadata
     }
   }
 }
@@ -21757,6 +21811,16 @@ export const ImportArcGisServiceDocument = /*#__PURE__*/ gql`
     tableOfContentsItems {
       id
       title
+    }
+  }
+}
+    `;
+export const SetMaxZoomDocument = /*#__PURE__*/ gql`
+    mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
+  updateDataSource(input: {id: $sourceId, patch: {maxzoom: $maxzoom}}) {
+    dataSource {
+      id
+      maxzoom
     }
   }
 }
@@ -23842,6 +23906,7 @@ export const namedOperations = {
     UpdateOptionalBasemapLayerOptions: 'UpdateOptionalBasemapLayerOptions',
     UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
     UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
+    SetBasemapMaxZoom: 'SetBasemapMaxZoom',
     CreateProject: 'CreateProject',
     VerifyEmail: 'VerifyEmail',
     createDataUpload: 'createDataUpload',
@@ -23867,6 +23932,7 @@ export const namedOperations = {
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',
+    SetMaxZoom: 'SetMaxZoom',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

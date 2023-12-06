@@ -45,6 +45,8 @@ import {
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import FeatureLayerPerformanceDetailsModal from "./FeatureLayerPerformanceDetailsModal";
 import { ChartBarIcon } from "@heroicons/react/solid";
+import Skeleton from "../../components/Skeleton";
+import ArcGISTiledRasterSettings from "./ArcGISTiledRasterSettings";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -424,150 +426,142 @@ export default function LayerTableOfContentsItemEditor(
                 {(source?.type === DataSourceTypes.SeasketchVector ||
                   source?.type === DataSourceTypes.SeasketchMvt) && (
                   <>
-                    <dl className="sm:divide-y sm:divide-gray-200 zebra-stripe-child-div">
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Source Type</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          {source?.type === DataSourceTypes.SeasketchVector && (
-                            <Trans ns={["admin"]}>
-                              GeoJSON data hosted on SeaSketch
-                            </Trans>
-                          )}
-                          {source?.type === DataSourceTypes.SeasketchMvt && (
-                            <Trans ns={["admin"]}>
-                              Vector tiles hosted on SeaSketch
-                            </Trans>
-                          )}
-                        </dd>
-                      </div>
+                    <SettingsDefinitionList>
+                      <SettingsDLListItem
+                        term={t("Source Type")}
+                        description={
+                          <>
+                            {source?.type ===
+                              DataSourceTypes.SeasketchVector && (
+                              <Trans ns={["admin"]}>
+                                GeoJSON data hosted on SeaSketch
+                              </Trans>
+                            )}
+                            {source?.type === DataSourceTypes.SeasketchMvt && (
+                              <Trans ns={["admin"]}>
+                                Vector tiles hosted on SeaSketch
+                              </Trans>
+                            )}
+                          </>
+                        }
+                      />
                       {source.geostats && source.geostats.geometry && (
-                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
-                          <dt className="text-sm font-medium text-gray-500">
-                            <Trans ns={["admin"]}>Geometry Type</Trans>
-                          </dt>
-                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                            {source.geostats.geometry}
-                          </dd>
-                        </div>
+                        <SettingsDLListItem
+                          term={t("Geometry Type")}
+                          description={source.geostats.geometry}
+                        />
                       )}
                       {source.geostats && source.geostats.count && (
-                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
-                          <dt className="text-sm font-medium text-gray-500">
-                            <Trans ns={["admin"]}>Feature Count</Trans>
-                          </dt>
-                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                            {source.geostats.count}
-                          </dd>
-                        </div>
+                        <SettingsDLListItem
+                          term={t("Feature Count")}
+                          description={source.geostats.count}
+                        />
                       )}
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>File Size</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                          {bytes.format(source?.byteLength || 0)}
-                        </dd>
-                      </div>
+                      <SettingsDLListItem
+                        term={t("File Size")}
+                        description={bytes.format(source?.byteLength || 0)}
+                      />
                       {source.uploadedSourceFilename && (
-                        <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
-                          <dt className="text-sm font-medium text-gray-500">
-                            <Trans ns={["admin"]}>Uploaded by</Trans>
-                          </dt>
-                          <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                            {source.uploadedBy || "Unknown"}
-                            {source.createdAt &&
-                              " on " +
-                                new Date(source.createdAt).toLocaleDateString()}
-                          </dd>
-                        </div>
+                        <SettingsDLListItem
+                          term={t("Uploaded by")}
+                          description={
+                            <>
+                              {source.uploadedBy || "Unknown"}
+                              {source.createdAt &&
+                                " on " +
+                                  new Date(
+                                    source.createdAt
+                                  ).toLocaleDateString()}
+                            </>
+                          }
+                        />
                       )}
-                      <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
-                        <dt className="text-sm font-medium text-gray-500">
-                          <Trans ns={["admin"]}>Original Source</Trans>
-                        </dt>
-                        <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 truncate">
-                          {source?.originalSourceUrl && (
-                            <a
-                              target="_blank"
-                              className="text-primary-600 underline"
-                              href={source?.originalSourceUrl}
-                              rel="noreferrer"
-                            >
-                              {source?.originalSourceUrl
-                                .replace("https://", "")
-                                .replace("http://", "")}
-                            </a>
-                          )}
-                          {source?.importType ===
-                            DataSourceImportTypes.Upload &&
-                            (source.uploadedSourceFilename || "User Upload")}
-                        </dd>
-                      </div>
+                      <SettingsDLListItem
+                        truncate
+                        term={t("Original Source")}
+                        description={
+                          <>
+                            {source?.originalSourceUrl && (
+                              <a
+                                target="_blank"
+                                className="text-primary-600 underline"
+                                href={source?.originalSourceUrl}
+                                rel="noreferrer"
+                              >
+                                {source?.originalSourceUrl
+                                  .replace("https://", "")
+                                  .replace("http://", "")}
+                              </a>
+                            )}
+                            {source?.importType ===
+                              DataSourceImportTypes.Upload &&
+                              (source.uploadedSourceFilename || "User Upload")}
+                          </>
+                        }
+                      />
                       {source.geostats &&
                         source.geostats.attributes &&
                         Array.isArray(source.geostats.attributes) && (
-                          <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
-                            <h4 className="text-sm font-medium text-gray-500">
-                              <Trans ns={["admin"]}>Columns</Trans>
-                            </h4>
-                            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                              {(
-                                source.geostats.attributes as {
-                                  type: string;
-                                  count: number;
-                                  attribute: string;
-                                  values: any[];
-                                  max?: number;
-                                  min?: number;
-                                }[]
-                              )
-                                .slice(
-                                  0,
-                                  showMoreColumns
-                                    ? source.geostats.attributes.length
-                                    : 4
+                          <SettingsDLListItem
+                            term={t("Columns")}
+                            description={
+                              <>
+                                {(
+                                  source.geostats.attributes as {
+                                    type: string;
+                                    count: number;
+                                    attribute: string;
+                                    values: any[];
+                                    max?: number;
+                                    min?: number;
+                                  }[]
                                 )
-                                .map((attr) => {
-                                  return (
-                                    <div className="flex">
-                                      <div className="flex-1 italic">
-                                        {attr.attribute}{" "}
-                                        {attr.values.length && (
-                                          <div
-                                            className="inline-block cursor-help"
-                                            title={attr.values.join("\n")}
-                                          >
-                                            <DotsHorizontalIcon className="w-4 h-4 inline-block text-gray-500" />
-                                          </div>
-                                        )}
+                                  .slice(
+                                    0,
+                                    showMoreColumns
+                                      ? source.geostats.attributes.length
+                                      : 4
+                                  )
+                                  .map((attr) => {
+                                    return (
+                                      <div className="flex">
+                                        <div className="flex-1 italic">
+                                          {attr.attribute}{" "}
+                                          {attr.values.length && (
+                                            <div
+                                              className="inline-block cursor-help"
+                                              title={attr.values.join("\n")}
+                                            >
+                                              <DotsHorizontalIcon className="w-4 h-4 inline-block text-gray-500" />
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="font-mono px-2">
+                                          {attr.type}
+                                        </div>
                                       </div>
-                                      <div className="font-mono px-2">
-                                        {attr.type}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              {showMoreColumns === false &&
-                                source.geostats.attributes.length > 4 && (
-                                  <button
-                                    className="underline py-1 text-primary-500"
-                                    onClick={() => setShowMoreColums(true)}
-                                  >
-                                    <Trans ns="admin:data">
-                                      Show{" "}
-                                      {(
-                                        source.geostats.attributes.length - 4
-                                      ).toString()}{" "}
-                                      more
-                                    </Trans>
-                                  </button>
-                                )}
-                            </dd>
-                          </div>
-                        )}{" "}
-                    </dl>
+                                    );
+                                  })}
+                                {showMoreColumns === false &&
+                                  source.geostats.attributes.length > 4 && (
+                                    <button
+                                      className="underline py-1 text-primary-500"
+                                      onClick={() => setShowMoreColums(true)}
+                                    >
+                                      <Trans ns="admin:data">
+                                        Show{" "}
+                                        {(
+                                          source.geostats.attributes.length - 4
+                                        ).toString()}{" "}
+                                        more
+                                      </Trans>
+                                    </button>
+                                  )}
+                              </>
+                            }
+                          />
+                        )}
+                    </SettingsDefinitionList>
                   </>
                 )}
                 {source?.type === DataSourceTypes.ArcgisVector && (
@@ -771,6 +765,9 @@ export default function LayerTableOfContentsItemEditor(
                       </Trans>
                     </InputBlock>
                   </SettingsDefinitionList>
+                )}
+                {source?.type === DataSourceTypes.ArcgisRasterTiles && (
+                  <ArcGISTiledRasterSettings source={source} />
                 )}
               </div>
             </div>

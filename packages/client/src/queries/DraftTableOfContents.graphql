@@ -505,16 +505,20 @@ query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
     computedMetadata
+    usesDynamicMetadata
+    isCustomGlSource
   }
 }
 
-mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   updateTableOfContentsItem(
     input: { id: $itemId, patch: { metadata: $metadata } }
   ) {
     tableOfContentsItem {
       id
       metadata
+      usesDynamicMetadata
+      computedMetadata
     }
   }
 }
@@ -569,6 +573,15 @@ mutation ImportArcGISService(
     tableOfContentsItems {
       id
       title
+    }
+  }
+}
+
+mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
+  updateDataSource(input: { id: $sourceId, patch: { maxzoom: $maxzoom } }) {
+    dataSource {
+      id
+      maxzoom
     }
   }
 }

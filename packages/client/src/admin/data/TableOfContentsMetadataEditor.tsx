@@ -23,6 +23,12 @@ export default function TableOfContentsMetadataEditor({
   return (
     <MetadataEditor
       onRequestClose={onRequestClose}
+      usingDynamicMetadata={Boolean(
+        data?.tableOfContentsItem?.usesDynamicMetadata
+      )}
+      dynamicMetadataAvailable={
+        data?.tableOfContentsItem?.isCustomGlSource || false
+      }
       mutation={(value) =>
         mutation({
           variables: {

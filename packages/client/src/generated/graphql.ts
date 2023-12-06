@@ -313,6 +313,7 @@ export type Basemap = Node & {
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `MapBookmark`. */
   mapBookmarksBySelectedBasemapConnection: MapBookmarksConnection;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -434,6 +435,7 @@ export type BasemapInput = {
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /**
@@ -488,6 +490,7 @@ export type BasemapPatch = {
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name?: Maybe<Scalars['String']>;
   /**
@@ -12013,6 +12016,7 @@ export type TableOfContentsItem = Node & {
    * their children. Toggles can only be used to toggle children off
    */
   isClickOffOnly: Scalars['Boolean'];
+  isCustomGlSource?: Maybe<Scalars['Boolean']>;
   /**
    * Identifies whether this item is part of the draft table of contents edited by
    * admin or the static public version. This property cannot be changed. Rather,
@@ -12049,6 +12053,7 @@ export type TableOfContentsItem = Node & {
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
   translatedProps: Scalars['JSON'];
+  usesDynamicMetadata?: Maybe<Scalars['Boolean']>;
 };
 
 /**
@@ -14882,7 +14887,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice' | 'maxzoom'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -15292,6 +15297,23 @@ export type MapboxKeysQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'mapboxPublicKey' | 'mapboxSecretKey'>
+  )> }
+);
+
+export type SetBasemapMaxZoomMutationVariables = Exact<{
+  id: Scalars['Int'];
+  maxzoom?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type SetBasemapMaxZoomMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemap?: Maybe<(
+    { __typename?: 'UpdateBasemapPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'maxzoom'>
+    )> }
   )> }
 );
 
@@ -15939,13 +15961,13 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'computedMetadata'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource'>
   )> }
 );
 
 export type UpdateMetadataMutationVariables = Exact<{
   itemId: Scalars['Int'];
-  metadata: Scalars['JSON'];
+  metadata?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -15955,7 +15977,7 @@ export type UpdateMetadataMutation = (
     { __typename?: 'UpdateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'metadata'>
+      & Pick<TableOfContentsItem, 'id' | 'metadata' | 'usesDynamicMetadata' | 'computedMetadata'>
     )> }
   )> }
 );
@@ -16034,6 +16056,23 @@ export type ImportArcGisServiceMutation = (
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title'>
     )>> }
+  )> }
+);
+
+export type SetMaxZoomMutationVariables = Exact<{
+  sourceId: Scalars['Int'];
+  maxzoom?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type SetMaxZoomMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'maxzoom'>
+    )> }
   )> }
 );
 
@@ -19561,6 +19600,7 @@ export const BasemapDetailsFragmentDoc = gql`
   surveysOnly
   translatedProps
   isArcgisTiledMapservice
+  maxzoom
 }
     `;
 export const BasemapAdminDetailsFragmentDoc = gql`
@@ -22361,6 +22401,43 @@ export function useMapboxKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions
 export type MapboxKeysQueryHookResult = ReturnType<typeof useMapboxKeysQuery>;
 export type MapboxKeysLazyQueryHookResult = ReturnType<typeof useMapboxKeysLazyQuery>;
 export type MapboxKeysQueryResult = Apollo.QueryResult<MapboxKeysQuery, MapboxKeysQueryVariables>;
+export const SetBasemapMaxZoomDocument = gql`
+    mutation SetBasemapMaxZoom($id: Int!, $maxzoom: Int) {
+  updateBasemap(input: {id: $id, patch: {maxzoom: $maxzoom}}) {
+    basemap {
+      id
+      maxzoom
+    }
+  }
+}
+    `;
+export type SetBasemapMaxZoomMutationFn = Apollo.MutationFunction<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>;
+
+/**
+ * __useSetBasemapMaxZoomMutation__
+ *
+ * To run a mutation, you first call `useSetBasemapMaxZoomMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetBasemapMaxZoomMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setBasemapMaxZoomMutation, { data, loading, error }] = useSetBasemapMaxZoomMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      maxzoom: // value for 'maxzoom'
+ *   },
+ * });
+ */
+export function useSetBasemapMaxZoomMutation(baseOptions?: Apollo.MutationHookOptions<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>(SetBasemapMaxZoomDocument, options);
+      }
+export type SetBasemapMaxZoomMutationHookResult = ReturnType<typeof useSetBasemapMaxZoomMutation>;
+export type SetBasemapMaxZoomMutationResult = Apollo.MutationResult<SetBasemapMaxZoomMutation>;
+export type SetBasemapMaxZoomMutationOptions = Apollo.BaseMutationOptions<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -23873,6 +23950,8 @@ export const GetMetadataDocument = gql`
   tableOfContentsItem(id: $itemId) {
     id
     computedMetadata
+    usesDynamicMetadata
+    isCustomGlSource
   }
 }
     `;
@@ -23905,11 +23984,13 @@ export type GetMetadataQueryHookResult = ReturnType<typeof useGetMetadataQuery>;
 export type GetMetadataLazyQueryHookResult = ReturnType<typeof useGetMetadataLazyQuery>;
 export type GetMetadataQueryResult = Apollo.QueryResult<GetMetadataQuery, GetMetadataQueryVariables>;
 export const UpdateMetadataDocument = gql`
-    mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+    mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
     tableOfContentsItem {
       id
       metadata
+      usesDynamicMetadata
+      computedMetadata
     }
   }
 }
@@ -24129,6 +24210,43 @@ export function useImportArcGisServiceMutation(baseOptions?: Apollo.MutationHook
 export type ImportArcGisServiceMutationHookResult = ReturnType<typeof useImportArcGisServiceMutation>;
 export type ImportArcGisServiceMutationResult = Apollo.MutationResult<ImportArcGisServiceMutation>;
 export type ImportArcGisServiceMutationOptions = Apollo.BaseMutationOptions<ImportArcGisServiceMutation, ImportArcGisServiceMutationVariables>;
+export const SetMaxZoomDocument = gql`
+    mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
+  updateDataSource(input: {id: $sourceId, patch: {maxzoom: $maxzoom}}) {
+    dataSource {
+      id
+      maxzoom
+    }
+  }
+}
+    `;
+export type SetMaxZoomMutationFn = Apollo.MutationFunction<SetMaxZoomMutation, SetMaxZoomMutationVariables>;
+
+/**
+ * __useSetMaxZoomMutation__
+ *
+ * To run a mutation, you first call `useSetMaxZoomMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetMaxZoomMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setMaxZoomMutation, { data, loading, error }] = useSetMaxZoomMutation({
+ *   variables: {
+ *      sourceId: // value for 'sourceId'
+ *      maxzoom: // value for 'maxzoom'
+ *   },
+ * });
+ */
+export function useSetMaxZoomMutation(baseOptions?: Apollo.MutationHookOptions<SetMaxZoomMutation, SetMaxZoomMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetMaxZoomMutation, SetMaxZoomMutationVariables>(SetMaxZoomDocument, options);
+      }
+export type SetMaxZoomMutationHookResult = ReturnType<typeof useSetMaxZoomMutation>;
+export type SetMaxZoomMutationResult = Apollo.MutationResult<SetMaxZoomMutation>;
+export type SetMaxZoomMutationOptions = Apollo.BaseMutationOptions<SetMaxZoomMutation, SetMaxZoomMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -30003,6 +30121,7 @@ export const namedOperations = {
     UpdateOptionalBasemapLayerOptions: 'UpdateOptionalBasemapLayerOptions',
     UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
     UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
+    SetBasemapMaxZoom: 'SetBasemapMaxZoom',
     CreateProject: 'CreateProject',
     VerifyEmail: 'VerifyEmail',
     createDataUpload: 'createDataUpload',
@@ -30028,6 +30147,7 @@ export const namedOperations = {
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',
+    SetMaxZoom: 'SetMaxZoom',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

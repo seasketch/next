@@ -10,6 +10,8 @@ import {
   useSet3dTerrainMutation,
   useUpdateTerrainExaggerationMutation,
   useUpdateBasemapUrlMutation,
+  useSetMaxZoomMutation,
+  useSetBasemapMaxZoomMutation,
 } from "../../generated/graphql";
 import { gql, useApolloClient } from "@apollo/client";
 
@@ -27,6 +29,12 @@ import { useMediaQuery } from "beautiful-react-hooks";
 import { Link } from "react-router-dom";
 import { ArrowLeftIcon } from "@heroicons/react/outline";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
+import {
+  SettingsDLListItem,
+  SettingsDefinitionList,
+} from "../SettingsDefinitionList";
+import ArcGISTiledRasterBaseSettings from "./ArcGISTiledRasterBaseSettings";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 const TERRAIN_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
 
@@ -124,6 +132,21 @@ export default function BasemapEditorPanel({
       terrainSetting = "ALWAYS";
     }
   }
+
+  const onError = useGlobalErrorHandler();
+  const [setMaxZoom] = useSetBasemapMaxZoomMutation({
+    onError,
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateDataSource: {
+          __typename: "Basemap",
+          id: data.id,
+          maxzoom: data.maxzoom,
+        },
+      };
+    },
+  });
 
   return (
     <div
@@ -234,67 +257,71 @@ export default function BasemapEditorPanel({
               className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
             />
           </div>
-          <div className="md:max-w-sm mt-5">
-            <MutableAutosaveInput
-              mutation={updateUrl}
-              mutationStatus={updateUrlMutationState}
-              propName="url"
-              value={basemap.url}
-              label="URL"
-              variables={{ id: basemapId }}
-            />
-          </div>
-          <div className="md:max-w-md mt-5">
-            <label
-              htmlFor="labelLayer"
-              className="block text-sm font-medium leading-5 text-gray-700"
-            >
-              <Trans ns={["admin"]}>Labels Layer</Trans>
-            </label>
-            <p className="text-sm text-gray-500 py-1">
-              <Trans ns={["admin"]}>
-                By identifying the lowest labels layer in this basemap you will
-                be able to configure layers to render below them.
-              </Trans>
-            </p>
-            <select
-              value={basemap.labelsLayerId || ""}
-              id="imageFormat"
-              disabled={updateLabelsState.loading}
-              onChange={(e) => {
-                let value: string | null = e.target.value;
-                if (value === "") {
-                  value = null;
-                }
-                client.writeFragment({
-                  id: `Basemap:${basemap.id}`,
-                  fragment: gql`
-                    fragment NewLabelsLayer on Basemap {
-                      labelsLayerId
-                    }
-                  `,
-                  data: {
-                    labelsLayerId: value,
-                  },
-                });
-                updateLabels({
-                  variables: {
-                    id: basemapId,
-                    layer: value,
-                  },
-                });
-              }}
-              className="rounded block w-96 pl-3 pr-4 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5 mt-1"
-            >
-              <option value={""}></option>
-              {layerIds.map((layer) => (
-                <option key={layer.id} value={layer.id}>
-                  {layer.id}
-                </option>
-              ))}
-            </select>
-          </div>
-          {!hideTerrain && (
+          {!basemap.isArcgisTiledMapservice && (
+            <div className="md:max-w-sm mt-5">
+              <MutableAutosaveInput
+                mutation={updateUrl}
+                mutationStatus={updateUrlMutationState}
+                propName="url"
+                value={basemap.url}
+                label="URL"
+                variables={{ id: basemapId }}
+              />
+            </div>
+          )}
+          {basemap.type === BasemapType.Mapbox && (
+            <div className="md:max-w-md mt-5">
+              <label
+                htmlFor="labelLayer"
+                className="block text-sm font-medium leading-5 text-gray-700"
+              >
+                <Trans ns={["admin"]}>Labels Layer</Trans>
+              </label>
+              <p className="text-sm text-gray-500 py-1">
+                <Trans ns={["admin"]}>
+                  By identifying the lowest labels layer in this basemap you
+                  will be able to configure layers to render below them.
+                </Trans>
+              </p>
+              <select
+                value={basemap.labelsLayerId || ""}
+                id="imageFormat"
+                disabled={updateLabelsState.loading}
+                onChange={(e) => {
+                  let value: string | null = e.target.value;
+                  if (value === "") {
+                    value = null;
+                  }
+                  client.writeFragment({
+                    id: `Basemap:${basemap.id}`,
+                    fragment: gql`
+                      fragment NewLabelsLayer on Basemap {
+                        labelsLayerId
+                      }
+                    `,
+                    data: {
+                      labelsLayerId: value,
+                    },
+                  });
+                  updateLabels({
+                    variables: {
+                      id: basemapId,
+                      layer: value,
+                    },
+                  });
+                }}
+                className="rounded block w-96 pl-3 pr-4 text-base leading-6 border-gray-300 focus:outline-none focus:shadow-outline-blue focus:border-blue-300 sm:text-sm sm:leading-5 mt-1"
+              >
+                <option value={""}></option>
+                {layerIds.map((layer) => (
+                  <option key={layer.id} value={layer.id}>
+                    {layer.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {!hideTerrain && basemap.type !== BasemapType.RasterUrlTemplate && (
             <>
               <RadioGroup
                 className="mt-5"
@@ -397,36 +424,58 @@ export default function BasemapEditorPanel({
               ></InputBlock>
             </>
           )}
-          <div className="mt-5">
-            <h5 className="block text-sm font-medium leading-5 text-gray-700">
-              <Trans ns={["admin"]}>Optional Layers</Trans>
-            </h5>
-            <p className="text-sm text-gray-500 py-1">
-              <Trans ns={["admin"]}>
-                With Optional Layers you can provide a means for users to toggle
-                components of the basemap like labels, or choose among mutually
-                exclusive versions of a dataset like annual data
-              </Trans>
-              <br />
-            </p>
-            {basemap.optionalBasemapLayers.map((layer) => (
-              <div className="my-2" key={layer.id}>
-                <OptionalBasemapLayerEditor layerId={layer.id} />
-              </div>
-            ))}
-            <Button
-              className="mt-2"
-              small
-              label={t("Add Option")}
-              onClick={() => setCreateOptionOpen(true)}
-            />
-          </div>
+          {basemap.type !== BasemapType.RasterUrlTemplate && (
+            <div className="mt-5">
+              <h5 className="block text-sm font-medium leading-5 text-gray-700">
+                <Trans ns={["admin"]}>Optional Layers</Trans>
+              </h5>
+              <p className="text-sm text-gray-500 py-1">
+                <Trans ns={["admin"]}>
+                  With Optional Layers you can provide a means for users to
+                  toggle components of the basemap like labels, or choose among
+                  mutually exclusive versions of a dataset like annual data
+                </Trans>
+                <br />
+              </p>
+              {basemap.optionalBasemapLayers.map((layer) => (
+                <div className="my-2" key={layer.id}>
+                  <OptionalBasemapLayerEditor layerId={layer.id} />
+                </div>
+              ))}
+              <Button
+                className="mt-2"
+                small
+                label={t("Add Option")}
+                onClick={() => setCreateOptionOpen(true)}
+              />
+            </div>
+          )}
           {basemap.type === BasemapType.Mapbox && (
             <div className="mt-5">
               <InteractivitySettings
                 basemap={basemap}
                 id={basemap.interactivitySettings!.id}
               />
+            </div>
+          )}
+          {basemap.isArcgisTiledMapservice && (
+            <div className="mt-5">
+              <div className="border rounded">
+                <div className="border-gray-200 border-b">
+                  <ArcGISTiledRasterBaseSettings
+                    url={basemap.url.replace("tile/{z}/{y}/{x}", "")}
+                    maxZoomSetting={basemap.maxzoom || null}
+                    onMaxZoomChange={(v) => {
+                      setMaxZoom({
+                        variables: {
+                          id: basemap.id,
+                          maxzoom: v || null,
+                        },
+                      });
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>

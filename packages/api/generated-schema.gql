@@ -320,6 +320,7 @@ type Basemap implements Node {
     """The method to use when ordering `MapBookmark`."""
     orderBy: [MapBookmarksOrderBy!] = [NATURAL]
   ): MapBookmarksConnection!
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String!
@@ -486,6 +487,7 @@ input BasemapInput {
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String!
@@ -558,6 +560,7 @@ input BasemapPatch {
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String
@@ -13198,6 +13201,7 @@ type TableOfContentsItem implements Node {
   their children. Toggles can only be used to toggle children off
   """
   isClickOffOnly: Boolean!
+  isCustomGlSource: Boolean
 
   """
   Identifies whether this item is part of the draft table of contents edited by
@@ -13253,6 +13257,7 @@ type TableOfContentsItem implements Node {
   """Name used in the table of contents rendering"""
   title: String!
   translatedProps: JSON!
+  usesDynamicMetadata: Boolean
 }
 
 """

@@ -7,7 +7,7 @@ export function SettingsDefinitionList({
 }) {
   const childArray = Children.toArray(children);
   return (
-    <dl className="sm:divide-y sm:divide-gray-200">
+    <dl className="sm:divide-y sm:divide-gray-200 zebra-stripe-child-div">
       {childArray.map((child, i) => {
         return (
           <div
@@ -33,16 +33,27 @@ export function SettingsDLListItem({
   term,
   description,
   truncate,
+  alignCenter,
 }: {
   term: string | ReactNode;
   description: string | ReactNode;
   truncate?: boolean;
+  alignCenter?: boolean;
 }) {
+  if (alignCenter && truncate) {
+    console.warn(
+      "SettingsDLListItem: alignCenter and truncate are incompatible"
+    );
+  }
   return (
     <>
-      <dt className="text-sm font-medium text-gray-500">{term}</dt>
+      <dt className="flex items-center text-sm font-medium text-gray-500">
+        {term}
+      </dt>
       <dd
-        className={`mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 ${
+        className={`${
+          alignCenter ? "flex items-center" : ""
+        } mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 ${
           truncate ? "truncate" : ""
         }`}
       >

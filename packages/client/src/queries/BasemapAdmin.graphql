@@ -37,6 +37,7 @@ fragment BasemapDetails on Basemap {
   surveysOnly
   translatedProps
   isArcgisTiledMapservice
+  maxzoom
 }
 
 query GetBasemaps($slug: String!) {
@@ -384,5 +385,14 @@ query MapboxKeys($slug: String!) {
     id
     mapboxPublicKey
     mapboxSecretKey
+  }
+}
+
+mutation SetBasemapMaxZoom($id: Int!, $maxzoom: Int) {
+  updateBasemap(input: { id: $id, patch: { maxzoom: $maxzoom } }) {
+    basemap {
+      id
+      maxzoom
+    }
   }
 }

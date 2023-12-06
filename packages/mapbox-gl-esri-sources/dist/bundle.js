@@ -1740,7 +1740,7 @@ var MapBoxGLEsriSources = (function () {
 
 	var ArcGISTiledMapService_1 = createCommonjsModule(function (module, exports) {
 	Object.defineProperty(exports, "__esModule", { value: true });
-	exports.ArcGISTiledMapService = void 0;
+	exports.isArcGISTiledMapservice = exports.ArcGISTiledMapService = void 0;
 	class ArcGISTiledMapService {
 	    constructor(requestManager, options) {
 	        this.type = "ArcGISTiledMapService";
@@ -1892,7 +1892,7 @@ var MapBoxGLEsriSources = (function () {
 	                ? tileSize / window.devicePixelRatio
 	                : tileSize,
 	            minzoom,
-	            maxzoom,
+	            maxzoom: this.options.maxZoom || maxzoom,
 	            attribution,
 	            ...(bounds ? { bounds } : {}),
 	        };
@@ -1913,20 +1913,37 @@ var MapBoxGLEsriSources = (function () {
 	        };
 	    }
 	    removeFromMap(map) {
+	        const removedLayers = [];
 	        if (map.getSource(this.sourceId)) {
 	            const layers = map.getStyle().layers || [];
 	            for (const layer of layers) {
 	                if ("source" in layer && layer.source === this.sourceId) {
 	                    map.removeLayer(layer.id);
+	                    removedLayers.push(layer);
 	                }
 	            }
 	            map.removeSource(this.sourceId);
 	            this.map = undefined;
 	        }
+	        return removedLayers;
 	    }
 	    destroy() {
 	        if (this.map) {
 	            this.removeFromMap(this.map);
+	        }
+	    }
+	    async updateMaxZoom(maxZoom) {
+	        const currentMaxZoom = (await this.getGLSource()).maxzoom;
+	        if (currentMaxZoom !== maxZoom) {
+	            this.options.maxZoom = maxZoom;
+	            if (this.map) {
+	                const map = this.map;
+	                const removedLayers = this.removeFromMap(map);
+	                this.addToMap(map);
+	                for (const layer of removedLayers) {
+	                    map.addLayer(layer);
+	                }
+	            }
 	        }
 	    }
 	    updateLayers(layers) { }
@@ -1943,6 +1960,10 @@ var MapBoxGLEsriSources = (function () {
 	    removeEventListeners(map) { }
 	}
 	exports.ArcGISTiledMapService = ArcGISTiledMapService;
+	function isArcGISTiledMapservice(source) {
+	    return source.type === "ArcGISTiledMapService";
+	}
+	exports.isArcGISTiledMapservice = isArcGISTiledMapservice;
 	});
 
 	var ArcGISTiledMapService = /*#__PURE__*/_mergeNamespaces({

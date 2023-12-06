@@ -1,4 +1,4 @@
-import { Map, RasterLayer, RasterSource } from "mapbox-gl";
+import { AnyLayer, Map, RasterLayer, RasterSource } from "mapbox-gl";
 import { ArcGISRESTServiceRequestManager } from "./ArcGISRESTServiceRequestManager";
 import {
   ComputedMetadata,
@@ -23,6 +23,8 @@ export interface ArcGISTiledMapServiceOptions extends CustomGLSourceOptions {
   url: string;
   supportHighDpiDisplays?: boolean;
   token?: string;
+  /* Overrides the value derived from the service metadata */
+  maxZoom?: number;
 }
 
 /**
@@ -243,7 +245,7 @@ export class ArcGISTiledMapService
         ? tileSize / window.devicePixelRatio
         : tileSize,
       minzoom,
-      maxzoom,
+      maxzoom: this.options.maxZoom || maxzoom,
       attribution,
       ...(bounds ? { bounds } : {}),
     } as RasterSource;
@@ -275,16 +277,19 @@ export class ArcGISTiledMapService
    * @param map Mapbox GL JS Map
    */
   removeFromMap(map: Map) {
+    const removedLayers: AnyLayer[] = [];
     if (map.getSource(this.sourceId)) {
       const layers = map.getStyle().layers || [];
       for (const layer of layers) {
         if ("source" in layer && layer.source === this.sourceId) {
           map.removeLayer(layer.id);
+          removedLayers.push(layer);
         }
       }
       map.removeSource(this.sourceId);
       this.map = undefined;
     }
+    return removedLayers;
   }
 
   /**
@@ -293,6 +298,21 @@ export class ArcGISTiledMapService
   destroy(): void {
     if (this.map) {
       this.removeFromMap(this.map);
+    }
+  }
+
+  async updateMaxZoom(maxZoom: number | undefined) {
+    const currentMaxZoom = (await this.getGLSource()).maxzoom;
+    if (currentMaxZoom !== maxZoom) {
+      this.options.maxZoom = maxZoom;
+      if (this.map) {
+        const map = this.map;
+        const removedLayers = this.removeFromMap(map);
+        this.addToMap(map);
+        for (const layer of removedLayers) {
+          map.addLayer(layer);
+        }
+      }
     }
   }
 
@@ -312,4 +332,10 @@ export class ArcGISTiledMapService
     this.map = map;
   }
   removeEventListeners(map: Map) {}
+}
+
+export function isArcGISTiledMapservice(
+  source: CustomGLSource<any, any>
+): source is ArcGISTiledMapService {
+  return source.type === "ArcGISTiledMapService";
 }

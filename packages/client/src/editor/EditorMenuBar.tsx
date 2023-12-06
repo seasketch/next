@@ -45,6 +45,7 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useIsSuperuser from "../useIsSuperuser";
 import { useAuth0 } from "@auth0/auth0-react";
 import axios from "axios";
+import { Link1Icon, Link2Icon } from "@radix-ui/react-icons";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -58,6 +59,7 @@ interface EditorMenuBarProps {
     sizeBytes: number,
     contentType: string
   ) => Promise<UploaderResponse | null>;
+  onUseServiceMetadata?: () => void;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -588,6 +590,11 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         >
           {isSmall ? t("Share") : t("Share content")}{" "}
           <ChevronDownIcon className="w-4 h-4 ml-1" />
+        </button>
+      )}
+      {props.onUseServiceMetadata && (
+        <button className="ml-0.5" onClick={props.onUseServiceMetadata}>
+          {t("Convert to dynamic service metadata")}
         </button>
       )}
 

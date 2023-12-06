@@ -210,3 +210,46 @@ create or replace function import_arcgis_services("projectId" int, items arcgis_
   $$;
 
 grant update (arcgis_fetch_strategy) on data_sources to seasketch_user;
+
+alter table basemaps add column if not exists maxzoom int;
+
+create or replace function table_of_contents_items_uses_dynamic_metadata(t table_of_contents_items)
+  returns boolean
+  language plpgsql
+  security definer
+  stable
+  as $$
+    declare
+      uses_dynamic_metadata boolean;
+    begin
+      if t.metadata is not null then
+        return false;
+      end if;
+      if t.data_layer_id is null then
+        return false;
+      end if;
+      select type = 'arcgis-dynamic-mapserver' or type = 'arcgis-vector' or type = 'arcgis-raster-tiles' into uses_dynamic_metadata from data_sources where id = (select data_source_id from data_layers where id = t.data_layer_id);
+      return uses_dynamic_metadata;
+    end;
+  $$;
+
+grant execute on function table_of_contents_items_uses_dynamic_metadata(table_of_contents_items) to anon;
+
+create or replace function table_of_contents_items_is_custom_gl_source(t table_of_contents_items)
+  returns boolean
+  language plpgsql
+  security definer
+  stable
+  as $$
+    declare
+      source_type text;
+    begin
+      if t.data_layer_id is null then
+        return null;
+      end if;
+      select type into source_type from data_sources where id = (select data_source_id from data_layers where id = t.data_layer_id);
+      return source_type = 'arcgis-dynamic-mapserver' or source_type = 'arcgis-vector' or source_type = 'arcgis-raster-tiles';
+    end;
+  $$;
+
+grant execute on function table_of_contents_items_is_custom_gl_source(table_of_contents_items) to anon;
