@@ -97,6 +97,7 @@ create or replace function import_arcgis_services("projectId" int, items arcgis_
       source_id_map jsonb;
       layer_id_map jsonb;
       item_id_map jsonb;
+      interactive_layers int[];
     begin
       source_id_map = '{}'::jsonb;
       layer_id_map = '{}'::jsonb;
@@ -130,6 +131,7 @@ create or replace function import_arcgis_services("projectId" int, items arcgis_
             select 
               id_lookup_set_key(layer_id_map, source.id, layer_id) 
             into layer_id_map;
+            interactive_layers = array_append(interactive_layers, layer_id);
           elsif source.type = 'arcgis-raster-tiles' then
             insert into data_sources (
               project_id, 
@@ -173,6 +175,7 @@ create or replace function import_arcgis_services("projectId" int, items arcgis_
                   source_id,
                   items[i].sublayer_id
                 ) returning id into layer_id;
+                interactive_layers = array_append(interactive_layers, layer_id);
                 select 
                   id_lookup_set_key(layer_id_map, items[i].id, layer_id) 
                 into layer_id_map;
@@ -203,6 +206,18 @@ create or replace function import_arcgis_services("projectId" int, items arcgis_
             items[1].stable_id::ltree
           );
         end if;
+        update interactivity_settings 
+        set type = 'ALL_PROPERTIES_POPUP' 
+        where id = any(
+          (
+            select 
+              interactivity_settings_id 
+            from 
+              data_layers 
+            where 
+              id = any(interactive_layers)
+          )
+        );
       else
         raise exception 'Only admins can import ArcGIS services';
       end if;
@@ -253,3 +268,5 @@ create or replace function table_of_contents_items_is_custom_gl_source(t table_o
   $$;
 
 grant execute on function table_of_contents_items_is_custom_gl_source(table_of_contents_items) to anon;
+
+ALTER TYPE interactivity_type ADD VALUE IF NOT EXISTS 'ALL_PROPERTIES_POPUP';

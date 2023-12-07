@@ -5634,6 +5634,7 @@ export type InteractivitySettingPatch = {
 };
 
 export enum InteractivityType {
+  AllPropertiesPopup = 'ALL_PROPERTIES_POPUP',
   Banner = 'BANNER',
   FixedBlock = 'FIXED_BLOCK',
   None = 'NONE',

@@ -410,7 +410,8 @@ class MapContextManager extends EventEmitter {
         .filter((id) => this.visibleLayers[id]?.visible && this.layers[id])
         .map((id) => this.layers[id]),
       this.clientDataSources,
-      this.getSelectedBasemap()!
+      this.getSelectedBasemap()!,
+      this.tocItemLabels
     );
 
     if (this.internalState.showScale) {
@@ -841,6 +842,14 @@ class MapContextManager extends EventEmitter {
             }
           }
         }
+        const sources: { [id: string]: CustomGLSource<any> } = {};
+        for (const id in this.customSources) {
+          const { customSource, visible } = this.customSources[id];
+          if (visible) {
+            sources[id] = customSource;
+          }
+        }
+        this.interactivityManager?.setCustomSources(sources);
         this.setState((prev) => ({ ...prev, styleHash }));
       };
       if (!this.mapIsLoaded) {
@@ -1770,7 +1779,8 @@ class MapContextManager extends EventEmitter {
       this.interactivityManager.setVisibleLayers(
         visibleLayers,
         this.clientDataSources,
-        this.getSelectedBasemap()!
+        this.getSelectedBasemap()!,
+        this.tocItemLabels
       );
     }
   }

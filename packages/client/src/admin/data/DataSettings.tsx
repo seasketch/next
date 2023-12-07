@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Link,
   Route,
@@ -18,13 +18,6 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import Legend, { LegendItem } from "../../dataLayers/Legend";
 
-const LazyArcGISBrowser = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISBrowser"
-    )
-);
-
 export default function DataSettings() {
   const { path } = useRouteMatch();
   const { slug } = useParams<{ slug: string }>();
@@ -38,7 +31,6 @@ export default function DataSettings() {
 
   const legendState = useMemo<{ items: LegendItem[] }>(() => {
     if (mapContext.legends) {
-      // TODO: this does't really handle WMS or dynamic map services
       const visibleLegends: LegendItem[] = [];
       for (const id in mapContext.layerStatesByTocStaticId) {
         if (mapContext.layerStatesByTocStaticId[id].visible) {
@@ -132,9 +124,6 @@ export default function DataSettings() {
                   </div>
                 </div>
               </div>
-            </Route>
-            <Route exact path={`${path}/add-data/arcgis`}>
-              <LazyArcGISBrowser />
             </Route>
           </Switch>
         </MapContext.Provider>

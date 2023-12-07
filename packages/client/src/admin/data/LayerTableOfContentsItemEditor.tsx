@@ -46,6 +46,7 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import FeatureLayerPerformanceDetailsModal from "./FeatureLayerPerformanceDetailsModal";
 import { ChartBarIcon } from "@heroicons/react/solid";
 import ArcGISTiledRasterSettings from "./ArcGISTiledRasterSettings";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -775,13 +776,28 @@ export default function LayerTableOfContentsItemEditor(
       {item && selectedTab === "interactivity" && (
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           <div className="mt-5">
-            {source && layer && (
-              <InteractivitySettings
-                id={layer.interactivitySettingsId}
-                dataSourceId={layer.dataSourceId}
-                sublayer={layer.sublayer}
-              />
-            )}
+            {source &&
+              layer &&
+              source.type !== DataSourceTypes.ArcgisRasterTiles && (
+                <InteractivitySettings
+                  id={layer.interactivitySettingsId}
+                  dataSourceId={layer.dataSourceId}
+                  sublayer={layer.sublayer}
+                />
+              )}
+            {source &&
+              layer &&
+              source.type === DataSourceTypes.ArcgisRasterTiles && (
+                <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4">
+                  <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
+                  <div>
+                    <Trans ns="admin:data">
+                      Popups and other interactivity options are not supported
+                      for tiled ArcGIS sources.
+                    </Trans>
+                  </div>
+                </div>
+              )}
           </div>
           <div className="mt-5">
             <MutableRadioGroup
@@ -888,6 +904,18 @@ export default function LayerTableOfContentsItemEditor(
                 />
               </div>
             )}
+          {isArcGISCustomSource && (
+            <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4 m-4 mt-5">
+              <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
+              <div className="flex-1">
+                <Trans ns="admin:data">
+                  Styling is not available for ArcGIS sources. SeaSketch
+                  respects cartographic styling as it is defined in the service
+                  and will change automatically when the service is updated.
+                </Trans>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

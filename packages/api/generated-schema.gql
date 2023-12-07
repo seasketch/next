@@ -6571,6 +6571,7 @@ input InteractivitySettingPatch {
 }
 
 enum InteractivityType {
+  ALL_PROPERTIES_POPUP
   BANNER
   FIXED_BLOCK
   NONE
