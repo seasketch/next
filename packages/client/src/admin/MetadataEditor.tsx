@@ -13,7 +13,7 @@ import { MutationResult } from "@apollo/client";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../components/useDialog";
 import Modal from "../components/Modal";
-import { Link1Icon, Pencil1Icon } from "@radix-ui/react-icons";
+import { Pencil1Icon } from "@radix-ui/react-icons";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {

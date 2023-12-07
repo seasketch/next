@@ -45,7 +45,6 @@ import {
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import FeatureLayerPerformanceDetailsModal from "./FeatureLayerPerformanceDetailsModal";
 import { ChartBarIcon } from "@heroicons/react/solid";
-import Skeleton from "../../components/Skeleton";
 import ArcGISTiledRasterSettings from "./ArcGISTiledRasterSettings";
 
 interface LayerTableOfContentsItemEditorProps {
@@ -94,8 +93,7 @@ export default function LayerTableOfContentsItemEditor(
       };
     },
   });
-  const [updateQueryParameters, updateQueryParametersState] =
-    useUpdateQueryParametersMutation();
+  const [updateQueryParameters] = useUpdateQueryParametersMutation();
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
   const [updateGLStyleMutation, updateGLStyleMutationState] =
     useUpdateLayerMutation();

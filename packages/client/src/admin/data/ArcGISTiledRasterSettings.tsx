@@ -1,15 +1,8 @@
-import { Trans, useTranslation } from "react-i18next";
 import {
   DataSourceDetailsFragment,
   useSetMaxZoomMutation,
 } from "../../generated/graphql";
-import {
-  SettingsDLListItem,
-  SettingsDefinitionList,
-} from "../SettingsDefinitionList";
-import Skeleton from "../../components/Skeleton";
-import { useContext, useEffect, useMemo, useState } from "react";
-import InputBlock from "../../components/InputBlock";
+import { useContext, useEffect } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import { isArcGISTiledMapservice } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISTiledMapService";
@@ -20,8 +13,6 @@ export default function ArcGISTiledRasterSettings({
 }: {
   source: DataSourceDetailsFragment;
 }) {
-  const { t } = useTranslation("admin:data");
-
   const onError = useGlobalErrorHandler();
   const [setMaxZoom] = useSetMaxZoomMutation({
     optimisticResponse: (data) => ({

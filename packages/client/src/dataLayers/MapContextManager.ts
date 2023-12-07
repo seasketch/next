@@ -1074,7 +1074,7 @@ class MapContextManager extends EventEmitter {
           raster: {
             type: "raster",
             tiles: [basemap.url],
-            tileSize: 256 / window.devicePixelRatio,
+            tileSize: 256,
             ...(basemap.maxzoom ? { maxzoom: basemap.maxzoom } : {}),
           },
         },
@@ -2755,6 +2755,11 @@ class MapContextManager extends EventEmitter {
               }
             }
           }
+        }
+      } else {
+        if (id in this.internalState.legends) {
+          delete newLegendState[id];
+          changes = true;
         }
       }
     }

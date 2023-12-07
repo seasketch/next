@@ -28,6 +28,7 @@ import {
   ShowScaleBar,
 } from "../draw/MapSettingsPopup";
 import { MeasureControlContextProvider } from "../MeasureControl";
+import ProjectMapLegend from "./ProjectMapLegend";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -97,6 +98,7 @@ export default function ProjectApp() {
             <SketchUIStateContextProvider>
               {/* <ProjectAppHeader /> */}
               <div className="flex flex-grow w-full">
+                <ProjectMapLegend />
                 <MapboxMap
                   className="ml-2"
                   showNavigationControls={true}

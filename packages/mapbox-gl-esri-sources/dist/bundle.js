@@ -1888,9 +1888,7 @@ var MapBoxGLEsriSources = (function () {
 	        const sourceData = {
 	            type: "raster",
 	            tiles: [`${this.options.url}/tile/{z}/{y}/{x}`],
-	            tileSize: this.options.supportHighDpiDisplays
-	                ? tileSize / window.devicePixelRatio
-	                : tileSize,
+	            tileSize,
 	            minzoom,
 	            maxzoom: this.options.maxZoom || maxzoom,
 	            attribution,

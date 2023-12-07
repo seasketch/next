@@ -17,7 +17,7 @@ import useDialog from "../../components/useDialog";
 export default function BaseMapEditor() {
   const mapContext = useContext(MapContext);
   const { slug } = useParams<{ slug: string }>();
-  const { data, loading, error } = useGetBasemapsQuery({
+  const { data } = useGetBasemapsQuery({
     variables: {
       slug: slug,
     },

@@ -10,7 +10,6 @@ import {
   useSet3dTerrainMutation,
   useUpdateTerrainExaggerationMutation,
   useUpdateBasemapUrlMutation,
-  useSetMaxZoomMutation,
   useSetBasemapMaxZoomMutation,
 } from "../../generated/graphql";
 import { gql, useApolloClient } from "@apollo/client";
@@ -29,10 +28,6 @@ import { useMediaQuery } from "beautiful-react-hooks";
 import { Link } from "react-router-dom";
 import { ArrowLeftIcon } from "@heroicons/react/outline";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
-import {
-  SettingsDLListItem,
-  SettingsDefinitionList,
-} from "../SettingsDefinitionList";
 import ArcGISTiledRasterBaseSettings from "./ArcGISTiledRasterBaseSettings";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 

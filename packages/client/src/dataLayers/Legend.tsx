@@ -20,6 +20,7 @@ import LegendListPanel from "./legends/LegendListPanel";
 import LegendMarkerSizePanel from "./legends/LegendMarkerSizePanel";
 import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
+import { useLocalForage } from "../useLocalForage";
 require("../admin/data/arcgis/Accordion.css");
 
 interface SingleImageLegendItem {
@@ -68,6 +69,7 @@ export default function Legend({
   map,
   maxHeight,
   backdropBlur: blur,
+  persistedStateKey,
 }: {
   backdropBlur?: boolean;
   items: LegendItem[];
@@ -81,9 +83,15 @@ export default function Legend({
   loading?: boolean;
   map?: Map;
   maxHeight?: number;
+  persistedStateKey?: string;
 }) {
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
+  const [hidden, setHidden] = useLocalForage<boolean>(
+    persistedStateKey || "legend",
+    true
+  );
+
   return (
     <div
       style={
@@ -93,17 +101,24 @@ export default function Legend({
             }
           : {}
       }
-      className={`${
-        className || ""
-      } shadow rounded bg-white bg-opacity-90 w-64 text-sm flex flex-col overflow-hidden`}
+      className={`${className || ""} shadow rounded bg-white bg-opacity-90 ${
+        hidden ? "w-auto" : "w-64"
+      } text-sm flex flex-col overflow-hidden`}
     >
-      <Accordion.Root type="single" collapsible defaultValue="legend">
+      <Accordion.Root type="single" value={hidden ? "" : "legend"}>
         <Accordion.Item value="legend">
-          <Accordion.Header className="flex-none flex p-2">
+          <Accordion.Header
+            onClick={(e) => {
+              setHidden((prev) => !prev);
+            }}
+            className="flex-none flex p-2 py-1.5"
+          >
             <Accordion.Trigger className="flex w-full AccordionTrigger">
               <h3 className="flex-1 text-left flex items-center">
                 <span>{t("Legend")}</span>
-                {loading && <Spinner className="scale-75 transform ml-1" />}
+                {loading && !hidden && (
+                  <Spinner className="scale-75 transform ml-1" />
+                )}
               </h3>
               <CaretDownIcon
                 className="w-5 h-5 AccordionChevron text-gray-500"
@@ -111,7 +126,7 @@ export default function Legend({
               />
             </Accordion.Trigger>
           </Accordion.Header>
-          <Accordion.Content className="flex-1 max-h-full overflow-y-auto border-t border-gray-200">
+          <Accordion.Content className="flex-1 max-h-full overflow-y-auto border-t border-black border-opacity-10">
             <ul
               className="list-none space-y-1 overflow-y-auto p-2 pr-2.5"
               style={{ maxHeight }}
@@ -141,17 +156,19 @@ export default function Legend({
                         <span title={item.label} className="truncate flex-1">
                           {item.label}
                         </span>
-                        <Toggle
-                          onChange={() => {
-                            if (onHiddenItemsChange) {
-                              onHiddenItemsChange(
-                                item.id,
-                                !hiddenItems.includes(item.id)
-                              );
-                            }
-                          }}
-                          visible={visible}
-                        />
+                        {onHiddenItemsChange && (
+                          <Toggle
+                            onChange={() => {
+                              if (onHiddenItemsChange) {
+                                onHiddenItemsChange(
+                                  item.id,
+                                  !hiddenItems.includes(item.id)
+                                );
+                              }
+                            }}
+                            visible={visible}
+                          />
+                        )}
                       </li>
                     );
                   } else if (legend.type === "MultipleSymbolGLLegend") {
@@ -166,17 +183,19 @@ export default function Legend({
                           <span title={item.label} className="truncate flex-1">
                             {item.label}
                           </span>
-                          <Toggle
-                            onChange={() => {
-                              if (onHiddenItemsChange) {
-                                onHiddenItemsChange(
-                                  item.id,
-                                  !hiddenItems.includes(item.id)
-                                );
-                              }
-                            }}
-                            visible={visible}
-                          />
+                          {onHiddenItemsChange && (
+                            <Toggle
+                              onChange={() => {
+                                if (onHiddenItemsChange) {
+                                  onHiddenItemsChange(
+                                    item.id,
+                                    !hiddenItems.includes(item.id)
+                                  );
+                                }
+                              }}
+                              visible={visible}
+                            />
+                          )}
                         </div>
                         <ul className="text-sm mb-1">
                           {legend.panels.map((panel) => (
@@ -212,17 +231,19 @@ export default function Legend({
                         <span title={item.label} className="truncate flex-1">
                           {item.label}
                         </span>
-                        <Toggle
-                          onChange={() => {
-                            if (onHiddenItemsChange) {
-                              onHiddenItemsChange(
-                                item.id,
-                                !hiddenItems.includes(item.id)
-                              );
-                            }
-                          }}
-                          visible={visible}
-                        />
+                        {onHiddenItemsChange && (
+                          <Toggle
+                            onChange={() => {
+                              if (onHiddenItemsChange) {
+                                onHiddenItemsChange(
+                                  item.id,
+                                  !hiddenItems.includes(item.id)
+                                );
+                              }
+                            }}
+                            visible={visible}
+                          />
+                        )}
                       </li>
                     );
                   } else {
@@ -237,17 +258,19 @@ export default function Legend({
                           <span title={item.label} className="truncate flex-1">
                             {item.label}
                           </span>
-                          <Toggle
-                            onChange={() => {
-                              if (onHiddenItemsChange) {
-                                onHiddenItemsChange(
-                                  item.id,
-                                  !hiddenItems.includes(item.id)
-                                );
-                              }
-                            }}
-                            visible={visible}
-                          />
+                          {onHiddenItemsChange && (
+                            <Toggle
+                              onChange={() => {
+                                if (onHiddenItemsChange) {
+                                  onHiddenItemsChange(
+                                    item.id,
+                                    !hiddenItems.includes(item.id)
+                                  );
+                                }
+                              }}
+                              visible={visible}
+                            />
+                          )}
                         </div>
                         <ul className="text-sm mb-1">
                           {item.symbols.map((symbol) => {
