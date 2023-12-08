@@ -63,7 +63,8 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */,
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "skipLibCheck": true
   },
   "include": [
     "**/*",
