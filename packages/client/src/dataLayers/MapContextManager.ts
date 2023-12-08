@@ -1082,6 +1082,14 @@ class MapContextManager extends EventEmitter {
       "mapbox://styles/underbluewaters/cklb3vusx2dvs17pay6jp5q7e";
     let baseStyle: Style;
     if (basemap?.type === BasemapType.RasterUrlTemplate) {
+      let url = basemap.url;
+      if (
+        url.indexOf("services.arcgisonline.com") > -1 &&
+        process.env.REACT_APP_ARCGIS_DEVELOPER_API_KEY
+      ) {
+        // eslint-disable-next-line i18next/no-literal-string
+        url += `?token=${process.env.REACT_APP_ARCGIS_DEVELOPER_API_KEY}`;
+      }
       baseStyle = {
         version: 8,
         // TODO: choose a ip un-encumbered alternative for these
@@ -1090,7 +1098,7 @@ class MapContextManager extends EventEmitter {
         sources: {
           raster: {
             type: "raster",
-            tiles: [basemap.url],
+            tiles: [url],
             tileSize: 256,
             ...(basemap.maxzoom ? { maxzoom: basemap.maxzoom } : {}),
           },
@@ -1334,6 +1342,9 @@ class MapContextManager extends EventEmitter {
                                   maxZoom: source.maxzoom
                                     ? source.maxzoom
                                     : undefined,
+                                  developerApiKey:
+                                    process.env
+                                      .REACT_APP_ARCGIS_DEVELOPER_API_KEY,
                                 }
                               ),
                             };

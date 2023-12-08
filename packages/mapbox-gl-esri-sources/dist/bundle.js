@@ -1885,9 +1885,14 @@ var MapBoxGLEsriSources = (function () {
 	    async getGLSource() {
 	        let { minzoom, maxzoom, bounds, tileSize, attribution } = await this.getComputedProperties();
 	        attribution = this.options.attributionOverride || attribution;
+	        let url = `${this.options.url}/tile/{z}/{y}/{x}`;
+	        if (url.indexOf("services.arcgisonline.com") !== -1 &&
+	            this.options.developerApiKey) {
+	            url = `${url}?token=${this.options.developerApiKey}`;
+	        }
 	        const sourceData = {
 	            type: "raster",
-	            tiles: [`${this.options.url}/tile/{z}/{y}/{x}`],
+	            tiles: [url],
 	            tileSize,
 	            minzoom,
 	            maxzoom: this.options.maxZoom || maxzoom,
