@@ -24,6 +24,7 @@ jobs:
       - name: Install lerna
         run: |
           npm install
+          npm install -g typescript@5.2.2
       - name: Install dependencies
         run: |
           npx lerna bootstrap --ci
