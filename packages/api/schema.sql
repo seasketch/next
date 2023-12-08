@@ -444,7 +444,8 @@ CREATE TYPE public.interactivity_type AS ENUM (
     'TOOLTIP',
     'POPUP',
     'FIXED_BLOCK',
-    'NONE'
+    'NONE',
+    'ALL_PROPERTIES_POPUP'
 );
 
 
@@ -2628,7 +2629,8 @@ CREATE TABLE public.basemaps (
     surveys_only boolean DEFAULT false NOT NULL,
     use_default_offline_tile_settings boolean DEFAULT true NOT NULL,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
-    is_arcgis_tiled_mapservice boolean DEFAULT false NOT NULL
+    is_arcgis_tiled_mapservice boolean DEFAULT false NOT NULL,
+    maxzoom integer
 );
 
 
@@ -3045,7 +3047,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
   declare
     bucket_id text;
   begin
-    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' ) then
+    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' and new.type != 'arcgis-raster-tiles' ) then
       raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
     end if;
     if new.coordinates is null and (new.type = 'video' or new.type = 'image') then
@@ -8273,6 +8275,7 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
       source_id_map jsonb;
       layer_id_map jsonb;
       item_id_map jsonb;
+      interactive_layers int[];
     begin
       source_id_map = '{}'::jsonb;
       layer_id_map = '{}'::jsonb;
@@ -8306,15 +8309,18 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
             select 
               id_lookup_set_key(layer_id_map, source.id, layer_id) 
             into layer_id_map;
+            interactive_layers = array_append(interactive_layers, layer_id);
           elsif source.type = 'arcgis-raster-tiles' then
             insert into data_sources (
               project_id, 
               type,
-              url
+              url,
+              use_device_pixel_ratio
             ) values (
               "projectId", 
               'arcgis-raster-tiles', 
-              source.url
+              source.url,
+              true
             ) returning id into source_id;
             insert into data_layers (
               project_id,
@@ -8327,11 +8333,13 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
             insert into data_sources (
               project_id,
               type,
-              url
+              url,
+              use_device_pixel_ratio
             ) values (
               "projectId",
               'arcgis-dynamic-mapserver',
-              source.url
+              source.url,
+              true
             ) returning id into source_id;
             -- create data layers for each sublayer
             for i in array_lower(items, 1)..array_upper(items, 1) loop
@@ -8345,6 +8353,7 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
                   source_id,
                   items[i].sublayer_id
                 ) returning id into layer_id;
+                interactive_layers = array_append(interactive_layers, layer_id);
                 select 
                   id_lookup_set_key(layer_id_map, items[i].id, layer_id) 
                 into layer_id_map;
@@ -8375,6 +8384,18 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
             items[1].stable_id::ltree
           );
         end if;
+        update interactivity_settings 
+        set type = 'ALL_PROPERTIES_POPUP' 
+        where id = any(
+          (
+            select 
+              interactivity_settings_id 
+            from 
+              data_layers 
+            where 
+              id = any(interactive_layers)
+          )
+        );
       else
         raise exception 'Only admins can import ArcGIS services';
       end if;
@@ -12610,6 +12631,25 @@ CREATE FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_
 
 
 --
+-- Name: table_of_contents_items_is_custom_gl_source(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.table_of_contents_items) RETURNS boolean
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      source_type text;
+    begin
+      if t.data_layer_id is null then
+        return null;
+      end if;
+      select type into source_type from data_sources where id = (select data_source_id from data_layers where id = t.data_layer_id);
+      return source_type = 'arcgis-dynamic-mapserver' or source_type = 'arcgis-vector' or source_type = 'arcgis-raster-tiles';
+    end;
+  $$;
+
+
+--
 -- Name: table_of_contents_items_primary_download_url(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12659,6 +12699,28 @@ CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
         update projects set draft_table_of_contents_has_changes = true where id = NEW.project_id;
       end if;
       return NEW;
+    end;
+  $$;
+
+
+--
+-- Name: table_of_contents_items_uses_dynamic_metadata(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) RETURNS boolean
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      uses_dynamic_metadata boolean;
+    begin
+      if t.metadata is not null then
+        return false;
+      end if;
+      if t.data_layer_id is null then
+        return false;
+      end if;
+      select type = 'arcgis-dynamic-mapserver' or type = 'arcgis-vector' or type = 'arcgis-raster-tiles' into uses_dynamic_metadata from data_sources where id = (select data_source_id from data_layers where id = t.data_layer_id);
+      return uses_dynamic_metadata;
     end;
   $$;
 
@@ -17707,7 +17769,7 @@ CREATE POLICY data_sources_select ON public.data_sources FOR SELECT USING ((publ
 
 CREATE POLICY data_sources_update ON public.data_sources FOR UPDATE USING ((public.session_is_admin(project_id) AND ( SELECT (( SELECT 1
            FROM public.table_of_contents_items
-          WHERE ((table_of_contents_items.data_layer_id = ( SELECT data_layers.id
+          WHERE ((table_of_contents_items.data_layer_id IN ( SELECT data_layers.id
                    FROM public.data_layers
                   WHERE (data_layers.data_source_id = data_sources.id))) AND (table_of_contents_items.is_draft = false))) IS NULL)))) WITH CHECK (public.session_is_admin(project_id));
 
@@ -21439,6 +21501,13 @@ GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE p
 
 GRANT SELECT(translated_props) ON TABLE public.data_sources TO anon;
 GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.arcgis_fetch_strategy; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -28097,6 +28166,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.tab
 
 
 --
+-- Name: FUNCTION table_of_contents_items_is_custom_gl_source(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.table_of_contents_items) TO anon;
+
+
+--
 -- Name: FUNCTION table_of_contents_items_primary_download_url(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
 --
 
@@ -28117,6 +28194,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_project(t public.table_of_c
 --
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_project_update() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) TO anon;
 
 
 --
