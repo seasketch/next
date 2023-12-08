@@ -48,7 +48,6 @@ export default {
 
 const Template: Story = (args: any) => {
   const [value, setValue] = useState<number>(args.value);
-  console.log("top level value", value);
   return (
     <SurveyAppLayout progress={0.4}>
       <ParticipantCount

@@ -8,7 +8,6 @@ var headings = document.getElementsByTagName("h3");
 function getUsage(heading) {
   const usage = [];
   const name = heading.innerText;
-  console.log(name);
 }
 
 var usage = {};
@@ -32,8 +31,6 @@ for (const heading of headings) {
     nextSibling = nextSibling.nextSibling;
   }
 }
-
-console.log(usage);
 
 */
 

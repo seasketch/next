@@ -326,7 +326,12 @@ class MapContextManager extends EventEmitter {
   /**
    * Call whenever the context will be replaced or no longer used
    */
-  destroy() {}
+  destroy() {
+    for (const key in this.customSources) {
+      this.customSources[key].customSource.destroy();
+      delete this.customSources[key];
+    }
+  }
 
   /**
    * Create a Mapbox GL JS instance. Should be called by <MapBoxMap /> component.
@@ -353,8 +358,11 @@ class MapContextManager extends EventEmitter {
         this.map.off("data", this.onMapDataEvent);
         this.map.off("dataloading", this.onMapDataEvent);
         this.map.off("moveend", this.onMapMove);
-        // TODO: remove event listeners for any CustomGLSources
         this.map.remove();
+      }
+      for (const key in this.customSources) {
+        this.customSources[key].customSource.destroy();
+        delete this.customSources[key];
       }
     }
     if (!this.internalState.ready) {
@@ -1368,8 +1376,7 @@ class MapContextManager extends EventEmitter {
                       }
                       this.customSources[source.id].visible = true;
                       // add style if ready
-                      const { customSource, visible, listenersAdded } =
-                        this.customSources[source.id];
+                      const { customSource } = this.customSources[source.id];
                       // Adding the source is skipped until later when sublayers are setup
                       if (customSource.ready) {
                         const styleData = await customSource.getGLStyleLayers();
@@ -1378,6 +1385,10 @@ class MapContextManager extends EventEmitter {
                         }
                         const layers = isUnderLabels ? underLabels : overLabels;
                         layers.push(...styleData.layers);
+                      } else {
+                        setTimeout(() => {
+                          this.debouncedUpdateStyle();
+                        }, 50);
                       }
                     }
                     break;
@@ -1915,7 +1926,7 @@ class MapContextManager extends EventEmitter {
     if (Object.keys(layers).length) {
       // Cleanup entries in visibleLayers that no longer exist
       for (const key in this.visibleLayers) {
-        if (!this.layers[key]) {
+        if (!tocItems.find((i) => i.stableId === key)) {
           delete this.visibleLayers[key];
         }
       }
@@ -2724,7 +2735,7 @@ class MapContextManager extends EventEmitter {
                 changes = true;
               }
             }
-          } else if (isCustomSourceType(source.type)) {
+          } else if (source && isCustomSourceType(source.type)) {
             const { customSource, visible } = this.customSources[source.id];
             if (visible && customSource) {
               const { tableOfContentsItems } =

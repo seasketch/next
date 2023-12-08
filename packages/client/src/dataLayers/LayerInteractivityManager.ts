@@ -504,11 +504,6 @@ export default class LayerInteractivityManager extends EventEmitter {
               // @ts-ignore
               layerLabel = (this.tocItemLabels || {})[lyr?.tocId];
             }
-            // const layerId = sublayerData[0]?.sublayer.toString();
-            // const lyr = layers.find((l) => l.sublayer?.toString() === )
-            // console.log(sublayerData, layers);
-            // const lyr = this.layers[top.layer.id];
-            // @ts-ignore
 
             const properties = sublayerData[0]?.attributes || {};
             new Popup({ closeOnClick: true, closeButton: true })

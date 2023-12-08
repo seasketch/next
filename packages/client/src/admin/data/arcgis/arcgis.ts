@@ -285,7 +285,6 @@ export function useMapServerInfo(location: string | undefined) {
           const mapServerData = await r.json();
           mapServerData.url = location;
           mapServerData.generatedId = uuid();
-          console.log(mapServerData.fullExtent);
           if (!abortController.signal.aborted) {
             fetch(`${location}/layers?f=json`, {
               signal: abortController.signal,
@@ -296,9 +295,7 @@ export function useMapServerInfo(location: string | undefined) {
               const layerInfo: LayerInfo[] = await Promise.all(
                 layerData.layers.map(async (lyr: LayerInfo) => {
                   const generatedId = uuid();
-                  console.log("generating for", lyr);
                   if (lyr.type === "Feature Layer" && lyr.drawingInfo) {
-                    console.log(lyr.extent);
                     let { layers, imageList } = await styleForFeatureLayer(
                       location,
                       lyr.id,

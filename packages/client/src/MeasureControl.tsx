@@ -398,7 +398,6 @@ class MeasureControl extends EventEmitter {
             }
           );
         } else {
-          // console.log("lock request denied");
         }
       }
     }

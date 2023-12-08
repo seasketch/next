@@ -32,7 +32,6 @@ export const Legends = () => {
             testCases[testCaseName].input as SeaSketchGlLayer[],
             "vector"
           );
-          console.log(data);
           return (
             <div key={testCaseName} className="p-2">
               {/* <h3>{testCaseName}</h3> */}
