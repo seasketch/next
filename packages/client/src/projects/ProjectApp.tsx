@@ -28,6 +28,7 @@ import {
   ShowScaleBar,
 } from "../draw/MapSettingsPopup";
 import { MeasureControlContextProvider } from "../MeasureControl";
+import ProjectMapLegend from "./ProjectMapLegend";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -78,7 +79,8 @@ export default function ProjectApp() {
     forums: t("Discussion Forums"),
     settings: t("Cache Settings"),
   };
-  const { basemaps, tableOfContentsItems } = useMapData(mapContext);
+  const { basemaps, tableOfContentsItems, dataLayers, dataSources } =
+    useMapData(mapContext);
   // Disabling until I can see some Divehi translations -cb 3/29/23
   // Might need to just enable this for forum content and attribute forms
   // const { selectedLang } = getSelectedLanguage(i18n);
@@ -96,6 +98,7 @@ export default function ProjectApp() {
             <SketchUIStateContextProvider>
               {/* <ProjectAppHeader /> */}
               <div className="flex flex-grow w-full">
+                <ProjectMapLegend />
                 <MapboxMap
                   className="ml-2"
                   showNavigationControls={true}
@@ -184,6 +187,8 @@ export default function ProjectApp() {
                       </Route>
                       <Route path={`/${slug}/app/overlays`}>
                         <LazyOverlays
+                          layers={dataLayers || []}
+                          sources={dataSources || []}
                           items={tableOfContentsItems as TableOfContentsItem[]}
                         />
                       </Route>

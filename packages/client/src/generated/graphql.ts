@@ -243,7 +243,7 @@ export enum ArcgisFeatureLayerFetchStrategy {
 export type ArcgisImportItemInput = {
   id?: Maybe<Scalars['Int']>;
   isFolder?: Maybe<Scalars['Boolean']>;
-  parentId?: Maybe<Scalars['Int']>;
+  parentId?: Maybe<Scalars['String']>;
   sourceId?: Maybe<Scalars['Int']>;
   stableId?: Maybe<Scalars['String']>;
   sublayerId?: Maybe<Scalars['Int']>;
@@ -313,6 +313,7 @@ export type Basemap = Node & {
   labelsLayerId?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `MapBookmark`. */
   mapBookmarksBySelectedBasemapConnection: MapBookmarksConnection;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -434,6 +435,7 @@ export type BasemapInput = {
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
   /**
@@ -488,6 +490,7 @@ export type BasemapPatch = {
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
+  maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name?: Maybe<Scalars['String']>;
   /**
@@ -2358,6 +2361,7 @@ export type DataSourceInput = {
 
 /** Represents an update to a `DataSource`. Fields that are set will be updated. */
 export type DataSourcePatch = {
+  arcgisFetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   /**
@@ -5632,6 +5636,7 @@ export type InteractivitySettingPatch = {
 };
 
 export enum InteractivityType {
+  AllPropertiesPopup = 'ALL_PROPERTIES_POPUP',
   Banner = 'BANNER',
   FixedBlock = 'FIXED_BLOCK',
   None = 'NONE',
@@ -8376,6 +8381,13 @@ export enum OptionalBasemapLayersOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
+
+export type OutstandingSurveyInvites = {
+  __typename?: 'OutstandingSurveyInvites';
+  projectId: Scalars['Int'];
+  surveyId: Scalars['Int'];
+  token: Scalars['String'];
+};
 
 /** Information about pagination in a connection. */
 export type PageInfo = {
@@ -11985,6 +11997,12 @@ export type TableOfContentsItem = Node & {
   acl?: Maybe<Acl>;
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /**
+   * Metadata will be returned as directly stored in the SeaSketch
+   * database or computed by fetching from a 3rd party service,
+   * depending on the data source type.
+   */
+  computedMetadata?: Maybe<Scalars['JSON']>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
@@ -11999,6 +12017,7 @@ export type TableOfContentsItem = Node & {
    * their children. Toggles can only be used to toggle children off
    */
   isClickOffOnly: Scalars['Boolean'];
+  isCustomGlSource?: Maybe<Scalars['Boolean']>;
   /**
    * Identifies whether this item is part of the draft table of contents edited by
    * admin or the static public version. This property cannot be changed. Rather,
@@ -12035,6 +12054,7 @@ export type TableOfContentsItem = Node & {
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
   translatedProps: Scalars['JSON'];
+  usesDynamicMetadata?: Maybe<Scalars['Boolean']>;
 };
 
 /**
@@ -12178,6 +12198,12 @@ export enum TileScheme {
   Tms = 'TMS',
   Xyz = 'XYZ'
 }
+
+export type TocItemDetails = {
+  __typename?: 'TocItemDetails';
+  id: Scalars['Int'];
+  type: SketchChildType;
+};
 
 /** All input for the `toggleAdminAccess` mutation. */
 export type ToggleAdminAccessInput = {
@@ -14391,16 +14417,6 @@ export type UpdateProjectStorageBucketMutation = (
   )> }
 );
 
-export type NewQueryParametersFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
-
-export type UpdateHighDpiFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'useDevicePixelRatio'>
-);
-
 export type UpdateFormatFragment = (
   { __typename?: 'DataSource' }
   & Pick<DataSource, 'queryParameters'>
@@ -14872,7 +14888,7 @@ export type RequestInviteOnlyProjectAccessMutation = (
 
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps'>
+  & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice' | 'maxzoom'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -14910,6 +14926,7 @@ export type CreateBasemapMutationVariables = Exact<{
   type: BasemapType;
   url: Scalars['String'];
   surveysOnly?: Maybe<Scalars['Boolean']>;
+  isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -14944,7 +14961,7 @@ export type UploadBasemapMutation = (
 
 export type BasemapAdminDetailsFragment = (
   { __typename?: 'Basemap' }
-  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly'>
+  & Pick<Basemap, 'id' | 'attribution' | 'description' | 'labelsLayerId' | 'name' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'isArcgisTiledMapservice'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
@@ -15284,6 +15301,23 @@ export type MapboxKeysQuery = (
   )> }
 );
 
+export type SetBasemapMaxZoomMutationVariables = Exact<{
+  id: Scalars['Int'];
+  maxzoom?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type SetBasemapMaxZoomMutation = (
+  { __typename?: 'Mutation' }
+  & { updateBasemap?: Maybe<(
+    { __typename?: 'UpdateBasemapPayload' }
+    & { basemap?: Maybe<(
+      { __typename?: 'Basemap' }
+      & Pick<Basemap, 'id' | 'maxzoom'>
+    )> }
+  )> }
+);
+
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -15535,7 +15569,7 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'importedArcgisServices'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -15559,7 +15593,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
@@ -15697,7 +15731,7 @@ export type GetLayerItemQuery = (
         )> }
       )>>, dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps'>
+        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy'>
       )> }
     )> }
   )> }
@@ -15885,6 +15919,23 @@ export type UpdateQueryParametersMutation = (
   )> }
 );
 
+export type UpdateFetchStrategyMutationVariables = Exact<{
+  sourceId: Scalars['Int'];
+  fetchStrategy: ArcgisFeatureLayerFetchStrategy;
+}>;
+
+
+export type UpdateFetchStrategyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'arcgisFetchStrategy'>
+    )> }
+  )> }
+);
+
 export type UpdateEnableHighDpiRequestsMutationVariables = Exact<{
   sourceId: Scalars['Int'];
   useDevicePixelRatio: Scalars['Boolean'];
@@ -15911,13 +15962,13 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'metadata'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource'>
   )> }
 );
 
 export type UpdateMetadataMutationVariables = Exact<{
   itemId: Scalars['Int'];
-  metadata: Scalars['JSON'];
+  metadata?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -15927,7 +15978,7 @@ export type UpdateMetadataMutation = (
     { __typename?: 'UpdateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'metadata'>
+      & Pick<TableOfContentsItem, 'id' | 'metadata' | 'usesDynamicMetadata' | 'computedMetadata'>
     )> }
   )> }
 );
@@ -15987,6 +16038,41 @@ export type DraftStatusSubscription = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    )> }
+  )> }
+);
+
+export type ImportArcGisServiceMutationVariables = Exact<{
+  items: Array<ArcgisImportItemInput> | ArcgisImportItemInput;
+  sources: Array<ArcgisImportSourceInput> | ArcgisImportSourceInput;
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ImportArcGisServiceMutation = (
+  { __typename?: 'Mutation' }
+  & { importArcgisServices?: Maybe<(
+    { __typename?: 'ImportArcgisServicesPayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title'>
+    )>> }
+  )> }
+);
+
+export type SetMaxZoomMutationVariables = Exact<{
+  sourceId: Scalars['Int'];
+  maxzoom?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type SetMaxZoomMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSource?: Maybe<(
+    { __typename?: 'UpdateDataSourcePayload' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'maxzoom'>
     )> }
   )> }
 );
@@ -17036,7 +17122,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy'>
 );
 
 export type ClientSpriteFragment = (
@@ -19278,16 +19364,6 @@ export const NewBasemapFragmentDoc = gql`
   surveysOnly
 }
     `;
-export const NewQueryParametersFragmentDoc = gql`
-    fragment NewQueryParameters on DataSource {
-  queryParameters
-}
-    `;
-export const UpdateHighDpiFragmentDoc = gql`
-    fragment UpdateHighDPI on DataSource {
-  useDevicePixelRatio
-}
-    `;
 export const UpdateFormatFragmentDoc = gql`
     fragment UpdateFormat on DataSource {
   queryParameters
@@ -19524,6 +19600,8 @@ export const BasemapDetailsFragmentDoc = gql`
   url
   surveysOnly
   translatedProps
+  isArcgisTiledMapservice
+  maxzoom
 }
     `;
 export const BasemapAdminDetailsFragmentDoc = gql`
@@ -19565,6 +19643,7 @@ export const BasemapAdminDetailsFragmentDoc = gql`
   type
   url
   surveysOnly
+  isArcgisTiledMapservice
 }
     ${BasemapDetailsFragmentDoc}`;
 export const DataUploadDetailsFragmentDoc = gql`
@@ -19969,6 +20048,7 @@ export const DataSourceDetailsFragmentDoc = gql`
   useDevicePixelRatio
   supportsDynamicLayers
   translatedProps
+  arcgisFetchStrategy
 }
     `;
 export const ClientSpriteFragmentDoc = gql`
@@ -21459,9 +21539,9 @@ export type GetBasemapsQueryHookResult = ReturnType<typeof useGetBasemapsQuery>;
 export type GetBasemapsLazyQueryHookResult = ReturnType<typeof useGetBasemapsLazyQuery>;
 export type GetBasemapsQueryResult = Apollo.QueryResult<GetBasemapsQuery, GetBasemapsQueryVariables>;
 export const CreateBasemapDocument = gql`
-    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
+    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean, $isArcgisTiledMapservice: Boolean) {
   createBasemap(
-    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
+    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly, isArcgisTiledMapservice: $isArcgisTiledMapservice}}
   ) {
     basemap {
       ...BasemapDetails
@@ -21491,6 +21571,7 @@ export type CreateBasemapMutationFn = Apollo.MutationFunction<CreateBasemapMutat
  *      type: // value for 'type'
  *      url: // value for 'url'
  *      surveysOnly: // value for 'surveysOnly'
+ *      isArcgisTiledMapservice: // value for 'isArcgisTiledMapservice'
  *   },
  * });
  */
@@ -22321,6 +22402,43 @@ export function useMapboxKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions
 export type MapboxKeysQueryHookResult = ReturnType<typeof useMapboxKeysQuery>;
 export type MapboxKeysLazyQueryHookResult = ReturnType<typeof useMapboxKeysLazyQuery>;
 export type MapboxKeysQueryResult = Apollo.QueryResult<MapboxKeysQuery, MapboxKeysQueryVariables>;
+export const SetBasemapMaxZoomDocument = gql`
+    mutation SetBasemapMaxZoom($id: Int!, $maxzoom: Int) {
+  updateBasemap(input: {id: $id, patch: {maxzoom: $maxzoom}}) {
+    basemap {
+      id
+      maxzoom
+    }
+  }
+}
+    `;
+export type SetBasemapMaxZoomMutationFn = Apollo.MutationFunction<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>;
+
+/**
+ * __useSetBasemapMaxZoomMutation__
+ *
+ * To run a mutation, you first call `useSetBasemapMaxZoomMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetBasemapMaxZoomMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setBasemapMaxZoomMutation, { data, loading, error }] = useSetBasemapMaxZoomMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      maxzoom: // value for 'maxzoom'
+ *   },
+ * });
+ */
+export function useSetBasemapMaxZoomMutation(baseOptions?: Apollo.MutationHookOptions<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>(SetBasemapMaxZoomDocument, options);
+      }
+export type SetBasemapMaxZoomMutationHookResult = ReturnType<typeof useSetBasemapMaxZoomMutation>;
+export type SetBasemapMaxZoomMutationResult = Apollo.MutationResult<SetBasemapMaxZoomMutation>;
+export type SetBasemapMaxZoomMutationOptions = Apollo.BaseMutationOptions<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -22847,6 +22965,7 @@ export const DraftTableOfContentsDocument = gql`
     draftTableOfContentsItems {
       ...Overlay
     }
+    importedArcgisServices
   }
 }
     ${OverlayFragmentDoc}`;
@@ -22913,6 +23032,7 @@ export const LayersAndSourcesForItemsDocument = gql`
       supportsDynamicLayers
       uploadedSourceFilename
       translatedProps
+      arcgisFetchStrategy
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -23268,6 +23388,7 @@ export const GetLayerItemDocument = gql`
         uploadedBy
         geostats
         translatedProps
+        arcgisFetchStrategy
       }
     }
   }
@@ -23747,6 +23868,45 @@ export function useUpdateQueryParametersMutation(baseOptions?: Apollo.MutationHo
 export type UpdateQueryParametersMutationHookResult = ReturnType<typeof useUpdateQueryParametersMutation>;
 export type UpdateQueryParametersMutationResult = Apollo.MutationResult<UpdateQueryParametersMutation>;
 export type UpdateQueryParametersMutationOptions = Apollo.BaseMutationOptions<UpdateQueryParametersMutation, UpdateQueryParametersMutationVariables>;
+export const UpdateFetchStrategyDocument = gql`
+    mutation UpdateFetchStrategy($sourceId: Int!, $fetchStrategy: ArcgisFeatureLayerFetchStrategy!) {
+  updateDataSource(
+    input: {id: $sourceId, patch: {arcgisFetchStrategy: $fetchStrategy}}
+  ) {
+    dataSource {
+      id
+      arcgisFetchStrategy
+    }
+  }
+}
+    `;
+export type UpdateFetchStrategyMutationFn = Apollo.MutationFunction<UpdateFetchStrategyMutation, UpdateFetchStrategyMutationVariables>;
+
+/**
+ * __useUpdateFetchStrategyMutation__
+ *
+ * To run a mutation, you first call `useUpdateFetchStrategyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFetchStrategyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFetchStrategyMutation, { data, loading, error }] = useUpdateFetchStrategyMutation({
+ *   variables: {
+ *      sourceId: // value for 'sourceId'
+ *      fetchStrategy: // value for 'fetchStrategy'
+ *   },
+ * });
+ */
+export function useUpdateFetchStrategyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFetchStrategyMutation, UpdateFetchStrategyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFetchStrategyMutation, UpdateFetchStrategyMutationVariables>(UpdateFetchStrategyDocument, options);
+      }
+export type UpdateFetchStrategyMutationHookResult = ReturnType<typeof useUpdateFetchStrategyMutation>;
+export type UpdateFetchStrategyMutationResult = Apollo.MutationResult<UpdateFetchStrategyMutation>;
+export type UpdateFetchStrategyMutationOptions = Apollo.BaseMutationOptions<UpdateFetchStrategyMutation, UpdateFetchStrategyMutationVariables>;
 export const UpdateEnableHighDpiRequestsDocument = gql`
     mutation UpdateEnableHighDPIRequests($sourceId: Int!, $useDevicePixelRatio: Boolean!) {
   updateDataSource(
@@ -23790,7 +23950,9 @@ export const GetMetadataDocument = gql`
     query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
-    metadata
+    computedMetadata
+    usesDynamicMetadata
+    isCustomGlSource
   }
 }
     `;
@@ -23823,11 +23985,13 @@ export type GetMetadataQueryHookResult = ReturnType<typeof useGetMetadataQuery>;
 export type GetMetadataLazyQueryHookResult = ReturnType<typeof useGetMetadataLazyQuery>;
 export type GetMetadataQueryResult = Apollo.QueryResult<GetMetadataQuery, GetMetadataQueryVariables>;
 export const UpdateMetadataDocument = gql`
-    mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+    mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
     tableOfContentsItem {
       id
       metadata
+      usesDynamicMetadata
+      computedMetadata
     }
   }
 }
@@ -24007,6 +24171,83 @@ export function useDraftStatusSubscription(baseOptions: Apollo.SubscriptionHookO
       }
 export type DraftStatusSubscriptionHookResult = ReturnType<typeof useDraftStatusSubscription>;
 export type DraftStatusSubscriptionResult = Apollo.SubscriptionResult<DraftStatusSubscription>;
+export const ImportArcGisServiceDocument = gql`
+    mutation ImportArcGISService($items: [ArcgisImportItemInput!]!, $sources: [ArcgisImportSourceInput!]!, $projectId: Int!) {
+  importArcgisServices(
+    input: {items: $items, sources: $sources, projectId: $projectId}
+  ) {
+    tableOfContentsItems {
+      id
+      title
+    }
+  }
+}
+    `;
+export type ImportArcGisServiceMutationFn = Apollo.MutationFunction<ImportArcGisServiceMutation, ImportArcGisServiceMutationVariables>;
+
+/**
+ * __useImportArcGisServiceMutation__
+ *
+ * To run a mutation, you first call `useImportArcGisServiceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useImportArcGisServiceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [importArcGisServiceMutation, { data, loading, error }] = useImportArcGisServiceMutation({
+ *   variables: {
+ *      items: // value for 'items'
+ *      sources: // value for 'sources'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useImportArcGisServiceMutation(baseOptions?: Apollo.MutationHookOptions<ImportArcGisServiceMutation, ImportArcGisServiceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ImportArcGisServiceMutation, ImportArcGisServiceMutationVariables>(ImportArcGisServiceDocument, options);
+      }
+export type ImportArcGisServiceMutationHookResult = ReturnType<typeof useImportArcGisServiceMutation>;
+export type ImportArcGisServiceMutationResult = Apollo.MutationResult<ImportArcGisServiceMutation>;
+export type ImportArcGisServiceMutationOptions = Apollo.BaseMutationOptions<ImportArcGisServiceMutation, ImportArcGisServiceMutationVariables>;
+export const SetMaxZoomDocument = gql`
+    mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
+  updateDataSource(input: {id: $sourceId, patch: {maxzoom: $maxzoom}}) {
+    dataSource {
+      id
+      maxzoom
+    }
+  }
+}
+    `;
+export type SetMaxZoomMutationFn = Apollo.MutationFunction<SetMaxZoomMutation, SetMaxZoomMutationVariables>;
+
+/**
+ * __useSetMaxZoomMutation__
+ *
+ * To run a mutation, you first call `useSetMaxZoomMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetMaxZoomMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setMaxZoomMutation, { data, loading, error }] = useSetMaxZoomMutation({
+ *   variables: {
+ *      sourceId: // value for 'sourceId'
+ *      maxzoom: // value for 'maxzoom'
+ *   },
+ * });
+ */
+export function useSetMaxZoomMutation(baseOptions?: Apollo.MutationHookOptions<SetMaxZoomMutation, SetMaxZoomMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetMaxZoomMutation, SetMaxZoomMutationVariables>(SetMaxZoomDocument, options);
+      }
+export type SetMaxZoomMutationHookResult = ReturnType<typeof useSetMaxZoomMutation>;
+export type SetMaxZoomMutationResult = Apollo.MutationResult<SetMaxZoomMutation>;
+export type SetMaxZoomMutationOptions = Apollo.BaseMutationOptions<SetMaxZoomMutation, SetMaxZoomMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29881,6 +30122,7 @@ export const namedOperations = {
     UpdateOptionalBasemapLayerOptions: 'UpdateOptionalBasemapLayerOptions',
     UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
     UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
+    SetBasemapMaxZoom: 'SetBasemapMaxZoom',
     CreateProject: 'CreateProject',
     VerifyEmail: 'VerifyEmail',
     createDataUpload: 'createDataUpload',
@@ -29901,9 +30143,12 @@ export const namedOperations = {
     UpdateZIndexes: 'UpdateZIndexes',
     UpdateRenderUnderType: 'UpdateRenderUnderType',
     UpdateQueryParameters: 'UpdateQueryParameters',
+    UpdateFetchStrategy: 'UpdateFetchStrategy',
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
     PublishTableOfContents: 'PublishTableOfContents',
+    ImportArcGISService: 'ImportArcGISService',
+    SetMaxZoom: 'SetMaxZoom',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
@@ -30000,8 +30245,6 @@ export const namedOperations = {
     NewLabelsLayer: 'NewLabelsLayer',
     NewTerrain: 'NewTerrain',
     NewBasemap: 'NewBasemap',
-    NewQueryParameters: 'NewQueryParameters',
-    UpdateHighDPI: 'UpdateHighDPI',
     UpdateFormat: 'UpdateFormat',
     NewGLStyle: 'NewGLStyle',
     NewRenderUnder: 'NewRenderUnder',

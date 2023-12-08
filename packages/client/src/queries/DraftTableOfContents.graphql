@@ -9,6 +9,7 @@ query DraftTableOfContents($slug: String!) {
     draftTableOfContentsItems {
       ...Overlay
     }
+    importedArcgisServices
   }
 }
 
@@ -49,6 +50,7 @@ query layersAndSourcesForItems(
       supportsDynamicLayers
       uploadedSourceFilename
       translatedProps
+      arcgisFetchStrategy
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -262,6 +264,7 @@ query GetLayerItem($id: Int!) {
         uploadedBy
         geostats
         translatedProps
+        arcgisFetchStrategy
       }
     }
   }
@@ -467,6 +470,20 @@ mutation UpdateQueryParameters($sourceId: Int!, $queryParameters: JSON!) {
   }
 }
 
+mutation UpdateFetchStrategy(
+  $sourceId: Int!
+  $fetchStrategy: ArcgisFeatureLayerFetchStrategy!
+) {
+  updateDataSource(
+    input: { id: $sourceId, patch: { arcgisFetchStrategy: $fetchStrategy } }
+  ) {
+    dataSource {
+      id
+      arcgisFetchStrategy
+    }
+  }
+}
+
 mutation UpdateEnableHighDPIRequests(
   $sourceId: Int!
   $useDevicePixelRatio: Boolean!
@@ -487,17 +504,21 @@ mutation UpdateEnableHighDPIRequests(
 query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
-    metadata
+    computedMetadata
+    usesDynamicMetadata
+    isCustomGlSource
   }
 }
 
-mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   updateTableOfContentsItem(
     input: { id: $itemId, patch: { metadata: $metadata } }
   ) {
     tableOfContentsItem {
       id
       metadata
+      usesDynamicMetadata
+      computedMetadata
     }
   }
 }
@@ -537,6 +558,30 @@ subscription DraftStatus($slug: String!) {
       id
       draftTableOfContentsHasChanges
       tableOfContentsLastPublished
+    }
+  }
+}
+
+mutation ImportArcGISService(
+  $items: [ArcgisImportItemInput!]!
+  $sources: [ArcgisImportSourceInput!]!
+  $projectId: Int!
+) {
+  importArcgisServices(
+    input: { items: $items, sources: $sources, projectId: $projectId }
+  ) {
+    tableOfContentsItems {
+      id
+      title
+    }
+  }
+}
+
+mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
+  updateDataSource(input: { id: $sourceId, patch: { maxzoom: $maxzoom } }) {
+    dataSource {
+      id
+      maxzoom
     }
   }
 }

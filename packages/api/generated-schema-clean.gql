@@ -209,6 +209,31 @@ enum ArcgisFeatureLayerFetchStrategy {
   TILED
 }
 
+"""An input for mutations affecting `ArcgisImportItem`"""
+input ArcgisImportItemInput {
+  id: Int
+  isFolder: Boolean
+  parentId: String
+  sourceId: Int
+  stableId: String
+  sublayerId: Int
+  title: String
+}
+
+"""An input for mutations affecting `ArcgisImportSource`"""
+input ArcgisImportSourceInput {
+  fetchStrategy: ArcgisFeatureLayerFetchStrategy
+  id: Int
+  type: ArcgisSourceType
+  url: String
+}
+
+enum ArcgisSourceType {
+  ARCGIS_DYNAMIC_MAPSERVER
+  ARCGIS_RASTER_TILES
+  ARCGIS_VECTOR
+}
+
 """All input for the `archiveResponses` mutation."""
 input ArchiveResponsesInput {
   """
@@ -295,6 +320,7 @@ type Basemap implements Node {
     """The method to use when ordering `MapBookmark`."""
     orderBy: [MapBookmarksOrderBy!] = [NATURAL]
   ): MapBookmarksConnection!
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String!
@@ -461,6 +487,7 @@ input BasemapInput {
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String!
@@ -533,6 +560,7 @@ input BasemapPatch {
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String
@@ -2735,6 +2763,8 @@ input DataSourceInput {
 Represents an update to a `DataSource`. Fields that are set will be updated.
 """
 input DataSourcePatch {
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy
+
   """
   Contains an attribution to be displayed when the map is shown to a user.
   """
@@ -6400,6 +6430,33 @@ enum GroupsOrderBy {
   PROJECT_ID_DESC
 }
 
+"""All input for the `importArcgisServices` mutation."""
+input ImportArcgisServicesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  items: [ArcgisImportItemInput]
+  projectId: Int
+  sources: [ArcgisImportSourceInput]
+}
+
+"""The output of our `importArcgisServices` mutation."""
+type ImportArcgisServicesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItems: [TableOfContentsItem!]
+}
+
 type InteractivitySetting implements Node {
   """Reads and enables pagination through a set of `Basemap`."""
   basemapsByInteractivitySettingsIdConnection(
@@ -6514,6 +6571,7 @@ input InteractivitySettingPatch {
 }
 
 enum InteractivityType {
+  ALL_PROPERTIES_POPUP
   BANNER
   FIXED_BLOCK
   NONE
@@ -7989,6 +8047,12 @@ type Mutation {
     """
     input: GrantAdminAccessInput!
   ): GrantAdminAccessPayload
+  importArcgisServices(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ImportArcgisServicesInput!
+  ): ImportArcgisServicesPayload
 
   """
   Adds current user to the list of participants for a project, sharing their 
@@ -9290,6 +9354,12 @@ enum OptionalBasemapLayersOrderBy {
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
+}
+
+type OutstandingSurveyInvites {
+  projectId: Int!
+  surveyId: Int!
+  token: String!
 }
 
 """Information about pagination in a connection."""
@@ -13106,6 +13176,13 @@ type TableOfContentsItem implements Node {
   bounds: [BigFloat]
 
   """
+  Metadata will be returned as directly stored in the SeaSketch
+  database or computed by fetching from a 3rd party service,
+  depending on the data source type.
+  """
+  computedMetadata: JSON
+
+  """
   Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
   """
   dataLayer: DataLayer
@@ -13125,6 +13202,7 @@ type TableOfContentsItem implements Node {
   their children. Toggles can only be used to toggle children off
   """
   isClickOffOnly: Boolean!
+  isCustomGlSource: Boolean
 
   """
   Identifies whether this item is part of the draft table of contents edited by
@@ -13180,6 +13258,7 @@ type TableOfContentsItem implements Node {
   """Name used in the table of contents rendering"""
   title: String!
   translatedProps: JSON!
+  usesDynamicMetadata: Boolean
 }
 
 """
@@ -13368,6 +13447,11 @@ type TableOfContentsItemsPrimaryDownloadUrlPayload {
 enum TileScheme {
   TMS
   XYZ
+}
+
+type TocItemDetails {
+  id: Int!
+  type: SketchChildType!
 }
 
 """All input for the `toggleAdminAccess` mutation."""

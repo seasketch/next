@@ -2,9 +2,13 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import {
+  MapContext,
+  sourceTypeIsCustomGLSource,
+} from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
 import {
+  DataSourceTypes,
   useDeleteBranchMutation,
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
@@ -30,6 +34,7 @@ import * as Menubar from "@radix-ui/react-menubar";
 import {
   MenuBarContent,
   MenuBarItem,
+  MenuBarLabel,
   MenuBarSeparator,
   MenuBarSubmenu,
   MenubarRadioItem,
@@ -40,6 +45,15 @@ import { DataUploadDropzoneContext } from "../uploads/DataUploadDropzone";
 import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import React from "react";
+import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
+
+const LazyArcGISCartModal = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminArcGISBrowser" */ "./arcgis/ArcGISCartModal"
+    )
+);
 
 export default function TableOfContentsEditor() {
   const [selectedView, setSelectedView] = useState("tree");
@@ -56,11 +70,19 @@ export default function TableOfContentsEditor() {
   const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
+  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
+    | undefined
+    | {
+        itemId: number;
+        sublayerId?: string;
+        customGLSource?: CustomGLSource<any>;
+      }
+  >();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
-  const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteItem] = useDeleteBranchMutation();
   const mapContext = useContext(MapContext);
+  const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
     variables: {
       slug,
@@ -121,11 +143,17 @@ export default function TableOfContentsEditor() {
       const item = items.find((item) => item.stableId === treeItem.id);
       if (item) {
         const sidebar = currentSidebarState();
-        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] = [
-          {
+        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] =
+          [];
+        if (
+          !item.isFolder ||
+          items.find((i) => i.parentStableId === item.stableId && i.bounds)
+        ) {
+          contextMenuOptions.push({
             id: "zoom-to",
+            disabled: !item.bounds && !checkedItems.includes(item.stableId),
             label: t("Zoom to bounds"),
-            onClick: () => {
+            onClick: async () => {
               let bounds: [number, number, number, number] | undefined;
               if (item.isFolder) {
                 bounds = createBoundsRecursive(item, items);
@@ -134,6 +162,26 @@ export default function TableOfContentsEditor() {
                   bounds = item.bounds.map((coord: string) =>
                     parseFloat(coord)
                   ) as [number, number, number, number];
+                } else {
+                  const layer =
+                    layersAndSources.data?.projectBySlug?.dataLayersForItems?.find(
+                      (l) => l.id === item.dataLayerId
+                    );
+                  if (layer && layer.dataSourceId) {
+                    const source =
+                      layersAndSources.data?.projectBySlug?.dataSourcesForItems?.find(
+                        (s) => s.id === layer.dataSourceId
+                      );
+                    if (source && sourceTypeIsCustomGLSource(source.type)) {
+                      const customSource =
+                        mapContext.manager?.getCustomGLSource(source.id);
+                      const metadata =
+                        await customSource?.getComputedMetadata();
+                      if (metadata?.bounds) {
+                        bounds = metadata.bounds;
+                      }
+                    }
+                  }
                 }
               }
               if (
@@ -151,30 +199,33 @@ export default function TableOfContentsEditor() {
                 });
               }
             },
-          },
-          {
-            id: "edit",
-            label: t("Edit"),
-            onClick: () => {
-              if (item?.isFolder) {
-                setFolderId(item.id);
-              } else {
-                if (item.dataLayerId) {
-                  manager?.showTocItems([item.stableId]);
-                }
-                setOpenLayerItemId(item.id);
+          });
+        }
+        contextMenuOptions.push({
+          id: "edit",
+          label: t("Edit"),
+          onClick: () => {
+            if (item?.isFolder) {
+              setFolderId(item.id);
+            } else {
+              if (item.dataLayerId) {
+                manager?.showTocItems([item.stableId]);
               }
-            },
+              setOpenLayerItemId(item.id);
+            }
           },
-        ];
+        });
         if (!item.isFolder || item.hideChildren) {
           contextMenuOptions.push({
             id: "metadata",
             label: t("Metadata"),
             onClick: () => {
-              setOpenMetadataViewerId(item.id);
+              setOpenMetadataViewerState({
+                itemId: item.id,
+              });
             },
           });
+          // if (item.isFolder) {
           contextMenuOptions.push({
             id: "edit-metadata",
             label: t("Edit metadata"),
@@ -182,6 +233,7 @@ export default function TableOfContentsEditor() {
               setOpenMetadataItemId(item.id);
             },
           });
+          // }
         }
         contextMenuOptions.push({
           id: "delete",
@@ -211,7 +263,16 @@ export default function TableOfContentsEditor() {
         return [];
       }
     },
-    [confirmDelete, deleteItem, manager, mapContext.manager?.map, t, tocQuery]
+    [
+      confirmDelete,
+      deleteItem,
+      manager,
+      mapContext.manager,
+      t,
+      tocQuery,
+      layersAndSources.data,
+      checkedItems,
+    ]
   );
 
   const onSortEnd: (
@@ -381,6 +442,9 @@ export default function TableOfContentsEditor() {
         />
       )}
       <Header
+        openArcGISCart={() => {
+          setArcgisCartOpen(true);
+        }}
         onRequestOpenFolder={() => {
           setCreateNewFolderModalOpen(true);
         }}
@@ -449,10 +513,21 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setOpenMetadataItemId(undefined)}
         />
       )}
-      {openMetadataViewerId && (
+      {openMetadataViewerState && (
         <TableOfContentsMetadataModal
-          id={openMetadataViewerId}
-          onRequestClose={() => setOpenMetadataViewerId(undefined)}
+          id={openMetadataViewerState.itemId}
+          onRequestClose={() => setOpenMetadataViewerState(undefined)}
+        />
+      )}
+      {arcgisCartOpen && (
+        <LazyArcGISCartModal
+          projectId={tocQuery.data?.projectBySlug?.id as number}
+          region={tocQuery.data?.projectBySlug?.region.geojson}
+          onRequestClose={() => setArcgisCartOpen(false)}
+          importedArcGISServices={
+            (tocQuery.data?.projectBySlug?.importedArcgisServices ||
+              []) as string[]
+          }
         />
       )}
     </>
@@ -468,6 +543,7 @@ function Header({
   onRequestPublish,
   publishDisabled,
   lastPublished,
+  openArcGISCart,
 }: {
   selectedView: string;
   setSelectedView: (view: string) => void;
@@ -477,6 +553,7 @@ function Header({
   onRequestPublish: () => void;
   publishDisabled?: boolean;
   lastPublished?: Date;
+  openArcGISCart: () => void;
 }) {
   const uploadContext = useContext(DataUploadDropzoneContext);
   const { t } = useTranslation("admin:data");
@@ -531,6 +608,7 @@ function Header({
                 <Trans ns="admin:data">Add Folder</Trans>
               </MenuBarItem>
               <MenuBarSubmenu label={t("Add Data")}>
+                <MenuBarLabel>{t("Host data on SeaSketch")}</MenuBarLabel>
                 <MenuBarItem
                   onClick={() => {
                     const fileInput = document.createElement("input");
@@ -548,6 +626,15 @@ function Header({
                   }}
                 >
                   {t("Upload spatial data files")}
+                </MenuBarItem>
+                <MenuBarSeparator />
+                <MenuBarLabel>{t("Connect to data services")}</MenuBarLabel>
+                <MenuBarItem
+                  onClick={() => {
+                    openArcGISCart();
+                  }}
+                >
+                  {t("Esri ArcGIS Service...")}
                 </MenuBarItem>
               </MenuBarSubmenu>
             </MenuBarContent>

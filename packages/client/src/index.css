@@ -278,3 +278,12 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-image: linear-gradient(to left, rgb(249, 250, 251), transparent);
   z-index: 10;
 } */
+
+.mapboxgl-popup-close-button {
+  @apply px-0.5 bg-white z-10 flex items-center;
+  border-radius: 100%;
+}
+
+.mapboxgl-popup-content {
+  @apply px-3 pt-4 !important;
+}

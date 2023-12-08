@@ -213,7 +213,7 @@ enum ArcgisFeatureLayerFetchStrategy {
 input ArcgisImportItemInput {
   id: Int
   isFolder: Boolean
-  parentId: Int
+  parentId: String
   sourceId: Int
   stableId: String
   sublayerId: Int
@@ -320,6 +320,7 @@ type Basemap implements Node {
     """The method to use when ordering `MapBookmark`."""
     orderBy: [MapBookmarksOrderBy!] = [NATURAL]
   ): MapBookmarksConnection!
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String!
@@ -486,6 +487,7 @@ input BasemapInput {
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String!
@@ -558,6 +560,7 @@ input BasemapPatch {
   Identify the labels layer lowest in the stack so that overlay layers may be placed underneath.
   """
   labelsLayerId: String
+  maxzoom: Int
 
   """Label shown in the basemap picker interface"""
   name: String
@@ -2760,6 +2763,8 @@ input DataSourceInput {
 Represents an update to a `DataSource`. Fields that are set will be updated.
 """
 input DataSourcePatch {
+  arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy
+
   """
   Contains an attribution to be displayed when the map is shown to a user.
   """
@@ -6566,6 +6571,7 @@ input InteractivitySettingPatch {
 }
 
 enum InteractivityType {
+  ALL_PROPERTIES_POPUP
   BANNER
   FIXED_BLOCK
   NONE
@@ -9348,6 +9354,12 @@ enum OptionalBasemapLayersOrderBy {
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
+}
+
+type OutstandingSurveyInvites {
+  projectId: Int!
+  surveyId: Int!
+  token: String!
 }
 
 """Information about pagination in a connection."""
@@ -13164,6 +13176,13 @@ type TableOfContentsItem implements Node {
   bounds: [BigFloat]
 
   """
+  Metadata will be returned as directly stored in the SeaSketch
+  database or computed by fetching from a 3rd party service,
+  depending on the data source type.
+  """
+  computedMetadata: JSON
+
+  """
   Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
   """
   dataLayer: DataLayer
@@ -13183,6 +13202,7 @@ type TableOfContentsItem implements Node {
   their children. Toggles can only be used to toggle children off
   """
   isClickOffOnly: Boolean!
+  isCustomGlSource: Boolean
 
   """
   Identifies whether this item is part of the draft table of contents edited by
@@ -13238,6 +13258,7 @@ type TableOfContentsItem implements Node {
   """Name used in the table of contents rendering"""
   title: String!
   translatedProps: JSON!
+  usesDynamicMetadata: Boolean
 }
 
 """
@@ -13426,6 +13447,11 @@ type TableOfContentsItemsPrimaryDownloadUrlPayload {
 enum TileScheme {
   TMS
   XYZ
+}
+
+type TocItemDetails {
+  id: Int!
+  type: SketchChildType!
 }
 
 """All input for the `toggleAdminAccess` mutation."""

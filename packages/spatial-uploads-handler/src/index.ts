@@ -170,6 +170,10 @@ export default async function handleUpload(
     let workingFilePath = `${path.join(tmpobj.name, objectKey.split("/")[1])}`;
     let originalFilePath = workingFilePath;
     await updateProgress("fetching", 0.0);
+    console.log(
+      workingFilePath,
+      `s3://${path.join(process.env.BUCKET!, objectKey)}`
+    );
     await getObject(
       workingFilePath,
       `s3://${path.join(process.env.BUCKET!, objectKey)}`,

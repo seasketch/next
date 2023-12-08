@@ -210,7 +210,6 @@ export default function useMapboxGLDraw(
         }
       } else {
         // draw.changeMode(drawMode);
-        // console.log("no initial value");
       }
 
       setState(DigitizingState.NO_SELECTION);
@@ -688,22 +687,6 @@ export default function useMapboxGLDraw(
       }
     }
   }, [mapContext.manager, draw, state, mapContext]);
-
-  // useEffect(() => {
-  //   console.log(DigitizingState[state]);
-  //   if (
-  //     state === DigitizingState.CREATE ||
-  //     state === DigitizingState.NO_SELECTION ||
-  //     state === DigitizingState.UNFINISHED ||
-  //     state === DigitizingState.PAUSED_FOR_MEASUREMENT
-  //   ) {
-  //     console.log("call enableMeasurementTools");
-  //     mapContextManager?.resumeMeasurementTools();
-  //   } else {
-  //     console.log("call disableMeasurementTools");
-  //     mapContextManager?.pauseMeasurementTools();
-  //   }
-  // }, [state, mapContextManager]);
 
   return {
     digitizingState: state,

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.11.1/mapbox-gl.js"></script>
+    <script src="../dist/bundle.js?blarg2"></script>
+    <script>
+      window.examples = [
+        {
+          name: "USA",
+          location:
+            "https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer/",
+          sublayers: [
+            { sublayer: 0, name: "cities" },
+            { sublayer: 1, name: "highways" },
+            { sublayer: 2, name: "states" },
+            { sublayer: 3, name: "counties" },
+          ],
+          mapSettings: {
+            center: [-97.9327097132877, 39.06356682093403],
+            zoom: 3,
+          },
+        },
+        {
+          name: "World Cities",
+          location:
+            "https://sampleserver6.arcgisonline.com/arcgis/rest/services/SampleWorldCities/MapServer",
+          sublayers: [
+            { sublayer: 0, name: "cities" },
+            { sublayer: 1, name: "continents", visible: false },
+            { sublayer: 2, name: "background", visible: false },
+          ],
+          mapSettings: {
+            center: [-97.9327097132877, 39.06356682093403],
+            zoom: 1,
+          },
+        },
+        {
+          name: "Wildfire",
+          location:
+            "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Wildfire/MapServer",
+          sublayers: [
+            { sublayer: 0, name: "Response Points" },
+            { sublayer: 1, name: "Response Lines", visible: false },
+            { sublayer: 2, name: "Response Polygons" },
+          ],
+          mapSettings: {
+            center: [-97.9327097132877, 39.06356682093403],
+            zoom: 3,
+          },
+        },
+        {
+          name: "Hurricanes",
+          location:
+            "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Hurricanes/MapServer",
+        },
+        {
+          name: "Military (label concat)",
+          location:
+            "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Military/MapServer",
+          mapSettings: {
+            bbox: [
+              [-118.56271036363368, 35.6696854676122],
+              [-120.45093112976411, 34.86643813110517],
+            ],
+          },
+        },
+      ];
+    </script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.11.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <title>ArcGIS Feature Layers Demo</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        margin: 0;
+        font-size: 16px;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+      }
+
+      #controls {
+        background-color: white;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 5px;
+      }
+
+      input,
+      select {
+        margin: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="controls">
+      <form>
+        <select id="example"></select>
+      </form>
+    </div>
+    <script>
+      const {
+        ArcGISDynamicMapService,
+        ArcGISVectorSource,
+        styleForFeatureLayer,
+        addImages,
+      } = MapBoxGLEsriSources;
+
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoidW5kZXJibHVld2F0ZXJzIiwiYSI6IjMzZ215RTQifQ.u6Gb_-kNfvaxiHdd9eJEEA";
+
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/streets-v11",
+        center: [-12, 28],
+        zoom: 1.5,
+      });
+
+      window.map = map;
+      map.on("load", async () => {
+        await populateExamples();
+        initControls(window.examples);
+      });
+
+      async function initControls(examples) {
+        const exampleSelect = document.getElementById("example");
+        for (const example of examples) {
+          const select = document.createElement("option");
+          select.innerText = example.name;
+          select.setAttribute("value", examples.indexOf(example));
+          exampleSelect.appendChild(select);
+        }
+        selectExample(examples[0]);
+        document.getElementById("example").onchange = (e) => {
+          selectExample(window.examples[e.target.value]);
+        };
+      }
+
+      let currentLayers = [];
+      const currentSources = [];
+      async function selectExample(example) {
+        for (const layerSet of currentLayers) {
+          for (const layer of layerSet) {
+            map.removeLayer(layer.id);
+          }
+        }
+        currentLayers = [];
+        while (currentSources.length) {
+          const source = currentSources.pop();
+          map.removeSource(source.id);
+          // source.destroy();
+        }
+        const controls = document.getElementById("controls");
+        const sublayerNodes = document.querySelectorAll("#controls > div");
+        sublayerNodes.forEach((node) => controls.removeChild(node));
+
+        for (const sublayer of example.sublayers) {
+          const sublayerSourceId = `ags-vector-${sublayer.sublayer}`;
+          const url = example.location + "/" + sublayer.sublayer;
+          const div = createSublayerControl(sublayer);
+          document.getElementById("controls").appendChild(div);
+          const styleInfo = await styleForFeatureLayer(url, sublayerSourceId);
+          for (const layer of styleInfo.layers) {
+            if ("visible" in sublayer && sublayer.visible === false) {
+              layer.layout = layer.layout || {};
+              layer.layout.visibility = "none";
+            }
+          }
+          const source = new ArcGISVectorSource(map, sublayerSourceId, url);
+          currentSources.push(source);
+          await styleInfo.imageList.addToMap(map);
+          currentLayers.push(styleInfo.layers);
+        }
+        for (const layerSet of [...currentLayers].reverse()) {
+          for (const layer of layerSet) {
+            map.addLayer(layer);
+          }
+        }
+        if (example.mapSettings.zoom) {
+          map.flyTo(example.mapSettings);
+        } else if (example.mapSettings.bbox) {
+          map.fitBounds(example.mapSettings.bbox, { padding: 100 });
+        }
+      }
+
+      function createSublayerControl(sublayer) {
+        const div = document.createElement("div");
+        const checkbox = document.createElement("input");
+        checkbox.setAttribute("type", "checkbox");
+        if ("visible" in sublayer && sublayer.visible === false) {
+          // checkbox.setAttribute("checked", false);
+        } else {
+          checkbox.setAttribute("checked", true);
+        }
+        checkbox.setAttribute("value", sublayer.sublayer.toString());
+        checkbox.setAttribute("id", `sublayer-visibility-${sublayer.sublayer}`);
+        checkbox.onchange = onCheckboxChange;
+        const label = document.createElement("label");
+        label.setAttribute("for", `sublayer-visibility-${sublayer.sublayer}`);
+        label.innerText = sublayer.name;
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        const range = document.createElement("input");
+        range.setAttribute("type", "range");
+        range.setAttribute("min", "0");
+        range.setAttribute("max", "100");
+        range.setAttribute("value", "100");
+        range.setAttribute("step", "1");
+        range.setAttribute("id", `sublayer-opacity-${sublayer.sublayer}`);
+        range.oninput = onOpacityChange;
+        div.appendChild(range);
+        return div;
+      }
+
+      function onCheckboxChange(e) {
+        const sublayerIndex = e.target.id.match(/\d+$/)[0];
+        for (const layer of currentLayers[sublayerIndex]) {
+          map.setLayoutProperty(
+            layer.id,
+            "visibility",
+            e.target.checked ? "visible" : "none"
+          );
+        }
+      }
+
+      function onOpacityChange(e) {
+        const sublayerIndex = e.target.id.match(/\d+$/)[0];
+        const opacity = parseInt(e.target.value) / 100;
+        for (const layer of currentLayers[sublayerIndex]) {
+          let prop;
+          switch (layer.type) {
+            case "fill":
+              prop = "fill-opacity";
+              break;
+            case "line":
+              prop = "line-opacity";
+              break;
+            case "symbol":
+              prop = "icon-opacity";
+              break;
+            case "circle":
+              prop = "circle-opacity";
+              break;
+            default:
+              prop = "fill-opacity";
+              break;
+          }
+          map.setPaintProperty(layer.id, prop, opacity, { validate: false });
+          if (prop === "icon-opacity") {
+            map.setPaintProperty(layer.id, "text-opacity", opacity, {
+              validate: false,
+            });
+          }
+        }
+      }
+
+      async function populateExamples() {
+        for (const example of window.examples) {
+          if (!example.sublayers) {
+            const response = await fetch(
+              example.location + "?f=json"
+            ).then((r) => r.json());
+            if (!example.sublayers) {
+              example.sublayers = [];
+              for (const layer of response.layers) {
+                if (!layer.subLayerIds) {
+                  example.sublayers.push({
+                    sublayer: layer.id,
+                    name: layer.name,
+                    visible: layer.defaultVisibilty,
+                  });
+                }
+              }
+            }
+            if (!example.mapSettings) {
+              example.mapSettings = {
+                bbox: [
+                  meters2degrees(
+                    response.fullExtent.xmin,
+                    response.fullExtent.ymax
+                  ),
+                  meters2degrees(
+                    response.fullExtent.xmax,
+                    response.fullExtent.ymin
+                  ),
+                ],
+              };
+            }
+          }
+        }
+      }
+
+      function meters2degrees(x, y) {
+        var lon = (x * 180) / 20037508.34;
+        //thanks magichim @ github for the correction
+        var lat =
+          (Math.atan(Math.exp((y * Math.PI) / 20037508.34)) * 360) / Math.PI -
+          90;
+        return [lon, lat];
+      }
+    </script>
+  </body>
+</html>

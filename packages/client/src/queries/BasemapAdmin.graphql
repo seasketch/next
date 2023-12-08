@@ -36,6 +36,8 @@ fragment BasemapDetails on Basemap {
   url
   surveysOnly
   translatedProps
+  isArcgisTiledMapservice
+  maxzoom
 }
 
 query GetBasemaps($slug: String!) {
@@ -58,6 +60,7 @@ mutation CreateBasemap(
   $type: BasemapType!
   $url: String!
   $surveysOnly: Boolean
+  $isArcgisTiledMapservice: Boolean
 ) {
   createBasemap(
     input: {
@@ -69,6 +72,7 @@ mutation CreateBasemap(
         type: $type
         url: $url
         surveysOnly: $surveysOnly
+        isArcgisTiledMapservice: $isArcgisTiledMapservice
       }
     }
   ) {
@@ -136,6 +140,7 @@ fragment BasemapAdminDetails on Basemap {
   type
   url
   surveysOnly
+  isArcgisTiledMapservice
 }
 
 query GetBasemap($id: Int!) {
@@ -380,5 +385,14 @@ query MapboxKeys($slug: String!) {
     id
     mapboxPublicKey
     mapboxSecretKey
+  }
+}
+
+mutation SetBasemapMaxZoom($id: Int!, $maxzoom: Int) {
+  updateBasemap(input: { id: $id, patch: { maxzoom: $maxzoom } }) {
+    basemap {
+      id
+      maxzoom
+    }
   }
 }

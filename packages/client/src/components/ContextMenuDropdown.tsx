@@ -94,7 +94,11 @@ export default function ContextMenuDropdown({
                 onClick={onOptionClick(props)}
                 className={classNames(
                   "group",
-                  "group-hover:bg-gray-100 group-hover:text-gray-900 text-gray-700",
+                  `${
+                    props.disabled
+                      ? ""
+                      : "group-hover:bg-gray-100 group-hover:text-gray-900"
+                  } text-gray-700`,
                   "block px-4 py-2 text-sm w-full text-left",
                   disabled ? "pointer-events-none opacity-50" : ""
                 )}

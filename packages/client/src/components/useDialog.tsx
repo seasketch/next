@@ -1,13 +1,59 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { createContext, ReactNode, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "./Modal";
 import TextInput from "./TextInput";
+import Spinner from "./Spinner";
 
 export default function useDialog() {
   const context = useContext(UseDialogContext);
   return useMemo(
     () => ({
+      makeChoice: (options: {
+        title: string;
+        choices: ReactNode[];
+      }): Promise<number | false> => {
+        return new Promise((resolve, reject) => {
+          context.setState({
+            type: "choice",
+            message: options.title,
+            open: true,
+            choices: options.choices,
+            onSubmit: (value) => resolve(parseInt(value)),
+            onCancel: () => resolve(false),
+            submitting: false,
+          });
+        });
+      },
+      loadingMessage: (message: string) => {
+        context.setState({
+          type: "loading",
+          open: true,
+          message: null,
+          submitting: false,
+          description: message,
+        });
+        return {
+          hideLoadingMessage: () => {
+            context.setState(ResetState);
+          },
+          updateLoadingMessage: (message: string) => {
+            context.setState((prev) => {
+              return {
+                ...prev,
+                description: message,
+              };
+            });
+          },
+        };
+      },
       prompt: (options: {
         message: string;
         defaultValue?: string;
@@ -90,7 +136,7 @@ export default function useDialog() {
 }
 
 type DialogContextState = {
-  type: "prompt" | "alert" | "confirm";
+  type: "prompt" | "alert" | "confirm" | "loading" | "choice";
   open: boolean;
   message: string | ReactNode;
   description?: string;
@@ -102,6 +148,7 @@ type DialogContextState = {
   primaryButtonVariant?: "primary" | "danger";
   primaryButtonText?: string;
   disableBackdropClick?: boolean;
+  choices?: ReactNode[];
 };
 
 const ResetState: DialogContextState = {
@@ -113,7 +160,7 @@ const ResetState: DialogContextState = {
 
 const UseDialogContext = createContext<{
   state: DialogContextState;
-  setState: (state: DialogContextState) => void;
+  setState: Dispatch<SetStateAction<DialogContextState>>;
 }>({
   state: ResetState,
   setState: () => {},
@@ -160,6 +207,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
       {state.open && (
         <Modal
           tipyTop
+          zeroPadding={state.type === "loading"}
           icon={state.type === "alert" ? "alert" : state.icon}
           title={state.message}
           onRequestClose={() => {
@@ -170,7 +218,9 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
           disableBackdropClick={state.disableBackdropClick}
           autoWidth
           footer={
-            state.type === "alert"
+            state.type === "loading"
+              ? []
+              : state.type === "alert"
               ? [
                   {
                     disabled: false,
@@ -191,6 +241,19 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     loading: state.submitting,
                     autoFocus: true,
                   },
+                  {
+                    disabled: state.submitting,
+                    label: t("Cancel"),
+                    onClick: () => {
+                      if (state.onCancel) {
+                        state.onCancel();
+                      }
+                      reset();
+                    },
+                  },
+                ]
+              : state.type === "choice"
+              ? [
                   {
                     disabled: state.submitting,
                     label: t("Cancel"),
@@ -225,8 +288,34 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
           }
         >
           <div className="">
-            {state.description && (
+            {state.type === "loading" && (
+              <div className="flex items-center justify-center p-4 space-x-2">
+                <Spinner />
+                <div>{state.description}</div>
+              </div>
+            )}
+            {state.type !== "loading" && state.description && (
               <p className="text-gray-500 text-sm">{state.description}</p>
+            )}
+            {state.choices && state.type === "choice" && (
+              <div className="space-y-4">
+                {state.choices.map((node, i) => {
+                  return (
+                    <div
+                      key={i}
+                      className="cursor-pointer group"
+                      onClick={() => {
+                        if (state.onSubmit) {
+                          state.onSubmit(i.toString());
+                        }
+                        reset();
+                      }}
+                    >
+                      {node}
+                    </div>
+                  );
+                })}
+              </div>
             )}
             {state.type === "prompt" && (
               <TextInput

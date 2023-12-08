@@ -37,11 +37,7 @@ export default function BasemapControl(props: BasemapControlProps) {
                   key={b.id}
                   basemap={b}
                   onClick={() => {
-                    // if (selectedBasemap !== b.id) {
                     mapContext.manager?.setSelectedBasemap(b.id.toString());
-                    // setSelectedBasemap(b.id);
-                    // managerContext.manager?.changeBasemap(b.url);
-                    // }
                   }}
                 />
               ))}

@@ -34,7 +34,7 @@ export default function MetadataModal({
   }, [document]);
 
   return (
-    <Modal title="" onRequestClose={onRequestClose}>
+    <Modal loading={loading} title="" onRequestClose={onRequestClose}>
       <>
         <div className="relative metadata mt-3">
           <button
@@ -59,7 +59,11 @@ export default function MetadataModal({
           {error &&
             // eslint-disable-next-line
             `Error: ${error.message}`}
-          {loading && <Spinner />}
+          {loading && (
+            <div className="w-full h-6 flex items-center justify-center">
+              <Spinner />
+            </div>
+          )}
           <div className="ProseMirror" ref={target}></div>
         </div>
       </>

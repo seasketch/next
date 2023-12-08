@@ -185,27 +185,36 @@ export default function InteractivitySettings({
                   },
                 ]
               : []),
+            ...(!sublayer
+              ? [
+                  {
+                    label: "Custom Popup",
+                    description:
+                      "Popup windows can be opened and closed to show detailed information.",
+                    value: InteractivityType.Popup,
+                    children: (
+                      <>
+                        <TemplateEditor
+                          type={InteractivityType.Popup}
+                          selectedType={selectedType}
+                          propName={"longTemplate"}
+                          templateValue={longTemplate || undefined}
+                          onSave={sanitizeTemplate}
+                          onChange={(value) => setLongTemplate(value)}
+                          attributeNames={attributeNames}
+                          basemap={basemap}
+                          layers={data.interactivitySetting?.layers as string[]}
+                          onSelectLayers={() => setPickLayersOpen(true)}
+                        />
+                      </>
+                    ),
+                  },
+                ]
+              : []),
             {
-              label: "Popup",
-              description:
-                "Popup windows can be opened and closed to show detailed information.",
-              value: InteractivityType.Popup,
-              children: (
-                <>
-                  <TemplateEditor
-                    type={InteractivityType.Popup}
-                    selectedType={selectedType}
-                    propName={"longTemplate"}
-                    templateValue={longTemplate || undefined}
-                    onSave={sanitizeTemplate}
-                    onChange={(value) => setLongTemplate(value)}
-                    attributeNames={attributeNames}
-                    basemap={basemap}
-                    layers={data.interactivitySetting?.layers as string[]}
-                    onSelectLayers={() => setPickLayersOpen(true)}
-                  />
-                </>
-              ),
+              label: "Popup with all columns",
+              description: "Popup window which includes all column values.",
+              value: InteractivityType.AllPropertiesPopup,
             },
             // {
             //   label: "Fixed Block",

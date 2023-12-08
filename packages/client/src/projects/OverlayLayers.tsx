@@ -1,7 +1,15 @@
 import { useState, useContext, useCallback } from "react";
 import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
-import { OverlayFragment, TableOfContentsItem } from "../generated/graphql";
-import { MapContext } from "../dataLayers/MapContextManager";
+import {
+  DataLayerDetailsFragment,
+  DataSourceDetailsFragment,
+  OverlayFragment,
+  TableOfContentsItem,
+} from "../generated/graphql";
+import {
+  MapContext,
+  sourceTypeIsCustomGLSource,
+} from "../dataLayers/MapContextManager";
 import TreeView, { TreeItem, useOverlayState } from "../components/TreeView";
 import { DropdownDividerProps } from "../components/ContextMenuDropdown";
 import { DropdownOption } from "../components/DropdownButton";
@@ -10,12 +18,18 @@ import { currentSidebarState } from "./ProjectAppSidebar";
 
 export default function OverlayLayers({
   items,
+  layers,
+  sources,
 }: {
   items: TableOfContentsItem[];
+  layers: DataLayerDetailsFragment[];
+  sources: DataSourceDetailsFragment[];
 }) {
   const { t } = useTranslation("homepage");
   const mapContext = useContext(MapContext);
-  const [openMetadataViewerId, setOpenMetadataViewerId] = useState<number>();
+  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
+    undefined | number
+  >();
 
   const {
     expandedIds,
@@ -36,7 +50,8 @@ export default function OverlayLayers({
           {
             id: "zoom-to",
             label: t("Zoom to bounds"),
-            onClick: () => {
+            disabled: !item.bounds && !checkedItems.includes(item.stableId),
+            onClick: async () => {
               let bounds: [number, number, number, number] | undefined;
               if (item.isFolder) {
                 bounds = createBoundsRecursive(item, items);
@@ -45,6 +60,22 @@ export default function OverlayLayers({
                   bounds = item.bounds.map((coord: string) =>
                     parseFloat(coord)
                   ) as [number, number, number, number];
+                } else {
+                  const layer = layers?.find((l) => l.id === item.dataLayerId);
+                  if (layer && layer.dataSourceId) {
+                    const source = sources?.find(
+                      (s) => s.id === layer.dataSourceId
+                    );
+                    if (source && sourceTypeIsCustomGLSource(source.type)) {
+                      const customSource =
+                        mapContext.manager?.getCustomGLSource(source.id);
+                      const metadata =
+                        await customSource?.getComputedMetadata();
+                      if (metadata?.bounds) {
+                        bounds = metadata.bounds;
+                      }
+                    }
+                  }
                 }
               }
               if (
@@ -69,7 +100,7 @@ export default function OverlayLayers({
             id: "metadata",
             label: t("Metadata"),
             onClick: () => {
-              setOpenMetadataViewerId(item.id);
+              setOpenMetadataViewerState(item.id);
             },
           });
         }
@@ -78,15 +109,23 @@ export default function OverlayLayers({
         return [];
       }
     },
-    [items, mapContext.manager?.map, t]
+    [
+      items,
+      mapContext.manager?.map,
+      t,
+      mapContext.manager,
+      layers,
+      sources,
+      checkedItems,
+    ]
   );
 
   return (
     <div className="mt-3 pl-3">
-      {openMetadataViewerId && (
+      {openMetadataViewerState && (
         <TableOfContentsMetadataModal
-          id={openMetadataViewerId}
-          onRequestClose={() => setOpenMetadataViewerId(undefined)}
+          id={openMetadataViewerState}
+          onRequestClose={() => setOpenMetadataViewerState(undefined)}
         />
       )}
       <TreeView

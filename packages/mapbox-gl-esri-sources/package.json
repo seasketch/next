@@ -1,0 +1,56 @@
+{
+  "name": "@seasketch/mapbox-gl-esri-sources",
+  "version": "0.9.0",
+  "description": "Render data services from ArcGIS in MapBox GL JS",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "http-server",
+    "watch": "rollup -c rollup.config.js --watch",
+    "test": "jest",
+    "docs": "rm -rf docs && npx typedoc",
+    "build": "tsc -b && rollup -c rollup.config.js",
+    "install": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/mapbox-gl-dynamic-image-sources.git"
+  },
+  "keywords": [
+    "mapbox",
+    "mapbox-gl",
+    "arcgis",
+    "wms"
+  ],
+  "author": "Chad Burt",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/seasketch/mapbox-gl-dynamic-image-sources/issues"
+  },
+  "homepage": "https://github.com/seasketch/mapbox-gl-dynamic-image-sources#readme",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^14.0.0",
+    "@rollup/plugin-node-resolve": "^15.2.1",
+    "@types/arcgis-rest-api": "^10.4.4",
+    "@types/geojson": "^7946.0.7",
+    "@types/mapbox-gl": "^2.7.15",
+    "@types/uuid": "^8.0.1",
+    "http-server": "^0.12.3",
+    "rollup": "^2.79.1",
+    "rollup-plugin-cleanup": "^3.1.1",
+    "typedoc": "^0.17.0-3",
+    "typescript": "^5.2"
+  },
+  "dependencies": {
+    "@mapbox/tilebelt": "^1.0.2",
+    "@terraformer/arcgis": "^2.0.7",
+    "@types/lodash.debounce": "^4.0.8",
+    "@types/mapbox__tilebelt": "^1.0.2",
+    "arcgis-pbf-parser": "^0.0.4",
+    "bytes": "^3.1.2",
+    "eventemitter3": "^5.0.1",
+    "lodash.debounce": "^4.0.8",
+    "tilebelt": "^1.0.1",
+    "uuid": "^8.3.0"
+  }
+}

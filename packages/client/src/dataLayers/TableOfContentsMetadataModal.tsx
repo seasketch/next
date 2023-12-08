@@ -12,10 +12,12 @@ export default function TableOfContentsMetadataModal({
     variables: {
       itemId: id,
     },
+    skip: !id,
   });
+
   return (
     <MetadataModal
-      document={data?.tableOfContentsItem?.metadata}
+      document={data?.tableOfContentsItem?.computedMetadata}
       loading={loading}
       error={error}
       onRequestClose={onRequestClose}

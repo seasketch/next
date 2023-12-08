@@ -74,7 +74,6 @@ export default function SketchEditorModal({
   //     return extractRelevantPropsFromStyle(sketchClass.mapboxGlStyle || []);
   //   }, [sketchClass]);
   // //
-  //   console.log(styleRelevantProps, properties);
 
   // useEffect(() => {
   //   const elements = sketchClass.form?.formElements || [];

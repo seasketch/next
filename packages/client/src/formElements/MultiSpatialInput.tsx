@@ -956,7 +956,6 @@ const MultiSpatialInput: FormElementComponent<
               }}
               onRequestSubmit={() => {
                 // if (props.value?.collection.features?.length) {
-                // console.log("onSubmit");
                 // props.onSubmit();
                 // }
               }}
