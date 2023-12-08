@@ -8,7 +8,9 @@
     "start": "http-server",
     "watch": "rollup -c rollup.config.js --watch",
     "test": "jest",
-    "docs": "rm -rf docs && npx typedoc"
+    "docs": "rm -rf docs && npx typedoc",
+    "build": "tsc -b && rollup -c rollup.config.js",
+    "install": "npm run build"
   },
   "repository": {
     "type": "git",

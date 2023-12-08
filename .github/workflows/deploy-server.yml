@@ -16,7 +16,7 @@ jobs:
     outputs:
       build_label: ${{ steps.short_sha.outputs.sha }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - id: short_sha
@@ -58,7 +58,7 @@ jobs:
       - run_migrations
       - export_commit
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:

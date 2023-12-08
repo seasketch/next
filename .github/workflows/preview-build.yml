@@ -9,7 +9,7 @@ jobs:
       name: preview_client
       url: ${{ steps.wrangler.outputs.preview_url }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
           node-version: "18.6"
