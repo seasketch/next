@@ -20,7 +20,7 @@ jobs:
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
         with:
-        limit-access-to-actor: true
+          limit-access-to-actor: true
       - uses: actions/setup-node@v3
         with:
           node-version: "18.6"
