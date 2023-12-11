@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { Suspense, useCallback, useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
@@ -47,6 +47,7 @@ import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import React from "react";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
+import { createPortal } from "react-dom";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -520,15 +521,27 @@ export default function TableOfContentsEditor() {
         />
       )}
       {arcgisCartOpen && (
-        <LazyArcGISCartModal
-          projectId={tocQuery.data?.projectBySlug?.id as number}
-          region={tocQuery.data?.projectBySlug?.region.geojson}
-          onRequestClose={() => setArcgisCartOpen(false)}
-          importedArcGISServices={
-            (tocQuery.data?.projectBySlug?.importedArcgisServices ||
-              []) as string[]
-          }
-        />
+        <Suspense
+          fallback={createPortal(
+            <div
+              style={{ height: "100vh", backdropFilter: "blur(2px)" }}
+              className="w-full flex min-h-full h-96 justify-center text-center align-middle items-center content-center justify-items-center place-items-center place-content-center z-50 absolute top-0 left-0 bg-black bg-opacity-50"
+            >
+              <Spinner large color="white" />
+            </div>,
+            document.body
+          )}
+        >
+          <LazyArcGISCartModal
+            projectId={tocQuery.data?.projectBySlug?.id as number}
+            region={tocQuery.data?.projectBySlug?.region.geojson}
+            onRequestClose={() => setArcgisCartOpen(false)}
+            importedArcGISServices={
+              (tocQuery.data?.projectBySlug?.importedArcgisServices ||
+                []) as string[]
+            }
+          />
+        </Suspense>
       )}
     </>
   );
