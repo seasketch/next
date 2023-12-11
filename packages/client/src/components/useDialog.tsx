@@ -44,11 +44,15 @@ export default function useDialog() {
           hideLoadingMessage: () => {
             context.setState(ResetState);
           },
-          updateLoadingMessage: (message: string) => {
+          updateLoadingMessage: (
+            message: string | ReactNode,
+            complete?: boolean
+          ) => {
             context.setState((prev) => {
               return {
                 ...prev,
                 description: message,
+                submitting: complete ? false : true,
               };
             });
           },
@@ -139,7 +143,7 @@ type DialogContextState = {
   type: "prompt" | "alert" | "confirm" | "loading" | "choice";
   open: boolean;
   message: string | ReactNode;
-  description?: string;
+  description?: string | ReactNode;
   defaultValue?: string;
   submitting: boolean;
   onSubmit?: (value: string) => void | Promise<string | void>;
@@ -290,7 +294,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
           <div className="">
             {state.type === "loading" && (
               <div className="flex items-center justify-center p-4 space-x-2">
-                <Spinner />
+                {state.submitting ? <Spinner /> : ""}
                 <div>{state.description}</div>
               </div>
             )}
