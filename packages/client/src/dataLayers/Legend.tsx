@@ -21,6 +21,7 @@ import LegendMarkerSizePanel from "./legends/LegendMarkerSizePanel";
 import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
+import { ErrorBoundary } from "@sentry/react";
 require("../admin/data/arcgis/Accordion.css");
 
 interface SingleImageLegendItem {
@@ -139,47 +140,21 @@ export default function Legend({
                     const visible =
                       !hiddenItems || !hiddenItems.includes(item.id);
                     return (
-                      <li
-                        key={item.id}
-                        className={`flex items-center space-x-2 max-w-full ${
-                          hiddenItems && hiddenItems.includes(item.id)
-                            ? "opacity-50"
-                            : "opacity-100"
-                        }`}
-                      >
-                        <div className="items-center justify-center bg-transparent">
-                          {map && legend ? (
-                            <SimpleSymbol map={map} data={legend.symbol} />
-                          ) : null}
-                        </div>
+                      <ErrorBoundary>
+                        <li
+                          key={item.id}
+                          className={`flex items-center space-x-2 max-w-full ${
+                            hiddenItems && hiddenItems.includes(item.id)
+                              ? "opacity-50"
+                              : "opacity-100"
+                          }`}
+                        >
+                          <div className="items-center justify-center bg-transparent">
+                            {map && legend ? (
+                              <SimpleSymbol map={map} data={legend.symbol} />
+                            ) : null}
+                          </div>
 
-                        <span title={item.label} className="truncate flex-1">
-                          {item.label}
-                        </span>
-                        {onHiddenItemsChange && (
-                          <Toggle
-                            onChange={() => {
-                              if (onHiddenItemsChange) {
-                                onHiddenItemsChange(
-                                  item.id,
-                                  !hiddenItems.includes(item.id)
-                                );
-                              }
-                            }}
-                            visible={visible}
-                          />
-                        )}
-                      </li>
-                    );
-                  } else if (legend.type === "MultipleSymbolGLLegend") {
-                    return (
-                      <li
-                        key={item.id}
-                        className={`max-w-full ${
-                          visible ? "opacity-100" : "opacity-50"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-1 mb-0.5">
                           <span title={item.label} className="truncate flex-1">
                             {item.label}
                           </span>
@@ -196,17 +171,50 @@ export default function Legend({
                               visible={visible}
                             />
                           )}
-                        </div>
-                        <ul className="text-sm mb-1">
-                          {legend.panels.map((panel) => (
-                            <PanelFactory
-                              key={panel.id}
-                              map={map}
-                              panel={panel}
-                            />
-                          ))}
-                        </ul>
-                      </li>
+                        </li>
+                      </ErrorBoundary>
+                    );
+                  } else if (legend.type === "MultipleSymbolGLLegend") {
+                    return (
+                      <ErrorBoundary>
+                        <li
+                          key={item.id}
+                          className={`max-w-full ${
+                            visible ? "opacity-100" : "opacity-50"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-1 mb-0.5">
+                            <span
+                              title={item.label}
+                              className="truncate flex-1"
+                            >
+                              {item.label}
+                            </span>
+                            {onHiddenItemsChange && (
+                              <Toggle
+                                onChange={() => {
+                                  if (onHiddenItemsChange) {
+                                    onHiddenItemsChange(
+                                      item.id,
+                                      !hiddenItems.includes(item.id)
+                                    );
+                                  }
+                                }}
+                                visible={visible}
+                              />
+                            )}
+                          </div>
+                          <ul className="text-sm mb-1">
+                            {legend.panels.map((panel) => (
+                              <PanelFactory
+                                key={panel.id}
+                                map={map}
+                                panel={panel}
+                              />
+                            ))}
+                          </ul>
+                        </li>
+                      </ErrorBoundary>
                     );
                   } else {
                     return null;
@@ -214,47 +222,21 @@ export default function Legend({
                 } else if (item.type === "CustomGLSourceSymbolLegend") {
                   if (item.symbols.length <= 1) {
                     return (
-                      <li
-                        key={item.id}
-                        className={`flex items-center space-x-2 max-w-full ${
-                          hiddenItems && hiddenItems.includes(item.id)
-                            ? "opacity-50"
-                            : "opacity-100"
-                        }`}
-                      >
-                        {item.symbols.length > 0 && (
-                          <div className="items-center justify-center bg-transparent">
-                            <LegendImage item={item.symbols[0]} />
-                          </div>
-                        )}
+                      <ErrorBoundary>
+                        <li
+                          key={item.id}
+                          className={`flex items-center space-x-2 max-w-full ${
+                            hiddenItems && hiddenItems.includes(item.id)
+                              ? "opacity-50"
+                              : "opacity-100"
+                          }`}
+                        >
+                          {item.symbols.length > 0 && (
+                            <div className="items-center justify-center bg-transparent">
+                              <LegendImage item={item.symbols[0]} />
+                            </div>
+                          )}
 
-                        <span title={item.label} className="truncate flex-1">
-                          {item.label}
-                        </span>
-                        {onHiddenItemsChange && (
-                          <Toggle
-                            onChange={() => {
-                              if (onHiddenItemsChange) {
-                                onHiddenItemsChange(
-                                  item.id,
-                                  !hiddenItems.includes(item.id)
-                                );
-                              }
-                            }}
-                            visible={visible}
-                          />
-                        )}
-                      </li>
-                    );
-                  } else {
-                    return (
-                      <li
-                        key={item.id}
-                        className={`max-w-full ${
-                          visible ? "opacity-100" : "opacity-50"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-1 mb-0.5">
                           <span title={item.label} className="truncate flex-1">
                             {item.label}
                           </span>
@@ -271,21 +253,56 @@ export default function Legend({
                               visible={visible}
                             />
                           )}
-                        </div>
-                        <ul className="text-sm mb-1">
-                          {item.symbols.map((symbol) => {
-                            return (
-                              <li
-                                className="flex items-center space-x-2"
-                                key={symbol.id}
-                              >
-                                <LegendImage item={symbol} />
-                                <span className="truncate">{symbol.label}</span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </li>
+                        </li>
+                      </ErrorBoundary>
+                    );
+                  } else {
+                    return (
+                      <ErrorBoundary>
+                        <li
+                          key={item.id}
+                          className={`max-w-full ${
+                            visible ? "opacity-100" : "opacity-50"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-1 mb-0.5">
+                            <span
+                              title={item.label}
+                              className="truncate flex-1"
+                            >
+                              {item.label}
+                            </span>
+                            {onHiddenItemsChange && (
+                              <Toggle
+                                onChange={() => {
+                                  if (onHiddenItemsChange) {
+                                    onHiddenItemsChange(
+                                      item.id,
+                                      !hiddenItems.includes(item.id)
+                                    );
+                                  }
+                                }}
+                                visible={visible}
+                              />
+                            )}
+                          </div>
+                          <ul className="text-sm mb-1">
+                            {item.symbols.map((symbol) => {
+                              return (
+                                <li
+                                  className="flex items-center space-x-2"
+                                  key={symbol.id}
+                                >
+                                  <LegendImage item={symbol} />
+                                  <span className="truncate">
+                                    {symbol.label}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </li>
+                      </ErrorBoundary>
                     );
                   }
                 } else if (item.type === "SingleImageLegendItem") {
