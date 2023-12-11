@@ -53,7 +53,7 @@ export default function ArcGISSearchPage({
           if (onResult) {
             let catalogItem: CatalogItem | undefined;
             let folder: CatalogItem | undefined;
-            if (location.location.split("/").length > 2) {
+            if (location.location.split("/").length > 3) {
               const folderName = location.location.split("/")[1];
               folder = {
                 name: folderName,
