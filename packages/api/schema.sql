@@ -3089,7 +3089,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.query_parameters is not null and (new.type != 'arcgis-vector' and new.type != 'arcgis-dynamic-mapserver') then
       raise 'query_parameters property not allowed on % sources', (new.type);
     end if;
-    if new.use_device_pixel_ratio is not null and new.type != 'arcgis-dynamic-mapserver' then
+    if new.use_device_pixel_ratio is not null and (new.type != 'arcgis-dynamic-mapserver' and new.type != 'arcgis-raster-tiles') then
       raise 'use_device_pixel_ratio property not allowed on % sources', (new.type);
     end if;
     if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' then
