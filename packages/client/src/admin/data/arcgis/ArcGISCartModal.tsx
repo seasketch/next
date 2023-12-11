@@ -436,6 +436,10 @@ export default function ArcGISCartModal({
       );
       if (!answer) {
         return;
+      } else {
+        // I don't know why this fixes modal contention problems but I'm not
+        // going to waste time figuring it out
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
     }
     const { hideLoadingMessage, updateLoadingMessage } = loadingMessage(
@@ -686,16 +690,17 @@ export default function ArcGISCartModal({
           <div className="flex items-center space-x-2">
             <div>{t("Service imported")}</div>
             <FinishedImportAnimation
-              onAnimationComplete={() =>
+              onAnimationComplete={() => {
                 setTimeout(() => {
                   hideLoadingMessage();
-                }, 500)
-              }
+                }, 500);
+              }}
             />
           </div>,
           true
         );
       } catch (e) {
+        console.error(e);
         hideLoadingMessage();
         alert(t("Error importing service"), {
           description: e.message,
