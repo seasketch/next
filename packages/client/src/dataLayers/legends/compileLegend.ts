@@ -2518,13 +2518,14 @@ function createCircleSymbol(
     representedProperties,
     1
   );
-  const strokeWidth = getPaintProp(
-    paint,
-    "circle-stroke-width",
-    featureData,
-    representedProperties,
-    1
-  );
+  const strokeWidth =
+    getPaintProp(
+      paint,
+      "circle-stroke-width",
+      featureData,
+      representedProperties,
+      1
+    ) || 0;
   const strokeColor = getPaintProp(
     paint,
     "circle-stroke-color",
