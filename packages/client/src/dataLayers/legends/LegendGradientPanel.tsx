@@ -8,6 +8,7 @@ export default function LegendGradientPanel({
 }) {
   const vals = panel.stops.map((stop) => stop.value);
   const maxVal = Math.max(...vals);
+  const firstVal = vals[0];
   return (
     <li key={panel.id} className="">
       {panel.label && <h3 className="text-xs font-mono my-1">{panel.label}</h3>}
@@ -18,8 +19,8 @@ export default function LegendGradientPanel({
         }}
       ></div>
       <div className="flex justify-between text-xs">
-        <span className="text-left">{vals[0].toLocaleString()}</span>
-        <span className="text-right">{maxVal.toLocaleString()}</span>
+        <span className="text-left">{firstVal?.toLocaleString()}</span>
+        <span className="text-right">{maxVal?.toLocaleString()}</span>
       </div>
     </li>
   );
