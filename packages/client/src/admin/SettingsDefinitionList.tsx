@@ -17,7 +17,7 @@ export function SettingsDefinitionList({
               "type" in child &&
               // @ts-ignore
               child.type.name === "SettingsDLListItem"
-                ? `py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2`
+                ? `px-2`
                 : "px-2"
             }
           >
@@ -46,7 +46,7 @@ export function SettingsDLListItem({
     );
   }
   return (
-    <>
+    <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
       <dt className="flex items-center text-sm font-medium text-gray-500">
         {term}
       </dt>
@@ -59,6 +59,6 @@ export function SettingsDLListItem({
       >
         {description}
       </dd>
-    </>
+    </div>
   );
 }
