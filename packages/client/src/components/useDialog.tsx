@@ -51,6 +51,9 @@ export default function useDialog() {
             context.setState((prev) => {
               return {
                 ...prev,
+                open: true,
+                type: "loading",
+                message: null,
                 description: message,
                 submitting: complete ? false : true,
               };

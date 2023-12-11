@@ -501,6 +501,7 @@ export default function ArcGISCartModal({
           return;
         } else if (choice === 0) {
           try {
+            await new Promise((resolve) => setTimeout(resolve, 200));
             updateLoadingMessage(t("Creating thumbnail..."));
             const response = await fetch(thumbnail);
             const blob = await response.blob();
@@ -530,7 +531,19 @@ export default function ArcGISCartModal({
             if (url) {
               fetch(url);
             }
-            hideLoadingMessage();
+            updateLoadingMessage(
+              <div className="flex items-center space-x-2">
+                <div>{t("Service imported")}</div>
+                <FinishedImportAnimation
+                  onAnimationComplete={() => {
+                    setTimeout(() => {
+                      hideLoadingMessage();
+                    }, 500);
+                  }}
+                />
+              </div>,
+              true
+            );
             return;
           } catch (e) {
             hideLoadingMessage();
