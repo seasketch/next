@@ -1429,7 +1429,7 @@ export default function SketchUIStateContextProvider({
         {openReports.length > 0 &&
           createPortal(
             <div
-              style={{ zIndex: 5 }}
+              style={{ zIndex: 11 }}
               className="absolute top-2 right-2 flex flex-wrap gap-2 max-w-full justify-end pointer-events-none"
             >
               {openReports.map(({ sketchId, uiState, sketchClassId }) => (
