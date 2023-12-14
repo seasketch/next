@@ -57,6 +57,8 @@ export interface MapServiceMetadata {
   maxImageWidth: number;
   minScale: number;
   maxScale: number;
+  minLOD?: number;
+  maxLOD?: number;
   tileServers: string[];
   layers: SimpleLayerInfo[];
   documentInfo?: {

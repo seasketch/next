@@ -18,6 +18,7 @@ import {
   replaceSource,
 } from "./utils";
 import * as tilebelt from "@mapbox/tilebelt";
+import { blankDataUri } from "./ArcGISDynamicMapService";
 
 export interface ArcGISTiledMapServiceOptions extends CustomGLSourceOptions {
   url: string;
@@ -157,6 +158,7 @@ export class ArcGISTiledMapService
     if (!this.map) {
       throw new Error("Map not set");
     }
+    const { minzoom } = await this.getComputedProperties();
     const map = this.map;
     const bounds = map.getBounds();
     const boundsArray = bounds.toArray();
@@ -167,6 +169,13 @@ export class ArcGISTiledMapService
       boundsArray[1][1],
     ]);
     let [x, y, z] = primaryTile;
+    if (primaryTile[2] < minzoom) {
+      let tile = primaryTile;
+      while (tile[2] < minzoom) {
+        tile = tilebelt.getChildren(tile)[0];
+      }
+      [x, y, z] = tile;
+    }
     const url = `${this.options.url}/tile/${z}/${y}/${x}`;
     const res = await fetch(url);
     if (res.ok) {
@@ -180,7 +189,8 @@ export class ArcGISTiledMapService
           return url;
         }
       }
-      throw new Error("Could not find valid thumbnail tile");
+      return blankDataUri;
+      console.error(new Error("Could not find valid thumbnail tile"));
     }
   }
 
@@ -208,8 +218,12 @@ export class ArcGISTiledMapService
       contentOrFalse(serviceMetadata.copyrightText) ||
       contentOrFalse(serviceMetadata.documentInfo?.Author) ||
       undefined;
-    const minzoom = Math.min(...levels);
-    const maxzoom = Math.max(...levels);
+    const minzoom = serviceMetadata.minLOD
+      ? serviceMetadata.minLOD
+      : Math.min(...levels);
+    const maxzoom = serviceMetadata.maxLOD
+      ? serviceMetadata.maxLOD
+      : Math.max(...levels);
     if (!serviceMetadata.tileInfo?.rows) {
       throw new Error("Invalid tile info");
     }
@@ -218,7 +232,7 @@ export class ArcGISTiledMapService
       maxzoom,
       bounds: await extentToLatLngBounds(serviceMetadata.fullExtent),
       tileSize: serviceMetadata.tileInfo!.rows,
-      attribution,
+      ...(attribution ? { attribution } : {}),
     };
   }
 
@@ -256,7 +270,7 @@ export class ArcGISTiledMapService
       tileSize,
       minzoom,
       maxzoom: this.options.maxZoom || maxzoom,
-      attribution,
+      ...(attribution ? { attribution } : {}),
       ...(bounds ? { bounds } : {}),
     } as RasterSource;
     return sourceData;
