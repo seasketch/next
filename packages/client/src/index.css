@@ -285,5 +285,5 @@ input[type="checkbox"][indeterminate="true"]:checked {
 }
 
 .mapboxgl-popup-content {
-  @apply px-3 pt-4 !important;
+  @apply px-3 pt-4 overflow-x-hidden !important;
 }
