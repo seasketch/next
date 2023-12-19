@@ -11,6 +11,7 @@ import mapboxgl, {
   AnySourceData,
   AnyLayer,
   Sources,
+  GeoJSONSource,
 } from "mapbox-gl";
 import {
   createContext,
@@ -1072,6 +1073,28 @@ class MapContextManager extends EventEmitter {
     sprites: SpriteDetailsFragment[];
   }> {
     this.resetLayersByZIndex();
+    // get mapbox-gl-draw related layers and sources and make sure to include
+    // them in the end. gl-draw has some magic to avoid their layers getting
+    // removed but I'm seeing errors like this when the style is updated:
+    //
+    // Uncaught TypeError: Cannot read properties of undefined (reading 'get')
+    //    at new Ut (mapbox-gl.js:36:1)
+    let glDrawLayers: AnyLayer[] = [];
+    let glDrawSources: { [id: string]: GeoJSONSource } = {};
+    const existingStyle = this.map?.getStyle();
+    if (existingStyle) {
+      glDrawLayers =
+        existingStyle.layers?.filter((l) => l.id.indexOf("gl-draw") === 0) ||
+        [];
+      // @ts-ignore
+      const relatedSourceIds = glDrawLayers.map((l) => l.source || "");
+      for (const key in existingStyle.sources) {
+        if (relatedSourceIds.indexOf(key) > -1) {
+          glDrawSources[key] = existingStyle.sources[key] as GeoJSONSource;
+        }
+      }
+    }
+
     let sprites: SpriteDetailsFragment[] = [];
     const basemap = this.basemaps[this.internalState.selectedBasemap || ""] as
       | BasemapDetailsFragment
@@ -1488,9 +1511,15 @@ class MapContextManager extends EventEmitter {
     baseStyle.sources = {
       ...baseStyle.sources,
       ...this.dynamicDataSources,
+      ...glDrawSources,
     };
 
-    baseStyle.layers = [...underLabels, ...overLabels, ...this.dynamicLayers];
+    baseStyle.layers = [
+      ...underLabels,
+      ...overLabels,
+      ...this.dynamicLayers,
+      ...glDrawLayers,
+    ];
 
     // Evaluate any basemap optional layers
     // value is whether to toggle
