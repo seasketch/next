@@ -1556,7 +1556,9 @@ class MapContextManager extends EventEmitter {
     const sketchLayerIds: string[] = [];
     const sketchData = this.computeSketchLayers();
     baseStyle.layers.push(...sketchData.layers);
-    sketchLayerIds.push(...sketchData.layers.map((l) => l.id));
+    sketchLayerIds.push(
+      ...sketchData.layers.filter((l) => l.type !== "symbol").map((l) => l.id)
+    );
     for (const sourceId in sketchData.sources) {
       baseStyle.sources[sourceId] = sketchData.sources[sourceId];
     }
