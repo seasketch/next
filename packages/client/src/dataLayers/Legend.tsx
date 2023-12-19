@@ -98,13 +98,12 @@ export default function Legend({
       style={
         blur
           ? {
-              backdropFilter: "blur(10px)",
-            }
+            backdropFilter: "blur(10px)",
+          }
           : {}
       }
-      className={`${className || ""} shadow rounded bg-white bg-opacity-90 ${
-        hidden ? "w-auto" : "w-64"
-      } text-sm flex flex-col overflow-hidden`}
+      className={`${className || ""} shadow rounded bg-white bg-opacity-90 ${hidden ? "w-auto" : "w-64"
+        } text-sm flex flex-col overflow-hidden`}
     >
       <Accordion.Root type="single" value={hidden ? "" : "legend"}>
         <Accordion.Item value="legend">
@@ -140,14 +139,12 @@ export default function Legend({
                     const visible =
                       !hiddenItems || !hiddenItems.includes(item.id);
                     return (
-                      <ErrorBoundary>
+                      <ErrorBoundary key={item.id}>
                         <li
-                          key={item.id}
-                          className={`flex items-center space-x-2 max-w-full ${
-                            hiddenItems && hiddenItems.includes(item.id)
+                          className={`flex items-center space-x-2 max-w-full ${hiddenItems && hiddenItems.includes(item.id)
                               ? "opacity-50"
                               : "opacity-100"
-                          }`}
+                            }`}
                         >
                           <div className="items-center justify-center bg-transparent">
                             {map && legend ? (
@@ -176,12 +173,10 @@ export default function Legend({
                     );
                   } else if (legend.type === "MultipleSymbolGLLegend") {
                     return (
-                      <ErrorBoundary>
+                      <ErrorBoundary key={item.id}>
                         <li
-                          key={item.id}
-                          className={`max-w-full ${
-                            visible ? "opacity-100" : "opacity-50"
-                          }`}
+                          className={`max-w-full ${visible ? "opacity-100" : "opacity-50"
+                            }`}
                         >
                           <div className="flex items-center space-x-1 mb-0.5">
                             <span
@@ -222,14 +217,12 @@ export default function Legend({
                 } else if (item.type === "CustomGLSourceSymbolLegend") {
                   if (item.symbols.length <= 1) {
                     return (
-                      <ErrorBoundary>
+                      <ErrorBoundary key={item.id}>
                         <li
-                          key={item.id}
-                          className={`flex items-center space-x-2 max-w-full ${
-                            hiddenItems && hiddenItems.includes(item.id)
+                          className={`flex items-center space-x-2 max-w-full ${hiddenItems && hiddenItems.includes(item.id)
                               ? "opacity-50"
                               : "opacity-100"
-                          }`}
+                            }`}
                         >
                           {item.symbols.length > 0 && (
                             <div className="items-center justify-center bg-transparent">
@@ -258,12 +251,10 @@ export default function Legend({
                     );
                   } else {
                     return (
-                      <ErrorBoundary>
+                      <ErrorBoundary key={item.id}>
                         <li
-                          key={item.id}
-                          className={`max-w-full ${
-                            visible ? "opacity-100" : "opacity-50"
-                          }`}
+                          className={`max-w-full ${visible ? "opacity-100" : "opacity-50"
+                            }`}
                         >
                           <div className="flex items-center space-x-1 mb-0.5">
                             <span
