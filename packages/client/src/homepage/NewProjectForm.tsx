@@ -66,6 +66,7 @@ export default function NewProjectForm() {
               <input
                 id="name"
                 type="text"
+                autoComplete="off"
                 placeholder={t("Project name")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -89,24 +90,23 @@ export default function NewProjectForm() {
                 placeholder="project-url"
                 required
                 value={slug}
+                autoComplete="off"
                 onChange={(e) => setSlug(slugify(e.target.value.toLowerCase()))}
-                className={`flex-1 block w-full border-gray-300 rounded-r-md focus:border-blue-300 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${
-                  !!data?.projectBySlug ? "bg-red-200" : ""
-                }`}
+                className={`flex-1 block w-full border-gray-300 rounded-r-md focus:border-blue-300 focus:ring-2 focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${!!data?.projectBySlug ? "bg-red-200" : ""
+                  }`}
               />
             </div>
           </div>
 
           <p
-            className={`text-sm text-gray-500 text-center relative bottom-3 ${
-              mutationError ? "text-red-800" : ""
-            }`}
+            className={`text-sm text-gray-500 text-center relative bottom-3 ${mutationError ? "text-red-800" : ""
+              }`}
           >
             {mutationError
               ? mutationError
               : !!data?.projectBySlug
-              ? "This URL is already in use"
-              : "Please choose wisely. URLs cannot be changed"}
+                ? "This URL is already in use"
+                : "Please choose wisely. URLs cannot be changed"}
           </p>
 
           <div className="relative bottom-2">

@@ -96,13 +96,12 @@ export default function NewProjectPage() {
                             filter:
                               "grayscale(100%) contrast(0.3) brightness(1.5)",
                           }}
-                          className={`${
-                            user.bigger
-                              ? "h-15 sm:h-16"
-                              : user.smaller
+                          className={`${user.bigger
+                            ? "h-15 sm:h-16"
+                            : user.smaller
                               ? "h-8 sm:h-9"
                               : "h-10 sm:h-11"
-                          } w-auto ${user.className}`}
+                            } w-auto ${user.className}`}
                           src={user.src}
                           alt={user.title}
                         />
@@ -113,7 +112,7 @@ export default function NewProjectPage() {
               </div>
             </div>
           </div>
-          <div className="mt-12 sm:mt-16 lg:mt-0 lg:col-span-6">
+          <div className="mt-12 sm:mt-16 lg:mt-0 lg:col-span-6 pb-12 lg:pb-0">
             <div className="bg-white sm:max-w-md sm:w-full sm:mx-auto sm:rounded-lg sm:overflow-hidden">
               <div className="px-4 py-8 sm:px-10">
                 {loading ? (
@@ -244,20 +243,19 @@ function PleaseVerifyEmail() {
               },
             });
           }}
-          className={`w-full flex items-center justify-center py-2 px-4 border border-transparent text-md font-medium rounded-md  transition duration-150 ease-in-out ${
-            sendingEmail
-              ? "bg-primary-300 text-white pointer-events-none"
-              : sent
+          className={`w-full flex items-center justify-center py-2 px-4 border border-transparent text-md font-medium rounded-md  transition duration-150 ease-in-out ${sendingEmail
+            ? "bg-primary-300 text-white pointer-events-none"
+            : sent
               ? "bg-primary-300 text-white pointer-events-none"
               : "text-white bg-primary-500 focus:outline-none focus:shadow-outline-indigo hover:bg-primary-600"
-          }`}
+            }`}
         >
           <span className="relative">
             {sendingEmail
               ? t("Sending email...")
               : sent
-              ? t("Email sent. Check your inbox  📨")
-              : t("Resend verification email")}{" "}
+                ? t("Email sent. Check your inbox  📨")
+                : t("Resend verification email")}{" "}
           </span>
         </button>
       </span>
