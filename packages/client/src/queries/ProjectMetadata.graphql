@@ -24,6 +24,7 @@ fragment ProjectMetadata on Project {
   translatedProps
   hideForums
   hideSketches
+  hideOverlays
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

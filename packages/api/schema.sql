@@ -5345,6 +5345,7 @@ CREATE TABLE public.projects (
     table_of_contents_last_published timestamp without time zone,
     hide_forums boolean DEFAULT false NOT NULL,
     hide_sketches boolean DEFAULT false NOT NULL,
+    hide_overlays boolean DEFAULT false NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -21071,6 +21072,13 @@ GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.hide_overlays; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(hide_overlays) ON TABLE public.projects TO seasketch_user;
 
 
 --

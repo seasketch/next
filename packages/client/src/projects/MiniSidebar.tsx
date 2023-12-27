@@ -72,13 +72,14 @@ export default function MiniSidebar({
         sidebarOpen={sidebar === "maps"}
         anySidebarOpen={!!sidebar}
       />
-      <LayersButton
-        sidebarOpen={sidebar === "overlays"}
-        onClick={openSidebar("overlays")}
-        tooltip={t("Overlay Layers")}
-        tabIndex={3}
-        anySidebarOpen={!!sidebar}
-      />
+      {data?.project?.hideOverlays !== true &&
+        <LayersButton
+          sidebarOpen={sidebar === "overlays"}
+          onClick={openSidebar("overlays")}
+          tooltip={t("Overlay Layers")}
+          tabIndex={3}
+          anySidebarOpen={!!sidebar}
+        />}
       {data?.project?.hideSketches !== true && <SketchingButton
         tooltip={t("Sketches")}
         sidebarOpen={sidebar === "sketches"}

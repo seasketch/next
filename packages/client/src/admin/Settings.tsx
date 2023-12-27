@@ -21,6 +21,7 @@ import {
   useUpdateDataHostingQuotaMutation,
   useUpdateHideSketchesMutation,
   useUpdateHideForumsMutation,
+  useUpdateHideOverlaysMutation,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -75,7 +76,7 @@ export default function Settings() {
           <AccessControlSettings />
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
-          {data && data.project && <HiddenContentSettings projectId={data.project.id} hideForums={data.project.hideForums} hideSketches={data.project.hideSketches} />}
+          {data && data.project && <HiddenContentSettings projectId={data.project.id} hideForums={data.project.hideForums} hideSketches={data.project.hideSketches} hideOverlays={data.project.hideOverlays} />}
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <MapboxAPIKeys />
@@ -245,7 +246,7 @@ function BasicSettingsForm(props: {
   );
 }
 
-function HiddenContentSettings(props: { hideSketches: boolean, hideForums: boolean, projectId: number }) {
+function HiddenContentSettings(props: { hideSketches: boolean, hideForums: boolean, hideOverlays: boolean, projectId: number }) {
   const [hideSketches] = useUpdateHideSketchesMutation({
     optimisticResponse: (data) => {
       return {
@@ -272,6 +273,22 @@ function HiddenContentSettings(props: { hideSketches: boolean, hideForums: boole
             __typename: "Project",
             id: data.projectId,
             hideForums: data.hidden,
+          },
+        }
+      }
+    }
+  }
+  );
+  const [hideOverlays] = useUpdateHideOverlaysMutation({
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateProject: {
+          __typename: "UpdateProjectPayload",
+          project: {
+            __typename: "Project",
+            id: data.projectId,
+            hideOverlays: data.hidden,
           },
         }
       }
@@ -321,6 +338,22 @@ function HiddenContentSettings(props: { hideSketches: boolean, hideForums: boole
             />
           }
           title={t("Hide Discussion Forums")}
+        />
+        <InputBlock
+          input={
+            <Switch
+              isToggled={props.hideOverlays}
+              onClick={() => {
+                hideOverlays({
+                  variables: {
+                    projectId: props.projectId,
+                    hidden: !props.hideOverlays
+                  }
+                })
+              }}
+            />
+          }
+          title={t("Hide Overlay Layers")}
         />
       </div>
     </div>

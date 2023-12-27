@@ -158,11 +158,12 @@ export default function FullSidebar({
           label={t("Maps")}
           icon={MapIcon}
         />
-        <NavItem
-          label={t("Overlay Layers")}
-          icon={LayerIcon}
-          onClick={chooseSidebar("overlays")}
-        />
+        {data?.project?.hideOverlays !== true &&
+          <NavItem
+            label={t("Overlay Layers")}
+            icon={LayerIcon}
+            onClick={chooseSidebar("overlays")}
+          />}
         {data?.project?.hideSketches !== true && <NavItem
           label={t("Sketching Tools")}
           onClick={chooseSidebar("sketches")}

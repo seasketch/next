@@ -8632,6 +8632,7 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   hideForums: Scalars['Boolean'];
+  hideOverlays: Scalars['Boolean'];
   hideSketches: Scalars['Boolean'];
   id: Scalars['Int'];
   importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -9356,6 +9357,7 @@ export type ProjectPatch = {
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   hideForums?: Maybe<Scalars['Boolean']>;
+  hideOverlays?: Maybe<Scalars['Boolean']>;
   hideSketches?: Maybe<Scalars['Boolean']>;
   inviteEmailSubject?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
@@ -16973,7 +16975,7 @@ export type SetTranslatedPropsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -18793,6 +18795,23 @@ export type UpdateHideForumsMutation = (
   )> }
 );
 
+export type UpdateHideOverlaysMutationVariables = Exact<{
+  hidden: Scalars['Boolean'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type UpdateHideOverlaysMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'hideOverlays'>
+    )> }
+  )> }
+);
+
 export type UserAdminCountsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -20007,6 +20026,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   translatedProps
   hideForums
   hideSketches
+  hideOverlays
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -23482,6 +23502,16 @@ export const UpdateHideForumsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateHideOverlaysDocument = /*#__PURE__*/ gql`
+    mutation UpdateHideOverlays($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideOverlays: $hidden}}) {
+    project {
+      id
+      hideOverlays
+    }
+  }
+}
+    `;
 export const UserAdminCountsDocument = /*#__PURE__*/ gql`
     query UserAdminCounts($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -24065,6 +24095,7 @@ export const namedOperations = {
     UpdateProjectSettings: 'UpdateProjectSettings',
     UpdateHideSketches: 'UpdateHideSketches',
     UpdateHideForums: 'UpdateHideForums',
+    UpdateHideOverlays: 'UpdateHideOverlays',
     CreateGroup: 'CreateGroup',
     toggleAdminAccess: 'toggleAdminAccess',
     setUserGroups: 'setUserGroups',

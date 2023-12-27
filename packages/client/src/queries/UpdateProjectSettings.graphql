@@ -53,3 +53,12 @@ mutation UpdateHideForums($hidden: Boolean!, $projectId: Int!) {
     }
   }
 }
+
+mutation UpdateHideOverlays($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: { id: $projectId, patch: { hideOverlays: $hidden } }) {
+    project {
+      id
+      hideOverlays
+    }
+  }
+}
