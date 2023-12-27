@@ -26,7 +26,7 @@ export default function LanguageSelector(props: {
 
   if (
     options.length <= 1 &&
-    i18n.language?.toLowerCase() === options[0].code.toLowerCase()
+    (i18n.language?.toLowerCase() === options[0].code.toLowerCase() || (i18n.language === "en-US" && options[0].code === "EN"))
   ) {
     return null;
   }
@@ -72,10 +72,9 @@ function Option(props: {
 }) {
   return (
     <button
-      className={`${
-        props.selected &&
+      className={`${props.selected &&
         "bg-primary-300 hover:bg-opacity-70 hover:bg-primary-300 bg-opacity-50"
-      } flex w-full p-4 px-6 hover:bg-gray-100 gap-4`}
+        } flex w-full p-4 px-6 hover:bg-gray-100 gap-4`}
       onClick={() => props.onClick(props.language)}
     >
       <span className="flex-1 text-left rtl:text-right">
