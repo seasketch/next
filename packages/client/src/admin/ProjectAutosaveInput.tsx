@@ -35,7 +35,7 @@ export default function ProjectAutosaveInput(props: {
         debouncedValue.length === 0 ? null : debouncedValue;
       mutation({
         variables,
-      }).catch((e) => {});
+      }).catch((e) => { });
     }
   }, [
     debouncedValue,
@@ -62,6 +62,7 @@ export default function ProjectAutosaveInput(props: {
       description={props.description}
       onChange={setValue}
       error={mutationStatus.error?.message}
+      autocomplete="off"
       state={
         mutationStatus.called
           ? mutationStatus.loading

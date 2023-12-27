@@ -34,7 +34,7 @@ export default function MutableAutosaveInput(props: {
       variables[props.propName] = debouncedValue;
       mutation({
         variables,
-      }).catch((e) => {});
+      }).catch((e) => { });
     }
   }, [
     debouncedValue,

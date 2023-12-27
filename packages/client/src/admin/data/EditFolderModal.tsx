@@ -133,7 +133,7 @@ export default function EditFolderModal({
           },
         },
       ]}
-      onRequestClose={() => {}}
+      onRequestClose={() => { }}
       title={createNew ? t("New Folder") : t("Edit Folder")}
       initialFocus={nameRef}
     >
@@ -144,6 +144,7 @@ export default function EditFolderModal({
               <TextInput
                 autoFocus={true}
                 ref={nameRef}
+                autocomplete="off"
                 error={error ? error.message : undefined}
                 name="folder-name"
                 label={t("Name")}

@@ -64,11 +64,11 @@ export default function InviteUsersModal({
       userDetails: state.multi
         ? state.userDetails
         : [
-            {
-              email: state.email,
-              fullname: state.fullname,
-            },
-          ],
+          {
+            email: state.email,
+            fullname: state.fullname,
+          },
+        ],
     },
     // @ts-ignore
     optimisticResponse: () => {
@@ -172,6 +172,7 @@ export default function InviteUsersModal({
               <TextInput
                 ref={emailInput}
                 name="recipient"
+                autocomplete="off"
                 type="email"
                 label={t("Email")}
                 description={t(
@@ -191,6 +192,7 @@ export default function InviteUsersModal({
             </div>
             <div className="mb-4">
               <TextInput
+                autocomplete="off"
                 name="fullname"
                 label={t("Full Name")}
                 description={t("Optionally provide the recipient's name.")}
