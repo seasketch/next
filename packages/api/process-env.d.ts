@@ -24,7 +24,9 @@ declare namespace NodeJS {
     AWS_SECRET_ACCESS_KEY: string;
     PUBLIC_UPLOADS_DOMAIN: string;
     UNSPLASH_KEY: string;
+    /** s3 bucket where offline tile packages are stored */
     TILE_PACKAGES_BUCKET: string;
+    /* Used when generating various links. Include protocol */
     CLIENT_DOMAIN: string;
     SPATIAL_UPLOADS_BUCKET: string;
     NORMALIZED_SPATIAL_UPLOADS_BUCKET: string;
@@ -38,8 +40,11 @@ declare namespace NodeJS {
     CLOUDFLARE_IMAGES_ACCOUNT_HASH: string;
     /** May be comma seperated list. First issuer should be the primary host */
     ISSUER?: string;
+    /* Used for generating email verification links */
     API_ROOT: string;
+    /* Lambda used for taking screenshots of map bookmakrs */
     SCREENSHOTTER_FUNCTION_ARN: string;
+    /* For discussion forum and survey file uploads */
     R2_FILE_UPLOADS_BUCKET: string;
   }
 }

@@ -28,6 +28,8 @@ There are a lot of build scripts and dev servers needed to run the entire stack.
 
 <img src="https://user-images.githubusercontent.com/511063/93515779-ff207700-f8dd-11ea-8ceb-e9e663161e4f.png" width="300">
 
+Follow [this guide](https://github.com/seasketch/next/blob/master/ENV.md) in order to setup appropriate environment variables for development.
+
 ## Deployments
 
 This project is managed using the [GitHub Flow pattern](https://guides.github.com/introduction/flow/) and GitHub Actions. To make changes...

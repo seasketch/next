@@ -252,7 +252,8 @@
     "deploy": "bin/deploy.sh",
     "cypress": "cypress open",
     "cypress:run": "cypress run",
-    "generate-api-helpers": "node bin/buildApiHelpers.js && cp src/formElements/ExportUtils.d.ts ../api/src/"
+    "generate-api-helpers": "node bin/buildApiHelpers.js && cp src/formElements/ExportUtils.d.ts ../api/src/",
+    "env:dev": "op inject -i .env.template > .env"
   },
   "eslintConfig": {
     "extends": "react-app"
