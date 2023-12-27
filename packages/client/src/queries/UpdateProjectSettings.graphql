@@ -35,3 +35,21 @@ mutation UpdateProjectSettings(
     }
   }
 }
+
+mutation UpdateHideSketches($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: { id: $projectId, patch: { hideSketches: $hidden } }) {
+    project {
+      id
+      hideSketches
+    }
+  }
+}
+
+mutation UpdateHideForums($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: { id: $projectId, patch: { hideForums: $hidden } }) {
+    project {
+      id
+      hideForums
+    }
+  }
+}

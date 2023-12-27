@@ -9802,6 +9802,8 @@ type Project implements Node {
     """The method to use when ordering `Group`."""
     orderBy: [GroupsOrderBy!]
   ): [Group!]!
+  hideForums: Boolean!
+  hideSketches: Boolean!
   id: Int!
   importedArcgisServices: [String]
 
@@ -10458,6 +10460,8 @@ input ProjectPatch {
 
   """Should be a short length in order to fit in the project header."""
   description: String
+  hideForums: Boolean
+  hideSketches: Boolean
   inviteEmailSubject: String
 
   """

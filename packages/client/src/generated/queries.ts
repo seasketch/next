@@ -8631,6 +8631,8 @@ export type Project = Node & {
   forums: Array<Forum>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
+  hideForums: Scalars['Boolean'];
+  hideSketches: Scalars['Boolean'];
   id: Scalars['Int'];
   importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
@@ -9353,6 +9355,8 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  hideForums?: Maybe<Scalars['Boolean']>;
+  hideSketches?: Maybe<Scalars['Boolean']>;
   inviteEmailSubject?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
   isFeatured?: Maybe<Scalars['Boolean']>;
@@ -16969,7 +16973,7 @@ export type SetTranslatedPropsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -18755,6 +18759,40 @@ export type UpdateProjectSettingsMutation = (
   )> }
 );
 
+export type UpdateHideSketchesMutationVariables = Exact<{
+  hidden: Scalars['Boolean'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type UpdateHideSketchesMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'hideSketches'>
+    )> }
+  )> }
+);
+
+export type UpdateHideForumsMutationVariables = Exact<{
+  hidden: Scalars['Boolean'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type UpdateHideForumsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'hideForums'>
+    )> }
+  )> }
+);
+
 export type UserAdminCountsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -19967,6 +20005,8 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   }
   supportedLanguages
   translatedProps
+  hideForums
+  hideSketches
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -23422,6 +23462,26 @@ export const UpdateProjectSettingsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateHideSketchesDocument = /*#__PURE__*/ gql`
+    mutation UpdateHideSketches($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideSketches: $hidden}}) {
+    project {
+      id
+      hideSketches
+    }
+  }
+}
+    `;
+export const UpdateHideForumsDocument = /*#__PURE__*/ gql`
+    mutation UpdateHideForums($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideForums: $hidden}}) {
+    project {
+      id
+      hideForums
+    }
+  }
+}
+    `;
 export const UserAdminCountsDocument = /*#__PURE__*/ gql`
     query UserAdminCounts($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -24003,6 +24063,8 @@ export const namedOperations = {
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',
+    UpdateHideSketches: 'UpdateHideSketches',
+    UpdateHideForums: 'UpdateHideForums',
     CreateGroup: 'CreateGroup',
     toggleAdminAccess: 'toggleAdminAccess',
     setUserGroups: 'setUserGroups',

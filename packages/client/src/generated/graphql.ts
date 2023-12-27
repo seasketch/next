@@ -8633,6 +8633,8 @@ export type Project = Node & {
   forums: Array<Forum>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
+  hideForums: Scalars['Boolean'];
+  hideSketches: Scalars['Boolean'];
   id: Scalars['Int'];
   importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
@@ -9355,6 +9357,8 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  hideForums?: Maybe<Scalars['Boolean']>;
+  hideSketches?: Maybe<Scalars['Boolean']>;
   inviteEmailSubject?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
   isFeatured?: Maybe<Scalars['Boolean']>;
@@ -16971,7 +16975,7 @@ export type SetTranslatedPropsMutation = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -18757,6 +18761,40 @@ export type UpdateProjectSettingsMutation = (
   )> }
 );
 
+export type UpdateHideSketchesMutationVariables = Exact<{
+  hidden: Scalars['Boolean'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type UpdateHideSketchesMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'hideSketches'>
+    )> }
+  )> }
+);
+
+export type UpdateHideForumsMutationVariables = Exact<{
+  hidden: Scalars['Boolean'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type UpdateHideForumsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'hideForums'>
+    )> }
+  )> }
+);
+
 export type UserAdminCountsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -19969,6 +20007,8 @@ export const ProjectMetadataFragmentDoc = gql`
   }
   supportedLanguages
   translatedProps
+  hideForums
+  hideSketches
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -28936,6 +28976,80 @@ export function useUpdateProjectSettingsMutation(baseOptions?: Apollo.MutationHo
 export type UpdateProjectSettingsMutationHookResult = ReturnType<typeof useUpdateProjectSettingsMutation>;
 export type UpdateProjectSettingsMutationResult = Apollo.MutationResult<UpdateProjectSettingsMutation>;
 export type UpdateProjectSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateProjectSettingsMutation, UpdateProjectSettingsMutationVariables>;
+export const UpdateHideSketchesDocument = gql`
+    mutation UpdateHideSketches($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideSketches: $hidden}}) {
+    project {
+      id
+      hideSketches
+    }
+  }
+}
+    `;
+export type UpdateHideSketchesMutationFn = Apollo.MutationFunction<UpdateHideSketchesMutation, UpdateHideSketchesMutationVariables>;
+
+/**
+ * __useUpdateHideSketchesMutation__
+ *
+ * To run a mutation, you first call `useUpdateHideSketchesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateHideSketchesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateHideSketchesMutation, { data, loading, error }] = useUpdateHideSketchesMutation({
+ *   variables: {
+ *      hidden: // value for 'hidden'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useUpdateHideSketchesMutation(baseOptions?: Apollo.MutationHookOptions<UpdateHideSketchesMutation, UpdateHideSketchesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateHideSketchesMutation, UpdateHideSketchesMutationVariables>(UpdateHideSketchesDocument, options);
+      }
+export type UpdateHideSketchesMutationHookResult = ReturnType<typeof useUpdateHideSketchesMutation>;
+export type UpdateHideSketchesMutationResult = Apollo.MutationResult<UpdateHideSketchesMutation>;
+export type UpdateHideSketchesMutationOptions = Apollo.BaseMutationOptions<UpdateHideSketchesMutation, UpdateHideSketchesMutationVariables>;
+export const UpdateHideForumsDocument = gql`
+    mutation UpdateHideForums($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideForums: $hidden}}) {
+    project {
+      id
+      hideForums
+    }
+  }
+}
+    `;
+export type UpdateHideForumsMutationFn = Apollo.MutationFunction<UpdateHideForumsMutation, UpdateHideForumsMutationVariables>;
+
+/**
+ * __useUpdateHideForumsMutation__
+ *
+ * To run a mutation, you first call `useUpdateHideForumsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateHideForumsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateHideForumsMutation, { data, loading, error }] = useUpdateHideForumsMutation({
+ *   variables: {
+ *      hidden: // value for 'hidden'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useUpdateHideForumsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateHideForumsMutation, UpdateHideForumsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateHideForumsMutation, UpdateHideForumsMutationVariables>(UpdateHideForumsDocument, options);
+      }
+export type UpdateHideForumsMutationHookResult = ReturnType<typeof useUpdateHideForumsMutation>;
+export type UpdateHideForumsMutationResult = Apollo.MutationResult<UpdateHideForumsMutation>;
+export type UpdateHideForumsMutationOptions = Apollo.BaseMutationOptions<UpdateHideForumsMutation, UpdateHideForumsMutationVariables>;
 export const UserAdminCountsDocument = gql`
     query UserAdminCounts($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -30218,6 +30332,8 @@ export const namedOperations = {
     CreateResponse: 'CreateResponse',
     UpdateProjectName: 'UpdateProjectName',
     UpdateProjectSettings: 'UpdateProjectSettings',
+    UpdateHideSketches: 'UpdateHideSketches',
+    UpdateHideForums: 'UpdateHideForums',
     CreateGroup: 'CreateGroup',
     toggleAdminAccess: 'toggleAdminAccess',
     setUserGroups: 'setUserGroups',

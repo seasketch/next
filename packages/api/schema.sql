@@ -5343,6 +5343,8 @@ CREATE TABLE public.projects (
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     draft_table_of_contents_has_changes boolean DEFAULT false NOT NULL,
     table_of_contents_last_published timestamp without time zone,
+    hide_forums boolean DEFAULT false NOT NULL,
+    hide_sketches boolean DEFAULT false NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -8054,23 +8056,6 @@ CREATE FUNCTION public.has_session() RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.has_session() IS '@omit';
-
-
---
--- Name: id_lookup_get_key(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.id_lookup_get_key(key integer) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-    begin
-      if lookup is null then
-        raise exception 'lookup is null';
-      else
-        return (lookup->key)::int;
-      end if;
-    end;
-  $$;
 
 
 --
@@ -21075,6 +21060,20 @@ GRANT SELECT(table_of_contents_last_published) ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.hide_forums; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.hide_sketches; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22883,13 +22882,6 @@ REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION id_lookup_get_key(key integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.id_lookup_get_key(key integer) FROM PUBLIC;
 
 
 --

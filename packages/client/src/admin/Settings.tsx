@@ -19,6 +19,8 @@ import {
   useUpdateOfflineEnabledMutation,
   useProjectHostingQuotaQuery,
   useUpdateDataHostingQuotaMutation,
+  useUpdateHideSketchesMutation,
+  useUpdateHideForumsMutation,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -63,7 +65,7 @@ export default function Settings() {
   }, [setHeaderState]);
   return (
     <>
-      <div className="pt-2 pb-6 md:py-6 max-h-full overflow-y-auto">
+      <div className="pt-2 pb-6 md:py-6 max-h-full overflow-y-auto space-y-4">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           {data && data.project && (
             <BasicSettingsForm {...data.project} url={data.project.url!} />
@@ -71,6 +73,9 @@ export default function Settings() {
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <AccessControlSettings />
+        </div>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+          {data && data.project && <HiddenContentSettings projectId={data.project.id} hideForums={data.project.hideForums} hideSketches={data.project.hideSketches} />}
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <MapboxAPIKeys />
@@ -119,7 +124,7 @@ function BasicSettingsForm(props: {
   }, [copiedToClipboard]);
 
   return (
-    <div className="mt-5 md:mt-0 md:col-span-2">
+    <div className=" md:mt-0 md:col-span-2">
       <form action="#" method="POST">
         <div className="shadow sm:rounded-md sm:overflow-hidden">
           <div className="px-4 py-5 bg-white sm:p-6">
@@ -224,9 +229,8 @@ function BasicSettingsForm(props: {
                       </svg>
                     </span>
                     <span
-                      className={`text-primary-500 p-1 px-4 rounded-full text-xs absolute w-auto right-0 top-0 -mt-7 -mr-4 duration-500 transition-opacity ${
-                        copiedToClipboard ? "opacity-100" : "opacity-0"
-                      }`}
+                      className={`text-primary-500 p-1 px-4 rounded-full text-xs absolute w-auto right-0 top-0 -mt-7 -mr-4 duration-500 transition-opacity ${copiedToClipboard ? "opacity-100" : "opacity-0"
+                        }`}
                     >
                       {t("Copied URL")}
                     </span>
@@ -241,6 +245,88 @@ function BasicSettingsForm(props: {
   );
 }
 
+function HiddenContentSettings(props: { hideSketches: boolean, hideForums: boolean, projectId: number }) {
+  const [hideSketches] = useUpdateHideSketchesMutation({
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateProject: {
+          __typename: "UpdateProjectPayload",
+          project: {
+            __typename: "Project",
+            id: data.projectId,
+            hideSketches: data.hidden,
+          },
+        }
+      }
+    }
+  }
+  );
+  const [hideForums] = useUpdateHideForumsMutation({
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateProject: {
+          __typename: "UpdateProjectPayload",
+          project: {
+            __typename: "Project",
+            id: data.projectId,
+            hideForums: data.hidden,
+          },
+        }
+      }
+    }
+  }
+  );
+  const { t } = useTranslation("admin");
+  return <div className="shadow sm:rounded-md sm:overflow-hidden">
+    <div className="px-4 py-5 bg-white sm:p-6">
+      <h3 className="text-lg font-medium leading-6 text-gray-900">
+        {t("Hidden Content")}
+      </h3>
+      <p className="mt-2 text-sm text-gray-500">
+        {t(
+          "If you are not using all the features of SeaSketch, as in the case of a data portal, you can hide these features from the homepage sidebar."
+        )}
+      </p>
+      <div className="text-base pt-4">
+        <InputBlock
+          input={
+            <Switch
+              isToggled={props.hideSketches}
+              onClick={() => {
+                hideSketches({
+                  variables: {
+                    projectId: props.projectId,
+                    hidden: !props.hideSketches
+                  }
+                })
+              }}
+            />
+          }
+          title={t("Hide Sketching Tools")}
+        />
+        <InputBlock
+          input={
+            <Switch
+              isToggled={props.hideForums}
+              onClick={() => {
+                hideForums({
+                  variables: {
+                    projectId: props.projectId,
+                    hidden: !props.hideForums
+                  }
+                })
+              }}
+            />
+          }
+          title={t("Hide Discussion Forums")}
+        />
+      </div>
+    </div>
+  </div>
+}
+
 function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
   const [mutate, mutationState] = useUpdateProjectSettingsMutation();
   const { t, i18n } = useTranslation("admin");
@@ -251,7 +337,7 @@ function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
         slug: props.slug,
         logoUrl: acceptedFiles[0],
       },
-    }).catch((e) => {});
+    }).catch((e) => { });
   }, []);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
@@ -259,11 +345,10 @@ function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
     <>
       <div
         {...getRootProps()}
-        className={`-ml-1 mt-2 flex items-center ${
-          isDragActive
-            ? "border-dashed border-2 rounded-lg border-gray-300 -ml-1.5 mt-1.5 -mb-0.5"
-            : ""
-        }`}
+        className={`-ml-1 mt-2 flex items-center ${isDragActive
+          ? "border-dashed border-2 rounded-lg border-gray-300 -ml-1.5 mt-1.5 -mb-0.5"
+          : ""
+          }`}
       >
         <span className="h-16 w-16 overflow-hidden text-gray-400 flex items-center">
           {props.logoUrl ? (
@@ -309,7 +394,7 @@ function UploadLogoField(props: { slug: string; logoUrl?: string | null }) {
                     logoUrl: e.target.files[0],
                   },
                 })
-                  .catch((e) => {})
+                  .catch((e) => { })
                   .then(() => {
                     target.value = "";
                   });
@@ -359,7 +444,7 @@ function AccessControlSettings() {
     };
     await mutate({
       variables,
-    }).catch((e) => {});
+    }).catch((e) => { });
   };
 
   const toggleIsListed = async () => {
@@ -386,7 +471,7 @@ function AccessControlSettings() {
     isListedOn === null ? data?.projectBySlug?.isListed : isListedOn;
   return (
     <>
-      <div className="mt-5">
+      <div className="">
         <form action="#" method="POST">
           <div className="shadow sm:rounded-md sm:overflow-hidden">
             <div className="px-4 py-5 bg-white sm:p-6">
@@ -446,9 +531,8 @@ function AccessControlSettings() {
                     />
                   </div>
                   <div
-                    className={`ml-3 text-sm leading-5 ${
-                      !showPublicOption && "opacity-50"
-                    }`}
+                    className={`ml-3 text-sm leading-5 ${!showPublicOption && "opacity-50"
+                      }`}
                   >
                     <label
                       htmlFor="PUBLIC"
@@ -475,7 +559,7 @@ function AccessControlSettings() {
                           accessControl
                             ? accessControl === "ADMINS_ONLY"
                             : data?.projectBySlug?.accessControl ===
-                              "ADMINS_ONLY"
+                            "ADMINS_ONLY"
                         }
                         type="radio"
                         className="form-radio h-4 w-4 text-primary-500 focus:ring focus:ring-blue-200 transition duration-150 ease-in-out"
@@ -507,7 +591,7 @@ function AccessControlSettings() {
                           accessControl
                             ? accessControl === "INVITE_ONLY"
                             : data?.projectBySlug?.accessControl ===
-                              "INVITE_ONLY"
+                            "INVITE_ONLY"
                         }
                         type="radio"
                         className="form-radio h-4 w-4 text-primary-500 transition duration-150 focus:ring focus:ring-blue-200 ease-in-out"
@@ -679,7 +763,7 @@ function MapExtentSettings() {
 
   return (
     <>
-      <div className="mt-5 relative">
+      <div className=" relative">
         <div className="shadow sm:rounded-md sm:overflow-hidden">
           <div className="px-4 py-5 bg-white sm:p-6">
             <h3 className="text-lg font-medium leading-6 text-gray-900">
@@ -698,9 +782,8 @@ function MapExtentSettings() {
               ref={(el) => (mapContainer.current = el)}
             ></div>
             <button
-              className={`${
-                drawing ? "hidden" : ""
-              } sm:absolute sm:top-28 mt-2 sm:mt-0 sm:left-10 cursor-pointer inline-flex items-center px-4 py-2 border border-gray-400 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:ring focus:ring-blue-200 active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150`}
+              className={`${drawing ? "hidden" : ""
+                } sm:absolute sm:top-28 mt-2 sm:mt-0 sm:left-10 cursor-pointer inline-flex items-center px-4 py-2 border border-gray-400 text-sm leading-5 font-medium rounded-md text-gray-700 bg-white hover:text-gray-500 focus:ring focus:ring-blue-200 active:text-gray-800 active:bg-gray-50 transition ease-in-out duration-150`}
               onClick={onRedrawBounds}
             >
               {t("Redraw Bounds")}
@@ -755,12 +838,12 @@ function SuperUserSettings() {
         slug,
         isFeatured: featured,
       },
-    }).catch((e) => {});
+    }).catch((e) => { });
   };
 
   return (
     <>
-      <div className="mt-5">
+      <div className="">
         <form action="#" method="POST">
           <div className="shadow sm:rounded-md sm:overflow-hidden">
             <div className="px-4 py-5 bg-white sm:p-6 space-y-5">
@@ -852,13 +935,12 @@ function SuperUserSettings() {
                     <span>{t("Data Hosting Quota")}</span>
                     {quotaQuery.data?.projectBySlug?.dataHostingQuota ? (
                       <span
-                        className={` ml-5 ${
-                          quotaQuery.data.projectBySlug.dataHostingQuota *
-                            0.9 <=
+                        className={` ml-5 ${quotaQuery.data.projectBySlug.dataHostingQuota *
+                          0.9 <=
                           quotaQuery.data.projectBySlug.dataHostingQuotaUsed
-                            ? "text-red-800"
-                            : "text-gray-500"
-                        }`}
+                          ? "text-red-800"
+                          : "text-gray-500"
+                          }`}
                       >
                         {bytes(
                           parseInt(
@@ -965,7 +1047,7 @@ function MapboxAPIKeys() {
   }
 
   return (
-    <div className="mt-5 md:col-span-2" id="mapbox-tokens">
+    <div className=" md:col-span-2" id="mapbox-tokens">
       <div className="shadow sm:rounded-md sm:overflow-hidden">
         <div className="px-4 py-5 bg-white sm:p-6 space-y-4">
           <h3 className="text-lg font-medium leading-6 text-gray-900 mb-5">

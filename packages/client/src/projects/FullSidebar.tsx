@@ -48,7 +48,7 @@ export default function FullSidebar({
       if (
         data?.project?.sessionParticipationStatus &&
         data?.project?.sessionParticipationStatus !==
-          ParticipationStatus.ParticipantSharedProfile
+        ParticipationStatus.ParticipantSharedProfile
       ) {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/join?redirectUrl=${window.location.pathname}`);
@@ -96,9 +96,8 @@ export default function FullSidebar({
         },
       }}
       style={{ boxShadow: open ? "rgb(0 0 0 / 23%) 2px 0px 5px 0px" : "none" }}
-      className={`absolute left-0 h-full overflow-y-auto z-20 p-5 w-full md:w-96 ${
-        dark ? "text-gray-200 bg-cool-gray-800" : "text-gray-900 bg-white "
-      }`}
+      className={`absolute left-0 h-full overflow-y-auto z-20 p-5 w-full md:w-96 ${dark ? "text-gray-200 bg-cool-gray-800" : "text-gray-900 bg-white "
+        }`}
       animate={open ? "open" : "closed"}
       initial={false}
     >
@@ -164,7 +163,7 @@ export default function FullSidebar({
           icon={LayerIcon}
           onClick={chooseSidebar("overlays")}
         />
-        <NavItem
+        {data?.project?.hideSketches !== true && <NavItem
           label={t("Sketching Tools")}
           onClick={chooseSidebar("sketches")}
           icon={
@@ -175,12 +174,14 @@ export default function FullSidebar({
               {SketchingIcon}
             </span>
           }
-        />
-        <NavItem
-          label={t("Discussion Forums")}
-          icon={ForumsIcon}
-          onClick={chooseSidebar("forums")}
-        />
+        />}
+        {data?.project?.hideForums !== true &&
+          <NavItem
+            label={t("Discussion Forums")}
+            icon={ForumsIcon}
+            onClick={chooseSidebar("forums")}
+          />
+        }
         {project?.isOfflineEnabled && (
           <NavItem
             icon={
@@ -206,9 +207,8 @@ export default function FullSidebar({
         <a
           target="_blank"
           rel="noreferrer"
-          href={`mailto:${
-            data?.project?.supportEmail || "support@seasketch.org"
-          }`}
+          href={`mailto:${data?.project?.supportEmail || "support@seasketch.org"
+            }`}
           className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
           role="menuitem"
         >

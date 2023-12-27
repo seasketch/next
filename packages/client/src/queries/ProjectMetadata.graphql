@@ -22,6 +22,8 @@ fragment ProjectMetadata on Project {
   }
   supportedLanguages
   translatedProps
+  hideForums
+  hideSketches
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
