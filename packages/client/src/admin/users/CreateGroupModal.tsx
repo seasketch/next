@@ -79,6 +79,7 @@ export default function CreateGroupModal({
       <div className="w-80">
         <TextInput
           name="name"
+          autocomplete="off"
           error={error}
           label={""}
           // required
