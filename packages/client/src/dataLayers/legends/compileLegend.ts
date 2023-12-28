@@ -1638,10 +1638,10 @@ function interpolationExpressionToStops(expression?: any) {
           "red",
         ];
   const stops: { value: number; color: string; label: string }[] = [];
-  if (expression[0] === "interpolate") {
+  if (/interpolate/.test(expression[0])) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [interpolationType, property, ...args] = expression;
-    if (interpolationType === "interpolate") {
+    if (/interpolate/.test(interpolationType)) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [input, ...stopPairs] = args;
       for (let i = 0; i < stopPairs.length; i += 2) {

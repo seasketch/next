@@ -1,4 +1,101 @@
 export const testCases = {
+  "Interpolated fill color": {
+    input: [
+      {
+        type: "fill",
+        paint: {
+          "fill-color": [
+            "interpolate-hcl",
+            ["linear"],
+            ["get", "SUM_VALUE"],
+            1671,
+            "#0d0887",
+            3980,
+            "#41049d",
+            6104,
+            "#6a00a8",
+            7869,
+            "#8f0da4",
+            10194,
+            "#b12a90",
+            13705,
+            "#cc4778",
+            19159,
+            "#e16462",
+            29000,
+            "#f2844b",
+            49158,
+            "#fca636",
+            91494,
+            "#fcce25",
+          ],
+        },
+        layout: {},
+      },
+    ],
+    output: {
+      type: "MultipleSymbolGLLegend",
+      panels: [
+        {
+          id: "0-fill-color-0-gradient",
+          label: "fill-color",
+          stops: [
+            {
+              color: "#0d0887",
+              label: "1,671",
+              value: 1671,
+            },
+            {
+              color: "#41049d",
+              label: "3,980",
+              value: 3980,
+            },
+            {
+              color: "#6a00a8",
+              label: "6,104",
+              value: 6104,
+            },
+            {
+              color: "#8f0da4",
+              label: "7,869",
+              value: 7869,
+            },
+            {
+              color: "#b12a90",
+              label: "10,194",
+              value: 10194,
+            },
+            {
+              color: "#cc4778",
+              label: "13,705",
+              value: 13705,
+            },
+            {
+              color: "#e16462",
+              label: "19,159",
+              value: 19159,
+            },
+            {
+              color: "#f2844b",
+              label: "29,000",
+              value: 29000,
+            },
+            {
+              color: "#fca636",
+              label: "49,158",
+              value: 49158,
+            },
+            {
+              color: "#fcce25",
+              label: "91,494",
+              value: 91494,
+            },
+          ],
+          type: "GLLegendGradientPanel",
+        },
+      ],
+    },
+  },
   "Place names": {
     input: [
       {
