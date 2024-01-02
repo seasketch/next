@@ -247,7 +247,7 @@ export default function InteractivitySettings({
               description:
                 "Similar to a popup, but the content is displayed in a sidebar.",
               value: InteractivityType.SidebarOverlay,
-              children: <div className="mt-4">
+              children: <>{selectedType === InteractivityType.SidebarOverlay && <div className="mt-4">
                 <h4 className="text-sm font-normal">{t("Sidebar title")}</h4><p className="text-sm text-gray-500">{t("You may reference feature properties in the title but html tags will not be rendered")}</p>
                 <TemplateEditor
                   type={InteractivityType.SidebarOverlay}
@@ -271,7 +271,7 @@ export default function InteractivitySettings({
                   onChange={(value) => setLongTemplate(value)}
                   attributeNames={attributeNames}
                 />
-              </div>,
+              </div>}</>,
             },
           ]}
           value={selectedType}
