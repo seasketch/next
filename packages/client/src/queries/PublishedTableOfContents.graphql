@@ -91,5 +91,6 @@ fragment DataLayerDetails on DataLayer {
     longTemplate
     shortTemplate
     type
+    title
   }
 }

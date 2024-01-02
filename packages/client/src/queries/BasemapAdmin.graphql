@@ -8,6 +8,7 @@ fragment BasemapDetails on Basemap {
     longTemplate
     shortTemplate
     type
+    title
   }
   labelsLayerId
   name

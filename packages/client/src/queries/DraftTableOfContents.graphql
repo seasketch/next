@@ -59,6 +59,7 @@ query layersAndSourcesForItems(
         longTemplate
         shortTemplate
         type
+        title
       }
       staticId
       sprites {
@@ -397,6 +398,7 @@ query InteractivitySettingsForLayer($layerId: Int!) {
       longTemplate
       shortTemplate
       type
+      title
     }
   }
 }
@@ -407,6 +409,7 @@ mutation UpdateInteractivitySettings(
   $cursor: CursorType
   $longTemplate: String
   $shortTemplate: String
+  $title: String
 ) {
   updateInteractivitySetting(
     input: {
@@ -416,6 +419,7 @@ mutation UpdateInteractivitySettings(
         cursor: $cursor
         longTemplate: $longTemplate
         shortTemplate: $shortTemplate
+        title: $title
       }
     }
   ) {
@@ -425,6 +429,7 @@ mutation UpdateInteractivitySettings(
       cursor
       longTemplate
       shortTemplate
+      title
     }
   }
 }
@@ -539,6 +544,7 @@ query InteractivitySettingsById($id: Int!) {
     longTemplate
     shortTemplate
     type
+    title
   }
 }
 

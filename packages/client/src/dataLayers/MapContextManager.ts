@@ -1081,7 +1081,12 @@ class MapContextManager extends EventEmitter {
     //    at new Ut (mapbox-gl.js:36:1)
     let glDrawLayers: AnyLayer[] = [];
     let glDrawSources: { [id: string]: GeoJSONSource } = {};
-    const existingStyle = this.map?.getStyle();
+    let existingStyle: mapboxgl.Style | undefined;
+    try {
+      existingStyle = this.map?.getStyle();
+    } catch (e) {
+      // do nothing
+    }
     if (existingStyle) {
       glDrawLayers =
         existingStyle.layers?.filter((l) => l.id.indexOf("gl-draw") === 0) ||
@@ -2852,6 +2857,8 @@ export interface MapContextInterface {
   bannerMessages: string[];
   tooltip?: Tooltip;
   fixedBlocks: string[];
+  sidebarPopupContent?: string;
+  sidebarPopupTitle?: string;
   selectedBasemap?: string;
   cameraOptions?: CameraOptions;
   /* Indicates the map state is ready to render a map */

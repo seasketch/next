@@ -1,0 +1,27 @@
+.sidebar-popup h1 {
+  @apply text-lg;
+}
+
+.sidebar-popup h2 {
+  @apply text-base;
+}
+
+.sidebar-popup dl {
+  @apply divide-y divide-gray-100 mt-2 border border-gray-100 rounded;
+}
+
+.sidebar-popup dt {
+  @apply text-sm font-medium leading-6 text-gray-900;
+}
+
+.sidebar-popup dd {
+  @apply mt-1 text-sm leading-6 text-gray-700;
+}
+
+.sidebar-popup dl div {
+  @apply px-2;
+}
+
+.sidebar-popup dl div:nth-child(even) {
+  @apply bg-gray-50;
+}

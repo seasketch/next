@@ -1,5 +1,5 @@
 import mapboxgl, { Map, MapboxOptions } from "mapbox-gl";
-import ReactDOM from "react-dom";
+import ReactDOM, { createPortal } from "react-dom";
 import React, {
   useEffect,
   useState,
@@ -17,6 +17,7 @@ import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
+import SidebarPopup from "../dataLayers/SidebarPopup";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -30,10 +31,10 @@ export interface OverlayMapProps {
   onClickNonInteractive?: () => void;
   lazyLoadReady?: boolean;
   navigationControlsLocation?:
-    | "top-right"
-    | "top-left"
-    | "bottom-right"
-    | "bottom-left";
+  | "top-right"
+  | "top-left"
+  | "bottom-right"
+  | "bottom-left";
   mapSettingsPopupActions?: ReactNode;
   onRequestSidebarClose?: () => void;
 }
@@ -111,12 +112,16 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   }
   return (
     <div
-      className={`flex-1 bg-gray-300 ${props.className} ${
-        props.hideDrawControls ? "hide-draw-controls" : ""
-      } ${!interactive ? "non-interactive" : ""}`}
+      className={`flex-1 bg-gray-300 ${props.className} ${props.hideDrawControls ? "hide-draw-controls" : ""
+        } ${!interactive ? "non-interactive" : ""}`}
       ref={mapContainer}
       onClick={!interactive ? props.onClickNonInteractive : undefined}
     >
+      {createPortal(<SidebarPopup onClose={() => {
+        if (mapContext?.manager?.interactivityManager) {
+          mapContext.manager.interactivityManager.clearSidebarPopup();
+        }
+      }} content={mapContext.sidebarPopupContent} title={mapContext.sidebarPopupTitle} />, document.body)}
       {props.mapSettingsPopupActions && (
         <MapSettingsPopup
           open={mapSettingsPopupOpen}
@@ -141,19 +146,17 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             }
             setMapSettingsPopupOpen(true);
           }}
-          className={`absolute bg-white ring-2 ring-black ring-opacity-10 rounded top-28 ${
-            props.navigationControlsLocation === "top-right"
-              ? "right-2.5"
-              : "left-2.5"
-          }`}
+          className={`absolute bg-white ring-2 ring-black ring-opacity-10 rounded top-28 ${props.navigationControlsLocation === "top-right"
+            ? "right-2.5"
+            : "left-2.5"
+            }`}
         >
           <CogIcon className="w-5 h-5" />
         </button>
       )}
       <div
-        className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
-          mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"
-        }`}
+        className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"
+          }`}
         style={{ backdropFilter: "blur(12px)" }}
       >
         <div className="bg-gray-100 bg-opacity-30 text-blue-800 border-blue-800 border-opacity-20 shadow-inner border text-base p-4 rounded-full flex items-center">
@@ -208,8 +211,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         style={
           sidebar.open
             ? {
-                paddingLeft: sidebar.width + "px",
-              }
+              paddingLeft: sidebar.width + "px",
+            }
             : {}
         }
       >
@@ -232,8 +235,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
               }}
             >
               {mapContext.displayedMapBookmark.errors.missingBasemap ||
-              mapContext.displayedMapBookmark.errors.missingLayers.length > 0 ||
-              mapContext.displayedMapBookmark.errors.missingSketches.length >
+                mapContext.displayedMapBookmark.errors.missingLayers.length > 0 ||
+                mapContext.displayedMapBookmark.errors.missingSketches.length >
                 0 ? (
                 <Trans
                   ns="map"
@@ -363,13 +366,13 @@ function Tooltip({
           },
         },
       }}
-      // animate={{
-      //   opacity: visible ? 1 : 0,
-      //   scale: visible ? 1 : 0.5,
-      //   // @ts-ignore
-      //   // left: state.x + 15,
-      //   // top: state.y + 15,
-      // }}
+    // animate={{
+    //   opacity: visible ? 1 : 0,
+    //   scale: visible ? 1 : 0.5,
+    //   // @ts-ignore
+    //   // left: state.x + 15,
+    //   // top: state.y + 15,
+    // }}
     >
       {state.children}
     </motion.div>,

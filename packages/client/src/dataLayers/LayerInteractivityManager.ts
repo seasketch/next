@@ -263,7 +263,9 @@ export default class LayerInteractivityManager extends EventEmitter {
     return (
       prev.bannerMessages.join("") !== next.bannerMessages.join("") ||
       prev.fixedBlocks.join("") !== next.fixedBlocks.join("") ||
-      prev.tooltip !== next.tooltip
+      prev.tooltip !== next.tooltip ||
+      prev.sidebarPopupContent !== next.sidebarPopupContent ||
+      prev.sidebarPopupTitle !== next.sidebarPopupTitle
     );
   }
 
@@ -340,23 +342,66 @@ export default class LayerInteractivityManager extends EventEmitter {
       layers: this.interactiveVectorLayerIds,
     });
     const top = features[0];
+    console.log({ top }, e.point, e.lngLat);
     let vectorPopupOpened = false;
     if (top) {
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (
         interactivitySetting &&
-        interactivitySetting.type === InteractivityType.Popup
+        (interactivitySetting.type === InteractivityType.Popup ||
+          interactivitySetting.type === InteractivityType.SidebarOverlay)
       ) {
-        new Popup({ closeOnClick: true, closeButton: true })
-          .setLngLat([e.lngLat.lng, e.lngLat.lat])
-          .setHTML(
-            Mustache.render(interactivitySetting.longTemplate || "", {
-              ...mustacheHelpers,
-              ...top.properties,
-            })
-          )
-          .addTo(this.map!);
         vectorPopupOpened = true;
+        const content = Mustache.render(
+          interactivitySetting.longTemplate || "",
+          {
+            ...mustacheHelpers,
+            ...top.properties,
+          }
+        );
+        if (interactivitySetting.type === InteractivityType.Popup) {
+          new Popup({ closeOnClick: true, closeButton: true })
+            .setLngLat([e.lngLat.lng, e.lngLat.lat])
+            .setHTML(content)
+            .addTo(this.map!);
+        } else {
+          if (this.map) {
+            if (this.map.getLayer("sidebar-popup-click-location")) {
+              this.map.removeLayer("sidebar-popup-click-location");
+              this.map.removeSource("sidebar-popup-click-location");
+            }
+            this.map.addSource("sidebar-popup-click-location", {
+              type: "geojson",
+              data: {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                  type: "Point",
+                  coordinates: [e.lngLat.lng, e.lngLat.lat],
+                },
+              },
+            });
+            this.map.addLayer({
+              id: "sidebar-popup-click-location",
+              type: "circle",
+              source: "sidebar-popup-click-location",
+              paint: {
+                "circle-radius": 4,
+                "circle-color": "rgba(255, 255, 255, 0.5)",
+                "circle-stroke-color": "rgba(0,0,0,0.2)",
+                "circle-stroke-width": 1,
+              },
+              layout: {
+                visibility: "visible",
+              },
+            });
+          }
+          this.setState((prev) => ({
+            ...prev,
+            sidebarPopupContent: content,
+            sidebarPopupTitle: interactivitySetting.title,
+          }));
+        }
       } else if (
         interactivitySetting &&
         interactivitySetting.type === InteractivityType.AllPropertiesPopup
@@ -405,6 +450,16 @@ export default class LayerInteractivityManager extends EventEmitter {
           .addTo(this.map!);
         vectorPopupOpened = true;
       }
+    } else {
+      if (this.map?.getLayer("sidebar-popup-click-location")) {
+        this.map.removeLayer("sidebar-popup-click-location");
+        this.map.removeSource("sidebar-popup-click-location");
+      }
+      this.setState((prev) => ({
+        ...prev,
+        sidebarPopupContent: undefined,
+        sidebarPopupTitle: undefined,
+      }));
     }
     if (!vectorPopupOpened) {
       // Are any image layers active that support identify tools?
@@ -419,6 +474,18 @@ export default class LayerInteractivityManager extends EventEmitter {
           interactiveImageLayers
         );
       }
+    }
+  };
+
+  clearSidebarPopup = () => {
+    this.setState((prev) => ({
+      ...prev,
+      sidebarPopupContent: undefined,
+      sidebarPopupTitle: undefined,
+    }));
+    if (this.map?.getLayer("sidebar-popup-click-location")) {
+      this.map.removeLayer("sidebar-popup-click-location");
+      this.map.removeSource("sidebar-popup-click-location");
     }
   };
 
@@ -648,6 +715,7 @@ export default class LayerInteractivityManager extends EventEmitter {
             break;
           case InteractivityType.Popup:
           case InteractivityType.AllPropertiesPopup:
+          case InteractivityType.SidebarOverlay:
             cursor = "pointer";
             break;
           case InteractivityType.FixedBlock:
@@ -672,7 +740,9 @@ export default class LayerInteractivityManager extends EventEmitter {
           (interactivitySetting.type === InteractivityType.Banner ||
             interactivitySetting.type === InteractivityType.FixedBlock ||
             interactivitySetting.type === InteractivityType.Popup ||
-            interactivitySetting.type === InteractivityType.AllPropertiesPopup)
+            interactivitySetting.type ===
+              InteractivityType.AllPropertiesPopup ||
+            interactivitySetting.type === InteractivityType.SidebarOverlay)
         ) {
           // Don't waste cycles on a state update
         } else {
