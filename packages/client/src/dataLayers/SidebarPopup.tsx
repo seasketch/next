@@ -10,7 +10,7 @@ export default function SidebarPopup(props: { content?: string, title?: string; 
         initial={{ opacity: 0, translateX: 200 }}
         animate={{ opacity: 1, translateX: 0 }}
         exit={{ opacity: 0, translateX: 200 }}
-        className="sidebar-popup z-10 absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        className="sidebar-popup z-20 absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="w-72 sm:w-96 bg-white text-sm h-full  pointer-events-auto shadow-xl flex flex-col right-0 absolute">
           <div className="flex items-center p-4 py-2 bg-gray-100 border-b">
             <h3 className="flex-1 truncate text-lg font-light">{props.title}</h3>

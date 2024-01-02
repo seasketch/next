@@ -8635,6 +8635,26 @@ COMMENT ON FUNCTION public.initialize_survey_form_from_template(survey_id intege
 
 
 --
+-- Name: interactivity_settings_update_draft_toc_has_changes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.interactivity_settings_update_draft_toc_has_changes() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  begin
+    if tg_op = 'INSERT' or tg_op = 'UPDATE' or tg_op = 'DELETE' then
+      update projects set draft_table_of_contents_has_changes = true where id = (
+        select project_id from table_of_contents_items where data_layer_id = any(  
+        select id from data_layers where interactivity_settings_id = NEW.id
+        )
+      );
+    end if;
+    return NEW;
+  end;
+  $$;
+
+
+--
 -- Name: is_admin(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10748,12 +10768,14 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             type,
             short_template,
             long_template,
-            cursor
+            cursor,
+            title
           ) select
               type,
               short_template,
               long_template,
-              cursor
+              cursor,
+              title
             from
               interactivity_settings
             where
@@ -16446,6 +16468,13 @@ CREATE TRIGGER form_element_associated_sketch_class AFTER INSERT ON public.form_
 --
 
 CREATE TRIGGER form_elements_check_allowed_layouts_002 BEFORE INSERT OR UPDATE ON public.form_elements FOR EACH ROW EXECUTE FUNCTION public.check_allowed_layouts();
+
+
+--
+-- Name: interactivity_settings interactivity_settings_update_draft_toc_has_changes_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER interactivity_settings_update_draft_toc_has_changes_trigger AFTER UPDATE ON public.interactivity_settings FOR EACH ROW EXECUTE FUNCTION public.interactivity_settings_update_draft_toc_has_changes();
 
 
 --
@@ -23135,6 +23164,13 @@ GRANT ALL ON FUNCTION public.initialize_sketch_class_form_from_template(sketch_c
 --
 
 REVOKE ALL ON FUNCTION public.initialize_survey_form_from_template(survey_id integer, template_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION interactivity_settings_update_draft_toc_has_changes(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.interactivity_settings_update_draft_toc_has_changes() FROM PUBLIC;
 
 
 --

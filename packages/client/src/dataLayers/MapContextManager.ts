@@ -12,6 +12,8 @@ import mapboxgl, {
   AnyLayer,
   Sources,
   GeoJSONSource,
+  FilterOptions,
+  LineLayer,
 } from "mapbox-gl";
 import {
   createContext,
@@ -415,7 +417,8 @@ class MapContextManager extends EventEmitter {
 
     this.interactivityManager = new LayerInteractivityManager(
       this.map,
-      this.setState
+      this.setState,
+      this.setHighlightedLayer
     );
 
     this.interactivityManager.setVisibleLayers(
@@ -1573,6 +1576,60 @@ class MapContextManager extends EventEmitter {
       },
     ];
 
+    // TODO: implement layer highlighting in a more general way
+    // console.log("highlighted layer", this.highlightedLayer);
+    // if (this.highlightedLayer?.layerId && this.highlightedLayer.filter) {
+    //   // highlight a feature in this layer
+    //   const layer = baseStyle.layers.find(
+    //     (l) => l.id === this.highlightedLayer!.layerId
+    //   );
+    //   if (layer) {
+    //     switch (layer.type) {
+    //       case "fill":
+    //       case "line":
+    //         // console.log("found layer to highlight", layer);
+    //         const h = {
+    //           id: "highlighted-feature",
+    //           type: "line",
+    //           source: layer.source,
+    //           ...(layer["source-layer"]
+    //             ? { "source-layer": layer["source-layer"] }
+    //             : {}),
+    //           // @ts-ignore
+    //           filter: this.highlightedLayer.filter as FilterOptions,
+    //           paint: {
+    //             "line-color": "rgba(255, 255,255, 1.0)",
+    //             "line-width": 1,
+    //             // "line-gap-width": 2,
+    //             "line-offset": -1,
+    //           },
+    //           layout: {
+    //             "line-join": "round",
+    //           },
+    //         };
+    //         // console.log(h);
+    //         baseStyle.layers.push(h as LineLayer);
+    //         break;
+    //       case "symbol":
+    //         // in the original layer, set the visibility to none where the
+    //         // filter matches, then
+    //         // layer.layout = {
+    //         //   ...layer.layout,
+    //         //   // @ts-ignore
+    //         //   visibility: [
+    //         //     this.highlightedLayer.filter as FilterOptions,
+    //         //     "none",
+    //         //     layer.layout?.visibility || "visible",
+    //         //   ],
+    //         // };
+    //         // console.log(layer);
+    //         break;
+    //       default: {
+    //       }
+    //     }
+    //   }
+    // }
+
     // Evaluate any basemap optional layers
     // value is whether to toggle
     // const stylesSubjectToToggle: { [id: string]: boolean } = {};
@@ -1978,7 +2035,20 @@ class MapContextManager extends EventEmitter {
     maxWait: 100,
   });
 
-  highlightLayer(layerId: string) {}
+  private highlightedLayer: { layerId: string; filter?: FilterOptions } | null =
+    null;
+
+  setHighlightedLayer = (
+    layerId: string | undefined,
+    filter?: FilterOptions
+  ) => {
+    if (!layerId) {
+      this.highlightedLayer = null;
+    } else {
+      this.highlightedLayer = { layerId, filter };
+    }
+    this.debouncedUpdateStyle();
+  };
 
   private tocItemLabels: { [id: string]: string } = {};
 

@@ -18,6 +18,7 @@ import sanitizeHtml from "sanitize-html";
 import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
 import SetBasemapInteractivityLayers from "./SetBasemapInteractivityLayers";
+import { GeostatsLayer } from "./GLStyleEditor/extensions/glStyleAutocomplete";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -29,12 +30,15 @@ export default function InteractivitySettings({
   dataSourceId,
   sublayer,
   basemap,
+  geostats
 }: {
   id: number;
   dataSourceId?: number;
   sublayer?: string | null;
   basemap?: BasemapDetailsFragment;
+  geostats?: GeostatsLayer;
 }) {
+  console.log('geostats', geostats, basemap);
   const { t } = useTranslation("admin");
   const { data, loading } = useInteractivitySettingsByIdQuery({
     variables: {
@@ -214,6 +218,7 @@ export default function InteractivitySettings({
                         basemap={basemap}
                         layers={data.interactivitySetting?.layers as string[]}
                         onSelectLayers={() => setPickLayersOpen(true)}
+                        geostats={geostats}
                       />
                     </>
                   ),
@@ -270,6 +275,7 @@ export default function InteractivitySettings({
                   onSave={sanitizeTemplate}
                   onChange={(value) => setLongTemplate(value)}
                   attributeNames={attributeNames}
+                  geostats={geostats}
                 />
               </div>}</>,
             },
@@ -295,6 +301,7 @@ function TemplateEditor(props: {
   layers?: string[];
   basemap?: any;
   onSelectLayers?: () => void;
+  geostats?: GeostatsLayer;
 }) {
   const { t } = useTranslation("admin");
   const onSave = () => props.onSave(props.propName);
@@ -317,6 +324,25 @@ function TemplateEditor(props: {
           onChange={(editor, data, value) => { }}
         />
         <Button small label={t("save")} onClick={onSave} />
+        {props.geostats && (props.propName === "longTemplate") && (
+          <Button className="ml-1" small label={t("insert property list")} onClick={() => {
+            const value = props.templateValue || "";
+            const attributes = props.geostats?.attributes || [];
+            const newValue = value + `
+<h2>Properties</h2>
+<dl>
+${attributes.map((prop) => {
+              return `  <div>
+    <dt>${prop.attribute}</dt>
+    <dd>{{${prop.attribute}}}</dd>
+  </div>                
+`;
+            }).join("")}
+</dl>
+`
+            props.onChange(newValue);
+          }} />
+        )}
         {props.basemap && (
           <Button
             className="ml-1"

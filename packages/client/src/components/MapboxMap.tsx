@@ -108,7 +108,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
     !/surveys/.test(window.location.pathname) &&
     measurementToolsPlacement === "top-right"
   ) {
-    measurementToolsPlacement = "top-right-homepage";
+    measurementToolsPlacement = "bottom-right";
   }
   return (
     <div
