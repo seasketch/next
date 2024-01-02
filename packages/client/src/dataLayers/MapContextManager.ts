@@ -66,6 +66,9 @@ import { OrderedLayerSettings } from "@seasketch/mapbox-gl-esri-sources/dist/src
 import { isArcGISDynamicMapService } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISDynamicMapService";
 import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
 
+const CROSSHAIR_IMAGE = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAEhJREFUKJHlkLENwEAMAiH7T+AMe2k+LX75ixRBokInbAxoqmtMdrDtink62zaAR82dvoMFaP1dkthwvcwfB+vgO4VxsNPmqAd8/ytkrmseVgAAAABJRU5ErkJggg==`;
+export const CROSSHAIR_IMAGE_ID = "_ssn_crosshair";
+
 export const MeasureEventTypes = {
   Started: "measure_started",
   Stopped: "measure_stopped",
@@ -148,6 +151,7 @@ export interface LayerState {
 export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
 }
+export const POPUP_CLICK_LOCATION_SOURCE = "popup-click-location";
 class MapContextManager extends EventEmitter {
   map?: Map;
   interactivityManager?: LayerInteractivityManager;
@@ -433,6 +437,13 @@ class MapContextManager extends EventEmitter {
     this.map.on("moveend", this.onMapMove);
     this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", () => {
+      this.map?.loadImage(CROSSHAIR_IMAGE, (error, image) => {
+        if (error) {
+          console.error(error);
+        } else if (image && this.map) {
+          this.map.addImage(CROSSHAIR_IMAGE_ID, image, { pixelRatio: 2 });
+        }
+      });
       this.mapIsLoaded = true;
       // Use to trigger changes to mapContextManager.map
       this.setState((prev) => ({ ...prev }));
@@ -1260,6 +1271,22 @@ class MapContextManager extends EventEmitter {
       (layer) => layer.id === labelsID
     );
     baseStyle.sources = baseStyle.sources || {};
+
+    let existingPopupClickLocationSource =
+      existingStyle?.sources[POPUP_CLICK_LOCATION_SOURCE];
+    if (existingPopupClickLocationSource) {
+      baseStyle.sources[POPUP_CLICK_LOCATION_SOURCE] =
+        existingPopupClickLocationSource as GeoJSONSource;
+    } else {
+      baseStyle.sources[POPUP_CLICK_LOCATION_SOURCE] = {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        },
+      };
+    }
+
     baseStyle.layers = baseStyle.layers || [];
     if (labelsLayerIndex === -1) {
       labelsLayerIndex = baseStyle.layers.length;
@@ -1524,6 +1551,26 @@ class MapContextManager extends EventEmitter {
       ...overLabels,
       ...this.dynamicLayers,
       ...glDrawLayers,
+      {
+        id: "sidebar-popup-click-location",
+        type: "symbol",
+        source: POPUP_CLICK_LOCATION_SOURCE,
+        paint: {
+          "icon-translate-transition": {
+            duration: 0,
+          },
+          "icon-opacity-transition": {
+            duration: 0,
+            delay: 0,
+          },
+        },
+        layout: {
+          "icon-image": CROSSHAIR_IMAGE_ID,
+          "icon-size": 2,
+          "icon-ignore-placement": true,
+          "icon-allow-overlap": true,
+        },
+      },
     ];
 
     // Evaluate any basemap optional layers

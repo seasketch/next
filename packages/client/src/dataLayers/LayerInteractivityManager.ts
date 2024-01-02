@@ -1,4 +1,5 @@
 import {
+  GeoJSONSource,
   Layer,
   Map,
   MapboxGeoJSONFeature,
@@ -6,10 +7,12 @@ import {
   Popup,
 } from "mapbox-gl";
 import {
+  CROSSHAIR_IMAGE_ID,
   idForLayer,
   isSeaSketchLayerId,
   layerIdFromStyleLayerId,
   MapContextInterface,
+  POPUP_CLICK_LOCATION_SOURCE,
   Tooltip,
 } from "./MapContextManager";
 import Mustache from "mustache";
@@ -27,6 +30,7 @@ import // getDynamicArcGISStyle,
 import { EventEmitter } from "eventemitter3";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 import { identifyLayers } from "../admin/data/arcgis/arcgis";
+import { EMPTY_FEATURE_COLLECTION } from "../draw/useMapboxGLDraw";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
@@ -366,33 +370,15 @@ export default class LayerInteractivityManager extends EventEmitter {
             .addTo(this.map!);
         } else {
           if (this.map) {
-            if (this.map.getLayer("sidebar-popup-click-location")) {
-              this.map.removeLayer("sidebar-popup-click-location");
-              this.map.removeSource("sidebar-popup-click-location");
-            }
-            this.map.addSource("sidebar-popup-click-location", {
-              type: "geojson",
-              data: {
-                type: "Feature",
-                properties: {},
-                geometry: {
-                  type: "Point",
-                  coordinates: [e.lngLat.lng, e.lngLat.lat],
-                },
-              },
-            });
-            this.map.addLayer({
-              id: "sidebar-popup-click-location",
-              type: "circle",
-              source: "sidebar-popup-click-location",
-              paint: {
-                "circle-radius": 4,
-                "circle-color": "rgba(255, 255, 255, 0.5)",
-                "circle-stroke-color": "rgba(0,0,0,0.2)",
-                "circle-stroke-width": 1,
-              },
-              layout: {
-                visibility: "visible",
+            const popupSource = this.map.getSource(
+              POPUP_CLICK_LOCATION_SOURCE
+            ) as GeoJSONSource;
+            popupSource.setData({
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Point",
+                coordinates: [e.lngLat.lng, e.lngLat.lat],
               },
             });
           }
@@ -459,9 +445,11 @@ export default class LayerInteractivityManager extends EventEmitter {
         vectorPopupOpened = true;
       }
     } else {
-      if (this.map?.getLayer("sidebar-popup-click-location")) {
-        this.map.removeLayer("sidebar-popup-click-location");
-        this.map.removeSource("sidebar-popup-click-location");
+      const popupSource = this.map?.getSource(POPUP_CLICK_LOCATION_SOURCE) as
+        | GeoJSONSource
+        | undefined;
+      if (popupSource) {
+        popupSource.setData(EMPTY_FEATURE_COLLECTION);
       }
       this.setState((prev) => ({
         ...prev,
@@ -491,9 +479,11 @@ export default class LayerInteractivityManager extends EventEmitter {
       sidebarPopupContent: undefined,
       sidebarPopupTitle: undefined,
     }));
-    if (this.map?.getLayer("sidebar-popup-click-location")) {
-      this.map.removeLayer("sidebar-popup-click-location");
-      this.map.removeSource("sidebar-popup-click-location");
+    const popupSource = this.map?.getSource(POPUP_CLICK_LOCATION_SOURCE) as
+      | GeoJSONSource
+      | undefined;
+    if (popupSource) {
+      popupSource.setData(EMPTY_FEATURE_COLLECTION);
     }
   };
 
