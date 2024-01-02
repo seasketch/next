@@ -261,8 +261,8 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   private statesDiffer(prev: MapContextInterface, next: MapContextInterface) {
     return (
-      prev.bannerMessages.join("") !== next.bannerMessages.join("") ||
-      prev.fixedBlocks.join("") !== next.fixedBlocks.join("") ||
+      prev.bannerMessages?.join("") !== next.bannerMessages?.join("") ||
+      prev.fixedBlocks?.join("") !== next.fixedBlocks?.join("") ||
       prev.tooltip !== next.tooltip ||
       prev.sidebarPopupContent !== next.sidebarPopupContent ||
       prev.sidebarPopupTitle !== next.sidebarPopupTitle
@@ -396,10 +396,18 @@ export default class LayerInteractivityManager extends EventEmitter {
               },
             });
           }
+          const titleContent = Mustache.render(
+            interactivitySetting.title || "",
+            {
+              ...mustacheHelpers,
+              ...top.properties,
+            }
+          );
+
           this.setState((prev) => ({
             ...prev,
             sidebarPopupContent: content,
-            sidebarPopupTitle: interactivitySetting.title,
+            sidebarPopupTitle: titleContent,
           }));
         }
       } else if (

@@ -112,7 +112,7 @@ export default function InteractivitySettings({
     if (type && settings && type !== settings.type) {
       save();
     }
-  }, [type]);
+  }, [save, type, settings?.type]);
 
   const selectedType = type || settings?.type || InteractivityType.None;
   return (
