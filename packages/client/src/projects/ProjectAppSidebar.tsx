@@ -49,9 +49,8 @@ const ProjectAppSidebar: React.FunctionComponent<{
       //     bounce: false,
       //   },
       // }}
-      className={`flex-col flex absolute left-16 top-0 h-full overflow-hidden z-10 ${
-        props.dark ? "bg-gray-50" : "bg-gray-50"
-      } w-72 md:w-96 2xl:w-128`}
+      className={`flex-col flex absolute left-16 top-0 h-full overflow-hidden z-10 ${props.dark ? "bg-gray-50" : "bg-gray-50"
+        } w-72 md:w-96 2xl:w-128`}
       style={{
         boxShadow:
           "0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
@@ -82,9 +81,8 @@ const ProjectAppSidebar: React.FunctionComponent<{
       <div ref={setToolbarDiv}></div>
       <ProjectAppSidebarContext.Provider value={{ toolbarDiv, isSmall }}>
         <div
-          className={`childin ${
-            props.noPadding ? "" : "p-4 pt-2"
-          } flex-1 overflow-y-auto`}
+          className={`childin ${props.noPadding ? "" : "p-4 pt-2"
+            } flex-1 overflow-y-auto`}
         >
           {props.children}
         </div>

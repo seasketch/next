@@ -5588,6 +5588,7 @@ export type InteractivitySetting = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   shortTemplate?: Maybe<Scalars['String']>;
+  title: Scalars['String'];
   type: InteractivityType;
 };
 
@@ -5621,6 +5622,7 @@ export type InteractivitySettingInput = {
   layers?: Maybe<Array<Maybe<Scalars['String']>>>;
   longTemplate?: Maybe<Scalars['String']>;
   shortTemplate?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
   type?: Maybe<InteractivityType>;
 };
 
@@ -5632,6 +5634,7 @@ export type InteractivitySettingPatch = {
   layers?: Maybe<Array<Maybe<Scalars['String']>>>;
   longTemplate?: Maybe<Scalars['String']>;
   shortTemplate?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
   type?: Maybe<InteractivityType>;
 };
 
@@ -5641,6 +5644,7 @@ export enum InteractivityType {
   FixedBlock = 'FIXED_BLOCK',
   None = 'NONE',
   Popup = 'POPUP',
+  SidebarOverlay = 'SIDEBAR_OVERLAY',
   Tooltip = 'TOOLTIP'
 }
 
@@ -14897,7 +14901,7 @@ export type BasemapDetailsFragment = (
   & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice' | 'maxzoom'>
   & { interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
-    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
   )>, optionalBasemapLayers: Array<(
     { __typename?: 'OptionalBasemapLayer' }
     & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
@@ -15605,7 +15609,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
-        & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type'>
+        & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
       )>, sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -15837,7 +15841,7 @@ export type InteractivitySettingsForLayerQuery = (
     & Pick<DataLayer, 'id' | 'sourceLayer'>
     & { interactivitySettings?: Maybe<(
       { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
+      & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
     )> }
   )> }
 );
@@ -15848,6 +15852,7 @@ export type UpdateInteractivitySettingsMutationVariables = Exact<{
   cursor?: Maybe<CursorType>;
   longTemplate?: Maybe<Scalars['String']>;
   shortTemplate?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -15857,7 +15862,7 @@ export type UpdateInteractivitySettingsMutation = (
     { __typename?: 'UpdateInteractivitySettingPayload' }
     & { interactivitySetting?: Maybe<(
       { __typename?: 'InteractivitySetting' }
-      & Pick<InteractivitySetting, 'id' | 'type' | 'cursor' | 'longTemplate' | 'shortTemplate'>
+      & Pick<InteractivitySetting, 'id' | 'type' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'title'>
     )> }
   )> }
 );
@@ -16011,7 +16016,7 @@ export type InteractivitySettingsByIdQuery = (
   { __typename?: 'Query' }
   & { interactivitySetting?: Maybe<(
     { __typename?: 'InteractivitySetting' }
-    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type'>
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'layers' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
   )> }
 );
 
@@ -17148,7 +17153,7 @@ export type DataLayerDetailsFragment = (
     & ClientSpriteFragment
   )>>, interactivitySettings?: Maybe<(
     { __typename?: 'InteractivitySetting' }
-    & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type'>
+    & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
   )> }
 );
 
@@ -19629,6 +19634,7 @@ export const BasemapDetailsFragmentDoc = gql`
     longTemplate
     shortTemplate
     type
+    title
   }
   labelsLayerId
   name
@@ -20143,6 +20149,7 @@ export const DataLayerDetailsFragmentDoc = gql`
     longTemplate
     shortTemplate
     type
+    title
   }
 }
     ${ClientSpriteFragmentDoc}`;
@@ -23101,6 +23108,7 @@ export const LayersAndSourcesForItemsDocument = gql`
         longTemplate
         shortTemplate
         type
+        title
       }
       staticId
       sprites {
@@ -23700,6 +23708,7 @@ export const InteractivitySettingsForLayerDocument = gql`
       longTemplate
       shortTemplate
       type
+      title
     }
   }
 }
@@ -23733,9 +23742,9 @@ export type InteractivitySettingsForLayerQueryHookResult = ReturnType<typeof use
 export type InteractivitySettingsForLayerLazyQueryHookResult = ReturnType<typeof useInteractivitySettingsForLayerLazyQuery>;
 export type InteractivitySettingsForLayerQueryResult = Apollo.QueryResult<InteractivitySettingsForLayerQuery, InteractivitySettingsForLayerQueryVariables>;
 export const UpdateInteractivitySettingsDocument = gql`
-    mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String) {
+    mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String, $title: String) {
   updateInteractivitySetting(
-    input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate}}
+    input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate, title: $title}}
   ) {
     interactivitySetting {
       id
@@ -23743,6 +23752,7 @@ export const UpdateInteractivitySettingsDocument = gql`
       cursor
       longTemplate
       shortTemplate
+      title
     }
   }
 }
@@ -23767,6 +23777,7 @@ export type UpdateInteractivitySettingsMutationFn = Apollo.MutationFunction<Upda
  *      cursor: // value for 'cursor'
  *      longTemplate: // value for 'longTemplate'
  *      shortTemplate: // value for 'shortTemplate'
+ *      title: // value for 'title'
  *   },
  * });
  */
@@ -24129,6 +24140,7 @@ export const InteractivitySettingsByIdDocument = gql`
     longTemplate
     shortTemplate
     type
+    title
   }
 }
     `;

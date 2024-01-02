@@ -26,10 +26,10 @@ import { useMediaQuery } from "beautiful-react-hooks";
 let featureId = 0;
 
 const emptyFeatureCollection = () =>
-  ({
-    type: "FeatureCollection",
-    features: [],
-  } as FeatureCollection);
+({
+  type: "FeatureCollection",
+  features: [],
+} as FeatureCollection);
 
 export const MeasureControlLockId = "MeasureControl";
 
@@ -767,11 +767,11 @@ export function MeasurementToolsOverlay({
   placement,
 }: {
   placement:
-    | "top-right"
-    | "top-left"
-    | "bottom-right"
-    | "bottom-left"
-    | "top-right-homepage";
+  | "top-right"
+  | "top-left"
+  | "bottom-right"
+  | "bottom-left"
+  | "top-right-homepage";
 }) {
   const mapContext = useContext(MapContext);
   const measureContext = useContext(MeasureControlContext);
@@ -845,17 +845,15 @@ export function MeasurementToolsOverlay({
           transition={{
             duration: 0.15,
           }}
-          className={`${
-            placement === "top-right"
-              ? isSmall
-                ? "right-20 top-5"
-                : "right-24 mr-1 top-5"
-              : placement === "top-right-homepage"
+          className={`${placement === "top-right"
+            ? isSmall
+              ? "right-20 top-5"
+              : "right-24 mr-1 top-5"
+            : placement === "top-right-homepage"
               ? "right-14 top-2.5"
-              : "left-20 top-5"
-          } ${
-            state === "paused" ? "pointer-events-none" : "pointer-events-auto"
-          } absolute z-10 bg-white shadow rounded border w-72`}
+              : placement === "bottom-right" ? "right-2 bottom-14" : "left-20 top-5"
+            } ${state === "paused" ? "pointer-events-none" : "pointer-events-auto"
+            } absolute z-10 bg-white shadow rounded border w-72`}
         >
           <div className="flex mt-2">
             <div className="text-xl font-semibold flex-1 truncate text-center mx-5">
@@ -875,11 +873,11 @@ export function MeasurementToolsOverlay({
               length > 0 &&
               (mouseHoverNotAvailable
                 ? t(
-                    "Tap again to measure a path, or use the buttons below to finish or start over."
-                  )
+                  "Tap again to measure a path, or use the buttons below to finish or start over."
+                )
                 : t(
-                    "Double-click to finish measuring or click to draw a path."
-                  ))}
+                  "Double-click to finish measuring or click to draw a path."
+                ))}
             {(state === "editing" || state === "dragging") &&
               (mouseHoverNotAvailable
                 ? t("")

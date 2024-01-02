@@ -1,4 +1,6 @@
 import {
+  FilterOptions,
+  GeoJSONSource,
   Layer,
   Map,
   MapboxGeoJSONFeature,
@@ -6,10 +8,12 @@ import {
   Popup,
 } from "mapbox-gl";
 import {
+  CROSSHAIR_IMAGE_ID,
   idForLayer,
   isSeaSketchLayerId,
   layerIdFromStyleLayerId,
   MapContextInterface,
+  POPUP_CLICK_LOCATION_SOURCE,
   Tooltip,
 } from "./MapContextManager";
 import Mustache from "mustache";
@@ -27,6 +31,8 @@ import // getDynamicArcGISStyle,
 import { EventEmitter } from "eventemitter3";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 import { identifyLayers } from "../admin/data/arcgis/arcgis";
+import { EMPTY_FEATURE_COLLECTION } from "../draw/useMapboxGLDraw";
+import { GeoJsonProperties } from "geojson";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
@@ -42,6 +48,10 @@ const PopupNumberFormatter = Intl.NumberFormat(undefined, {
 export default class LayerInteractivityManager extends EventEmitter {
   private map: Map;
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
+  private _setHighlightedLayer: (
+    layerId: string | undefined,
+    filter?: FilterOptions
+  ) => void;
   private previousState?: MapContextInterface;
 
   /** List of interactive layers that are currently shown on the map. Update with setVisibleLayers() */
@@ -70,12 +80,17 @@ export default class LayerInteractivityManager extends EventEmitter {
    */
   constructor(
     map: Map,
-    setState: Dispatch<SetStateAction<MapContextInterface>>
+    setState: Dispatch<SetStateAction<MapContextInterface>>,
+    setHighlightedLayer: (
+      layerId: string | undefined,
+      filter?: FilterOptions
+    ) => void
   ) {
     super();
     this.map = map;
     this.registerEventListeners(map);
     this._setState = setState;
+    this._setHighlightedLayer = setHighlightedLayer;
   }
 
   /**
@@ -261,9 +276,11 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   private statesDiffer(prev: MapContextInterface, next: MapContextInterface) {
     return (
-      prev.bannerMessages.join("") !== next.bannerMessages.join("") ||
-      prev.fixedBlocks.join("") !== next.fixedBlocks.join("") ||
-      prev.tooltip !== next.tooltip
+      prev.bannerMessages?.join("") !== next.bannerMessages?.join("") ||
+      prev.fixedBlocks?.join("") !== next.fixedBlocks?.join("") ||
+      prev.tooltip !== next.tooltip ||
+      prev.sidebarPopupContent !== next.sidebarPopupContent ||
+      prev.sidebarPopupTitle !== next.sidebarPopupTitle
     );
   }
 
@@ -345,22 +362,88 @@ export default class LayerInteractivityManager extends EventEmitter {
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (
         interactivitySetting &&
-        interactivitySetting.type === InteractivityType.Popup
+        (interactivitySetting.type === InteractivityType.Popup ||
+          interactivitySetting.type === InteractivityType.SidebarOverlay)
       ) {
-        new Popup({ closeOnClick: true, closeButton: true })
-          .setLngLat([e.lngLat.lng, e.lngLat.lat])
-          .setHTML(
-            Mustache.render(interactivitySetting.longTemplate || "", {
+        vectorPopupOpened = true;
+        const content = Mustache.render(
+          interactivitySetting.longTemplate || "",
+          {
+            ...mustacheHelpers,
+            ...top.properties,
+          }
+        );
+        if (interactivitySetting.type === InteractivityType.Popup) {
+          const popupSource = this.map.getSource(
+            POPUP_CLICK_LOCATION_SOURCE
+          ) as GeoJSONSource;
+          popupSource?.setData(EMPTY_FEATURE_COLLECTION);
+          this.setState((prev) => ({
+            ...prev,
+            sidebarPopupContent: undefined,
+            sidebarPopupTitle: undefined,
+          }));
+          new Popup({ closeOnClick: true, closeButton: true })
+            .setLngLat([e.lngLat.lng, e.lngLat.lat])
+            .setHTML(content)
+            .addTo(this.map!);
+        } else {
+          if (this.map) {
+            const popupSource = this.map.getSource(
+              POPUP_CLICK_LOCATION_SOURCE
+            ) as GeoJSONSource;
+            popupSource.setData({
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Point",
+                coordinates: [e.lngLat.lng, e.lngLat.lat],
+              },
+            });
+          }
+          const titleContent = Mustache.render(
+            interactivitySetting.title || "",
+            {
               ...mustacheHelpers,
               ...top.properties,
-            })
-          )
-          .addTo(this.map!);
-        vectorPopupOpened = true;
+            }
+          );
+          this.setState((prev) => ({
+            ...prev,
+            sidebarPopupContent: content,
+            sidebarPopupTitle: titleContent,
+          }));
+          const idProperty = getIdProperty(top.properties);
+          if (idProperty) {
+            this._setHighlightedLayer(top.layer.id, [
+              "==",
+              idProperty,
+              top.properties![idProperty],
+            ] as FilterOptions);
+          } else {
+            this._setHighlightedLayer(undefined);
+          }
+        }
       } else if (
         interactivitySetting &&
         interactivitySetting.type === InteractivityType.AllPropertiesPopup
       ) {
+        this.setState((prev) => ({
+          ...prev,
+          sidebarPopupContent: undefined,
+          sidebarPopupTitle: undefined,
+        }));
+        const popupSource = this.map.getSource(
+          POPUP_CLICK_LOCATION_SOURCE
+        ) as GeoJSONSource;
+        popupSource.setData({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "Point",
+            coordinates: [e.lngLat.lng, e.lngLat.lat],
+          },
+        });
         const lyr = this.layers[top.layer.id];
         // @ts-ignore
         const layerLabel = (this.tocItemLabels || {})[lyr?.tocId];
@@ -405,6 +488,19 @@ export default class LayerInteractivityManager extends EventEmitter {
           .addTo(this.map!);
         vectorPopupOpened = true;
       }
+    } else {
+      const popupSource = this.map?.getSource(POPUP_CLICK_LOCATION_SOURCE) as
+        | GeoJSONSource
+        | undefined;
+      if (popupSource) {
+        popupSource.setData(EMPTY_FEATURE_COLLECTION);
+      }
+      this.setState((prev) => ({
+        ...prev,
+        sidebarPopupContent: undefined,
+        sidebarPopupTitle: undefined,
+      }));
+      this._setHighlightedLayer(undefined);
     }
     if (!vectorPopupOpened) {
       // Are any image layers active that support identify tools?
@@ -419,6 +515,21 @@ export default class LayerInteractivityManager extends EventEmitter {
           interactiveImageLayers
         );
       }
+    }
+  };
+
+  clearSidebarPopup = () => {
+    this.setState((prev) => ({
+      ...prev,
+      sidebarPopupContent: undefined,
+      sidebarPopupTitle: undefined,
+    }));
+    this._setHighlightedLayer(undefined);
+    const popupSource = this.map?.getSource(POPUP_CLICK_LOCATION_SOURCE) as
+      | GeoJSONSource
+      | undefined;
+    if (popupSource) {
+      popupSource.setData(EMPTY_FEATURE_COLLECTION);
     }
   };
 
@@ -648,6 +759,7 @@ export default class LayerInteractivityManager extends EventEmitter {
             break;
           case InteractivityType.Popup:
           case InteractivityType.AllPropertiesPopup:
+          case InteractivityType.SidebarOverlay:
             cursor = "pointer";
             break;
           case InteractivityType.FixedBlock:
@@ -672,7 +784,9 @@ export default class LayerInteractivityManager extends EventEmitter {
           (interactivitySetting.type === InteractivityType.Banner ||
             interactivitySetting.type === InteractivityType.FixedBlock ||
             interactivitySetting.type === InteractivityType.Popup ||
-            interactivitySetting.type === InteractivityType.AllPropertiesPopup)
+            interactivitySetting.type ===
+              InteractivityType.AllPropertiesPopup ||
+            interactivitySetting.type === InteractivityType.SidebarOverlay)
         ) {
           // Don't waste cycles on a state update
         } else {
@@ -732,3 +846,27 @@ const mustacheHelpers = {
     return `${Math.round(parseFloat(render(text)) * 100) / 100}`;
   },
 };
+
+const orderedPotentialIdProperties = [
+  "id",
+  "ID",
+  "Id",
+  "OBJECTID",
+  "FID",
+  "fid",
+  "OBJECT_ID",
+];
+
+function getIdProperty(properties: GeoJsonProperties) {
+  if (properties === null) {
+    return undefined;
+  }
+  let idProperty: string | undefined;
+  for (const potentialIdProperty of orderedPotentialIdProperties) {
+    if (properties[potentialIdProperty]) {
+      idProperty = potentialIdProperty;
+      break;
+    }
+  }
+  return idProperty;
+}

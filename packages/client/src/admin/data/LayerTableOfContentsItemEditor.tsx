@@ -324,11 +324,11 @@ export default function LayerTableOfContentsItemEditor(
               description={
                 isArcGISCustomSource
                   ? t(
-                      "Leave blank to display attribution dynamically from ArcGIS service, or provide attribution to override the service metadata."
-                    )
+                    "Leave blank to display attribution dynamically from ArcGIS service, or provide attribution to override the service metadata."
+                  )
                   : t(
-                      "If set, a short attribution string will be shown at the bottom of the map."
-                    )
+                    "If set, a short attribution string will be shown at the bottom of the map."
+                  )
               }
               variables={{ id: source?.id }}
             />
@@ -388,181 +388,181 @@ export default function LayerTableOfContentsItemEditor(
           {(source?.type === DataSourceTypes.Geojson ||
             source?.type === DataSourceTypes.SeasketchVector ||
             source?.type === DataSourceTypes.SeasketchMvt) && (
-            <div className="mt-5">
-              <div className="flex">
-                <div className="flex-1 text-sm font-medium text-gray-700">
-                  <Trans ns={["admin"]}>Enable data download</Trans>
-                </div>
-                <div className="flex-none">
-                  <Switch
-                    isToggled={
-                      downloadEnabled === undefined
-                        ? item.enableDownload
-                        : downloadEnabled
-                    }
-                    onClick={() =>
-                      setDownloadEnabled(
-                        !(downloadEnabled === undefined
+              <div className="mt-5">
+                <div className="flex">
+                  <div className="flex-1 text-sm font-medium text-gray-700">
+                    <Trans ns={["admin"]}>Enable data download</Trans>
+                  </div>
+                  <div className="flex-none">
+                    <Switch
+                      isToggled={
+                        downloadEnabled === undefined
                           ? item.enableDownload
-                          : downloadEnabled)
-                      )
-                    }
-                  />
+                          : downloadEnabled
+                      }
+                      onClick={() =>
+                        setDownloadEnabled(
+                          !(downloadEnabled === undefined
+                            ? item.enableDownload
+                            : downloadEnabled)
+                        )
+                      }
+                    />
+                  </div>
                 </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  <Trans ns={["admin"]}>
+                    If enabled, users will be able to download this dataset in
+                    GeoJSON vector format using the context menu.
+                  </Trans>
+                </p>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                <Trans ns={["admin"]}>
-                  If enabled, users will be able to download this dataset in
-                  GeoJSON vector format using the context menu.
-                </Trans>
-              </p>
-            </div>
-          )}
+            )}
 
           <div className="mt-5">
             <div className="border rounded">
               <div className="border-gray-200 border-b">
                 {(source?.type === DataSourceTypes.SeasketchVector ||
                   source?.type === DataSourceTypes.SeasketchMvt) && (
-                  <>
-                    <SettingsDefinitionList>
-                      <SettingsDLListItem
-                        term={t("Source Type")}
-                        description={
-                          <>
-                            {source?.type ===
-                              DataSourceTypes.SeasketchVector && (
-                              <Trans ns={["admin"]}>
-                                GeoJSON data hosted on SeaSketch
-                              </Trans>
-                            )}
-                            {source?.type === DataSourceTypes.SeasketchMvt && (
-                              <Trans ns={["admin"]}>
-                                Vector tiles hosted on SeaSketch
-                              </Trans>
-                            )}
-                          </>
-                        }
-                      />
-                      {source.geostats && source.geostats.geometry && (
+                    <>
+                      <SettingsDefinitionList>
                         <SettingsDLListItem
-                          term={t("Geometry Type")}
-                          description={source.geostats.geometry}
-                        />
-                      )}
-                      {source.geostats && source.geostats.count && (
-                        <SettingsDLListItem
-                          term={t("Feature Count")}
-                          description={source.geostats.count}
-                        />
-                      )}
-                      <SettingsDLListItem
-                        term={t("File Size")}
-                        description={bytes.format(source?.byteLength || 0)}
-                      />
-                      {source.uploadedSourceFilename && (
-                        <SettingsDLListItem
-                          term={t("Uploaded by")}
+                          term={t("Source Type")}
                           description={
                             <>
-                              {source.uploadedBy || "Unknown"}
-                              {source.createdAt &&
-                                " on " +
-                                  new Date(
-                                    source.createdAt
-                                  ).toLocaleDateString()}
+                              {source?.type ===
+                                DataSourceTypes.SeasketchVector && (
+                                  <Trans ns={["admin"]}>
+                                    GeoJSON data hosted on SeaSketch
+                                  </Trans>
+                                )}
+                              {source?.type === DataSourceTypes.SeasketchMvt && (
+                                <Trans ns={["admin"]}>
+                                  Vector tiles hosted on SeaSketch
+                                </Trans>
+                              )}
                             </>
                           }
                         />
-                      )}
-                      <SettingsDLListItem
-                        truncate
-                        term={t("Original Source")}
-                        description={
-                          <>
-                            {source?.originalSourceUrl && (
-                              <a
-                                target="_blank"
-                                className="text-primary-600 underline"
-                                href={source?.originalSourceUrl}
-                                rel="noreferrer"
-                              >
-                                {source?.originalSourceUrl
-                                  .replace("https://", "")
-                                  .replace("http://", "")}
-                              </a>
-                            )}
-                            {source?.importType ===
-                              DataSourceImportTypes.Upload &&
-                              (source.uploadedSourceFilename || "User Upload")}
-                          </>
-                        }
-                      />
-                      {source.geostats &&
-                        source.geostats.attributes &&
-                        Array.isArray(source.geostats.attributes) && (
+                        {source.geostats && source.geostats.geometry && (
                           <SettingsDLListItem
-                            term={t("Columns")}
+                            term={t("Geometry Type")}
+                            description={source.geostats.geometry}
+                          />
+                        )}
+                        {source.geostats && source.geostats.count && (
+                          <SettingsDLListItem
+                            term={t("Feature Count")}
+                            description={source.geostats.count}
+                          />
+                        )}
+                        <SettingsDLListItem
+                          term={t("File Size")}
+                          description={bytes.format(source?.byteLength || 0)}
+                        />
+                        {source.uploadedSourceFilename && (
+                          <SettingsDLListItem
+                            term={t("Uploaded by")}
                             description={
                               <>
-                                {(
-                                  source.geostats.attributes as {
-                                    type: string;
-                                    count: number;
-                                    attribute: string;
-                                    values: any[];
-                                    max?: number;
-                                    min?: number;
-                                  }[]
-                                )
-                                  .slice(
-                                    0,
-                                    showMoreColumns
-                                      ? source.geostats.attributes.length
-                                      : 4
-                                  )
-                                  .map((attr) => {
-                                    return (
-                                      <div className="flex">
-                                        <div className="flex-1 italic">
-                                          {attr.attribute}{" "}
-                                          {attr.values.length && (
-                                            <div
-                                              className="inline-block cursor-help"
-                                              title={attr.values.join("\n")}
-                                            >
-                                              <DotsHorizontalIcon className="w-4 h-4 inline-block text-gray-500" />
-                                            </div>
-                                          )}
-                                        </div>
-                                        <div className="font-mono px-2">
-                                          {attr.type}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                {showMoreColumns === false &&
-                                  source.geostats.attributes.length > 4 && (
-                                    <button
-                                      className="underline py-1 text-primary-500"
-                                      onClick={() => setShowMoreColums(true)}
-                                    >
-                                      <Trans ns="admin:data">
-                                        Show{" "}
-                                        {(
-                                          source.geostats.attributes.length - 4
-                                        ).toString()}{" "}
-                                        more
-                                      </Trans>
-                                    </button>
-                                  )}
+                                {source.uploadedBy || "Unknown"}
+                                {source.createdAt &&
+                                  " on " +
+                                  new Date(
+                                    source.createdAt
+                                  ).toLocaleDateString()}
                               </>
                             }
                           />
                         )}
-                    </SettingsDefinitionList>
-                  </>
-                )}
+                        <SettingsDLListItem
+                          truncate
+                          term={t("Original Source")}
+                          description={
+                            <>
+                              {source?.originalSourceUrl && (
+                                <a
+                                  target="_blank"
+                                  className="text-primary-600 underline"
+                                  href={source?.originalSourceUrl}
+                                  rel="noreferrer"
+                                >
+                                  {source?.originalSourceUrl
+                                    .replace("https://", "")
+                                    .replace("http://", "")}
+                                </a>
+                              )}
+                              {source?.importType ===
+                                DataSourceImportTypes.Upload &&
+                                (source.uploadedSourceFilename || "User Upload")}
+                            </>
+                          }
+                        />
+                        {source.geostats &&
+                          source.geostats.attributes &&
+                          Array.isArray(source.geostats.attributes) && (
+                            <SettingsDLListItem
+                              term={t("Columns")}
+                              description={
+                                <>
+                                  {(
+                                    source.geostats.attributes as {
+                                      type: string;
+                                      count: number;
+                                      attribute: string;
+                                      values: any[];
+                                      max?: number;
+                                      min?: number;
+                                    }[]
+                                  )
+                                    .slice(
+                                      0,
+                                      showMoreColumns
+                                        ? source.geostats.attributes.length
+                                        : 4
+                                    )
+                                    .map((attr) => {
+                                      return (
+                                        <div className="flex">
+                                          <div className="flex-1 italic">
+                                            {attr.attribute}{" "}
+                                            {attr.values.length && (
+                                              <div
+                                                className="inline-block cursor-help"
+                                                title={attr.values.join("\n")}
+                                              >
+                                                <DotsHorizontalIcon className="w-4 h-4 inline-block text-gray-500" />
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="font-mono px-2">
+                                            {attr.type}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  {showMoreColumns === false &&
+                                    source.geostats.attributes.length > 4 && (
+                                      <button
+                                        className="underline py-1 text-primary-500"
+                                        onClick={() => setShowMoreColums(true)}
+                                      >
+                                        <Trans ns="admin:data">
+                                          Show{" "}
+                                          {(
+                                            source.geostats.attributes.length - 4
+                                          ).toString()}{" "}
+                                          more
+                                        </Trans>
+                                      </button>
+                                    )}
+                                </>
+                              }
+                            />
+                          )}
+                      </SettingsDefinitionList>
+                    </>
+                  )}
                 {source?.type === DataSourceTypes.ArcgisVector && (
                   <>
                     <SettingsDefinitionList>
@@ -783,6 +783,7 @@ export default function LayerTableOfContentsItemEditor(
                   id={layer.interactivitySettingsId}
                   dataSourceId={layer.dataSourceId}
                   sublayer={layer.sublayer}
+                  geostats={source.geostats}
                 />
               )}
             {source &&
@@ -894,11 +895,11 @@ export default function LayerTableOfContentsItemEditor(
                   bounds={
                     item.bounds
                       ? (item.bounds.map((b) => parseFloat(b)) as [
-                          number,
-                          number,
-                          number,
-                          number
-                        ])
+                        number,
+                        number,
+                        number,
+                        number
+                      ])
                       : undefined
                   }
                 />
