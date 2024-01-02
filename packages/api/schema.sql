@@ -445,7 +445,8 @@ CREATE TYPE public.interactivity_type AS ENUM (
     'POPUP',
     'FIXED_BLOCK',
     'NONE',
-    'ALL_PROPERTIES_POPUP'
+    'ALL_PROPERTIES_POPUP',
+    'SIDEBAR_OVERLAY'
 );
 
 
@@ -8060,6 +8061,23 @@ COMMENT ON FUNCTION public.has_session() IS '@omit';
 
 
 --
+-- Name: id_lookup_get_key(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.id_lookup_get_key(key integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    begin
+      if lookup is null then
+        raise exception 'lookup is null';
+      else
+        return (lookup->key)::int;
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: id_lookup_get_key(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -14197,7 +14215,8 @@ CREATE TABLE public.interactivity_settings (
     short_template text,
     long_template text,
     cursor public.cursor_type DEFAULT 'AUTO'::public.cursor_type NOT NULL,
-    layers text[]
+    layers text[],
+    title text DEFAULT ''::text NOT NULL
 );
 
 
@@ -22890,6 +22909,13 @@ REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION id_lookup_get_key(key integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.id_lookup_get_key(key integer) FROM PUBLIC;
 
 
 --

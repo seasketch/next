@@ -6535,6 +6535,7 @@ type InteractivitySetting implements Node {
   """
   nodeId: ID!
   shortTemplate: String
+  title: String!
   type: InteractivityType!
 }
 
@@ -6550,6 +6551,7 @@ input InteractivitySettingInput {
   layers: [String]
   longTemplate: String
   shortTemplate: String
+  title: String
   type: InteractivityType
 }
 
@@ -6567,6 +6569,7 @@ input InteractivitySettingPatch {
   layers: [String]
   longTemplate: String
   shortTemplate: String
+  title: String
   type: InteractivityType
 }
 
@@ -6576,6 +6579,7 @@ enum InteractivityType {
   FIXED_BLOCK
   NONE
   POPUP
+  SIDEBAR_OVERLAY
   TOOLTIP
 }
 
