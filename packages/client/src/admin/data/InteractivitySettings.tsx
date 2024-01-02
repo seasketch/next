@@ -38,7 +38,6 @@ export default function InteractivitySettings({
   basemap?: BasemapDetailsFragment;
   geostats?: GeostatsLayer;
 }) {
-  console.log('geostats', geostats, basemap);
   const { t } = useTranslation("admin");
   const { data, loading } = useInteractivitySettingsByIdQuery({
     variables: {
@@ -100,7 +99,6 @@ export default function InteractivitySettings({
   }
 
   const sanitizeTemplate = (propName: "longTemplate" | "shortTemplate" | "title") => {
-    console.log('sanitize', propName);
     if (propName === "title") {
       setTitle(title || "");
     }
