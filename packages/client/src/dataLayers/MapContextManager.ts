@@ -2533,19 +2533,19 @@ class MapContextManager extends EventEmitter {
       offlineTileSimulatorActive: true,
     }));
     this.updateStyle();
-    // Using a bunch of undocumented private apis here. See:
-    // https://github.com/mapbox/mapbox-gl-js/issues/2633#issuecomment-518622682
-    // TODO: This seems to be out of date with new version of mapbox-gl-js
+    // Using a bunch of undocumented private apis here to reset tile caches.
+    // See:
+    // https://github.com/mapbox/mapbox-gl-js/issues/2633#issuecomment-576050636
     // @ts-ignore
     const sourceCaches = this.map?.style?._sourceCaches;
     await window.caches.delete("mapbox-tiles");
     if (sourceCaches) {
-      // const cache = sourceCaches["other:composite"];
-      for (const cache of Object.values(sourceCaches)) {
-        // @ts-ignore
-        cache.clearTiles();
-        // @ts-ignore
-        cache.update(this.map.transform);
+      for (const cache of Object.values(sourceCaches) as any[]) {
+        for (const id in cache._tiles) {
+          cache._tiles[id].expirationTime = Date.now() - 1;
+          cache._reloadTile(id, "reloading");
+        }
+        cache._cache.reset();
       }
       this.map?.triggerRepaint();
       this.map?.resize();

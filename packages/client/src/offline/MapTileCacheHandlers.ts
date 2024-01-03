@@ -19,11 +19,13 @@ export function handleSimulatorRequest(
       if (inCache) {
         return fetch(realUrl);
       } else {
-        return new Response("", { status: 500 });
+        return new Response("Offline tile similator. Tile not in cache.", {
+          status: 500,
+        });
       }
     });
   } else {
-    return fetch(event.request).catch((e) => {
+    return fetch(realUrl).catch((e) => {
       return new Response(e.toString(), { status: 500 });
     });
   }
