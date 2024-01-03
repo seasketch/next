@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import RadioGroup from "../../components/RadioGroup";
 import Spinner from "../../components/Spinner";
@@ -19,6 +19,7 @@ import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
 import SetBasemapInteractivityLayers from "./SetBasemapInteractivityLayers";
 import { GeostatsLayer } from "./GLStyleEditor/extensions/glStyleAutocomplete";
+import { MapContext } from "../../dataLayers/MapContextManager";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -274,6 +275,9 @@ export default function InteractivitySettings({
                   onChange={(value) => setLongTemplate(value)}
                   attributeNames={attributeNames}
                   geostats={geostats}
+                  layers={data.interactivitySetting?.layers as string[]}
+                  onSelectLayers={() => setPickLayersOpen(true)}
+                  basemap={basemap}
                 />
               </div>}</>,
             },
@@ -303,6 +307,27 @@ function TemplateEditor(props: {
 }) {
   const { t } = useTranslation("admin");
   const onSave = () => props.onSave(props.propName);
+  const mapContext = useContext(MapContext);
+
+  const attributes = useMemo(() => {
+    if (props.geostats) {
+      return props.geostats.attributes;
+    }
+    if (props.basemap && props.layers && mapContext.manager?.map) {
+      const features = mapContext.manager?.map.queryRenderedFeatures(undefined, {
+        layers: [props.layers[0]],
+      });
+      if (features && features.length > 0) {
+        const feature = features[0];
+        const props = Object.keys(feature.properties || {});
+        return props;
+      }
+    }
+    return [];
+
+  }, [props.geostats, props.layers, mapContext.manager?.map, props.basemap]);
+
+
   if (props.selectedType === props.type) {
     return (
       <div className="mt-1">
@@ -322,17 +347,16 @@ function TemplateEditor(props: {
           onChange={(editor, data, value) => { }}
         />
         <Button small label={t("save")} onClick={onSave} />
-        {props.geostats && (props.propName === "longTemplate") && (
+        {props.propName === "longTemplate" && attributes.length > 0 && (
           <Button className="ml-1" small label={t("insert property list")} onClick={() => {
             const value = props.templateValue || "";
-            const attributes = props.geostats?.attributes || [];
             const newValue = value + `
 <h2>Properties</h2>
 <dl>
-${attributes.map((prop) => {
+${attributes.map((attr) => {
               return `  <div>
-    <dt>${prop.attribute}</dt>
-    <dd>{{${prop.attribute}}}</dd>
+    <dt>${attr}</dt>
+    <dd>{{${attr}}}</dd>
   </div>                
 `;
             }).join("")}
