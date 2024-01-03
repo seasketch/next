@@ -332,7 +332,7 @@ function TemplateEditor(props: {
     return (
       <div className="mt-1">
         <CodeMirror.Controlled
-          className="border my-2 w-96"
+          className="border my-2 w-96 max-h-160 overflow-y-auto"
           value={props.templateValue || ""}
           options={{
             mode: { name: "handlebars", base: "text/html" },
