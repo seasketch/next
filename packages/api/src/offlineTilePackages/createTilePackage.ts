@@ -236,7 +236,7 @@ export async function createTilePackage(packageId: string, client: DBClient) {
             } else {
               if (response.status < 500) {
                 failuresWithoutSuccess++;
-                if (failuresWithoutSuccess > 2000) {
+                if (failuresWithoutSuccess > 4000) {
                   throw new Error(
                     `Failed to retrieve tiles ${failuresWithoutSuccess} times without any successes. Last message = ${await response.text()}. Last url = ${url}`
                   );
