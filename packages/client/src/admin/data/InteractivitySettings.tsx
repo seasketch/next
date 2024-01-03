@@ -311,7 +311,7 @@ function TemplateEditor(props: {
 
   const attributes = useMemo(() => {
     if (props.geostats) {
-      return props.geostats.attributes;
+      return props.geostats.attributes.map((a) => a.attribute);
     }
     if (props.basemap && props.layers && mapContext.manager?.map) {
       const features = mapContext.manager?.map.queryRenderedFeatures(undefined, {
