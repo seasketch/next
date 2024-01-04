@@ -417,7 +417,7 @@ export default class LayerInteractivityManager extends EventEmitter {
           if (idProperty) {
             this._setHighlightedLayer(top.layer.id, [
               "==",
-              idProperty,
+              ["get", idProperty],
               top.properties![idProperty],
             ] as FilterOptions);
           } else {
@@ -761,6 +761,35 @@ export default class LayerInteractivityManager extends EventEmitter {
           case InteractivityType.AllPropertiesPopup:
           case InteractivityType.SidebarOverlay:
             cursor = "pointer";
+            if (
+              interactivitySetting.type === InteractivityType.SidebarOverlay &&
+              interactivitySetting.title?.length
+            ) {
+              tooltip = {
+                x: e.originalEvent.x,
+                y: e.originalEvent.y,
+                messages: [
+                  Mustache.render(interactivitySetting.title, {
+                    ...mustacheHelpers,
+                    ...(top.properties || {}),
+                  }) +
+                    // eslint-disable-next-line i18next/no-literal-string
+                    `<span class="font-italics text-xs">${`<svg class="inline-block" width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+                    <g class="layer">
+                     <title>Layer 1</title>
+                     
+                     <ellipse cx="12.55" cy="13.5" fill="#ffffff" id="svg_2" rx="3.45" ry="3.35" stroke="#ffffff"/>
+                     <ellipse cx="10.6" cy="8.59" fill="#ffffff" id="svg_6" rx="3.2" ry="3.26" stroke="#000000" stroke-opacity="0.55" stroke-width="0.7"/>
+                     <ellipse cx="11.7" cy="11.87" fill="#ffffff" id="svg_8" rx="2.85" ry="2.77" stroke="#ffffff"/>
+                     <g id="svg_7">
+                      <path clip-rule="evenodd" d="m10.29,8.05c0.18,-0.08 0.39,-0.05 0.54,0.08l9.03,7.82c0.15,0.13 0.21,0.35 0.14,0.54c-0.06,0.2 -0.24,0.33 -0.45,0.34l-3.33,0.14l1.93,4.25c0.11,0.25 0,0.55 -0.25,0.66l-2.15,0.98c-0.25,0.12 -0.55,0 -0.66,-0.25l-1.94,-4.24l-2.29,2.42c-0.14,0.14 -0.36,0.19 -0.55,0.12c-0.19,-0.08 -0.31,-0.26 -0.31,-0.47l0,-11.94c0,-0.19 0.11,-0.37 0.29,-0.45zm0.71,1.55l0,9.59l1.94,-2.05c0.11,-0.12 0.28,-0.17 0.44,-0.14c0.17,0.02 0.31,0.13 0.38,0.28l2.03,4.46l1.24,-0.56l-2.03,-4.47c-0.07,-0.15 -0.06,-0.32 0.03,-0.46c0.09,-0.15 0.24,-0.23 0.41,-0.24l2.81,-0.13l-7.25,-6.28z" fill="currentColor" fill-rule="evenodd" stroke-opacity="1" id="svg_1"/>
+                      <path d="m10.9,9.15l0.1,7.95l6.1,-2.2l-6.2,-5.75z" fill="#ffffff" id="svg_4"/>
+                     </g>
+                    </g>
+                   </svg>`}</span>`,
+                ],
+              };
+            }
             break;
           case InteractivityType.FixedBlock:
             cursor = "pointer";
@@ -784,9 +813,7 @@ export default class LayerInteractivityManager extends EventEmitter {
           (interactivitySetting.type === InteractivityType.Banner ||
             interactivitySetting.type === InteractivityType.FixedBlock ||
             interactivitySetting.type === InteractivityType.Popup ||
-            interactivitySetting.type ===
-              InteractivityType.AllPropertiesPopup ||
-            interactivitySetting.type === InteractivityType.SidebarOverlay)
+            interactivitySetting.type === InteractivityType.AllPropertiesPopup)
         ) {
           // Don't waste cycles on a state update
         } else {
@@ -855,6 +882,7 @@ const orderedPotentialIdProperties = [
   "FID",
   "fid",
   "OBJECT_ID",
+  "ISO_SOV1",
 ];
 
 function getIdProperty(properties: GeoJsonProperties) {
