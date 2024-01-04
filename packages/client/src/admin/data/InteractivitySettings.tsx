@@ -169,6 +169,8 @@ export default function InteractivitySettings({
                         basemap={basemap}
                         layers={data.interactivitySetting?.layers as string[]}
                         onSelectLayers={() => setPickLayersOpen(true)}
+                        geostats={geostats}
+
                       />
                     </>
                   ),
@@ -191,6 +193,8 @@ export default function InteractivitySettings({
                         basemap={basemap}
                         layers={data.interactivitySetting?.layers as string[]}
                         onSelectLayers={() => setPickLayersOpen(true)}
+                        geostats={geostats}
+
                       />
                     </>
                   ),
@@ -313,6 +317,9 @@ function TemplateEditor(props: {
     if (props.geostats) {
       return props.geostats.attributes.map((a) => a.attribute);
     }
+    if (props.attributeNames.length > 0) {
+      return props.attributeNames;
+    }
     if (props.basemap && props.layers && mapContext.manager?.map) {
       const features = mapContext.manager?.map.queryRenderedFeatures(undefined, {
         layers: [props.layers[0]],
@@ -325,8 +332,7 @@ function TemplateEditor(props: {
     }
     return [];
 
-  }, [props.geostats, props.layers, mapContext.manager?.map, props.basemap]);
-
+  }, [props.geostats, props.layers, mapContext.manager?.map, props.basemap, props.attributeNames]);
 
   if (props.selectedType === props.type) {
     return (
@@ -376,7 +382,7 @@ ${attributes.map((attr) => {
           />
         )}
         <div className="w-96 mt-2">
-          {props.attributeNames.map((attr) => (
+          {attributes.map((attr) => (
             <span
               key={attr}
               className="float-left px-1 text-sm rounded font-mono bg-blue-50 bg-opacity-50 border-gray-500  border m-1"
@@ -385,6 +391,7 @@ ${attributes.map((attr) => {
             </span>
           ))}
         </div>
+        <div className="clear-both" />
       </div>
     );
   } else {
