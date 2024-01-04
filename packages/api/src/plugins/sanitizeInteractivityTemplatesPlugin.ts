@@ -48,7 +48,7 @@ function sanitizeInput(input: string) {
   input = sanitizeHtml(input, {
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
-      "*": ["style"],
+      "*": ["style", "class"],
     },
   });
   return input;
