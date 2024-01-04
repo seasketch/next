@@ -93,7 +93,7 @@ export default function InteractivitySettings({
     input = sanitizeHtml(input, {
       allowedAttributes: {
         ...sanitizeHtml.defaults.allowedAttributes,
-        "*": ["style"],
+        "*": ["style", "class"],
       },
     });
     return input;
@@ -282,6 +282,19 @@ export default function InteractivitySettings({
                   layers={data.interactivitySetting?.layers as string[]}
                   onSelectLayers={() => setPickLayersOpen(true)}
                   basemap={basemap}
+                />
+                <h4 className="mt-4 text-sm font-normal">{t("Tooltip (optional)")}</h4><p className="text-sm text-gray-500">{t("If set, a tooltip will appear as a preview before the user clicks on a feature to show the full sidebar.")}</p>
+                <TemplateEditor
+                  type={InteractivityType.Tooltip}
+                  selectedType={InteractivityType.Tooltip}
+                  propName={"shortTemplate"}
+                  templateValue={shortTemplate || undefined}
+                  onSave={sanitizeTemplate}
+                  onChange={(value) => setShortTemplate(value)}
+                  attributeNames={[]}
+                  basemap={basemap}
+                // geostats={geostats}
+
                 />
               </div>}</>,
             },
