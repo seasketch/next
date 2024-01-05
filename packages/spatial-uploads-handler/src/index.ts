@@ -684,6 +684,7 @@ export default async function handleUpload(
               "-n",
               `"${originalName}"`,
               "-zg",
+              "--generate-ids",
               "--drop-densest-as-needed",
               "-l",
               `${originalName}`,
