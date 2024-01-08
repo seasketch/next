@@ -219,7 +219,7 @@ const BasemapOfflineDetailsPlugin = makeExtendSchemaPlugin((build) => {
                 .glyphs!.replace("{fontstack}", stack)
                 .replace("{range}", "0-255");
               if (/^mapbox:/.test(style.glyphs!)) {
-                url = `https://api.mapbox.com/fonts/v1/mapbox/${encodeURIComponent(
+                url = `https://api.mapbox.com/fonts/v1/mapbox/${encodeURI(
                   stack
                 )}/0-255.pbf?access_token=${apiKey}`;
               }
