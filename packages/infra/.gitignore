@@ -8,3 +8,5 @@ node_modules
 cdk.out
 github_key*
 .env
+./cdk.context.json
+./cdk.json
