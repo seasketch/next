@@ -11,7 +11,7 @@ import {
 } from "../../generated/graphql";
 import { Trans, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { useCallback, useContext, useEffect, useState, useMemo } from "react";
+import { useCallback, useContext, useEffect, useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
 import getSlug from "../../getSlug";
@@ -96,6 +96,8 @@ export default function SketchEditorModal({
   //   sketchClass.form?.formElements,
   //   mapContext.manager,
   // ]);
+
+  const scrollableAreaRef = useRef<HTMLDivElement>(null);
 
   const formElements = useMemo(() => {
     const elements = sketchClass.form?.formElements || [];
@@ -211,11 +213,11 @@ export default function SketchEditorModal({
         animate: true,
         padding: true // sidebarInfo.open
           ? {
-              top: 150,
-              bottom: 150,
-              right: 150,
-              left: sidebarInfo.width + 50,
-            }
+            top: 150,
+            bottom: 150,
+            right: 150,
+            left: sidebarInfo.width + 50,
+          }
           : 150,
       });
     }
@@ -285,6 +287,16 @@ export default function SketchEditorModal({
     }
   }, [sketch, setFeature, startingProperties]);
 
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollableAreaRef.current) {
+      const area = scrollableAreaRef.current;
+      setTimeout(() => {
+        area.scrollTop = area.scrollHeight;
+      }, 100);
+    }
+  }, [scrollableAreaRef])
+
   useEffect(() => {
     if (sketch) {
       draw.actions.clearSelection();
@@ -314,6 +326,7 @@ export default function SketchEditorModal({
       draw.selfIntersects ||
       draw.digitizingState === DigitizingState.PREPROCESSING_ERROR
     ) {
+      scrollToBottom();
       setGeometryErrors(t("You must fix problems with your geometry first"));
       return;
     }
@@ -322,11 +335,13 @@ export default function SketchEditorModal({
       !feature &&
       sketchClass.geometryType !== SketchGeometryType.Collection
     ) {
+      scrollToBottom();
       setGeometryErrors(t("You must finish your geometry first"));
       return;
     }
 
     if (draw.digitizingState === DigitizingState.PREPROCESSING) {
+      scrollToBottom();
       setGeometryErrors(t("Wait until processing is complete"));
       return;
     }
@@ -341,12 +356,14 @@ export default function SketchEditorModal({
         sketchClass.geometryType !== SketchGeometryType.Collection &&
         draw.digitizingState !== DigitizingState.NO_SELECTION
       ) {
+        scrollToBottom();
         setGeometryErrors(t("Please complete your geometry first"));
         return;
       }
     }
 
     if (hasValidationErrors) {
+      scrollToBottom();
       return;
     }
 
@@ -373,16 +390,16 @@ export default function SketchEditorModal({
       const response = await updateSketch({
         variables: geometryChanged
           ? {
-              name,
-              userGeom: feature,
-              properties,
-              id: sketch.id,
-            }
+            name,
+            userGeom: feature,
+            properties,
+            id: sketch.id,
+          }
           : {
-              name,
-              properties,
-              id: sketch.id,
-            },
+            name,
+            properties,
+            id: sketch.id,
+          },
       });
       data = response.data?.updateSketch || undefined;
     } else {
@@ -445,6 +462,7 @@ export default function SketchEditorModal({
     hasValidationErrors,
     sketchClass.preprocessingEndpoint,
     collectionId,
+    scrollToBottom
   ]);
 
   useEffect(() => {
@@ -541,6 +559,7 @@ export default function SketchEditorModal({
               <div
                 className="p-4 pt-0 flex-1 overflow-y-auto SketchForm"
                 dir="ltr"
+                ref={scrollableAreaRef}
               >
                 <FormElementLayoutContext.Provider
                   value={{
@@ -633,7 +652,7 @@ export default function SketchEditorModal({
               onRequestFinishEditing={draw.actions.finishEditing}
               geometryType={sketchClass.geometryType}
               state={draw.digitizingState}
-              onRequestSubmit={() => {}}
+              onRequestSubmit={() => { }}
               onRequestDelete={() => {
                 confirmDelete({
                   message: t("Delete Geometry"),
