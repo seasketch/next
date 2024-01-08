@@ -179,28 +179,29 @@ export function findGetExpression(
   if (!isExpression(expression)) {
     return null;
   }
-  if (isFilter && !parent) {
-    // check for legacy filter type
-    if (
-      typeof expression[1] === "string" &&
-      !/\$/.test(expression[1]) &&
-      expression[1] !== "zoom"
-    ) {
-      return {
-        type: "legacy",
-        property: expression[1],
-      };
-    }
-  }
   if (expression[0] === "get") {
     return { type: "get", property: expression[1] };
   } else {
-    for (const arg of expression.slice(1)) {
-      if (isExpression(arg)) {
-        const found = findGetExpression(arg, isFilter, expression);
-        if (found !== null) {
-          return found;
-        }
+    if (isFilter) {
+      // check for legacy filter type
+      if (
+        typeof expression[1] === "string" &&
+        !/\$/.test(expression[1]) &&
+        expression[1] !== "zoom"
+      ) {
+        return {
+          type: "legacy",
+          property: expression[1],
+        };
+      }
+    }
+  }
+
+  for (const arg of expression.slice(1)) {
+    if (isExpression(arg)) {
+      const found = findGetExpression(arg, isFilter, expression);
+      if (found !== null) {
+        return found;
       }
     }
   }

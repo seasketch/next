@@ -12,8 +12,6 @@ import mapboxgl, {
   AnyLayer,
   Sources,
   GeoJSONSource,
-  FilterOptions,
-  LineLayer,
 } from "mapbox-gl";
 import {
   createContext,
@@ -30,6 +28,7 @@ import {
   DataLayerDetailsFragment,
   DataSourceDetailsFragment,
   DataSourceTypes,
+  InteractivityType,
   MapBookmarkDetailsFragment,
   OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
@@ -67,9 +66,7 @@ import {
 import { OrderedLayerSettings } from "@seasketch/mapbox-gl-esri-sources/dist/src/CustomGLSource";
 import { isArcGISDynamicMapService } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISDynamicMapService";
 import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
-
-const CROSSHAIR_IMAGE = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAEhJREFUKJHlkLENwEAMAiH7T+AMe2k+LX75ixRBokInbAxoqmtMdrDtink62zaAR82dvoMFaP1dkthwvcwfB+vgO4VxsNPmqAd8/ytkrmseVgAAAABJRU5ErkJggg==`;
-export const CROSSHAIR_IMAGE_ID = "_ssn_crosshair";
+import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -153,7 +150,6 @@ export interface LayerState {
 export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
 }
-export const POPUP_CLICK_LOCATION_SOURCE = "popup-click-location";
 class MapContextManager extends EventEmitter {
   map?: Map;
   interactivityManager?: LayerInteractivityManager;
@@ -417,8 +413,7 @@ class MapContextManager extends EventEmitter {
 
     this.interactivityManager = new LayerInteractivityManager(
       this.map,
-      this.setState,
-      this.setHighlightedLayer
+      this.setState
     );
 
     this.interactivityManager.setVisibleLayers(
@@ -440,13 +435,6 @@ class MapContextManager extends EventEmitter {
     this.map.on("moveend", this.onMapMove);
     this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", () => {
-      this.map?.loadImage(CROSSHAIR_IMAGE, (error, image) => {
-        if (error) {
-          console.error(error);
-        } else if (image && this.map) {
-          this.map.addImage(CROSSHAIR_IMAGE_ID, image, { pixelRatio: 2 });
-        }
-      });
       this.mapIsLoaded = true;
       // Use to trigger changes to mapContextManager.map
       this.setState((prev) => ({ ...prev }));
@@ -1275,21 +1263,6 @@ class MapContextManager extends EventEmitter {
     );
     baseStyle.sources = baseStyle.sources || {};
 
-    let existingPopupClickLocationSource =
-      existingStyle?.sources[POPUP_CLICK_LOCATION_SOURCE];
-    if (existingPopupClickLocationSource) {
-      baseStyle.sources[POPUP_CLICK_LOCATION_SOURCE] =
-        existingPopupClickLocationSource as GeoJSONSource;
-    } else {
-      baseStyle.sources[POPUP_CLICK_LOCATION_SOURCE] = {
-        type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: [],
-        },
-      };
-    }
-
     baseStyle.layers = baseStyle.layers || [];
     if (labelsLayerIndex === -1) {
       labelsLayerIndex = baseStyle.layers.length;
@@ -1453,7 +1426,19 @@ class MapContextManager extends EventEmitter {
                           styleData.imageList.addToMap(this.map);
                         }
                         const layers = isUnderLabels ? underLabels : overLabels;
-                        layers.push(...styleData.layers);
+                        if (
+                          layer.interactivitySettings &&
+                          layer.interactivitySettings.type ===
+                            InteractivityType.SidebarOverlay
+                        ) {
+                          layers.push(
+                            ...addInteractivityExpressions(
+                              styleData.layers as AnyLayer[]
+                            )
+                          );
+                        } else {
+                          layers.push(...styleData.layers);
+                        }
                       } else {
                         setTimeout(() => {
                           this.debouncedUpdateStyle();
@@ -1480,27 +1465,28 @@ class MapContextManager extends EventEmitter {
                   source.type === DataSourceTypes.SeasketchMvt) &&
                 layer.mapboxGlStyles?.length
               ) {
-                for (let i = 0; i < layer.mapboxGlStyles.length; i++) {
-                  const layers = isUnderLabels ? underLabels : overLabels;
-                  if (
-                    source.type === DataSourceTypes.SeasketchMvt ||
-                    source.type === DataSourceTypes.Vector ||
-                    source.type === DataSourceTypes.SeasketchRaster
-                  ) {
-                    layers.push({
-                      ...layer.mapboxGlStyles[i],
-                      source: source.id.toString(),
-                      id: idForLayer(layer, i),
-                      "source-layer": layer.sourceLayer,
-                    });
-                  } else {
-                    layers.push({
-                      ...layer.mapboxGlStyles[i],
-                      source: source.id.toString(),
-                      id: idForLayer(layer, i),
-                    });
-                  }
+                const shouldHaveSourceLayer =
+                  source.type === DataSourceTypes.SeasketchMvt ||
+                  source.type === DataSourceTypes.Vector ||
+                  source.type === DataSourceTypes.SeasketchRaster;
+                let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {
+                  return {
+                    ...lyr,
+                    source: source.id.toString(),
+                    id: idForLayer(layer, i),
+                    ...(shouldHaveSourceLayer
+                      ? { "source-layer": layer.sourceLayer }
+                      : {}),
+                  } as AnyLayer;
+                });
+                const layers = isUnderLabels ? underLabels : overLabels;
+                if (
+                  layer.interactivitySettings?.type ===
+                  InteractivityType.SidebarOverlay
+                ) {
+                  glLayers = addInteractivityExpressions(glLayers);
                 }
+                layers.push(...glLayers);
               } else if (isCustomSourceType(source.type) && layer.sublayer) {
                 // Add sublayer info if needed
                 if (!Array.isArray(this.customSources[source.id].sublayers)) {
@@ -1554,81 +1540,7 @@ class MapContextManager extends EventEmitter {
       ...overLabels,
       ...this.dynamicLayers,
       ...glDrawLayers,
-      {
-        id: "sidebar-popup-click-location",
-        type: "symbol",
-        source: POPUP_CLICK_LOCATION_SOURCE,
-        paint: {
-          "icon-translate-transition": {
-            duration: 0,
-          },
-          "icon-opacity-transition": {
-            duration: 0,
-            delay: 0,
-          },
-        },
-        layout: {
-          "icon-image": CROSSHAIR_IMAGE_ID,
-          "icon-size": 2,
-          "icon-ignore-placement": true,
-          "icon-allow-overlap": true,
-        },
-      },
     ];
-
-    // TODO: implement layer highlighting in a more general way
-    // console.log("highlighted layer", this.highlightedLayer);
-    // if (this.highlightedLayer?.layerId && this.highlightedLayer.filter) {
-    //   // highlight a feature in this layer
-    //   const layer = baseStyle.layers.find(
-    //     (l) => l.id === this.highlightedLayer!.layerId
-    //   );
-    //   if (layer) {
-    //     switch (layer.type) {
-    //       case "fill":
-    //       case "line":
-    //         // console.log("found layer to highlight", layer);
-    //         const h = {
-    //           id: "highlighted-feature",
-    //           type: "line",
-    //           source: layer.source,
-    //           ...(layer["source-layer"]
-    //             ? { "source-layer": layer["source-layer"] }
-    //             : {}),
-    //           // @ts-ignore
-    //           filter: this.highlightedLayer.filter as FilterOptions,
-    //           paint: {
-    //             "line-color": "rgba(255, 255,255, 1.0)",
-    //             "line-width": 1,
-    //             // "line-gap-width": 2,
-    //             "line-offset": -1,
-    //           },
-    //           layout: {
-    //             "line-join": "round",
-    //           },
-    //         };
-    //         // console.log(h);
-    //         baseStyle.layers.push(h as LineLayer);
-    //         break;
-    //       case "symbol":
-    //         // in the original layer, set the visibility to none where the
-    //         // filter matches, then
-    //         // layer.layout = {
-    //         //   ...layer.layout,
-    //         //   // @ts-ignore
-    //         //   visibility: [
-    //         //     this.highlightedLayer.filter as FilterOptions,
-    //         //     "none",
-    //         //     layer.layout?.visibility || "visible",
-    //         //   ],
-    //         // };
-    //         // console.log(layer);
-    //         break;
-    //       default: {
-    //       }
-    //     }
-    //   }
-    // }
 
     // Evaluate any basemap optional layers
     // value is whether to toggle
@@ -2034,21 +1946,6 @@ class MapContextManager extends EventEmitter {
     trailing: true,
     maxWait: 100,
   });
-
-  private highlightedLayer: { layerId: string; filter?: FilterOptions } | null =
-    null;
-
-  setHighlightedLayer = (
-    layerId: string | undefined,
-    filter?: FilterOptions
-  ) => {
-    if (!layerId) {
-      this.highlightedLayer = null;
-    } else {
-      this.highlightedLayer = { layerId, filter };
-    }
-    this.debouncedUpdateStyle();
-  };
 
   private tocItemLabels: { [id: string]: string } = {};
 

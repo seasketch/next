@@ -1,6 +1,4 @@
-import {
-  FilterOptions,
-  GeoJSONSource,
+import mapboxgl, {
   Layer,
   Map,
   MapboxGeoJSONFeature,
@@ -8,12 +6,10 @@ import {
   Popup,
 } from "mapbox-gl";
 import {
-  CROSSHAIR_IMAGE_ID,
   idForLayer,
   isSeaSketchLayerId,
   layerIdFromStyleLayerId,
   MapContextInterface,
-  POPUP_CLICK_LOCATION_SOURCE,
   Tooltip,
 } from "./MapContextManager";
 import Mustache from "mustache";
@@ -25,14 +21,9 @@ import {
   DataSourceTypes,
   InteractivityType,
 } from "../generated/graphql";
-import // getDynamicArcGISStyle,
-// identifyLayers,
-"../admin/data/arcgis/arcgis";
 import { EventEmitter } from "eventemitter3";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 import { identifyLayers } from "../admin/data/arcgis/arcgis";
-import { EMPTY_FEATURE_COLLECTION } from "../draw/useMapboxGLDraw";
-import { GeoJsonProperties } from "geojson";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
@@ -48,10 +39,6 @@ const PopupNumberFormatter = Intl.NumberFormat(undefined, {
 export default class LayerInteractivityManager extends EventEmitter {
   private map: Map;
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
-  private _setHighlightedLayer: (
-    layerId: string | undefined,
-    filter?: FilterOptions
-  ) => void;
   private previousState?: MapContextInterface;
 
   /** List of interactive layers that are currently shown on the map. Update with setVisibleLayers() */
@@ -71,6 +58,8 @@ export default class LayerInteractivityManager extends EventEmitter {
   private focusedSketchId?: number;
   private customSources: { [sourceId: string]: CustomGLSource<any> } = {};
   private tocItemLabels: { [stableId: string]: string } = {};
+  private selectedFeature?: mapboxgl.FeatureIdentifier;
+  private hoveredFeature?: mapboxgl.FeatureIdentifier;
 
   /**
    *
@@ -80,17 +69,12 @@ export default class LayerInteractivityManager extends EventEmitter {
    */
   constructor(
     map: Map,
-    setState: Dispatch<SetStateAction<MapContextInterface>>,
-    setHighlightedLayer: (
-      layerId: string | undefined,
-      filter?: FilterOptions
-    ) => void
+    setState: Dispatch<SetStateAction<MapContextInterface>>
   ) {
     super();
     this.map = map;
     this.registerEventListeners(map);
     this._setState = setState;
-    this._setHighlightedLayer = setHighlightedLayer;
   }
 
   /**
@@ -312,6 +296,17 @@ export default class LayerInteractivityManager extends EventEmitter {
     if (this.paused) {
       return;
     }
+    if (this.hoveredFeature) {
+      this.map.setFeatureState(this.hoveredFeature, {
+        hovered: false,
+        selected:
+          this.selectedFeature &&
+          this.selectedFeature?.id === this.hoveredFeature?.id &&
+          this.selectedFeature?.source === this.hoveredFeature?.source &&
+          this.selectedFeature?.sourceLayer ===
+            this.hoveredFeature?.sourceLayer,
+      });
+    }
     setTimeout(() => {
       delete this.previousInteractionTarget;
       this.setState((prev) => ({
@@ -374,10 +369,6 @@ export default class LayerInteractivityManager extends EventEmitter {
           }
         );
         if (interactivitySetting.type === InteractivityType.Popup) {
-          const popupSource = this.map.getSource(
-            POPUP_CLICK_LOCATION_SOURCE
-          ) as GeoJSONSource;
-          popupSource?.setData(EMPTY_FEATURE_COLLECTION);
           this.setState((prev) => ({
             ...prev,
             sidebarPopupContent: undefined,
@@ -388,19 +379,6 @@ export default class LayerInteractivityManager extends EventEmitter {
             .setHTML(content)
             .addTo(this.map!);
         } else {
-          if (this.map) {
-            const popupSource = this.map.getSource(
-              POPUP_CLICK_LOCATION_SOURCE
-            ) as GeoJSONSource;
-            popupSource.setData({
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "Point",
-                coordinates: [e.lngLat.lng, e.lngLat.lat],
-              },
-            });
-          }
           const titleContent = Mustache.render(
             interactivitySetting.title || "",
             {
@@ -413,16 +391,7 @@ export default class LayerInteractivityManager extends EventEmitter {
             sidebarPopupContent: content,
             sidebarPopupTitle: titleContent,
           }));
-          const idProperty = getIdProperty(top.properties);
-          if (idProperty) {
-            this._setHighlightedLayer(top.layer.id, [
-              "==",
-              ["get", idProperty],
-              top.properties![idProperty],
-            ] as FilterOptions);
-          } else {
-            this._setHighlightedLayer(undefined);
-          }
+          this.setSelectedFeature(top);
         }
       } else if (
         interactivitySetting &&
@@ -433,17 +402,6 @@ export default class LayerInteractivityManager extends EventEmitter {
           sidebarPopupContent: undefined,
           sidebarPopupTitle: undefined,
         }));
-        const popupSource = this.map.getSource(
-          POPUP_CLICK_LOCATION_SOURCE
-        ) as GeoJSONSource;
-        popupSource.setData({
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "Point",
-            coordinates: [e.lngLat.lng, e.lngLat.lat],
-          },
-        });
         const lyr = this.layers[top.layer.id];
         // @ts-ignore
         const layerLabel = (this.tocItemLabels || {})[lyr?.tocId];
@@ -489,18 +447,12 @@ export default class LayerInteractivityManager extends EventEmitter {
         vectorPopupOpened = true;
       }
     } else {
-      const popupSource = this.map?.getSource(POPUP_CLICK_LOCATION_SOURCE) as
-        | GeoJSONSource
-        | undefined;
-      if (popupSource) {
-        popupSource.setData(EMPTY_FEATURE_COLLECTION);
-      }
       this.setState((prev) => ({
         ...prev,
         sidebarPopupContent: undefined,
         sidebarPopupTitle: undefined,
       }));
-      this._setHighlightedLayer(undefined);
+      this.setSelectedFeature(undefined);
     }
     if (!vectorPopupOpened) {
       // Are any image layers active that support identify tools?
@@ -518,19 +470,69 @@ export default class LayerInteractivityManager extends EventEmitter {
     }
   };
 
+  setSelectedFeature(feature?: mapboxgl.FeatureIdentifier) {
+    if (this.selectedFeature?.id === feature?.id) {
+      return;
+    }
+    if (this.selectedFeature) {
+      this.map.setFeatureState(this.selectedFeature, {
+        selected: false,
+        hovered:
+          this.hoveredFeature &&
+          this.hoveredFeature?.id === this.selectedFeature?.id &&
+          this.hoveredFeature?.source === this.selectedFeature?.source &&
+          this.hoveredFeature?.sourceLayer ===
+            this.selectedFeature?.sourceLayer,
+      });
+    }
+    if (feature) {
+      this.map.setFeatureState(feature, {
+        selected: true,
+        hovered:
+          this.hoveredFeature &&
+          this.hoveredFeature?.id === feature?.id &&
+          this.hoveredFeature?.source === feature?.source &&
+          this.hoveredFeature?.sourceLayer === feature?.sourceLayer,
+      });
+    }
+    this.selectedFeature = feature;
+  }
+
+  setHoveredFeature(feature?: mapboxgl.FeatureIdentifier) {
+    if (this.hoveredFeature?.id === feature?.id) {
+      return;
+    }
+    if (this.hoveredFeature) {
+      this.map.setFeatureState(this.hoveredFeature, {
+        hovered: false,
+        selected:
+          this.selectedFeature &&
+          this.selectedFeature?.id === this.hoveredFeature?.id &&
+          this.selectedFeature?.source === this.hoveredFeature?.source &&
+          this.selectedFeature?.sourceLayer ===
+            this.hoveredFeature?.sourceLayer,
+      });
+    }
+    if (feature) {
+      this.map.setFeatureState(feature, {
+        hovered: true,
+        selected:
+          this.selectedFeature &&
+          this.selectedFeature?.id === feature?.id &&
+          this.selectedFeature?.source === feature?.source &&
+          this.selectedFeature?.sourceLayer === feature?.sourceLayer,
+      });
+    }
+    this.hoveredFeature = feature;
+  }
+
   clearSidebarPopup = () => {
     this.setState((prev) => ({
       ...prev,
       sidebarPopupContent: undefined,
       sidebarPopupTitle: undefined,
     }));
-    this._setHighlightedLayer(undefined);
-    const popupSource = this.map?.getSource(POPUP_CLICK_LOCATION_SOURCE) as
-      | GeoJSONSource
-      | undefined;
-    if (popupSource) {
-      popupSource.setData(EMPTY_FEATURE_COLLECTION);
-    }
+    this.setSelectedFeature(undefined);
   };
 
   // Note, this will only work with ArcGIS Server
@@ -727,6 +729,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     });
     if (features.length && layerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
+      this.setHoveredFeature(top);
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (interactivitySetting) {
         let cursor = "";
@@ -817,6 +820,7 @@ export default class LayerInteractivityManager extends EventEmitter {
         clear();
       }
     } else {
+      this.setHoveredFeature(undefined);
       clear();
     }
   };
@@ -859,28 +863,3 @@ const mustacheHelpers = {
     return `${Math.round(parseFloat(render(text)) * 100) / 100}`;
   },
 };
-
-const orderedPotentialIdProperties = [
-  "id",
-  "ID",
-  "Id",
-  "OBJECTID",
-  "FID",
-  "fid",
-  "OBJECT_ID",
-  "ISO_SOV1",
-];
-
-function getIdProperty(properties: GeoJsonProperties) {
-  if (properties === null) {
-    return undefined;
-  }
-  let idProperty: string | undefined;
-  for (const potentialIdProperty of orderedPotentialIdProperties) {
-    if (properties[potentialIdProperty]) {
-      idProperty = potentialIdProperty;
-      break;
-    }
-  }
-  return idProperty;
-}
