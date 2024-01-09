@@ -17,7 +17,7 @@ const MapPicker: FunctionComponent<{
   return (
     <>
       <div
-        className={`MapPicker absolute flex-col flex z-50 shadow-md hover:shadow-md bg-white ${"w-auto right-2 top-5 rounded-md bg-opacity-80"}`}
+        className={`MapPicker absolute flex-col flex z-30 shadow-md hover:shadow-md bg-white ${"w-auto right-2 top-5 rounded-md bg-opacity-80"}`}
         style={{ maxHeight: isPhone ? "" : "calc(100vh - 50px)" }}
       >
         {
