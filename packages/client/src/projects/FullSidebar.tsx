@@ -404,7 +404,7 @@ export default function FullSidebar({
               <a
                 target="_blank"
                 rel="noreferrer"
-                href="https://github.com/seasketch/next/deployments"
+                href="https://github.com/seasketch/next"
               >
                 {
                   // eslint-disable-next-line i18next/no-literal-string
