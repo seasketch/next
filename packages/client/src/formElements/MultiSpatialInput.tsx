@@ -446,19 +446,19 @@ const MultiSpatialInput: FormElementComponent<
     <>
       <ResetView map={mapContext.manager?.map!} bounds={bounds} />
       {selection ||
-      (props.value?.collection &&
-        props.value.collection.features.length > 0) ? (
+        (props.value?.collection &&
+          props.value.collection.features.length > 0) ? (
         <ZoomToFeature
           map={mapContext.manager?.map!}
           feature={
             selection
               ? selection
               : {
-                  ...EMPTY_FEATURE_COLLECTION,
-                  features: (
-                    props.value?.collection || EMPTY_FEATURE_COLLECTION
-                  ).features,
-                }
+                ...EMPTY_FEATURE_COLLECTION,
+                features: (
+                  props.value?.collection || EMPTY_FEATURE_COLLECTION
+                ).features,
+              }
           }
           isSmall={style.isSmall}
           geometryType={props.sketchClass!.geometryType}
@@ -506,8 +506,8 @@ const MultiSpatialInput: FormElementComponent<
                   isSmall && stage === STAGES.SHAPE_EDITOR
                     ? { duration: 0 }
                     : {
-                        duration: 0.3,
-                      },
+                      duration: 0.3,
+                    },
               };
             },
             enter: ({ direction }: { direction: boolean; stage: STAGES }) => ({
@@ -525,8 +525,8 @@ const MultiSpatialInput: FormElementComponent<
             style.isSmall
               ? { duration: 0 }
               : {
-                  duration: 0.3,
-                }
+                duration: 0.3,
+              }
           }
           key={props.stage}
           initial="enter"
@@ -535,33 +535,33 @@ const MultiSpatialInput: FormElementComponent<
         >
           {(props.stage === STAGES.DRAWING_INTRO ||
             props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
-            <>
-              <FormElementBody
-                formElementId={props.id}
-                isInput={true}
-                body={props.body}
-                required={props.isRequired}
-                editable={props.editable}
-                alternateLanguageSettings={props.alternateLanguageSettings}
-              />
-              {style.isSmall && (
-                <SurveyButton
-                  label={t("Begin", { ns: "surveys" })}
-                  className="pt-5"
-                  onClick={() =>
-                    props.onRequestStageChange(STAGES.MOBILE_DRAW_FIRST_SHAPE)
-                  }
+              <>
+                <FormElementBody
+                  formElementId={props.id}
+                  isInput={true}
+                  body={props.body}
+                  required={props.isRequired}
+                  editable={props.editable}
+                  alternateLanguageSettings={props.alternateLanguageSettings}
                 />
-              )}
-              {!props.isRequired && !style.isSmall && (
-                <SurveyButton
-                  label={t("Skip Question", { ns: "surveys" })}
-                  className="mt-10"
-                  onClick={() => props.onRequestNext()}
-                />
-              )}
-            </>
-          )}
+                {style.isSmall && (
+                  <SurveyButton
+                    label={t("Begin", { ns: "surveys" })}
+                    className="pt-5"
+                    onClick={() =>
+                      props.onRequestStageChange(STAGES.MOBILE_DRAW_FIRST_SHAPE)
+                    }
+                  />
+                )}
+                {!props.isRequired && !style.isSmall && (
+                  <SurveyButton
+                    label={t("Skip Question", { ns: "surveys" })}
+                    className="mt-10"
+                    onClick={() => props.onRequestNext()}
+                  />
+                )}
+              </>
+            )}
           {props.stage === STAGES.LIST_SHAPES && (
             <>
               <FormElementBody
@@ -688,149 +688,148 @@ const MultiSpatialInput: FormElementComponent<
           )}
           {(props.stage === STAGES.SHAPE_EDITOR ||
             props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
-            <div className="py-5 space-y-2">
-              <SketchForm
-                key={state.featureId}
-                formElements={
-                  (props.sketchClass?.form?.formElements ||
-                    []) as FormElementFullDetailsFragment[]
-                }
-                logicRules={props.sketchClass?.form?.logicRules || []}
-                startingProperties={state}
-                submissionAttempted={state.submissionAttempted}
-                editable={props.editable}
-                featureNumber={
-                  ((props.value?.collection.features || []).length || 0) + 1
-                }
-                onSubmissionRequested={onClickSave}
-                onChange={(newProperties, hasValidationErrors) => {
-                  setState((prev) => {
-                    return {
-                      ...prev,
-                      ...newProperties,
-                      hasValidationErrors,
-                    };
-                  });
-                  // If editing an existing shape and there are no validation errors,
-                  // update the feature in the collection and props.value immediately
-                  if (
-                    !hasValidationErrors &&
-                    state.featureId &&
-                    geometryEditingState?.isNew !== true
-                  ) {
-                    onChange({
-                      collection: updateFeatureInCollection(
-                        state.featureId as string,
-                        {
-                          props: newProperties,
-                        },
-                        props.value?.collection || EMPTY_FEATURE_COLLECTION
-                      ),
+              <div className="py-5 space-y-2">
+                <SketchForm
+                  key={state.featureId}
+                  formElements={
+                    (props.sketchClass?.form?.formElements ||
+                      []) as FormElementFullDetailsFragment[]
+                  }
+                  logicRules={props.sketchClass?.form?.logicRules || []}
+                  startingProperties={state}
+                  submissionAttempted={state.submissionAttempted}
+                  editable={props.editable}
+                  featureNumber={
+                    ((props.value?.collection.features || []).length || 0) + 1
+                  }
+                  onSubmissionRequested={onClickSave}
+                  onChange={(newProperties, hasValidationErrors) => {
+                    setState((prev) => {
+                      return {
+                        ...prev,
+                        ...newProperties,
+                        hasValidationErrors,
+                      };
                     });
-                  }
-                }}
-              />
-              <div className="space-x-2 rtl:space-x-reverse">
-                {geometryEditingState?.isNew && (
-                  <SurveyButton
-                    secondary={true}
-                    label={<Trans ns="surveys">Cancel</Trans>}
-                    onClick={async () => {
-                      if (!geometryEditingState?.isNew) {
-                        throw new Error(
-                          "Editor is not in state geometryEditingState.isNew"
-                        );
-                      }
-                      if (
-                        !geometryEditingState.feature ||
-                        (await confirm(
-                          t("Are you sure you want to delete this shape?", {
-                            ns: "surveys",
-                          })
-                        ))
-                      ) {
-                        if (geometryEditingState.feature) {
-                          const collection = removeFeatureFromValue(
-                            geometryEditingState.feature.id!
-                          );
-                          setFilteredCollection(collection);
-                        }
-                        setGeometryEditingState({ isNew: false });
-                        props.onRequestStageChange(STAGES.LIST_SHAPES);
-                        actions.finishEditing();
-                        setFilteredCollection(props.value!.collection);
-                      }
-                    }}
-                  />
-                )}
-                <SurveyButton
-                  label={
-                    geometryEditingState?.isNew
-                      ? t("Save", { ns: "surveys" })
-                      : t("Close", { ns: "surveys" })
-                  }
-                  onClick={onClickSave}
+                    // If editing an existing shape and there are no validation errors,
+                    // update the feature in the collection and props.value immediately
+                    if (
+                      !hasValidationErrors &&
+                      state.featureId &&
+                      geometryEditingState?.isNew !== true
+                    ) {
+                      onChange({
+                        collection: updateFeatureInCollection(
+                          state.featureId as string,
+                          {
+                            props: newProperties,
+                          },
+                          props.value?.collection || EMPTY_FEATURE_COLLECTION
+                        ),
+                      });
+                    }
+                  }}
                 />
-                {!geometryEditingState?.isNew && style.isSmall && (
-                  <>
+                <div className="space-x-2 rtl:space-x-reverse">
+                  {geometryEditingState?.isNew && (
                     <SurveyButton
-                      label={t("Edit on Map", { ns: "surveys" })}
-                      onClick={onClickMapNonInteractive}
-                    />
-                    <SurveyButton
-                      label={t("Delete", { ns: "surveys" })}
+                      secondary={true}
+                      label={<Trans ns="surveys">Cancel</Trans>}
                       onClick={async () => {
-                        if (!selection?.id) {
-                          throw new Error("No selection to delete");
-                        }
-                        if (!props.value) {
+                        if (!geometryEditingState?.isNew) {
                           throw new Error(
-                            "No collection to delete feature from"
+                            "Editor is not in state geometryEditingState.isNew"
                           );
                         }
                         if (
-                          await confirm(
+                          !geometryEditingState.feature ||
+                          (await confirm(
                             t("Are you sure you want to delete this shape?", {
                               ns: "surveys",
                             })
-                          )
+                          ))
                         ) {
-                          const collection = removeFeatureFromValue(
-                            selection.id
-                          );
-                          setFilteredCollection(collection);
-                          if (geometryEditingState?.isNew) {
-                            setGeometryEditingState({ isNew: false });
+                          if (geometryEditingState.feature) {
+                            const collection = removeFeatureFromValue(
+                              geometryEditingState.feature.id!
+                            );
+                            setFilteredCollection(collection);
                           }
+                          setGeometryEditingState({ isNew: false });
                           props.onRequestStageChange(STAGES.LIST_SHAPES);
+                          actions.finishEditing();
+                          setFilteredCollection(props.value!.collection);
                         }
                       }}
                     />
-                  </>
-                )}
-                {style.isSmall && !geometryEditingState?.isNew && (
-                  <div
-                    className={`rounded-full fixed top-4 right-2 z-10 shadow-lg bg-black bg-opacity-20`}
+                  )}
+                  <SurveyButton
+                    label={
+                      geometryEditingState?.isNew
+                        ? t("Save", { ns: "surveys" })
+                        : t("Close", { ns: "surveys" })
+                    }
                     onClick={onClickSave}
+                  />
+                  {!geometryEditingState?.isNew && style.isSmall && (
+                    <>
+                      <SurveyButton
+                        label={t("Edit on Map", { ns: "surveys" })}
+                        onClick={onClickMapNonInteractive}
+                      />
+                      <SurveyButton
+                        label={t("Delete", { ns: "surveys" })}
+                        onClick={async () => {
+                          if (!selection?.id) {
+                            throw new Error("No selection to delete");
+                          }
+                          if (!props.value) {
+                            throw new Error(
+                              "No collection to delete feature from"
+                            );
+                          }
+                          if (
+                            await confirm(
+                              t("Are you sure you want to delete this shape?", {
+                                ns: "surveys",
+                              })
+                            )
+                          ) {
+                            const collection = removeFeatureFromValue(
+                              selection.id
+                            );
+                            setFilteredCollection(collection);
+                            if (geometryEditingState?.isNew) {
+                              setGeometryEditingState({ isNew: false });
+                            }
+                            props.onRequestStageChange(STAGES.LIST_SHAPES);
+                          }
+                        }}
+                      />
+                    </>
+                  )}
+                  {style.isSmall && !geometryEditingState?.isNew && (
+                    <div
+                      className={`rounded-full fixed top-4 right-2 z-10 shadow-lg bg-black bg-opacity-20`}
+                      onClick={onClickSave}
                     // style={{ backgroundColor: style.secondaryColor }}
-                  >
-                    <XIcon className="w-10 h-10" />
-                    {/* <XCircleIcon className="w-10 h-10" /> */}
-                  </div>
-                )}
+                    >
+                      <XIcon className="w-10 h-10" />
+                      {/* <XCircleIcon className="w-10 h-10" /> */}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </motion.div>
       </AnimatePresence>
 
       <SurveyMapPortal mapContext={mapContext}>
         <div
-          className={`flex items-center justify-center w-full h-full ${
-            props.stage === STAGES.MOBILE_EDIT_PROPERTIES
+          className={`flex items-center justify-center w-full h-full ${props.stage === STAGES.MOBILE_EDIT_PROPERTIES
               ? "hide-all-gl-controls"
               : ""
-          }`}
+            }`}
         >
           {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
             <DigitizingTools
@@ -1212,19 +1211,22 @@ export function updateFeatureInCollection(
   const features = collection.features;
   const idx = features.findIndex((f) => f.id === id);
   if (idx === -1) {
-    throw new Error(`Can't find feature with id ${id}`);
+    console.warn(`Can't find feature with id ${id}`);
+    return collection;
+  } else {
+    const feature = features[idx];
+    return {
+      ...collection,
+      features: [
+        ...features.slice(0, idx),
+        {
+          ...feature,
+          ...(opts.geometry ? { geometry: opts.geometry.geometry } : {}),
+          ...(opts.props ? { properties: opts.props } : {}),
+        } as Feature<Polygon, any>,
+        ...features.slice(idx + 1),
+      ],
+    };
+
   }
-  const feature = features[idx];
-  return {
-    ...collection,
-    features: [
-      ...features.slice(0, idx),
-      {
-        ...feature,
-        ...(opts.geometry ? { geometry: opts.geometry.geometry } : {}),
-        ...(opts.props ? { properties: opts.props } : {}),
-      } as Feature<Polygon, any>,
-      ...features.slice(idx + 1),
-    ],
-  };
 }
