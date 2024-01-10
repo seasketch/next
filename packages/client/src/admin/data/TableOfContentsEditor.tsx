@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useContext, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import {
@@ -8,7 +8,6 @@ import {
 } from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
 import {
-  DataSourceTypes,
   useDeleteBranchMutation,
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
@@ -18,7 +17,6 @@ import {
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
-import ZIndexEditor from "./ZIndexEditor";
 import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
 import useDialog from "../../components/useDialog";
 import FolderEditor from "./FolderEditor";
@@ -48,6 +46,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import React from "react";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 import { createPortal } from "react-dom";
+import { ZIndexEditableList } from "./ZIndexEditableList";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -57,8 +56,21 @@ const LazyArcGISCartModal = React.lazy(
 );
 
 export default function TableOfContentsEditor() {
-  const [selectedView, setSelectedView] = useState("tree");
+  const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
+
+  const setSelectedView = useCallback((view: string) => {
+    if (view === "order") {
+      // eslint-disable-next-line i18next/no-literal-string
+      history.push(`/${slug}/admin/data/zindex`);
+    } else {
+      // eslint-disable-next-line i18next/no-literal-string
+      history.push(`/${slug}/admin/data`);
+    }
+  }, [history, slug]);
+
+
+  const selectedView = /zindex/.test(history.location.pathname) ? "order" : "tree";
   const { manager } = useContext(MapContext);
   const { t } = useTranslation("nav");
 
@@ -74,10 +86,10 @@ export default function TableOfContentsEditor() {
   const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
     | undefined
     | {
-        itemId: number;
-        sublayerId?: string;
-        customGLSource?: CustomGLSource<any>;
-      }
+      itemId: number;
+      sublayerId?: string;
+      customGLSource?: CustomGLSource<any>;
+    }
   >();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
@@ -460,8 +472,8 @@ export default function TableOfContentsEditor() {
         lastPublished={
           tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
             ? new Date(
-                tocQuery.data.projectBySlug.tableOfContentsLastPublished!
-              )
+              tocQuery.data.projectBySlug.tableOfContentsLastPublished!
+            )
             : undefined
         }
       />
@@ -470,7 +482,8 @@ export default function TableOfContentsEditor() {
         onContextMenu={(e) => e.preventDefault()}
       >
         {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
-        {selectedView === "tree" && (
+
+        <Route exact path={`/${slug}/admin/data`}>
           <TreeView
             loadingItems={loadingItems}
             errors={overlayErrors}
@@ -484,10 +497,9 @@ export default function TableOfContentsEditor() {
             getContextMenuItems={getContextMenuItems}
             onSortEnd={onSortEnd}
           />
-        )}
-        {selectedView === "order" && (
-          <ZIndexEditor
-            // @ts-ignore
+        </Route>
+        <Route path={`/${slug}/admin/data/zindex`}>
+          <ZIndexEditableList // @ts-ignore
             tableOfContentsItems={
               tocQuery.data?.projectBySlug?.draftTableOfContentsItems
             }
@@ -498,9 +510,8 @@ export default function TableOfContentsEditor() {
             // @ts-ignore
             dataSources={
               layersAndSources.data?.projectBySlug?.dataSourcesForItems
-            }
-          />
-        )}
+            } />
+        </Route>
       </div>
       {openLayerItemId && (
         <LayerTableOfContentsItemEditor
@@ -659,11 +670,10 @@ function Header({
               <Tooltip.Trigger>
                 <button
                   // disabled={Boolean(publishDisabled)}
-                  className={`${
-                    publishDisabled
-                      ? "bg-white text-black opacity-80"
-                      : "bg-primary-500 text-white"
-                  } rounded px-2 py-0.5 mx-1 shadow-sm`}
+                  className={`${publishDisabled
+                    ? "bg-white text-black opacity-80"
+                    : "bg-primary-500 text-white"
+                    } rounded px-2 py-0.5 mx-1 shadow-sm`}
                   onClick={onRequestPublish}
                 >
                   <Trans ns="admin:data">Publish</Trans>

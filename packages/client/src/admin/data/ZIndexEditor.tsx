@@ -24,9 +24,37 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
   const { t } = useTranslation("admin");
   const [treeState, setTreeState] = useState<TreeItem[]>();
   const [expandedItems, setExpandedItems] = useState<(number | string)[]>([]);
-  const client = useApolloClient();
-  const [updateZIndexes] = useUpdateZIndexesMutation();
-  const [updateRenderUnder] = useUpdateRenderUnderTypeMutation();
+  const [updateZIndexes] = useUpdateZIndexesMutation({
+    optimisticResponse: (data) => {
+      let z = 0;
+      const layers: { id: number, zIndex: number, __typename: "DataLayer" }[] = [];
+      for (const id of data.dataLayerIds as number[]) {
+        layers.push({ id, zIndex: z++, __typename: "DataLayer" });
+      }
+      return {
+        __typename: "Mutation",
+        updateZIndexes: {
+          __typename: "UpdateZIndexesPayload",
+          dataLayers: layers
+        }
+      }
+    }
+  });
+  const [updateRenderUnder] = useUpdateRenderUnderTypeMutation({
+    optimisticResponse: (data) => {
+      return {
+        __typename: "Mutation",
+        updateDataLayer: {
+          "__typename": "UpdateDataLayerPayload",
+          dataLayer: {
+            __typename: "DataLayer",
+            id: data.layerId,
+            renderUnder: data.renderUnder!
+          }
+        }
+      }
+    }
+  });
   const { manager, layerStatesByTocStaticId } = useContext(MapContext);
   let layerLookup = useRef<{ [id: string]: DataLayerDetailsFragment }>({});
 
@@ -85,6 +113,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
               ...(parent.children! as TreeItem[]),
               {
                 id: item.dataLayerId,
+                stableId: item.stableId,
                 title: item.title,
                 zIndex: layer.zIndex,
                 preventDrag: source?.supportsDynamicLayers === false,
@@ -102,6 +131,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
             items.push({
               id: item.dataLayerId,
               title: item.title,
+              stableId: item.stableId,
               // title: item.title + `(${item.dataLayerId})`,
               zIndex: layer.zIndex,
             });
@@ -189,22 +219,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
                   renderUnder: underLabels
                     ? RenderUnderType.Labels
                     : RenderUnderType.None,
-                },
-              });
-              client.writeFragment({
-                id: `DataLayer:${child.id}`,
-                fragment: gql`
-                  fragment NewRenderUnder on DataLayer {
-                    # id
-                    renderUnder
-                  }
-                `,
-                data: {
-                  // id: layerId,
-                  renderUnder: underLabels
-                    ? RenderUnderType.Labels
-                    : RenderUnderType.None,
-                },
+                }
               });
             }
           }
@@ -228,43 +243,12 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
                   : RenderUnderType.None,
               },
             });
-            client.writeFragment({
-              id: `DataLayer:${item.id}`,
-              fragment: gql`
-                fragment NewRenderUnder on DataLayer {
-                  # id
-                  renderUnder
-                }
-              `,
-              data: {
-                // id: layerId,
-                renderUnder: underLabels
-                  ? RenderUnderType.Labels
-                  : RenderUnderType.None,
-              },
-            });
           }
         }
       }
     }
     setExpandedItems(expandedIds);
     setTreeState([...treeData]);
-
-    for (const layerId in zIndexes) {
-      client.writeFragment({
-        id: `DataLayer:${layerId}`,
-        fragment: gql`
-          fragment NewZIndex on DataLayer {
-            # id
-            zIndex
-          }
-        `,
-        data: {
-          // id: layerId,
-          zIndex: zIndexes[layerId],
-        },
-      });
-    }
 
     updateZIndexes({
       variables: {
@@ -280,10 +264,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
         onChange={onChange}
         getNodeKey={(data) => data.node.id}
         isVirtualized={false}
-        // onVisibilityToggle={(data) => {
-        //   setTreeState(data.treeData);
-        // }}
-        canNodeHaveChildren={(node) => !!node.children}
+        canNodeHaveChildren={() => false}
         canDrop={(data) => {
           if (!data.prevParent && data.nextParent) {
             return false;
@@ -299,26 +280,26 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
         }
         generateNodeProps={(data) => {
           const visible =
-            layerStatesByTocStaticId[data.node.id] &&
-            layerStatesByTocStaticId[data.node.id].visible;
+            layerStatesByTocStaticId[data.node.stableId] &&
+            layerStatesByTocStaticId[data.node.stableId].visible;
           return {
             className: data.node.isBasemapLayer ? "basemap" : "",
             buttons:
               !data.node.children && data.node.title !== t("Basemap Labels")
                 ? [
-                    <VisibilityCheckbox
-                      visibility={visible}
-                      id={data.node.id}
-                      disabled={false}
-                      onClick={() => {
-                        if (visible) {
-                          manager?.hideTocItems([data.node.id]);
-                        } else {
-                          manager?.showTocItems([data.node.id]);
-                        }
-                      }}
-                    />,
-                  ]
+                  <VisibilityCheckbox
+                    visibility={visible}
+                    id={data.node.stableId}
+                    disabled={false}
+                    onClick={() => {
+                      if (visible) {
+                        manager?.hideTocItems([data.node.stableId]);
+                      } else {
+                        manager?.showTocItems([data.node.stableId]);
+                      }
+                    }}
+                  />,
+                ]
                 : [],
           };
         }}

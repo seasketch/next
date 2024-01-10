@@ -45,7 +45,7 @@ export default function DataSettings() {
       <DndProvider backend={HTML5Backend}>
         <MapContext.Provider value={mapContext}>
           <Switch>
-            <Route exact path={`${path}`}>
+            <Route path={`${path}`}>
               <DataUploadDropzone
                 slug={slug}
                 className="flex flex-row h-screen"
@@ -70,11 +70,11 @@ export default function DataSettings() {
                       bounds={
                         data?.projectBySlug
                           ? (bbox(data.projectBySlug.region.geojson) as [
-                              number,
-                              number,
-                              number,
-                              number
-                            ])
+                            number,
+                            number,
+                            number,
+                            number
+                          ])
                           : undefined
                       }
                       className="h-full"

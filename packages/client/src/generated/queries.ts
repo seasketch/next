@@ -14435,16 +14435,6 @@ export type NewGlStyleFragment = (
   & Pick<DataLayer, 'mapboxGlStyles'>
 );
 
-export type NewRenderUnderFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'renderUnder'>
-);
-
-export type NewZIndexFragment = (
-  { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'zIndex'>
-);
-
 export type NewRuleFragment = (
   { __typename?: 'FormLogicRule' }
   & Pick<FormLogicRule, 'booleanOperator' | 'command' | 'id' | 'jumpToId' | 'position' | 'formElementId'>
@@ -19434,16 +19424,6 @@ export const NewGlStyleFragmentDoc = /*#__PURE__*/ gql`
   mapboxGlStyles
 }
     `;
-export const NewRenderUnderFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewRenderUnder on DataLayer {
-  renderUnder
-}
-    `;
-export const NewZIndexFragmentDoc = /*#__PURE__*/ gql`
-    fragment NewZIndex on DataLayer {
-  zIndex
-}
-    `;
 export const NewRuleFragmentDoc = /*#__PURE__*/ gql`
     fragment NewRule on FormLogicRule {
   booleanOperator
@@ -24136,8 +24116,6 @@ export const namedOperations = {
     NewBasemap: 'NewBasemap',
     UpdateFormat: 'UpdateFormat',
     NewGLStyle: 'NewGLStyle',
-    NewRenderUnder: 'NewRenderUnder',
-    NewZIndex: 'NewZIndex',
     NewRule: 'NewRule',
     NewCondition: 'NewCondition',
     NewElement: 'NewElement',

@@ -152,3 +152,43 @@
     opacity: 0;
   }
 }
+
+.rst__node {
+  height: 36px !important;
+  @apply text-sm p-0 font-normal bg-transparent;
+  line-height: normal !important;
+}
+
+.rst__node .rst__rowWrapper {
+  @apply py-1 px-0;
+}
+
+.rst__node .rst__rowTitle {
+  @apply font-normal;
+}
+
+.rst__moveHandle {
+  border-radius: 0.25rem 0 0 0.25rem !important;
+  box-shadow: none !important;
+  width: 32px !important;
+  flex: none;
+}
+
+.rst__rowContents {
+  border-radius: 0 0.25rem 0.25rem 0 !important;
+  box-shadow: none !important;
+  flex: 1 !important;
+  display: flex;
+}
+
+.rst__row {
+  max-width: 400px !important;
+  overflow: hidden;
+  flex: 1;
+  background-color: transparent !important;
+}
+
+.rst__rowLabel {
+  @apply truncate;
+  flex: 1 !important;
+}
