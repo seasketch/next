@@ -13560,11 +13560,13 @@ CREATE FUNCTION public.update_z_indexes("dataLayerIds" integer[]) RETURNS SETOF 
     if (session_is_admin((select project_id from data_layers where id = any("dataLayerIds") limit 1))) != true then
       raise 'Unauthorized';
     end if;
+    SET session_replication_role = replica;
     z = 0;
     for i in array_lower("dataLayerIds", 1)..array_upper("dataLayerIds", 1) loop
       z = z + 1;
       update data_layers set z_index = z where id = "dataLayerIds"[i];
     end loop;
+    SET session_replication_role = DEFAULT;
     return query (select * from data_layers where id = any("dataLayerIds"));
   end
 $$;
