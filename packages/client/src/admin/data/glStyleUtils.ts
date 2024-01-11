@@ -136,7 +136,6 @@ function upgradeCombinationFilter(expression: Expression): Expression {
  * @returns
  */
 export function addInteractivityExpressions(layers: AnyLayer[]) {
-  console.log("input layers", layers);
   // First check to see if the author of the styles for this layer already
   // added interactivity expressions. If so, we don't want to add generated
   // styles.
@@ -377,7 +376,6 @@ export function addInteractivityExpressions(layers: AnyLayer[]) {
   } else {
     return layers;
   }
-  console.log("output layers", newLayers);
   return newLayers;
 }
 
