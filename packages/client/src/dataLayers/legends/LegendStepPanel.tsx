@@ -12,9 +12,9 @@ export default function LegendStepPanel({
   return (
     <li key={panel.id} className="w-full">
       {panel.label && (
-        <h3 className="text-xs font-mono pl-2 my-1">{panel.label}</h3>
+        <h3 className="text-xs font-mono my-1">{panel.label}</h3>
       )}
-      <ul className="space-y-0.5 w-full pl-2">
+      <ul className="space-y-0.5 w-full">
         {panel.steps.map((step) => {
           return (
             <li

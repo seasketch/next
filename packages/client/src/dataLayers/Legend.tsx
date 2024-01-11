@@ -22,19 +22,8 @@ import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
 import { ErrorBoundary } from "@sentry/react";
+import { useState } from "react";
 require("../admin/data/arcgis/Accordion.css");
-
-interface SingleImageLegendItem {
-  type: "SingleImageLegendItem";
-  label: string;
-  /** TableOfContentsItem ids */
-  ids: string[];
-  /** Image URL */
-  url: string;
-  supportsDynamicRendering: DynamicRenderingSupportOptions;
-  id: string;
-  zOrder?: number;
-}
 
 interface CustomGLSourceSymbolLegend {
   label: string;
@@ -54,10 +43,7 @@ interface GLStyleLegendItem {
   zOrder?: number;
 }
 
-export type LegendItem =
-  | GLStyleLegendItem
-  | CustomGLSourceSymbolLegend
-  | SingleImageLegendItem;
+export type LegendItem = GLStyleLegendItem | CustomGLSourceSymbolLegend;
 
 const PANEL_WIDTH = 180;
 
@@ -98,12 +84,13 @@ export default function Legend({
       style={
         blur
           ? {
-            backdropFilter: "blur(10px)",
-          }
+              backdropFilter: "blur(10px)",
+            }
           : {}
       }
-      className={`${className || ""} shadow rounded bg-white bg-opacity-90 ${hidden ? "w-auto" : "w-64"
-        } text-sm flex flex-col overflow-hidden`}
+      className={`${className || ""} shadow rounded bg-white bg-opacity-90 ${
+        hidden ? "w-auto" : "w-64"
+      } text-sm flex flex-col overflow-hidden`}
     >
       <Accordion.Root type="single" value={hidden ? "" : "legend"}>
         <Accordion.Item value="legend">
@@ -111,7 +98,7 @@ export default function Legend({
             onClick={(e) => {
               setHidden((prev) => !prev);
             }}
-            className="flex-none flex p-2 py-1.5"
+            className="flex-none flex p-2 py-1.5 shadow"
           >
             <Accordion.Trigger className="flex w-full AccordionTrigger">
               <h3 className="flex-1 text-left flex items-center">
@@ -127,187 +114,116 @@ export default function Legend({
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content className="flex-1 max-h-full overflow-y-auto border-t border-black border-opacity-10">
-            <ul
-              className="list-none space-y-1 overflow-y-auto p-2 pr-2.5"
-              style={{ maxHeight }}
-            >
+            <ul className="list-none overflow-y-auto" style={{ maxHeight }}>
               {items.map((item, i) => {
-                const visible = !hiddenItems || !hiddenItems.includes(item.id);
-                if (item.type === "GLStyleLegendItem") {
-                  const legend = item.legend;
-                  if (!legend || legend.type === "SimpleGLLegend") {
-                    const visible =
-                      !hiddenItems || !hiddenItems.includes(item.id);
-                    return (
-                      <ErrorBoundary key={item.id}>
-                        <li
-                          className={`flex items-center space-x-2 max-w-full ${hiddenItems && hiddenItems.includes(item.id)
-                              ? "opacity-50"
-                              : "opacity-100"
-                            }`}
-                        >
-                          <div className="items-center justify-center bg-transparent">
-                            {map && legend ? (
-                              <SimpleSymbol map={map} data={legend.symbol} />
-                            ) : null}
-                          </div>
-
-                          <span title={item.label} className="truncate flex-1">
-                            {item.label}
-                          </span>
-                          {onHiddenItemsChange && (
-                            <Toggle
-                              onChange={() => {
-                                if (onHiddenItemsChange) {
-                                  onHiddenItemsChange(
-                                    item.id,
-                                    !hiddenItems.includes(item.id)
-                                  );
-                                }
-                              }}
-                              visible={visible}
-                            />
-                          )}
-                        </li>
-                      </ErrorBoundary>
-                    );
-                  } else if (legend.type === "MultipleSymbolGLLegend") {
-                    return (
-                      <ErrorBoundary key={item.id}>
-                        <li
-                          className={`max-w-full ${visible ? "opacity-100" : "opacity-50"
-                            }`}
-                        >
-                          <div className="flex items-center space-x-1 mb-0.5">
-                            <span
-                              title={item.label}
-                              className="truncate flex-1"
-                            >
-                              {item.label}
-                            </span>
-                            {onHiddenItemsChange && (
-                              <Toggle
-                                onChange={() => {
-                                  if (onHiddenItemsChange) {
-                                    onHiddenItemsChange(
-                                      item.id,
-                                      !hiddenItems.includes(item.id)
-                                    );
-                                  }
-                                }}
-                                visible={visible}
-                              />
-                            )}
-                          </div>
-                          <ul className="text-sm mb-1">
-                            {legend.panels.map((panel) => (
-                              <PanelFactory
-                                key={panel.id}
-                                map={map}
-                                panel={panel}
-                              />
-                            ))}
-                          </ul>
-                        </li>
-                      </ErrorBoundary>
-                    );
-                  } else {
-                    return null;
-                  }
-                } else if (item.type === "CustomGLSourceSymbolLegend") {
-                  if (item.symbols.length <= 1) {
-                    return (
-                      <ErrorBoundary key={item.id}>
-                        <li
-                          className={`flex items-center space-x-2 max-w-full ${hiddenItems && hiddenItems.includes(item.id)
-                              ? "opacity-50"
-                              : "opacity-100"
-                            }`}
-                        >
-                          {item.symbols.length > 0 && (
-                            <div className="items-center justify-center bg-transparent">
-                              <LegendImage item={item.symbols[0]} />
-                            </div>
-                          )}
-
-                          <span title={item.label} className="truncate flex-1">
-                            {item.label}
-                          </span>
-                          {onHiddenItemsChange && (
-                            <Toggle
-                              onChange={() => {
-                                if (onHiddenItemsChange) {
-                                  onHiddenItemsChange(
-                                    item.id,
-                                    !hiddenItems.includes(item.id)
-                                  );
-                                }
-                              }}
-                              visible={visible}
-                            />
-                          )}
-                        </li>
-                      </ErrorBoundary>
-                    );
-                  } else {
-                    return (
-                      <ErrorBoundary key={item.id}>
-                        <li
-                          className={`max-w-full ${visible ? "opacity-100" : "opacity-50"
-                            }`}
-                        >
-                          <div className="flex items-center space-x-1 mb-0.5">
-                            <span
-                              title={item.label}
-                              className="truncate flex-1"
-                            >
-                              {item.label}
-                            </span>
-                            {onHiddenItemsChange && (
-                              <Toggle
-                                onChange={() => {
-                                  if (onHiddenItemsChange) {
-                                    onHiddenItemsChange(
-                                      item.id,
-                                      !hiddenItems.includes(item.id)
-                                    );
-                                  }
-                                }}
-                                visible={visible}
-                              />
-                            )}
-                          </div>
-                          <ul className="text-sm mb-1">
-                            {item.symbols.map((symbol) => {
-                              return (
-                                <li
-                                  className="flex items-center space-x-2"
-                                  key={symbol.id}
-                                >
-                                  <LegendImage item={symbol} />
-                                  <span className="truncate">
-                                    {symbol.label}
-                                  </span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </li>
-                      </ErrorBoundary>
-                    );
-                  }
-                } else if (item.type === "SingleImageLegendItem") {
-                  throw new Error("SingleImageLegendItem not implemented");
-                } else {
-                  console.error("unsupported type", item);
-                  throw new Error("Unknown legend item type");
-                }
+                return (
+                  <LegendListItem
+                    onHiddenItemsChange={onHiddenItemsChange}
+                    key={item.id}
+                    item={item}
+                    visible={!hiddenItems || !hiddenItems.includes(item.id)}
+                    map={map}
+                    skipTopBorder={i === 0}
+                  />
+                );
               })}
             </ul>
           </Accordion.Content>
         </Accordion.Item>
       </Accordion.Root>
     </div>
+  );
+}
+
+function LegendListItem({
+  item,
+  visible,
+  map,
+  onHiddenItemsChange,
+  skipTopBorder,
+}: {
+  item: LegendItem;
+  visible: boolean;
+  map?: Map;
+  onHiddenItemsChange?: (id: string, hidden: boolean) => void;
+  skipTopBorder?: boolean;
+}) {
+  const isSingleSymbol =
+    (item.type === "GLStyleLegendItem" &&
+      item.legend?.type === "SimpleGLLegend" &&
+      item.legend.symbol) ||
+    (item.type === "CustomGLSourceSymbolLegend" && item.symbols.length <= 1);
+  const [hovered, setHovered] = useState(false);
+  return (
+    <ErrorBoundary>
+      <li
+        onMouseOver={() => setHovered(true)}
+        onMouseOut={() => setHovered(false)}
+        className={`${
+          skipTopBorder ? "" : "border-t border-black border-opacity-5"
+        } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"} group`}
+      >
+        <div className="flex items-center space-x-2 group">
+          {/* If single-symbol, show inline image */}
+          {isSingleSymbol && (
+            <div className="items-center justify-center bg-transparent flex-none">
+              {item.type === "GLStyleLegendItem" &&
+                map &&
+                item.legend?.type === "SimpleGLLegend" && (
+                  <SimpleSymbol map={map} data={item.legend.symbol} />
+                )}
+              {item.type === "CustomGLSourceSymbolLegend" &&
+                item.symbols.length === 1 && (
+                  <LegendImage item={item.symbols[0]} />
+                )}
+            </div>
+          )}
+          {/* Title */}
+          <span title={item.label} className="truncate flex-1">
+            {item.label}
+          </span>
+          {/* Buttons */}
+          <div
+            className={`flex-none group pl-4 flex items-center space-x-1 ${
+              hovered ? "opacity-50" : "opacity-10"
+            }`}
+          >
+            {onHiddenItemsChange && (
+              <Toggle
+                onChange={() => {
+                  if (onHiddenItemsChange) {
+                    onHiddenItemsChange(item.id, visible);
+                  }
+                }}
+                visible={visible}
+              />
+            )}
+            {/* <DotsHorizontalIcon
+              className={`w-5 h-5 text-black  cursor-pointer`}
+            /> */}
+          </div>
+        </div>
+        {!isSingleSymbol && (
+          <ul className="text-sm p-1">
+            {item.type === "GLStyleLegendItem" &&
+              item.legend?.type === "MultipleSymbolGLLegend" &&
+              item.legend.panels.map((panel) => (
+                <PanelFactory key={panel.id} map={map} panel={panel} />
+              ))}
+            {item.type === "CustomGLSourceSymbolLegend" &&
+              item.symbols.length > 1 &&
+              item.symbols.map((symbol) => {
+                return (
+                  <li className="flex items-center space-x-2" key={symbol.id}>
+                    <LegendImage item={symbol} />
+                    <span className="truncate">{symbol.label}</span>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
+      </li>
+    </ErrorBoundary>
   );
 }
 
@@ -333,8 +249,8 @@ function PanelFactory({ panel, map }: { panel: GLLegendPanel; map?: Map }) {
           case "GLLegendFilterPanel":
             return (
               <div key={panel.id} className="">
-                <h3 className="text-xs pl-2 mt-2 font-mono">{panel.label}</h3>
-                <ul className="">
+                <h3 className="text-xs mt-2 font-mono">{panel.label}</h3>
+                <ul className="p-1">
                   {panel.children.map((child) => (
                     <PanelFactory key={child.id} panel={child} map={map} />
                   ))}
@@ -360,10 +276,7 @@ function Toggle({
   className?: string;
 }) {
   return (
-    <button
-      onClick={onChange}
-      className={`${className} text-gray-500 hover:text-black`}
-    >
+    <button onClick={onChange} className={`${className} text-black`}>
       {visible ? <EyeOpenIcon /> : <EyeClosedIcon />}
     </button>
   );

@@ -1,6 +1,5 @@
 import MarkerSymbol from "./MarkerSymbol";
-import SimpleSymbol from "./SimpleSymbol";
-import { GLLegendListPanel, GLMarkerSizePanel } from "./LegendDataModel";
+import { GLMarkerSizePanel } from "./LegendDataModel";
 import { Map } from "mapbox-gl";
 
 export default function LegendMarkerSizePanel({
@@ -13,9 +12,9 @@ export default function LegendMarkerSizePanel({
   return (
     <li key={panel.id} className="w-full">
       {panel.label && (
-        <h3 className="text-xs font-mono pl-2 my-1">{panel.label}</h3>
+        <h3 className="text-xs font-mono my-1">{panel.label}</h3>
       )}
-      <ul className="space-y-0.5 w-full pl-2">
+      <ul className="space-y-0.5 w-full">
         {panel.stops.map((stop) => {
           return (
             <li

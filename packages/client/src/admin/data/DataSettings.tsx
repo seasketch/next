@@ -56,6 +56,7 @@ export default function DataSettings() {
                 <div className="flex-1 h-full">
                   {legendState.items.length > 0 && (
                     <Legend
+                      backdropBlur
                       maxHeight={800}
                       className="absolute ml-5 top-5 z-10"
                       items={legendState.items}
@@ -70,11 +71,11 @@ export default function DataSettings() {
                       bounds={
                         data?.projectBySlug
                           ? (bbox(data.projectBySlug.region.geojson) as [
-                            number,
-                            number,
-                            number,
-                            number
-                          ])
+                              number,
+                              number,
+                              number,
+                              number
+                            ])
                           : undefined
                       }
                       className="h-full"
