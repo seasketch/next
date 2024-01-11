@@ -85,6 +85,7 @@ module.exports = {
     extend: {
       scale: ["active"],
       padding: ["hover"],
+      display: ["group-hover"],
     },
     space: ["responsive", "direction"],
     inset: ["responsive", "direction"],

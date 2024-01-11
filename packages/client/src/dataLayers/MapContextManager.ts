@@ -145,6 +145,12 @@ export interface LayerState {
   opacity?: number;
   loading: boolean;
   error?: Error;
+  /**
+   * If true, it means that while the layer may be "visible" as selected from
+   * the table of contents, the user may have temporarily hidden it in the
+   * legend.
+   */
+  hidden?: boolean;
 }
 
 export interface SketchLayerState extends LayerState {
@@ -1427,17 +1433,22 @@ class MapContextManager extends EventEmitter {
                         }
                         const layers = isUnderLabels ? underLabels : overLabels;
                         if (
-                          layer.interactivitySettings &&
-                          layer.interactivitySettings.type ===
-                            InteractivityType.SidebarOverlay
+                          !this.internalState.layerStatesByTocStaticId[layerId]
+                            ?.hidden
                         ) {
-                          layers.push(
-                            ...addInteractivityExpressions(
-                              styleData.layers as AnyLayer[]
-                            )
-                          );
-                        } else {
-                          layers.push(...styleData.layers);
+                          if (
+                            layer.interactivitySettings &&
+                            layer.interactivitySettings.type ===
+                              InteractivityType.SidebarOverlay
+                          ) {
+                            layers.push(
+                              ...addInteractivityExpressions(
+                                styleData.layers as AnyLayer[]
+                              )
+                            );
+                          } else {
+                            layers.push(...styleData.layers);
+                          }
                         }
                       } else {
                         setTimeout(() => {
@@ -1481,12 +1492,16 @@ class MapContextManager extends EventEmitter {
                 });
                 const layers = isUnderLabels ? underLabels : overLabels;
                 if (
-                  layer.interactivitySettings?.type ===
-                  InteractivityType.SidebarOverlay
+                  !this.internalState.layerStatesByTocStaticId[layerId]?.hidden
                 ) {
-                  glLayers = addInteractivityExpressions(glLayers);
+                  if (
+                    layer.interactivitySettings?.type ===
+                    InteractivityType.SidebarOverlay
+                  ) {
+                    glLayers = addInteractivityExpressions(glLayers);
+                  }
+                  layers.push(...glLayers);
                 }
-                layers.push(...glLayers);
               } else if (isCustomSourceType(source.type) && layer.sublayer) {
                 // Add sublayer info if needed
                 if (!Array.isArray(this.customSources[source.id].sublayers)) {
@@ -2854,6 +2869,34 @@ class MapContextManager extends EventEmitter {
   }
 
   updateLegends = debounce(this._updateLegends, 20);
+
+  hideLayer(stableId: string) {
+    this.setState((prev) => ({
+      ...prev,
+      layerStatesByTocStaticId: {
+        ...prev.layerStatesByTocStaticId,
+        [stableId]: {
+          ...prev.layerStatesByTocStaticId[stableId],
+          hidden: true,
+        },
+      },
+    }));
+    this.updateStyle();
+  }
+
+  showLayer(stableId: string) {
+    this.setState((prev) => ({
+      ...prev,
+      layerStatesByTocStaticId: {
+        ...prev.layerStatesByTocStaticId,
+        [stableId]: {
+          ...prev.layerStatesByTocStaticId[stableId],
+          hidden: false,
+        },
+      },
+    }));
+    this.updateStyle();
+  }
 }
 
 export default MapContextManager;

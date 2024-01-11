@@ -6,8 +6,10 @@ import { GLLegendPanel, LegendForGLLayers } from "./legends/LegendDataModel";
 import * as Accordion from "@radix-ui/react-accordion";
 import {
   CaretDownIcon,
+  DotsHorizontalIcon,
   EyeClosedIcon,
   EyeOpenIcon,
+  HeightIcon,
 } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import Spinner from "../components/Spinner";
@@ -57,6 +59,7 @@ export default function Legend({
   maxHeight,
   backdropBlur: blur,
   persistedStateKey,
+  onZOrderChange,
 }: {
   backdropBlur?: boolean;
   items: LegendItem[];
@@ -124,6 +127,7 @@ export default function Legend({
                     visible={!hiddenItems || !hiddenItems.includes(item.id)}
                     map={map}
                     skipTopBorder={i === 0}
+                    onZOrderChange={onZOrderChange}
                   />
                 );
               })}
@@ -141,29 +145,28 @@ function LegendListItem({
   map,
   onHiddenItemsChange,
   skipTopBorder,
+  onZOrderChange,
 }: {
   item: LegendItem;
   visible: boolean;
   map?: Map;
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   skipTopBorder?: boolean;
+  onZOrderChange?: (id: string, zOrder: number) => void;
 }) {
   const isSingleSymbol =
     (item.type === "GLStyleLegendItem" &&
       item.legend?.type === "SimpleGLLegend" &&
       item.legend.symbol) ||
     (item.type === "CustomGLSourceSymbolLegend" && item.symbols.length <= 1);
-  const [hovered, setHovered] = useState(false);
   return (
     <ErrorBoundary>
       <li
-        onMouseOver={() => setHovered(true)}
-        onMouseOut={() => setHovered(false)}
-        className={`${
+        className={`group ${
           skipTopBorder ? "" : "border-t border-black border-opacity-5"
-        } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"} group`}
+        } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"}`}
       >
-        <div className="flex items-center space-x-2 group">
+        <div className="flex items-center space-x-2">
           {/* If single-symbol, show inline image */}
           {isSingleSymbol && (
             <div className="items-center justify-center bg-transparent flex-none">
@@ -184,23 +187,23 @@ function LegendListItem({
           </span>
           {/* Buttons */}
           <div
-            className={`flex-none group pl-4 flex items-center space-x-1 ${
-              hovered ? "opacity-50" : "opacity-10"
-            }`}
+            className={`opacity-10 group-hover:opacity-50 flex-none group pl-1 flex items-center space-x-1 `}
           >
-            {onHiddenItemsChange && (
-              <Toggle
-                onChange={() => {
-                  if (onHiddenItemsChange) {
-                    onHiddenItemsChange(item.id, visible);
-                  }
-                }}
-                visible={visible}
-              />
-            )}
-            {/* <DotsHorizontalIcon
-              className={`w-5 h-5 text-black  cursor-pointer`}
-            /> */}
+            <DotsHorizontalIcon
+              className={`w-5 h-5 text-black  cursor-pointer hidden group-hover:inline-block`}
+            />
+            <HeightIcon
+              className="w-4 h-4 text-black hidden group-hover:inline-block"
+              style={{ cursor: "ns-resize" }}
+            />
+            <Toggle
+              onChange={() => {
+                if (onHiddenItemsChange) {
+                  onHiddenItemsChange(item.id, visible);
+                }
+              }}
+              visible={visible}
+            />
           </div>
         </div>
         {!isSingleSymbol && (
