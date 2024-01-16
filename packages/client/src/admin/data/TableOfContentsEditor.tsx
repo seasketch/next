@@ -2,10 +2,7 @@ import { Suspense, useCallback, useContext, useEffect, useState } from "react";
 import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
-import {
-  MapContext,
-  sourceTypeIsCustomGLSource,
-} from "../../dataLayers/MapContextManager";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
 import {
   useDeleteBranchMutation,
@@ -22,10 +19,8 @@ import useDialog from "../../components/useDialog";
 import FolderEditor from "./FolderEditor";
 import TreeView, { TreeItem } from "../../components/TreeView";
 import { useOverlayState } from "../../components/TreeView";
-import { currentSidebarState } from "../../projects/ProjectAppSidebar";
 import { DropdownOption } from "../../components/DropdownButton";
 import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
-import { createBoundsRecursive } from "../../projects/OverlayLayers";
 import { SortingState } from "../../projects/Sketches/TreeItemComponent";
 import { OverlayFragment } from "../../generated/queries";
 import * as Menubar from "@radix-ui/react-menubar";
@@ -59,18 +54,22 @@ export default function TableOfContentsEditor() {
   const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
 
-  const setSelectedView = useCallback((view: string) => {
-    if (view === "order") {
-      // eslint-disable-next-line i18next/no-literal-string
-      history.push(`/${slug}/admin/data/zindex`);
-    } else {
-      // eslint-disable-next-line i18next/no-literal-string
-      history.push(`/${slug}/admin/data`);
-    }
-  }, [history, slug]);
+  const setSelectedView = useCallback(
+    (view: string) => {
+      if (view === "order") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/zindex`);
+      } else {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data`);
+      }
+    },
+    [history, slug]
+  );
 
-
-  const selectedView = /zindex/.test(history.location.pathname) ? "order" : "tree";
+  const selectedView = /zindex/.test(history.location.pathname)
+    ? "order"
+    : "tree";
   const { manager } = useContext(MapContext);
   const { t } = useTranslation("nav");
 
@@ -86,10 +85,10 @@ export default function TableOfContentsEditor() {
   const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
     | undefined
     | {
-      itemId: number;
-      sublayerId?: string;
-      customGLSource?: CustomGLSource<any>;
-    }
+        itemId: number;
+        sublayerId?: string;
+        customGLSource?: CustomGLSource<any>;
+      }
   >();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
@@ -155,7 +154,6 @@ export default function TableOfContentsEditor() {
         tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [];
       const item = items.find((item) => item.stableId === treeItem.id);
       if (item) {
-        const sidebar = currentSidebarState();
         const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] =
           [];
         if (
@@ -167,50 +165,7 @@ export default function TableOfContentsEditor() {
             disabled: !item.bounds && !checkedItems.includes(item.stableId),
             label: t("Zoom to bounds"),
             onClick: async () => {
-              let bounds: [number, number, number, number] | undefined;
-              if (item.isFolder) {
-                bounds = createBoundsRecursive(item, items);
-              } else {
-                if (item.bounds) {
-                  bounds = item.bounds.map((coord: string) =>
-                    parseFloat(coord)
-                  ) as [number, number, number, number];
-                } else {
-                  const layer =
-                    layersAndSources.data?.projectBySlug?.dataLayersForItems?.find(
-                      (l) => l.id === item.dataLayerId
-                    );
-                  if (layer && layer.dataSourceId) {
-                    const source =
-                      layersAndSources.data?.projectBySlug?.dataSourcesForItems?.find(
-                        (s) => s.id === layer.dataSourceId
-                      );
-                    if (source && sourceTypeIsCustomGLSource(source.type)) {
-                      const customSource =
-                        mapContext.manager?.getCustomGLSource(source.id);
-                      const metadata =
-                        await customSource?.getComputedMetadata();
-                      if (metadata?.bounds) {
-                        bounds = metadata.bounds;
-                      }
-                    }
-                  }
-                }
-              }
-              if (
-                bounds &&
-                [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
-              ) {
-                mapContext.manager?.map?.fitBounds(bounds, {
-                  animate: true,
-                  padding: {
-                    bottom: 100,
-                    top: 100,
-                    left: sidebar.open ? sidebar.width + 100 : 100,
-                    right: 100,
-                  },
-                });
-              }
+              mapContext.manager?.zoomToTocItem(item.stableId);
             },
           });
         }
@@ -283,7 +238,6 @@ export default function TableOfContentsEditor() {
       mapContext.manager,
       t,
       tocQuery,
-      layersAndSources.data,
       checkedItems,
     ]
   );
@@ -472,8 +426,8 @@ export default function TableOfContentsEditor() {
         lastPublished={
           tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
             ? new Date(
-              tocQuery.data.projectBySlug.tableOfContentsLastPublished!
-            )
+                tocQuery.data.projectBySlug.tableOfContentsLastPublished!
+              )
             : undefined
         }
       />
@@ -510,7 +464,8 @@ export default function TableOfContentsEditor() {
             // @ts-ignore
             dataSources={
               layersAndSources.data?.projectBySlug?.dataSourcesForItems
-            } />
+            }
+          />
         </Route>
       </div>
       {openLayerItemId && (
@@ -670,10 +625,11 @@ function Header({
               <Tooltip.Trigger>
                 <button
                   // disabled={Boolean(publishDisabled)}
-                  className={`${publishDisabled
-                    ? "bg-white text-black opacity-80"
-                    : "bg-primary-500 text-white"
-                    } rounded px-2 py-0.5 mx-1 shadow-sm`}
+                  className={`${
+                    publishDisabled
+                      ? "bg-white text-black opacity-80"
+                      : "bg-primary-500 text-white"
+                  } rounded px-2 py-0.5 mx-1 shadow-sm`}
                   onClick={onRequestPublish}
                 >
                   <Trans ns="admin:data">Publish</Trans>

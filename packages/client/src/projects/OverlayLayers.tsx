@@ -145,8 +145,11 @@ export default function OverlayLayers({
 }
 
 export function createBoundsRecursive(
-  item: OverlayFragment,
-  items: OverlayFragment[],
+  item: Pick<OverlayFragment, "bounds" | "stableId" | "id" | "parentStableId">,
+  items: Pick<
+    OverlayFragment,
+    "bounds" | "id" | "stableId" | "parentStableId"
+  >[],
   bounds?: [number, number, number, number]
 ): [number, number, number, number] {
   if (item.bounds) {

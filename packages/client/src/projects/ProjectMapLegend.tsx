@@ -1,6 +1,7 @@
 import { useContext, useMemo } from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import Legend, { LegendItem } from "../dataLayers/Legend";
+import useCommonLegendProps from "../dataLayers/useCommonLegendProps";
 
 export default function ProjectMapLegend() {
   const mapContext = useContext(MapContext);
@@ -19,12 +20,14 @@ export default function ProjectMapLegend() {
     }
     return false;
   }, [mapContext.layerStatesByTocStaticId]);
+
+  const legendProps = useCommonLegendProps(mapContext);
+
   if (legendItems.length > 0) {
     return (
       <Legend
         className="absolute -top-1.5 right-8 m-4 z-20"
         items={legendItems}
-        hiddenItems={[]}
         backdropBlur
         maxHeight={500}
         opacity={{}}
@@ -32,6 +35,7 @@ export default function ProjectMapLegend() {
         map={mapContext.manager?.map}
         loading={loading}
         persistedStateKey="project-map-legend"
+        {...legendProps}
       />
     );
   } else {

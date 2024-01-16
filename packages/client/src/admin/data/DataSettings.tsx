@@ -9,6 +9,7 @@ import DataUploadDropzone from "../uploads/DataUploadDropzone";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import Legend, { LegendItem } from "../../dataLayers/Legend";
+import useCommonLegendProps from "../../dataLayers/useCommonLegendProps";
 
 export default function DataSettings() {
   const { path } = useRouteMatch();
@@ -40,15 +41,7 @@ export default function DataSettings() {
     }
   }, [mapContext.legends, mapContext.layerStatesByTocStaticId]);
 
-  const hiddenItems = useMemo(() => {
-    const hiddenItems: string[] = [];
-    for (const id in mapContext.layerStatesByTocStaticId) {
-      if (mapContext.layerStatesByTocStaticId[id].hidden) {
-        hiddenItems.push(id);
-      }
-    }
-    return hiddenItems;
-  }, [mapContext.layerStatesByTocStaticId]);
+  const legendProps = useCommonLegendProps(mapContext);
 
   return (
     <>
@@ -70,20 +63,11 @@ export default function DataSettings() {
                       maxHeight={800}
                       className="absolute ml-5 top-5 z-10"
                       items={legendState.items}
-                      hiddenItems={hiddenItems}
                       opacity={{}}
                       zOrder={{}}
                       map={mapContext.manager?.map}
                       onZOrderChange={() => {}}
-                      onHiddenItemsChange={(id, hidden) => {
-                        if (hidden) {
-                          console.log("hide");
-                          mapContext.manager?.hideLayer(id);
-                        } else {
-                          console.log("show");
-                          mapContext.manager?.showLayer(id);
-                        }
-                      }}
+                      {...legendProps}
                     />
                   )}
                   {data?.projectBySlug && (

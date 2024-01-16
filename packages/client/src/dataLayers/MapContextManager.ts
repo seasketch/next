@@ -67,6 +67,8 @@ import { OrderedLayerSettings } from "@seasketch/mapbox-gl-esri-sources/dist/src
 import { isArcGISDynamicMapService } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISDynamicMapService";
 import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
 import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
+import { parse } from "path";
+import { createBoundsRecursive } from "../projects/OverlayLayers";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -428,7 +430,7 @@ class MapContextManager extends EventEmitter {
         .map((id) => this.layers[id]),
       this.clientDataSources,
       this.getSelectedBasemap()!,
-      this.tocItemLabels
+      this.tocItems
     );
 
     if (this.internalState.showScale) {
@@ -1869,7 +1871,7 @@ class MapContextManager extends EventEmitter {
         visibleLayers,
         this.clientDataSources,
         this.getSelectedBasemap()!,
-        this.tocItemLabels
+        this.tocItems
       );
     }
   }
@@ -1962,14 +1964,31 @@ class MapContextManager extends EventEmitter {
     maxWait: 100,
   });
 
-  private tocItemLabels: { [id: string]: string } = {};
+  private tocItems: {
+    [stableId: string]: {
+      stableId: string;
+      id: number;
+      label?: string;
+      bounds?: [number, number, number, number];
+      dataLayerId?: number;
+      isFolder: boolean;
+      parentStableId?: string;
+    };
+  } = {};
 
   reset(
     sources: DataSourceDetailsFragment[],
     layers: DataLayerDetailsFragment[],
     tocItems: Pick<
       OverlayFragment,
-      "id" | "stableId" | "dataLayerId" | "geoprocessingReferenceId" | "title"
+      | "id"
+      | "stableId"
+      | "dataLayerId"
+      | "geoprocessingReferenceId"
+      | "title"
+      | "bounds"
+      | "isFolder"
+      | "parentStableId"
     >[]
   ) {
     this.clientDataSources = {};
@@ -1982,7 +2001,15 @@ class MapContextManager extends EventEmitter {
       // this.layers[layer.id] = layer;
     }
     for (const item of tocItems) {
-      this.tocItemLabels[item.stableId] = item.title;
+      this.tocItems[item.stableId] = {
+        label: item.title,
+        dataLayerId: item.dataLayerId || undefined,
+        bounds: (item.bounds as [number, number, number, number]) || undefined,
+        isFolder: Boolean(item.isFolder),
+        parentStableId: item.parentStableId || undefined,
+        stableId: item.stableId,
+        id: item.id,
+      };
       if (item.dataLayerId) {
         const layer = layersById[item.dataLayerId];
         if (layer) {
@@ -2793,7 +2820,7 @@ class MapContextManager extends EventEmitter {
                     type: "GLStyleLegendItem",
                     legend: legend,
                     zOrder: this.layersByZIndex.indexOf(id),
-                    label: this.tocItemLabels[layer.tocId] || "",
+                    label: this.tocItems[layer.tocId]?.label || "",
                   };
                   changes = true;
                 } else {
@@ -2806,7 +2833,7 @@ class MapContextManager extends EventEmitter {
                   id,
                   type: "GLStyleLegendItem",
                   zOrder: this.layersByZIndex.indexOf(id),
-                  label: this.tocItemLabels[layer.tocId] || "",
+                  label: this.tocItems[layer.tocId]?.label || "",
                 };
                 changes = true;
               }
@@ -2832,7 +2859,7 @@ class MapContextManager extends EventEmitter {
                       item.glStyle.layers,
                       "vector"
                     ),
-                    label: this.tocItemLabels[layer.tocId] || "",
+                    label: this.tocItems[layer.tocId]?.label || "",
                   };
                 } else if (item.legend) {
                   newLegendState[id] = {
@@ -2871,6 +2898,7 @@ class MapContextManager extends EventEmitter {
   updateLegends = debounce(this._updateLegends, 20);
 
   hideLayer(stableId: string) {
+    console.log("hiding");
     this.setState((prev) => ({
       ...prev,
       layerStatesByTocStaticId: {
@@ -2896,6 +2924,42 @@ class MapContextManager extends EventEmitter {
       },
     }));
     this.updateStyle();
+  }
+
+  async zoomToTocItem(stableId: string) {
+    let bounds: [number, number, number, number] | undefined;
+    const item = this.tocItems[stableId];
+    if (item) {
+      if (item.bounds) {
+        bounds = item.bounds.map((coord: string | number) =>
+          typeof coord === "string" ? parseFloat(coord) : coord
+        ) as [number, number, number, number];
+      } else if (item.isFolder) {
+        bounds = createBoundsRecursive(item, Object.values(this.tocItems));
+      } else {
+        const layer = this.layers[stableId];
+        const source = this.clientDataSources[layer?.dataSourceId];
+        if (source && sourceTypeIsCustomGLSource(source.type)) {
+          const customSource = this.getCustomGLSource(source.id);
+          const metadata = await customSource?.getComputedMetadata();
+          if (metadata?.bounds) {
+            bounds = metadata.bounds;
+          }
+        }
+      }
+    }
+    if (bounds && [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")) {
+      const sidebar = currentSidebarState();
+      this.map?.fitBounds(bounds, {
+        animate: true,
+        padding: {
+          bottom: 100,
+          top: 100,
+          left: sidebar.open ? sidebar.width + 100 : 100,
+          right: 100,
+        },
+      });
+    }
   }
 }
 

@@ -11,7 +11,7 @@ import {
   EyeOpenIcon,
   HeightIcon,
 } from "@radix-ui/react-icons";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../components/Spinner";
 import SimpleSymbol from "./legends/SimpleSymbol";
 import { Map } from "mapbox-gl";
@@ -24,7 +24,11 @@ import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
 import { ErrorBoundary } from "@sentry/react";
-import { useState } from "react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { MenuBarSeparator } from "../components/Menubar";
+import { useContext, useState } from "react";
+import { MapContext } from "./MapContextManager";
+
 require("../admin/data/arcgis/Accordion.css");
 
 interface CustomGLSourceSymbolLegend {
@@ -67,7 +71,6 @@ export default function Legend({
   opacity: { [id: string]: number };
   hiddenItems: string[];
   onZOrderChange?: (id: string, zOrder: number) => void;
-  onOpacityChange?: (id: string, opacity: number) => void;
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   className?: string;
   loading?: boolean;
@@ -117,7 +120,10 @@ export default function Legend({
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content className="flex-1 max-h-full overflow-y-auto border-t border-black border-opacity-10">
-            <ul className="list-none overflow-y-auto" style={{ maxHeight }}>
+            <ul
+              className="list-none overflow-y-auto pr-1"
+              style={{ maxHeight }}
+            >
               {items.map((item, i) => {
                 return (
                   <LegendListItem
@@ -154,6 +160,8 @@ function LegendListItem({
   skipTopBorder?: boolean;
   onZOrderChange?: (id: string, zOrder: number) => void;
 }) {
+  const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
+  const mapContext = useContext(MapContext);
   const isSingleSymbol =
     (item.type === "GLStyleLegendItem" &&
       item.legend?.type === "SimpleGLLegend" &&
@@ -166,65 +174,104 @@ function LegendListItem({
           skipTopBorder ? "" : "border-t border-black border-opacity-5"
         } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"}`}
       >
-        <div className="flex items-center space-x-2">
-          {/* If single-symbol, show inline image */}
-          {isSingleSymbol && (
-            <div className="items-center justify-center bg-transparent flex-none">
-              {item.type === "GLStyleLegendItem" &&
-                map &&
-                item.legend?.type === "SimpleGLLegend" && (
-                  <SimpleSymbol map={map} data={item.legend.symbol} />
-                )}
-              {item.type === "CustomGLSourceSymbolLegend" &&
-                item.symbols.length === 1 && (
-                  <LegendImage item={item.symbols[0]} />
-                )}
+        <DropdownMenu.Root onOpenChange={(open) => setContextMenuIsOpen(open)}>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              style={{ backdropFilter: "blur(3px)", minWidth: 220 }}
+              className="z-50 bg-gray-100 bg-opacity-90 rounded shadow-md p-1.5 border border-black border-opacity-10"
+              align="start"
+              sideOffset={5}
+            >
+              <DropdownMenu.Item
+                className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none outline-none"
+                onSelect={() => {
+                  mapContext?.manager?.zoomToTocItem(item.id);
+                }}
+              >
+                <Trans>Zoom to</Trans>
+              </DropdownMenu.Item>
+              {/* <MenuBarSeparator /> */}
+              <DropdownMenu.Item className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none outline-none ">
+                <Trans>Metadata</Trans>
+              </DropdownMenu.Item>
+              {/* <DropdownMenu.Arrow style={{ fill: "white" }} /> */}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+          <div className="flex items-center space-x-2">
+            {/* If single-symbol, show inline image */}
+            {isSingleSymbol && (
+              <div className="items-center justify-center bg-transparent flex-none">
+                {item.type === "GLStyleLegendItem" &&
+                  map &&
+                  item.legend?.type === "SimpleGLLegend" && (
+                    <SimpleSymbol map={map} data={item.legend.symbol} />
+                  )}
+                {item.type === "CustomGLSourceSymbolLegend" &&
+                  item.symbols.length === 1 && (
+                    <LegendImage item={item.symbols[0]} />
+                  )}
+              </div>
+            )}
+            {/* Title */}
+            <span title={item.label} className="truncate flex-1">
+              {item.label}
+            </span>
+            {/* Buttons */}
+            <div
+              className={`${
+                contextMenuIsOpen
+                  ? "opacity-50"
+                  : "opacity-10 group-hover:opacity-50"
+              } flex-none group pl-1 flex items-center space-x-1 `}
+            >
+              <HeightIcon
+                className={`w-4 h-4 text-black ${
+                  contextMenuIsOpen
+                    ? "inline-block"
+                    : "hidden group-hover:inline-block"
+                }`}
+                style={{ cursor: "ns-resize" }}
+              />
+              <DropdownMenu.Trigger asChild>
+                <DotsHorizontalIcon
+                  className={`w-5 h-5 text-black  cursor-pointer ${
+                    contextMenuIsOpen
+                      ? "inline-block bg-gray-200 border border-black border-opacity-20 rounded-full"
+                      : "hidden group-hover:inline-block"
+                  } `}
+                />
+              </DropdownMenu.Trigger>
+              <Toggle
+                className={`inline-block`}
+                onChange={() => {
+                  if (onHiddenItemsChange) {
+                    onHiddenItemsChange(item.id, visible);
+                  }
+                }}
+                visible={visible}
+              />
             </div>
-          )}
-          {/* Title */}
-          <span title={item.label} className="truncate flex-1">
-            {item.label}
-          </span>
-          {/* Buttons */}
-          <div
-            className={`opacity-10 group-hover:opacity-50 flex-none group pl-1 flex items-center space-x-1 `}
-          >
-            <DotsHorizontalIcon
-              className={`w-5 h-5 text-black  cursor-pointer hidden group-hover:inline-block`}
-            />
-            <HeightIcon
-              className="w-4 h-4 text-black hidden group-hover:inline-block"
-              style={{ cursor: "ns-resize" }}
-            />
-            <Toggle
-              onChange={() => {
-                if (onHiddenItemsChange) {
-                  onHiddenItemsChange(item.id, visible);
-                }
-              }}
-              visible={visible}
-            />
           </div>
-        </div>
-        {!isSingleSymbol && (
-          <ul className="text-sm p-1">
-            {item.type === "GLStyleLegendItem" &&
-              item.legend?.type === "MultipleSymbolGLLegend" &&
-              item.legend.panels.map((panel) => (
-                <PanelFactory key={panel.id} map={map} panel={panel} />
-              ))}
-            {item.type === "CustomGLSourceSymbolLegend" &&
-              item.symbols.length > 1 &&
-              item.symbols.map((symbol) => {
-                return (
-                  <li className="flex items-center space-x-2" key={symbol.id}>
-                    <LegendImage item={symbol} />
-                    <span className="truncate">{symbol.label}</span>
-                  </li>
-                );
-              })}
-          </ul>
-        )}
+          {!isSingleSymbol && (
+            <ul className="text-sm p-1">
+              {item.type === "GLStyleLegendItem" &&
+                item.legend?.type === "MultipleSymbolGLLegend" &&
+                item.legend.panels.map((panel) => (
+                  <PanelFactory key={panel.id} map={map} panel={panel} />
+                ))}
+              {item.type === "CustomGLSourceSymbolLegend" &&
+                item.symbols.length > 1 &&
+                item.symbols.map((symbol) => {
+                  return (
+                    <li className="flex items-center space-x-2" key={symbol.id}>
+                      <LegendImage item={symbol} />
+                      <span className="truncate">{symbol.label}</span>
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
+        </DropdownMenu.Root>
       </li>
     </ErrorBoundary>
   );
