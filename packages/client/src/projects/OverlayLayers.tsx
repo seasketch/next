@@ -1,5 +1,7 @@
 import { useState, useContext, useCallback } from "react";
-import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
+import TableOfContentsMetadataModal, {
+  TableOfContentsMetadataModalContext,
+} from "../dataLayers/TableOfContentsMetadataModal";
 import {
   DataLayerDetailsFragment,
   DataSourceDetailsFragment,
@@ -27,9 +29,7 @@ export default function OverlayLayers({
 }) {
   const { t } = useTranslation("homepage");
   const mapContext = useContext(MapContext);
-  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
-    undefined | number
-  >();
+  const metadataContext = useContext(TableOfContentsMetadataModalContext);
 
   const {
     expandedIds,
@@ -100,7 +100,7 @@ export default function OverlayLayers({
             id: "metadata",
             label: t("Metadata"),
             onClick: () => {
-              setOpenMetadataViewerState(item.id);
+              metadataContext.open(item.id);
             },
           });
         }
@@ -111,6 +111,7 @@ export default function OverlayLayers({
     },
     [
       items,
+      metadataContext.open,
       mapContext.manager?.map,
       t,
       mapContext.manager,
@@ -122,12 +123,6 @@ export default function OverlayLayers({
 
   return (
     <div className="mt-3 pl-3">
-      {openMetadataViewerState && (
-        <TableOfContentsMetadataModal
-          id={openMetadataViewerState}
-          onRequestClose={() => setOpenMetadataViewerState(undefined)}
-        />
-      )}
       <TreeView
         loadingItems={loadingItems}
         errors={overlayErrors}

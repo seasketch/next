@@ -69,6 +69,7 @@ import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/di
 import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
 import { parse } from "path";
 import { createBoundsRecursive } from "../projects/OverlayLayers";
+import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -1973,6 +1974,7 @@ class MapContextManager extends EventEmitter {
       dataLayerId?: number;
       isFolder: boolean;
       parentStableId?: string;
+      enableDownload: boolean;
     };
   } = {};
 
@@ -1989,6 +1991,7 @@ class MapContextManager extends EventEmitter {
       | "bounds"
       | "isFolder"
       | "parentStableId"
+      | "enableDownload"
     >[]
   ) {
     this.clientDataSources = {};
@@ -2009,6 +2012,7 @@ class MapContextManager extends EventEmitter {
         parentStableId: item.parentStableId || undefined,
         stableId: item.stableId,
         id: item.id,
+        enableDownload: Boolean(item.enableDownload),
       };
       if (item.dataLayerId) {
         const layer = layersById[item.dataLayerId];
@@ -2772,6 +2776,13 @@ class MapContextManager extends EventEmitter {
         if (clearCache === true && id in this.internalState.legends) {
           newLegendState[id] = this.internalState.legends[id];
         } else {
+          const tableOfContentsItemDetails: TocMenuItemType = {
+            stableId: id,
+            enableDownload: Boolean(this.tocItems[id]?.enableDownload),
+            isFolder: Boolean(this.tocItems[id]?.isFolder),
+            id: this.tocItems[id].id,
+            title: this.tocItems[id].label || "Unknown",
+          };
           const layer = this.layers[id];
           const source = this.clientDataSources[layer?.dataSourceId];
           if (layer && source && layer.mapboxGlStyles) {
@@ -2821,6 +2832,7 @@ class MapContextManager extends EventEmitter {
                     legend: legend,
                     zOrder: this.layersByZIndex.indexOf(id),
                     label: this.tocItems[layer.tocId]?.label || "",
+                    tableOfContentsItemDetails,
                   };
                   changes = true;
                 } else {
@@ -2834,6 +2846,7 @@ class MapContextManager extends EventEmitter {
                   type: "GLStyleLegendItem",
                   zOrder: this.layersByZIndex.indexOf(id),
                   label: this.tocItems[layer.tocId]?.label || "",
+                  tableOfContentsItemDetails,
                 };
                 changes = true;
               }
@@ -2860,6 +2873,7 @@ class MapContextManager extends EventEmitter {
                       "vector"
                     ),
                     label: this.tocItems[layer.tocId]?.label || "",
+                    tableOfContentsItemDetails,
                   };
                 } else if (item.legend) {
                   newLegendState[id] = {
@@ -2873,6 +2887,7 @@ class MapContextManager extends EventEmitter {
                     },
                     symbols: item.legend,
                     id: item.id.toString(),
+                    tableOfContentsItemDetails,
                   };
                 }
                 changes = true;
@@ -2898,7 +2913,6 @@ class MapContextManager extends EventEmitter {
   updateLegends = debounce(this._updateLegends, 20);
 
   hideLayer(stableId: string) {
-    console.log("hiding");
     this.setState((prev) => ({
       ...prev,
       layerStatesByTocStaticId: {

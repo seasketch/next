@@ -1,4 +1,11 @@
-import { useMemo, useCallback, useState, useEffect, useContext } from "react";
+import {
+  useMemo,
+  useCallback,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+} from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { OverlayFragment } from "../generated/graphql";
 import TreeItemComponent, {
@@ -10,6 +17,8 @@ import ContextMenuDropdown, {
 } from "./ContextMenuDropdown";
 import { DropdownOption } from "./DropdownButton";
 import { useTranslatedProps } from "./TranslatedPropControl";
+import * as ContextMenu from "@radix-ui/react-context-menu";
+import { MenuBarContentClasses } from "./Menubar";
 
 export interface TreeItem {
   id: string;
@@ -70,6 +79,7 @@ interface TreeViewProps {
     target: TreeItem,
     state: SortingState
   ) => void;
+  getContextMenuContent?: (id: string, event: React.MouseEvent) => ReactNode;
 }
 
 export interface TreeNodeComponentProps {
@@ -85,7 +95,8 @@ export interface TreeNodeComponentProps {
   onContextMenu?: (
     node: TreeItem,
     target: HTMLElement,
-    offsetX: number
+    offsetX: number,
+    clickEvent: React.MouseEvent
   ) => void;
   updateContextMenuTargetRef: (el: HTMLElement) => void;
   onDragEnd?: (items: TreeItem[]) => void;
@@ -115,6 +126,7 @@ export interface TreeNodeComponentProps {
     target: TreeItem,
     state: SortingState
   ) => void;
+  allowContextMenuDefault?: boolean;
 }
 export enum CheckState {
   CHECKED,
@@ -162,6 +174,7 @@ export default function TreeView({
         id: string;
         target: HTMLElement;
         offsetX: number;
+        clickEvent: React.MouseEvent;
       }
     | undefined
   >();
@@ -372,12 +385,18 @@ export default function TreeView({
   );
 
   const onContextMenu = useCallback(
-    (node: TreeItem, target: HTMLElement, offsetX: number) => {
+    (
+      node: TreeItem,
+      target: HTMLElement,
+      offsetX: number,
+      clickEvent: React.MouseEvent
+    ) => {
       if (getContextMenuItems) {
         setContextMenu({
           id: node.id,
           offsetX,
           target,
+          clickEvent,
         });
         setContextMenuOptions(getContextMenuItems(node));
       }
@@ -401,47 +420,58 @@ export default function TreeView({
       role="tree"
       aria-label={props.ariaLabel}
     >
-      {contextMenu?.target && contextMenuOptions?.length > 0 && (
-        <ContextMenuDropdown
-          options={contextMenuOptions}
-          target={contextMenu.target}
-          offsetX={contextMenu.offsetX}
-          onClick={() => {
-            setContextMenu(undefined);
-          }}
-        />
-      )}
+      <ContextMenu.Root>
+        <ContextMenu.Portal>
+          {contextMenu?.id &&
+            props.getContextMenuContent &&
+            props.getContextMenuContent(contextMenu.id, contextMenu.clickEvent)}
+        </ContextMenu.Portal>
 
-      {data.map((item, index) => (
-        <TreeItemComponent
-          index={index}
-          clearSelection={clearSelection}
-          key={item.node.id}
-          {...item}
-          numChildren={item.children.length}
-          onExpand={onExpand}
-          onSelect={onSelect}
-          onContextMenu={onContextMenu}
-          level={1}
-          children={item.children}
-          isContextMenuTarget={item.isContextMenuTarget}
-          updateContextMenuTargetRef={updateContextMenuTargetRef}
-          onDragEnd={onDragEnd}
-          onDropEnd={onDropEnd}
-          onChecked={handleChecked}
-          disableEditing={disableEditing || false}
-          hideCheckboxes={hideCheckboxes || false}
-          checked={item.checked}
-          highlighted={item.highlighted}
-          isLoading={item.loading}
-          error={item.error || null}
-          onDrop={onDrop}
-          sortable={Boolean(sortable)}
-          nextSiblingId={data[index + 1]?.node.id}
-          previousSiblingId={data[index - 1]?.node.id}
-          onSortEnd={onSortEnd}
-        />
-      ))}
+        {!props.getContextMenuContent &&
+          contextMenu?.target &&
+          contextMenuOptions?.length > 0 && (
+            <ContextMenuDropdown
+              options={contextMenuOptions}
+              target={contextMenu.target}
+              offsetX={contextMenu.offsetX}
+              onClick={() => {
+                setContextMenu(undefined);
+              }}
+            />
+          )}
+
+        {data.map((item, index) => (
+          <TreeItemComponent
+            index={index}
+            clearSelection={clearSelection}
+            key={item.node.id}
+            {...item}
+            numChildren={item.children.length}
+            onExpand={onExpand}
+            onSelect={onSelect}
+            onContextMenu={onContextMenu}
+            level={1}
+            children={item.children}
+            isContextMenuTarget={item.isContextMenuTarget}
+            updateContextMenuTargetRef={updateContextMenuTargetRef}
+            onDragEnd={onDragEnd}
+            onDropEnd={onDropEnd}
+            onChecked={handleChecked}
+            disableEditing={disableEditing || false}
+            hideCheckboxes={hideCheckboxes || false}
+            checked={item.checked}
+            highlighted={item.highlighted}
+            isLoading={item.loading}
+            error={item.error || null}
+            onDrop={onDrop}
+            sortable={Boolean(sortable)}
+            nextSiblingId={data[index + 1]?.node.id}
+            previousSiblingId={data[index - 1]?.node.id}
+            onSortEnd={onSortEnd}
+            allowContextMenuDefault={Boolean(props.getContextMenuContent)}
+          />
+        ))}
+      </ContextMenu.Root>
     </ul>
   );
 }

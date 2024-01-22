@@ -3,7 +3,9 @@ import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
-import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
+import TableOfContentsMetadataModal, {
+  TableOfContentsMetadataModalContext,
+} from "../../dataLayers/TableOfContentsMetadataModal";
 import {
   useDeleteBranchMutation,
   useDraftStatusSubscription,
@@ -42,6 +44,10 @@ import React from "react";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 import { createPortal } from "react-dom";
 import { ZIndexEditableList } from "./ZIndexEditableList";
+import { LayerEditingContext } from "./LayerEditingContext";
+import FullScreenLoadingSpinner from "./FullScreenLoadingSpinner";
+import { TableOfContentsItemMenu } from "./TableOfContentsItemMenu";
+import * as ContextMenu from "@radix-ui/react-context-menu";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -76,20 +82,11 @@ export default function TableOfContentsEditor() {
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });
-  const [openLayerItemId, setOpenLayerItemId] = useState<number>();
   const [createNewFolderModalOpen, setCreateNewFolderModalOpen] =
     useState<boolean>(false);
   const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
-  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
-    | undefined
-    | {
-        itemId: number;
-        sublayerId?: string;
-        customGLSource?: CustomGLSource<any>;
-      }
-  >();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
   const [deleteItem] = useDeleteBranchMutation();
@@ -101,6 +98,8 @@ export default function TableOfContentsEditor() {
     },
     shouldResubscribe: true,
   });
+
+  const layerEditingContext = useContext(LayerEditingContext);
 
   const layersAndSources = useLayersAndSourcesForItemsQuery({
     variables: {
@@ -147,6 +146,7 @@ export default function TableOfContentsEditor() {
   );
 
   const { confirmDelete } = useDialog();
+  const metadataModal = useContext(TableOfContentsMetadataModalContext);
 
   const getContextMenuItems = useCallback(
     (treeItem: TreeItem) => {
@@ -179,7 +179,7 @@ export default function TableOfContentsEditor() {
               if (item.dataLayerId) {
                 manager?.showTocItems([item.stableId]);
               }
-              setOpenLayerItemId(item.id);
+              layerEditingContext.setOpenEditor(item.id);
             }
           },
         });
@@ -188,9 +188,7 @@ export default function TableOfContentsEditor() {
             id: "metadata",
             label: t("Metadata"),
             onClick: () => {
-              setOpenMetadataViewerState({
-                itemId: item.id,
-              });
+              metadataModal.open(item.id);
             },
           });
           // if (item.isFolder) {
@@ -450,6 +448,27 @@ export default function TableOfContentsEditor() {
             sortable
             getContextMenuItems={getContextMenuItems}
             onSortEnd={onSortEnd}
+            getContextMenuContent={(treeItemId, clickEvent) => {
+              const item =
+                tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
+                  (item) => item.stableId === treeItemId
+                );
+              if (item) {
+                return (
+                  <TableOfContentsItemMenu
+                    items={[item]}
+                    type={ContextMenu}
+                    editable
+                    transform={{
+                      x: clickEvent.clientX,
+                      y: clickEvent.clientY,
+                    }}
+                  />
+                );
+              } else {
+                return null;
+              }
+            }}
           />
         </Route>
         <Route path={`/${slug}/admin/data/zindex`}>
@@ -468,10 +487,10 @@ export default function TableOfContentsEditor() {
           />
         </Route>
       </div>
-      {openLayerItemId && (
+      {layerEditingContext.openEditor && (
         <LayerTableOfContentsItemEditor
-          onRequestClose={() => setOpenLayerItemId(undefined)}
-          itemId={openLayerItemId}
+          onRequestClose={() => layerEditingContext.setOpenEditor(undefined)}
+          itemId={layerEditingContext.openEditor}
         />
       )}
       {openMetadataItemId && (
@@ -480,24 +499,8 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setOpenMetadataItemId(undefined)}
         />
       )}
-      {openMetadataViewerState && (
-        <TableOfContentsMetadataModal
-          id={openMetadataViewerState.itemId}
-          onRequestClose={() => setOpenMetadataViewerState(undefined)}
-        />
-      )}
       {arcgisCartOpen && (
-        <Suspense
-          fallback={createPortal(
-            <div
-              style={{ height: "100vh", backdropFilter: "blur(2px)" }}
-              className="w-full flex min-h-full h-96 justify-center text-center align-middle items-center content-center justify-items-center place-items-center place-content-center z-50 absolute top-0 left-0 bg-black bg-opacity-50"
-            >
-              <Spinner large color="white" />
-            </div>,
-            document.body
-          )}
-        >
+        <Suspense fallback={<FullScreenLoadingSpinner />}>
           <LazyArcGISCartModal
             projectId={tocQuery.data?.projectBySlug?.id as number}
             region={tocQuery.data?.projectBySlug?.region.geojson}

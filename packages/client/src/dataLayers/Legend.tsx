@@ -24,10 +24,14 @@ import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
 import { ErrorBoundary } from "@sentry/react";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { MenuBarSeparator } from "../components/Menubar";
 import { useContext, useState } from "react";
 import { MapContext } from "./MapContextManager";
+import {
+  TableOfContentsItemMenu,
+  TocMenuItemType,
+} from "../admin/data/TableOfContentsItemMenu";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { LayerEditingContext } from "../admin/data/LayerEditingContext";
 
 require("../admin/data/arcgis/Accordion.css");
 
@@ -49,7 +53,9 @@ interface GLStyleLegendItem {
   zOrder?: number;
 }
 
-export type LegendItem = GLStyleLegendItem | CustomGLSourceSymbolLegend;
+export type LegendItem = (GLStyleLegendItem | CustomGLSourceSymbolLegend) & {
+  tableOfContentsItemDetails: TocMenuItemType;
+};
 
 const PANEL_WIDTH = 180;
 
@@ -64,6 +70,7 @@ export default function Legend({
   backdropBlur: blur,
   persistedStateKey,
   onZOrderChange,
+  editable,
 }: {
   backdropBlur?: boolean;
   items: LegendItem[];
@@ -77,6 +84,7 @@ export default function Legend({
   map?: Map;
   maxHeight?: number;
   persistedStateKey?: string;
+  editable?: boolean;
 }) {
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
@@ -84,7 +92,7 @@ export default function Legend({
     persistedStateKey || "legend",
     true
   );
-
+  const layerEditingContext = useContext(LayerEditingContext);
   return (
     <div
       style={
@@ -125,8 +133,16 @@ export default function Legend({
               style={{ maxHeight }}
             >
               {items.map((item, i) => {
+                if (
+                  layerEditingContext?.recentlyDeletedStableIds?.includes(
+                    item.id
+                  )
+                ) {
+                  return null;
+                }
                 return (
                   <LegendListItem
+                    editable={editable}
                     onHiddenItemsChange={onHiddenItemsChange}
                     key={item.id}
                     item={item}
@@ -152,6 +168,7 @@ function LegendListItem({
   onHiddenItemsChange,
   skipTopBorder,
   onZOrderChange,
+  editable,
 }: {
   item: LegendItem;
   visible: boolean;
@@ -159,9 +176,9 @@ function LegendListItem({
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   skipTopBorder?: boolean;
   onZOrderChange?: (id: string, zOrder: number) => void;
+  editable?: boolean;
 }) {
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
-  const mapContext = useContext(MapContext);
   const isSingleSymbol =
     (item.type === "GLStyleLegendItem" &&
       item.legend?.type === "SimpleGLLegend" &&
@@ -174,64 +191,51 @@ function LegendListItem({
           skipTopBorder ? "" : "border-t border-black border-opacity-5"
         } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"}`}
       >
-        <DropdownMenu.Root onOpenChange={(open) => setContextMenuIsOpen(open)}>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              style={{ backdropFilter: "blur(3px)", minWidth: 220 }}
-              className="z-50 bg-gray-100 bg-opacity-90 rounded shadow-md p-1.5 border border-black border-opacity-10"
-              align="start"
-              sideOffset={5}
-            >
-              <DropdownMenu.Item
-                className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none outline-none"
-                onSelect={() => {
-                  mapContext?.manager?.zoomToTocItem(item.id);
-                }}
-              >
-                <Trans>Zoom to</Trans>
-              </DropdownMenu.Item>
-              {/* <MenuBarSeparator /> */}
-              <DropdownMenu.Item className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none outline-none ">
-                <Trans>Metadata</Trans>
-              </DropdownMenu.Item>
-              {/* <DropdownMenu.Arrow style={{ fill: "white" }} /> */}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-          <div className="flex items-center space-x-2">
-            {/* If single-symbol, show inline image */}
-            {isSingleSymbol && (
-              <div className="items-center justify-center bg-transparent flex-none">
-                {item.type === "GLStyleLegendItem" &&
-                  map &&
-                  item.legend?.type === "SimpleGLLegend" && (
-                    <SimpleSymbol map={map} data={item.legend.symbol} />
-                  )}
-                {item.type === "CustomGLSourceSymbolLegend" &&
-                  item.symbols.length === 1 && (
-                    <LegendImage item={item.symbols[0]} />
-                  )}
-              </div>
-            )}
-            {/* Title */}
-            <span title={item.label} className="truncate flex-1">
-              {item.label}
-            </span>
-            {/* Buttons */}
-            <div
-              className={`${
+        <div className="flex items-center space-x-2">
+          {/* If single-symbol, show inline image */}
+          {isSingleSymbol && (
+            <div className="items-center justify-center bg-transparent flex-none">
+              {item.type === "GLStyleLegendItem" &&
+                map &&
+                item.legend?.type === "SimpleGLLegend" && (
+                  <SimpleSymbol map={map} data={item.legend.symbol} />
+                )}
+              {item.type === "CustomGLSourceSymbolLegend" &&
+                item.symbols.length === 1 && (
+                  <LegendImage item={item.symbols[0]} />
+                )}
+            </div>
+          )}
+          {/* Title */}
+          <span title={item.label} className="truncate flex-1">
+            {item.label}
+          </span>
+          {/* Buttons */}
+          <div
+            className={`${
+              contextMenuIsOpen
+                ? "opacity-50"
+                : "opacity-10 group-hover:opacity-50"
+            } flex-none group pl-1 flex items-center space-x-1 `}
+          >
+            <HeightIcon
+              className={`w-4 h-4 text-black ${
                 contextMenuIsOpen
-                  ? "opacity-50"
-                  : "opacity-10 group-hover:opacity-50"
-              } flex-none group pl-1 flex items-center space-x-1 `}
+                  ? "inline-block"
+                  : "hidden group-hover:inline-block"
+              }`}
+              style={{ cursor: "ns-resize" }}
+            />
+            <DropdownMenu.Root
+              onOpenChange={(open) => setContextMenuIsOpen(open)}
             >
-              <HeightIcon
-                className={`w-4 h-4 text-black ${
-                  contextMenuIsOpen
-                    ? "inline-block"
-                    : "hidden group-hover:inline-block"
-                }`}
-                style={{ cursor: "ns-resize" }}
-              />
+              <DropdownMenu.Portal>
+                <TableOfContentsItemMenu
+                  items={[item.tableOfContentsItemDetails]}
+                  type={DropdownMenu}
+                  editable={editable}
+                />
+              </DropdownMenu.Portal>
               <DropdownMenu.Trigger asChild>
                 <DotsHorizontalIcon
                   className={`w-5 h-5 text-black  cursor-pointer ${
@@ -241,37 +245,37 @@ function LegendListItem({
                   } `}
                 />
               </DropdownMenu.Trigger>
-              <Toggle
-                className={`inline-block`}
-                onChange={() => {
-                  if (onHiddenItemsChange) {
-                    onHiddenItemsChange(item.id, visible);
-                  }
-                }}
-                visible={visible}
-              />
-            </div>
+            </DropdownMenu.Root>
+            <Toggle
+              className={`inline-block`}
+              onChange={() => {
+                if (onHiddenItemsChange) {
+                  onHiddenItemsChange(item.id, visible);
+                }
+              }}
+              visible={visible}
+            />
           </div>
-          {!isSingleSymbol && (
-            <ul className="text-sm p-1">
-              {item.type === "GLStyleLegendItem" &&
-                item.legend?.type === "MultipleSymbolGLLegend" &&
-                item.legend.panels.map((panel) => (
-                  <PanelFactory key={panel.id} map={map} panel={panel} />
-                ))}
-              {item.type === "CustomGLSourceSymbolLegend" &&
-                item.symbols.length > 1 &&
-                item.symbols.map((symbol) => {
-                  return (
-                    <li className="flex items-center space-x-2" key={symbol.id}>
-                      <LegendImage item={symbol} />
-                      <span className="truncate">{symbol.label}</span>
-                    </li>
-                  );
-                })}
-            </ul>
-          )}
-        </DropdownMenu.Root>
+        </div>
+        {!isSingleSymbol && (
+          <ul className="text-sm p-1">
+            {item.type === "GLStyleLegendItem" &&
+              item.legend?.type === "MultipleSymbolGLLegend" &&
+              item.legend.panels.map((panel) => (
+                <PanelFactory key={panel.id} map={map} panel={panel} />
+              ))}
+            {item.type === "CustomGLSourceSymbolLegend" &&
+              item.symbols.length > 1 &&
+              item.symbols.map((symbol) => {
+                return (
+                  <li className="flex items-center space-x-2" key={symbol.id}>
+                    <LegendImage item={symbol} />
+                    <span className="truncate">{symbol.label}</span>
+                  </li>
+                );
+              })}
+          </ul>
+        )}
       </li>
     </ErrorBoundary>
   );

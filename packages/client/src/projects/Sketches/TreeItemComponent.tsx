@@ -22,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "../../components/Tooltip";
+import * as ContextMenu from "@radix-ui/react-context-menu";
 
 export interface TreeNodeDataProps {
   id: number;
@@ -105,6 +106,7 @@ export default function TreeItemComponent({
   nextSiblingId,
   previousSiblingId,
   onSortEnd,
+  allowContextMenuDefault,
 }: TreeNodeComponentProps) {
   const isChecked = checked !== CheckState.UNCHECKED;
   const hasCheckedChildren = checked !== CheckState.UNCHECKED;
@@ -135,9 +137,11 @@ export default function TreeItemComponent({
         }
         var rect = e.currentTarget.getBoundingClientRect();
         var offsetX = e.clientX - rect.left; //x position within the element.
-        onContextMenu(node, e.currentTarget, offsetX);
-        e.preventDefault();
-        e.stopPropagation();
+        onContextMenu(node, e.currentTarget, offsetX, e);
+        if (!allowContextMenuDefault) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
       }
     },
     [isSelected, node, onContextMenu, onSelect]
@@ -378,93 +382,105 @@ export default function TreeItemComponent({
             !node.isLeaf &&
             node.type !== "Sketch" &&
             (isExpanded ? (
-              <FolderOpenIcon
-                fill="currentColor"
-                fillOpacity={0.2}
-                strokeWidth={1}
-                onContextMenu={contextMenuHandler}
-                onClick={updateSelectionOnClick}
-                className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
-              />
+              <ContextMenu.Trigger asChild={true}>
+                <FolderOpenIcon
+                  fill="currentColor"
+                  fillOpacity={0.2}
+                  strokeWidth={1}
+                  onContextMenu={contextMenuHandler}
+                  onClick={updateSelectionOnClick}
+                  className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
+                />
+              </ContextMenu.Trigger>
             ) : (
-              <FolderIcon
-                fill="currentColor"
-                fillOpacity={0.2}
-                strokeWidth={1}
-                onContextMenu={contextMenuHandler}
-                onClick={updateSelectionOnClick}
-                className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
-              />
+              <ContextMenu.Trigger asChild={true}>
+                <FolderIcon
+                  fill="currentColor"
+                  fillOpacity={0.2}
+                  strokeWidth={1}
+                  onContextMenu={contextMenuHandler}
+                  onClick={updateSelectionOnClick}
+                  className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
+                />
+              </ContextMenu.Trigger>
             ))}
           {node.type === "Sketch" && !node.isLeaf && (
-            <CollectionIcon
-              stroke="currentColor"
-              fill="currentColor"
-              fillOpacity={0.2}
-              strokeWidth={1}
-              onContextMenu={contextMenuHandler}
-              onClick={updateSelectionOnClick}
-              style={{ height: 22 }}
-              className="-mt-1 w-6 text-primary-700"
-            />
-          )}
-          <label
-            id={`${node.id}-label`}
-            ref={isContextMenuTarget ? setLabelRef : undefined}
-            className={`px-1 cursor-pointer select-none -mt-0.5 ${
-              error ? "text-red-600" : ""
-            }`}
-            onClick={updateSelectionOnClick}
-            onContextMenu={contextMenuHandler}
-          >
-            {node.title}
-          </label>
-        </span>
-        {children && children.length > 0 && isExpanded && !node.hideChildren && (
-          <ul
-            role="group"
-            onClick={(e) => {
-              if (clearSelection) {
-                clearSelection();
-              }
-            }}
-            className={isDragging && sortable ? "bg-gray-50" : ""}
-            style={{
-              paddingLeft: childGroupPadding || 35,
-            }}
-          >
-            {children.map((item, index) => (
-              <TreeItemComponent
-                index={index}
-                key={item.node.id}
-                {...item}
-                numChildren={item.children.length}
-                onExpand={onExpand}
-                onSelect={onSelect}
-                onContextMenu={onContextMenu}
-                level={1}
-                children={item.children}
-                isContextMenuTarget={item.isContextMenuTarget}
-                updateContextMenuTargetRef={updateContextMenuTargetRef}
-                onDragEnd={onDragEnd}
-                onDropEnd={onDropEnd}
-                onDrop={onDrop}
-                onChecked={onChecked}
-                disableEditing={disableEditing || false}
-                hideCheckboxes={hideCheckboxes || false}
-                checked={item.checked}
-                highlighted={item.highlighted}
-                isLoading={item.loading}
-                error={item.error || null}
-                clearSelection={clearSelection}
-                sortable={sortable}
-                nextSiblingId={children[index + 1]?.node.id}
-                previousSiblingId={children[index - 1]?.node.id}
-                onSortEnd={onSortEnd}
+            <ContextMenu.Trigger asChild={true}>
+              <CollectionIcon
+                stroke="currentColor"
+                fill="currentColor"
+                fillOpacity={0.2}
+                strokeWidth={1}
+                onContextMenu={contextMenuHandler}
+                onClick={updateSelectionOnClick}
+                style={{ height: 22 }}
+                className="-mt-1 w-6 text-primary-700"
               />
-            ))}
-          </ul>
-        )}
+            </ContextMenu.Trigger>
+          )}
+          <ContextMenu.Trigger asChild={true}>
+            <label
+              id={`${node.id}-label`}
+              ref={isContextMenuTarget ? setLabelRef : undefined}
+              className={`px-1 cursor-pointer select-none -mt-0.5 ${
+                error ? "text-red-600" : ""
+              }`}
+              onClick={updateSelectionOnClick}
+              onContextMenu={contextMenuHandler}
+            >
+              {node.title}
+            </label>
+          </ContextMenu.Trigger>
+        </span>
+        {children &&
+          children.length > 0 &&
+          isExpanded &&
+          !node.hideChildren && (
+            <ul
+              role="group"
+              onClick={(e) => {
+                if (clearSelection) {
+                  clearSelection();
+                }
+              }}
+              className={isDragging && sortable ? "bg-gray-50" : ""}
+              style={{
+                paddingLeft: childGroupPadding || 35,
+              }}
+            >
+              {children.map((item, index) => (
+                <TreeItemComponent
+                  index={index}
+                  key={item.node.id}
+                  {...item}
+                  numChildren={item.children.length}
+                  onExpand={onExpand}
+                  onSelect={onSelect}
+                  onContextMenu={onContextMenu}
+                  level={1}
+                  children={item.children}
+                  isContextMenuTarget={item.isContextMenuTarget}
+                  updateContextMenuTargetRef={updateContextMenuTargetRef}
+                  onDragEnd={onDragEnd}
+                  onDropEnd={onDropEnd}
+                  onDrop={onDrop}
+                  onChecked={onChecked}
+                  disableEditing={disableEditing || false}
+                  hideCheckboxes={hideCheckboxes || false}
+                  checked={item.checked}
+                  highlighted={item.highlighted}
+                  isLoading={item.loading}
+                  error={item.error || null}
+                  clearSelection={clearSelection}
+                  sortable={sortable}
+                  nextSiblingId={children[index + 1]?.node.id}
+                  previousSiblingId={children[index - 1]?.node.id}
+                  onSortEnd={onSortEnd}
+                  allowContextMenuDefault={allowContextMenuDefault}
+                />
+              ))}
+            </ul>
+          )}
         <motion.div
           variants={{
             highlighted: {

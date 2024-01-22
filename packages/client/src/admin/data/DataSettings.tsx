@@ -10,6 +10,8 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import Legend, { LegendItem } from "../../dataLayers/Legend";
 import useCommonLegendProps from "../../dataLayers/useCommonLegendProps";
+import { TableOfContentsMetadataModalProvider } from "../../dataLayers/TableOfContentsMetadataModal";
+import { LayerEditingContextProvider } from "./LayerEditingContext";
 
 export default function DataSettings() {
   const { path } = useRouteMatch();
@@ -47,48 +49,52 @@ export default function DataSettings() {
     <>
       <DndProvider backend={HTML5Backend}>
         <MapContext.Provider value={mapContext}>
-          <Switch>
-            <Route path={`${path}`}>
-              <DataUploadDropzone
-                slug={slug}
-                className="flex flex-row h-screen"
-              >
-                <div className="h-full w-128">
-                  <LayerAdminSidebar />
-                </div>
-                <div className="flex-1 h-full">
-                  {legendState.items.length > 0 && (
-                    <Legend
-                      backdropBlur
-                      maxHeight={800}
-                      className="absolute ml-5 top-5 z-10"
-                      items={legendState.items}
-                      opacity={{}}
-                      zOrder={{}}
-                      map={mapContext.manager?.map}
-                      onZOrderChange={() => {}}
-                      {...legendProps}
-                    />
-                  )}
-                  {data?.projectBySlug && (
-                    <MapboxMap
-                      bounds={
-                        data?.projectBySlug
-                          ? (bbox(data.projectBySlug.region.geojson) as [
-                              number,
-                              number,
-                              number,
-                              number
-                            ])
-                          : undefined
-                      }
-                      className="h-full"
-                    />
-                  )}
-                </div>
-              </DataUploadDropzone>
-            </Route>
-          </Switch>
+          <TableOfContentsMetadataModalProvider>
+            <LayerEditingContextProvider>
+              <Switch>
+                <Route path={`${path}`}>
+                  <DataUploadDropzone
+                    slug={slug}
+                    className="flex flex-row h-screen"
+                  >
+                    <div className="h-full w-128">
+                      <LayerAdminSidebar />
+                    </div>
+                    <div className="flex-1 h-full">
+                      {legendState.items.length > 0 && (
+                        <Legend
+                          editable
+                          backdropBlur
+                          maxHeight={800}
+                          className="absolute ml-5 top-5 z-10"
+                          items={legendState.items}
+                          opacity={{}}
+                          zOrder={{}}
+                          map={mapContext.manager?.map}
+                          {...legendProps}
+                        />
+                      )}
+                      {data?.projectBySlug && (
+                        <MapboxMap
+                          bounds={
+                            data?.projectBySlug
+                              ? (bbox(data.projectBySlug.region.geojson) as [
+                                  number,
+                                  number,
+                                  number,
+                                  number
+                                ])
+                              : undefined
+                          }
+                          className="h-full"
+                        />
+                      )}
+                    </div>
+                  </DataUploadDropzone>
+                </Route>
+              </Switch>
+            </LayerEditingContextProvider>
+          </TableOfContentsMetadataModalProvider>
         </MapContext.Provider>
       </DndProvider>
     </>

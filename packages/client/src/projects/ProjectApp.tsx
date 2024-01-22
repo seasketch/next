@@ -29,6 +29,7 @@ import {
 } from "../draw/MapSettingsPopup";
 import { MeasureControlContextProvider } from "../MeasureControl";
 import ProjectMapLegend from "./ProjectMapLegend";
+import { TableOfContentsMetadataModalProvider } from "../dataLayers/TableOfContentsMetadataModal";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -46,10 +47,9 @@ const LazyCacheSettingsPage = React.lazy(
     )
 );
 
-
 export const FullSidebarContext = createContext({
   open: false,
-  setOpen: (open: boolean) => { },
+  setOpen: (open: boolean) => {},
 });
 
 export default function ProjectApp() {
@@ -96,165 +96,176 @@ export default function ProjectApp() {
     <div
       className="h-screen flex flex-col ml-14"
       style={{ width: "calc(100vw - 3.5rem)" }}
-    // dir={selectedLang.rtl ? "rtl" : "ltr"}
+      // dir={selectedLang.rtl ? "rtl" : "ltr"}
     >
-      <FullSidebarContext.Provider value={{ open: expandSidebar, setOpen: setExpandSidebar }}>
+      <FullSidebarContext.Provider
+        value={{ open: expandSidebar, setOpen: setExpandSidebar }}
+      >
         <DndProvider backend={HTML5Backend}>
           {/* <ProjectAppHeader /> */}
           <MapContext.Provider value={contextValue}>
             <MeasureControlContextProvider>
               <SketchUIStateContextProvider>
-                {/* <ProjectAppHeader /> */}
-                <div className="flex flex-grow w-full">
-                  <ProjectMapLegend />
-                  <MapboxMap
-                    className="ml-2"
-                    showNavigationControls={true}
-                    navigationControlsLocation="top-right"
-                    onRequestSidebarClose={() => setExpandSidebar(false)}
-                    mapSettingsPopupActions={
-                      <>
-                        <ResetToProjectBounds
-                          mapContextManager={mapContext.manager}
-                        />
-                        <ShowScaleBar mapContext={mapContext} />
-                        <Measure
-                        // disabled={
-                        //   mapContext.digitizingLockState !==
-                        //     DigitizingLockState.Free ||
-                        //   mapContext.digitizingLockedBy === "MeasureControl"
-                        // }
-                        // onClick={() => {
-                        //   if (
-                        //     mapContext.digitizingLockState ===
-                        //     DigitizingLockState.Free
-                        //   ) {
-                        //     mapContext.manager?.measure();
-                        //   } else if (
-                        //     mapContext.digitizingLockedBy === "MeasureControl"
-                        //   ) {
-                        //     mapContext.manager?.cancelMeasurement();
-                        //   } else {
-                        //     // do nothing. Don't interfere with sketching
-                        //   }
-                        // }}
-                        />
-                      </>
-                    }
-                  />
-                  <div
-                    className="absolute flex items-center justify-center h-full pointer-events-none"
-                    style={{ width: "calc(100vw - 3.5rem)" }}
-                    ref={setMapContainerPortal}
-                  ></div>
-                </div>
-                <MiniSidebar
-                  dark={dark}
-                  onExpand={() => {
-                    setExpandSidebar((prev) => !prev);
-                    history.replace(`/${slug}/app`);
-                  }}
-                />
-
-                <Route path={`/${slug}/profile`}>
-                  <UserProfileModal
-                    onRequestClose={() => history.push(`/${slug}/app`)}
-                  />
-                </Route>
-                <AnimatePresence initial={false}>
-                  <ProjectAppSidebar
-                    title={sidebarTitles[showSidebar?.params["sidebar"] || ""]}
-                    onClose={() => history.replace(`/${slug}/app`)}
+                <TableOfContentsMetadataModalProvider>
+                  {/* <ProjectAppHeader /> */}
+                  <div className="flex flex-grow w-full">
+                    <ProjectMapLegend />
+                    <MapboxMap
+                      className="ml-2"
+                      showNavigationControls={true}
+                      navigationControlsLocation="top-right"
+                      onRequestSidebarClose={() => setExpandSidebar(false)}
+                      mapSettingsPopupActions={
+                        <>
+                          <ResetToProjectBounds
+                            mapContextManager={mapContext.manager}
+                          />
+                          <ShowScaleBar mapContext={mapContext} />
+                          <Measure
+                          // disabled={
+                          //   mapContext.digitizingLockState !==
+                          //     DigitizingLockState.Free ||
+                          //   mapContext.digitizingLockedBy === "MeasureControl"
+                          // }
+                          // onClick={() => {
+                          //   if (
+                          //     mapContext.digitizingLockState ===
+                          //     DigitizingLockState.Free
+                          //   ) {
+                          //     mapContext.manager?.measure();
+                          //   } else if (
+                          //     mapContext.digitizingLockedBy === "MeasureControl"
+                          //   ) {
+                          //     mapContext.manager?.cancelMeasurement();
+                          //   } else {
+                          //     // do nothing. Don't interfere with sketching
+                          //   }
+                          // }}
+                          />
+                        </>
+                      }
+                    />
+                    <div
+                      className="absolute flex items-center justify-center h-full pointer-events-none"
+                      style={{ width: "calc(100vw - 3.5rem)" }}
+                      ref={setMapContainerPortal}
+                    ></div>
+                  </div>
+                  <MiniSidebar
                     dark={dark}
-                    hidden={Boolean(!showSidebar)}
-                    noPadding={
-                      /sketches/.test(history.location.pathname) ||
-                      /forums/.test(history.location.pathname)
-                    }
-                  >
-                    <Suspense
-                      fallback={
-                        <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
-                          <Spinner />
-                        </div>
+                    onExpand={() => {
+                      setExpandSidebar((prev) => !prev);
+                      history.replace(`/${slug}/app`);
+                    }}
+                  />
+
+                  <Route path={`/${slug}/profile`}>
+                    <UserProfileModal
+                      onRequestClose={() => history.push(`/${slug}/app`)}
+                    />
+                  </Route>
+                  <AnimatePresence initial={false}>
+                    <ProjectAppSidebar
+                      title={
+                        sidebarTitles[showSidebar?.params["sidebar"] || ""]
+                      }
+                      onClose={() => history.replace(`/${slug}/app`)}
+                      dark={dark}
+                      hidden={Boolean(!showSidebar)}
+                      noPadding={
+                        /sketches/.test(history.location.pathname) ||
+                        /forums/.test(history.location.pathname)
                       }
                     >
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className={`flex flex-col ${/app\/forums\//.test(location.pathname)
-                          ? "max-h-full overflow-hidden fffff"
-                          : ""
-                          }`}
+                      <Suspense
+                        fallback={
+                          <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                            <Spinner />
+                          </div>
+                        }
                       >
-                        <Route path={`/${slug}/app/maps`}>
-                          <BasemapControl basemaps={basemaps} />
-                        </Route>
-                        <Route path={`/${slug}/app/overlays`}>
-                          <LazyOverlays
-                            layers={dataLayers || []}
-                            sources={dataSources || []}
-                            items={tableOfContentsItems as TableOfContentsItem[]}
-                          />
-                        </Route>
-                        <Route
-                          children={(match) => {
-                            return (
-                              <LazyForums
-                                hidden={!Boolean(match.match?.url)}
-                                forumId={
-                                  match.match &&
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className={`flex flex-col ${
+                            /app\/forums\//.test(location.pathname)
+                              ? "max-h-full overflow-hidden fffff"
+                              : ""
+                          }`}
+                        >
+                          <Route path={`/${slug}/app/maps`}>
+                            <BasemapControl basemaps={basemaps} />
+                          </Route>
+                          <Route path={`/${slug}/app/overlays`}>
+                            <LazyOverlays
+                              layers={dataLayers || []}
+                              sources={dataSources || []}
+                              items={
+                                tableOfContentsItems as TableOfContentsItem[]
+                              }
+                            />
+                          </Route>
+                          <Route
+                            children={(match) => {
+                              return (
+                                <LazyForums
+                                  hidden={!Boolean(match.match?.url)}
+                                  forumId={
+                                    match.match &&
                                     match.match.params &&
                                     "id" in match.match.params
-                                    ? parseInt(match.match.params.id)
-                                    : undefined
-                                }
-                                topicId={
-                                  match.match &&
+                                      ? parseInt(match.match.params.id)
+                                      : undefined
+                                  }
+                                  topicId={
+                                    match.match &&
                                     match.match.params &&
                                     "topicId" in match.match.params
-                                    ? parseInt(match.match.params.topicId)
-                                    : undefined
-                                }
-                                postNewTopic={Boolean(
-                                  match.match?.path &&
-                                  /new-post/.test(match.match.path)
-                                )}
+                                      ? parseInt(match.match.params.topicId)
+                                      : undefined
+                                  }
+                                  postNewTopic={Boolean(
+                                    match.match?.path &&
+                                      /new-post/.test(match.match.path)
+                                  )}
+                                />
+                              );
+                            }}
+                            path={[
+                              `/${slug}/app/forums/:id/new-post`,
+                              `/${slug}/app/forums/:id/:topicId`,
+                              `/${slug}/app/forums/:id`,
+                              `/${slug}/app/forums`,
+                            ]}
+                            // component={SketchingTools}
+                          />
+                          <Route
+                            children={(match) => (
+                              <LazySketchingTools
+                                hidden={!Boolean(match.match)}
                               />
-                            );
-                          }}
-                          path={[
-                            `/${slug}/app/forums/:id/new-post`,
-                            `/${slug}/app/forums/:id/:topicId`,
-                            `/${slug}/app/forums/:id`,
-                            `/${slug}/app/forums`,
-                          ]}
-                        // component={SketchingTools}
-                        />
-                        <Route
-                          children={(match) => (
-                            <LazySketchingTools hidden={!Boolean(match.match)} />
-                          )}
-                          path={`/${slug}/app/sketches`}
-                        />
-                        <Route path={`/${slug}/app/settings`}>
-                          <LazyCacheSettingsPage />
-                        </Route>
-                      </motion.div>
-                    </Suspense>
-                  </ProjectAppSidebar>
-                </AnimatePresence>
-                <FullSidebar
-                  dark={dark}
-                  open={expandSidebar}
-                  onClose={() => {
-                    setExpandSidebar((prev) => false);
-                  }}
-                />
-                <OfflineToastNotification />
-                <OfflineResponsesToastNotification />
+                            )}
+                            path={`/${slug}/app/sketches`}
+                          />
+                          <Route path={`/${slug}/app/settings`}>
+                            <LazyCacheSettingsPage />
+                          </Route>
+                        </motion.div>
+                      </Suspense>
+                    </ProjectAppSidebar>
+                  </AnimatePresence>
+                  <FullSidebar
+                    dark={dark}
+                    open={expandSidebar}
+                    onClose={() => {
+                      setExpandSidebar((prev) => false);
+                    }}
+                  />
+                  <OfflineToastNotification />
+                  <OfflineResponsesToastNotification />
+                </TableOfContentsMetadataModalProvider>
               </SketchUIStateContextProvider>
             </MeasureControlContextProvider>
           </MapContext.Provider>
