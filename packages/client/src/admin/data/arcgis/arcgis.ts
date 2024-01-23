@@ -93,6 +93,12 @@ export function normalizeArcGISServerUrl(
       servicesRoot: "",
       location: "",
     };
+  } else if (/rest\/services/i.test(url)) {
+    const parts = url.split(/\/rest\/services/i);
+    const baseUrl = parts[0];
+    const servicesRoot = baseUrl + "/rest/services";
+    const location = parts[1].replace(/\/$/, "") || "/";
+    return { baseUrl, servicesRoot, location };
   } else {
     const baseUrl = url.replace(/\/$/, "");
     const servicesRoot = baseUrl + "/arcgis/rest/services";
