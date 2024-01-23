@@ -18,7 +18,7 @@ import ContextMenuDropdown, {
 import { DropdownOption } from "./DropdownButton";
 import { useTranslatedProps } from "./TranslatedPropControl";
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { MenuBarContentClasses } from "./Menubar";
+require("../admin/data/GLStyleEditor/RadixDropdown.css");
 
 export interface TreeItem {
   id: string;
@@ -391,17 +391,19 @@ export default function TreeView({
       offsetX: number,
       clickEvent: React.MouseEvent
     ) => {
-      if (getContextMenuItems) {
+      if (getContextMenuItems || props.getContextMenuContent) {
         setContextMenu({
           id: node.id,
           offsetX,
           target,
           clickEvent,
         });
-        setContextMenuOptions(getContextMenuItems(node));
+        if (getContextMenuItems) {
+          setContextMenuOptions(getContextMenuItems(node));
+        }
       }
     },
-    [setContextMenu, getContextMenuItems]
+    [setContextMenu, getContextMenuItems, props.getContextMenuContent]
   );
 
   useEffect(() => {

@@ -3,11 +3,7 @@ import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
-import TableOfContentsMetadataModal, {
-  TableOfContentsMetadataModalContext,
-} from "../../dataLayers/TableOfContentsMetadataModal";
 import {
-  useDeleteBranchMutation,
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
   useLayersAndSourcesForItemsQuery,
@@ -17,12 +13,9 @@ import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
 import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
-import useDialog from "../../components/useDialog";
 import FolderEditor from "./FolderEditor";
 import TreeView, { TreeItem } from "../../components/TreeView";
 import { useOverlayState } from "../../components/TreeView";
-import { DropdownOption } from "../../components/DropdownButton";
-import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
 import { SortingState } from "../../projects/Sketches/TreeItemComponent";
 import { OverlayFragment } from "../../generated/queries";
 import * as Menubar from "@radix-ui/react-menubar";
@@ -41,8 +34,6 @@ import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import React from "react";
-import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
-import { createPortal } from "react-dom";
 import { ZIndexEditableList } from "./ZIndexEditableList";
 import { LayerEditingContext } from "./LayerEditingContext";
 import FullScreenLoadingSpinner from "./FullScreenLoadingSpinner";
@@ -77,7 +68,6 @@ export default function TableOfContentsEditor() {
     ? "order"
     : "tree";
   const { manager } = useContext(MapContext);
-  const { t } = useTranslation("nav");
 
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
@@ -89,7 +79,6 @@ export default function TableOfContentsEditor() {
   const [folderId, setFolderId] = useState<number>();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
-  const [deleteItem] = useDeleteBranchMutation();
   const mapContext = useContext(MapContext);
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
@@ -143,101 +132,6 @@ export default function TableOfContentsEditor() {
     tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [],
     true,
     "admin"
-  );
-
-  const { confirmDelete } = useDialog();
-  const metadataModal = useContext(TableOfContentsMetadataModalContext);
-
-  const getContextMenuItems = useCallback(
-    (treeItem: TreeItem) => {
-      const items =
-        tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [];
-      const item = items.find((item) => item.stableId === treeItem.id);
-      if (item) {
-        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] =
-          [];
-        if (
-          !item.isFolder ||
-          items.find((i) => i.parentStableId === item.stableId && i.bounds)
-        ) {
-          contextMenuOptions.push({
-            id: "zoom-to",
-            disabled: !item.bounds && !checkedItems.includes(item.stableId),
-            label: t("Zoom to bounds"),
-            onClick: async () => {
-              mapContext.manager?.zoomToTocItem(item.stableId);
-            },
-          });
-        }
-        contextMenuOptions.push({
-          id: "edit",
-          label: t("Edit"),
-          onClick: () => {
-            if (item?.isFolder) {
-              setFolderId(item.id);
-            } else {
-              if (item.dataLayerId) {
-                manager?.showTocItems([item.stableId]);
-              }
-              layerEditingContext.setOpenEditor(item.id);
-            }
-          },
-        });
-        if (!item.isFolder || item.hideChildren) {
-          contextMenuOptions.push({
-            id: "metadata",
-            label: t("Metadata"),
-            onClick: () => {
-              metadataModal.open(item.id);
-            },
-          });
-          // if (item.isFolder) {
-          contextMenuOptions.push({
-            id: "edit-metadata",
-            label: t("Edit metadata"),
-            onClick: () => {
-              setOpenMetadataItemId(item.id);
-            },
-          });
-          // }
-        }
-        contextMenuOptions.push({
-          id: "delete",
-          label: t("Delete"),
-          onClick: async () => {
-            if (item) {
-              await confirmDelete({
-                message: t("Delete Item"),
-                description: t("Are you sure you want to delete {{name}}?", {
-                  name: item.title.replace(/\.$/, ""),
-                }),
-                onDelete: async () => {
-                  await deleteItem({
-                    variables: {
-                      id: item.id as number,
-                    },
-                  }).then(async () => {
-                    await tocQuery.refetch();
-                  });
-                },
-              });
-            }
-          },
-        });
-        return contextMenuOptions;
-      } else {
-        return [];
-      }
-    },
-    [
-      confirmDelete,
-      deleteItem,
-      manager,
-      mapContext.manager,
-      t,
-      tocQuery,
-      checkedItems,
-    ]
   );
 
   const onSortEnd: (
@@ -446,7 +340,6 @@ export default function TableOfContentsEditor() {
             items={treeNodes}
             ariaLabel="Draft overlays"
             sortable
-            getContextMenuItems={getContextMenuItems}
             onSortEnd={onSortEnd}
             getContextMenuContent={(treeItemId, clickEvent) => {
               const item =

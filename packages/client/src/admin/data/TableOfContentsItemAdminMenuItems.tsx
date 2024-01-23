@@ -35,6 +35,9 @@ export default function TableOfContentsItemAdminMenuItems({
   return (
     <>
       <MenuType.Item
+        style={{
+          minWidth: 120,
+        }}
         onSelect={() => {
           layerEditingContext.setOpenEditor(item.id);
         }}

@@ -34,6 +34,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
   ) => {
     const MenuType = type;
     const mapContext = useContext(MapContext);
+    const intersectsBottom = (transform?.y || 0) > window.innerHeight - 160;
     const metadataContext = useContext(TableOfContentsMetadataModalContext);
     if (!mapContext.manager || !mapContext.ready) {
       return (
@@ -48,6 +49,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
               ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
               : {}),
             backdropFilter: "blur(3px)",
+            marginTop: intersectsBottom ? "-90%" : 0,
           }}
         >
           <MenuType.Label>
@@ -70,6 +72,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
               ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
               : {}),
             backdropFilter: "blur(3px)",
+            marginTop: intersectsBottom ? "-90%" : 0,
           }}
         >
           <MenuType.Label>
@@ -92,6 +95,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
             ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
             : {}),
           backdropFilter: "blur(3px)",
+          marginTop: intersectsBottom ? "-90%" : 0,
         }}
         className={MenuBarContentClasses}
         {...(type === ContextMenu || type === DropdownMenu
@@ -138,7 +142,9 @@ export const TableOfContentsItemMenu = React.forwardRef<
           )}
           {editable && (
             <>
-              <MenuType.Separator {...MenuBarSeparatorProps} />
+              {!item.isFolder && (
+                <MenuType.Separator {...MenuBarSeparatorProps} />
+              )}
               <LazyAdminItems type={type} items={items} />
             </>
           )}

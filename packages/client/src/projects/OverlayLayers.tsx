@@ -17,6 +17,8 @@ import { DropdownDividerProps } from "../components/ContextMenuDropdown";
 import { DropdownOption } from "../components/DropdownButton";
 import { useTranslation } from "react-i18next";
 import { currentSidebarState } from "./ProjectAppSidebar";
+import { TableOfContentsItemMenu } from "../admin/data/TableOfContentsItemMenu";
+import * as ContextMenu from "@radix-ui/react-context-menu";
 
 export default function OverlayLayers({
   items,
@@ -41,86 +43,6 @@ export default function OverlayLayers({
     treeItems,
   } = useOverlayState(items);
 
-  const getContextMenuItems = useCallback(
-    (treeItem: TreeItem) => {
-      const item = items.find((item) => item.stableId === treeItem.id);
-      if (item) {
-        const sidebar = currentSidebarState();
-        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] = [
-          {
-            id: "zoom-to",
-            label: t("Zoom to bounds"),
-            disabled: !item.bounds && !checkedItems.includes(item.stableId),
-            onClick: async () => {
-              let bounds: [number, number, number, number] | undefined;
-              if (item.isFolder) {
-                bounds = createBoundsRecursive(item, items);
-              } else {
-                if (item.bounds) {
-                  bounds = item.bounds.map((coord: string) =>
-                    parseFloat(coord)
-                  ) as [number, number, number, number];
-                } else {
-                  const layer = layers?.find((l) => l.id === item.dataLayerId);
-                  if (layer && layer.dataSourceId) {
-                    const source = sources?.find(
-                      (s) => s.id === layer.dataSourceId
-                    );
-                    if (source && sourceTypeIsCustomGLSource(source.type)) {
-                      const customSource =
-                        mapContext.manager?.getCustomGLSource(source.id);
-                      const metadata =
-                        await customSource?.getComputedMetadata();
-                      if (metadata?.bounds) {
-                        bounds = metadata.bounds;
-                      }
-                    }
-                  }
-                }
-              }
-              if (
-                bounds &&
-                [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
-              ) {
-                mapContext.manager?.map?.fitBounds(bounds, {
-                  animate: true,
-                  padding: {
-                    bottom: 100,
-                    top: 100,
-                    left: sidebar.open ? sidebar.width + 100 : 100,
-                    right: 100,
-                  },
-                });
-              }
-            },
-          },
-        ];
-        if (item.dataLayerId || item.hasMetadata) {
-          contextMenuOptions.push({
-            id: "metadata",
-            label: t("Metadata"),
-            onClick: () => {
-              metadataContext.open(item.id);
-            },
-          });
-        }
-        return contextMenuOptions;
-      } else {
-        return [];
-      }
-    },
-    [
-      items,
-      metadataContext.open,
-      mapContext.manager?.map,
-      t,
-      mapContext.manager,
-      layers,
-      sources,
-      checkedItems,
-    ]
-  );
-
   return (
     <div className="mt-3 pl-3">
       <TreeView
@@ -133,7 +55,23 @@ export default function OverlayLayers({
         onChecked={onChecked}
         ariaLabel="Overlay Layers"
         items={treeItems}
-        getContextMenuItems={getContextMenuItems}
+        getContextMenuContent={(treeItemId, clickEvent) => {
+          const item = items.find((item) => item.stableId === treeItemId);
+          if (item) {
+            return (
+              <TableOfContentsItemMenu
+                items={[item]}
+                type={ContextMenu}
+                transform={{
+                  x: clickEvent.clientX,
+                  y: clickEvent.clientY,
+                }}
+              />
+            );
+          } else {
+            return null;
+          }
+        }}
       />
     </div>
   );
