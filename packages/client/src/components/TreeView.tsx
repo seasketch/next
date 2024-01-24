@@ -189,10 +189,12 @@ export default function TreeView({
   >([]);
 
   useEffect(() => {
-    const onClick = () => setContextMenu(undefined);
-    if (contextMenu) {
-      document.addEventListener("click", onClick);
-      return () => document.removeEventListener("click", onClick);
+    if (getContextMenuItems) {
+      const onClick = () => setContextMenu(undefined);
+      if (contextMenu) {
+        document.addEventListener("click", onClick);
+        return () => document.removeEventListener("click", onClick);
+      }
     }
   }, [setContextMenu, contextMenu]);
 

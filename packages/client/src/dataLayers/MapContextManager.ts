@@ -12,6 +12,7 @@ import mapboxgl, {
   AnyLayer,
   Sources,
   GeoJSONSource,
+  Expression,
 } from "mapbox-gl";
 import {
   createContext,
@@ -69,6 +70,7 @@ import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/di
 import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
 import { createBoundsRecursive } from "../projects/OverlayLayers";
 import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
+import { isExpression } from "./legends/utils";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -1450,6 +1452,20 @@ class MapContextManager extends EventEmitter {
                           !this.visibleLayers[layerId]?.hidden ||
                           source.type === DataSourceTypes.ArcgisDynamicMapserver
                         ) {
+                          let layersToAdd = styleData.layers;
+                          if (
+                            source.type !==
+                              DataSourceTypes.ArcgisDynamicMapserver &&
+                            this.visibleLayers[layerId] &&
+                            "opacity" in this.visibleLayers[layerId] &&
+                            typeof this.visibleLayers[layerId].opacity ===
+                              "number"
+                          ) {
+                            layersToAdd = adjustLayerOpacities(
+                              layersToAdd as mapboxgl.AnyLayer[],
+                              this.visibleLayers[layerId].opacity!
+                            );
+                          }
                           if (
                             layer.interactivitySettings &&
                             layer.interactivitySettings.type ===
@@ -1457,11 +1473,11 @@ class MapContextManager extends EventEmitter {
                           ) {
                             layers.push(
                               ...addInteractivityExpressions(
-                                styleData.layers as AnyLayer[]
+                                layersToAdd as AnyLayer[]
                               )
                             );
                           } else {
-                            layers.push(...styleData.layers);
+                            layers.push(...layersToAdd);
                           }
                         }
                       } else {
@@ -2944,7 +2960,6 @@ class MapContextManager extends EventEmitter {
       source.type === DataSourceTypes.Vector ||
       source.type === DataSourceTypes.SeasketchRaster;
     if (layer && source && this.map && layer.mapboxGlStyles?.length > 0) {
-      // console.log(`update just these layers' opacity`);
       // Do an update in place if possible
       let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {
         return {
@@ -2959,7 +2974,7 @@ class MapContextManager extends EventEmitter {
       adjustLayerOpacities(glLayers, opacity, this.map);
     } else {
       // Otherwise, update the whole map style
-      // console.log("schedule a map update");
+      // TODO: could make this more optimal for custom sources
       this.debouncedUpdateStyle();
     }
   }
@@ -3397,24 +3412,24 @@ export function adjustLayerOpacities(
     if ("paint" in layer) {
       switch (layer.type) {
         case "circle":
-          adjustPaintProp(layer, "circle-opacity", opacity, map);
-          adjustPaintProp(layer, "circle-stroke-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "circle-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "circle-stroke-opacity", opacity, map);
           break;
         case "fill":
-          adjustPaintProp(layer, "fill-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "fill-opacity", opacity, map);
           break;
         case "line":
-          adjustPaintProp(layer, "line-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "line-opacity", opacity, map);
           break;
         case "symbol":
-          adjustPaintProp(layer, "icon-opacity", opacity, map);
-          adjustPaintProp(layer, "text-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "icon-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "text-opacity", opacity, map);
           break;
         case "heatmap":
-          adjustPaintProp(layer, "heatmap-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "heatmap-opacity", opacity, map);
           break;
         case "raster":
-          adjustPaintProp(layer, "raster-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "raster-opacity", opacity, map);
           break;
         default:
           break;
@@ -3424,26 +3439,53 @@ export function adjustLayerOpacities(
   });
 }
 
-function adjustPaintProp(
+function adjustPaintOpacityProp(
   layer: AnyLayer,
   propName: string,
-  propValue: any,
+  opacity: number,
   map?: Map
 ) {
   if ("paint" in layer) {
-    const value =
-      // @ts-ignore
-      propName in layer.paint
-        ? // @ts-ignore
-          ["*", propValue, layer.paint[propName]]
-        : propValue;
-    // @ts-ignore
+    const currentValue = (layer.paint as any)[propName];
+    let value: number | Expression = opacity;
+    if (typeof currentValue === "number") {
+      value = ["*", opacity, currentValue];
+    } else if (isExpression(currentValue)) {
+      // check to make sure it's not a zoom expression. For some reason these
+      // cause mapbox-gl to stop updating the style if combined with a
+      // multiplication expression.
+      if (hasZoomExpression(currentValue)) {
+        value = opacity;
+      } else {
+        value = ["*", opacity, currentValue];
+      }
+    }
     layer.paint = {
       ...layer.paint,
-      [propName]: value,
+      [propName]: opacity === 1 && currentValue ? currentValue : value,
     };
     if (map) {
-      map.setPaintProperty(layer.id, propName, value);
+      if (opacity === 1 && currentValue) {
+        map.setPaintProperty(layer.id, propName, currentValue);
+      } else {
+        map.setPaintProperty(layer.id, propName, value);
+      }
     }
   }
+}
+
+function hasZoomExpression(expression: Expression) {
+  const fnName = expression[0];
+  if (fnName === "zoom") {
+    return true;
+  } else {
+    for (const arg of expression.slice(1)) {
+      if (isExpression(arg)) {
+        if (hasZoomExpression(arg)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }
