@@ -16,7 +16,7 @@ export default function useCommonLegendProps(mapContext: MapContextInterface) {
       if (hidden) {
         mapContext.manager?.hideLayer(id);
       } else {
-        mapContext.manager?.showLayer(id);
+        mapContext.manager?.showHiddenLayer(id);
       }
     },
     [mapContext.manager]

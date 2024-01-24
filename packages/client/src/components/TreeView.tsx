@@ -80,6 +80,8 @@ interface TreeViewProps {
     state: SortingState
   ) => void;
   getContextMenuContent?: (id: string, event: React.MouseEvent) => ReactNode;
+  hiddenItems?: string[];
+  onUnhide?: (stableId: string) => void;
 }
 
 export interface TreeNodeComponentProps {
@@ -127,6 +129,8 @@ export interface TreeNodeComponentProps {
     state: SortingState
   ) => void;
   allowContextMenuDefault?: boolean;
+  isHidden: boolean;
+  onUnhide?: (stableId: string) => void;
 }
 export enum CheckState {
   CHECKED,
@@ -149,6 +153,7 @@ export interface TreeNode {
   radioFolder: boolean;
   error?: string;
   parents: string[];
+  hidden: boolean;
 }
 
 export default function TreeView({
@@ -222,6 +227,7 @@ export default function TreeView({
           : false,
         parentIsRadioFolder: false,
         parents: [],
+        hidden: (props.hiddenItems || []).indexOf(item.id) !== -1,
       } as TreeNode;
       map.set(item.id, node);
       return map;
@@ -290,6 +296,7 @@ export default function TreeView({
     checkedItems,
     loadingItems,
     props.errors,
+    props.hiddenItems,
   ]);
 
   const handleChecked = useCallback(
@@ -424,9 +431,14 @@ export default function TreeView({
     >
       <ContextMenu.Root>
         <ContextMenu.Portal>
-          {contextMenu?.id &&
-            props.getContextMenuContent &&
-            props.getContextMenuContent(contextMenu.id, contextMenu.clickEvent)}
+          <div className="ToCMenuContent">
+            {contextMenu?.id &&
+              props.getContextMenuContent &&
+              props.getContextMenuContent(
+                contextMenu.id,
+                contextMenu.clickEvent
+              )}
+          </div>
         </ContextMenu.Portal>
 
         {!props.getContextMenuContent &&
@@ -471,6 +483,8 @@ export default function TreeView({
             previousSiblingId={data[index - 1]?.node.id}
             onSortEnd={onSortEnd}
             allowContextMenuDefault={Boolean(props.getContextMenuContent)}
+            isHidden={item.hidden}
+            onUnhide={props.onUnhide}
           />
         ))}
       </ContextMenu.Root>
@@ -526,32 +540,38 @@ export function useOverlayState(
     );
   }, [items, editable, getTranslatedProp]);
 
-  const { checkedItems, loadingItems, overlayErrors } = useMemo(() => {
-    const checkedItems: string[] = [];
-    const loadingItems: string[] = [];
-    const overlayErrors: { [id: string]: string } = {};
-    for (const item of items) {
-      if (item.dataLayerId) {
-        const record = mapContext.layerStatesByTocStaticId[item.stableId];
-        if (record) {
-          if (record.visible) {
-            checkedItems.push(item.stableId);
-          }
-          if (record.loading) {
-            loadingItems.push(item.stableId);
-          }
-          if (record.error) {
-            overlayErrors[item.stableId] = record.error.toString();
+  const { checkedItems, loadingItems, overlayErrors, hiddenItems } =
+    useMemo(() => {
+      const checkedItems: string[] = [];
+      const loadingItems: string[] = [];
+      const hiddenItems: string[] = [];
+      const overlayErrors: { [id: string]: string } = {};
+      for (const item of items) {
+        if (item.dataLayerId) {
+          const record = mapContext.layerStatesByTocStaticId[item.stableId];
+          if (record) {
+            if (record.visible) {
+              checkedItems.push(item.stableId);
+            }
+            if (record.loading) {
+              loadingItems.push(item.stableId);
+            }
+            if (record.error) {
+              overlayErrors[item.stableId] = record.error.toString();
+            }
+            if (record.hidden) {
+              hiddenItems.push(item.stableId);
+            }
           }
         }
       }
-    }
-    return {
-      checkedItems,
-      loadingItems,
-      overlayErrors,
-    };
-  }, [items, mapContext.layerStatesByTocStaticId]);
+      return {
+        checkedItems,
+        loadingItems,
+        overlayErrors,
+        hiddenItems,
+      };
+    }, [items, mapContext.layerStatesByTocStaticId]);
 
   const onExpand = useCallback(
     (node: TreeItem, isExpanded: boolean) => {
@@ -582,6 +602,15 @@ export function useOverlayState(
     [items, mapContext.manager]
   );
 
+  const onUnhide = useCallback(
+    (stableId: string) => {
+      if (mapContext.manager) {
+        mapContext.manager.showHiddenLayer(stableId);
+      }
+    },
+    [mapContext.manager]
+  );
+
   return {
     expandedIds,
     onExpand,
@@ -590,6 +619,8 @@ export function useOverlayState(
     treeItems,
     loadingItems,
     overlayErrors,
+    onUnhide,
+    hiddenItems,
   };
 }
 

@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "../../components/Tooltip";
 import * as ContextMenu from "@radix-ui/react-context-menu";
+import { EyeClosedIcon } from "@radix-ui/react-icons";
 
 export interface TreeNodeDataProps {
   id: number;
@@ -107,6 +108,8 @@ export default function TreeItemComponent({
   previousSiblingId,
   onSortEnd,
   allowContextMenuDefault,
+  onUnhide,
+  isHidden,
 }: TreeNodeComponentProps) {
   const isChecked = checked !== CheckState.UNCHECKED;
   const hasCheckedChildren = checked !== CheckState.UNCHECKED;
@@ -333,7 +336,7 @@ export default function TreeItemComponent({
         {sortable && canDrop && isOverCurrent && sortPlaceholder}
 
         <span
-          className={`label-container flex items-start text-sm space-x-0.5 ${classNames.label}`}
+          className={`label-container flex items-center text-sm space-x-0.5 ${classNames.label}`}
           style={{
             paddingTop: 5,
             paddingBottom: 5,
@@ -389,7 +392,7 @@ export default function TreeItemComponent({
                   strokeWidth={1}
                   onContextMenu={contextMenuHandler}
                   onClick={updateSelectionOnClick}
-                  className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
+                  className="relative -right-0.5 w-6 h-6 text-primary-700"
                 />
               </ContextMenu.Trigger>
             ) : (
@@ -422,15 +425,26 @@ export default function TreeItemComponent({
             <label
               id={`${node.id}-label`}
               ref={isContextMenuTarget ? setLabelRef : undefined}
-              className={`px-1 cursor-pointer select-none -mt-0.5 ${
+              className={`px-1 cursor-pointer select-none ${
                 error ? "text-red-600" : ""
-              }`}
+              } ${isHidden ? "opacity-50" : ""}`}
               onClick={updateSelectionOnClick}
               onContextMenu={contextMenuHandler}
             >
               {node.title}
             </label>
           </ContextMenu.Trigger>
+          {isHidden && (
+            <button
+              onClick={() => {
+                if (onUnhide) {
+                  onUnhide(node.id);
+                }
+              }}
+            >
+              <EyeClosedIcon className="text-black opacity-50 hover:opacity-80" />
+            </button>
+          )}
         </span>
         {children &&
           children.length > 0 &&
@@ -477,6 +491,8 @@ export default function TreeItemComponent({
                   previousSiblingId={children[index - 1]?.node.id}
                   onSortEnd={onSortEnd}
                   allowContextMenuDefault={allowContextMenuDefault}
+                  isHidden={item.hidden}
+                  onUnhide={onUnhide}
                 />
               ))}
             </ul>

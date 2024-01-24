@@ -128,6 +128,8 @@ export default function TableOfContentsEditor() {
     loadingItems,
     overlayErrors,
     treeItems: treeNodes,
+    hiddenItems,
+    onUnhide,
   } = useOverlayState(
     tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [],
     true,
@@ -337,6 +339,8 @@ export default function TableOfContentsEditor() {
             onExpand={onExpand}
             checkedItems={checkedItems}
             onChecked={onChecked}
+            hiddenItems={hiddenItems}
+            onUnhide={onUnhide}
             items={treeNodes}
             ariaLabel="Draft overlays"
             sortable

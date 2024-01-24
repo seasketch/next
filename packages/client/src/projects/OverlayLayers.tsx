@@ -1,22 +1,11 @@
-import { useState, useContext, useCallback } from "react";
-import TableOfContentsMetadataModal, {
-  TableOfContentsMetadataModalContext,
-} from "../dataLayers/TableOfContentsMetadataModal";
 import {
   DataLayerDetailsFragment,
   DataSourceDetailsFragment,
   OverlayFragment,
   TableOfContentsItem,
 } from "../generated/graphql";
-import {
-  MapContext,
-  sourceTypeIsCustomGLSource,
-} from "../dataLayers/MapContextManager";
-import TreeView, { TreeItem, useOverlayState } from "../components/TreeView";
-import { DropdownDividerProps } from "../components/ContextMenuDropdown";
-import { DropdownOption } from "../components/DropdownButton";
+import TreeView, { useOverlayState } from "../components/TreeView";
 import { useTranslation } from "react-i18next";
-import { currentSidebarState } from "./ProjectAppSidebar";
 import { TableOfContentsItemMenu } from "../admin/data/TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 
@@ -30,8 +19,6 @@ export default function OverlayLayers({
   sources: DataSourceDetailsFragment[];
 }) {
   const { t } = useTranslation("homepage");
-  const mapContext = useContext(MapContext);
-  const metadataContext = useContext(TableOfContentsMetadataModalContext);
 
   const {
     expandedIds,
@@ -41,11 +28,15 @@ export default function OverlayLayers({
     loadingItems,
     overlayErrors,
     treeItems,
+    hiddenItems,
+    onUnhide,
   } = useOverlayState(items);
 
   return (
     <div className="mt-3 pl-3">
       <TreeView
+        hiddenItems={hiddenItems}
+        onUnhide={onUnhide}
         loadingItems={loadingItems}
         errors={overlayErrors}
         disableEditing={true}
@@ -57,6 +48,9 @@ export default function OverlayLayers({
         items={treeItems}
         getContextMenuContent={(treeItemId, clickEvent) => {
           const item = items.find((item) => item.stableId === treeItemId);
+          if (item?.isFolder) {
+            return null;
+          }
           if (item) {
             return (
               <TableOfContentsItemMenu

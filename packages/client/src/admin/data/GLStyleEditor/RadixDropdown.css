@@ -14,3 +14,7 @@
 .MenubarTrigger[data-state="open"] {
   @apply bg-gray-300 bg-opacity-70;
 }
+
+.ToCMenuContent [data-radix-popper-content-wrapper] {
+  transform: none !important;
+}

@@ -11,7 +11,7 @@ import {
   EyeOpenIcon,
   HeightIcon,
 } from "@radix-ui/react-icons";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import Spinner from "../components/Spinner";
 import SimpleSymbol from "./legends/SimpleSymbol";
 import { Map } from "mapbox-gl";
@@ -25,7 +25,6 @@ import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
 import { ErrorBoundary } from "@sentry/react";
 import { useContext, useState } from "react";
-import { MapContext } from "./MapContextManager";
 import {
   TableOfContentsItemMenu,
   TocMenuItemType,
