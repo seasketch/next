@@ -210,14 +210,6 @@ function LegendListItem({
                 : "opacity-10 group-hover:opacity-50"
             } flex-none group pl-1 flex items-center space-x-1 `}
           >
-            <HeightIcon
-              className={`w-4 h-4 text-black ${
-                contextMenuIsOpen
-                  ? "inline-block"
-                  : "hidden group-hover:inline-block"
-              }`}
-              style={{ cursor: "ns-resize" }}
-            />
             {item.tableOfContentsItemDetails && (
               <DropdownMenu.Root
                 onOpenChange={(open) => setContextMenuIsOpen(open)}

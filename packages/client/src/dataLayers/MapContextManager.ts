@@ -1055,7 +1055,6 @@ class MapContextManager extends EventEmitter {
         }
       }
     } else {
-      console.log("internal state", this.internalState);
       this.visibleLayers[stableId] = {
         loading: true,
         visible: true,
