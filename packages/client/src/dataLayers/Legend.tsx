@@ -53,7 +53,7 @@ interface GLStyleLegendItem {
 }
 
 export type LegendItem = (GLStyleLegendItem | CustomGLSourceSymbolLegend) & {
-  tableOfContentsItemDetails: TocMenuItemType;
+  tableOfContentsItemDetails?: TocMenuItemType;
 };
 
 const PANEL_WIDTH = 180;
@@ -225,26 +225,28 @@ function LegendListItem({
               }`}
               style={{ cursor: "ns-resize" }}
             />
-            <DropdownMenu.Root
-              onOpenChange={(open) => setContextMenuIsOpen(open)}
-            >
-              <DropdownMenu.Portal>
-                <TableOfContentsItemMenu
-                  items={[item.tableOfContentsItemDetails]}
-                  type={DropdownMenu}
-                  editable={editable}
-                />
-              </DropdownMenu.Portal>
-              <DropdownMenu.Trigger asChild>
-                <DotsHorizontalIcon
-                  className={`w-5 h-5 text-black  cursor-pointer ${
-                    contextMenuIsOpen
-                      ? "inline-block bg-gray-200 border border-black border-opacity-20 rounded-full"
-                      : "hidden group-hover:inline-block"
-                  } `}
-                />
-              </DropdownMenu.Trigger>
-            </DropdownMenu.Root>
+            {item.tableOfContentsItemDetails && (
+              <DropdownMenu.Root
+                onOpenChange={(open) => setContextMenuIsOpen(open)}
+              >
+                <DropdownMenu.Portal>
+                  <TableOfContentsItemMenu
+                    items={[item.tableOfContentsItemDetails]}
+                    type={DropdownMenu}
+                    editable={editable}
+                  />
+                </DropdownMenu.Portal>
+                <DropdownMenu.Trigger asChild>
+                  <DotsHorizontalIcon
+                    className={`w-5 h-5 text-black  cursor-pointer ${
+                      contextMenuIsOpen
+                        ? "inline-block bg-gray-200 border border-black border-opacity-20 rounded-full"
+                        : "hidden group-hover:inline-block"
+                    } `}
+                  />
+                </DropdownMenu.Trigger>
+              </DropdownMenu.Root>
+            )}
             <Toggle
               className={`inline-block`}
               onChange={() => {
