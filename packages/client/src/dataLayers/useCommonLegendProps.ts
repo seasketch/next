@@ -1,5 +1,6 @@
-import { useCallback, useContext, useEffect, useMemo } from "react";
-import { MapContext, MapContextInterface } from "./MapContextManager";
+import { useCallback, useMemo } from "react";
+import { MapContextInterface } from "./MapContextManager";
+import { LegendItem } from "./Legend";
 
 /**
  * Provides handlers for the Legend state. This is used by the TOC component.
@@ -32,8 +33,26 @@ export default function useCommonLegendProps(mapContext: MapContextInterface) {
     return hiddenItems;
   }, [mapContext.layerStatesByTocStaticId]);
 
+  const items = useMemo<LegendItem[]>(() => {
+    if (mapContext.legends) {
+      const visibleLegends: LegendItem[] = [];
+      for (const id of mapContext.manager?.layersByZIndex || []) {
+        if (mapContext.layerStatesByTocStaticId[id]?.visible) {
+          const legend = mapContext.legends[id];
+          if (legend) {
+            visibleLegends.push(legend);
+          }
+        }
+      }
+      return visibleLegends;
+    } else {
+      return [];
+    }
+  }, [mapContext.legends, mapContext.layerStatesByTocStaticId]);
+
   return {
     onHiddenItemsChange,
     hiddenItems,
+    items,
   };
 }

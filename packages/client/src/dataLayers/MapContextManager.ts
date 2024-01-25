@@ -145,8 +145,9 @@ export type DigitizingLockStateChangeEventPayload = {
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
 export interface LayerState {
-  visible: true;
+  visible: boolean;
   opacity?: number;
+  zOrderOverride?: number;
   loading: boolean;
   error?: Error;
   /**
@@ -167,7 +168,7 @@ class MapContextManager extends EventEmitter {
   private clientDataSources: {
     [dataSourceId: string]: DataSourceDetailsFragment;
   } = {};
-  private layersByZIndex: string[] = [];
+  layersByZIndex: string[] = [];
   private layers: {
     [tocStableId: string]: {
       tocId: string;
@@ -237,7 +238,7 @@ class MapContextManager extends EventEmitter {
     this.internalState = initialState;
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
-    this.visibleLayers = initialState.layerStatesByTocStaticId;
+    this.visibleLayers = { ...initialState.layerStatesByTocStaticId };
   }
 
   getCustomGLSource(sourceId: number) {
@@ -1019,7 +1020,17 @@ class MapContextManager extends EventEmitter {
       id in this.geoprocessingReferenceIds
         ? this.geoprocessingReferenceIds[id]
         : id;
-    delete this.visibleLayers[stableId];
+    const state = this.visibleLayers[stableId];
+    if (state?.visible) {
+      if (
+        (state.opacity !== undefined && state.opacity !== 1) ||
+        state.zOrderOverride !== undefined
+      ) {
+        this.visibleLayers[stableId].visible = false;
+      } else {
+        delete this.visibleLayers[stableId];
+      }
+    }
     this.updateLegends();
   }
 
@@ -1040,16 +1051,19 @@ class MapContextManager extends EventEmitter {
         if (!state.visible) {
           state.visible = true;
           state.loading = true;
-          state.opacity = 1;
           state.hidden = false;
         }
       }
     } else {
+      console.log("internal state", this.internalState);
       this.visibleLayers[stableId] = {
         loading: true,
         visible: true,
-        opacity: 1,
+        opacity:
+          this.internalState.layerStatesByTocStaticId[stableId]?.opacity || 1,
         hidden: false,
+        zOrderOverride:
+          this.internalState.layerStatesByTocStaticId[stableId]?.zOrderOverride,
       };
     }
     this.updateLegends();
@@ -2040,7 +2054,9 @@ class MapContextManager extends EventEmitter {
       ) {
         return -1;
       } else {
-        return a.zIndex - b.zIndex;
+        const aZIndex = this.visibleLayers[a.tocId]?.zOrderOverride || a.zIndex;
+        const bZIndex = this.visibleLayers[b.tocId]?.zOrderOverride || b.zIndex;
+        return aZIndex - bZIndex;
       }
     });
     // Need to make sure these are layer ids and not ids of layers to accomadate sublayers
@@ -2810,7 +2826,6 @@ class MapContextManager extends EventEmitter {
                     id,
                     type: "GLStyleLegendItem",
                     legend: legend,
-                    zOrder: this.layersByZIndex.indexOf(id),
                     label: this.tocItems[layer.tocId]?.label || "",
                     tableOfContentsItemDetails,
                   };
@@ -2824,7 +2839,6 @@ class MapContextManager extends EventEmitter {
                 newLegendState[id] = {
                   id,
                   type: "GLStyleLegendItem",
-                  zOrder: this.layersByZIndex.indexOf(id),
                   label: this.tocItems[layer.tocId]?.label || "",
                   tableOfContentsItemDetails,
                 };
@@ -2832,8 +2846,9 @@ class MapContextManager extends EventEmitter {
               }
             }
           } else if (source && isCustomSourceType(source.type)) {
-            const { customSource, visible } = this.customSources[source.id];
-            if (visible && customSource) {
+            const d = this.customSources[source.id];
+            if (d && d.visible && d.customSource) {
+              const { customSource } = d;
               const { tableOfContentsItems } =
                 await customSource.getComputedMetadata();
               const item =
@@ -2846,7 +2861,6 @@ class MapContextManager extends EventEmitter {
                 if (item.glStyle) {
                   newLegendState[id] = {
                     id,
-                    zOrder: this.layersByZIndex.indexOf(id),
                     type: "GLStyleLegendItem",
                     legend: compileLegendFromGLStyleLayers(
                       item.glStyle.layers,
@@ -2859,7 +2873,6 @@ class MapContextManager extends EventEmitter {
                   newLegendState[id] = {
                     type: "CustomGLSourceSymbolLegend",
                     label: item.label,
-                    zOrder: this.layersByZIndex.indexOf(id),
                     supportsDynamicRendering: {
                       layerOpacity: true,
                       layerOrder: true,
@@ -2928,6 +2941,61 @@ class MapContextManager extends EventEmitter {
     }));
     this.debouncedUpdateLayerState();
     this.updateStyle();
+  }
+
+  private setZOrderOverride(stableId: string, zOrder: number) {
+    const state = this.visibleLayers[stableId];
+    if (state) {
+      state.zOrderOverride = zOrder;
+    }
+    this.setState((prev) => ({
+      ...prev,
+      layerStatesByTocStaticId: {
+        ...prev.layerStatesByTocStaticId,
+        [stableId]: {
+          ...prev.layerStatesByTocStaticId[stableId],
+          zOrderOverride: zOrder,
+        },
+      },
+    }));
+    this.resetLayersByZIndex();
+    this.debouncedUpdateLayerState();
+    this.updateStyle();
+  }
+
+  private getCurrentZOrder() {
+    return this.layersByZIndex
+      .filter(
+        (id) =>
+          id in this.visibleLayers && this.visibleLayers[id].visible === true
+      )
+      .map((id) => ({
+        id,
+        label: this.tocItems[id]?.label || "",
+        zIndex: (typeof this.visibleLayers[id].zOrderOverride === "number"
+          ? this.visibleLayers[id].zOrderOverride
+          : this.layers[id].zIndex || 0) as number,
+      }));
+  }
+
+  moveLayerToTop(stableId: string) {
+    const currentOrder = this.getCurrentZOrder();
+    if (currentOrder.length > 1) {
+      const top = currentOrder[0];
+      if (top.id !== stableId) {
+        this.setZOrderOverride(stableId, top.zIndex - 1);
+      }
+    }
+  }
+
+  moveLayerToBottom(stableId: string) {
+    const currentOrder = this.getCurrentZOrder();
+    if (currentOrder.length > 1) {
+      const bottom = currentOrder[currentOrder.length - 1];
+      if (bottom.id !== stableId) {
+        this.setZOrderOverride(stableId, bottom.zIndex + 1);
+      }
+    }
   }
 
   setLayerOpacity(stableId: string, opacity: number) {

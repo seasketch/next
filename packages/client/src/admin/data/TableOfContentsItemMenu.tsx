@@ -12,6 +12,7 @@ import {
 } from "../../components/Menubar";
 import { TableOfContentsMetadataModalContext } from "../../dataLayers/TableOfContentsMetadataModal";
 import Skeleton from "../../components/Skeleton";
+import { ArrowDownIcon, ArrowUpIcon } from "@radix-ui/react-icons";
 const LazyAdminItems = React.lazy(
   () =>
     import(
@@ -128,6 +129,30 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     }}
                   >
                     <Trans ns="homepage">View metadata</Trans>
+                  </MenuType.Item>
+                  <MenuType.Item
+                    className={MenuBarItemClasses}
+                    onSelect={() => {
+                      mapContext?.manager?.moveLayerToTop(firstItem.stableId);
+                    }}
+                  >
+                    <span>
+                      <Trans ns="homepage">Move to top</Trans>
+                    </span>
+                    <ArrowUpIcon className="w-3 h-3" />
+                  </MenuType.Item>
+                  <MenuType.Item
+                    className={MenuBarItemClasses}
+                    onSelect={() => {
+                      mapContext?.manager?.moveLayerToBottom(
+                        firstItem.stableId
+                      );
+                    }}
+                  >
+                    <span>
+                      <Trans ns="homepage">Move to bottom</Trans>
+                    </span>
+                    <ArrowDownIcon className="w-3 h-3" />
                   </MenuType.Item>
                   {mapContext.layerStatesByTocStaticId[firstItem?.stableId]
                     ?.visible === true && (

@@ -40,7 +40,6 @@ interface CustomGLSourceSymbolLegend {
   supportsDynamicRendering: DynamicRenderingSupportOptions;
   symbols: LegendSymbolItem[];
   id: string;
-  zOrder?: number;
 }
 
 interface GLStyleLegendItem {
@@ -49,7 +48,6 @@ interface GLStyleLegendItem {
   /** Table of contents item id */
   id: string;
   legend?: LegendForGLLayers;
-  zOrder?: number;
 }
 
 export type LegendItem = (GLStyleLegendItem | CustomGLSourceSymbolLegend) & {
@@ -68,7 +66,6 @@ export default function Legend({
   maxHeight,
   backdropBlur: blur,
   persistedStateKey,
-  onZOrderChange,
   editable,
 }: {
   backdropBlur?: boolean;
@@ -76,7 +73,6 @@ export default function Legend({
   zOrder: { [id: string]: number };
   opacity: { [id: string]: number };
   hiddenItems: string[];
-  onZOrderChange?: (id: string, zOrder: number) => void;
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   className?: string;
   loading?: boolean;
@@ -148,7 +144,6 @@ export default function Legend({
                     visible={!hiddenItems || !hiddenItems.includes(item.id)}
                     map={map}
                     skipTopBorder={i === 0}
-                    onZOrderChange={onZOrderChange}
                   />
                 );
               })}
@@ -166,7 +161,6 @@ function LegendListItem({
   map,
   onHiddenItemsChange,
   skipTopBorder,
-  onZOrderChange,
   editable,
 }: {
   item: LegendItem;
@@ -174,7 +168,6 @@ function LegendListItem({
   map?: Map;
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   skipTopBorder?: boolean;
-  onZOrderChange?: (id: string, zOrder: number) => void;
   editable?: boolean;
 }) {
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);

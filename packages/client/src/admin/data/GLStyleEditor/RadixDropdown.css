@@ -18,3 +18,11 @@
 .ToCMenuContent [data-radix-popper-content-wrapper] {
   transform: none !important;
 }
+
+.RadixDropdownItem {
+  @apply flex items-center;
+}
+
+.RadixDropdownItem > span {
+  @apply flex-1;
+}
