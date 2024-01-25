@@ -431,7 +431,13 @@ export default function TreeView({
       role="tree"
       aria-label={props.ariaLabel}
     >
-      <ContextMenu.Root>
+      <ContextMenu.Root
+        onOpenChange={(open) => {
+          if (!open) {
+            setContextMenu(undefined);
+          }
+        }}
+      >
         <ContextMenu.Portal>
           <div className="ToCMenuContent">
             {contextMenu?.id &&
