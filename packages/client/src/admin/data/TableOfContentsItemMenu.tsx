@@ -58,8 +58,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
     const manager = mapContext.manager;
     return (
       <MenuType.Content
-        id="foo"
-        avoidCollisions={false}
+        // avoidCollisions={false}
         {...props}
         ref={forwardedRef}
         style={{
