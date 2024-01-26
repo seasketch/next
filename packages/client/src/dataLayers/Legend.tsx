@@ -144,6 +144,8 @@ export default function Legend({
                     visible={!hiddenItems || !hiddenItems.includes(item.id)}
                     map={map}
                     skipTopBorder={i === 0}
+                    top={i === 0}
+                    bottom={i === items.length - 1}
                   />
                 );
               })}
@@ -162,6 +164,8 @@ function LegendListItem({
   onHiddenItemsChange,
   skipTopBorder,
   editable,
+  top,
+  bottom,
 }: {
   item: LegendItem;
   visible: boolean;
@@ -169,6 +173,8 @@ function LegendListItem({
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   skipTopBorder?: boolean;
   editable?: boolean;
+  top?: boolean;
+  bottom?: boolean;
 }) {
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const isSingleSymbol =
@@ -219,6 +225,8 @@ function LegendListItem({
                     items={[item.tableOfContentsItemDetails]}
                     type={DropdownMenu}
                     editable={editable}
+                    top={top}
+                    bottom={bottom}
                   />
                 </DropdownMenu.Portal>
                 <DropdownMenu.Trigger asChild>

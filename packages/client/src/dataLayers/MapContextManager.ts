@@ -168,7 +168,6 @@ class MapContextManager extends EventEmitter {
   private clientDataSources: {
     [dataSourceId: string]: DataSourceDetailsFragment;
   } = {};
-  layersByZIndex: string[] = [];
   private layers: {
     [tocStableId: string]: {
       tocId: string;
@@ -1329,7 +1328,7 @@ class MapContextManager extends EventEmitter {
     style: Style;
     sprites: SpriteDetailsFragment[];
   }> {
-    this.resetLayersByZIndex();
+    // this.resetLayersByZIndex();
     // get mapbox-gl-draw related layers and sources and make sure to include
     // them in the end. gl-draw has some magic to avoid their layers getting
     // removed but I'm seeing errors like this when the style is updated:
@@ -1364,11 +1363,12 @@ class MapContextManager extends EventEmitter {
     let underLabels: any[] = baseStyle.layers.slice(0, labelsLayerIndex);
     let overLabels: any[] = baseStyle.layers.slice(labelsLayerIndex);
     let isUnderLabels = true;
-    let i = this.layersByZIndex.length;
+    const layersByZIndex = this.getVisibleLayersByZIndex();
+    let i = layersByZIndex.length;
     const insertedCustomSourceIds: number[] = [];
     // reset sublayer settings before proceeding
     while (i--) {
-      const layerId = this.layersByZIndex[i];
+      const layerId = layersByZIndex[i].tocId;
       if (layerId === "LABELS") {
         isUnderLabels = false;
       } else {
@@ -1563,7 +1563,7 @@ class MapContextManager extends EventEmitter {
                   throw new Error("Visible layer settings missing");
                 }
                 if (!this.visibleLayers[layerId]?.hidden) {
-                  this.customSources[source.id].sublayers!.push({
+                  this.customSources[source.id].sublayers!.unshift({
                     id: layer.sublayer,
                     opacity:
                       "opacity" in settings && settings.opacity !== undefined
@@ -2036,50 +2036,6 @@ class MapContextManager extends EventEmitter {
     this.updateInteractivitySettings();
     this.updateLegends();
     return;
-  }
-
-  private resetLayersByZIndex() {
-    const sortedLayers = [...Object.values(this.layers)];
-    // sortedLayers.sort((a, b) => b.zIndex - a.zIndex);
-    sortedLayers.sort((a, b) => {
-      if (
-        a.renderUnder === RenderUnderType.Labels &&
-        b.renderUnder !== RenderUnderType.Labels
-      ) {
-        return 1;
-      } else if (
-        b.renderUnder === RenderUnderType.Labels &&
-        a.renderUnder !== RenderUnderType.Labels
-      ) {
-        return -1;
-      } else {
-        const aZIndex = this.visibleLayers[a.tocId]?.zOrderOverride || a.zIndex;
-        const bZIndex = this.visibleLayers[b.tocId]?.zOrderOverride || b.zIndex;
-        return aZIndex - bZIndex;
-      }
-    });
-    // Need to make sure these are layer ids and not ids of layers to accomadate sublayers
-    const layerIds = [];
-
-    let labelsLayerInserted = false;
-    for (const layer of sortedLayers) {
-      if (
-        !labelsLayerInserted &&
-        layer.renderUnder === RenderUnderType.Labels
-      ) {
-        labelsLayerInserted = true;
-        layerIds.push("LABELS");
-      }
-      // if (layer.sublayer) {
-      //   const specialId = idForSublayer(layer);
-      //   if (layerIds.indexOf(specialId) === -1) {
-      //     layerIds.push(specialId);
-      //   }
-      // } else {
-      layerIds.push(layer.tocId);
-      // }
-    }
-    this.layersByZIndex = layerIds;
   }
 
   hideTocItems(stableIds: string[]) {
@@ -2766,7 +2722,9 @@ class MapContextManager extends EventEmitter {
   private async _updateLegends(clearCache = false) {
     const newLegendState: { [layerId: string]: LegendItem | null } = {};
     let changes = false;
-    for (const id of this.layersByZIndex) {
+    const layers = this.getVisibleLayersByZIndex();
+    for (const layer of layers) {
+      const id = layer.tocId;
       if (this.visibleLayers[id]?.visible) {
         if (clearCache === true && id in this.internalState.legends) {
           newLegendState[id] = this.internalState.legends[id];
@@ -2957,23 +2915,87 @@ class MapContextManager extends EventEmitter {
         },
       },
     }));
-    this.resetLayersByZIndex();
+    // this.resetLayersByZIndex();
     this.debouncedUpdateLayerState();
     this.updateStyle();
   }
 
+  getVisibleLayersByZIndex() {
+    const visible = Object.values(this.layers).filter(
+      (l) => this.visibleLayers[l.tocId]?.visible === true
+    );
+    // First, create a lookup table of the lowest sublayer z-index for each
+    // datasource. This way sublayers are grouped together in the listing
+    const sublayerZIndexLookup: {
+      [dataSourceId: number]: number;
+    } = {};
+    for (const layer of visible) {
+      if (layer.sublayer !== undefined) {
+        const dataSourceId = layer.dataSourceId;
+        const zIndex =
+          typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
+            ? this.visibleLayers[layer.tocId].zOrderOverride!
+            : layer.zIndex;
+        if (
+          !(dataSourceId in sublayerZIndexLookup) ||
+          zIndex < sublayerZIndexLookup[dataSourceId]
+        ) {
+          sublayerZIndexLookup[dataSourceId] = zIndex;
+        }
+      }
+    }
+    const getZIndex = (layer: (typeof visible)[0], sameDataSource = false) => {
+      if (!sameDataSource && layer.dataSourceId in sublayerZIndexLookup) {
+        return sublayerZIndexLookup[layer.dataSourceId];
+      } else if (
+        typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
+      ) {
+        return this.visibleLayers[layer.tocId].zOrderOverride!;
+      }
+      return layer.zIndex;
+    };
+
+    return visible
+      .sort((a, b) => {
+        if (
+          a.renderUnder === RenderUnderType.Labels &&
+          b.renderUnder !== RenderUnderType.Labels
+        ) {
+          return 1;
+        } else if (
+          b.renderUnder === RenderUnderType.Labels &&
+          a.renderUnder !== RenderUnderType.Labels
+        ) {
+          return -1;
+        } else if (
+          // comparing two sublayers under the same datasource
+          a.dataSourceId === b.dataSourceId
+        ) {
+          return getZIndex(a, true) - getZIndex(b, true);
+        } else {
+          return getZIndex(a) - getZIndex(b);
+        }
+      })
+      .map((l) => ({
+        ...l,
+        finalZIndex: getZIndex(l),
+      }));
+  }
+
   private getCurrentZOrder() {
-    return this.layersByZIndex
+    return this.getVisibleLayersByZIndex()
       .filter(
-        (id) =>
-          id in this.visibleLayers && this.visibleLayers[id].visible === true
+        (layer) =>
+          layer.tocId in this.visibleLayers &&
+          this.visibleLayers[layer.tocId].visible === true
       )
-      .map((id) => ({
-        id,
-        label: this.tocItems[id]?.label || "",
-        zIndex: (typeof this.visibleLayers[id].zOrderOverride === "number"
-          ? this.visibleLayers[id].zOrderOverride
-          : this.layers[id].zIndex || 0) as number,
+      .map((layer) => ({
+        id: layer.tocId,
+        label: this.tocItems[layer.tocId]?.label || "",
+        zIndex: (typeof this.visibleLayers[layer.tocId].zOrderOverride ===
+        "number"
+          ? this.visibleLayers[layer.tocId].zOrderOverride
+          : this.layers[layer.tocId].zIndex || 0) as number,
       }));
   }
 

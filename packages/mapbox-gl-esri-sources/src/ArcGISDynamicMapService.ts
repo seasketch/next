@@ -513,7 +513,8 @@ export class ArcGISDynamicMapService
         }
       }
     }
-    if (this.layers && (!layersInOrder || hasOpacityUpdates)) {
+    if (this.layers) {
+      // && (!layersInOrder || hasOpacityUpdates)) {
       // need to provide renderInfo
       const dynamicLayers = this.layers.map((lyr) => {
         return {

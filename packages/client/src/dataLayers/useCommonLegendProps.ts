@@ -36,12 +36,11 @@ export default function useCommonLegendProps(mapContext: MapContextInterface) {
   const items = useMemo<LegendItem[]>(() => {
     if (mapContext.legends) {
       const visibleLegends: LegendItem[] = [];
-      for (const id of mapContext.manager?.layersByZIndex || []) {
-        if (mapContext.layerStatesByTocStaticId[id]?.visible) {
-          const legend = mapContext.legends[id];
-          if (legend) {
-            visibleLegends.push(legend);
-          }
+      for (const layer of mapContext.manager?.getVisibleLayersByZIndex() ||
+        []) {
+        const legend = mapContext.legends[layer.tocId];
+        if (legend) {
+          visibleLegends.push(legend);
         }
       }
       return visibleLegends;

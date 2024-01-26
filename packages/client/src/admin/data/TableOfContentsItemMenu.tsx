@@ -27,10 +27,12 @@ export const TableOfContentsItemMenu = React.forwardRef<
     items: TocMenuItemType[];
     editable?: boolean;
     transform?: { x: number; y: number };
+    top?: boolean;
+    bottom?: boolean;
   }
 >(
   (
-    { transform, type = DropdownMenu, items, editable, ...props },
+    { top, bottom, transform, type = DropdownMenu, items, editable, ...props },
     forwardedRef
   ) => {
     const MenuType = type;
@@ -131,6 +133,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     <Trans ns="homepage">View metadata</Trans>
                   </MenuType.Item>
                   <MenuType.Item
+                    disabled={top}
                     className={MenuBarItemClasses}
                     onSelect={() => {
                       mapContext?.manager?.moveLayerToTop(firstItem.stableId);
@@ -142,6 +145,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     <ArrowUpIcon className="w-3 h-3" />
                   </MenuType.Item>
                   <MenuType.Item
+                    disabled={bottom}
                     className={MenuBarItemClasses}
                     onSelect={() => {
                       mapContext?.manager?.moveLayerToBottom(
