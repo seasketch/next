@@ -2,13 +2,8 @@ import { Suspense, useCallback, useContext, useEffect, useState } from "react";
 import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
+import { MapContext } from "../../dataLayers/MapContextManager";
 import {
-  MapContext,
-  sourceTypeIsCustomGLSource,
-} from "../../dataLayers/MapContextManager";
-import TableOfContentsMetadataModal from "../../dataLayers/TableOfContentsMetadataModal";
-import {
-  useDeleteBranchMutation,
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
   useLayersAndSourcesForItemsQuery,
@@ -18,14 +13,9 @@ import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
 import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
-import useDialog from "../../components/useDialog";
 import FolderEditor from "./FolderEditor";
 import TreeView, { TreeItem } from "../../components/TreeView";
 import { useOverlayState } from "../../components/TreeView";
-import { currentSidebarState } from "../../projects/ProjectAppSidebar";
-import { DropdownOption } from "../../components/DropdownButton";
-import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
-import { createBoundsRecursive } from "../../projects/OverlayLayers";
 import { SortingState } from "../../projects/Sketches/TreeItemComponent";
 import { OverlayFragment } from "../../generated/queries";
 import * as Menubar from "@radix-ui/react-menubar";
@@ -44,9 +34,11 @@ import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import React from "react";
-import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
-import { createPortal } from "react-dom";
 import { ZIndexEditableList } from "./ZIndexEditableList";
+import { LayerEditingContext } from "./LayerEditingContext";
+import FullScreenLoadingSpinner from "./FullScreenLoadingSpinner";
+import { TableOfContentsItemMenu } from "./TableOfContentsItemMenu";
+import * as ContextMenu from "@radix-ui/react-context-menu";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -59,41 +51,34 @@ export default function TableOfContentsEditor() {
   const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
 
-  const setSelectedView = useCallback((view: string) => {
-    if (view === "order") {
-      // eslint-disable-next-line i18next/no-literal-string
-      history.push(`/${slug}/admin/data/zindex`);
-    } else {
-      // eslint-disable-next-line i18next/no-literal-string
-      history.push(`/${slug}/admin/data`);
-    }
-  }, [history, slug]);
+  const setSelectedView = useCallback(
+    (view: string) => {
+      if (view === "order") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/zindex`);
+      } else {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data`);
+      }
+    },
+    [history, slug]
+  );
 
-
-  const selectedView = /zindex/.test(history.location.pathname) ? "order" : "tree";
+  const selectedView = /zindex/.test(history.location.pathname)
+    ? "order"
+    : "tree";
   const { manager } = useContext(MapContext);
-  const { t } = useTranslation("nav");
 
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });
-  const [openLayerItemId, setOpenLayerItemId] = useState<number>();
   const [createNewFolderModalOpen, setCreateNewFolderModalOpen] =
     useState<boolean>(false);
   const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
-  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
-    | undefined
-    | {
-      itemId: number;
-      sublayerId?: string;
-      customGLSource?: CustomGLSource<any>;
-    }
-  >();
   const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
-  const [deleteItem] = useDeleteBranchMutation();
   const mapContext = useContext(MapContext);
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
@@ -102,6 +87,8 @@ export default function TableOfContentsEditor() {
     },
     shouldResubscribe: true,
   });
+
+  const layerEditingContext = useContext(LayerEditingContext);
 
   const layersAndSources = useLayersAndSourcesForItemsQuery({
     variables: {
@@ -141,151 +128,14 @@ export default function TableOfContentsEditor() {
     loadingItems,
     overlayErrors,
     treeItems: treeNodes,
+    hiddenItems,
+    onUnhide,
+    hasLocalState,
+    resetLocalState,
   } = useOverlayState(
     tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [],
     true,
     "admin"
-  );
-
-  const { confirmDelete } = useDialog();
-
-  const getContextMenuItems = useCallback(
-    (treeItem: TreeItem) => {
-      const items =
-        tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [];
-      const item = items.find((item) => item.stableId === treeItem.id);
-      if (item) {
-        const sidebar = currentSidebarState();
-        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] =
-          [];
-        if (
-          !item.isFolder ||
-          items.find((i) => i.parentStableId === item.stableId && i.bounds)
-        ) {
-          contextMenuOptions.push({
-            id: "zoom-to",
-            disabled: !item.bounds && !checkedItems.includes(item.stableId),
-            label: t("Zoom to bounds"),
-            onClick: async () => {
-              let bounds: [number, number, number, number] | undefined;
-              if (item.isFolder) {
-                bounds = createBoundsRecursive(item, items);
-              } else {
-                if (item.bounds) {
-                  bounds = item.bounds.map((coord: string) =>
-                    parseFloat(coord)
-                  ) as [number, number, number, number];
-                } else {
-                  const layer =
-                    layersAndSources.data?.projectBySlug?.dataLayersForItems?.find(
-                      (l) => l.id === item.dataLayerId
-                    );
-                  if (layer && layer.dataSourceId) {
-                    const source =
-                      layersAndSources.data?.projectBySlug?.dataSourcesForItems?.find(
-                        (s) => s.id === layer.dataSourceId
-                      );
-                    if (source && sourceTypeIsCustomGLSource(source.type)) {
-                      const customSource =
-                        mapContext.manager?.getCustomGLSource(source.id);
-                      const metadata =
-                        await customSource?.getComputedMetadata();
-                      if (metadata?.bounds) {
-                        bounds = metadata.bounds;
-                      }
-                    }
-                  }
-                }
-              }
-              if (
-                bounds &&
-                [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
-              ) {
-                mapContext.manager?.map?.fitBounds(bounds, {
-                  animate: true,
-                  padding: {
-                    bottom: 100,
-                    top: 100,
-                    left: sidebar.open ? sidebar.width + 100 : 100,
-                    right: 100,
-                  },
-                });
-              }
-            },
-          });
-        }
-        contextMenuOptions.push({
-          id: "edit",
-          label: t("Edit"),
-          onClick: () => {
-            if (item?.isFolder) {
-              setFolderId(item.id);
-            } else {
-              if (item.dataLayerId) {
-                manager?.showTocItems([item.stableId]);
-              }
-              setOpenLayerItemId(item.id);
-            }
-          },
-        });
-        if (!item.isFolder || item.hideChildren) {
-          contextMenuOptions.push({
-            id: "metadata",
-            label: t("Metadata"),
-            onClick: () => {
-              setOpenMetadataViewerState({
-                itemId: item.id,
-              });
-            },
-          });
-          // if (item.isFolder) {
-          contextMenuOptions.push({
-            id: "edit-metadata",
-            label: t("Edit metadata"),
-            onClick: () => {
-              setOpenMetadataItemId(item.id);
-            },
-          });
-          // }
-        }
-        contextMenuOptions.push({
-          id: "delete",
-          label: t("Delete"),
-          onClick: async () => {
-            if (item) {
-              await confirmDelete({
-                message: t("Delete Item"),
-                description: t("Are you sure you want to delete {{name}}?", {
-                  name: item.title.replace(/\.$/, ""),
-                }),
-                onDelete: async () => {
-                  await deleteItem({
-                    variables: {
-                      id: item.id as number,
-                    },
-                  }).then(async () => {
-                    await tocQuery.refetch();
-                  });
-                },
-              });
-            }
-          },
-        });
-        return contextMenuOptions;
-      } else {
-        return [];
-      }
-    },
-    [
-      confirmDelete,
-      deleteItem,
-      manager,
-      mapContext.manager,
-      t,
-      tocQuery,
-      layersAndSources.data,
-      checkedItems,
-    ]
   );
 
   const onSortEnd: (
@@ -455,6 +305,8 @@ export default function TableOfContentsEditor() {
         />
       )}
       <Header
+        hasLocalState={hasLocalState}
+        resetLocalState={resetLocalState}
         openArcGISCart={() => {
           setArcgisCartOpen(true);
         }}
@@ -472,8 +324,8 @@ export default function TableOfContentsEditor() {
         lastPublished={
           tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
             ? new Date(
-              tocQuery.data.projectBySlug.tableOfContentsLastPublished!
-            )
+                tocQuery.data.projectBySlug.tableOfContentsLastPublished!
+              )
             : undefined
         }
       />
@@ -491,11 +343,37 @@ export default function TableOfContentsEditor() {
             onExpand={onExpand}
             checkedItems={checkedItems}
             onChecked={onChecked}
+            hiddenItems={hiddenItems}
+            onUnhide={onUnhide}
             items={treeNodes}
             ariaLabel="Draft overlays"
             sortable
-            getContextMenuItems={getContextMenuItems}
             onSortEnd={onSortEnd}
+            getContextMenuContent={(treeItemId, clickEvent) => {
+              const item =
+                tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
+                  (item) => item.stableId === treeItemId
+                );
+              const sorted =
+                mapContext.manager?.getVisibleLayersByZIndex() || [];
+              if (item) {
+                return (
+                  <TableOfContentsItemMenu
+                    items={[item]}
+                    type={ContextMenu}
+                    editable
+                    transform={{
+                      x: clickEvent.clientX,
+                      y: clickEvent.clientY,
+                    }}
+                    top={sorted[0].tocId === item.stableId}
+                    bottom={sorted[sorted.length - 1].tocId === item.stableId}
+                  />
+                );
+              } else {
+                return null;
+              }
+            }}
           />
         </Route>
         <Route path={`/${slug}/admin/data/zindex`}>
@@ -510,13 +388,14 @@ export default function TableOfContentsEditor() {
             // @ts-ignore
             dataSources={
               layersAndSources.data?.projectBySlug?.dataSourcesForItems
-            } />
+            }
+          />
         </Route>
       </div>
-      {openLayerItemId && (
+      {layerEditingContext.openEditor && (
         <LayerTableOfContentsItemEditor
-          onRequestClose={() => setOpenLayerItemId(undefined)}
-          itemId={openLayerItemId}
+          onRequestClose={() => layerEditingContext.setOpenEditor(undefined)}
+          itemId={layerEditingContext.openEditor}
         />
       )}
       {openMetadataItemId && (
@@ -525,24 +404,8 @@ export default function TableOfContentsEditor() {
           onRequestClose={() => setOpenMetadataItemId(undefined)}
         />
       )}
-      {openMetadataViewerState && (
-        <TableOfContentsMetadataModal
-          id={openMetadataViewerState.itemId}
-          onRequestClose={() => setOpenMetadataViewerState(undefined)}
-        />
-      )}
       {arcgisCartOpen && (
-        <Suspense
-          fallback={createPortal(
-            <div
-              style={{ height: "100vh", backdropFilter: "blur(2px)" }}
-              className="w-full flex min-h-full h-96 justify-center text-center align-middle items-center content-center justify-items-center place-items-center place-content-center z-50 absolute top-0 left-0 bg-black bg-opacity-50"
-            >
-              <Spinner large color="white" />
-            </div>,
-            document.body
-          )}
-        >
+        <Suspense fallback={<FullScreenLoadingSpinner />}>
           <LazyArcGISCartModal
             projectId={tocQuery.data?.projectBySlug?.id as number}
             region={tocQuery.data?.projectBySlug?.region.geojson}
@@ -568,6 +431,8 @@ function Header({
   publishDisabled,
   lastPublished,
   openArcGISCart,
+  hasLocalState,
+  resetLocalState,
 }: {
   selectedView: string;
   setSelectedView: (view: string) => void;
@@ -578,10 +443,11 @@ function Header({
   publishDisabled?: boolean;
   lastPublished?: Date;
   openArcGISCart: () => void;
+  hasLocalState?: boolean;
+  resetLocalState?: () => void;
 }) {
   const uploadContext = useContext(DataUploadDropzoneContext);
   const { t } = useTranslation("admin:data");
-
   return (
     <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
       <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
@@ -621,6 +487,16 @@ function Header({
               >
                 <Trans ns="admin:data">Zoom to Project Bounds</Trans>
               </MenuBarItem>
+              {resetLocalState && (
+                <MenuBarItem
+                  disabled={!hasLocalState}
+                  onClick={() => {
+                    resetLocalState();
+                  }}
+                >
+                  <Trans ns="homepage">Reset overlays</Trans>
+                </MenuBarItem>
+              )}
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
@@ -670,10 +546,11 @@ function Header({
               <Tooltip.Trigger>
                 <button
                   // disabled={Boolean(publishDisabled)}
-                  className={`${publishDisabled
-                    ? "bg-white text-black opacity-80"
-                    : "bg-primary-500 text-white"
-                    } rounded px-2 py-0.5 mx-1 shadow-sm`}
+                  className={`${
+                    publishDisabled
+                      ? "bg-white text-black opacity-80"
+                      : "bg-primary-500 text-white"
+                  } rounded px-2 py-0.5 mx-1 shadow-sm`}
                   onClick={onRequestPublish}
                 >
                   <Trans ns="admin:data">Publish</Trans>

@@ -1,20 +1,14 @@
-import { useState, useContext, useCallback } from "react";
-import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
 import {
   DataLayerDetailsFragment,
   DataSourceDetailsFragment,
   OverlayFragment,
   TableOfContentsItem,
 } from "../generated/graphql";
-import {
-  MapContext,
-  sourceTypeIsCustomGLSource,
-} from "../dataLayers/MapContextManager";
-import TreeView, { TreeItem, useOverlayState } from "../components/TreeView";
-import { DropdownDividerProps } from "../components/ContextMenuDropdown";
-import { DropdownOption } from "../components/DropdownButton";
+import TreeView, { useOverlayState } from "../components/TreeView";
 import { useTranslation } from "react-i18next";
-import { currentSidebarState } from "./ProjectAppSidebar";
+import { TableOfContentsItemMenu } from "../admin/data/TableOfContentsItemMenu";
+import * as ContextMenu from "@radix-ui/react-context-menu";
+import Button from "../components/Button";
 
 export default function OverlayLayers({
   items,
@@ -26,10 +20,6 @@ export default function OverlayLayers({
   sources: DataSourceDetailsFragment[];
 }) {
   const { t } = useTranslation("homepage");
-  const mapContext = useContext(MapContext);
-  const [openMetadataViewerState, setOpenMetadataViewerState] = useState<
-    undefined | number
-  >();
 
   const {
     expandedIds,
@@ -39,114 +29,72 @@ export default function OverlayLayers({
     loadingItems,
     overlayErrors,
     treeItems,
+    hiddenItems,
+    onUnhide,
+    hasLocalState,
+    resetLocalState,
   } = useOverlayState(items);
 
-  const getContextMenuItems = useCallback(
-    (treeItem: TreeItem) => {
-      const item = items.find((item) => item.stableId === treeItem.id);
-      if (item) {
-        const sidebar = currentSidebarState();
-        const contextMenuOptions: (DropdownOption | DropdownDividerProps)[] = [
-          {
-            id: "zoom-to",
-            label: t("Zoom to bounds"),
-            disabled: !item.bounds && !checkedItems.includes(item.stableId),
-            onClick: async () => {
-              let bounds: [number, number, number, number] | undefined;
-              if (item.isFolder) {
-                bounds = createBoundsRecursive(item, items);
-              } else {
-                if (item.bounds) {
-                  bounds = item.bounds.map((coord: string) =>
-                    parseFloat(coord)
-                  ) as [number, number, number, number];
-                } else {
-                  const layer = layers?.find((l) => l.id === item.dataLayerId);
-                  if (layer && layer.dataSourceId) {
-                    const source = sources?.find(
-                      (s) => s.id === layer.dataSourceId
-                    );
-                    if (source && sourceTypeIsCustomGLSource(source.type)) {
-                      const customSource =
-                        mapContext.manager?.getCustomGLSource(source.id);
-                      const metadata =
-                        await customSource?.getComputedMetadata();
-                      if (metadata?.bounds) {
-                        bounds = metadata.bounds;
-                      }
-                    }
-                  }
-                }
-              }
-              if (
-                bounds &&
-                [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")
-              ) {
-                mapContext.manager?.map?.fitBounds(bounds, {
-                  animate: true,
-                  padding: {
-                    bottom: 100,
-                    top: 100,
-                    left: sidebar.open ? sidebar.width + 100 : 100,
-                    right: 100,
-                  },
-                });
-              }
-            },
-          },
-        ];
-        if (item.dataLayerId || item.hasMetadata) {
-          contextMenuOptions.push({
-            id: "metadata",
-            label: t("Metadata"),
-            onClick: () => {
-              setOpenMetadataViewerState(item.id);
-            },
-          });
-        }
-        return contextMenuOptions;
-      } else {
-        return [];
-      }
-    },
-    [
-      items,
-      mapContext.manager?.map,
-      t,
-      mapContext.manager,
-      layers,
-      sources,
-      checkedItems,
-    ]
-  );
-
   return (
-    <div className="mt-3 pl-3">
-      {openMetadataViewerState && (
-        <TableOfContentsMetadataModal
-          id={openMetadataViewerState}
-          onRequestClose={() => setOpenMetadataViewerState(undefined)}
+    <div>
+      <header className=" select-none fixed w-128 p-2 bg-gray-100 border-b z-10">
+        <button
+          disabled={!hasLocalState}
+          onClick={() => {
+            resetLocalState();
+          }}
+          className={`px-1 py-0.5 border bg-white text-sm rounded shadow-sm ${
+            !hasLocalState ? "opacity-50 pointer-events-none" : ""
+          }`}
+        >
+          {t("Reset layers")}
+        </button>
+      </header>
+      <div className="mt-12 pl-6">
+        <TreeView
+          hiddenItems={hiddenItems}
+          onUnhide={onUnhide}
+          loadingItems={loadingItems}
+          errors={overlayErrors}
+          disableEditing={true}
+          expanded={expandedIds}
+          onExpand={onExpand}
+          checkedItems={checkedItems}
+          onChecked={onChecked}
+          ariaLabel="Overlay Layers"
+          items={treeItems}
+          getContextMenuContent={(treeItemId, clickEvent) => {
+            const item = items.find((item) => item.stableId === treeItemId);
+            if (item?.isFolder) {
+              return null;
+            }
+            if (item) {
+              return (
+                <TableOfContentsItemMenu
+                  items={[item]}
+                  type={ContextMenu}
+                  transform={{
+                    x: clickEvent.clientX,
+                    y: clickEvent.clientY,
+                  }}
+                />
+              );
+            } else {
+              return null;
+            }
+          }}
         />
-      )}
-      <TreeView
-        loadingItems={loadingItems}
-        errors={overlayErrors}
-        disableEditing={true}
-        expanded={expandedIds}
-        onExpand={onExpand}
-        checkedItems={checkedItems}
-        onChecked={onChecked}
-        ariaLabel="Overlay Layers"
-        items={treeItems}
-        getContextMenuItems={getContextMenuItems}
-      />
+      </div>
     </div>
   );
 }
 
 export function createBoundsRecursive(
-  item: OverlayFragment,
-  items: OverlayFragment[],
+  item: Pick<OverlayFragment, "bounds" | "stableId" | "id" | "parentStableId">,
+  items: Pick<
+    OverlayFragment,
+    "bounds" | "id" | "stableId" | "parentStableId"
+  >[],
   bounds?: [number, number, number, number]
 ): [number, number, number, number] {
   if (item.bounds) {

@@ -57,7 +57,7 @@ export default class LayerInteractivityManager extends EventEmitter {
   private sketchLayerIds: string[] = [];
   private focusedSketchId?: number;
   private customSources: { [sourceId: string]: CustomGLSource<any> } = {};
-  private tocItemLabels: { [stableId: string]: string } = {};
+  private tocItemLabels: { [stableId: string]: { label?: string } } = {};
   private selectedFeature?: mapboxgl.FeatureIdentifier;
   private hoveredFeature?: mapboxgl.FeatureIdentifier;
 
@@ -117,7 +117,11 @@ export default class LayerInteractivityManager extends EventEmitter {
     dataLayers: DataLayerDetailsFragment[],
     dataSources: { [dataSourceId: string]: DataSourceDetailsFragment },
     basemap: BasemapDetailsFragment,
-    tocItemLabels: { [stableId: string]: string }
+    tocItemLabels: {
+      [stableId: string]: {
+        label?: string;
+      };
+    }
   ) {
     this.tocItemLabels = tocItemLabels;
     const newActiveLayers: { [layerId: string]: DataLayerDetailsFragment } = {};
@@ -404,7 +408,7 @@ export default class LayerInteractivityManager extends EventEmitter {
         }));
         const lyr = this.layers[top.layer.id];
         // @ts-ignore
-        const layerLabel = (this.tocItemLabels || {})[lyr?.tocId];
+        const layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
         new Popup({ closeOnClick: true, closeButton: true })
           .setLngLat([e.lngLat.lng, e.lngLat.lat])
           .setHTML(
@@ -615,7 +619,7 @@ export default class LayerInteractivityManager extends EventEmitter {
                   l.dataSourceId === data.sourceId
               );
               // @ts-ignore
-              layerLabel = (this.tocItemLabels || {})[lyr?.tocId];
+              const layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
             }
 
             const properties = sublayerData[0]?.attributes || {};

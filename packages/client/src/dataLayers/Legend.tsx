@@ -6,8 +6,10 @@ import { GLLegendPanel, LegendForGLLayers } from "./legends/LegendDataModel";
 import * as Accordion from "@radix-ui/react-accordion";
 import {
   CaretDownIcon,
+  DotsHorizontalIcon,
   EyeClosedIcon,
   EyeOpenIcon,
+  HeightIcon,
 } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import Spinner from "../components/Spinner";
@@ -22,7 +24,14 @@ import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
 import { ErrorBoundary } from "@sentry/react";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import {
+  TableOfContentsItemMenu,
+  TocMenuItemType,
+} from "../admin/data/TableOfContentsItemMenu";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { LayerEditingContext } from "../admin/data/LayerEditingContext";
+
 require("../admin/data/arcgis/Accordion.css");
 
 interface CustomGLSourceSymbolLegend {
@@ -31,7 +40,6 @@ interface CustomGLSourceSymbolLegend {
   supportsDynamicRendering: DynamicRenderingSupportOptions;
   symbols: LegendSymbolItem[];
   id: string;
-  zOrder?: number;
 }
 
 interface GLStyleLegendItem {
@@ -40,10 +48,11 @@ interface GLStyleLegendItem {
   /** Table of contents item id */
   id: string;
   legend?: LegendForGLLayers;
-  zOrder?: number;
 }
 
-export type LegendItem = GLStyleLegendItem | CustomGLSourceSymbolLegend;
+export type LegendItem = (GLStyleLegendItem | CustomGLSourceSymbolLegend) & {
+  tableOfContentsItemDetails?: TocMenuItemType;
+};
 
 const PANEL_WIDTH = 180;
 
@@ -57,20 +66,20 @@ export default function Legend({
   maxHeight,
   backdropBlur: blur,
   persistedStateKey,
+  editable,
 }: {
   backdropBlur?: boolean;
   items: LegendItem[];
   zOrder: { [id: string]: number };
   opacity: { [id: string]: number };
   hiddenItems: string[];
-  onZOrderChange?: (id: string, zOrder: number) => void;
-  onOpacityChange?: (id: string, opacity: number) => void;
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   className?: string;
   loading?: boolean;
   map?: Map;
   maxHeight?: number;
   persistedStateKey?: string;
+  editable?: boolean;
 }) {
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
@@ -78,7 +87,7 @@ export default function Legend({
     persistedStateKey || "legend",
     true
   );
-
+  const layerEditingContext = useContext(LayerEditingContext);
   return (
     <div
       style={
@@ -114,16 +123,29 @@ export default function Legend({
             </Accordion.Trigger>
           </Accordion.Header>
           <Accordion.Content className="flex-1 max-h-full overflow-y-auto border-t border-black border-opacity-10">
-            <ul className="list-none overflow-y-auto" style={{ maxHeight }}>
+            <ul
+              className="list-none overflow-y-auto pr-1"
+              style={{ maxHeight }}
+            >
               {items.map((item, i) => {
+                if (
+                  layerEditingContext?.recentlyDeletedStableIds?.includes(
+                    item.id
+                  )
+                ) {
+                  return null;
+                }
                 return (
                   <LegendListItem
+                    editable={editable}
                     onHiddenItemsChange={onHiddenItemsChange}
                     key={item.id}
                     item={item}
                     visible={!hiddenItems || !hiddenItems.includes(item.id)}
                     map={map}
                     skipTopBorder={i === 0}
+                    top={i === 0}
+                    bottom={i === items.length - 1}
                   />
                 );
               })}
@@ -141,29 +163,33 @@ function LegendListItem({
   map,
   onHiddenItemsChange,
   skipTopBorder,
+  editable,
+  top,
+  bottom,
 }: {
   item: LegendItem;
   visible: boolean;
   map?: Map;
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   skipTopBorder?: boolean;
+  editable?: boolean;
+  top?: boolean;
+  bottom?: boolean;
 }) {
+  const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const isSingleSymbol =
     (item.type === "GLStyleLegendItem" &&
       item.legend?.type === "SimpleGLLegend" &&
       item.legend.symbol) ||
     (item.type === "CustomGLSourceSymbolLegend" && item.symbols.length <= 1);
-  const [hovered, setHovered] = useState(false);
   return (
     <ErrorBoundary>
       <li
-        onMouseOver={() => setHovered(true)}
-        onMouseOut={() => setHovered(false)}
-        className={`${
+        className={`group ${
           skipTopBorder ? "" : "border-t border-black border-opacity-5"
-        } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"} group`}
+        } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"}`}
       >
-        <div className="flex items-center space-x-2 group">
+        <div className="flex items-center space-x-2">
           {/* If single-symbol, show inline image */}
           {isSingleSymbol && (
             <div className="items-center justify-center bg-transparent flex-none">
@@ -184,23 +210,45 @@ function LegendListItem({
           </span>
           {/* Buttons */}
           <div
-            className={`flex-none group pl-4 flex items-center space-x-1 ${
-              hovered ? "opacity-50" : "opacity-10"
-            }`}
+            className={`${
+              contextMenuIsOpen
+                ? "opacity-50"
+                : "opacity-10 group-hover:opacity-50"
+            } flex-none group pl-1 flex items-center space-x-1 `}
           >
-            {onHiddenItemsChange && (
-              <Toggle
-                onChange={() => {
-                  if (onHiddenItemsChange) {
-                    onHiddenItemsChange(item.id, visible);
-                  }
-                }}
-                visible={visible}
-              />
+            {item.tableOfContentsItemDetails && (
+              <DropdownMenu.Root
+                onOpenChange={(open) => setContextMenuIsOpen(open)}
+              >
+                <DropdownMenu.Portal>
+                  <TableOfContentsItemMenu
+                    items={[item.tableOfContentsItemDetails]}
+                    type={DropdownMenu}
+                    editable={editable}
+                    top={top}
+                    bottom={bottom}
+                  />
+                </DropdownMenu.Portal>
+                <DropdownMenu.Trigger asChild>
+                  <DotsHorizontalIcon
+                    className={`w-5 h-5 text-black  cursor-pointer ${
+                      contextMenuIsOpen
+                        ? "inline-block bg-gray-200 border border-black border-opacity-20 rounded-full"
+                        : "hidden group-hover:inline-block"
+                    } `}
+                  />
+                </DropdownMenu.Trigger>
+              </DropdownMenu.Root>
             )}
-            {/* <DotsHorizontalIcon
-              className={`w-5 h-5 text-black  cursor-pointer`}
-            /> */}
+            <Toggle
+              className={`inline-block`}
+              onChange={() => {
+                if (onHiddenItemsChange) {
+                  onHiddenItemsChange(item.id, visible);
+                }
+              }}
+              visible={visible}
+            />
           </div>
         </div>
         {!isSingleSymbol && (

@@ -513,7 +513,8 @@ export class ArcGISDynamicMapService
         }
       }
     }
-    if (this.layers && (!layersInOrder || hasOpacityUpdates)) {
+    if (this.layers) {
+      // && (!layersInOrder || hasOpacityUpdates)) {
       // need to provide renderInfo
       const dynamicLayers = this.layers.map((lyr) => {
         return {
@@ -542,6 +543,12 @@ export class ArcGISDynamicMapService
       } else {
         url.searchParams.set("size", [tileSize, tileSize].join(","));
       }
+    }
+    if (
+      hasOpacityUpdates &&
+      /png/i.test(url.searchParams.get("format") || "png")
+    ) {
+      url.searchParams.set("format", "PNG32");
     }
     return url.toString().replace("seasketch-replace-me", "{bbox-epsg-3857}");
   }

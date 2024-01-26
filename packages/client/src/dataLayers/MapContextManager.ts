@@ -12,6 +12,7 @@ import mapboxgl, {
   AnyLayer,
   Sources,
   GeoJSONSource,
+  Expression,
 } from "mapbox-gl";
 import {
   createContext,
@@ -67,6 +68,9 @@ import { OrderedLayerSettings } from "@seasketch/mapbox-gl-esri-sources/dist/src
 import { isArcGISDynamicMapService } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISDynamicMapService";
 import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
 import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
+import { createBoundsRecursive } from "../projects/OverlayLayers";
+import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
+import { isExpression } from "./legends/utils";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -141,10 +145,17 @@ export type DigitizingLockStateChangeEventPayload = {
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN!;
 
 export interface LayerState {
-  visible: true;
+  visible: boolean;
   opacity?: number;
+  zOrderOverride?: number;
   loading: boolean;
   error?: Error;
+  /**
+   * If true, it means that while the layer may be "visible" as selected from
+   * the table of contents, the user may have temporarily hidden it in the
+   * legend.
+   */
+  hidden?: boolean;
 }
 
 export interface SketchLayerState extends LayerState {
@@ -157,12 +168,15 @@ class MapContextManager extends EventEmitter {
   private clientDataSources: {
     [dataSourceId: string]: DataSourceDetailsFragment;
   } = {};
-  private layersByZIndex: string[] = [];
   private layers: {
     [tocStableId: string]: {
       tocId: string;
     } & DataLayerDetailsFragment;
   } = {};
+  // TODO: it probably makes sense to "garbage collect" visibleLayers at some
+  // point since it is stored in localstorage. If there's a lot of churn in
+  // layers there will be stale entries, and eventually there could even be a
+  // problem with really long layer lists if the user toggles all the layers
   private visibleLayers: { [id: string]: LayerState } = {};
   private basemaps: { [id: string]: BasemapDetailsFragment } = {};
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
@@ -227,7 +241,7 @@ class MapContextManager extends EventEmitter {
     this.internalState = initialState;
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
-    this.visibleLayers = initialState.layerStatesByTocStaticId;
+    this.visibleLayers = { ...initialState.layerStatesByTocStaticId };
   }
 
   getCustomGLSource(sourceId: number) {
@@ -422,7 +436,7 @@ class MapContextManager extends EventEmitter {
         .map((id) => this.layers[id]),
       this.clientDataSources,
       this.getSelectedBasemap()!,
-      this.tocItemLabels
+      this.tocItems
     );
 
     if (this.internalState.showScale) {
@@ -688,6 +702,68 @@ class MapContextManager extends EventEmitter {
     return states;
   }
 
+  private applyOptionalBasemapLayerStates(
+    baseStyle: Style,
+    basemap: BasemapDetailsFragment | undefined
+  ) {
+    const optionalBasemapLayerStates = this.computeBasemapOptionalLayerStates(
+      this.getSelectedBasemap(),
+      this.internalState.basemapOptionalLayerStatePreferences
+    );
+
+    // If set to true, display the optional layer, else filter out
+    const optionalLayersToggleState: { [layerId: string]: boolean } = {};
+    for (const layer of basemap?.optionalBasemapLayers || []) {
+      if (layer.groupType === OptionalBasemapLayersGroupType.None) {
+        for (const id of layer.layers) {
+          if (id) {
+            optionalLayersToggleState[id] =
+              optionalLayersToggleState[id] ||
+              optionalBasemapLayerStates[layer.id];
+          }
+        }
+      } else {
+        // Select or Radio-type basemap
+        for (const option of (layer.options || []) as {
+          name: string;
+          description?: string;
+          layers?: string[];
+        }[]) {
+          // if (optionalBasemapLayerStates[layer.id] !== option.name) {
+          // hide all layers associated with this option
+          for (const id of option.layers || []) {
+            if (id) {
+              optionalLayersToggleState[id] =
+                optionalLayersToggleState[id] ||
+                optionalBasemapLayerStates[layer.id] === option.name;
+            }
+          }
+          // }
+        }
+      }
+    }
+
+    baseStyle.layers = baseStyle.layers.map((layer) => {
+      const state = optionalLayersToggleState[layer.id];
+      // @ts-ignore
+      const hasSource = !!layer.source;
+      if (hasSource && state === false) {
+        return {
+          ...layer,
+          ...{
+            layout: {
+              // @ts-ignore
+              ...(layer.layout || {}),
+              visibility: "none",
+            },
+          },
+        };
+      } else {
+        return layer;
+      }
+    });
+  }
+
   /**
    * Set the basemap that should be displayed on the map. Updates
    * MapContext.selectedBasemap
@@ -780,6 +856,13 @@ class MapContextManager extends EventEmitter {
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
+  }
+
+  resetLayers() {
+    const visibleLayerIds = Object.keys(this.visibleLayers);
+    this.hideTocItems(visibleLayerIds);
+    this.visibleLayers = {};
+    this.updatePreferences();
   }
 
   private updateStyleDebouncerReference: NodeJS.Timeout | undefined;
@@ -947,7 +1030,17 @@ class MapContextManager extends EventEmitter {
       id in this.geoprocessingReferenceIds
         ? this.geoprocessingReferenceIds[id]
         : id;
-    delete this.visibleLayers[stableId];
+    const state = this.visibleLayers[stableId];
+    if (state?.visible) {
+      if (
+        (state.opacity !== undefined && state.opacity !== 1) ||
+        state.zOrderOverride !== undefined
+      ) {
+        this.visibleLayers[stableId].visible = false;
+      } else {
+        delete this.visibleLayers[stableId];
+      }
+    }
     this.updateLegends();
   }
 
@@ -968,14 +1061,18 @@ class MapContextManager extends EventEmitter {
         if (!state.visible) {
           state.visible = true;
           state.loading = true;
-          state.opacity = 1;
+          state.hidden = false;
         }
       }
     } else {
       this.visibleLayers[stableId] = {
         loading: true,
         visible: true,
-        opacity: 1,
+        opacity:
+          this.internalState.layerStatesByTocStaticId[stableId]?.opacity || 1,
+        hidden: false,
+        zOrderOverride:
+          this.internalState.layerStatesByTocStaticId[stableId]?.zOrderOverride,
       };
     }
     this.updateLegends();
@@ -1070,39 +1167,7 @@ class MapContextManager extends EventEmitter {
     this.debouncedUpdateStyle();
   }
 
-  async getComputedStyle(unfinishedCustomSourceCallback?: () => void): Promise<{
-    style: Style;
-    sprites: SpriteDetailsFragment[];
-  }> {
-    this.resetLayersByZIndex();
-    // get mapbox-gl-draw related layers and sources and make sure to include
-    // them in the end. gl-draw has some magic to avoid their layers getting
-    // removed but I'm seeing errors like this when the style is updated:
-    //
-    // Uncaught TypeError: Cannot read properties of undefined (reading 'get')
-    //    at new Ut (mapbox-gl.js:36:1)
-    let glDrawLayers: AnyLayer[] = [];
-    let glDrawSources: { [id: string]: GeoJSONSource } = {};
-    let existingStyle: mapboxgl.Style | undefined;
-    try {
-      existingStyle = this.map?.getStyle();
-    } catch (e) {
-      // do nothing
-    }
-    if (existingStyle) {
-      glDrawLayers =
-        existingStyle.layers?.filter((l) => l.id.indexOf("gl-draw") === 0) ||
-        [];
-      // @ts-ignore
-      const relatedSourceIds = glDrawLayers.map((l) => l.source || "");
-      for (const key in existingStyle.sources) {
-        if (relatedSourceIds.indexOf(key) > -1) {
-          glDrawSources[key] = existingStyle.sources[key] as GeoJSONSource;
-        }
-      }
-    }
-
-    let sprites: SpriteDetailsFragment[] = [];
+  async getComputedBaseStyle() {
     const basemap = this.basemaps[this.internalState.selectedBasemap || ""] as
       | BasemapDetailsFragment
       | undefined;
@@ -1267,14 +1332,54 @@ class MapContextManager extends EventEmitter {
     if (labelsLayerIndex === -1) {
       labelsLayerIndex = baseStyle.layers.length;
     }
+    return { baseStyle, labelsLayerIndex, basemap };
+  }
+
+  async getComputedStyle(unfinishedCustomSourceCallback?: () => void): Promise<{
+    style: Style;
+    sprites: SpriteDetailsFragment[];
+  }> {
+    // this.resetLayersByZIndex();
+    // get mapbox-gl-draw related layers and sources and make sure to include
+    // them in the end. gl-draw has some magic to avoid their layers getting
+    // removed but I'm seeing errors like this when the style is updated:
+    //
+    // Uncaught TypeError: Cannot read properties of undefined (reading 'get')
+    //    at new Ut (mapbox-gl.js:36:1)
+    let glDrawLayers: AnyLayer[] = [];
+    let glDrawSources: { [id: string]: GeoJSONSource } = {};
+    let existingStyle: mapboxgl.Style | undefined;
+    try {
+      existingStyle = this.map?.getStyle();
+    } catch (e) {
+      // do nothing
+    }
+    if (existingStyle) {
+      glDrawLayers =
+        existingStyle.layers?.filter((l) => l.id.indexOf("gl-draw") === 0) ||
+        [];
+      // @ts-ignore
+      const relatedSourceIds = glDrawLayers.map((l) => l.source || "");
+      for (const key in existingStyle.sources) {
+        if (relatedSourceIds.indexOf(key) > -1) {
+          glDrawSources[key] = existingStyle.sources[key] as GeoJSONSource;
+        }
+      }
+    }
+
+    const { baseStyle, labelsLayerIndex, basemap } =
+      await this.getComputedBaseStyle();
+
+    let sprites: SpriteDetailsFragment[] = [];
     let underLabels: any[] = baseStyle.layers.slice(0, labelsLayerIndex);
     let overLabels: any[] = baseStyle.layers.slice(labelsLayerIndex);
     let isUnderLabels = true;
-    let i = this.layersByZIndex.length;
+    const layersByZIndex = this.getVisibleLayersByZIndex();
+    let i = layersByZIndex.length;
     const insertedCustomSourceIds: number[] = [];
     // reset sublayer settings before proceeding
     while (i--) {
-      const layerId = this.layersByZIndex[i];
+      const layerId = layersByZIndex[i].tocId;
       if (layerId === "LABELS") {
         isUnderLabels = false;
       } else {
@@ -1330,74 +1435,15 @@ class MapContextManager extends EventEmitter {
                       if (!this.customSources[source.id]) {
                         switch (source.type) {
                           case DataSourceTypes.ArcgisVector:
-                            const fetchStrategy =
-                              source.arcgisFetchStrategy ===
-                              ArcgisFeatureLayerFetchStrategy.Raw
-                                ? "raw"
-                                : source.arcgisFetchStrategy ===
-                                  ArcgisFeatureLayerFetchStrategy.Tiled
-                                ? "tiled"
-                                : "auto";
-                            this.customSources[source.id] = {
-                              listenersAdded: false,
-                              visible: true,
-                              lastUsedTimestamp: new Date().getTime(),
-                              customSource: new ArcGISFeatureLayerSource(
-                                this.arcgisRequestManager,
-                                {
-                                  url: source.url!,
-                                  fetchStrategy,
-                                  sourceId: source.id.toString(),
-                                  attributionOverride:
-                                    (source.attribution || "").trim().length > 0
-                                      ? source.attribution!
-                                      : undefined,
-                                }
-                              ),
-                            };
-                            break;
                           case DataSourceTypes.ArcgisRasterTiles:
-                            this.customSources[source.id] = {
-                              listenersAdded: false,
-                              visible: true,
-                              lastUsedTimestamp: new Date().getTime(),
-                              customSource: new ArcGISTiledMapService(
-                                this.arcgisRequestManager,
-                                {
-                                  url: source.url!,
-                                  sourceId: source.id.toString(),
-                                  attributionOverride:
-                                    (source.attribution || "").trim().length > 0
-                                      ? source.attribution!
-                                      : undefined,
-                                  maxZoom: source.maxzoom
-                                    ? source.maxzoom
-                                    : undefined,
-                                  developerApiKey:
-                                    process.env
-                                      .REACT_APP_ARCGIS_DEVELOPER_API_KEY,
-                                }
-                              ),
-                            };
-                            break;
                           case DataSourceTypes.ArcgisDynamicMapserver:
                             this.customSources[source.id] = {
                               listenersAdded: false,
                               visible: true,
                               lastUsedTimestamp: new Date().getTime(),
-                              customSource: new ArcGISDynamicMapService(
-                                this.arcgisRequestManager,
-                                {
-                                  url: source.url!,
-                                  sourceId: source.id.toString(),
-                                  supportHighDpiDisplays:
-                                    source.useDevicePixelRatio || false,
-                                  queryParameters: source.queryParameters || {},
-                                  attributionOverride:
-                                    (source.attribution || "").trim().length > 0
-                                      ? source.attribution!
-                                      : undefined,
-                                }
+                              customSource: createCustomSource(
+                                source,
+                                this.arcgisRequestManager
                               ),
                             };
                             break;
@@ -1427,17 +1473,36 @@ class MapContextManager extends EventEmitter {
                         }
                         const layers = isUnderLabels ? underLabels : overLabels;
                         if (
-                          layer.interactivitySettings &&
-                          layer.interactivitySettings.type ===
-                            InteractivityType.SidebarOverlay
+                          !this.visibleLayers[layerId]?.hidden ||
+                          source.type === DataSourceTypes.ArcgisDynamicMapserver
                         ) {
-                          layers.push(
-                            ...addInteractivityExpressions(
-                              styleData.layers as AnyLayer[]
-                            )
-                          );
-                        } else {
-                          layers.push(...styleData.layers);
+                          let layersToAdd = styleData.layers;
+                          if (
+                            source.type !==
+                              DataSourceTypes.ArcgisDynamicMapserver &&
+                            this.visibleLayers[layerId] &&
+                            "opacity" in this.visibleLayers[layerId] &&
+                            typeof this.visibleLayers[layerId].opacity ===
+                              "number"
+                          ) {
+                            layersToAdd = adjustLayerOpacities(
+                              layersToAdd as mapboxgl.AnyLayer[],
+                              this.visibleLayers[layerId].opacity!
+                            );
+                          }
+                          if (
+                            layer.interactivitySettings &&
+                            layer.interactivitySettings.type ===
+                              InteractivityType.SidebarOverlay
+                          ) {
+                            layers.push(
+                              ...addInteractivityExpressions(
+                                layersToAdd as AnyLayer[]
+                              )
+                            );
+                          } else {
+                            layers.push(...layersToAdd);
+                          }
                         }
                       } else {
                         setTimeout(() => {
@@ -1479,14 +1544,26 @@ class MapContextManager extends EventEmitter {
                       : {}),
                   } as AnyLayer;
                 });
-                const layers = isUnderLabels ? underLabels : overLabels;
                 if (
-                  layer.interactivitySettings?.type ===
-                  InteractivityType.SidebarOverlay
+                  this.visibleLayers[layerId] &&
+                  "opacity" in this.visibleLayers[layerId] &&
+                  typeof this.visibleLayers[layerId].opacity === "number"
                 ) {
-                  glLayers = addInteractivityExpressions(glLayers);
+                  glLayers = adjustLayerOpacities(
+                    glLayers,
+                    this.visibleLayers[layerId].opacity!
+                  );
                 }
-                layers.push(...glLayers);
+                const layers = isUnderLabels ? underLabels : overLabels;
+                if (!this.visibleLayers[layerId]?.hidden) {
+                  if (
+                    layer.interactivitySettings?.type ===
+                    InteractivityType.SidebarOverlay
+                  ) {
+                    glLayers = addInteractivityExpressions(glLayers);
+                  }
+                  layers.push(...glLayers);
+                }
               } else if (isCustomSourceType(source.type) && layer.sublayer) {
                 // Add sublayer info if needed
                 if (!Array.isArray(this.customSources[source.id].sublayers)) {
@@ -1496,13 +1573,15 @@ class MapContextManager extends EventEmitter {
                 if (!settings) {
                   throw new Error("Visible layer settings missing");
                 }
-                this.customSources[source.id].sublayers!.push({
-                  id: layer.sublayer,
-                  opacity:
-                    "opacity" in settings && settings.opacity !== undefined
-                      ? settings.opacity
-                      : 1,
-                });
+                if (!this.visibleLayers[layerId]?.hidden) {
+                  this.customSources[source.id].sublayers!.unshift({
+                    id: layer.sublayer,
+                    opacity:
+                      "opacity" in settings && settings.opacity !== undefined
+                        ? settings.opacity
+                        : 1,
+                  });
+                }
               }
             }
           }
@@ -1543,64 +1622,7 @@ class MapContextManager extends EventEmitter {
     ];
 
     // Evaluate any basemap optional layers
-    // value is whether to toggle
-    // const stylesSubjectToToggle: { [id: string]: boolean } = {};
-    const optionalBasemapLayerStates = this.computeBasemapOptionalLayerStates(
-      this.getSelectedBasemap(),
-      this.internalState.basemapOptionalLayerStatePreferences
-    );
-
-    // If set to true, display the optional layer, else filter out
-    const optionalLayersToggleState: { [layerId: string]: boolean } = {};
-    for (const layer of basemap?.optionalBasemapLayers || []) {
-      if (layer.groupType === OptionalBasemapLayersGroupType.None) {
-        for (const id of layer.layers) {
-          if (id) {
-            optionalLayersToggleState[id] =
-              optionalLayersToggleState[id] ||
-              optionalBasemapLayerStates[layer.id];
-          }
-        }
-      } else {
-        // Select or Radio-type basemap
-        for (const option of (layer.options || []) as {
-          name: string;
-          description?: string;
-          layers?: string[];
-        }[]) {
-          // if (optionalBasemapLayerStates[layer.id] !== option.name) {
-          // hide all layers associated with this option
-          for (const id of option.layers || []) {
-            if (id) {
-              optionalLayersToggleState[id] =
-                optionalLayersToggleState[id] ||
-                optionalBasemapLayerStates[layer.id] === option.name;
-            }
-          }
-          // }
-        }
-      }
-    }
-
-    baseStyle.layers = baseStyle.layers.map((layer) => {
-      const state = optionalLayersToggleState[layer.id];
-      // @ts-ignore
-      const hasSource = !!layer.source;
-      if (hasSource && state === false) {
-        return {
-          ...layer,
-          ...{
-            layout: {
-              // @ts-ignore
-              ...(layer.layout || {}),
-              visibility: "none",
-            },
-          },
-        };
-      } else {
-        return layer;
-      }
-    });
+    this.applyOptionalBasemapLayerStates(baseStyle, basemap);
 
     // Add sketches
     const sketchLayerIds: string[] = [];
@@ -1854,7 +1876,7 @@ class MapContextManager extends EventEmitter {
         visibleLayers,
         this.clientDataSources,
         this.getSelectedBasemap()!,
-        this.tocItemLabels
+        this.tocItems
       );
     }
   }
@@ -1947,14 +1969,33 @@ class MapContextManager extends EventEmitter {
     maxWait: 100,
   });
 
-  private tocItemLabels: { [id: string]: string } = {};
+  private tocItems: {
+    [stableId: string]: {
+      stableId: string;
+      id: number;
+      label?: string;
+      bounds?: [number, number, number, number];
+      dataLayerId?: number;
+      isFolder: boolean;
+      parentStableId?: string;
+      enableDownload: boolean;
+    };
+  } = {};
 
   reset(
     sources: DataSourceDetailsFragment[],
     layers: DataLayerDetailsFragment[],
     tocItems: Pick<
       OverlayFragment,
-      "id" | "stableId" | "dataLayerId" | "geoprocessingReferenceId" | "title"
+      | "id"
+      | "stableId"
+      | "dataLayerId"
+      | "geoprocessingReferenceId"
+      | "title"
+      | "bounds"
+      | "isFolder"
+      | "parentStableId"
+      | "enableDownload"
     >[]
   ) {
     this.clientDataSources = {};
@@ -1967,7 +2008,16 @@ class MapContextManager extends EventEmitter {
       // this.layers[layer.id] = layer;
     }
     for (const item of tocItems) {
-      this.tocItemLabels[item.stableId] = item.title;
+      this.tocItems[item.stableId] = {
+        label: item.title,
+        dataLayerId: item.dataLayerId || undefined,
+        bounds: (item.bounds as [number, number, number, number]) || undefined,
+        isFolder: Boolean(item.isFolder),
+        parentStableId: item.parentStableId || undefined,
+        stableId: item.stableId,
+        id: item.id,
+        enableDownload: Boolean(item.enableDownload),
+      };
       if (item.dataLayerId) {
         const layer = layersById[item.dataLayerId];
         if (layer) {
@@ -1997,48 +2047,6 @@ class MapContextManager extends EventEmitter {
     this.updateInteractivitySettings();
     this.updateLegends();
     return;
-  }
-
-  private resetLayersByZIndex() {
-    const sortedLayers = [...Object.values(this.layers)];
-    // sortedLayers.sort((a, b) => b.zIndex - a.zIndex);
-    sortedLayers.sort((a, b) => {
-      if (
-        a.renderUnder === RenderUnderType.Labels &&
-        b.renderUnder !== RenderUnderType.Labels
-      ) {
-        return 1;
-      } else if (
-        b.renderUnder === RenderUnderType.Labels &&
-        a.renderUnder !== RenderUnderType.Labels
-      ) {
-        return -1;
-      } else {
-        return a.zIndex - b.zIndex;
-      }
-    });
-    // Need to make sure these are layer ids and not ids of layers to accomadate sublayers
-    const layerIds = [];
-
-    let labelsLayerInserted = false;
-    for (const layer of sortedLayers) {
-      if (
-        !labelsLayerInserted &&
-        layer.renderUnder === RenderUnderType.Labels
-      ) {
-        labelsLayerInserted = true;
-        layerIds.push("LABELS");
-      }
-      // if (layer.sublayer) {
-      //   const specialId = idForSublayer(layer);
-      //   if (layerIds.indexOf(specialId) === -1) {
-      //     layerIds.push(specialId);
-      //   }
-      // } else {
-      layerIds.push(layer.tocId);
-      // }
-    }
-    this.layersByZIndex = layerIds;
   }
 
   hideTocItems(stableIds: string[]) {
@@ -2725,11 +2733,20 @@ class MapContextManager extends EventEmitter {
   private async _updateLegends(clearCache = false) {
     const newLegendState: { [layerId: string]: LegendItem | null } = {};
     let changes = false;
-    for (const id of this.layersByZIndex) {
+    const layers = this.getVisibleLayersByZIndex();
+    for (const layer of layers) {
+      const id = layer.tocId;
       if (this.visibleLayers[id]?.visible) {
         if (clearCache === true && id in this.internalState.legends) {
           newLegendState[id] = this.internalState.legends[id];
         } else {
+          const tableOfContentsItemDetails: TocMenuItemType = {
+            stableId: id,
+            enableDownload: Boolean(this.tocItems[id]?.enableDownload),
+            isFolder: Boolean(this.tocItems[id]?.isFolder),
+            id: this.tocItems[id].id,
+            title: this.tocItems[id].label || "Unknown",
+          };
           const layer = this.layers[id];
           const source = this.clientDataSources[layer?.dataSourceId];
           if (layer && source && layer.mapboxGlStyles) {
@@ -2777,8 +2794,8 @@ class MapContextManager extends EventEmitter {
                     id,
                     type: "GLStyleLegendItem",
                     legend: legend,
-                    zOrder: this.layersByZIndex.indexOf(id),
-                    label: this.tocItemLabels[layer.tocId] || "",
+                    label: this.tocItems[layer.tocId]?.label || "",
+                    tableOfContentsItemDetails,
                   };
                   changes = true;
                 } else {
@@ -2790,15 +2807,16 @@ class MapContextManager extends EventEmitter {
                 newLegendState[id] = {
                   id,
                   type: "GLStyleLegendItem",
-                  zOrder: this.layersByZIndex.indexOf(id),
-                  label: this.tocItemLabels[layer.tocId] || "",
+                  label: this.tocItems[layer.tocId]?.label || "",
+                  tableOfContentsItemDetails,
                 };
                 changes = true;
               }
             }
           } else if (source && isCustomSourceType(source.type)) {
-            const { customSource, visible } = this.customSources[source.id];
-            if (visible && customSource) {
+            const d = this.customSources[source.id];
+            if (d && d.visible && d.customSource) {
+              const { customSource } = d;
               const { tableOfContentsItems } =
                 await customSource.getComputedMetadata();
               const item =
@@ -2811,26 +2829,26 @@ class MapContextManager extends EventEmitter {
                 if (item.glStyle) {
                   newLegendState[id] = {
                     id,
-                    zOrder: this.layersByZIndex.indexOf(id),
                     type: "GLStyleLegendItem",
                     legend: compileLegendFromGLStyleLayers(
                       item.glStyle.layers,
                       "vector"
                     ),
-                    label: this.tocItemLabels[layer.tocId] || "",
+                    label: this.tocItems[layer.tocId]?.label || "",
+                    tableOfContentsItemDetails,
                   };
                 } else if (item.legend) {
                   newLegendState[id] = {
                     type: "CustomGLSourceSymbolLegend",
                     label: item.label,
-                    zOrder: this.layersByZIndex.indexOf(id),
                     supportsDynamicRendering: {
                       layerOpacity: true,
                       layerOrder: true,
                       layerVisibility: true,
                     },
                     symbols: item.legend,
-                    id: item.id.toString(),
+                    id,
+                    tableOfContentsItemDetails,
                   };
                 }
                 changes = true;
@@ -2854,6 +2872,260 @@ class MapContextManager extends EventEmitter {
   }
 
   updateLegends = debounce(this._updateLegends, 20);
+
+  hideLayer(stableId: string) {
+    const state = this.visibleLayers[stableId];
+    if (state) {
+      state.hidden = true;
+    }
+    this.setState((prev) => ({
+      ...prev,
+      layerStatesByTocStaticId: {
+        ...prev.layerStatesByTocStaticId,
+        [stableId]: {
+          ...prev.layerStatesByTocStaticId[stableId],
+          hidden: true,
+        },
+      },
+    }));
+    this.debouncedUpdateLayerState();
+    this.updateStyle();
+  }
+
+  showHiddenLayer(stableId: string) {
+    const state = this.visibleLayers[stableId];
+    if (state) {
+      state.hidden = false;
+    }
+    this.setState((prev) => ({
+      ...prev,
+      layerStatesByTocStaticId: {
+        ...prev.layerStatesByTocStaticId,
+        [stableId]: {
+          ...prev.layerStatesByTocStaticId[stableId],
+          hidden: false,
+        },
+      },
+    }));
+    this.debouncedUpdateLayerState();
+    this.updateStyle();
+  }
+
+  private setZOrderOverride(stableId: string, zOrder: number) {
+    const state = this.visibleLayers[stableId];
+    if (state) {
+      state.zOrderOverride = zOrder;
+    }
+    this.setState((prev) => ({
+      ...prev,
+      layerStatesByTocStaticId: {
+        ...prev.layerStatesByTocStaticId,
+        [stableId]: {
+          ...prev.layerStatesByTocStaticId[stableId],
+          zOrderOverride: zOrder,
+        },
+      },
+    }));
+    // this.resetLayersByZIndex();
+    this.debouncedUpdateLayerState();
+    this.updateStyle();
+  }
+
+  getVisibleLayersByZIndex() {
+    const visible = Object.values(this.layers).filter(
+      (l) => this.visibleLayers[l.tocId]?.visible === true
+    );
+    // First, create a lookup table of the lowest sublayer z-index for each
+    // datasource. This way sublayers are grouped together in the listing
+    const sublayerZIndexLookup: {
+      [dataSourceId: number]: number;
+    } = {};
+    for (const layer of visible) {
+      if (layer.sublayer !== undefined) {
+        const dataSourceId = layer.dataSourceId;
+        const zIndex =
+          typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
+            ? this.visibleLayers[layer.tocId].zOrderOverride!
+            : layer.zIndex;
+        if (
+          !(dataSourceId in sublayerZIndexLookup) ||
+          zIndex < sublayerZIndexLookup[dataSourceId]
+        ) {
+          sublayerZIndexLookup[dataSourceId] = zIndex;
+        }
+      }
+    }
+    const getZIndex = (layer: (typeof visible)[0], sameDataSource = false) => {
+      if (!sameDataSource && layer.dataSourceId in sublayerZIndexLookup) {
+        return sublayerZIndexLookup[layer.dataSourceId];
+      } else if (
+        typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
+      ) {
+        return this.visibleLayers[layer.tocId].zOrderOverride!;
+      }
+      return layer.zIndex;
+    };
+
+    return visible
+      .sort((a, b) => {
+        if (
+          a.renderUnder === RenderUnderType.Labels &&
+          b.renderUnder !== RenderUnderType.Labels
+        ) {
+          return 1;
+        } else if (
+          b.renderUnder === RenderUnderType.Labels &&
+          a.renderUnder !== RenderUnderType.Labels
+        ) {
+          return -1;
+        } else if (
+          // comparing two sublayers under the same datasource
+          a.dataSourceId === b.dataSourceId
+        ) {
+          return getZIndex(a, true) - getZIndex(b, true);
+        } else {
+          return getZIndex(a) - getZIndex(b);
+        }
+      })
+      .map((l) => ({
+        ...l,
+        finalZIndex: getZIndex(l),
+      }));
+  }
+
+  private getCurrentZOrder() {
+    return this.getVisibleLayersByZIndex()
+      .filter(
+        (layer) =>
+          layer.tocId in this.visibleLayers &&
+          this.visibleLayers[layer.tocId].visible === true
+      )
+      .map((layer) => ({
+        id: layer.tocId,
+        label: this.tocItems[layer.tocId]?.label || "",
+        zIndex: (typeof this.visibleLayers[layer.tocId].zOrderOverride ===
+        "number"
+          ? this.visibleLayers[layer.tocId].zOrderOverride
+          : this.layers[layer.tocId].zIndex || 0) as number,
+      }));
+  }
+
+  moveLayerToTop(stableId: string) {
+    const currentOrder = this.getCurrentZOrder();
+    if (currentOrder.length > 1) {
+      const top = currentOrder[0];
+      if (top.id !== stableId) {
+        this.setZOrderOverride(stableId, top.zIndex - 1);
+      }
+    }
+  }
+
+  moveLayerToBottom(stableId: string) {
+    const currentOrder = this.getCurrentZOrder();
+    if (currentOrder.length > 1) {
+      const bottom = currentOrder[currentOrder.length - 1];
+      if (bottom.id !== stableId) {
+        this.setZOrderOverride(stableId, bottom.zIndex + 1);
+      }
+    }
+  }
+
+  setLayerOpacity(stableId: string, opacity: number) {
+    if (opacity > 1 || opacity < 0) {
+      throw new Error("Opacity should be between 0 and 1");
+    }
+    const state = this.visibleLayers[stableId];
+    if (state) {
+      state.opacity = opacity;
+    }
+    this.setState((prev) => {
+      const newState = {
+        ...prev,
+        layerStatesByTocStaticId: {
+          ...prev.layerStatesByTocStaticId,
+          [stableId]: {
+            ...prev.layerStatesByTocStaticId[stableId],
+            opacity,
+          },
+        },
+      };
+      return newState;
+    });
+    this.debouncedUpdateLayerState();
+    const layer = this.layers[stableId];
+    const source = this.clientDataSources[layer.dataSourceId];
+    // TODO: consider customsource layer types
+    const shouldHaveSourceLayer =
+      source.type === DataSourceTypes.SeasketchMvt ||
+      source.type === DataSourceTypes.Vector ||
+      source.type === DataSourceTypes.SeasketchRaster;
+    if (layer && source && this.map && layer.mapboxGlStyles?.length > 0) {
+      // Do an update in place if possible
+      let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {
+        return {
+          ...lyr,
+          source: source.id.toString(),
+          id: idForLayer(layer, i),
+          ...(shouldHaveSourceLayer
+            ? { "source-layer": layer.sourceLayer }
+            : {}),
+        } as AnyLayer;
+      });
+      adjustLayerOpacities(glLayers, opacity, this.map);
+    } else {
+      // Otherwise, update the whole map style
+      // TODO: could make this more optimal for custom sources
+      this.debouncedUpdateStyle();
+    }
+  }
+
+  async zoomToTocItem(stableId: string) {
+    let bounds: [number, number, number, number] | undefined;
+    const item = this.tocItems[stableId];
+    if (item) {
+      if (item.bounds) {
+        bounds = item.bounds.map((coord: string | number) =>
+          typeof coord === "string" ? parseFloat(coord) : coord
+        ) as [number, number, number, number];
+      } else if (item.isFolder) {
+        bounds = createBoundsRecursive(item, Object.values(this.tocItems));
+      } else {
+        const layer = this.layers[stableId];
+        const source = this.clientDataSources[layer?.dataSourceId];
+        if (source && sourceTypeIsCustomGLSource(source.type)) {
+          const existingSource = this.getCustomGLSource(source.id);
+          if (existingSource) {
+            const metadata = await existingSource?.getComputedMetadata();
+            if (metadata?.bounds) {
+              bounds = metadata.bounds;
+            }
+          } else {
+            const customSource = createCustomSource(
+              source,
+              this.arcgisRequestManager
+            );
+            const metadata = await customSource.getComputedMetadata();
+            if (metadata?.bounds) {
+              bounds = metadata.bounds;
+            }
+            customSource.destroy();
+          }
+        }
+      }
+    }
+    if (bounds && [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")) {
+      const sidebar = currentSidebarState();
+      this.map?.fitBounds(bounds, {
+        animate: true,
+        padding: {
+          bottom: 100,
+          top: 100,
+          left: sidebar.open ? sidebar.width + 100 : 100,
+          right: 100,
+        },
+      });
+    }
+  }
 }
 
 export default MapContextManager;
@@ -3058,15 +3330,6 @@ async function loadImage(
   });
 }
 
-function idForSublayer(layer: DataLayerDetailsFragment) {
-  if (layer.sublayer === null || layer.sublayer === undefined) {
-    /* eslint-disable-next-line */
-    throw new Error(`Layer is not a sublayer. id=${layer.id}`);
-  } else {
-    return idForImageSource(layer.dataSourceId);
-  }
-}
-
 /**
  * Generate an ID for a given layer in a ClientDataLayer. Note that SeaSketch DataLayers are not the same as Mapbox GL Style layers.
  * @param layer ClientDataLayer
@@ -3184,4 +3447,145 @@ function isCustomSourceType(type: DataSourceTypes): type is CustomSourceType {
     type === DataSourceTypes.ArcgisRasterTiles ||
     type === DataSourceTypes.ArcgisVector
   );
+}
+
+function createCustomSource(
+  source: DataSourceDetailsFragment,
+  requestManager: ArcGISRESTServiceRequestManager
+) {
+  if (!isCustomSourceType(source.type)) {
+    throw new Error("Source type is not custom");
+  } else {
+    switch (source.type) {
+      case DataSourceTypes.ArcgisVector:
+        const fetchStrategy =
+          source.arcgisFetchStrategy === ArcgisFeatureLayerFetchStrategy.Raw
+            ? "raw"
+            : source.arcgisFetchStrategy ===
+              ArcgisFeatureLayerFetchStrategy.Tiled
+            ? "tiled"
+            : "auto";
+        return new ArcGISFeatureLayerSource(requestManager, {
+          url: source.url!,
+          fetchStrategy,
+          sourceId: source.id.toString(),
+          attributionOverride:
+            (source.attribution || "").trim().length > 0
+              ? source.attribution!
+              : undefined,
+        });
+      case DataSourceTypes.ArcgisRasterTiles:
+        return new ArcGISTiledMapService(requestManager, {
+          url: source.url!,
+          sourceId: source.id.toString(),
+          attributionOverride:
+            (source.attribution || "").trim().length > 0
+              ? source.attribution!
+              : undefined,
+          maxZoom: source.maxzoom ? source.maxzoom : undefined,
+          developerApiKey: process.env.REACT_APP_ARCGIS_DEVELOPER_API_KEY,
+        });
+      case DataSourceTypes.ArcgisDynamicMapserver:
+        return new ArcGISDynamicMapService(requestManager, {
+          url: source.url!,
+          sourceId: source.id.toString(),
+          supportHighDpiDisplays: source.useDevicePixelRatio || false,
+          queryParameters: source.queryParameters || {},
+          attributionOverride:
+            (source.attribution || "").trim().length > 0
+              ? source.attribution!
+              : undefined,
+        });
+      default:
+        throw new Error("Source type is not custom");
+    }
+  }
+}
+
+export function adjustLayerOpacities(
+  layers: AnyLayer[],
+  opacity: number,
+  map?: Map
+) {
+  return layers.map((l) => {
+    const layer = { ...l };
+    if ("paint" in layer) {
+      switch (layer.type) {
+        case "circle":
+          adjustPaintOpacityProp(layer, "circle-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "circle-stroke-opacity", opacity, map);
+          break;
+        case "fill":
+          adjustPaintOpacityProp(layer, "fill-opacity", opacity, map);
+          break;
+        case "line":
+          adjustPaintOpacityProp(layer, "line-opacity", opacity, map);
+          break;
+        case "symbol":
+          adjustPaintOpacityProp(layer, "icon-opacity", opacity, map);
+          adjustPaintOpacityProp(layer, "text-opacity", opacity, map);
+          break;
+        case "heatmap":
+          adjustPaintOpacityProp(layer, "heatmap-opacity", opacity, map);
+          break;
+        case "raster":
+          adjustPaintOpacityProp(layer, "raster-opacity", opacity, map);
+          break;
+        default:
+          break;
+      }
+    }
+    return layer;
+  });
+}
+
+function adjustPaintOpacityProp(
+  layer: AnyLayer,
+  propName: string,
+  opacity: number,
+  map?: Map
+) {
+  if ("paint" in layer) {
+    const currentValue = (layer.paint as any)[propName];
+    let value: number | Expression = opacity;
+    if (typeof currentValue === "number") {
+      value = ["*", opacity, currentValue];
+    } else if (isExpression(currentValue)) {
+      // check to make sure it's not a zoom expression. For some reason these
+      // cause mapbox-gl to stop updating the style if combined with a
+      // multiplication expression.
+      if (hasZoomExpression(currentValue)) {
+        value = opacity;
+      } else {
+        value = ["*", opacity, currentValue];
+      }
+    }
+    layer.paint = {
+      ...layer.paint,
+      [propName]: opacity === 1 && currentValue ? currentValue : value,
+    };
+    if (map) {
+      if (opacity === 1 && currentValue) {
+        map.setPaintProperty(layer.id, propName, currentValue);
+      } else {
+        map.setPaintProperty(layer.id, propName, value);
+      }
+    }
+  }
+}
+
+function hasZoomExpression(expression: Expression) {
+  const fnName = expression[0];
+  if (fnName === "zoom") {
+    return true;
+  } else {
+    for (const arg of expression.slice(1)) {
+      if (isExpression(arg)) {
+        if (hasZoomExpression(arg)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
 }

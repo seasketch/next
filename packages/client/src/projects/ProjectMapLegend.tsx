@@ -1,16 +1,10 @@
 import { useContext, useMemo } from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
-import Legend, { LegendItem } from "../dataLayers/Legend";
+import Legend from "../dataLayers/Legend";
+import useCommonLegendProps from "../dataLayers/useCommonLegendProps";
 
 export default function ProjectMapLegend() {
   const mapContext = useContext(MapContext);
-  const legendItems = useMemo(
-    () =>
-      Object.values(mapContext?.legends || {}).filter(
-        (l) => !!l
-      ) as LegendItem[],
-    [mapContext.legends]
-  );
   const loading = useMemo(() => {
     for (const key in mapContext.layerStatesByTocStaticId) {
       if (mapContext.layerStatesByTocStaticId[key].loading) {
@@ -19,12 +13,13 @@ export default function ProjectMapLegend() {
     }
     return false;
   }, [mapContext.layerStatesByTocStaticId]);
-  if (legendItems.length > 0) {
+
+  const legendProps = useCommonLegendProps(mapContext);
+
+  if (legendProps.items.length > 0) {
     return (
       <Legend
         className="absolute -top-1.5 right-8 m-4 z-20"
-        items={legendItems}
-        hiddenItems={[]}
         backdropBlur
         maxHeight={500}
         opacity={{}}
@@ -32,6 +27,7 @@ export default function ProjectMapLegend() {
         map={mapContext.manager?.map}
         loading={loading}
         persistedStateKey="project-map-legend"
+        {...legendProps}
       />
     );
   } else {

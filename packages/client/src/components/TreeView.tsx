@@ -1,4 +1,11 @@
-import { useMemo, useCallback, useState, useEffect, useContext } from "react";
+import {
+  useMemo,
+  useCallback,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+} from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { OverlayFragment } from "../generated/graphql";
 import TreeItemComponent, {
@@ -10,6 +17,9 @@ import ContextMenuDropdown, {
 } from "./ContextMenuDropdown";
 import { DropdownOption } from "./DropdownButton";
 import { useTranslatedProps } from "./TranslatedPropControl";
+import * as ContextMenu from "@radix-ui/react-context-menu";
+import set from "lodash.set";
+require("../admin/data/GLStyleEditor/RadixDropdown.css");
 
 export interface TreeItem {
   id: string;
@@ -70,6 +80,9 @@ interface TreeViewProps {
     target: TreeItem,
     state: SortingState
   ) => void;
+  getContextMenuContent?: (id: string, event: React.MouseEvent) => ReactNode;
+  hiddenItems?: string[];
+  onUnhide?: (stableId: string) => void;
 }
 
 export interface TreeNodeComponentProps {
@@ -85,7 +98,8 @@ export interface TreeNodeComponentProps {
   onContextMenu?: (
     node: TreeItem,
     target: HTMLElement,
-    offsetX: number
+    offsetX: number,
+    clickEvent: React.MouseEvent
   ) => void;
   updateContextMenuTargetRef: (el: HTMLElement) => void;
   onDragEnd?: (items: TreeItem[]) => void;
@@ -115,6 +129,9 @@ export interface TreeNodeComponentProps {
     target: TreeItem,
     state: SortingState
   ) => void;
+  allowContextMenuDefault?: boolean;
+  isHidden: boolean;
+  onUnhide?: (stableId: string) => void;
 }
 export enum CheckState {
   CHECKED,
@@ -137,6 +154,7 @@ export interface TreeNode {
   radioFolder: boolean;
   error?: string;
   parents: string[];
+  hidden: boolean;
 }
 
 export default function TreeView({
@@ -162,6 +180,7 @@ export default function TreeView({
         id: string;
         target: HTMLElement;
         offsetX: number;
+        clickEvent: React.MouseEvent;
       }
     | undefined
   >();
@@ -171,10 +190,12 @@ export default function TreeView({
   >([]);
 
   useEffect(() => {
-    const onClick = () => setContextMenu(undefined);
-    if (contextMenu) {
-      document.addEventListener("click", onClick);
-      return () => document.removeEventListener("click", onClick);
+    if (getContextMenuItems) {
+      const onClick = () => setContextMenu(undefined);
+      if (contextMenu) {
+        document.addEventListener("click", onClick);
+        return () => document.removeEventListener("click", onClick);
+      }
     }
   }, [setContextMenu, contextMenu]);
 
@@ -209,6 +230,7 @@ export default function TreeView({
           : false,
         parentIsRadioFolder: false,
         parents: [],
+        hidden: (props.hiddenItems || []).indexOf(item.id) !== -1,
       } as TreeNode;
       map.set(item.id, node);
       return map;
@@ -277,6 +299,7 @@ export default function TreeView({
     checkedItems,
     loadingItems,
     props.errors,
+    props.hiddenItems,
   ]);
 
   const handleChecked = useCallback(
@@ -372,17 +395,25 @@ export default function TreeView({
   );
 
   const onContextMenu = useCallback(
-    (node: TreeItem, target: HTMLElement, offsetX: number) => {
-      if (getContextMenuItems) {
+    (
+      node: TreeItem,
+      target: HTMLElement,
+      offsetX: number,
+      clickEvent: React.MouseEvent
+    ) => {
+      if (getContextMenuItems || props.getContextMenuContent) {
         setContextMenu({
           id: node.id,
           offsetX,
           target,
+          clickEvent,
         });
-        setContextMenuOptions(getContextMenuItems(node));
+        if (getContextMenuItems) {
+          setContextMenuOptions(getContextMenuItems(node));
+        }
       }
     },
-    [setContextMenu, getContextMenuItems]
+    [setContextMenu, getContextMenuItems, props.getContextMenuContent]
   );
 
   useEffect(() => {
@@ -401,47 +432,71 @@ export default function TreeView({
       role="tree"
       aria-label={props.ariaLabel}
     >
-      {contextMenu?.target && contextMenuOptions?.length > 0 && (
-        <ContextMenuDropdown
-          options={contextMenuOptions}
-          target={contextMenu.target}
-          offsetX={contextMenu.offsetX}
-          onClick={() => {
+      <ContextMenu.Root
+        onOpenChange={(open) => {
+          if (!open) {
             setContextMenu(undefined);
-          }}
-        />
-      )}
+          }
+        }}
+      >
+        <ContextMenu.Portal>
+          <div className="ToCMenuContent">
+            {contextMenu?.id &&
+              props.getContextMenuContent &&
+              props.getContextMenuContent(
+                contextMenu.id,
+                contextMenu.clickEvent
+              )}
+          </div>
+        </ContextMenu.Portal>
 
-      {data.map((item, index) => (
-        <TreeItemComponent
-          index={index}
-          clearSelection={clearSelection}
-          key={item.node.id}
-          {...item}
-          numChildren={item.children.length}
-          onExpand={onExpand}
-          onSelect={onSelect}
-          onContextMenu={onContextMenu}
-          level={1}
-          children={item.children}
-          isContextMenuTarget={item.isContextMenuTarget}
-          updateContextMenuTargetRef={updateContextMenuTargetRef}
-          onDragEnd={onDragEnd}
-          onDropEnd={onDropEnd}
-          onChecked={handleChecked}
-          disableEditing={disableEditing || false}
-          hideCheckboxes={hideCheckboxes || false}
-          checked={item.checked}
-          highlighted={item.highlighted}
-          isLoading={item.loading}
-          error={item.error || null}
-          onDrop={onDrop}
-          sortable={Boolean(sortable)}
-          nextSiblingId={data[index + 1]?.node.id}
-          previousSiblingId={data[index - 1]?.node.id}
-          onSortEnd={onSortEnd}
-        />
-      ))}
+        {!props.getContextMenuContent &&
+          contextMenu?.target &&
+          contextMenuOptions?.length > 0 && (
+            <ContextMenuDropdown
+              options={contextMenuOptions}
+              target={contextMenu.target}
+              offsetX={contextMenu.offsetX}
+              onClick={() => {
+                setContextMenu(undefined);
+              }}
+            />
+          )}
+
+        {data.map((item, index) => (
+          <TreeItemComponent
+            index={index}
+            clearSelection={clearSelection}
+            key={item.node.id}
+            {...item}
+            numChildren={item.children.length}
+            onExpand={onExpand}
+            onSelect={onSelect}
+            onContextMenu={onContextMenu}
+            level={1}
+            children={item.children}
+            isContextMenuTarget={item.isContextMenuTarget}
+            updateContextMenuTargetRef={updateContextMenuTargetRef}
+            onDragEnd={onDragEnd}
+            onDropEnd={onDropEnd}
+            onChecked={handleChecked}
+            disableEditing={disableEditing || false}
+            hideCheckboxes={hideCheckboxes || false}
+            checked={item.checked}
+            highlighted={item.highlighted}
+            isLoading={item.loading}
+            error={item.error || null}
+            onDrop={onDrop}
+            sortable={Boolean(sortable)}
+            nextSiblingId={data[index + 1]?.node.id}
+            previousSiblingId={data[index - 1]?.node.id}
+            onSortEnd={onSortEnd}
+            allowContextMenuDefault={Boolean(props.getContextMenuContent)}
+            isHidden={item.hidden}
+            onUnhide={props.onUnhide}
+          />
+        ))}
+      </ContextMenu.Root>
     </ul>
   );
 }
@@ -494,32 +549,38 @@ export function useOverlayState(
     );
   }, [items, editable, getTranslatedProp]);
 
-  const { checkedItems, loadingItems, overlayErrors } = useMemo(() => {
-    const checkedItems: string[] = [];
-    const loadingItems: string[] = [];
-    const overlayErrors: { [id: string]: string } = {};
-    for (const item of items) {
-      if (item.dataLayerId) {
-        const record = mapContext.layerStatesByTocStaticId[item.stableId];
-        if (record) {
-          if (record.visible) {
-            checkedItems.push(item.stableId);
-          }
-          if (record.loading) {
-            loadingItems.push(item.stableId);
-          }
-          if (record.error) {
-            overlayErrors[item.stableId] = record.error.toString();
+  const { checkedItems, loadingItems, overlayErrors, hiddenItems } =
+    useMemo(() => {
+      const checkedItems: string[] = [];
+      const loadingItems: string[] = [];
+      const hiddenItems: string[] = [];
+      const overlayErrors: { [id: string]: string } = {};
+      for (const item of items) {
+        if (item.dataLayerId) {
+          const record = mapContext.layerStatesByTocStaticId[item.stableId];
+          if (record) {
+            if (record.visible) {
+              checkedItems.push(item.stableId);
+            }
+            if (record.loading) {
+              loadingItems.push(item.stableId);
+            }
+            if (record.error) {
+              overlayErrors[item.stableId] = record.error.toString();
+            }
+            if (record.hidden) {
+              hiddenItems.push(item.stableId);
+            }
           }
         }
       }
-    }
-    return {
-      checkedItems,
-      loadingItems,
-      overlayErrors,
-    };
-  }, [items, mapContext.layerStatesByTocStaticId]);
+      return {
+        checkedItems,
+        loadingItems,
+        overlayErrors,
+        hiddenItems,
+      };
+    }, [items, mapContext.layerStatesByTocStaticId]);
 
   const onExpand = useCallback(
     (node: TreeItem, isExpanded: boolean) => {
@@ -550,6 +611,32 @@ export function useOverlayState(
     [items, mapContext.manager]
   );
 
+  const onUnhide = useCallback(
+    (stableId: string) => {
+      if (mapContext.manager) {
+        mapContext.manager.showHiddenLayer(stableId);
+      }
+    },
+    [mapContext.manager]
+  );
+
+  const hasLocalState = useMemo(() => {
+    return (
+      expandedIds.length > 0 ||
+      checkedItems.length > 0 ||
+      hiddenItems.length > 0
+    );
+  }, [expandedIds, checkedItems, hiddenItems]);
+
+  const resetLocalState = useCallback(() => {
+    mapContext.manager?.resetLayers();
+    setExpandedIds([]);
+    window.localStorage.removeItem(
+      // eslint-disable-next-line i18next/no-literal-string
+      `${localStoragePrefix}-overlays-expanded-ids`
+    );
+  }, [setExpandedIds, mapContext.manager, localStoragePrefix]);
+
   return {
     expandedIds,
     onExpand,
@@ -558,6 +645,10 @@ export function useOverlayState(
     treeItems,
     loadingItems,
     overlayErrors,
+    onUnhide,
+    hiddenItems,
+    hasLocalState,
+    resetLocalState,
   };
 }
 

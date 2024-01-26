@@ -14,3 +14,15 @@
 .MenubarTrigger[data-state="open"] {
   @apply bg-gray-300 bg-opacity-70;
 }
+
+.ToCMenuContent [data-radix-popper-content-wrapper] {
+  transform: none !important;
+}
+
+.RadixDropdownItem {
+  @apply flex items-center;
+}
+
+.RadixDropdownItem > span {
+  @apply flex-1;
+}

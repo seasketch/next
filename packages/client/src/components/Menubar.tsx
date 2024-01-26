@@ -38,20 +38,23 @@ export function MenuBarLabel({ children }: { children?: ReactNode }) {
   );
 }
 
+export const MenuBarSeparatorProps = {
+  className: "bg-black opacity-10 my-1.5 mb-1",
+  style: { height: 1 },
+};
+
 export function MenuBarSeparator() {
-  return (
-    <Menubar.Separator
-      style={{ height: 1 }}
-      className="bg-black opacity-10 my-1.5 mb-1"
-    />
-  );
+  return <Menubar.Separator {...MenuBarSeparatorProps} />;
 }
+
+export const MenuBarContentClasses =
+  "z-50 bg-gray-100 bg-opacity-90 rounded shadow-md p-1 border border-black border-opacity-10";
 
 export function MenuBarContent({ children }: { children?: ReactNode }) {
   return (
     <Menubar.Content
       style={{ backdropFilter: "blur(3px)", minWidth: 220 }}
-      className="z-50 bg-gray-100 bg-opacity-80 rounded shadow-md p-1 px-2 border border-black border-opacity-10"
+      className={MenuBarContentClasses}
       align="start"
       sideOffset={2}
       alignOffset={-3}
@@ -60,6 +63,9 @@ export function MenuBarContent({ children }: { children?: ReactNode }) {
     </Menubar.Content>
   );
 }
+
+export const MenuBarItemClasses =
+  "RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none outline-none ";
 
 export function MenuBarItem({
   children,
@@ -74,7 +80,7 @@ export function MenuBarItem({
     <Menubar.Item
       onClick={onClick}
       disabled={disabled}
-      className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none pl-5 outline-none "
+      className={MenuBarItemClasses + " pl-5"}
     >
       {children}
     </Menubar.Item>

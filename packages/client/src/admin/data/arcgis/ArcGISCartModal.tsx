@@ -288,11 +288,11 @@ export default function ArcGISCartModal({
           type === "FeatureServer"
             ? catalogItemDetailsQuery.data.metadata?.layers
             : catalogItemDetailsQuery.data.layers.layers.filter((lyr: any) => {
-              return (
-                lyr.type === "Feature Layer" &&
-                /geojson/i.test(lyr.supportedQueryFormats)
-              );
-            });
+                return (
+                  lyr.type === "Feature Layer" &&
+                  /geojson/i.test(lyr.supportedQueryFormats)
+                );
+              });
         if (type === "FeatureServer" || useFeatureLayers) {
           const sources: ArcGISFeatureLayerSource[] = [];
           const layerStaticIdsToHide: string[] = [];
@@ -596,7 +596,8 @@ export default function ArcGISCartModal({
             }
             updateLoadingMessage(
               t(
-                `Evaluating services (${importedCount++}/${customSources.length
+                `Evaluating services (${importedCount++}/${
+                  customSources.length
                 })...`
               )
             );
@@ -606,7 +607,7 @@ export default function ArcGISCartModal({
               isFolder: false,
               title:
                 catalogItemDetailsQuery.data?.type === "FeatureServer" &&
-                  layers.length === 1
+                layers.length === 1
                   ? selection?.name || layer.name
                   : layer.name,
               sourceId: layer.id,
@@ -628,8 +629,8 @@ export default function ArcGISCartModal({
                 fetchStrategy === "auto"
                   ? ArcgisFeatureLayerFetchStrategy.Auto
                   : fetchStrategy === "tiled"
-                    ? ArcgisFeatureLayerFetchStrategy.Tiled
-                    : ArcgisFeatureLayerFetchStrategy.Raw,
+                  ? ArcgisFeatureLayerFetchStrategy.Tiled
+                  : ArcgisFeatureLayerFetchStrategy.Raw,
             });
           } else {
             // Dynamic Map Service
@@ -837,10 +838,11 @@ export default function ArcGISCartModal({
                           }
                         }
                       }}
-                      className={`border-b p-2 px-4 flex overflow-hidden w-full text-left ${selection?.url === item.url
+                      className={`border-b p-2 px-4 flex overflow-hidden w-full text-left ${
+                        selection?.url === item.url
                           ? "bg-blue-600 text-white"
                           : ""
-                        }`}
+                      }`}
                     >
                       <div className="flex-1 overflow-hidden">
                         <h2 className="truncate">
@@ -948,11 +950,12 @@ export default function ArcGISCartModal({
             </div>
             <div className="border-t border-gray-800 border-opacity-20 flex w-full bg-gray-200 p-4 rounded-b-md items-end justify-end gap-2 space-x-5">
               <div
-                className={`${catalogItemDetailsQuery.data?.type === "MapServer" &&
-                    !catalogItemDetailsQuery.data?.tiled
+                className={`${
+                  catalogItemDetailsQuery.data?.type === "MapServer" &&
+                  !catalogItemDetailsQuery.data?.tiled
                     ? "opacity-100"
                     : "opacity-0"
-                  } h-full flex items-center justify-start space-x-2 text-sm flex-1`}
+                } h-full flex items-center justify-start space-x-2 text-sm flex-1`}
               >
                 <div>
                   <h5>
