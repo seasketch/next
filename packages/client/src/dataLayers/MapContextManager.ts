@@ -173,6 +173,10 @@ class MapContextManager extends EventEmitter {
       tocId: string;
     } & DataLayerDetailsFragment;
   } = {};
+  // TODO: it probably makes sense to "garbage collect" visibleLayers at some
+  // point since it is stored in localstorage. If there's a lot of churn in
+  // layers there will be stale entries, and eventually there could even be a
+  // problem with really long layer lists if the user toggles all the layers
   private visibleLayers: { [id: string]: LayerState } = {};
   private basemaps: { [id: string]: BasemapDetailsFragment } = {};
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
@@ -852,6 +856,13 @@ class MapContextManager extends EventEmitter {
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
+  }
+
+  resetLayers() {
+    const visibleLayerIds = Object.keys(this.visibleLayers);
+    this.hideTocItems(visibleLayerIds);
+    this.visibleLayers = {};
+    this.updatePreferences();
   }
 
   private updateStyleDebouncerReference: NodeJS.Timeout | undefined;

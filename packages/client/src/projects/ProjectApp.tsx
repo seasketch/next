@@ -174,7 +174,8 @@ export default function ProjectApp() {
                       hidden={Boolean(!showSidebar)}
                       noPadding={
                         /sketches/.test(history.location.pathname) ||
-                        /forums/.test(history.location.pathname)
+                        /forums/.test(history.location.pathname) ||
+                        /overlays/.test(history.location.pathname)
                       }
                     >
                       <Suspense

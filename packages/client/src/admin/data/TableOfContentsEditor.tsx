@@ -130,6 +130,8 @@ export default function TableOfContentsEditor() {
     treeItems: treeNodes,
     hiddenItems,
     onUnhide,
+    hasLocalState,
+    resetLocalState,
   } = useOverlayState(
     tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [],
     true,
@@ -303,6 +305,8 @@ export default function TableOfContentsEditor() {
         />
       )}
       <Header
+        hasLocalState={hasLocalState}
+        resetLocalState={resetLocalState}
         openArcGISCart={() => {
           setArcgisCartOpen(true);
         }}
@@ -350,6 +354,8 @@ export default function TableOfContentsEditor() {
                 tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
                   (item) => item.stableId === treeItemId
                 );
+              const sorted =
+                mapContext.manager?.getVisibleLayersByZIndex() || [];
               if (item) {
                 return (
                   <TableOfContentsItemMenu
@@ -360,6 +366,8 @@ export default function TableOfContentsEditor() {
                       x: clickEvent.clientX,
                       y: clickEvent.clientY,
                     }}
+                    top={sorted[0].tocId === item.stableId}
+                    bottom={sorted[sorted.length - 1].tocId === item.stableId}
                   />
                 );
               } else {
@@ -423,6 +431,8 @@ function Header({
   publishDisabled,
   lastPublished,
   openArcGISCart,
+  hasLocalState,
+  resetLocalState,
 }: {
   selectedView: string;
   setSelectedView: (view: string) => void;
@@ -433,10 +443,11 @@ function Header({
   publishDisabled?: boolean;
   lastPublished?: Date;
   openArcGISCart: () => void;
+  hasLocalState?: boolean;
+  resetLocalState?: () => void;
 }) {
   const uploadContext = useContext(DataUploadDropzoneContext);
   const { t } = useTranslation("admin:data");
-
   return (
     <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
       <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
@@ -476,6 +487,16 @@ function Header({
               >
                 <Trans ns="admin:data">Zoom to Project Bounds</Trans>
               </MenuBarItem>
+              {resetLocalState && (
+                <MenuBarItem
+                  disabled={!hasLocalState}
+                  onClick={() => {
+                    resetLocalState();
+                  }}
+                >
+                  <Trans ns="homepage">Reset overlays</Trans>
+                </MenuBarItem>
+              )}
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>

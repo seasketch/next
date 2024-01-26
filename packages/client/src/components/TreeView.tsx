@@ -18,6 +18,7 @@ import ContextMenuDropdown, {
 import { DropdownOption } from "./DropdownButton";
 import { useTranslatedProps } from "./TranslatedPropControl";
 import * as ContextMenu from "@radix-ui/react-context-menu";
+import set from "lodash.set";
 require("../admin/data/GLStyleEditor/RadixDropdown.css");
 
 export interface TreeItem {
@@ -619,6 +620,23 @@ export function useOverlayState(
     [mapContext.manager]
   );
 
+  const hasLocalState = useMemo(() => {
+    return (
+      expandedIds.length > 0 ||
+      checkedItems.length > 0 ||
+      hiddenItems.length > 0
+    );
+  }, [expandedIds, checkedItems, hiddenItems]);
+
+  const resetLocalState = useCallback(() => {
+    mapContext.manager?.resetLayers();
+    setExpandedIds([]);
+    window.localStorage.removeItem(
+      // eslint-disable-next-line i18next/no-literal-string
+      `${localStoragePrefix}-overlays-expanded-ids`
+    );
+  }, [setExpandedIds, mapContext.manager, localStoragePrefix]);
+
   return {
     expandedIds,
     onExpand,
@@ -629,6 +647,8 @@ export function useOverlayState(
     overlayErrors,
     onUnhide,
     hiddenItems,
+    hasLocalState,
+    resetLocalState,
   };
 }
 

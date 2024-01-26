@@ -8,6 +8,7 @@ import TreeView, { useOverlayState } from "../components/TreeView";
 import { useTranslation } from "react-i18next";
 import { TableOfContentsItemMenu } from "../admin/data/TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
+import Button from "../components/Button";
 
 export default function OverlayLayers({
   items,
@@ -30,43 +31,60 @@ export default function OverlayLayers({
     treeItems,
     hiddenItems,
     onUnhide,
+    hasLocalState,
+    resetLocalState,
   } = useOverlayState(items);
 
   return (
-    <div className="mt-3 pl-3">
-      <TreeView
-        hiddenItems={hiddenItems}
-        onUnhide={onUnhide}
-        loadingItems={loadingItems}
-        errors={overlayErrors}
-        disableEditing={true}
-        expanded={expandedIds}
-        onExpand={onExpand}
-        checkedItems={checkedItems}
-        onChecked={onChecked}
-        ariaLabel="Overlay Layers"
-        items={treeItems}
-        getContextMenuContent={(treeItemId, clickEvent) => {
-          const item = items.find((item) => item.stableId === treeItemId);
-          if (item?.isFolder) {
-            return null;
-          }
-          if (item) {
-            return (
-              <TableOfContentsItemMenu
-                items={[item]}
-                type={ContextMenu}
-                transform={{
-                  x: clickEvent.clientX,
-                  y: clickEvent.clientY,
-                }}
-              />
-            );
-          } else {
-            return null;
-          }
-        }}
-      />
+    <div>
+      <header className=" select-none fixed w-128 p-2 bg-gray-100 border-b z-10">
+        <button
+          disabled={!hasLocalState}
+          onClick={() => {
+            resetLocalState();
+          }}
+          className={`px-1 py-0.5 border bg-white text-sm rounded shadow-sm ${
+            !hasLocalState ? "opacity-50 pointer-events-none" : ""
+          }`}
+        >
+          {t("Reset layers")}
+        </button>
+      </header>
+      <div className="mt-12 pl-6">
+        <TreeView
+          hiddenItems={hiddenItems}
+          onUnhide={onUnhide}
+          loadingItems={loadingItems}
+          errors={overlayErrors}
+          disableEditing={true}
+          expanded={expandedIds}
+          onExpand={onExpand}
+          checkedItems={checkedItems}
+          onChecked={onChecked}
+          ariaLabel="Overlay Layers"
+          items={treeItems}
+          getContextMenuContent={(treeItemId, clickEvent) => {
+            const item = items.find((item) => item.stableId === treeItemId);
+            if (item?.isFolder) {
+              return null;
+            }
+            if (item) {
+              return (
+                <TableOfContentsItemMenu
+                  items={[item]}
+                  type={ContextMenu}
+                  transform={{
+                    x: clickEvent.clientX,
+                    y: clickEvent.clientY,
+                  }}
+                />
+              );
+            } else {
+              return null;
+            }
+          }}
+        />
+      </div>
     </div>
   );
 }

@@ -140,7 +140,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     }}
                   >
                     <span>
-                      <Trans ns="homepage">Move to top</Trans>
+                      <Trans ns="homepage">Move to front</Trans>
                     </span>
                     <ArrowUpIcon className="w-3 h-3" />
                   </MenuType.Item>
@@ -154,7 +154,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     }}
                   >
                     <span>
-                      <Trans ns="homepage">Move to bottom</Trans>
+                      <Trans ns="homepage">Move to back</Trans>
                     </span>
                     <ArrowDownIcon className="w-3 h-3" />
                   </MenuType.Item>
