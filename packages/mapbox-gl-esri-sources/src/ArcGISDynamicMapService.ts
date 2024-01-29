@@ -1,19 +1,9 @@
-import {
-  Map,
-  ImageSource,
-  RasterSource,
-  AnyLayer,
-  AnySourceData,
-  ImageSourceOptions,
-  ImageSourceRaw,
-  LngLatBounds,
-} from "mapbox-gl";
+import { Map, AnyLayer, AnySourceData, ImageSourceRaw } from "mapbox-gl";
 import {
   ComputedMetadata,
   CustomGLSource,
   CustomGLSourceOptions,
   CustomSourceType,
-  DynamicRenderingSupportOptions,
   LegendItem,
   OrderedLayerSettings,
 } from "./CustomGLSource";
@@ -26,6 +16,9 @@ import {
   generateMetadataForLayer,
   makeLegend,
 } from "./utils";
+import booleanIntersects from "@turf/boolean-intersects";
+import bboxPolygon from "@turf/bbox-polygon";
+import { BBox } from "geojson";
 
 /** @hidden */
 export const blankDataUri =
@@ -572,6 +565,22 @@ export class ArcGISDynamicMapService
         source.setTiles([this.getUrl()]);
       } else if (source.type === "image") {
         const coordinates = this.getCoordinates(this.map);
+
+        if (this._computedMetadata?.bounds) {
+          const serviceBounds = bboxPolygon(this._computedMetadata?.bounds);
+          const bounds = this.map.getBounds();
+          const viewPortBBox = [
+            bounds.getWest(),
+            bounds.getSouth(),
+            bounds.getEast(),
+            bounds.getNorth(),
+          ];
+          const viewportBounds = bboxPolygon(viewPortBBox as BBox);
+          if (!booleanIntersects(viewportBounds, serviceBounds)) {
+            // Do nothing, viewport is outside service bounds
+            return;
+          }
+        }
 
         const url = this.getUrl(this.map);
         // @ts-ignore

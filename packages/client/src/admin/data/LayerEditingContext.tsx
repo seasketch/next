@@ -9,6 +9,8 @@ import {
 export const LayerEditingContext = createContext<{
   openEditor?: number;
   setOpenEditor: (id: number | undefined) => void;
+  openMetadataEditor?: number;
+  setOpenMetadataEditor: (id: number | undefined) => void;
   /**
    * These are an optimization to immediately remove items from the legend or
    * table of contents after deletion, without waiting to refetch the entire
@@ -18,6 +20,7 @@ export const LayerEditingContext = createContext<{
   setRecentlyDeletedStableIds: Dispatch<SetStateAction<string[]>>;
 }>({
   setOpenEditor: (id: number | undefined) => {},
+  setOpenMetadataEditor: (id: number | undefined) => {},
   recentlyDeletedStableIds: [],
   // set state action
   setRecentlyDeletedStableIds: () => {},
@@ -29,6 +32,9 @@ export const LayerEditingContextProvider = ({
   children: ReactNode;
 }) => {
   const [openEditor, setOpenEditor] = useState<number | undefined>(undefined);
+  const [openMetadataEditor, setOpenMetadataEditor] = useState<
+    number | undefined
+  >(undefined);
   const [recentlyDeletedItems, setRecentlyDeletedItems] = useState<string[]>(
     []
   );
@@ -37,8 +43,10 @@ export const LayerEditingContextProvider = ({
       value={{
         openEditor,
         setOpenEditor,
+        openMetadataEditor,
         recentlyDeletedStableIds: recentlyDeletedItems,
         setRecentlyDeletedStableIds: setRecentlyDeletedItems,
+        setOpenMetadataEditor: setOpenMetadataEditor,
       }}
     >
       {children}

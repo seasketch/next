@@ -77,7 +77,6 @@ export default function TableOfContentsEditor() {
   const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
-  const [openMetadataItemId, setOpenMetadataItemId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
   const mapContext = useContext(MapContext);
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
@@ -398,10 +397,12 @@ export default function TableOfContentsEditor() {
           itemId={layerEditingContext.openEditor}
         />
       )}
-      {openMetadataItemId && (
+      {layerEditingContext.openMetadataEditor && (
         <TableOfContentsMetadataEditor
-          id={openMetadataItemId}
-          onRequestClose={() => setOpenMetadataItemId(undefined)}
+          id={layerEditingContext.openMetadataEditor}
+          onRequestClose={() =>
+            layerEditingContext.setOpenMetadataEditor(undefined)
+          }
         />
       )}
       {arcgisCartOpen && (
