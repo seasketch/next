@@ -12018,6 +12018,23 @@ export type TableOfContentsItem = Node & {
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
   enableDownload: Scalars['Boolean'];
+  ftsAr?: Maybe<Scalars['String']>;
+  ftsDa?: Maybe<Scalars['String']>;
+  ftsDe?: Maybe<Scalars['String']>;
+  ftsEl?: Maybe<Scalars['String']>;
+  ftsEn?: Maybe<Scalars['String']>;
+  ftsEs?: Maybe<Scalars['String']>;
+  ftsFr?: Maybe<Scalars['String']>;
+  ftsId?: Maybe<Scalars['String']>;
+  ftsIt?: Maybe<Scalars['String']>;
+  ftsLt?: Maybe<Scalars['String']>;
+  ftsNl?: Maybe<Scalars['String']>;
+  ftsNo?: Maybe<Scalars['String']>;
+  ftsPt?: Maybe<Scalars['String']>;
+  ftsRo?: Maybe<Scalars['String']>;
+  ftsRu?: Maybe<Scalars['String']>;
+  ftsSimple?: Maybe<Scalars['String']>;
+  ftsSv?: Maybe<Scalars['String']>;
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hasMetadata?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
@@ -12074,6 +12091,40 @@ export type TableOfContentsItem = Node & {
 export type TableOfContentsItemCondition = {
   /** Checks for equality with the object’s `dataLayerId` field. */
   dataLayerId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `ftsAr` field. */
+  ftsAr?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsDa` field. */
+  ftsDa?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsDe` field. */
+  ftsDe?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsEl` field. */
+  ftsEl?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsEn` field. */
+  ftsEn?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsEs` field. */
+  ftsEs?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsFr` field. */
+  ftsFr?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsId` field. */
+  ftsId?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsIt` field. */
+  ftsIt?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsLt` field. */
+  ftsLt?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsNl` field. */
+  ftsNl?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsNo` field. */
+  ftsNo?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsPt` field. */
+  ftsPt?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsRo` field. */
+  ftsRo?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsRu` field. */
+  ftsRu?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsSimple` field. */
+  ftsSimple?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsSv` field. */
+  ftsSv?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isDraft` field. */
@@ -12170,6 +12221,40 @@ export type TableOfContentsItemsEdge = {
 export enum TableOfContentsItemsOrderBy {
   DataLayerIdAsc = 'DATA_LAYER_ID_ASC',
   DataLayerIdDesc = 'DATA_LAYER_ID_DESC',
+  FtsArAsc = 'FTS_AR_ASC',
+  FtsArDesc = 'FTS_AR_DESC',
+  FtsDaAsc = 'FTS_DA_ASC',
+  FtsDaDesc = 'FTS_DA_DESC',
+  FtsDeAsc = 'FTS_DE_ASC',
+  FtsDeDesc = 'FTS_DE_DESC',
+  FtsElAsc = 'FTS_EL_ASC',
+  FtsElDesc = 'FTS_EL_DESC',
+  FtsEnAsc = 'FTS_EN_ASC',
+  FtsEnDesc = 'FTS_EN_DESC',
+  FtsEsAsc = 'FTS_ES_ASC',
+  FtsEsDesc = 'FTS_ES_DESC',
+  FtsFrAsc = 'FTS_FR_ASC',
+  FtsFrDesc = 'FTS_FR_DESC',
+  FtsIdAsc = 'FTS_ID_ASC',
+  FtsIdDesc = 'FTS_ID_DESC',
+  FtsItAsc = 'FTS_IT_ASC',
+  FtsItDesc = 'FTS_IT_DESC',
+  FtsLtAsc = 'FTS_LT_ASC',
+  FtsLtDesc = 'FTS_LT_DESC',
+  FtsNlAsc = 'FTS_NL_ASC',
+  FtsNlDesc = 'FTS_NL_DESC',
+  FtsNoAsc = 'FTS_NO_ASC',
+  FtsNoDesc = 'FTS_NO_DESC',
+  FtsPtAsc = 'FTS_PT_ASC',
+  FtsPtDesc = 'FTS_PT_DESC',
+  FtsRoAsc = 'FTS_RO_ASC',
+  FtsRoDesc = 'FTS_RO_DESC',
+  FtsRuAsc = 'FTS_RU_ASC',
+  FtsRuDesc = 'FTS_RU_DESC',
+  FtsSimpleAsc = 'FTS_SIMPLE_ASC',
+  FtsSimpleDesc = 'FTS_SIMPLE_DESC',
+  FtsSvAsc = 'FTS_SV_ASC',
+  FtsSvDesc = 'FTS_SV_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   IsDraftAsc = 'IS_DRAFT_ASC',

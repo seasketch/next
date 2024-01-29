@@ -13202,6 +13202,23 @@ type TableOfContentsItem implements Node {
   """
   dataLayerId: Int
   enableDownload: Boolean!
+  ftsAr: String
+  ftsDa: String
+  ftsDe: String
+  ftsEl: String
+  ftsEn: String
+  ftsEs: String
+  ftsFr: String
+  ftsId: String
+  ftsIt: String
+  ftsLt: String
+  ftsNl: String
+  ftsNo: String
+  ftsPt: String
+  ftsRo: String
+  ftsRu: String
+  ftsSimple: String
+  ftsSv: String
   geoprocessingReferenceId: String
   hasMetadata: Boolean
   hideChildren: Boolean!
@@ -13278,6 +13295,57 @@ are tested for equality and combined with a logical ‘and.’
 input TableOfContentsItemCondition {
   """Checks for equality with the object’s `dataLayerId` field."""
   dataLayerId: Int
+
+  """Checks for equality with the object’s `ftsAr` field."""
+  ftsAr: String
+
+  """Checks for equality with the object’s `ftsDa` field."""
+  ftsDa: String
+
+  """Checks for equality with the object’s `ftsDe` field."""
+  ftsDe: String
+
+  """Checks for equality with the object’s `ftsEl` field."""
+  ftsEl: String
+
+  """Checks for equality with the object’s `ftsEn` field."""
+  ftsEn: String
+
+  """Checks for equality with the object’s `ftsEs` field."""
+  ftsEs: String
+
+  """Checks for equality with the object’s `ftsFr` field."""
+  ftsFr: String
+
+  """Checks for equality with the object’s `ftsId` field."""
+  ftsId: String
+
+  """Checks for equality with the object’s `ftsIt` field."""
+  ftsIt: String
+
+  """Checks for equality with the object’s `ftsLt` field."""
+  ftsLt: String
+
+  """Checks for equality with the object’s `ftsNl` field."""
+  ftsNl: String
+
+  """Checks for equality with the object’s `ftsNo` field."""
+  ftsNo: String
+
+  """Checks for equality with the object’s `ftsPt` field."""
+  ftsPt: String
+
+  """Checks for equality with the object’s `ftsRo` field."""
+  ftsRo: String
+
+  """Checks for equality with the object’s `ftsRu` field."""
+  ftsRu: String
+
+  """Checks for equality with the object’s `ftsSimple` field."""
+  ftsSimple: String
+
+  """Checks for equality with the object’s `ftsSv` field."""
+  ftsSv: String
 
   """Checks for equality with the object’s `id` field."""
   id: Int
@@ -13418,6 +13486,40 @@ type TableOfContentsItemsEdge {
 enum TableOfContentsItemsOrderBy {
   DATA_LAYER_ID_ASC
   DATA_LAYER_ID_DESC
+  FTS_AR_ASC
+  FTS_AR_DESC
+  FTS_DA_ASC
+  FTS_DA_DESC
+  FTS_DE_ASC
+  FTS_DE_DESC
+  FTS_EL_ASC
+  FTS_EL_DESC
+  FTS_EN_ASC
+  FTS_EN_DESC
+  FTS_ES_ASC
+  FTS_ES_DESC
+  FTS_FR_ASC
+  FTS_FR_DESC
+  FTS_ID_ASC
+  FTS_ID_DESC
+  FTS_IT_ASC
+  FTS_IT_DESC
+  FTS_LT_ASC
+  FTS_LT_DESC
+  FTS_NL_ASC
+  FTS_NL_DESC
+  FTS_NO_ASC
+  FTS_NO_DESC
+  FTS_PT_ASC
+  FTS_PT_DESC
+  FTS_RO_ASC
+  FTS_RO_DESC
+  FTS_RU_ASC
+  FTS_RU_DESC
+  FTS_SIMPLE_ASC
+  FTS_SIMPLE_DESC
+  FTS_SV_ASC
+  FTS_SV_DESC
   ID_ASC
   ID_DESC
   IS_DRAFT_ASC
