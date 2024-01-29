@@ -46,6 +46,17 @@ export default function TableOfContentsItemAdminMenuItems({
         {t("Edit")}
       </MenuType.Item>
       <MenuType.Item
+        style={{
+          minWidth: 120,
+        }}
+        onSelect={() => {
+          layerEditingContext.setOpenMetadataEditor(item.id);
+        }}
+        className={MenuBarItemClasses}
+      >
+        {t("Edit Metadata")}
+      </MenuType.Item>
+      <MenuType.Item
         onSelect={async () => {
           if (item) {
             await confirmDelete({
