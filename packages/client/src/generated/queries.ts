@@ -12042,7 +12042,6 @@ export type TableOfContentsItem = Node & {
   ftsAr?: Maybe<Scalars['String']>;
   ftsDa?: Maybe<Scalars['String']>;
   ftsDe?: Maybe<Scalars['String']>;
-  ftsEl?: Maybe<Scalars['String']>;
   ftsEn?: Maybe<Scalars['String']>;
   ftsEs?: Maybe<Scalars['String']>;
   ftsFr?: Maybe<Scalars['String']>;
@@ -12118,8 +12117,6 @@ export type TableOfContentsItemCondition = {
   ftsDa?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `ftsDe` field. */
   ftsDe?: Maybe<Scalars['String']>;
-  /** Checks for equality with the object’s `ftsEl` field. */
-  ftsEl?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `ftsEn` field. */
   ftsEn?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `ftsEs` field. */
@@ -12248,8 +12245,6 @@ export enum TableOfContentsItemsOrderBy {
   FtsDaDesc = 'FTS_DA_DESC',
   FtsDeAsc = 'FTS_DE_ASC',
   FtsDeDesc = 'FTS_DE_DESC',
-  FtsElAsc = 'FTS_EL_ASC',
-  FtsElDesc = 'FTS_EL_DESC',
   FtsEnAsc = 'FTS_EN_ASC',
   FtsEnDesc = 'FTS_EN_DESC',
   FtsEsAsc = 'FTS_ES_ASC',

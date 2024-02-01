@@ -8102,7 +8102,7 @@ COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bo
 CREATE FUNCTION public.get_supported_languages() RETURNS jsonb
     LANGUAGE sql IMMUTABLE
     AS $$
-    select '{"simple": "simple", "english": "en", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "greek": "el", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
+    select '{"simple": "simple", "english": "EN", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
   $$;
 
 
@@ -8335,7 +8335,6 @@ CREATE TABLE public.table_of_contents_items (
     fts_nl tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('dutch'::text, title, metadata, translated_props)) STORED,
     fts_fr tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('french'::text, title, metadata, translated_props)) STORED,
     fts_de tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('german'::text, title, metadata, translated_props)) STORED,
-    fts_el tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('greek'::text, title, metadata, translated_props)) STORED,
     fts_id tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('indonesian'::text, title, metadata, translated_props)) STORED,
     fts_it tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('italian'::text, title, metadata, translated_props)) STORED,
     fts_lt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('lithuanian'::text, title, metadata, translated_props)) STORED,
@@ -16335,13 +16334,6 @@ CREATE INDEX fts_da_idx ON public.table_of_contents_items USING gin (fts_da);
 --
 
 CREATE INDEX fts_de_idx ON public.table_of_contents_items USING gin (fts_de);
-
-
---
--- Name: fts_el_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX fts_el_idx ON public.table_of_contents_items USING gin (fts_el);
 
 
 --

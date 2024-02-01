@@ -13228,7 +13228,6 @@ type TableOfContentsItem implements Node {
   ftsAr: String
   ftsDa: String
   ftsDe: String
-  ftsEl: String
   ftsEn: String
   ftsEs: String
   ftsFr: String
@@ -13327,9 +13326,6 @@ input TableOfContentsItemCondition {
 
   """Checks for equality with the object’s `ftsDe` field."""
   ftsDe: String
-
-  """Checks for equality with the object’s `ftsEl` field."""
-  ftsEl: String
 
   """Checks for equality with the object’s `ftsEn` field."""
   ftsEn: String
@@ -13515,8 +13511,6 @@ enum TableOfContentsItemsOrderBy {
   FTS_DA_DESC
   FTS_DE_ASC
   FTS_DE_DESC
-  FTS_EL_ASC
-  FTS_EL_DESC
   FTS_EN_ASC
   FTS_EN_DESC
   FTS_ES_ASC
