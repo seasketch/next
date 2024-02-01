@@ -190,88 +190,88 @@ create or replace function toc_to_tsvector(lang text, title text, metadata jsonb
 comment on function toc_to_tsvector is '@omit';
 grant execute on function toc_to_tsvector to anon;
 
-ALTER TABLE table_of_contents_items ADD COLUMN fts_simple tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_simple tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('simple', title, metadata, translated_props)) STORED;
 
-CREATE INDEX fts_simple_idx ON table_of_contents_items USING GIN (fts_simple);
+CREATE INDEX if not exists fts_simple_idx ON table_of_contents_items USING GIN (fts_simple);
 
 -- English
-ALTER TABLE table_of_contents_items ADD COLUMN fts_en tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_en tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('english', title, metadata, translated_props)) STORED;
 
-CREATE INDEX fts_en_idx ON table_of_contents_items USING GIN (fts_en);
+CREATE INDEX if not exists fts_en_idx ON table_of_contents_items USING GIN (fts_en);
 
 -- Spanish
-ALTER TABLE table_of_contents_items ADD COLUMN fts_es tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_es tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('spanish', title, metadata, translated_props)) STORED;
 
 CREATE INDEX if not exists fts_es_idx ON table_of_contents_items USING GIN (fts_es);
 
 
 -- portuguese
-ALTER TABLE table_of_contents_items ADD COLUMN fts_pt tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_pt tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('portuguese', title, metadata, translated_props)) STORED;
 
 CREATE INDEX if not exists fts_pt_idx ON table_of_contents_items USING GIN (fts_pt);
 
 
 -- arabic
-ALTER TABLE table_of_contents_items ADD COLUMN fts_ar tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_ar tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('arabic', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_ar_idx ON table_of_contents_items USING GIN (fts_ar);
 
 -- danish
-ALTER TABLE table_of_contents_items ADD COLUMN fts_da tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_da tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('danish', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_da_idx ON table_of_contents_items USING GIN (fts_da);
 
 -- dutch
-ALTER TABLE table_of_contents_items ADD COLUMN fts_nl tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_nl tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('dutch', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_nl_idx ON table_of_contents_items USING GIN (fts_nl);
 
 -- french
-ALTER TABLE table_of_contents_items ADD COLUMN fts_fr tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_fr tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('french', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_fr_idx ON table_of_contents_items USING GIN (fts_fr);
 
 -- german
-ALTER TABLE table_of_contents_items ADD COLUMN fts_de tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_de tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('german', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_de_idx ON table_of_contents_items USING GIN (fts_de);
 
 -- indonesian
-ALTER TABLE table_of_contents_items ADD COLUMN fts_id tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_id tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('indonesian', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_id_idx ON table_of_contents_items USING GIN (fts_id);
 
 -- italian
-ALTER TABLE table_of_contents_items ADD COLUMN fts_it tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_it tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('italian', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_it_idx ON table_of_contents_items USING GIN (fts_it);
 
 -- lithuanian
-ALTER TABLE table_of_contents_items ADD COLUMN fts_lt tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_lt tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('lithuanian', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_lt_idx ON table_of_contents_items USING GIN (fts_lt);
 
 -- norwegian
-ALTER TABLE table_of_contents_items ADD COLUMN fts_no tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_no tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('norwegian', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_no_idx ON table_of_contents_items USING GIN (fts_no);
 
 -- romanian
-ALTER TABLE table_of_contents_items ADD COLUMN fts_ro tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_ro tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('romanian', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_ro_idx ON table_of_contents_items USING GIN (fts_ro);
 
 -- russian
-ALTER TABLE table_of_contents_items ADD COLUMN fts_ru tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_ru tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('russian', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_ru_idx ON table_of_contents_items USING GIN (fts_ru);
 
 -- swedish
-ALTER TABLE table_of_contents_items ADD COLUMN fts_sv tsvector
+ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_sv tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('swedish', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_sv_idx ON table_of_contents_items USING GIN (fts_sv);
 
