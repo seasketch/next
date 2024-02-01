@@ -294,6 +294,12 @@ function Panel({
           const inputs = dom.querySelectorAll("input");
           if (inputs && inputs.length) {
             inputs[0].focus();
+            return;
+          }
+          const buttons = dom.querySelectorAll("button");
+          if (buttons && buttons.length) {
+            buttons[0].focus();
+            return;
           }
         }
       }}

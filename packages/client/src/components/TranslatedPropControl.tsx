@@ -1,5 +1,5 @@
 import { TranslateIcon } from "@heroicons/react/outline";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   useProjectMetadataQuery,
@@ -210,22 +210,24 @@ export function useTranslatedProps(
       f.code === "EN"
   );
   const lang = getSelectedLanguage(i18n, filteredLanguages);
-  return function getTranslatedProp(
-    propName: string,
-    record?: TranslatableRecordType
-  ) {
-    const obj = record || baseRecord;
-    if (!obj) {
-      return "";
-    }
-    const defaultValue = obj[propName] as string;
-    if (
-      obj.translatedProps[lang.selectedLang.code] &&
-      propName in obj.translatedProps[lang.selectedLang.code] &&
-      obj.translatedProps[lang.selectedLang.code][propName]?.length > 0
-    ) {
-      return obj.translatedProps[lang.selectedLang.code][propName] as string;
-    }
-    return defaultValue;
-  };
+
+  const getTranslatedProp = useCallback(
+    (propName: string, record?: TranslatableRecordType) => {
+      const obj = record || baseRecord;
+      if (!obj) {
+        return "";
+      }
+      const defaultValue = obj[propName] as string;
+      if (
+        obj.translatedProps[lang.selectedLang.code] &&
+        propName in obj.translatedProps[lang.selectedLang.code] &&
+        obj.translatedProps[lang.selectedLang.code][propName]?.length > 0
+      ) {
+        return obj.translatedProps[lang.selectedLang.code][propName] as string;
+      }
+      return defaultValue;
+    },
+    [baseRecord, lang.selectedLang.code]
+  );
+  return getTranslatedProp;
 }

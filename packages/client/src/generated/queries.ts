@@ -9671,6 +9671,8 @@ export type Query = Node & {
    * which can only query top level fields if they are in a particular form.
    */
   query: Query;
+  /** Reads and enables pagination through a set of `SearchResult`. */
+  searchOverlays?: Maybe<Array<SearchResult>>;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
   sharedBasemaps?: Maybe<Basemap>;
   sketch?: Maybe<Sketch>;
@@ -10360,6 +10362,18 @@ export type QueryPublicSpritesArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QuerySearchOverlaysArgs = {
+  draft?: Maybe<Scalars['Boolean']>;
+  first?: Maybe<Scalars['Int']>;
+  lang?: Maybe<Scalars['String']>;
+  limit?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  query?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySessionIsBannedFromPostingArgs = {
   pid?: Maybe<Scalars['Int']>;
 };
@@ -10740,6 +10754,15 @@ export type RevokeAdminAccessPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type SearchResult = {
+  __typename?: 'SearchResult';
+  id?: Maybe<Scalars['Int']>;
+  isFolder?: Maybe<Scalars['Boolean']>;
+  metadataHeadline?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
+  titleHeadline?: Maybe<Scalars['String']>;
 };
 
 /** All input for the `sendAllProjectInvites` mutation. */
@@ -17230,6 +17253,23 @@ export type DataLayerDetailsFragment = (
   )> }
 );
 
+export type SearchOverlaysQueryVariables = Exact<{
+  search: Scalars['String'];
+  draft?: Maybe<Scalars['Boolean']>;
+  limit?: Maybe<Scalars['Int']>;
+  projectId: Scalars['Int'];
+  lang: Scalars['String'];
+}>;
+
+
+export type SearchOverlaysQuery = (
+  { __typename?: 'Query' }
+  & { searchOverlays?: Maybe<Array<(
+    { __typename?: 'SearchResult' }
+    & Pick<SearchResult, 'id' | 'metadataHeadline' | 'stableId' | 'titleHeadline' | 'isFolder'>
+  )>> }
+);
+
 export type ProjectListItemFragment = (
   { __typename?: 'Project' }
   & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured' | 'translatedProps'>
@@ -22551,6 +22591,23 @@ export const PublishedTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     ${OverlayFragmentDoc}`;
+export const SearchOverlaysDocument = /*#__PURE__*/ gql`
+    query SearchOverlays($search: String!, $draft: Boolean, $limit: Int, $projectId: Int!, $lang: String!) {
+  searchOverlays(
+    query: $search
+    draft: $draft
+    projectId: $projectId
+    limit: $limit
+    lang: $lang
+  ) {
+    id
+    metadataHeadline
+    stableId
+    titleHeadline
+    isFolder
+  }
+}
+    `;
 export const ProjectListingDocument = /*#__PURE__*/ gql`
     query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
   projects: projectsConnection(
@@ -24010,6 +24067,7 @@ export const namedOperations = {
     GetProjectBySlug: 'GetProjectBySlug',
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
+    SearchOverlays: 'SearchOverlays',
     ProjectListing: 'ProjectListing',
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',

@@ -5,6 +5,7 @@ import {
   useEffect,
   useContext,
   ReactNode,
+  useRef,
 } from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { OverlayFragment } from "../generated/graphql";
@@ -18,9 +19,12 @@ import ContextMenuDropdown, {
 import { DropdownOption } from "./DropdownButton";
 import { useTranslatedProps } from "./TranslatedPropControl";
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import set from "lodash.set";
 require("../admin/data/GLStyleEditor/RadixDropdown.css");
 
+export interface TreeItemHighlights {
+  title?: string;
+  metadata?: string;
+}
 export interface TreeItem {
   id: string;
   /** label shown in tree */
@@ -83,9 +87,11 @@ interface TreeViewProps {
   getContextMenuContent?: (id: string, event: React.MouseEvent) => ReactNode;
   hiddenItems?: string[];
   onUnhide?: (stableId: string) => void;
+  highlights?: { [id: string]: TreeItemHighlights };
 }
 
 export interface TreeNodeComponentProps {
+  highlights?: { [id: string]: TreeItemHighlights };
   node: TreeItem;
   numChildren: number;
   onSelect?: (metaKey: boolean, node: TreeItem, isSelected: boolean) => void;
@@ -465,6 +471,7 @@ export default function TreeView({
 
         {data.map((item, index) => (
           <TreeItemComponent
+            highlights={props.highlights}
             index={index}
             clearSelection={clearSelection}
             key={item.node.id}
@@ -529,7 +536,7 @@ export function parseTreeItemId(id: string) {
 }
 
 export function useOverlayState(
-  items: OverlayFragment[],
+  items?: OverlayFragment[] | null,
   editable?: boolean,
   localStoragePrefix?: string
 ) {
@@ -539,9 +546,10 @@ export function useOverlayState(
     `${localStoragePrefix}-overlays-expanded-ids`,
     []
   );
+
   const treeItems = useMemo(() => {
     return overlayLayerFragmentsToTreeItems(
-      [...items].sort((a, b) => a.sortIndex - b.sortIndex),
+      [...(items || [])].sort((a, b) => a.sortIndex - b.sortIndex),
       editable,
       (propName: string, record: OverlayFragment) => {
         return getTranslatedProp(propName, record)!;
@@ -555,7 +563,7 @@ export function useOverlayState(
       const loadingItems: string[] = [];
       const hiddenItems: string[] = [];
       const overlayErrors: { [id: string]: string } = {};
-      for (const item of items) {
+      for (const item of items || []) {
         if (item.dataLayerId) {
           const record = mapContext.layerStatesByTocStaticId[item.stableId];
           if (record) {
@@ -598,7 +606,7 @@ export function useOverlayState(
 
   const onChecked = useCallback(
     (ids: string[], isChecked: boolean) => {
-      const staticIds = items
+      const staticIds = (items || [])
         .filter((item) => ids.indexOf(item.stableId) !== -1)
         .filter((item) => Boolean(item.dataLayerId))
         .map((item) => item.stableId);
@@ -640,6 +648,7 @@ export function useOverlayState(
   return {
     expandedIds,
     onExpand,
+    setExpandedIds,
     checkedItems,
     onChecked,
     treeItems,

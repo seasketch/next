@@ -94,3 +94,25 @@ fragment DataLayerDetails on DataLayer {
     title
   }
 }
+
+query SearchOverlays(
+  $search: String!
+  $draft: Boolean
+  $limit: Int
+  $projectId: Int!
+  $lang: String!
+) {
+  searchOverlays(
+    query: $search
+    draft: $draft
+    projectId: $projectId
+    limit: $limit
+    lang: $lang
+  ) {
+    id
+    metadataHeadline
+    stableId
+    titleHeadline
+    isFolder
+  }
+}

@@ -11276,6 +11276,21 @@ type Query implements Node {
   which can only query top level fields if they are in a particular form.
   """
   query: Query!
+
+  """Reads and enables pagination through a set of `SearchResult`."""
+  searchOverlays(
+    draft: Boolean
+
+    """Only read the first `n` values of the set."""
+    first: Int
+    lang: String
+    limit: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    projectId: Int
+    query: String
+  ): [SearchResult!]
   sessionIsBannedFromPosting(pid: Int): Boolean
   sharedBasemaps: Basemap
   sketch(id: Int!): Sketch
@@ -11662,6 +11677,14 @@ type RevokeAdminAccessPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type SearchResult {
+  id: Int
+  isFolder: Boolean
+  metadataHeadline: String
+  stableId: String
+  titleHeadline: String
 }
 
 """All input for the `sendAllProjectInvites` mutation."""
