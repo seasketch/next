@@ -10,6 +10,7 @@ import { useDrag, useDrop } from "react-dnd";
 import {
   CheckState,
   TreeItem,
+  TreeItemHighlights,
   TreeNodeComponentProps,
 } from "../../components/TreeView";
 import CollectionIcon from "@heroicons/react/outline/CollectionIcon";
@@ -110,6 +111,7 @@ export default function TreeItemComponent({
   allowContextMenuDefault,
   onUnhide,
   isHidden,
+  highlights,
 }: TreeNodeComponentProps) {
   const isChecked = checked !== CheckState.UNCHECKED;
   const hasCheckedChildren = checked !== CheckState.UNCHECKED;
@@ -183,7 +185,7 @@ export default function TreeItemComponent({
         if (!sortable || !rootRef.current) {
           return;
         }
-        const span = rootRef.current.querySelector("span.label-container");
+        const span = rootRef.current.querySelector(".label-container");
         const offset = monitor.getClientOffset();
         if (span && offset) {
           const state = getSortState(
@@ -211,7 +213,7 @@ export default function TreeItemComponent({
         if (!sortable || !onSortEnd || !rootRef.current) {
           return;
         }
-        const span = rootRef.current.querySelector("span.label-container");
+        const span = rootRef.current.querySelector(".label-container");
         const offset = monitor.getClientOffset();
         if (offset && span) {
           const state = getSortState(
@@ -335,8 +337,8 @@ export default function TreeItemComponent({
       >
         {sortable && canDrop && isOverCurrent && sortPlaceholder}
 
-        <span
-          className={`label-container flex items-center text-sm space-x-0.5 ${classNames.label}`}
+        <div
+          className={`label-container flex items-center text-sm space-x-0.5 flex-wrap ${classNames.label}`}
           style={{
             paddingTop: 5,
             paddingBottom: 5,
@@ -403,7 +405,7 @@ export default function TreeItemComponent({
                   strokeWidth={1}
                   onContextMenu={contextMenuHandler}
                   onClick={updateSelectionOnClick}
-                  className="-mt-1 relative -right-0.5 w-6 h-6 text-primary-700"
+                  className="relative -right-0.5 w-6 h-6 text-primary-700"
                 />
               </ContextMenu.Trigger>
             ))}
@@ -431,7 +433,11 @@ export default function TreeItemComponent({
               onClick={updateSelectionOnClick}
               onContextMenu={contextMenuHandler}
             >
-              {node.title}
+              {highlights?.[node.id]?.title ? (
+                <SearchResultHighlights data={highlights[node.id].title!} />
+              ) : (
+                node.title
+              )}
             </label>
           </ContextMenu.Trigger>
           {isHidden && (
@@ -445,7 +451,18 @@ export default function TreeItemComponent({
               <EyeClosedIcon className="text-black opacity-50 hover:opacity-80" />
             </button>
           )}
-        </span>
+          {highlights?.[node.id]?.metadata &&
+            !Boolean(highlights?.[node.id]?.title?.length) && (
+              <>
+                <div style={{ flexBasis: "100%", height: 0 }}></div>
+                <div className="text-xs text-gray-500 pl-5">
+                  <SearchResultHighlights
+                    data={highlights[node.id].metadata!}
+                  />
+                </div>
+              </>
+            )}
+        </div>
         {children &&
           children.length > 0 &&
           isExpanded &&
@@ -464,6 +481,7 @@ export default function TreeItemComponent({
             >
               {children.map((item, index) => (
                 <TreeItemComponent
+                  highlights={highlights}
                   index={index}
                   key={item.node.id}
                   {...item}
@@ -588,4 +606,19 @@ function getSortState(
     }
   }
   return SortingState.NONE;
+}
+
+function SearchResultHighlights({ data }: { data: string }) {
+  const parts = data.split(/<<<|>>>/);
+  return (
+    <div>
+      {parts.map((part, index) => {
+        if (index % 2 === 1) {
+          return <span className="bg-yellow-200 px-0.5 -mx-0.5">{part}</span>;
+        } else {
+          return <span>{part}</span>;
+        }
+      })}
+    </div>
+  );
 }

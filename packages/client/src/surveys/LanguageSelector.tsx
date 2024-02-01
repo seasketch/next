@@ -3,6 +3,7 @@ import { ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import languages, { LangDetails } from "../lang/supported";
+import useCurrentLang from "../useCurrentLang";
 
 export default function LanguageSelector(props: {
   options?: string[];
@@ -10,7 +11,7 @@ export default function LanguageSelector(props: {
   button: (onClick: () => void, language: LangDetails) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const { i18n } = useTranslation("surveys");
+  const { i18n, t } = useTranslation("surveys");
   const filteredLanguages = languages.filter(
     (f) =>
       !props.options ||
@@ -24,9 +25,12 @@ export default function LanguageSelector(props: {
     filteredLanguages
   );
 
+  const selectedLanguage = useCurrentLang();
+
   if (
     options.length <= 1 &&
-    (i18n.language?.toLowerCase() === options[0].code.toLowerCase() || (i18n.language === "en-US" && options[0].code === "EN"))
+    (i18n.language?.toLowerCase() === options[0].code.toLowerCase() ||
+      (i18n.language === "en-US" && options[0].code === "EN"))
   ) {
     return null;
   }
@@ -37,8 +41,10 @@ export default function LanguageSelector(props: {
 
       {open && (
         <Modal
-          // title={t("Select a language")}
-          onRequestClose={() => setOpen(false)}
+          title={t("Select a language")}
+          onRequestClose={() => {
+            setOpen(false);
+          }}
           className="text-black"
           autoWidth
           zeroPadding
@@ -48,10 +54,7 @@ export default function LanguageSelector(props: {
               <Option
                 key={o.code}
                 language={o}
-                selected={
-                  (o.code === "EN" && !matchesAnyTranslation) ||
-                  i18n.language?.toUpperCase() === o.code.toUpperCase()
-                }
+                selected={selectedLang.code === o.code}
                 onClick={(lang) => {
                   i18n.changeLanguage(lang.code);
                   setOpen(false);
@@ -72,10 +75,13 @@ function Option(props: {
 }) {
   return (
     <button
-      className={`${props.selected &&
+      className={`${
+        props.selected &&
         "bg-primary-300 hover:bg-opacity-70 hover:bg-primary-300 bg-opacity-50"
-        } flex w-full p-4 px-6 hover:bg-gray-100 gap-4`}
-      onClick={() => props.onClick(props.language)}
+      } flex w-full p-4 px-6 hover:bg-gray-100 gap-4`}
+      onClick={() => {
+        props.onClick(props.language);
+      }}
     >
       <span className="flex-1 text-left rtl:text-right">
         {props.language.localName || props.language.name}

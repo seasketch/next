@@ -39,6 +39,9 @@ import { LayerEditingContext } from "./LayerEditingContext";
 import FullScreenLoadingSpinner from "./FullScreenLoadingSpinner";
 import { TableOfContentsItemMenu } from "./TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
+import useOverlaySearchState from "../../dataLayers/useOverlaySearchState";
+import SearchResultsMessages from "../../dataLayers/SearchResultsMessages";
+import OverlaySearchInput from "../../dataLayers/OverlaySearchInput";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -72,6 +75,7 @@ export default function TableOfContentsEditor() {
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
   });
+
   const [createNewFolderModalOpen, setCreateNewFolderModalOpen] =
     useState<boolean>(false);
   const [updateChildrenMutation] =
@@ -122,6 +126,7 @@ export default function TableOfContentsEditor() {
   const {
     expandedIds,
     onExpand,
+    setExpandedIds,
     checkedItems,
     onChecked,
     loadingItems,
@@ -132,7 +137,7 @@ export default function TableOfContentsEditor() {
     hasLocalState,
     resetLocalState,
   } = useOverlayState(
-    tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [],
+    tocQuery.data?.projectBySlug?.draftTableOfContentsItems,
     true,
     "admin"
   );
@@ -274,6 +279,22 @@ export default function TableOfContentsEditor() {
     ]
   );
 
+  const {
+    search,
+    setSearch,
+    searchResults,
+    filteredTreeNodes,
+    searchState,
+    isFiltered,
+    searching,
+  } = useOverlaySearchState({
+    isDraft: true,
+    projectId: tocQuery.data?.projectBySlug?.id,
+    treeNodes,
+    expandedIds,
+    setExpandedIds,
+  });
+
   return (
     <>
       {createNewFolderModalOpen && (
@@ -300,34 +321,47 @@ export default function TableOfContentsEditor() {
       )}
       {publishOpen && (
         <PublishTableOfContentsModal
-          onRequestClose={() => setPublishOpen(false)}
+          onRequestClose={() => {
+            setPublishOpen(false);
+            // Hack so that tooltip doesn't reappear after publishing
+            document.getElementById("publish-button")?.blur();
+            setTimeout(() => {
+              document.getElementById("publish-button")?.blur();
+            }, 10);
+          }}
         />
       )}
-      <Header
-        hasLocalState={hasLocalState}
-        resetLocalState={resetLocalState}
-        openArcGISCart={() => {
-          setArcgisCartOpen(true);
-        }}
-        onRequestOpenFolder={() => {
-          setCreateNewFolderModalOpen(true);
-        }}
-        map={mapContext.manager?.map}
-        region={tocQuery.data?.projectBySlug?.region.geojson}
-        selectedView={selectedView}
-        setSelectedView={setSelectedView}
-        onRequestPublish={() => setPublishOpen(true)}
-        publishDisabled={
-          tocQuery.data?.projectBySlug?.draftTableOfContentsHasChanges === false
-        }
-        lastPublished={
-          tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
-            ? new Date(
-                tocQuery.data.projectBySlug.tableOfContentsLastPublished!
-              )
-            : undefined
-        }
-      />
+      {tocQuery.data?.projectBySlug?.id && (
+        <Header
+          searchLoading={searching}
+          search={search}
+          onSearchChange={setSearch}
+          hasLocalState={hasLocalState}
+          resetLocalState={resetLocalState}
+          openArcGISCart={() => {
+            setArcgisCartOpen(true);
+          }}
+          onRequestOpenFolder={() => {
+            setCreateNewFolderModalOpen(true);
+          }}
+          map={mapContext.manager?.map}
+          region={tocQuery.data?.projectBySlug?.region.geojson}
+          selectedView={selectedView}
+          setSelectedView={setSelectedView}
+          onRequestPublish={() => setPublishOpen(true)}
+          publishDisabled={
+            tocQuery.data?.projectBySlug?.draftTableOfContentsHasChanges ===
+            false
+          }
+          lastPublished={
+            tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
+              ? new Date(
+                  tocQuery.data.projectBySlug.tableOfContentsLastPublished!
+                )
+              : undefined
+          }
+        />
+      )}
       <div
         className="flex-1 overflow-y-auto p-2 px-8"
         onContextMenu={(e) => e.preventDefault()}
@@ -335,45 +369,62 @@ export default function TableOfContentsEditor() {
         {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
 
         <Route exact path={`/${slug}/admin/data`}>
-          <TreeView
-            loadingItems={loadingItems}
-            errors={overlayErrors}
-            expanded={expandedIds}
-            onExpand={onExpand}
-            checkedItems={checkedItems}
-            onChecked={onChecked}
-            hiddenItems={hiddenItems}
-            onUnhide={onUnhide}
-            items={treeNodes}
-            ariaLabel="Draft overlays"
-            sortable
-            onSortEnd={onSortEnd}
-            getContextMenuContent={(treeItemId, clickEvent) => {
-              const item =
-                tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
-                  (item) => item.stableId === treeItemId
-                );
-              const sorted =
-                mapContext.manager?.getVisibleLayersByZIndex() || [];
-              if (item) {
-                return (
-                  <TableOfContentsItemMenu
-                    items={[item]}
-                    type={ContextMenu}
-                    editable
-                    transform={{
-                      x: clickEvent.clientX,
-                      y: clickEvent.clientY,
-                    }}
-                    top={sorted[0].tocId === item.stableId}
-                    bottom={sorted[sorted.length - 1].tocId === item.stableId}
-                  />
-                );
-              } else {
-                return null;
+          <>
+            <SearchResultsMessages
+              filteredTreeNodes={filteredTreeNodes}
+              search={search}
+              searchResults={searchResults}
+            />
+            <div
+              className={
+                "transition-opacity " +
+                (searching ? "opacity-50" : "opacity-100")
               }
-            }}
-          />
+            >
+              <TreeView
+                highlights={searchState.highlights}
+                disableEditing={isFiltered}
+                items={filteredTreeNodes}
+                loadingItems={loadingItems}
+                errors={overlayErrors}
+                expanded={expandedIds}
+                onExpand={onExpand}
+                checkedItems={checkedItems}
+                onChecked={onChecked}
+                hiddenItems={hiddenItems}
+                onUnhide={onUnhide}
+                ariaLabel="Draft overlays"
+                onSortEnd={onSortEnd}
+                getContextMenuContent={(treeItemId, clickEvent) => {
+                  const item =
+                    tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
+                      (item) => item.stableId === treeItemId
+                    );
+                  const sorted =
+                    mapContext.manager?.getVisibleLayersByZIndex() || [];
+                  if (item) {
+                    return (
+                      <TableOfContentsItemMenu
+                        items={[item]}
+                        type={ContextMenu}
+                        editable
+                        transform={{
+                          x: clickEvent.clientX,
+                          y: clickEvent.clientY,
+                        }}
+                        top={sorted[0].tocId === item.stableId}
+                        bottom={
+                          sorted[sorted.length - 1].tocId === item.stableId
+                        }
+                      />
+                    );
+                  } else {
+                    return null;
+                  }
+                }}
+              />
+            </div>
+          </>
         </Route>
         <Route path={`/${slug}/admin/data/zindex`}>
           <ZIndexEditableList // @ts-ignore
@@ -434,6 +485,9 @@ function Header({
   openArcGISCart,
   hasLocalState,
   resetLocalState,
+  search,
+  onSearchChange,
+  searchLoading,
 }: {
   selectedView: string;
   setSelectedView: (view: string) => void;
@@ -446,6 +500,9 @@ function Header({
   openArcGISCart: () => void;
   hasLocalState?: boolean;
   resetLocalState?: () => void;
+  onSearchChange?: (search: string) => void;
+  search?: string;
+  searchLoading?: boolean;
 }) {
   const uploadContext = useContext(DataUploadDropzoneContext);
   const { t } = useTranslation("admin:data");
@@ -541,12 +598,19 @@ function Header({
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
+        <div className="ml-2">
+          <OverlaySearchInput
+            search={search}
+            onChange={onSearchChange}
+            loading={searchLoading}
+          />
+        </div>
         <div className="flex-1 text-right">
           <Tooltip.Provider>
             <Tooltip.Root delayDuration={200}>
-              <Tooltip.Trigger>
+              <Tooltip.Trigger asChild>
                 <button
-                  // disabled={Boolean(publishDisabled)}
+                  id="publish-button"
                   className={`${
                     publishDisabled
                       ? "bg-white text-black opacity-80"
@@ -557,24 +621,26 @@ function Header({
                   <Trans ns="admin:data">Publish</Trans>
                 </button>
               </Tooltip.Trigger>
-              <Tooltip.Content
-                style={{ maxWidth: 220 }}
-                className="select-none rounded bg-white px-4 py-2 shadow text-center"
-                // sideOffset={-200}
-                side="right"
-              >
-                {publishDisabled ? (
-                  t("No changes")
-                ) : (
-                  <span>
-                    {t("Has changes since last publish")}
-                    {lastPublished
-                      ? " on " + lastPublished.toLocaleDateString()
-                      : null}
-                  </span>
-                )}
-                <Tooltip.Arrow className="" style={{ fill: "white" }} />
-              </Tooltip.Content>
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  style={{ maxWidth: 220 }}
+                  className="z-50 select-none rounded bg-white px-4 py-2 shadow text-center"
+                  // sideOffset={-200}
+                  side="right"
+                >
+                  {publishDisabled ? (
+                    t("No changes")
+                  ) : (
+                    <span>
+                      {t("Has changes since last publish")}
+                      {lastPublished
+                        ? " on " + lastPublished.toLocaleDateString()
+                        : null}
+                    </span>
+                  )}
+                  <Tooltip.Arrow className="" style={{ fill: "white" }} />
+                </Tooltip.Content>
+              </Tooltip.Portal>
             </Tooltip.Root>
           </Tooltip.Provider>
         </div>

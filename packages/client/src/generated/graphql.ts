@@ -9673,6 +9673,8 @@ export type Query = Node & {
    * which can only query top level fields if they are in a particular form.
    */
   query: Query;
+  /** Reads and enables pagination through a set of `SearchResult`. */
+  searchOverlays?: Maybe<Array<SearchResult>>;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
   sharedBasemaps?: Maybe<Basemap>;
   sketch?: Maybe<Sketch>;
@@ -10362,6 +10364,18 @@ export type QueryPublicSpritesArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QuerySearchOverlaysArgs = {
+  draft?: Maybe<Scalars['Boolean']>;
+  first?: Maybe<Scalars['Int']>;
+  lang?: Maybe<Scalars['String']>;
+  limit?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  query?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySessionIsBannedFromPostingArgs = {
   pid?: Maybe<Scalars['Int']>;
 };
@@ -10742,6 +10756,15 @@ export type RevokeAdminAccessPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type SearchResult = {
+  __typename?: 'SearchResult';
+  id?: Maybe<Scalars['Int']>;
+  isFolder?: Maybe<Scalars['Boolean']>;
+  metadataHeadline?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
+  titleHeadline?: Maybe<Scalars['String']>;
 };
 
 /** All input for the `sendAllProjectInvites` mutation. */
@@ -12018,6 +12041,22 @@ export type TableOfContentsItem = Node & {
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
   enableDownload: Scalars['Boolean'];
+  ftsAr?: Maybe<Scalars['String']>;
+  ftsDa?: Maybe<Scalars['String']>;
+  ftsDe?: Maybe<Scalars['String']>;
+  ftsEn?: Maybe<Scalars['String']>;
+  ftsEs?: Maybe<Scalars['String']>;
+  ftsFr?: Maybe<Scalars['String']>;
+  ftsId?: Maybe<Scalars['String']>;
+  ftsIt?: Maybe<Scalars['String']>;
+  ftsLt?: Maybe<Scalars['String']>;
+  ftsNl?: Maybe<Scalars['String']>;
+  ftsNo?: Maybe<Scalars['String']>;
+  ftsPt?: Maybe<Scalars['String']>;
+  ftsRo?: Maybe<Scalars['String']>;
+  ftsRu?: Maybe<Scalars['String']>;
+  ftsSimple?: Maybe<Scalars['String']>;
+  ftsSv?: Maybe<Scalars['String']>;
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hasMetadata?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
@@ -12074,6 +12113,38 @@ export type TableOfContentsItem = Node & {
 export type TableOfContentsItemCondition = {
   /** Checks for equality with the object’s `dataLayerId` field. */
   dataLayerId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `ftsAr` field. */
+  ftsAr?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsDa` field. */
+  ftsDa?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsDe` field. */
+  ftsDe?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsEn` field. */
+  ftsEn?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsEs` field. */
+  ftsEs?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsFr` field. */
+  ftsFr?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsId` field. */
+  ftsId?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsIt` field. */
+  ftsIt?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsLt` field. */
+  ftsLt?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsNl` field. */
+  ftsNl?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsNo` field. */
+  ftsNo?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsPt` field. */
+  ftsPt?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsRo` field. */
+  ftsRo?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsRu` field. */
+  ftsRu?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsSimple` field. */
+  ftsSimple?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `ftsSv` field. */
+  ftsSv?: Maybe<Scalars['String']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `isDraft` field. */
@@ -12170,6 +12241,38 @@ export type TableOfContentsItemsEdge = {
 export enum TableOfContentsItemsOrderBy {
   DataLayerIdAsc = 'DATA_LAYER_ID_ASC',
   DataLayerIdDesc = 'DATA_LAYER_ID_DESC',
+  FtsArAsc = 'FTS_AR_ASC',
+  FtsArDesc = 'FTS_AR_DESC',
+  FtsDaAsc = 'FTS_DA_ASC',
+  FtsDaDesc = 'FTS_DA_DESC',
+  FtsDeAsc = 'FTS_DE_ASC',
+  FtsDeDesc = 'FTS_DE_DESC',
+  FtsEnAsc = 'FTS_EN_ASC',
+  FtsEnDesc = 'FTS_EN_DESC',
+  FtsEsAsc = 'FTS_ES_ASC',
+  FtsEsDesc = 'FTS_ES_DESC',
+  FtsFrAsc = 'FTS_FR_ASC',
+  FtsFrDesc = 'FTS_FR_DESC',
+  FtsIdAsc = 'FTS_ID_ASC',
+  FtsIdDesc = 'FTS_ID_DESC',
+  FtsItAsc = 'FTS_IT_ASC',
+  FtsItDesc = 'FTS_IT_DESC',
+  FtsLtAsc = 'FTS_LT_ASC',
+  FtsLtDesc = 'FTS_LT_DESC',
+  FtsNlAsc = 'FTS_NL_ASC',
+  FtsNlDesc = 'FTS_NL_DESC',
+  FtsNoAsc = 'FTS_NO_ASC',
+  FtsNoDesc = 'FTS_NO_DESC',
+  FtsPtAsc = 'FTS_PT_ASC',
+  FtsPtDesc = 'FTS_PT_DESC',
+  FtsRoAsc = 'FTS_RO_ASC',
+  FtsRoDesc = 'FTS_RO_DESC',
+  FtsRuAsc = 'FTS_RU_ASC',
+  FtsRuDesc = 'FTS_RU_DESC',
+  FtsSimpleAsc = 'FTS_SIMPLE_ASC',
+  FtsSimpleDesc = 'FTS_SIMPLE_DESC',
+  FtsSvAsc = 'FTS_SV_ASC',
+  FtsSvDesc = 'FTS_SV_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   IsDraftAsc = 'IS_DRAFT_ASC',
@@ -17145,6 +17248,23 @@ export type DataLayerDetailsFragment = (
     { __typename?: 'InteractivitySetting' }
     & Pick<InteractivitySetting, 'cursor' | 'id' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
   )> }
+);
+
+export type SearchOverlaysQueryVariables = Exact<{
+  search: Scalars['String'];
+  draft?: Maybe<Scalars['Boolean']>;
+  limit?: Maybe<Scalars['Int']>;
+  projectId: Scalars['Int'];
+  lang: Scalars['String'];
+}>;
+
+
+export type SearchOverlaysQuery = (
+  { __typename?: 'Query' }
+  & { searchOverlays?: Maybe<Array<(
+    { __typename?: 'SearchResult' }
+    & Pick<SearchResult, 'id' | 'metadataHeadline' | 'stableId' | 'titleHeadline' | 'isFolder'>
+  )>> }
 );
 
 export type ProjectListItemFragment = (
@@ -26034,6 +26154,55 @@ export function usePublishedTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQu
 export type PublishedTableOfContentsQueryHookResult = ReturnType<typeof usePublishedTableOfContentsQuery>;
 export type PublishedTableOfContentsLazyQueryHookResult = ReturnType<typeof usePublishedTableOfContentsLazyQuery>;
 export type PublishedTableOfContentsQueryResult = Apollo.QueryResult<PublishedTableOfContentsQuery, PublishedTableOfContentsQueryVariables>;
+export const SearchOverlaysDocument = gql`
+    query SearchOverlays($search: String!, $draft: Boolean, $limit: Int, $projectId: Int!, $lang: String!) {
+  searchOverlays(
+    query: $search
+    draft: $draft
+    projectId: $projectId
+    limit: $limit
+    lang: $lang
+  ) {
+    id
+    metadataHeadline
+    stableId
+    titleHeadline
+    isFolder
+  }
+}
+    `;
+
+/**
+ * __useSearchOverlaysQuery__
+ *
+ * To run a query within a React component, call `useSearchOverlaysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchOverlaysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchOverlaysQuery({
+ *   variables: {
+ *      search: // value for 'search'
+ *      draft: // value for 'draft'
+ *      limit: // value for 'limit'
+ *      projectId: // value for 'projectId'
+ *      lang: // value for 'lang'
+ *   },
+ * });
+ */
+export function useSearchOverlaysQuery(baseOptions: Apollo.QueryHookOptions<SearchOverlaysQuery, SearchOverlaysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SearchOverlaysQuery, SearchOverlaysQueryVariables>(SearchOverlaysDocument, options);
+      }
+export function useSearchOverlaysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SearchOverlaysQuery, SearchOverlaysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SearchOverlaysQuery, SearchOverlaysQueryVariables>(SearchOverlaysDocument, options);
+        }
+export type SearchOverlaysQueryHookResult = ReturnType<typeof useSearchOverlaysQuery>;
+export type SearchOverlaysLazyQueryHookResult = ReturnType<typeof useSearchOverlaysLazyQuery>;
+export type SearchOverlaysQueryResult = Apollo.QueryResult<SearchOverlaysQuery, SearchOverlaysQueryVariables>;
 export const ProjectListingDocument = gql`
     query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
   projects: projectsConnection(
@@ -30222,6 +30391,7 @@ export const namedOperations = {
     GetProjectBySlug: 'GetProjectBySlug',
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
+    SearchOverlays: 'SearchOverlays',
     ProjectListing: 'ProjectListing',
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',

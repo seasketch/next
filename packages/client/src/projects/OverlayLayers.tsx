@@ -3,12 +3,17 @@ import {
   DataSourceDetailsFragment,
   OverlayFragment,
   TableOfContentsItem,
+  useProjectMetadataQuery,
 } from "../generated/graphql";
 import TreeView, { useOverlayState } from "../components/TreeView";
 import { useTranslation } from "react-i18next";
 import { TableOfContentsItemMenu } from "../admin/data/TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import Button from "../components/Button";
+import { ProjectAppSidebarToolbar } from "./ProjectAppSidebar";
+import useOverlaySearchState from "../dataLayers/useOverlaySearchState";
+import SearchResultsMessages from "../dataLayers/SearchResultsMessages";
+import OverlaySearchInput from "../dataLayers/OverlaySearchInput";
+import getSlug from "../getSlug";
 
 export default function OverlayLayers({
   items,
@@ -20,6 +25,8 @@ export default function OverlayLayers({
   sources: DataSourceDetailsFragment[];
 }) {
   const { t } = useTranslation("homepage");
+  const slug = getSlug();
+  const metadata = useProjectMetadataQuery({ variables: { slug } });
 
   const {
     expandedIds,
@@ -32,12 +39,34 @@ export default function OverlayLayers({
     hiddenItems,
     onUnhide,
     hasLocalState,
+    setExpandedIds,
     resetLocalState,
   } = useOverlayState(items);
 
+  const {
+    search,
+    setSearch,
+    searchResults,
+    filteredTreeNodes,
+    searchState,
+    searching,
+  } = useOverlaySearchState({
+    isDraft: false,
+    projectId: metadata.data?.projectPublicDetails?.id!,
+    treeNodes: treeItems,
+    expandedIds,
+    setExpandedIds,
+  });
+
   return (
     <div>
-      <header className=" select-none fixed w-128 p-2 bg-gray-100 border-b z-10">
+      <ProjectAppSidebarToolbar>
+        <OverlaySearchInput
+          className="mr-2 flex-1"
+          search={search}
+          onChange={setSearch}
+          loading={searchResults.loading}
+        />
         <button
           disabled={!hasLocalState}
           onClick={() => {
@@ -49,41 +78,53 @@ export default function OverlayLayers({
         >
           {t("Reset layers")}
         </button>
-      </header>
-      <div className="mt-12 pl-6">
-        <TreeView
-          hiddenItems={hiddenItems}
-          onUnhide={onUnhide}
-          loadingItems={loadingItems}
-          errors={overlayErrors}
-          disableEditing={true}
-          expanded={expandedIds}
-          onExpand={onExpand}
-          checkedItems={checkedItems}
-          onChecked={onChecked}
-          ariaLabel="Overlay Layers"
-          items={treeItems}
-          getContextMenuContent={(treeItemId, clickEvent) => {
-            const item = items.find((item) => item.stableId === treeItemId);
-            if (item?.isFolder) {
-              return null;
-            }
-            if (item) {
-              return (
-                <TableOfContentsItemMenu
-                  items={[item]}
-                  type={ContextMenu}
-                  transform={{
-                    x: clickEvent.clientX,
-                    y: clickEvent.clientY,
-                  }}
-                />
-              );
-            } else {
-              return null;
-            }
-          }}
-        />
+      </ProjectAppSidebarToolbar>
+      <SearchResultsMessages
+        filteredTreeNodes={filteredTreeNodes}
+        search={search}
+        searchResults={searchResults}
+      />
+      <div className="mt-2 pl-6">
+        <div
+          className={
+            "transition-opacity " + (searching ? "opacity-50" : "opacity-100")
+          }
+        >
+          <TreeView
+            highlights={searchState.highlights}
+            items={filteredTreeNodes}
+            disableEditing={true}
+            hiddenItems={hiddenItems}
+            onUnhide={onUnhide}
+            loadingItems={loadingItems}
+            errors={overlayErrors}
+            expanded={expandedIds}
+            onExpand={onExpand}
+            checkedItems={checkedItems}
+            onChecked={onChecked}
+            ariaLabel="Overlay Layers"
+            getContextMenuContent={(treeItemId, clickEvent) => {
+              const item = items.find((item) => item.stableId === treeItemId);
+              if (item?.isFolder) {
+                return null;
+              }
+              if (item) {
+                return (
+                  <TableOfContentsItemMenu
+                    items={[item]}
+                    type={ContextMenu}
+                    transform={{
+                      x: clickEvent.clientX,
+                      y: clickEvent.clientY,
+                    }}
+                  />
+                );
+              } else {
+                return null;
+              }
+            }}
+          />
+        </div>
       </div>
     </div>
   );
