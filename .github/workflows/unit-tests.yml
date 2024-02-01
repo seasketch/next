@@ -6,12 +6,11 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: underbluewaters/seasketch_db_base:latest
+        image: underbluewaters/seasketch_db_base
         ports:
           - "5432:5432"
         env:
           POSTGRES_PASSWORD: password
-          POSTGRES_HOST_AUTH_METHOD: trust
       redis:
         image: "redis:alpine"
         ports:
@@ -28,12 +27,10 @@ jobs:
       - name: Install dependencies
         run: |
           npx lerna bootstrap --ci
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: true
       - name: Init docker db
         working-directory: ./packages/api
         env:
-          TEST_DB: postgres://postgres:password@postgres:5432/
+          TEST_DB: postgres://postgres:password@localhost:5432/
         run: |
           node tests/init_dockerdb.js
       - name: Run Tests
@@ -41,7 +38,7 @@ jobs:
         run: |
           npx jest --ci --reporters=default --reporters=jest-junit
         env:
-          TEST_DB: postgres://postgres:password@postgres:5432/
+          TEST_DB: postgres://postgres:password@localhost:5432/
           SES_EMAIL_SOURCE: do-not-reply@seasketch.org
       - uses: IgnusG/jest-report-action@v2.3.3
         if: always()
@@ -55,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: underbluewaters/seasketch_db_base:latest
+        image: underbluewaters/seasketch_db_base
         ports:
           - "54321:5432"
         env:
@@ -169,7 +166,7 @@ jobs:
   #   # container: cypress/browsers:node16.5.0-chrome94-ff93
   #   services:
   #     postgres:
-  #       image: underbluewaters/seasketch_db_base:latest
+  #       image: underbluewaters/seasketch_db_base
   #       ports:
   #         - "5432:5432"
   #       env:
@@ -285,7 +282,7 @@ jobs:
   #   # container: cypress/browsers:node16.5.0-chrome94-ff93
   #   services:
   #     postgres:
-  #       image: underbluewaters/seasketch_db_base:latest
+  #       image: underbluewaters/seasketch_db_base
   #       ports:
   #         - "5432:5432"
   #       env:

@@ -129,7 +129,7 @@ create or replace function get_supported_languages()
   language sql
   immutable
   as $$
-    select '{"simple": "simple", "english": "EN", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "greek": "el", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
+    select '{"simple": "simple", "english": "EN", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
   $$;
 
 create or replace function toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb)
@@ -239,11 +239,6 @@ CREATE INDEX if not exists fts_fr_idx ON table_of_contents_items USING GIN (fts_
 ALTER TABLE table_of_contents_items ADD COLUMN fts_de tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('german', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_de_idx ON table_of_contents_items USING GIN (fts_de);
-
--- greek
-ALTER TABLE table_of_contents_items ADD COLUMN fts_el tsvector
-    GENERATED ALWAYS AS (toc_to_tsvector('greek', title, metadata, translated_props)) STORED;
-CREATE INDEX if not exists fts_el_idx ON table_of_contents_items USING GIN (fts_el);
 
 -- indonesian
 ALTER TABLE table_of_contents_items ADD COLUMN fts_id tsvector
