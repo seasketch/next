@@ -33,7 +33,7 @@ jobs:
       - name: Init docker db
         working-directory: ./packages/api
         env:
-          TEST_DB: postgres://postgres:password@host.docker.internal:5432/
+          TEST_DB: postgres://postgres:password@postgres:5432/
         run: |
           node tests/init_dockerdb.js
       - name: Run Tests
@@ -41,7 +41,7 @@ jobs:
         run: |
           npx jest --ci --reporters=default --reporters=jest-junit
         env:
-          TEST_DB: postgres://postgres:password@host.docker.internal:5432/
+          TEST_DB: postgres://postgres:password@postgres:5432/
           SES_EMAIL_SOURCE: do-not-reply@seasketch.org
       - uses: IgnusG/jest-report-action@v2.3.3
         if: always()
