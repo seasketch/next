@@ -275,15 +275,15 @@ ALTER TABLE table_of_contents_items ADD COLUMN if not exists fts_sv tsvector
     GENERATED ALWAYS AS (toc_to_tsvector('swedish', title, metadata, translated_props)) STORED;
 CREATE INDEX if not exists fts_sv_idx ON table_of_contents_items USING GIN (fts_sv);
 
-drop type if exists search_result;
-
-create type search_result as (
-  id int,
-  stable_id text,
-  title_headline text,
-  metadata_headline text,
-  is_folder boolean
-);
+IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'search_result') THEN
+  create type exists search_result as (
+    id int,
+    stable_id text,
+    title_headline text,
+    metadata_headline text,
+    is_folder boolean
+  );
+end if;
 
 create or replace function search_overlays(lang text, query text, "projectId" int, draft boolean, "limit" integer)
   returns setof search_result
