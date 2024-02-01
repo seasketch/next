@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: underbluewaters/seasketch_db_base
+        image: underbluewaters/seasketch_db_base:latest
         ports:
           - "5432:5432"
         env:
@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: underbluewaters/seasketch_db_base
+        image: underbluewaters/seasketch_db_base:latest
         ports:
           - "54321:5432"
         env:
@@ -166,7 +166,7 @@ jobs:
   #   # container: cypress/browsers:node16.5.0-chrome94-ff93
   #   services:
   #     postgres:
-  #       image: underbluewaters/seasketch_db_base
+  #       image: underbluewaters/seasketch_db_base:latest
   #       ports:
   #         - "5432:5432"
   #       env:
@@ -282,7 +282,7 @@ jobs:
   #   # container: cypress/browsers:node16.5.0-chrome94-ff93
   #   services:
   #     postgres:
-  #       image: underbluewaters/seasketch_db_base
+  #       image: underbluewaters/seasketch_db_base:latest
   #       ports:
   #         - "5432:5432"
   #       env:
