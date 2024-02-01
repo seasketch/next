@@ -11,6 +11,7 @@ jobs:
           - "5432:5432"
         env:
           POSTGRES_PASSWORD: password
+          POSTGRES_HOST_AUTH_METHOD: trust
       redis:
         image: "redis:alpine"
         ports:
@@ -27,10 +28,12 @@ jobs:
       - name: Install dependencies
         run: |
           npx lerna bootstrap --ci
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: true
       - name: Init docker db
         working-directory: ./packages/api
         env:
-          TEST_DB: postgres://postgres:password@localhost:5432/
+          TEST_DB: postgres://postgres:password@host.docker.internal:5432/
         run: |
           node tests/init_dockerdb.js
       - name: Run Tests
@@ -38,7 +41,7 @@ jobs:
         run: |
           npx jest --ci --reporters=default --reporters=jest-junit
         env:
-          TEST_DB: postgres://postgres:password@localhost:5432/
+          TEST_DB: postgres://postgres:password@host.docker.internal:5432/
           SES_EMAIL_SOURCE: do-not-reply@seasketch.org
       - uses: IgnusG/jest-report-action@v2.3.3
         if: always()
