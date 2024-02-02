@@ -495,73 +495,17 @@ export default function LayerTableOfContentsItemEditor(
                               </a>
                             )}
                             {source?.importType ===
-                              DataSourceImportTypes.Upload &&
-                              (source.uploadedSourceFilename || "User Upload")}
+                              DataSourceImportTypes.Upload && (
+                              <UploadedSourceName
+                                filename={source.uploadedSourceFilename!}
+                                primaryDownloadUrl={
+                                  data.tableOfContentsItem?.primaryDownloadUrl!
+                                }
+                              />
+                            )}
                           </>
                         }
                       />
-                      {source.geostats &&
-                        source.geostats.attributes &&
-                        Array.isArray(source.geostats.attributes) && (
-                          <SettingsDLListItem
-                            term={t("Columns")}
-                            description={
-                              <>
-                                {(
-                                  source.geostats.attributes as {
-                                    type: string;
-                                    count: number;
-                                    attribute: string;
-                                    values: any[];
-                                    max?: number;
-                                    min?: number;
-                                  }[]
-                                )
-                                  .slice(
-                                    0,
-                                    showMoreColumns
-                                      ? source.geostats.attributes.length
-                                      : 4
-                                  )
-                                  .map((attr) => {
-                                    return (
-                                      <div className="flex">
-                                        <div className="flex-1 italic">
-                                          {attr.attribute}{" "}
-                                          {attr.values.length && (
-                                            <div
-                                              className="inline-block cursor-help"
-                                              title={attr.values.join("\n")}
-                                            >
-                                              <DotsHorizontalIcon className="w-4 h-4 inline-block text-gray-500" />
-                                            </div>
-                                          )}
-                                        </div>
-                                        <div className="font-mono px-2">
-                                          {attr.type}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                {showMoreColumns === false &&
-                                  source.geostats.attributes.length > 4 && (
-                                    <button
-                                      className="underline py-1 text-primary-500"
-                                      onClick={() => setShowMoreColums(true)}
-                                    >
-                                      <Trans ns="admin:data">
-                                        Show{" "}
-                                        {(
-                                          source.geostats.attributes.length - 4
-                                        ).toString()}{" "}
-                                        more
-                                      </Trans>
-                                    </button>
-                                  )}
-                              </>
-                            }
-                          />
-                        )}
                     </SettingsDefinitionList>
                   </>
                 )}
@@ -923,4 +867,26 @@ export default function LayerTableOfContentsItemEditor(
       )}
     </div>
   );
+}
+
+function UploadedSourceName({
+  filename,
+  primaryDownloadUrl,
+}: {
+  filename?: string;
+  primaryDownloadUrl?: string;
+}) {
+  if (primaryDownloadUrl) {
+    return (
+      <a
+        className="text-primary-500 underline"
+        download={filename}
+        href={primaryDownloadUrl}
+      >
+        {filename}
+      </a>
+    );
+  } else {
+    return <span>{filename || "User upload"}</span>;
+  }
 }

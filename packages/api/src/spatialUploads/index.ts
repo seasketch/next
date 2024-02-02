@@ -199,8 +199,9 @@ export async function createDBRecordsForProcessedUpload(
           filename,
           url,
           is_original,
-          project_id
-        ) values ($1, $2, $3, $4, $5, $6, $7, $8)
+          project_id,
+          original_filename
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `,
       [
         dataSourceId,
@@ -211,6 +212,7 @@ export async function createDBRecordsForProcessedUpload(
         output.url,
         Boolean(output.isOriginal),
         projectId,
+        layer.filename,
       ]
     );
   }

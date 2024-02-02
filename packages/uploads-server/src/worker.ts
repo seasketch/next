@@ -42,8 +42,6 @@ export default {
 		const cacheKey = new Request(url.toString(), request);
 		const cache = caches.default;
 
-		console.log(`${request.method} object ${objectName}: ${request.url}`);
-
 		if (request.method === 'GET' || request.method === 'HEAD') {
 			if (objectName === '' || objectName.endsWith('/')) {
 				if (request.method == 'HEAD') {
@@ -63,11 +61,8 @@ export default {
 				// for future access
 				let cachedResponse = await cache.match(cacheKey);
 				if (cachedResponse) {
-					console.log(`Cache hit for: ${request.url}.`);
 					return cachedResponse;
 				}
-
-				console.log(`Response for request url: ${request.url} not present in cache. Fetching and caching request.`);
 
 				const object = await env.SSN_UPLOADS.get(objectName, {
 					range: request.headers,
@@ -80,8 +75,14 @@ export default {
 				const headers = new Headers();
 				object.writeHttpMetadata(headers);
 				headers.set('Cache-Control', 'public, max-age=31536000, immutable');
-				// TODO: limit in the future to prevent hot-linking
-				headers.set('Access-Control-Allow-Origin', '*');
+				const origin = request.headers.get('origin');
+				if (origin && isAllowedOrigin(origin)) {
+					headers.set('Access-Control-Allow-Origin', origin);
+				}
+				const downloadParam = url.searchParams.get('download');
+				if (downloadParam && downloadParam.length > 0) {
+					headers.set('Content-Disposition', `attachment; filename="${downloadParam}"`);
+				}
 				headers.set('etag', object.httpEtag);
 				if (object.range) {
 					// @ts-ignore
@@ -117,3 +118,27 @@ export default {
 		});
 	},
 };
+
+const allowedOrigins = ['localhost', '127.0.0.1', '*.seasketch.org'];
+
+function isAllowedOrigin(origin: string) {
+	// No origin provided, possibly a non-CORS request or server-to-server request
+	if (!origin) return false;
+
+	// Extract the domain from the origin
+	const domain = new URL(origin).hostname;
+
+	if (allowedOrigins.includes(domain)) {
+		return true;
+	}
+
+	const wildCardOrigins = allowedOrigins.filter((o) => o.startsWith('*.'));
+	for (const origin of wildCardOrigins) {
+		if (domain.endsWith(origin.slice(2))) {
+			return true;
+		}
+	}
+
+	// Origin does not match any allowed pattern
+	return false;
+}
