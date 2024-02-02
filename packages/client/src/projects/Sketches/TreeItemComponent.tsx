@@ -338,7 +338,7 @@ export default function TreeItemComponent({
         {sortable && canDrop && isOverCurrent && sortPlaceholder}
 
         <div
-          className={`label-container flex items-center text-sm space-x-0.5 flex-wrap ${classNames.label}`}
+          className={`label-container flex items-center text-sm space-x-0.5  ${classNames.label}`}
           style={{
             paddingTop: 5,
             paddingBottom: 5,
@@ -427,7 +427,7 @@ export default function TreeItemComponent({
             <label
               id={`${node.id}-label`}
               ref={isContextMenuTarget ? setLabelRef : undefined}
-              className={`px-1 cursor-pointer select-none ${
+              className={`px-1 cursor-pointer select-none truncate ${
                 error ? "text-red-600" : ""
               } ${isHidden ? "opacity-50" : ""}`}
               onClick={updateSelectionOnClick}
@@ -451,18 +451,18 @@ export default function TreeItemComponent({
               <EyeClosedIcon className="text-black opacity-50 hover:opacity-80" />
             </button>
           )}
-          {highlights?.[node.id]?.metadata &&
-            !Boolean(highlights?.[node.id]?.title?.length) && (
-              <>
-                <div style={{ flexBasis: "100%", height: 0 }}></div>
-                <div className="text-xs text-gray-500 pl-5">
-                  <SearchResultHighlights
-                    data={highlights[node.id].metadata!}
-                  />
-                </div>
-              </>
-            )}
         </div>
+        {highlights?.[node.id]?.metadata &&
+          !Boolean(highlights?.[node.id]?.title?.length) && (
+            <>
+              <div
+                style={{ marginLeft: 1 }}
+                className="text-xs text-gray-500 pl-6 truncate"
+              >
+                <SearchResultHighlights data={highlights[node.id].metadata!} />
+              </div>
+            </>
+          )}
         {children &&
           children.length > 0 &&
           isExpanded &&
