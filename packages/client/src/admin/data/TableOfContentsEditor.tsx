@@ -394,6 +394,7 @@ export default function TableOfContentsEditor() {
                 hiddenItems={hiddenItems}
                 onUnhide={onUnhide}
                 ariaLabel="Draft overlays"
+                sortable={!isFiltered}
                 onSortEnd={onSortEnd}
                 getContextMenuContent={(treeItemId, clickEvent) => {
                   const item =
