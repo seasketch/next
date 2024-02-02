@@ -2569,6 +2569,15 @@ export enum DataSourcesOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+export enum DataUploadOutputType {
+  FlatGeobuf = 'FLAT_GEOBUF',
+  GeoJson = 'GEO_JSON',
+  GeoTiff = 'GEO_TIFF',
+  Pmtiles = 'PMTILES',
+  Png = 'PNG',
+  ZippedShapefile = 'ZIPPED_SHAPEFILE'
+}
+
 export enum DataUploadState {
   AwaitingUpload = 'AWAITING_UPLOAD',
   Cartography = 'CARTOGRAPHY',
@@ -3976,6 +3985,14 @@ export type DismissFailedUploadPayload = {
 /** The output of our `dismissFailedUpload` mutation. */
 export type DismissFailedUploadPayloadDataUploadTaskEdgeArgs = {
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
+};
+
+export type DownloadOption = {
+  __typename?: 'DownloadOption';
+  isOriginal?: Maybe<Scalars['Boolean']>;
+  size?: Maybe<Scalars['BigInt']>;
+  type?: Maybe<DataUploadOutputType>;
+  url?: Maybe<Scalars['String']>;
 };
 
 
@@ -12033,6 +12050,8 @@ export type TableOfContentsItem = Node & {
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `DownloadOption`. */
+  downloadOptions?: Maybe<Array<DownloadOption>>;
   enableDownload: Scalars['Boolean'];
   ftsAr?: Maybe<Scalars['String']>;
   ftsDa?: Maybe<Scalars['String']>;
@@ -12098,6 +12117,22 @@ export type TableOfContentsItem = Node & {
   title: Scalars['String'];
   translatedProps: Scalars['JSON'];
   usesDynamicMetadata?: Maybe<Scalars['Boolean']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemDownloadOptionsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 /**
@@ -17171,7 +17206,7 @@ export type ProjectSlugExistsQuery = (
 
 export type OverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps' | 'hasMetadata'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps' | 'hasMetadata' | 'primaryDownloadUrl'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
@@ -17236,6 +17271,30 @@ export type SearchOverlaysQuery = (
     { __typename?: 'SearchResult' }
     & Pick<SearchResult, 'id' | 'metadataHeadline' | 'stableId' | 'titleHeadline' | 'isFolder'>
   )>> }
+);
+
+export type DataDownloadInfoQueryVariables = Exact<{
+  tocId: Scalars['Int'];
+}>;
+
+
+export type DataDownloadInfoQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'title' | 'translatedProps' | 'primaryDownloadUrl'>
+    & { downloadOptions?: Maybe<Array<(
+      { __typename?: 'DownloadOption' }
+      & Pick<DownloadOption, 'url' | 'type' | 'isOriginal' | 'size'>
+    )>>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'createdAt' | 'id' | 'type' | 'uploadedSourceFilename'>
+      )> }
+    )> }
+  )> }
 );
 
 export type ProjectListItemFragment = (
@@ -20153,6 +20212,7 @@ export const OverlayFragmentDoc = gql`
   geoprocessingReferenceId
   translatedProps
   hasMetadata
+  primaryDownloadUrl
 }
     `;
 export const DataSourceDetailsFragmentDoc = gql`
@@ -26175,6 +26235,59 @@ export function useSearchOverlaysLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type SearchOverlaysQueryHookResult = ReturnType<typeof useSearchOverlaysQuery>;
 export type SearchOverlaysLazyQueryHookResult = ReturnType<typeof useSearchOverlaysLazyQuery>;
 export type SearchOverlaysQueryResult = Apollo.QueryResult<SearchOverlaysQuery, SearchOverlaysQueryVariables>;
+export const DataDownloadInfoDocument = gql`
+    query DataDownloadInfo($tocId: Int!) {
+  tableOfContentsItem(id: $tocId) {
+    id
+    title
+    translatedProps
+    primaryDownloadUrl
+    downloadOptions {
+      url
+      type
+      isOriginal
+      size
+    }
+    dataLayer {
+      id
+      dataSource {
+        createdAt
+        id
+        type
+        uploadedSourceFilename
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useDataDownloadInfoQuery__
+ *
+ * To run a query within a React component, call `useDataDownloadInfoQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDataDownloadInfoQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDataDownloadInfoQuery({
+ *   variables: {
+ *      tocId: // value for 'tocId'
+ *   },
+ * });
+ */
+export function useDataDownloadInfoQuery(baseOptions: Apollo.QueryHookOptions<DataDownloadInfoQuery, DataDownloadInfoQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DataDownloadInfoQuery, DataDownloadInfoQueryVariables>(DataDownloadInfoDocument, options);
+      }
+export function useDataDownloadInfoLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DataDownloadInfoQuery, DataDownloadInfoQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DataDownloadInfoQuery, DataDownloadInfoQueryVariables>(DataDownloadInfoDocument, options);
+        }
+export type DataDownloadInfoQueryHookResult = ReturnType<typeof useDataDownloadInfoQuery>;
+export type DataDownloadInfoLazyQueryHookResult = ReturnType<typeof useDataDownloadInfoLazyQuery>;
+export type DataDownloadInfoQueryResult = Apollo.QueryResult<DataDownloadInfoQuery, DataDownloadInfoQueryVariables>;
 export const ProjectListingDocument = gql`
     query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
   projects: projectsConnection(
@@ -30364,6 +30477,7 @@ export const namedOperations = {
     ProjectSlugExists: 'ProjectSlugExists',
     PublishedTableOfContents: 'PublishedTableOfContents',
     SearchOverlays: 'SearchOverlays',
+    DataDownloadInfo: 'DataDownloadInfo',
     ProjectListing: 'ProjectListing',
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',

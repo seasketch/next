@@ -18,6 +18,7 @@ fragment Overlay on TableOfContentsItem {
   geoprocessingReferenceId
   translatedProps
   hasMetadata
+  primaryDownloadUrl
 }
 
 query PublishedTableOfContents($slug: String!) {
@@ -114,5 +115,29 @@ query SearchOverlays(
     stableId
     titleHeadline
     isFolder
+  }
+}
+
+query DataDownloadInfo($tocId: Int!) {
+  tableOfContentsItem(id: $tocId) {
+    id
+    title
+    translatedProps
+    primaryDownloadUrl
+    downloadOptions {
+      url
+      type
+      isOriginal
+      size
+    }
+    dataLayer {
+      id
+      dataSource {
+        createdAt
+        id
+        type
+        uploadedSourceFilename
+      }
+    }
   }
 }

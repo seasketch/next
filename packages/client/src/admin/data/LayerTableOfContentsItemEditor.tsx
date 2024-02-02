@@ -25,10 +25,7 @@ import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import InputBlock from "../../components/InputBlock";
 import GLStyleEditor from "./GLStyleEditor/GLStyleEditor";
-import {
-  ClipboardCopyIcon,
-  DotsHorizontalIcon,
-} from "@heroicons/react/outline";
+import { ClipboardCopyIcon } from "@heroicons/react/outline";
 import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 import {
   Tooltip,
@@ -414,8 +411,8 @@ export default function LayerTableOfContentsItemEditor(
               </div>
               <p className="text-sm text-gray-500 mt-1">
                 <Trans ns={["admin"]}>
-                  If enabled, users will be able to download this dataset in
-                  GeoJSON vector format using the context menu.
+                  If enabled, users will be able to download the original data
+                  file uploaded to SeaSketch.
                 </Trans>
               </p>
             </div>

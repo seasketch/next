@@ -11,6 +11,7 @@ import Legend from "../../dataLayers/Legend";
 import useCommonLegendProps from "../../dataLayers/useCommonLegendProps";
 import { TableOfContentsMetadataModalProvider } from "../../dataLayers/TableOfContentsMetadataModal";
 import { LayerEditingContextProvider } from "./LayerEditingContext";
+import { DataDownloadModalProvider } from "../../dataLayers/DataDownloadModal";
 
 export default function DataSettings() {
   const { path } = useRouteMatch();
@@ -30,47 +31,49 @@ export default function DataSettings() {
         <MapContext.Provider value={mapContext}>
           <TableOfContentsMetadataModalProvider>
             <LayerEditingContextProvider>
-              <Switch>
-                <Route path={`${path}`}>
-                  <DataUploadDropzone
-                    slug={slug}
-                    className="flex flex-row h-screen"
-                  >
-                    <div className="h-full w-128">
-                      <LayerAdminSidebar />
-                    </div>
-                    <div className="flex-1 h-full">
-                      {legendProps.items.length > 0 && (
-                        <Legend
-                          editable
-                          backdropBlur
-                          maxHeight={800}
-                          className="absolute ml-5 top-5 z-10"
-                          opacity={{}}
-                          zOrder={{}}
-                          map={mapContext.manager?.map}
-                          {...legendProps}
-                        />
-                      )}
-                      {data?.projectBySlug && (
-                        <MapboxMap
-                          bounds={
-                            data?.projectBySlug
-                              ? (bbox(data.projectBySlug.region.geojson) as [
-                                  number,
-                                  number,
-                                  number,
-                                  number
-                                ])
-                              : undefined
-                          }
-                          className="h-full"
-                        />
-                      )}
-                    </div>
-                  </DataUploadDropzone>
-                </Route>
-              </Switch>
+              <DataDownloadModalProvider>
+                <Switch>
+                  <Route path={`${path}`}>
+                    <DataUploadDropzone
+                      slug={slug}
+                      className="flex flex-row h-screen"
+                    >
+                      <div className="h-full w-128">
+                        <LayerAdminSidebar />
+                      </div>
+                      <div className="flex-1 h-full">
+                        {legendProps.items.length > 0 && (
+                          <Legend
+                            editable
+                            backdropBlur
+                            maxHeight={800}
+                            className="absolute ml-5 top-5 z-10"
+                            opacity={{}}
+                            zOrder={{}}
+                            map={mapContext.manager?.map}
+                            {...legendProps}
+                          />
+                        )}
+                        {data?.projectBySlug && (
+                          <MapboxMap
+                            bounds={
+                              data?.projectBySlug
+                                ? (bbox(data.projectBySlug.region.geojson) as [
+                                    number,
+                                    number,
+                                    number,
+                                    number
+                                  ])
+                                : undefined
+                            }
+                            className="h-full"
+                          />
+                        )}
+                      </div>
+                    </DataUploadDropzone>
+                  </Route>
+                </Switch>
+              </DataDownloadModalProvider>
             </LayerEditingContextProvider>
           </TableOfContentsMetadataModalProvider>
         </MapContext.Provider>

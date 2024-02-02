@@ -13,6 +13,10 @@ import {
 import { TableOfContentsMetadataModalContext } from "../../dataLayers/TableOfContentsMetadataModal";
 import Skeleton from "../../components/Skeleton";
 import { ArrowDownIcon, ArrowUpIcon } from "@radix-ui/react-icons";
+import { createPortal } from "react-dom";
+import DataDownloadModal, {
+  DataDownloadModalContext,
+} from "../../dataLayers/DataDownloadModal";
 const LazyAdminItems = React.lazy(
   () =>
     import(
@@ -37,6 +41,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
   ) => {
     const MenuType = type;
     const mapContext = useContext(MapContext);
+    const dataDownloadModalContext = useContext(DataDownloadModalContext);
 
     const [opacity, setOpacity] = useState(
       mapContext.layerStatesByTocStaticId[items[0]?.stableId]?.opacity || 1
@@ -84,6 +89,15 @@ export const TableOfContentsItemMenu = React.forwardRef<
             }
           : {})}
       >
+        {dataDownloadModalContext.dataDownloadModal &&
+          createPortal(
+            <DataDownloadModal
+              tocId={dataDownloadModalContext.dataDownloadModal}
+              //@ts-ignore
+              onRequestClose={dataDownloadModalContext.setDataDownloadModal}
+            />,
+            document.body
+          )}
         {!manager ||
           (!mapContext.ready && (
             <MenuType.Label>
@@ -132,6 +146,18 @@ export const TableOfContentsItemMenu = React.forwardRef<
                   >
                     <Trans ns="homepage">View metadata</Trans>
                   </MenuType.Item>
+                  {firstItem.enableDownload && firstItem.primaryDownloadUrl && (
+                    <MenuType.Item
+                      className={MenuBarItemClasses}
+                      onSelect={(e) => {
+                        dataDownloadModalContext.setDataDownloadModal(
+                          firstItem.id
+                        );
+                      }}
+                    >
+                      <Trans ns="homepage">Download...</Trans>
+                    </MenuType.Item>
+                  )}
                   <MenuType.Item
                     disabled={top}
                     className={MenuBarItemClasses}
@@ -210,5 +236,10 @@ export const TableOfContentsItemMenu = React.forwardRef<
 
 export type TocMenuItemType = Pick<
   TableOfContentsItem,
-  "stableId" | "isFolder" | "enableDownload" | "id" | "title"
+  | "stableId"
+  | "isFolder"
+  | "enableDownload"
+  | "id"
+  | "title"
+  | "primaryDownloadUrl"
 >;

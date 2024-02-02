@@ -260,6 +260,18 @@ CREATE TYPE public.data_upload_type AS ENUM (
 
 
 --
+-- Name: download_option; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.download_option AS (
+	type public.data_upload_output_type,
+	url text,
+	is_original boolean,
+	size bigint
+);
+
+
+--
 -- Name: email; Type: DOMAIN; Schema: public; Owner: -
 --
 
@@ -11216,6 +11228,33 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           where
             id = source_id
           returning id into copied_source_id;
+        -- copy data_upload_outputs
+        insert into data_upload_outputs (
+          data_source_id,
+          project_id,
+          type,
+          created_at,
+          url,
+          remote,
+          is_original,
+          size,
+          filename,
+          original_filename
+        ) select 
+            copied_source_id,
+            project_id,
+            type,
+            created_at,
+            url,
+            remote,
+            is_original,
+            size,
+            filename,
+            original_filename
+          from 
+            data_upload_outputs 
+          where 
+            data_source_id = source_id;
         -- update data_layers that should now reference the copy
         update 
           data_layers 
@@ -12916,6 +12955,38 @@ CREATE FUNCTION public.surveys_submitted_response_count(survey public.surveys) R
     AS $$
     select count(*)::int from survey_responses where survey_id = survey.id and is_draft = false and is_practice = false and archived = false;
 $$;
+
+
+--
+-- Name: table_of_contents_items_download_options(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_download_options(item public.table_of_contents_items) RETURNS SETOF public.download_option
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $_$
+    select
+      type,
+      (case when is_original then 
+        replace(url, 'tiles.seasketch.org', 'uploads.seasketch.org') || '?download=' || original_filename 
+      else 
+        replace(url, 'tiles.seasketch.org', 'uploads.seasketch.org') || '?download=' || substring(original_filename from '(.*)\.\w+$') || substring(url from '.*(\.\w+)$')
+      end) as url,
+      is_original,
+      size
+    from
+      data_upload_outputs
+    where
+      data_upload_outputs.data_source_id = (
+        select data_source_id from data_layers where data_layers.id = item.data_layer_id
+      );
+  $_$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_download_options(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_download_options(item public.table_of_contents_items) IS '@simpleCollections only';
 
 
 --
@@ -28710,6 +28781,14 @@ GRANT ALL ON FUNCTION public.surveys_responses_spatial_extent(survey public.surv
 
 REVOKE ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surveys) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surveys) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_download_options(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_download_options(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_download_options(item public.table_of_contents_items) TO anon;
 
 
 --

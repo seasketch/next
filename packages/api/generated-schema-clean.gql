@@ -3053,6 +3053,15 @@ enum DataSourceTypes {
   VIDEO
 }
 
+enum DataUploadOutputType {
+  FLAT_GEOBUF
+  GEO_JSON
+  GEO_TIFF
+  PMTILES
+  PNG
+  ZIPPED_SHAPEFILE
+}
+
 enum DataUploadState {
   AWAITING_UPLOAD
   CARTOGRAPHY
@@ -4645,6 +4654,13 @@ type DismissFailedUploadPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type DownloadOption {
+  isOriginal: Boolean
+  size: BigInt
+  type: DataUploadOutputType
+  url: String
 }
 
 scalar Email
@@ -13218,6 +13234,15 @@ type TableOfContentsItem implements Node {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+
+  """Reads and enables pagination through a set of `DownloadOption`."""
+  downloadOptions(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [DownloadOption!]
   enableDownload: Boolean!
   ftsAr: String
   ftsDa: String
