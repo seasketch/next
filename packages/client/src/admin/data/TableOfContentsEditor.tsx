@@ -413,9 +413,9 @@ export default function TableOfContentsEditor() {
                           x: clickEvent.clientX,
                           y: clickEvent.clientY,
                         }}
-                        top={sorted[0].tocId === item.stableId}
+                        top={sorted[0]?.tocId === item.stableId}
                         bottom={
-                          sorted[sorted.length - 1].tocId === item.stableId
+                          sorted[sorted.length - 1]?.tocId === item.stableId
                         }
                       />
                     );
