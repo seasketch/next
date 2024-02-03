@@ -1979,6 +1979,7 @@ class MapContextManager extends EventEmitter {
       isFolder: boolean;
       parentStableId?: string;
       enableDownload: boolean;
+      primaryDownloadUrl?: string;
     };
   } = {};
 
@@ -1996,6 +1997,7 @@ class MapContextManager extends EventEmitter {
       | "isFolder"
       | "parentStableId"
       | "enableDownload"
+      | "primaryDownloadUrl"
     >[]
   ) {
     this.clientDataSources = {};
@@ -2017,6 +2019,7 @@ class MapContextManager extends EventEmitter {
         stableId: item.stableId,
         id: item.id,
         enableDownload: Boolean(item.enableDownload),
+        primaryDownloadUrl: item.primaryDownloadUrl || undefined,
       };
       if (item.dataLayerId) {
         const layer = layersById[item.dataLayerId];
@@ -2746,6 +2749,7 @@ class MapContextManager extends EventEmitter {
             isFolder: Boolean(this.tocItems[id]?.isFolder),
             id: this.tocItems[id].id,
             title: this.tocItems[id].label || "Unknown",
+            primaryDownloadUrl: this.tocItems[id]?.primaryDownloadUrl,
           };
           const layer = this.layers[id];
           const source = this.clientDataSources[layer?.dataSourceId];
