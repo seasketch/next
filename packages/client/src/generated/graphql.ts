@@ -8746,11 +8746,6 @@ export type Project = Node & {
   forums: Array<Forum>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
-  /**
-   * Returns true if the project has any layers that have enable_download = true.
-   * Useful when used in conjunction with set_enable_download_for_all_overlays()
-   */
-  hasDownloadableLayers?: Maybe<Scalars['Boolean']>;
   hideForums: Scalars['Boolean'];
   hideOverlays: Scalars['Boolean'];
   hideSketches: Scalars['Boolean'];

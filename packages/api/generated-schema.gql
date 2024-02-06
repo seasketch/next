@@ -9916,12 +9916,6 @@ type Project implements Node {
     """The method to use when ordering `Group`."""
     orderBy: [GroupsOrderBy!]
   ): [Group!]!
-
-  """
-  Returns true if the project has any layers that have enable_download = true.
-  Useful when used in conjunction with set_enable_download_for_all_overlays()
-  """
-  hasDownloadableLayers: Boolean
   hideForums: Boolean!
   hideOverlays: Boolean!
   hideSketches: Boolean!
