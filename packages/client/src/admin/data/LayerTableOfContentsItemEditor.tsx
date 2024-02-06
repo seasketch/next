@@ -389,15 +389,19 @@ export default function LayerTableOfContentsItemEditor(
             source?.type === DataSourceTypes.SeasketchMvt) && (
             <div className="mt-5">
               <div className="flex">
-                <div className="flex-1 text-sm font-medium text-gray-700">
+                <div className={`flex-1 text-sm font-medium text-gray-700`}>
                   <Trans ns={["admin"]}>Enable data download</Trans>
                 </div>
                 <div className="flex-none">
                   <Switch
+                    disabled={
+                      !Boolean(data.tableOfContentsItem?.primaryDownloadUrl)
+                    }
                     isToggled={
-                      downloadEnabled === undefined
+                      Boolean(data.tableOfContentsItem?.primaryDownloadUrl) &&
+                      (downloadEnabled === undefined
                         ? item.enableDownload
-                        : downloadEnabled
+                        : downloadEnabled)
                     }
                     onClick={() =>
                       setDownloadEnabled(
@@ -409,12 +413,26 @@ export default function LayerTableOfContentsItemEditor(
                   />
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                <Trans ns={["admin"]}>
-                  If enabled, users will be able to download the original data
-                  file uploaded to SeaSketch.
-                </Trans>
-              </p>
+              {Boolean(data.tableOfContentsItem?.primaryDownloadUrl) ? (
+                <p className="text-sm text-gray-500 mt-1">
+                  <Trans ns={["admin"]}>
+                    If enabled, users will be able to download the original data
+                    file uploaded to SeaSketch.
+                  </Trans>
+                </p>
+              ) : (
+                <div className="flex border p-2 mt-1 items-center space-x-4 rounded">
+                  <ExclamationTriangleIcon className="h-24 w-24 px-2 text-gray-500" />
+                  <p className="text-sm text-gray-500">
+                    <Trans ns={["admin"]}>
+                      Data download cannot be enabled because the original is
+                      not available. SeaSketch only recently began storing
+                      original uploaded files, so older data layers may need to
+                      be uploaded again to support this capability.
+                    </Trans>
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
