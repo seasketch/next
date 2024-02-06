@@ -10307,7 +10307,7 @@ when users request layers be displayed on the map.
 CREATE FUNCTION public.projects_downloadable_layers_count(p public.projects) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(id) from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
+    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
   $$;
 
 
@@ -10345,7 +10345,7 @@ then use the `publishTableOfContents` mutation when it is ready for end-users.
 CREATE FUNCTION public.projects_eligable_downloadable_layers_count(p public.projects) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(id) from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = false and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
+    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = false and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
   $$;
 
 
