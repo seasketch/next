@@ -4,8 +4,10 @@ import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import {
+  useDisableDownloadForSharedLayersMutation,
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
+  useEnableDownloadForEligibleLayersMutation,
   useLayersAndSourcesForItemsQuery,
   useUpdateTableOfContentsItemChildrenMutation,
 } from "../../generated/graphql";
@@ -25,6 +27,7 @@ import {
   MenuBarLabel,
   MenuBarSeparator,
   MenuBarSubmenu,
+  MenubarCheckboxItem,
   MenubarRadioItem,
   MenubarTrigger,
 } from "../../components/Menubar";
@@ -42,6 +45,10 @@ import * as ContextMenu from "@radix-ui/react-context-menu";
 import useOverlaySearchState from "../../dataLayers/useOverlaySearchState";
 import SearchResultsMessages from "../../dataLayers/SearchResultsMessages";
 import OverlaySearchInput from "../../dataLayers/OverlaySearchInput";
+import DataDownloadDefaultSettingModal from "./DataDownloadDefaultSettingModal";
+import getSlug from "../../getSlug";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import useDialog from "../../components/useDialog";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -333,6 +340,12 @@ export default function TableOfContentsEditor() {
       )}
       {tocQuery.data?.projectBySlug?.id && (
         <Header
+          sharedLayersCount={
+            tocQuery.data?.projectBySlug?.downloadableLayersCount || 0
+          }
+          eligibleLayersCount={
+            tocQuery.data?.projectBySlug?.eligableDownloadableLayersCount || 0
+          }
           searchLoading={searching}
           search={search}
           onSearchChange={setSearch}
@@ -496,6 +509,8 @@ function Header({
   search,
   onSearchChange,
   searchLoading,
+  sharedLayersCount,
+  eligibleLayersCount: eligableLayersCount,
 }: {
   selectedView: string;
   setSelectedView: (view: string) => void;
@@ -511,9 +526,29 @@ function Header({
   onSearchChange?: (search: string) => void;
   search?: string;
   searchLoading?: boolean;
+  sharedLayersCount: number;
+  eligibleLayersCount: number;
 }) {
   const uploadContext = useContext(DataUploadDropzoneContext);
   const { t } = useTranslation("admin:data");
+  const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
+  const onError = useGlobalErrorHandler();
+  const [enableDownload, enableDownloadState] =
+    useEnableDownloadForEligibleLayersMutation({
+      variables: {
+        slug: getSlug(),
+      },
+      onError,
+    });
+  const [disableDownload, disableDownloadState] =
+    useDisableDownloadForSharedLayersMutation({
+      variables: {
+        slug: getSlug(),
+      },
+      onError,
+    });
+
+  const { confirm, prompt } = useDialog();
   return (
     <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
       <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
@@ -603,6 +638,65 @@ function Header({
                   {t("Esri ArcGIS Service...")}
                 </MenuBarItem>
               </MenuBarSubmenu>
+              <MenuBarSeparator />
+              <MenuBarLabel>
+                <Trans ns="admin:data">Data download</Trans>
+              </MenuBarLabel>
+              <MenuBarItem
+                onClick={async () => {
+                  if (
+                    await confirm(
+                      "Are you sure you want to enable data download for all eligible layers?",
+                      {
+                        description:
+                          "You will need to publish the table of contents for this change to take effect.",
+
+                        onSubmit: async () => {
+                          await enableDownload();
+                          return;
+                        },
+                      }
+                    )
+                  ) {
+                  }
+                }}
+                disabled={eligableLayersCount === 0}
+              >
+                {t(`Enable for ${eligableLayersCount || ""} eligible layers`)}
+              </MenuBarItem>
+              <MenuBarItem
+                onClick={async () => {
+                  if (
+                    await confirm(
+                      "Are you sure you want to disable data download for all layers?",
+                      {
+                        description:
+                          "You will need to publish the table of contents for this change to take effect.",
+                        onSubmit: async () => {
+                          await disableDownload();
+                          return;
+                        },
+                      }
+                    )
+                  ) {
+                  }
+                }}
+                disabled={sharedLayersCount === 0}
+              >
+                {t(`Disable for ${sharedLayersCount || ""} shared layers`)}
+              </MenuBarItem>
+            </MenuBarContent>
+          </Menubar.Portal>
+        </Menubar.Menu>
+        <Menubar.Menu>
+          <MenubarTrigger>{t("Settings")}</MenubarTrigger>
+          <Menubar.Portal>
+            <MenuBarContent>
+              <Menubar.MenubarGroup>
+                <MenuBarItem onClick={() => setDataDownloadSettingOpen(true)}>
+                  <Trans ns="admin:data">Data download...</Trans>
+                </MenuBarItem>
+              </Menubar.MenubarGroup>
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
@@ -653,6 +747,11 @@ function Header({
           </Tooltip.Provider>
         </div>
       </Menubar.Root>
+      {dataDownloadSettingOpen && (
+        <DataDownloadDefaultSettingModal
+          onRequestClose={() => setDataDownloadSettingOpen(false)}
+        />
+      )}
     </header>
   );
 }

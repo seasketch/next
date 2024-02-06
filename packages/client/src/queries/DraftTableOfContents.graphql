@@ -10,6 +10,8 @@ query DraftTableOfContents($slug: String!) {
       ...Overlay
     }
     importedArcgisServices
+    downloadableLayersCount
+    eligableDownloadableLayersCount
   }
 }
 
@@ -211,6 +213,7 @@ query GetLayerItem($id: Int!) {
     enableDownload
     geoprocessingReferenceId
     primaryDownloadUrl
+    hasOriginalSourceUpload
     dataLayer {
       id
       zIndex
@@ -308,6 +311,11 @@ mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
     tableOfContentsItem {
       id
       enableDownload
+      project {
+        id
+        downloadableLayersCount
+        eligableDownloadableLayersCount
+      }
     }
   }
 }
@@ -589,6 +597,52 @@ mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
     dataSource {
       id
       maxzoom
+    }
+  }
+}
+
+query ProjectDownloadSetting($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    enableDownloadByDefault
+    downloadableLayersCount
+  }
+}
+
+mutation UpdateEnableDownloadByDefault(
+  $projectId: Int!
+  $enableDownload: Boolean
+) {
+  updateProject(
+    input: {
+      id: $projectId
+      patch: { enableDownloadByDefault: $enableDownload }
+    }
+  ) {
+    project {
+      id
+      enableDownloadByDefault
+      downloadableLayersCount
+    }
+  }
+}
+
+mutation EnableDownloadForEligibleLayers($slug: String!) {
+  enableDownloadForEligibleLayers(input: { slug: $slug }) {
+    project {
+      id
+      downloadableLayersCount
+      eligableDownloadableLayersCount
+    }
+  }
+}
+
+mutation DisableDownloadForSharedLayers($slug: String!) {
+  disableDownloadForSharedLayers(input: { slug: $slug }) {
+    project {
+      id
+      downloadableLayersCount
+      eligableDownloadableLayersCount
     }
   }
 }

@@ -3929,6 +3929,39 @@ export type DenyParticipantPayloadUserEdgeArgs = {
   orderBy?: Maybe<Array<UsersOrderBy>>;
 };
 
+/** All input for the `disableDownloadForSharedLayers` mutation. */
+export type DisableDownloadForSharedLayersInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `disableDownloadForSharedLayers` mutation. */
+export type DisableDownloadForSharedLayersPayload = {
+  __typename?: 'DisableDownloadForSharedLayersPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `disableDownloadForSharedLayers` mutation. */
+export type DisableDownloadForSharedLayersPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 /** All input for the `disableForumPosting` mutation. */
 export type DisableForumPostingInput = {
   /**
@@ -4103,6 +4136,39 @@ export enum EmailVerificationStatus {
   /** The email address is already verified */
   Verified = 'VERIFIED'
 }
+
+/** All input for the `enableDownloadForEligibleLayers` mutation. */
+export type EnableDownloadForEligibleLayersInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `enableDownloadForEligibleLayers` mutation. */
+export type EnableDownloadForEligibleLayersPayload = {
+  __typename?: 'EnableDownloadForEligibleLayersPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `enableDownloadForEligibleLayers` mutation. */
+export type EnableDownloadForEligibleLayersPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
 
 /** All input for the `enableForumPosting` mutation. */
 export type EnableForumPostingInput = {
@@ -6386,9 +6452,11 @@ export type Mutation = {
   /** Deletes a single `Topic` using its globally unique id. */
   deleteTopicByNodeId?: Maybe<DeleteTopicPayload>;
   denyParticipant?: Maybe<DenyParticipantPayload>;
+  disableDownloadForSharedLayers?: Maybe<DisableDownloadForSharedLayersPayload>;
   /** Ban a user from posting in the discussion forum */
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
   dismissFailedUpload?: Maybe<DismissFailedUploadPayload>;
+  enableDownloadForEligibleLayers?: Maybe<EnableDownloadForEligibleLayersPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
@@ -6473,6 +6541,11 @@ export type Mutation = {
    * Returns the same inviteId if successful.
    */
   sendSurveyInviteReminder?: Maybe<Scalars['Int']>;
+  /**
+   * Sets the enable_download flag for all overlays in a project. Note this is only
+   * applied to draft items, so will require a publish to impact project users.
+   */
+  setEnableDownloadForAllOverlays?: Maybe<SetEnableDownloadForAllOverlaysPayload>;
   setFormElementBackground: FormElement;
   /**
    * Sets the positions of all elements in a form at once. Any missing element ids from
@@ -7367,6 +7440,12 @@ export type MutationDenyParticipantArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDisableDownloadForSharedLayersArgs = {
+  input: DisableDownloadForSharedLayersInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDisableForumPostingArgs = {
   input: DisableForumPostingInput;
 };
@@ -7375,6 +7454,12 @@ export type MutationDisableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDismissFailedUploadArgs = {
   input: DismissFailedUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationEnableDownloadForEligibleLayersArgs = {
+  input: EnableDownloadForEligibleLayersInput;
 };
 
 
@@ -7548,6 +7633,12 @@ export type MutationSendProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendSurveyInviteReminderArgs = {
   inviteId: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetEnableDownloadForAllOverlaysArgs = {
+  input: SetEnableDownloadForAllOverlaysInput;
 };
 
 
@@ -8635,12 +8726,20 @@ export type Project = Node & {
   dataUploadTasksConnection: DataUploadTasksConnection;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  downloadableLayersCount?: Maybe<Scalars['Int']>;
   draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
    * then use the `publishTableOfContents` mutation when it is ready for end-users.
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+  eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
+  /**
+   * When true, overlay layers will be available for download by end-users if they
+   * have access to the layer and the data source supports it. This can be
+   * controlled on a per-layer basis.
+   */
+  enableDownloadByDefault: Scalars['Boolean'];
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
   /** Reads and enables pagination through a set of `Group`. */
@@ -9370,6 +9469,12 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  /**
+   * When true, overlay layers will be available for download by end-users if they
+   * have access to the layer and the data source supports it. This can be
+   * controlled on a per-layer basis.
+   */
+  enableDownloadByDefault?: Maybe<Scalars['Boolean']>;
   hideForums?: Maybe<Scalars['Boolean']>;
   hideOverlays?: Maybe<Scalars['Boolean']>;
   hideSketches?: Maybe<Scalars['Boolean']>;
@@ -10827,6 +10932,30 @@ export type SendVerificationEmailResults = {
   success: Scalars['Boolean'];
 };
 
+/** All input for the `setEnableDownloadForAllOverlays` mutation. */
+export type SetEnableDownloadForAllOverlaysInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enable?: Maybe<Scalars['Boolean']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `setEnableDownloadForAllOverlays` mutation. */
+export type SetEnableDownloadForAllOverlaysPayload = {
+  __typename?: 'SetEnableDownloadForAllOverlaysPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
 /** All input for the `setFormElementOrder` mutation. */
 export type SetFormElementOrderInput = {
   /**
@@ -12069,6 +12198,7 @@ export type TableOfContentsItem = Node & {
   ftsSv?: Maybe<Scalars['String']>;
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hasMetadata?: Maybe<Scalars['Boolean']>;
+  hasOriginalSourceUpload?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
@@ -15676,7 +15806,7 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'importedArcgisServices'>
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'importedArcgisServices' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -15818,7 +15948,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl'>
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -15877,6 +16007,10 @@ export type UpdateEnableDownloadMutation = (
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'enableDownload'>
+      & { project?: Maybe<(
+        { __typename?: 'Project' }
+        & Pick<Project, 'id' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
+      )> }
     )> }
   )> }
 );
@@ -16181,6 +16315,68 @@ export type SetMaxZoomMutation = (
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
       & Pick<DataSource, 'id' | 'maxzoom'>
+    )> }
+  )> }
+);
+
+export type ProjectDownloadSettingQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectDownloadSettingQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'enableDownloadByDefault' | 'downloadableLayersCount'>
+  )> }
+);
+
+export type UpdateEnableDownloadByDefaultMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  enableDownload?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type UpdateEnableDownloadByDefaultMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'enableDownloadByDefault' | 'downloadableLayersCount'>
+    )> }
+  )> }
+);
+
+export type EnableDownloadForEligibleLayersMutationVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type EnableDownloadForEligibleLayersMutation = (
+  { __typename?: 'Mutation' }
+  & { enableDownloadForEligibleLayers?: Maybe<(
+    { __typename?: 'EnableDownloadForEligibleLayersPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
+    )> }
+  )> }
+);
+
+export type DisableDownloadForSharedLayersMutationVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DisableDownloadForSharedLayersMutation = (
+  { __typename?: 'Mutation' }
+  & { disableDownloadForSharedLayers?: Maybe<(
+    { __typename?: 'DisableDownloadForSharedLayersPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
     )> }
   )> }
 );
@@ -21520,6 +21716,8 @@ export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
       ...Overlay
     }
     importedArcgisServices
+    downloadableLayersCount
+    eligableDownloadableLayersCount
   }
 }
     ${OverlayFragmentDoc}`;
@@ -21688,6 +21886,7 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
     enableDownload
     geoprocessingReferenceId
     primaryDownloadUrl
+    hasOriginalSourceUpload
     dataLayer {
       id
       zIndex
@@ -21773,6 +21972,11 @@ export const UpdateEnableDownloadDocument = /*#__PURE__*/ gql`
     tableOfContentsItem {
       id
       enableDownload
+      project {
+        id
+        downloadableLayersCount
+        eligableDownloadableLayersCount
+      }
     }
   }
 }
@@ -22025,6 +22229,50 @@ export const SetMaxZoomDocument = /*#__PURE__*/ gql`
     dataSource {
       id
       maxzoom
+    }
+  }
+}
+    `;
+export const ProjectDownloadSettingDocument = /*#__PURE__*/ gql`
+    query ProjectDownloadSetting($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    enableDownloadByDefault
+    downloadableLayersCount
+  }
+}
+    `;
+export const UpdateEnableDownloadByDefaultDocument = /*#__PURE__*/ gql`
+    mutation UpdateEnableDownloadByDefault($projectId: Int!, $enableDownload: Boolean) {
+  updateProject(
+    input: {id: $projectId, patch: {enableDownloadByDefault: $enableDownload}}
+  ) {
+    project {
+      id
+      enableDownloadByDefault
+      downloadableLayersCount
+    }
+  }
+}
+    `;
+export const EnableDownloadForEligibleLayersDocument = /*#__PURE__*/ gql`
+    mutation EnableDownloadForEligibleLayers($slug: String!) {
+  enableDownloadForEligibleLayers(input: {slug: $slug}) {
+    project {
+      id
+      downloadableLayersCount
+      eligableDownloadableLayersCount
+    }
+  }
+}
+    `;
+export const DisableDownloadForSharedLayersDocument = /*#__PURE__*/ gql`
+    mutation DisableDownloadForSharedLayers($slug: String!) {
+  disableDownloadForSharedLayers(input: {slug: $slug}) {
+    project {
+      id
+      downloadableLayersCount
+      eligableDownloadableLayersCount
     }
   }
 }
@@ -24098,6 +24346,7 @@ export const namedOperations = {
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
+    ProjectDownloadSetting: 'ProjectDownloadSetting',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
@@ -24211,6 +24460,9 @@ export const namedOperations = {
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',
     SetMaxZoom: 'SetMaxZoom',
+    UpdateEnableDownloadByDefault: 'UpdateEnableDownloadByDefault',
+    EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',
+    DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

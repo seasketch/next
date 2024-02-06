@@ -1,6 +1,10 @@
 import { ReactNode } from "react";
 import * as Menubar from "@radix-ui/react-menubar";
-import { ChevronRightIcon, DotFilledIcon } from "@radix-ui/react-icons";
+import {
+  CheckIcon,
+  ChevronRightIcon,
+  DotFilledIcon,
+} from "@radix-ui/react-icons";
 
 export function MenubarTrigger({ children }: { children?: ReactNode }) {
   return (
@@ -27,6 +31,26 @@ export function MenubarRadioItem({
       </Menubar.ItemIndicator>
       {children}
     </Menubar.RadioItem>
+  );
+}
+
+export function MenubarCheckboxItem({
+  children,
+  checked,
+}: {
+  children?: ReactNode;
+  checked?: boolean;
+}) {
+  return (
+    <Menubar.CheckboxItem
+      checked={checked}
+      className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none pl-5 outline-none "
+    >
+      <Menubar.ItemIndicator className="absolute left-0 w-5 inline-flex items-center justify-center">
+        <CheckIcon />
+      </Menubar.ItemIndicator>
+      {children}
+    </Menubar.CheckboxItem>
   );
 }
 

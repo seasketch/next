@@ -103,6 +103,7 @@ export default function useDialog() {
           description?: string;
           icon?: "alert" | "delete";
           primaryButtonText?: string;
+          onSubmit?: (value: string) => void | Promise<string | void>;
         }
       ): Promise<boolean> => {
         return new Promise((resolve, reject) => {
@@ -111,7 +112,7 @@ export default function useDialog() {
             open: true,
             description: options?.description,
             message: message,
-            onSubmit: () => resolve(true),
+            onSubmit: options?.onSubmit,
             onCancel: () => resolve(false),
             submitting: false,
             primaryButtonText: options?.primaryButtonText,
@@ -170,7 +171,7 @@ const UseDialogContext = createContext<{
   setState: Dispatch<SetStateAction<DialogContextState>>;
 }>({
   state: ResetState,
-  setState: () => { },
+  setState: () => {},
 });
 
 export function DialogProvider({ children }: { children?: ReactNode }) {
@@ -228,7 +229,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
             state.type === "loading"
               ? []
               : state.type === "alert"
-                ? [
+              ? [
                   {
                     disabled: false,
                     label: state.primaryButtonText || t("OK"),
@@ -238,60 +239,60 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                     autoFocus: true,
                   },
                 ]
-                : state.type === "confirm"
-                  ? [
-                    {
-                      disabled: state.submitting,
-                      label: state.primaryButtonText || t("OK"),
-                      onClick: onSubmit,
-                      variant: state.primaryButtonVariant || "primary",
-                      loading: state.submitting,
-                      autoFocus: true,
+              : state.type === "confirm"
+              ? [
+                  {
+                    disabled: state.submitting,
+                    label: state.primaryButtonText || t("OK"),
+                    onClick: onSubmit,
+                    variant: state.primaryButtonVariant || "primary",
+                    loading: state.submitting,
+                    autoFocus: true,
+                  },
+                  {
+                    disabled: state.submitting,
+                    label: t("Cancel"),
+                    onClick: () => {
+                      if (state.onCancel) {
+                        state.onCancel();
+                      }
+                      reset();
                     },
-                    {
-                      disabled: state.submitting,
-                      label: t("Cancel"),
-                      onClick: () => {
-                        if (state.onCancel) {
-                          state.onCancel();
-                        }
-                        reset();
-                      },
+                  },
+                ]
+              : state.type === "choice"
+              ? [
+                  {
+                    disabled: state.submitting,
+                    label: t("Cancel"),
+                    onClick: () => {
+                      if (state.onCancel) {
+                        state.onCancel();
+                      }
+                      reset();
                     },
-                  ]
-                  : state.type === "choice"
-                    ? [
-                      {
-                        disabled: state.submitting,
-                        label: t("Cancel"),
-                        onClick: () => {
-                          if (state.onCancel) {
-                            state.onCancel();
-                          }
-                          reset();
-                        },
-                      },
-                    ]
-                    : [
-                      {
-                        disabled: state.submitting,
-                        label: state.primaryButtonText || t("Submit"),
-                        onClick: onSubmit,
-                        variant: state.primaryButtonVariant || "primary",
-                        loading: state.submitting,
-                        autoFocus: true,
-                      },
-                      {
-                        disabled: state.submitting,
-                        label: t("Cancel"),
-                        onClick: () => {
-                          if (state.onCancel) {
-                            state.onCancel();
-                          }
-                          reset();
-                        },
-                      },
-                    ]
+                  },
+                ]
+              : [
+                  {
+                    disabled: state.submitting,
+                    label: state.primaryButtonText || t("Submit"),
+                    onClick: onSubmit,
+                    variant: state.primaryButtonVariant || "primary",
+                    loading: state.submitting,
+                    autoFocus: true,
+                  },
+                  {
+                    disabled: state.submitting,
+                    label: t("Cancel"),
+                    onClick: () => {
+                      if (state.onCancel) {
+                        state.onCancel();
+                      }
+                      reset();
+                    },
+                  },
+                ]
           }
         >
           <div className="">
