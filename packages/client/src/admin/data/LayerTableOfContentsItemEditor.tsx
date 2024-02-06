@@ -395,10 +395,14 @@ export default function LayerTableOfContentsItemEditor(
                 <div className="flex-none">
                   <Switch
                     disabled={
-                      !Boolean(data.tableOfContentsItem?.primaryDownloadUrl)
+                      !Boolean(
+                        data.tableOfContentsItem?.hasOriginalSourceUpload
+                      )
                     }
                     isToggled={
-                      Boolean(data.tableOfContentsItem?.primaryDownloadUrl) &&
+                      Boolean(
+                        data.tableOfContentsItem?.hasOriginalSourceUpload
+                      ) &&
                       (downloadEnabled === undefined
                         ? item.enableDownload
                         : downloadEnabled)
@@ -413,7 +417,7 @@ export default function LayerTableOfContentsItemEditor(
                   />
                 </div>
               </div>
-              {Boolean(data.tableOfContentsItem?.primaryDownloadUrl) ? (
+              {Boolean(data.tableOfContentsItem?.hasOriginalSourceUpload) ? (
                 <p className="text-sm text-gray-500 mt-1">
                   <Trans ns={["admin"]}>
                     If enabled, users will be able to download the original data

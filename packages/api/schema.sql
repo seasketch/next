@@ -3209,6 +3209,7 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
       new.sort_index = (select coalesce(max(sort_index), -1) + 1 from table_of_contents_items where is_draft = true and project_id = new.project_id and parent_stable_id = new.parent_stable_id or (parent_stable_id is null and new.parent_stable_id is null));
     end if;
     if old is null and new.is_draft = true then -- inserting
+      new.enable_download = (select enable_download_by_default from projects where id = new.project_id);
       -- verify that stable_id is unique among draft items
       if (select count(id) from table_of_contents_items where stable_id = new.stable_id and is_draft = true) > 0 then
         raise '% is not a unique stable_id.', new.stable_id;
@@ -5392,6 +5393,7 @@ CREATE TABLE public.projects (
     hide_forums boolean DEFAULT false NOT NULL,
     hide_sketches boolean DEFAULT false NOT NULL,
     hide_overlays boolean DEFAULT false NOT NULL,
+    enable_download_by_default boolean DEFAULT false NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -5494,6 +5496,13 @@ COMMENT ON COLUMN public.projects.mapbox_secret_key IS '
 --
 
 COMMENT ON COLUMN public.projects.data_hosting_quota IS '@omit';
+
+
+--
+-- Name: COLUMN projects.enable_download_by_default; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.enable_download_by_default IS 'When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis.';
 
 
 --
@@ -6996,6 +7005,34 @@ CREATE FUNCTION public.deny_participant("projectId" integer, "userId" integer) R
 
 
 --
+-- Name: disable_download_for_shared_layers(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.disable_download_for_shared_layers(slug text) RETURNS public.projects
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+      project projects;
+    begin
+    update table_of_contents_items set enable_download = false
+    where table_of_contents_items.project_id = (select id from projects where projects.slug = disable_download_for_shared_layers.slug)
+    and table_of_contents_items.is_draft = true
+    and table_of_contents_items.is_folder = false;
+    select 
+        * 
+      from 
+        projects 
+      into 
+        project
+      where 
+        projects.slug = disable_download_for_shared_layers.slug 
+      limit 1;
+      return project;
+    end;
+  $$;
+
+
+--
 -- Name: disable_forum_posting(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7084,6 +7121,45 @@ CREATE FUNCTION public.email_unsubscribed(email text) RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.email_unsubscribed(email text) IS '@omit';
+
+
+--
+-- Name: enable_download_for_eligible_layers(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enable_download_for_eligible_layers(slug text) RETURNS public.projects
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+      project projects;
+    begin    
+      update 
+        table_of_contents_items 
+      set enable_download = true
+      where 
+        table_of_contents_items.project_id = (
+          select 
+            id 
+          from 
+            projects 
+          where 
+            projects.slug = enable_download_for_eligible_layers.slug
+        ) and 
+        table_of_contents_items.is_draft = true and
+        table_of_contents_items.is_folder = false;
+      
+      select 
+        * 
+      from 
+        projects 
+      into 
+        project
+      where 
+        projects.slug = enable_download_for_eligible_layers.slug 
+      limit 1;
+      return project;
+    end;
+  $$;
 
 
 --
@@ -8266,7 +8342,6 @@ CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, tr
       if supported_languages->>lang is null then
         raise exception 'Language % not supported', lang;
       end if;
-      raise notice 'langkey: %, lang %', langkey, lang;
       -- TODO: add support for translating metadata
       if lang = 'simple' THEN
         -- The simple index matches against absolutely everything in
@@ -8293,8 +8368,6 @@ CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, tr
             'B')
           );
       else
-        raise notice 'Using language-specific index for %', lang;
-        raise notice 'found title %', translated_props->langkey->>'title'::text;
         return (
           setweight(
               to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
@@ -10228,6 +10301,17 @@ when users request layers be displayed on the map.
 
 
 --
+-- Name: projects_downloadable_layers_count(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_downloadable_layers_count(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+    select count(id) from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
+  $$;
+
+
+--
 -- Name: projects_draft_table_of_contents_items(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10252,6 +10336,35 @@ COMMENT ON FUNCTION public.projects_draft_table_of_contents_items(p public.proje
 Draft layer lists, accessible only to admins. Make edits to the layer list and
 then use the `publishTableOfContents` mutation when it is ready for end-users.
 ';
+
+
+--
+-- Name: projects_eligable_downloadable_layers_count(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_eligable_downloadable_layers_count(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+    select count(id) from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = false and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
+  $$;
+
+
+--
+-- Name: projects_has_downloadable_layers(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_has_downloadable_layers(p public.projects) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select count(id) > 0 from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true;
+  $$;
+
+
+--
+-- Name: FUNCTION projects_has_downloadable_layers(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_has_downloadable_layers(p public.projects) IS 'Returns true if the project has any layers that have enable_download = true. Useful when used in conjunction with set_enable_download_for_all_overlays()';
 
 
 --
@@ -11893,6 +12006,28 @@ COMMENT ON FUNCTION public.session_on_acl(acl_id integer) IS '@omit';
 
 
 --
+-- Name: set_enable_download_for_all_overlays(text, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_enable_download_for_all_overlays(slug text, enable boolean) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE sql
+    AS $$
+    update table_of_contents_items set enable_download = enable
+    where table_of_contents_items.project_id = (select id from projects where projects.slug = set_enable_download_for_all_overlays.slug)
+    and table_of_contents_items.is_draft = true
+    and table_of_contents_items.is_folder = false
+    returning *;
+  $$;
+
+
+--
+-- Name: FUNCTION set_enable_download_for_all_overlays(slug text, enable boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.set_enable_download_for_all_overlays(slug text, enable boolean) IS 'Sets the enable_download flag for all overlays in a project. Note this is only applied to draft items, so will require a publish to impact project users.';
+
+
+--
 -- Name: set_form_element_order(integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12997,6 +13132,39 @@ CREATE FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select metadata is not null from table_of_contents_items where id = toc.id;
+  $$;
+
+
+--
+-- Name: table_of_contents_items_has_original_source_upload(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_has_original_source_upload(item public.table_of_contents_items) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      case
+        when item.data_layer_id is null then null
+        else
+          (
+            select exists (
+              select 
+                original_filename
+              from 
+                data_upload_outputs
+              where 
+                data_upload_outputs.data_source_id = (
+                  select 
+                    data_layers.data_source_id
+                  from 
+                    data_layers
+                  where 
+                    data_layers.id = item.data_layer_id
+                ) and
+                data_upload_outputs.is_original = true
+            )
+          )
+      end;
   $$;
 
 
@@ -21646,6 +21814,14 @@ GRANT UPDATE(hide_overlays) ON TABLE public.projects TO seasketch_user;
 
 
 --
+-- Name: COLUMN projects.enable_download_by_default; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(enable_download_by_default) ON TABLE public.projects TO anon;
+GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_project(name text, slug text, OUT project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22180,6 +22356,14 @@ REVOKE ALL ON FUNCTION public.digest(text, text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION disable_download_for_shared_layers(slug text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.disable_download_for_shared_layers(slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.disable_download_for_shared_layers(slug text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION disable_forum_posting("userId" integer, "projectId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22257,6 +22441,14 @@ REVOKE ALL ON FUNCTION public.dropgeometrytable(catalog_name character varying, 
 
 REVOKE ALL ON FUNCTION public.email_unsubscribed(email text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.email_unsubscribed(email text) TO anon;
+
+
+--
+-- Name: FUNCTION enable_download_for_eligible_layers(slug text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enable_download_for_eligible_layers(slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enable_download_for_eligible_layers(slug text) TO seasketch_user;
 
 
 --
@@ -25107,11 +25299,35 @@ GRANT ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, 
 
 
 --
+-- Name: FUNCTION projects_downloadable_layers_count(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_downloadable_layers_count(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_downloadable_layers_count(p public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_draft_table_of_contents_items(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.projects_draft_table_of_contents_items(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_draft_table_of_contents_items(p public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_eligable_downloadable_layers_count(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_eligable_downloadable_layers_count(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_eligable_downloadable_layers_count(p public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_has_downloadable_layers(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_has_downloadable_layers(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_has_downloadable_layers(p public.projects) TO seasketch_user;
 
 
 --
@@ -25607,6 +25823,14 @@ REVOKE ALL ON FUNCTION public.session_member_of_group(groups integer[]) FROM PUB
 
 REVOKE ALL ON FUNCTION public.session_on_acl(acl_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.session_on_acl(acl_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION set_enable_download_for_all_overlays(slug text, enable boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_enable_download_for_all_overlays(slug text, enable boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_enable_download_for_all_overlays(slug text, enable boolean) TO seasketch_user;
 
 
 --
@@ -28797,6 +29021,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_download_options(item publi
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_has_original_source_upload(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_has_original_source_upload(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_has_original_source_upload(item public.table_of_contents_items) TO seasketch_user;
 
 
 --

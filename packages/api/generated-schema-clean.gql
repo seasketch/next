@@ -4597,6 +4597,40 @@ type DenyParticipantPayload {
   ): UsersEdge
 }
 
+"""All input for the `disableDownloadForSharedLayers` mutation."""
+input DisableDownloadForSharedLayersInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  slug: String
+}
+
+"""The output of our `disableDownloadForSharedLayers` mutation."""
+type DisableDownloadForSharedLayersPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `DataSourcesBucket` that is related to this `Project`."""
+  dataSourcesBucket: DataSourcesBucket
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `disableForumPosting` mutation."""
 input DisableForumPostingInput {
   """
@@ -4800,6 +4834,40 @@ enum EmailVerificationStatus {
 
   """The email address is already verified"""
   VERIFIED
+}
+
+"""All input for the `enableDownloadForEligibleLayers` mutation."""
+input EnableDownloadForEligibleLayersInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  slug: String
+}
+
+"""The output of our `enableDownloadForEligibleLayers` mutation."""
+type EnableDownloadForEligibleLayersPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `DataSourcesBucket` that is related to this `Project`."""
+  dataSourcesBucket: DataSourcesBucket
+  project: Project
+
+  """An edge for our `Project`. May be used by Relay 1."""
+  projectEdge(
+    """The method to use when ordering `Project`."""
+    orderBy: [ProjectsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ProjectsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All input for the `enableForumPosting` mutation."""
@@ -7994,6 +8062,12 @@ type Mutation {
     """
     input: DenyParticipantInput!
   ): DenyParticipantPayload
+  disableDownloadForSharedLayers(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DisableDownloadForSharedLayersInput!
+  ): DisableDownloadForSharedLayersPayload
 
   """Ban a user from posting in the discussion forum"""
   disableForumPosting(
@@ -8008,6 +8082,12 @@ type Mutation {
     """
     input: DismissFailedUploadInput!
   ): DismissFailedUploadPayload
+  enableDownloadForEligibleLayers(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: EnableDownloadForEligibleLayersInput!
+  ): EnableDownloadForEligibleLayersPayload
 
   """
   Re-enable discussion forum posting for a user that was previously banned.
@@ -8270,6 +8350,17 @@ type Mutation {
     """ID of survey invite"""
     inviteId: Int!
   ): Int
+
+  """
+  Sets the enable_download flag for all overlays in a project. Note this is only
+  applied to draft items, so will require a publish to impact project users.
+  """
+  setEnableDownloadForAllOverlays(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SetEnableDownloadForAllOverlaysInput!
+  ): SetEnableDownloadForAllOverlaysPayload
   setFormElementBackground(backgroundColor: String!, backgroundHeight: Int!, backgroundPalette: [String]!, backgroundUrl: String!, backgroundWidth: Int!, downloadUrl: String!, id: Int!, secondaryColor: String!, unsplashAuthorName: String!, unsplashAuthorUrl: String!): FormElement!
 
   """
@@ -9773,6 +9864,7 @@ type Project implements Node {
 
   """Should be a short length in order to fit in the project header."""
   description: String
+  downloadableLayersCount: Int
   draftTableOfContentsHasChanges: Boolean!
 
   """
@@ -9787,6 +9879,14 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [TableOfContentsItem!]
+  eligableDownloadableLayersCount: Int
+
+  """
+  When true, overlay layers will be available for download by end-users if they
+  have access to the layer and the data source supports it. This can be
+  controlled on a per-layer basis.
+  """
+  enableDownloadByDefault: Boolean!
 
   """Reads and enables pagination through a set of `Forum`."""
   forums(
@@ -10475,6 +10575,13 @@ input ProjectPatch {
 
   """Should be a short length in order to fit in the project header."""
   description: String
+
+  """
+  When true, overlay layers will be available for download by end-users if they
+  have access to the layer and the data source supports it. This can be
+  controlled on a per-layer basis.
+  """
+  enableDownloadByDefault: Boolean
   hideForums: Boolean
   hideOverlays: Boolean
   hideSketches: Boolean
@@ -11750,6 +11857,32 @@ type SendProjectInvitesPayload {
 type SendVerificationEmailResults {
   error: String
   success: Boolean!
+}
+
+"""All input for the `setEnableDownloadForAllOverlays` mutation."""
+input SetEnableDownloadForAllOverlaysInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  enable: Boolean
+  slug: String
+}
+
+"""The output of our `setEnableDownloadForAllOverlays` mutation."""
+type SetEnableDownloadForAllOverlaysPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItems: [TableOfContentsItem!]
 }
 
 """All input for the `setFormElementOrder` mutation."""
@@ -13262,6 +13395,7 @@ type TableOfContentsItem implements Node {
   ftsSv: String
   geoprocessingReferenceId: String
   hasMetadata: Boolean
+  hasOriginalSourceUpload: Boolean
   hideChildren: Boolean!
   id: Int!
 
