@@ -7,8 +7,9 @@ import {
 } from "react";
 
 export const LayerEditingContext = createContext<{
-  openEditor?: number;
-  setOpenEditor: (id: number | undefined) => void;
+  openEditor?: { id: number; isFolder: boolean };
+  isFolder?: boolean;
+  setOpenEditor: (item: { id: number; isFolder: boolean } | undefined) => void;
   openMetadataEditor?: number;
   setOpenMetadataEditor: (id: number | undefined) => void;
   /**
@@ -19,7 +20,7 @@ export const LayerEditingContext = createContext<{
   recentlyDeletedStableIds: string[];
   setRecentlyDeletedStableIds: Dispatch<SetStateAction<string[]>>;
 }>({
-  setOpenEditor: (id: number | undefined) => {},
+  setOpenEditor: (item: { id: number; isFolder: boolean } | undefined) => {},
   setOpenMetadataEditor: (id: number | undefined) => {},
   recentlyDeletedStableIds: [],
   // set state action
@@ -31,7 +32,9 @@ export const LayerEditingContextProvider = ({
 }: {
   children: ReactNode;
 }) => {
-  const [openEditor, setOpenEditor] = useState<number | undefined>(undefined);
+  const [openEditor, setOpenEditor] = useState<
+    { id: number; isFolder: boolean } | undefined
+  >(undefined);
   const [openMetadataEditor, setOpenMetadataEditor] = useState<
     number | undefined
   >(undefined);
