@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:3b30fee54a49de60a48d4e3d11cc2e3535afac04
 --! Hash: sha1:4ea50e168e109391cda07cad450af30d78a2d338
 
@@ -165,7 +166,7 @@ grant execute on function set_enable_download_for_all_overlays(text, boolean) to
 drop function if exists projects_has_downloadable_layers();
 drop function if exists projects_downloadable_layers_count;
 create or replace function projects_downloadable_layers_count(p projects)
-  returns integer
+  returns bigint
   language sql
   stable
   as $$
@@ -180,7 +181,7 @@ update projects set enable_download_by_default = false;
 
 
 create or replace function projects_eligable_downloadable_layers_count(p projects)
-  returns integer
+  returns bigint
   language sql
   stable
   as $$
