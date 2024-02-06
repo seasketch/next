@@ -443,10 +443,17 @@ export default function TableOfContentsEditor() {
           />
         </Route>
       </div>
-      {layerEditingContext.openEditor && (
-        <LayerTableOfContentsItemEditor
+      {layerEditingContext.openEditor &&
+        !layerEditingContext.openEditor.isFolder && (
+          <LayerTableOfContentsItemEditor
+            onRequestClose={() => layerEditingContext.setOpenEditor(undefined)}
+            itemId={layerEditingContext.openEditor.id}
+          />
+        )}
+      {layerEditingContext.openEditor?.isFolder && (
+        <FolderEditor
+          id={layerEditingContext.openEditor.id}
           onRequestClose={() => layerEditingContext.setOpenEditor(undefined)}
-          itemId={layerEditingContext.openEditor}
         />
       )}
       {layerEditingContext.openMetadataEditor && (

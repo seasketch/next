@@ -39,7 +39,10 @@ export default function TableOfContentsItemAdminMenuItems({
           minWidth: 120,
         }}
         onSelect={() => {
-          layerEditingContext.setOpenEditor(item.id);
+          layerEditingContext.setOpenEditor({
+            id: item.id,
+            isFolder: item.isFolder,
+          });
         }}
         className={MenuBarItemClasses}
       >
@@ -65,7 +68,7 @@ export default function TableOfContentsItemAdminMenuItems({
                 name: item.title.replace(/\.$/, ""),
               }),
               onDelete: async () => {
-                if (layerEditingContext.openEditor === item.id) {
+                if (layerEditingContext.openEditor?.id === item.id) {
                   layerEditingContext.setOpenEditor(undefined);
                 }
                 layerEditingContext.setRecentlyDeletedStableIds((prev) => {
