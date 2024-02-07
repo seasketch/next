@@ -112,7 +112,9 @@ export default function useDialog() {
             open: true,
             description: options?.description,
             message: message,
-            onSubmit: options?.onSubmit,
+            onSubmit: options?.onSubmit
+              ? options?.onSubmit
+              : () => resolve(true),
             onCancel: () => resolve(false),
             submitting: false,
             primaryButtonText: options?.primaryButtonText,
