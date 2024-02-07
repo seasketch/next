@@ -229,7 +229,7 @@ export default function TreeItemComponent({
         }
       },
     }),
-    [onDrop, onDropEnd, onSortEnd]
+    [onDrop, onDropEnd, onSortEnd, sortable, disableEditing]
   );
 
   const attachRef = useCallback(
