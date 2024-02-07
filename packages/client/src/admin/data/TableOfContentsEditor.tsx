@@ -27,7 +27,6 @@ import {
   MenuBarLabel,
   MenuBarSeparator,
   MenuBarSubmenu,
-  MenubarCheckboxItem,
   MenubarRadioItem,
   MenubarTrigger,
 } from "../../components/Menubar";
@@ -533,22 +532,20 @@ function Header({
   const { t } = useTranslation("admin:data");
   const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
   const onError = useGlobalErrorHandler();
-  const [enableDownload, enableDownloadState] =
-    useEnableDownloadForEligibleLayersMutation({
-      variables: {
-        slug: getSlug(),
-      },
-      onError,
-    });
-  const [disableDownload, disableDownloadState] =
-    useDisableDownloadForSharedLayersMutation({
-      variables: {
-        slug: getSlug(),
-      },
-      onError,
-    });
+  const [enableDownload] = useEnableDownloadForEligibleLayersMutation({
+    variables: {
+      slug: getSlug(),
+    },
+    onError,
+  });
+  const [disableDownload] = useDisableDownloadForSharedLayersMutation({
+    variables: {
+      slug: getSlug(),
+    },
+    onError,
+  });
 
-  const { confirm, prompt } = useDialog();
+  const { confirm } = useDialog();
   return (
     <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
       <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
