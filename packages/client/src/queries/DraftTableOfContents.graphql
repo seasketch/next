@@ -82,6 +82,7 @@ query layersAndSourcesForItems(
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
     }
   }
 }

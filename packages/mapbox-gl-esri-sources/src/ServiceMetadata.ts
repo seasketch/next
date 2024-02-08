@@ -13,6 +13,7 @@ export interface SimpleLayerInfo {
   parentLayerId: number;
   defaultVisibility: boolean;
   subLayerIds: number[] | null;
+  type: "Feature Layer" | "Raster Layer" | "Group Layer" | string;
   minScale: number;
   maxScale: number;
 }

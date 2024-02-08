@@ -245,6 +245,7 @@ export type ArcgisImportItemInput = {
   sourceId?: Maybe<Scalars['Int']>;
   stableId?: Maybe<Scalars['String']>;
   sublayerId?: Maybe<Scalars['Int']>;
+  sublayerType?: Maybe<SublayerType>;
   title?: Maybe<Scalars['String']>;
 };
 
@@ -1864,6 +1865,7 @@ export type DataLayer = Node & {
    * making image requests.
    */
   sublayer?: Maybe<Scalars['String']>;
+  sublayerType?: Maybe<SublayerType>;
   /** Reads a single `TableOfContentsItem` that is related to this `DataLayer`. */
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
   /**
@@ -1947,6 +1949,7 @@ export type DataLayerInput = {
    * making image requests.
    */
   sublayer?: Maybe<Scalars['String']>;
+  sublayerType?: Maybe<SublayerType>;
   zIndex?: Maybe<Scalars['Int']>;
 };
 
@@ -1976,6 +1979,7 @@ export type DataLayerPatch = {
    * making image requests.
    */
   sublayer?: Maybe<Scalars['String']>;
+  sublayerType?: Maybe<SublayerType>;
   zIndex?: Maybe<Scalars['Int']>;
 };
 
@@ -11608,6 +11612,11 @@ export enum SpriteType {
   Line = 'LINE'
 }
 
+export enum SublayerType {
+  Raster = 'RASTER',
+  Vector = 'VECTOR'
+}
+
 /** All input for the `submitDataUpload` mutation. */
 export type SubmitDataUploadInput = {
   /**
@@ -15834,7 +15843,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
@@ -21795,6 +21804,7 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
     }
   }
 }

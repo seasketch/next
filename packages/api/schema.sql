@@ -137,6 +137,16 @@ CREATE TYPE public.arcgis_feature_layer_fetch_strategy AS ENUM (
 
 
 --
+-- Name: sublayer_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.sublayer_type AS ENUM (
+    'raster',
+    'vector'
+);
+
+
+--
 -- Name: arcgis_import_item; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -147,7 +157,8 @@ CREATE TYPE public.arcgis_import_item AS (
 	source_id integer,
 	parent_id text,
 	sublayer_id integer,
-	stable_id text
+	stable_id text,
+	sublayer_type public.sublayer_type
 );
 
 
@@ -6392,6 +6403,7 @@ CREATE TABLE public.data_layers (
     interactivity_settings_id integer NOT NULL,
     sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_styles)::text)) STORED,
     static_id text,
+    sublayer_type public.sublayer_type,
     CONSTRAINT length_check CHECK ((char_length(static_id) <= 128))
 );
 
@@ -8636,11 +8648,13 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
                 insert into data_layers (
                   project_id,
                   data_source_id,
-                  sublayer
+                  sublayer,
+                  sublayer_type
                 ) values (
                   "projectId",
                   source_id,
-                  items[i].sublayer_id
+                  items[i].sublayer_id,
+                  items[i].sublayer_type
                 ) returning id into layer_id;
                 interactive_layers = array_append(interactive_layers, layer_id);
                 select 

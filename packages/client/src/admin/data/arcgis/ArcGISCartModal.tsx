@@ -44,6 +44,7 @@ import {
   BasemapType,
   DraftTableOfContentsDocument,
   GetBasemapsDocument,
+  SublayerType,
   useCreateBasemapMutation,
   useImportArcGisServiceMutation,
 } from "../../../generated/graphql";
@@ -643,6 +644,12 @@ export default function ArcGISCartModal({
                 ? { parentId: layer.parentLayerId.toString() }
                 : {}),
               sublayerId: layer.id,
+              sublayerType:
+                layer.type === "Feature Layer"
+                  ? SublayerType.Vector
+                  : layer.type === "Raster Layer"
+                  ? SublayerType.Raster
+                  : null,
               stableId: generateStableId(),
             });
           }

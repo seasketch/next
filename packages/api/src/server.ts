@@ -241,6 +241,7 @@ run({
   crontab: `
     * * * * * cleanupDataUploads
     * * * * * cleanupDeletedOverlayRecords
+    * * * * * migrateSublayerTypeField
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {

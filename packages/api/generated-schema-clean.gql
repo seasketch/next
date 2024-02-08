@@ -217,6 +217,7 @@ input ArcgisImportItemInput {
   sourceId: Int
   stableId: String
   sublayerId: Int
+  sublayerType: SublayerType
   title: String
 }
 
@@ -2103,6 +2104,7 @@ type DataLayer implements Node {
   making image requests.
   """
   sublayer: String
+  sublayerType: SublayerType
 
   """
   Reads a single `TableOfContentsItem` that is related to this `DataLayer`.
@@ -2190,6 +2192,7 @@ input DataLayerInput {
   making image requests.
   """
   sublayer: String
+  sublayerType: SublayerType
   zIndex: Int
 }
 
@@ -2228,6 +2231,7 @@ input DataLayerPatch {
   making image requests.
   """
   sublayer: String
+  sublayerType: SublayerType
   zIndex: Int
 }
 
@@ -12667,6 +12671,11 @@ enum SpriteType {
   FILL
   ICON
   LINE
+}
+
+enum SublayerType {
+  RASTER
+  VECTOR
 }
 
 """All input for the `submitDataUpload` mutation."""
