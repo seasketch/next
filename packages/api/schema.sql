@@ -11156,6 +11156,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             data_source_id,
             source_layer,
             sublayer,
+            sublayer_type,
             render_under,
             mapbox_gl_styles,
             interactivity_settings_id,
@@ -11165,6 +11166,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             data_source_id, 
             source_layer, 
             sublayer, 
+            sublayer_type
             render_under, 
             mapbox_gl_styles,
             new_interactivity_settings_id,
@@ -11194,7 +11196,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           sort_index,
           hide_children,
           geoprocessing_reference_id,
-          translated_props
+          translated_props,
+          enable_download
         ) values (
           false,
           "projectId",
@@ -11211,7 +11214,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           item.sort_index,
           item.hide_children,
           item.geoprocessing_reference_id,
-          item.translated_props
+          item.translated_props,
+          item.enable_download
         ) returning id into new_toc_id;
         select 
           type, id into acl_type, orig_acl_id 
