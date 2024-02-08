@@ -11166,7 +11166,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             data_source_id, 
             source_layer, 
             sublayer, 
-            sublayer_type
+            sublayer_type,
             render_under, 
             mapbox_gl_styles,
             new_interactivity_settings_id,
