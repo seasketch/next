@@ -1,8 +1,9 @@
 import { createContext, useMemo, useState } from "react";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import Modal from "../components/Modal";
+import Modal, { FooterButtonProps } from "../components/Modal";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
 import {
+  DataSourceTypes,
   DataUploadOutputType,
   useDataDownloadInfoQuery,
 } from "../generated/graphql";
@@ -67,7 +68,25 @@ export default function DataDownloadModal({
 
   const getTranslatedProp = useTranslatedProps(data?.tableOfContentsItem);
 
+  const isEsriVectorService = useMemo(() => {
+    return (
+      data?.tableOfContentsItem?.dataLayer?.dataSource?.type ===
+      DataSourceTypes.ArcgisVector
+    );
+  }, [data?.tableOfContentsItem?.dataLayer?.dataSource?.type]);
+
   const original = useMemo(() => {
+    if (
+      data?.tableOfContentsItem?.dataLayer?.dataSource?.type ===
+      DataSourceTypes.ArcgisVector
+    ) {
+      return {
+        isOriginal: true,
+        size: 0,
+        url: data.tableOfContentsItem.primaryDownloadUrl,
+        type: DataUploadOutputType.GeoJson,
+      };
+    }
     return data?.tableOfContentsItem?.downloadOptions?.find(
       (option) => option.isOriginal
     );
@@ -82,11 +101,44 @@ export default function DataDownloadModal({
           <span className="">{getTranslatedProp("title")}</span>
         </>
       }
+      footer={[
+        ...(isEsriVectorService && data?.tableOfContentsItem?.primaryDownloadUrl
+          ? [
+              {
+                label: t("Start Download"),
+                onClick: () => {
+                  window.open(
+                    data!.tableOfContentsItem!.primaryDownloadUrl!,
+                    "_blank"
+                  );
+                  onRequestClose();
+                },
+                variant: "primary",
+              } as FooterButtonProps,
+            ]
+          : []),
+        {
+          label: t("Close"),
+          onClick: onRequestClose,
+        },
+      ]}
       onRequestClose={onRequestClose}
       loading={loading}
     >
       <div className="space-y-4">
-        {original?.url && (
+        {isEsriVectorService && (
+          <div className="">
+            <p className="text-sm">
+              <Trans ns="homepage">
+                This data layer is hosted on an ArcGIS vector service. SeaSketch
+                will extract vector features from the service and return them to
+                you as a GeoJSON file, usable in most modern geospatial
+                software. This extract may be up to 3 hours old.
+              </Trans>
+            </p>
+          </div>
+        )}
+        {!isEsriVectorService && original?.url && (
           <div className="shadow-sm p-4 py-2 border rounded">
             <h3>
               {data?.tableOfContentsItem?.dataLayer?.dataSource?.createdAt ? (
@@ -121,36 +173,38 @@ export default function DataDownloadModal({
             </div>
           </div>
         )}
-        <div>
-          <h3>{t("Alternate formats")}</h3>
-          <ul className="space-y-2">
-            {sortedOptions.map((option) => {
-              const filename = new URL(
-                option.url || "https://www.example.com"
-              ).pathname
-                .split("/")
-                .pop();
-              const downloadFilename = new URL(
-                option.url || "https://www.example.com"
-              ).searchParams.get("download");
-              return (
-                <li>
-                  <div className="flex pr-4">
-                    <a
-                      className="text-primary-500 underline flex-1"
-                      download={filename}
-                      href={option.url!}
-                    >
-                      {downloadFilename || filename}
-                    </a>
-                    <span>{bytes(parseInt(option.size) || 0)}</span>
-                  </div>
-                  <DownloadFormatDescription type={option.type!} />
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        {sortedOptions.length > 0 && (
+          <div>
+            <h3>{t("Alternate formats")}</h3>
+            <ul className="space-y-2">
+              {sortedOptions.map((option) => {
+                const filename = new URL(
+                  option.url || "https://www.example.com"
+                ).pathname
+                  .split("/")
+                  .pop();
+                const downloadFilename = new URL(
+                  option.url || "https://www.example.com"
+                ).searchParams.get("download");
+                return (
+                  <li>
+                    <div className="flex pr-4">
+                      <a
+                        className="text-primary-500 underline flex-1"
+                        download={filename}
+                        href={option.url!}
+                      >
+                        {downloadFilename || filename}
+                      </a>
+                      <span>{bytes(parseInt(option.size) || 0)}</span>
+                    </div>
+                    <DownloadFormatDescription type={option.type!} />
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
       </div>
     </Modal>
   );

@@ -384,6 +384,48 @@ export default function LayerTableOfContentsItemEditor(
             )}
           </div>
 
+          {source?.type === DataSourceTypes.ArcgisVector && (
+            <div className="mt-5">
+              <div className="flex">
+                <div className={`flex-1 text-sm font-medium text-gray-700`}>
+                  <Trans ns={["admin"]}>Enable data download</Trans>
+                </div>
+                <div className="flex-none">
+                  <Switch
+                    isToggled={
+                      downloadEnabled === undefined
+                        ? item.enableDownload
+                        : downloadEnabled
+                    }
+                    onClick={() =>
+                      setDownloadEnabled(
+                        !(downloadEnabled === undefined
+                          ? item.enableDownload
+                          : downloadEnabled)
+                      )
+                    }
+                  />
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-500 mt-1">
+                <Trans ns={["admin"]}>
+                  If enabled, users will have the ability to download raw
+                  feature data as a GeoJSON file. SeaSketch will extract vector
+                  features from the service using the{" "}
+                  <a
+                    className="text-primary-500"
+                    href="https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer-.htm"
+                    target="_blank"
+                  >
+                    ArcGIS REST API query endpoint
+                  </a>
+                  . Data may be cached and up to 3 hours old.
+                </Trans>
+              </p>
+            </div>
+          )}
+
           {(source?.type === DataSourceTypes.Geojson ||
             source?.type === DataSourceTypes.SeasketchVector ||
             source?.type === DataSourceTypes.SeasketchMvt) && (

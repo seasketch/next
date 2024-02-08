@@ -12199,6 +12199,7 @@ export type TableOfContentsItem = Node & {
   ftsSimple?: Maybe<Scalars['String']>;
   ftsSv?: Maybe<Scalars['String']>;
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
+  hasArcgisVectorLayer?: Maybe<Scalars['Boolean']>;
   hasMetadata?: Maybe<Scalars['Boolean']>;
   hasOriginalSourceUpload?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
@@ -16008,7 +16009,7 @@ export type UpdateEnableDownloadMutation = (
     { __typename?: 'UpdateTableOfContentsItemPayload' }
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'enableDownload'>
+      & Pick<TableOfContentsItem, 'id' | 'enableDownload' | 'primaryDownloadUrl'>
       & { project?: Maybe<(
         { __typename?: 'Project' }
         & Pick<Project, 'id' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
@@ -16363,6 +16364,10 @@ export type EnableDownloadForEligibleLayersMutation = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
+      & { draftTableOfContentsItems?: Maybe<Array<(
+        { __typename?: 'TableOfContentsItem' }
+        & Pick<TableOfContentsItem, 'id' | 'enableDownload' | 'primaryDownloadUrl'>
+      )>> }
     )> }
   )> }
 );
@@ -16379,6 +16384,10 @@ export type DisableDownloadForSharedLayersMutation = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
+      & { draftTableOfContentsItems?: Maybe<Array<(
+        { __typename?: 'TableOfContentsItem' }
+        & Pick<TableOfContentsItem, 'id' | 'enableDownload' | 'primaryDownloadUrl'>
+      )>> }
     )> }
   )> }
 );
@@ -23880,6 +23889,7 @@ export const UpdateEnableDownloadDocument = gql`
         downloadableLayersCount
         eligableDownloadableLayersCount
       }
+      primaryDownloadUrl
     }
   }
 }
@@ -24740,6 +24750,11 @@ export const EnableDownloadForEligibleLayersDocument = gql`
       id
       downloadableLayersCount
       eligableDownloadableLayersCount
+      draftTableOfContentsItems {
+        id
+        enableDownload
+        primaryDownloadUrl
+      }
     }
   }
 }
@@ -24777,6 +24792,11 @@ export const DisableDownloadForSharedLayersDocument = gql`
       id
       downloadableLayersCount
       eligableDownloadableLayersCount
+      draftTableOfContentsItems {
+        id
+        enableDownload
+        primaryDownloadUrl
+      }
     }
   }
 }

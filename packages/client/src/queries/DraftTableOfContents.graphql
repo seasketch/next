@@ -316,6 +316,7 @@ mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
         downloadableLayersCount
         eligableDownloadableLayersCount
       }
+      primaryDownloadUrl
     }
   }
 }
@@ -633,6 +634,11 @@ mutation EnableDownloadForEligibleLayers($slug: String!) {
       id
       downloadableLayersCount
       eligableDownloadableLayersCount
+      draftTableOfContentsItems {
+        id
+        enableDownload
+        primaryDownloadUrl
+      }
     }
   }
 }
@@ -643,6 +649,11 @@ mutation DisableDownloadForSharedLayers($slug: String!) {
       id
       downloadableLayersCount
       eligableDownloadableLayersCount
+      draftTableOfContentsItems {
+        id
+        enableDownload
+        primaryDownloadUrl
+      }
     }
   }
 }

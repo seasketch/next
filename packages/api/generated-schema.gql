@@ -13394,6 +13394,7 @@ type TableOfContentsItem implements Node {
   ftsSimple: String
   ftsSv: String
   geoprocessingReferenceId: String
+  hasArcgisVectorLayer: Boolean
   hasMetadata: Boolean
   hasOriginalSourceUpload: Boolean
   hideChildren: Boolean!

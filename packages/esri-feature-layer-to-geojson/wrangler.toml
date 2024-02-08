@@ -2,10 +2,15 @@ name = "esri-feature-layer-to-geojson"
 main = "src/index.ts"
 compatibility_date = "2024-01-29"
 
+
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
 # Docs: https://developers.cloudflare.com/workers/platform/environment-variables
-# [vars]
+[vars]
+# 5MB before we start streaming the response
+STREAMING_RESPONSE_BYTES_THRESHOLD = 5242880
+STREAMING_RESPONSE_PAGES_THRESHOLD = 3
+
 # MY_VARIABLE = "production_value"
 
 # Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.

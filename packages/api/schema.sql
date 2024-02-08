@@ -10307,7 +10307,11 @@ when users request layers be displayed on the map.
 CREATE FUNCTION public.projects_downloadable_layers_count(p public.projects) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
+    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true and (
+      table_of_contents_items_has_original_source_upload(table_of_contents_items.*)
+      or
+      table_of_contents_items_has_arcgis_vector_layer(table_of_contents_items.*)
+    );
   $$;
 
 
@@ -10345,26 +10349,12 @@ then use the `publishTableOfContents` mutation when it is ready for end-users.
 CREATE FUNCTION public.projects_eligable_downloadable_layers_count(p public.projects) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = false and table_of_contents_items_has_original_source_upload(table_of_contents_items.*);
+    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = false and (
+      table_of_contents_items_has_original_source_upload(table_of_contents_items.*)
+      or
+      table_of_contents_items_has_arcgis_vector_layer(table_of_contents_items.*)
+    );
   $$;
-
-
---
--- Name: projects_has_downloadable_layers(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_has_downloadable_layers(p public.projects) RETURNS boolean
-    LANGUAGE sql STABLE
-    AS $$
-    select count(id) > 0 from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true;
-  $$;
-
-
---
--- Name: FUNCTION projects_has_downloadable_layers(p public.projects); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.projects_has_downloadable_layers(p public.projects) IS 'Returns true if the project has any layers that have enable_download = true. Useful when used in conjunction with set_enable_download_for_all_overlays()';
 
 
 --
@@ -13125,6 +13115,17 @@ COMMENT ON FUNCTION public.table_of_contents_items_download_options(item public.
 
 
 --
+-- Name: table_of_contents_items_has_arcgis_vector_layer(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_has_arcgis_vector_layer(item public.table_of_contents_items) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select exists(select * from data_layers where data_layers.id = item.data_layer_id and exists(select * from data_sources where data_sources.id = data_layers.data_source_id and data_sources.type = 'arcgis-vector'));
+  $$;
+
+
+--
 -- Name: table_of_contents_items_has_metadata(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13194,29 +13195,52 @@ CREATE FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.tabl
 CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
+    with related_data_source as (
+      select 
+        *
+      from 
+        data_sources
+      where 
+        data_sources.id = (
+          select 
+            data_layers.data_source_id
+          from
+            data_layers
+          where 
+            data_layers.id = item.data_layer_id and
+            data_sources.type = 'arcgis-vector'
+        )
+    )
     select 
       case
         when item.enable_download = false then null
         when item.data_layer_id is null then null
-        else
-          (
-            select 
+        when item.is_folder = true then null
+        when (exists(select * from related_data_source)) then (
+          select 
+            'https://arcgis-export.seasketch.org/?download=' || item.title || '&location=' || url
+          from
+            related_data_source 
+          limit 1
+        )
+        else (
+          select 
               data_upload_outputs.url || '?download=' || data_upload_outputs.original_filename
-            from 
-              data_upload_outputs
-            where 
-              data_upload_outputs.data_source_id = (
-                select 
-                  data_layers.data_source_id
-                from 
-                  data_layers
-                where 
-                  data_layers.id = item.data_layer_id
-              )
-            and 
-              data_upload_outputs.is_original = true
-              limit 1
-          )
+          from 
+            data_upload_outputs
+          where 
+            data_upload_outputs.data_source_id = (
+              select 
+                data_layers.data_source_id
+              from 
+                data_layers
+              where 
+                data_layers.id = item.data_layer_id
+            )
+          and 
+            data_upload_outputs.is_original = true
+            limit 1
+        )   
       end;
   $$;
 
@@ -25323,14 +25347,6 @@ GRANT ALL ON FUNCTION public.projects_eligable_downloadable_layers_count(p publi
 
 
 --
--- Name: FUNCTION projects_has_downloadable_layers(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_has_downloadable_layers(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_has_downloadable_layers(p public.projects) TO seasketch_user;
-
-
---
 -- Name: FUNCTION projects_imported_arcgis_services(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -29013,6 +29029,14 @@ GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surv
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_download_options(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_download_options(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_has_arcgis_vector_layer(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_has_arcgis_vector_layer(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_has_arcgis_vector_layer(item public.table_of_contents_items) TO anon;
 
 
 --

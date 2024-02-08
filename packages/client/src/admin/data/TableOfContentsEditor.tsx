@@ -48,6 +48,7 @@ import DataDownloadDefaultSettingModal from "./DataDownloadDefaultSettingModal";
 import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useDialog from "../../components/useDialog";
+import Warning from "../../components/Warning";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -373,6 +374,11 @@ export default function TableOfContentsEditor() {
               : undefined
           }
         />
+      )}
+      {tocQuery.error && (
+        <Warning level="error">
+          {tocQuery.error.message || "An error occurred"}
+        </Warning>
       )}
       <div
         className="flex-1 overflow-y-auto p-2 px-8"
