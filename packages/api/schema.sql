@@ -8624,6 +8624,13 @@ COMMENT ON COLUMN public.table_of_contents_items.sort_index IS 'Position in the 
 
 
 --
+-- Name: COLUMN table_of_contents_items.original_source_upload_available; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_available IS '@name has_original_source_upload';
+
+
+--
 -- Name: import_arcgis_services(integer, public.arcgis_import_item[], public.arcgis_import_source[]); Type: FUNCTION; Schema: public; Owner: -
 --
 

@@ -12215,6 +12215,7 @@ export type TableOfContentsItem = Node & {
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hasArcgisVectorLayer?: Maybe<Scalars['Boolean']>;
   hasMetadata?: Maybe<Scalars['Boolean']>;
+  hasOriginalSourceUpload: Scalars['Boolean'];
   hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
@@ -12236,7 +12237,6 @@ export type TableOfContentsItem = Node & {
   metadata?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  originalSourceUploadAvailable: Scalars['Boolean'];
   /**
    * stable_id of the parent folder, if any. This property cannot be changed
    * directly. To rearrange items into folders, use the
@@ -15979,7 +15979,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'originalSourceUploadAvailable'>
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -23803,7 +23803,7 @@ export const GetLayerItemDocument = gql`
     enableDownload
     geoprocessingReferenceId
     primaryDownloadUrl
-    originalSourceUploadAvailable
+    hasOriginalSourceUpload
     dataLayer {
       id
       zIndex

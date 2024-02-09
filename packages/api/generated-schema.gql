@@ -13416,6 +13416,7 @@ type TableOfContentsItem implements Node {
   geoprocessingReferenceId: String
   hasArcgisVectorLayer: Boolean
   hasMetadata: Boolean
+  hasOriginalSourceUpload: Boolean!
   hideChildren: Boolean!
   id: Int!
 
@@ -13448,7 +13449,6 @@ type TableOfContentsItem implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-  originalSourceUploadAvailable: Boolean!
 
   """
   stable_id of the parent folder, if any. This property cannot be changed 
