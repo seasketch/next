@@ -1,6 +1,11 @@
 import { Helpers } from "graphile-worker";
 import { withTimeout } from "../src/withTimeout";
 
+/**
+ * @deprecated
+ * This task is no longer needed now that the sublayer_type field is being
+ * populated when layers are imported (Feb 9th, 2024).
+ */
 async function migrateSublayerTypeField(payload: {}, helpers: Helpers) {
   await helpers.withPgClient(async (client) => {
     // Get bookmark from db
