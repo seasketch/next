@@ -2460,6 +2460,10 @@ export type DataSourcePatch = {
 export enum DataSourceTypes {
   /** Loads dynamic images for the entire viewport from arcgis server */
   ArcgisDynamicMapserver = 'ARCGIS_DYNAMIC_MAPSERVER',
+  /** Only valid when used as a table of contents item data_source_type value. */
+  ArcgisDynamicMapserverRasterSublayer = 'ARCGIS_DYNAMIC_MAPSERVER_RASTER_SUBLAYER',
+  /** Only valid when used as a table of contents item data_source_type value. */
+  ArcgisDynamicMapserverVectorSublayer = 'ARCGIS_DYNAMIC_MAPSERVER_VECTOR_SUBLAYER',
   /** Tiled ArcGIS Map Service */
   ArcgisRasterTiles = 'ARCGIS_RASTER_TILES',
   /** Loads vector data from arcgis server for rendering as a geojson source */
@@ -12186,6 +12190,7 @@ export type TableOfContentsItem = Node & {
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  dataSourceType?: Maybe<DataSourceTypes>;
   /** Reads and enables pagination through a set of `DownloadOption`. */
   downloadOptions?: Maybe<Array<DownloadOption>>;
   enableDownload: Scalars['Boolean'];
@@ -12208,7 +12213,6 @@ export type TableOfContentsItem = Node & {
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hasArcgisVectorLayer?: Maybe<Scalars['Boolean']>;
   hasMetadata?: Maybe<Scalars['Boolean']>;
-  hasOriginalSourceUpload?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
   id: Scalars['Int'];
   /**
@@ -12217,6 +12221,7 @@ export type TableOfContentsItem = Node & {
    */
   isClickOffOnly: Scalars['Boolean'];
   isCustomGlSource?: Maybe<Scalars['Boolean']>;
+  isDownloadableSourceType?: Maybe<Scalars['Boolean']>;
   /**
    * Identifies whether this item is part of the draft table of contents edited by
    * admin or the static public version. This property cannot be changed. Rather,
@@ -12229,6 +12234,7 @@ export type TableOfContentsItem = Node & {
   metadata?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  originalSourceUploadAvailable: Scalars['Boolean'];
   /**
    * stable_id of the parent folder, if any. This property cannot be changed
    * directly. To rearrange items into folders, use the
@@ -15971,7 +15977,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'originalSourceUploadAvailable'>
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -21924,7 +21930,7 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
     enableDownload
     geoprocessingReferenceId
     primaryDownloadUrl
-    hasOriginalSourceUpload
+    originalSourceUploadAvailable
     dataLayer {
       id
       zIndex

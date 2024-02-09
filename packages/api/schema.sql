@@ -3084,6 +3084,12 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
   declare
     bucket_id text;
   begin
+    if new.type = 'arcgis-dynamic-mapserver-raster-sublayer' then
+      raise exception 'arcgis-dynamic-mapserver-raster-sublayer is not a valid data source type. It is only to be used as a table of contents item data_source_type value.';
+    end if;
+    if new.type = 'arcgis-dynamic-mapserver-vector-sublayer' then
+      raise exception 'arcgis-dynamic-mapserver-vector-sublayer is not a valid data source type. It is only to be used as a table of contents item data_source_type value.';
+    end if;
     if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' and new.type != 'arcgis-raster-tiles' ) then
       raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
     end if;
@@ -3210,6 +3216,32 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
   begin
+    if new.is_folder or new.data_layer_id is null then
+      new.data_source_type = null;
+    else
+      new.data_source_type = data_source_type(new.data_layer_id);
+    end if;
+    if (new.data_source_type = 'seasketch-vector' or new.data_source_type = 'seasketch-mvt' or new.data_source_type = 'seasketch-raster') and new.original_source_upload_available = false then
+      new.original_source_upload_available = (
+      
+              select exists (
+                select 
+                  original_filename
+                from 
+                  data_upload_outputs
+                where 
+                  data_upload_outputs.data_source_id = (
+                    select 
+                      data_layers.data_source_id
+                    from 
+                      data_layers
+                    where 
+                      data_layers.id = new.data_layer_id
+                  ) and
+                  data_upload_outputs.is_original = true
+              )
+      );
+    end if;
     if old.is_folder != new.is_folder then
       raise 'Cannot change is_folder. Create a new table of contents item';
     end if;
@@ -3257,6 +3289,9 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
     end if;
     if length(trim(new.title)) = 0 then
       raise 'title cannot be empty';
+    end if;
+    if new.enable_download = true and not table_of_contents_items_is_downloadable_source_type(new) then
+      raise 'Cannot enable download for this source type %', new.data_source_type;
     end if;
     return new;
   end;
@@ -6492,6 +6527,33 @@ COMMENT ON FUNCTION public.data_layers_sprites(l public.data_layers) IS '@simple
 
 
 --
+-- Name: data_source_type(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_source_type(data_layer_id integer) RETURNS text
+    LANGUAGE sql
+    AS $$
+    select
+      (
+        case 
+          when data_layers.sublayer is not null then
+            'arcgis-dynamic-mapserver-' || data_layers.sublayer_type || '-sublayer'
+          else
+            data_sources.type
+          end
+      ) as data_source_type
+    from 
+      data_layers
+    inner join
+      data_sources
+    on
+      data_layers.data_source_id = data_sources.id
+    where
+      data_layers.id = data_layer_id;
+  $$;
+
+
+--
 -- Name: data_sources; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7158,8 +7220,7 @@ CREATE FUNCTION public.enable_download_for_eligible_layers(slug text) RETURNS pu
             projects.slug = enable_download_for_eligible_layers.slug
         ) and 
         table_of_contents_items.is_draft = true and
-        table_of_contents_items.is_folder = false;
-      
+        table_of_contents_items_is_downloadable_source_type(table_of_contents_items.*);
       select 
         * 
       from 
@@ -8440,6 +8501,8 @@ CREATE TABLE public.table_of_contents_items (
     fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
     fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
     fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
+    data_source_type text,
+    original_source_upload_available boolean DEFAULT false NOT NULL,
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
 );
@@ -10330,15 +10393,7 @@ CREATE FUNCTION public.projects_downloadable_layers_count(p public.projects) RET
       is_draft = true and 
       is_folder = false and 
       enable_download = true and 
-      (
-        table_of_contents_items_has_original_source_upload(
-          table_of_contents_items.*
-        )
-        or
-        table_of_contents_items_has_arcgis_vector_layer(
-          table_of_contents_items.*
-        )
-      );
+      table_of_contents_items_is_downloadable_source_type(table_of_contents_items.*);
 $$;
 
 
@@ -10385,14 +10440,7 @@ CREATE FUNCTION public.projects_eligable_downloadable_layers_count(p public.proj
       is_draft = true and 
       is_folder = false and 
       enable_download = false and 
-      (
-        table_of_contents_items_has_original_source_upload(table_of_contents_items.*)
-        or
-        table_of_contents_items_has_arcgis_vector_layer(
-          table_of_contents_items.*
-        )
-      )
-    ;
+      table_of_contents_items_is_downloadable_source_type(table_of_contents_items.*);
   $$;
 
 
@@ -13237,6 +13285,13 @@ CREATE FUNCTION public.table_of_contents_items_has_original_source_upload(item p
 
 
 --
+-- Name: FUNCTION table_of_contents_items_has_original_source_upload(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_has_original_source_upload(item public.table_of_contents_items) IS '@omit';
+
+
+--
 -- Name: table_of_contents_items_is_custom_gl_source(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13256,81 +13311,77 @@ CREATE FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.tabl
 
 
 --
+-- Name: table_of_contents_items_is_downloadable_source_type(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+    select 
+      item.data_source_type = 'arcgis-dynamic-mapserver-vector-sublayer' or
+      item.data_source_type = 'arcgis-vector' or
+      (
+        (
+          item.data_source_type = 'seasketch-vector' or
+          item.data_source_type = 'seasketch-mvt' or
+          item.data_source_type = 'seasketch-raster'
+        ) and 
+        item.original_source_upload_available = true
+      );
+  $$;
+
+
+--
 -- Name: table_of_contents_items_primary_download_url(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    
-    with related_data_layer as (
-      select 
-        *
-      from 
-        data_layers
-      where 
-        data_layers.id = item.data_layer_id
-    ), related_data_source as (
-      select 
-        *
-      from 
-        data_sources
-      where 
-        data_sources.id = (
-          select 
-            related_data_layer.data_source_id
-          from
-            related_data_layer
-          where 
-            related_data_layer.id = item.data_layer_id and
-            (
-              data_sources.type = 'arcgis-vector' or
-              (
-                data_sources.type = 'arcgis-dynamic-mapserver' and
-                exists(
-                  select 
-                    sublayer_type 
-                  from 
-                    related_data_layer 
-                  where 
-                    sublayer_type = 'vector'
-                )
-              )
-            )
-        )
-    )
-    select 
+    select
       case
         when item.enable_download = false then null
         when item.data_layer_id is null then null
         when item.is_folder = true then null
-        when (exists(select * from related_data_source)) then (
-          select 
-            'https://arcgis-export.seasketch.org/?download=' || item.title || '&location=' || url || '/' || (
-              select coalesce(sublayer, '') from related_data_layer
-            )
-          from
-            related_data_source 
-          limit 1
-        )
+        when not table_of_contents_items_is_downloadable_source_type(item) then null 
+        when item.data_source_type = 'seasketch-mvt' or 
+          item.data_source_type = 'seasketch-vector' then
+          (
+            select 
+                data_upload_outputs.url || '?download=' || data_upload_outputs.original_filename
+            from 
+              data_upload_outputs
+            where 
+              data_upload_outputs.data_source_id = (
+                select 
+                  data_layers.data_source_id
+                from 
+                  data_layers
+                where 
+                  data_layers.id = item.data_layer_id
+              )
+            and 
+              data_upload_outputs.is_original = true
+              limit 1
+          )
         else (
           select 
-              data_upload_outputs.url || '?download=' || data_upload_outputs.original_filename
-          from 
-            data_upload_outputs
-          where 
-            data_upload_outputs.data_source_id = (
-              select 
-                data_layers.data_source_id
-              from 
-                data_layers
-              where 
-                data_layers.id = item.data_layer_id
-            )
-          and 
-            data_upload_outputs.is_original = true
-            limit 1
-        )   
+            'https://arcgis-export.seasketch.org/?download=' || 
+            item.title || 
+            '&location=' || 
+            data_sources.url || 
+            '/' || 
+            coalesce(data_layers.sublayer, '')
+          from
+            data_layers
+          inner join
+            data_sources
+          on
+            data_sources.id = data_layers.data_source_id
+          where
+            data_layers.id = item.data_layer_id
+          limit 1
+        )
       end;
   $$;
 
@@ -18361,6 +18412,14 @@ ALTER TABLE ONLY public.table_of_contents_items
 
 
 --
+-- Name: table_of_contents_items table_of_contents_items_data_source_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.table_of_contents_items
+    ADD CONSTRAINT table_of_contents_items_data_source_type_fkey FOREIGN KEY (data_source_type) REFERENCES public.data_source_types(type);
+
+
+--
 -- Name: table_of_contents_items table_of_contents_items_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -22191,6 +22250,13 @@ GRANT SELECT(sprite_ids) ON TABLE public.data_layers TO anon;
 
 REVOKE ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
+
+
+--
+-- Name: FUNCTION data_source_type(data_layer_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_source_type(data_layer_id integer) FROM PUBLIC;
 
 
 --
@@ -29151,6 +29217,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_has_original_source_upload(
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) TO anon;
 
 
 --

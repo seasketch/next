@@ -219,7 +219,7 @@ query GetLayerItem($id: Int!) {
     enableDownload
     geoprocessingReferenceId
     primaryDownloadUrl
-    hasOriginalSourceUpload
+    originalSourceUploadAvailable
     dataLayer {
       id
       zIndex

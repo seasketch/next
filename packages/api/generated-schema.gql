@@ -3023,6 +3023,16 @@ enum DataSourceTypes {
   """Loads dynamic images for the entire viewport from arcgis server"""
   ARCGIS_DYNAMIC_MAPSERVER
 
+  """
+  Only valid when used as a table of contents item data_source_type value.
+  """
+  ARCGIS_DYNAMIC_MAPSERVER_RASTER_SUBLAYER
+
+  """
+  Only valid when used as a table of contents item data_source_type value.
+  """
+  ARCGIS_DYNAMIC_MAPSERVER_VECTOR_SUBLAYER
+
   """Tiled ArcGIS Map Service"""
   ARCGIS_RASTER_TILES
 
@@ -13376,6 +13386,7 @@ type TableOfContentsItem implements Node {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+  dataSourceType: DataSourceTypes
 
   """Reads and enables pagination through a set of `DownloadOption`."""
   downloadOptions(
@@ -13405,7 +13416,6 @@ type TableOfContentsItem implements Node {
   geoprocessingReferenceId: String
   hasArcgisVectorLayer: Boolean
   hasMetadata: Boolean
-  hasOriginalSourceUpload: Boolean
   hideChildren: Boolean!
   id: Int!
 
@@ -13415,6 +13425,7 @@ type TableOfContentsItem implements Node {
   """
   isClickOffOnly: Boolean!
   isCustomGlSource: Boolean
+  isDownloadableSourceType: Boolean
 
   """
   Identifies whether this item is part of the draft table of contents edited by
@@ -13437,6 +13448,7 @@ type TableOfContentsItem implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  originalSourceUploadAvailable: Boolean!
 
   """
   stable_id of the parent folder, if any. This property cannot be changed 
