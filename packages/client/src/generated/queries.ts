@@ -15816,7 +15816,7 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'importedArcgisServices' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -15824,6 +15824,19 @@ export type DraftTableOfContentsQuery = (
       { __typename?: 'TableOfContentsItem' }
       & OverlayFragment
     )>> }
+  )> }
+);
+
+export type ExtraTocEditingInfoQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ExtraTocEditingInfoQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'importedArcgisServices' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
   )> }
 );
 
@@ -15843,7 +15856,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType'>
+      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
@@ -15968,7 +15981,7 @@ export type GetLayerItemQuery = (
       )>> }
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'staticId' | 'dataSourceId'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType' | 'staticId' | 'dataSourceId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -21733,12 +21746,19 @@ export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
     draftTableOfContentsItems {
       ...Overlay
     }
+  }
+}
+    ${OverlayFragmentDoc}`;
+export const ExtraTocEditingInfoDocument = /*#__PURE__*/ gql`
+    query ExtraTocEditingInfo($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
     importedArcgisServices
     downloadableLayersCount
     eligableDownloadableLayersCount
   }
 }
-    ${OverlayFragmentDoc}`;
+    `;
 export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
     query layersAndSourcesForItems($slug: String!, $tableOfContentsItemIds: [Int]!) {
   projectBySlug(slug: $slug) {
@@ -21804,7 +21824,6 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       renderUnder
       sourceLayer
       sublayer
-      sublayerType
     }
   }
 }
@@ -21914,6 +21933,7 @@ export const GetLayerItemDocument = /*#__PURE__*/ gql`
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
       staticId
       sprites {
         id
@@ -24368,6 +24388,7 @@ export const namedOperations = {
     DownloadBasemapDetails: 'DownloadBasemapDetails',
     ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
+    ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
     GetLayerItem: 'GetLayerItem',

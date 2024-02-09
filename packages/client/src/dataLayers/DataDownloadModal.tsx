@@ -71,7 +71,9 @@ export default function DataDownloadModal({
   const isEsriVectorService = useMemo(() => {
     return (
       data?.tableOfContentsItem?.dataLayer?.dataSource?.type ===
-      DataSourceTypes.ArcgisVector
+        DataSourceTypes.ArcgisVector ||
+      data?.tableOfContentsItem?.dataLayer?.dataSource?.type ===
+        DataSourceTypes.ArcgisDynamicMapserver
     );
   }, [data?.tableOfContentsItem?.dataLayer?.dataSource?.type]);
 

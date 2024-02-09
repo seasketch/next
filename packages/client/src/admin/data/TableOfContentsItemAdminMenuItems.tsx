@@ -6,12 +6,14 @@ import { MenuBarItemClasses } from "../../components/Menubar";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../../components/useDialog";
 import {
-  DraftTableOfContentsDocument,
+  ExtraTocEditingInfoDocument,
   useDeleteBranchMutation,
+  useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useContext } from "react";
 import { LayerEditingContext } from "./LayerEditingContext";
+import getSlug from "../../getSlug";
 
 export default function TableOfContentsItemAdminMenuItems({
   type,
@@ -26,9 +28,14 @@ export default function TableOfContentsItemAdminMenuItems({
   const { confirmDelete } = useDialog();
   const [deleteItem] = useDeleteBranchMutation({
     onError,
-    refetchQueries: [DraftTableOfContentsDocument],
+    refetchQueries: [ExtraTocEditingInfoDocument],
   });
   const layerEditingContext = useContext(LayerEditingContext);
+  const projectMetadataQuery = useProjectMetadataQuery({
+    variables: {
+      slug: getSlug(),
+    },
+  });
 
   const item = items[0];
 
@@ -77,6 +84,27 @@ export default function TableOfContentsItemAdminMenuItems({
                 await deleteItem({
                   variables: {
                     id: item.id as number,
+                  },
+                  update: (cache, { data }) => {
+                    if (projectMetadataQuery.data?.project) {
+                      cache.modify({
+                        broadcast: true,
+                        id: cache.identify(projectMetadataQuery.data.project),
+                        fields: {
+                          draftTableOfContentsItems(
+                            existingRefs = [],
+                            { readField }
+                          ) {
+                            return existingRefs.filter(
+                              (ref: any) => item.id !== readField("id", ref)
+                            );
+                          },
+                          draftTableOfContentsHasChanges() {
+                            return true;
+                          },
+                        },
+                      });
+                    }
                   },
                 });
               },

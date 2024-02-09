@@ -8,6 +8,7 @@ import {
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
   useEnableDownloadForEligibleLayersMutation,
+  useExtraTocEditingInfoQuery,
   useLayersAndSourcesForItemsQuery,
   useUpdateTableOfContentsItemChildrenMutation,
 } from "../../generated/graphql";
@@ -97,6 +98,11 @@ export default function TableOfContentsEditor() {
     },
     shouldResubscribe: true,
   });
+  const extraQuery = useExtraTocEditingInfoQuery({
+    variables: {
+      slug,
+    },
+  });
 
   const layerEditingContext = useContext(LayerEditingContext);
 
@@ -125,6 +131,10 @@ export default function TableOfContentsEditor() {
     manager,
     tocQuery.data?.projectBySlug?.draftTableOfContentsItems,
   ]);
+
+  useEffect(() => {
+    console.log("draftTableOfContentsItems changed");
+  }, [tocQuery.data?.projectBySlug?.draftTableOfContentsItems]);
 
   useEffect(() => {
     tocQuery.refetch();
@@ -341,10 +351,10 @@ export default function TableOfContentsEditor() {
       {tocQuery.data?.projectBySlug?.id && (
         <Header
           sharedLayersCount={
-            tocQuery.data?.projectBySlug?.downloadableLayersCount || 0
+            extraQuery.data?.projectBySlug?.downloadableLayersCount || 0
           }
           eligibleLayersCount={
-            tocQuery.data?.projectBySlug?.eligableDownloadableLayersCount || 0
+            extraQuery.data?.projectBySlug?.eligableDownloadableLayersCount || 0
           }
           searchLoading={searching}
           search={search}
@@ -489,7 +499,7 @@ export default function TableOfContentsEditor() {
             region={tocQuery.data?.projectBySlug?.region.geojson}
             onRequestClose={() => setArcgisCartOpen(false)}
             importedArcGISServices={
-              (tocQuery.data?.projectBySlug?.importedArcgisServices ||
+              (extraQuery.data?.projectBySlug?.importedArcgisServices ||
                 []) as string[]
             }
           />

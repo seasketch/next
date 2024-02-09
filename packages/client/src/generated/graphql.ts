@@ -15818,7 +15818,7 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'importedArcgisServices' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -15826,6 +15826,19 @@ export type DraftTableOfContentsQuery = (
       { __typename?: 'TableOfContentsItem' }
       & OverlayFragment
     )>> }
+  )> }
+);
+
+export type ExtraTocEditingInfoQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ExtraTocEditingInfoQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'importedArcgisServices' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
   )> }
 );
 
@@ -15845,7 +15858,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType'>
+      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
@@ -15970,7 +15983,7 @@ export type GetLayerItemQuery = (
       )>> }
     )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'staticId' | 'dataSourceId'>
+      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType' | 'staticId' | 'dataSourceId'>
       & { sprites?: Maybe<Array<(
         { __typename?: 'Sprite' }
         & Pick<Sprite, 'id' | 'type'>
@@ -23377,9 +23390,6 @@ export const DraftTableOfContentsDocument = gql`
     draftTableOfContentsItems {
       ...Overlay
     }
-    importedArcgisServices
-    downloadableLayersCount
-    eligableDownloadableLayersCount
   }
 }
     ${OverlayFragmentDoc}`;
@@ -23411,6 +23421,44 @@ export function useDraftTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type DraftTableOfContentsQueryHookResult = ReturnType<typeof useDraftTableOfContentsQuery>;
 export type DraftTableOfContentsLazyQueryHookResult = ReturnType<typeof useDraftTableOfContentsLazyQuery>;
 export type DraftTableOfContentsQueryResult = Apollo.QueryResult<DraftTableOfContentsQuery, DraftTableOfContentsQueryVariables>;
+export const ExtraTocEditingInfoDocument = gql`
+    query ExtraTocEditingInfo($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    importedArcgisServices
+    downloadableLayersCount
+    eligableDownloadableLayersCount
+  }
+}
+    `;
+
+/**
+ * __useExtraTocEditingInfoQuery__
+ *
+ * To run a query within a React component, call `useExtraTocEditingInfoQuery` and pass it any options that fit your needs.
+ * When your component renders, `useExtraTocEditingInfoQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useExtraTocEditingInfoQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useExtraTocEditingInfoQuery(baseOptions: Apollo.QueryHookOptions<ExtraTocEditingInfoQuery, ExtraTocEditingInfoQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ExtraTocEditingInfoQuery, ExtraTocEditingInfoQueryVariables>(ExtraTocEditingInfoDocument, options);
+      }
+export function useExtraTocEditingInfoLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ExtraTocEditingInfoQuery, ExtraTocEditingInfoQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ExtraTocEditingInfoQuery, ExtraTocEditingInfoQueryVariables>(ExtraTocEditingInfoDocument, options);
+        }
+export type ExtraTocEditingInfoQueryHookResult = ReturnType<typeof useExtraTocEditingInfoQuery>;
+export type ExtraTocEditingInfoLazyQueryHookResult = ReturnType<typeof useExtraTocEditingInfoLazyQuery>;
+export type ExtraTocEditingInfoQueryResult = Apollo.QueryResult<ExtraTocEditingInfoQuery, ExtraTocEditingInfoQueryVariables>;
 export const LayersAndSourcesForItemsDocument = gql`
     query layersAndSourcesForItems($slug: String!, $tableOfContentsItemIds: [Int]!) {
   projectBySlug(slug: $slug) {
@@ -23476,7 +23524,6 @@ export const LayersAndSourcesForItemsDocument = gql`
       renderUnder
       sourceLayer
       sublayer
-      sublayerType
     }
   }
 }
@@ -23759,6 +23806,7 @@ export const GetLayerItemDocument = gql`
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
       staticId
       sprites {
         id
@@ -30832,6 +30880,7 @@ export const namedOperations = {
     DownloadBasemapDetails: 'DownloadBasemapDetails',
     ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
+    ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
     GetLayerItem: 'GetLayerItem',

@@ -10321,12 +10321,25 @@ when users request layers be displayed on the map.
 CREATE FUNCTION public.projects_downloadable_layers_count(p public.projects) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = true and (
-      table_of_contents_items_has_original_source_upload(table_of_contents_items.*)
-      or
-      table_of_contents_items_has_arcgis_vector_layer(table_of_contents_items.*)
-    );
-  $$;
+    select 
+      count(id)::int 
+    from 
+      table_of_contents_items 
+    where 
+      project_id = p.id and 
+      is_draft = true and 
+      is_folder = false and 
+      enable_download = true and 
+      (
+        table_of_contents_items_has_original_source_upload(
+          table_of_contents_items.*
+        )
+        or
+        table_of_contents_items_has_arcgis_vector_layer(
+          table_of_contents_items.*
+        )
+      );
+$$;
 
 
 --
@@ -10363,11 +10376,23 @@ then use the `publishTableOfContents` mutation when it is ready for end-users.
 CREATE FUNCTION public.projects_eligable_downloadable_layers_count(p public.projects) RETURNS integer
     LANGUAGE sql STABLE
     AS $$
-    select count(id)::int from table_of_contents_items where project_id = p.id and is_draft = true and is_folder = false and enable_download = false and (
-      table_of_contents_items_has_original_source_upload(table_of_contents_items.*)
-      or
-      table_of_contents_items_has_arcgis_vector_layer(table_of_contents_items.*)
-    );
+    select 
+      count(id)::int 
+    from 
+      table_of_contents_items 
+    where 
+      project_id = p.id and 
+      is_draft = true and 
+      is_folder = false and 
+      enable_download = false and 
+      (
+        table_of_contents_items_has_original_source_upload(table_of_contents_items.*)
+        or
+        table_of_contents_items_has_arcgis_vector_layer(
+          table_of_contents_items.*
+        )
+      )
+    ;
   $$;
 
 
@@ -13139,7 +13164,31 @@ COMMENT ON FUNCTION public.table_of_contents_items_download_options(item public.
 CREATE FUNCTION public.table_of_contents_items_has_arcgis_vector_layer(item public.table_of_contents_items) RETURNS boolean
     LANGUAGE sql STABLE
     AS $$
-    select exists(select * from data_layers where data_layers.id = item.data_layer_id and exists(select * from data_sources where data_sources.id = data_layers.data_source_id and data_sources.type = 'arcgis-vector'));
+    select 
+      exists(
+        select 
+          id 
+        from 
+          data_layers 
+        where 
+          data_layers.id = item.data_layer_id and 
+        exists(
+          select 
+            id 
+          from 
+            data_sources 
+          where 
+            data_sources.id = data_layers.data_source_id and 
+            (
+              data_sources.type = 'arcgis-vector'
+              or
+              (
+                data_sources.type = 'arcgis-dynamic-mapserver' and
+                data_layers.sublayer_type = 'vector'
+              )
+            )
+        )
+      );
   $$;
 
 
@@ -13213,7 +13262,15 @@ CREATE FUNCTION public.table_of_contents_items_is_custom_gl_source(t public.tabl
 CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    with related_data_source as (
+    
+    with related_data_layer as (
+      select 
+        *
+      from 
+        data_layers
+      where 
+        data_layers.id = item.data_layer_id
+    ), related_data_source as (
       select 
         *
       from 
@@ -13221,12 +13278,25 @@ CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.
       where 
         data_sources.id = (
           select 
-            data_layers.data_source_id
+            related_data_layer.data_source_id
           from
-            data_layers
+            related_data_layer
           where 
-            data_layers.id = item.data_layer_id and
-            data_sources.type = 'arcgis-vector'
+            related_data_layer.id = item.data_layer_id and
+            (
+              data_sources.type = 'arcgis-vector' or
+              (
+                data_sources.type = 'arcgis-dynamic-mapserver' and
+                exists(
+                  select 
+                    sublayer_type 
+                  from 
+                    related_data_layer 
+                  where 
+                    sublayer_type = 'vector'
+                )
+              )
+            )
         )
     )
     select 
@@ -13236,7 +13306,9 @@ CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.
         when item.is_folder = true then null
         when (exists(select * from related_data_source)) then (
           select 
-            'https://arcgis-export.seasketch.org/?download=' || item.title || '&location=' || url
+            'https://arcgis-export.seasketch.org/?download=' || item.title || '&location=' || url || '/' || (
+              select coalesce(sublayer, '') from related_data_layer
+            )
           from
             related_data_source 
           limit 1

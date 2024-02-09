@@ -9,6 +9,12 @@ query DraftTableOfContents($slug: String!) {
     draftTableOfContentsItems {
       ...Overlay
     }
+  }
+}
+
+query ExtraTocEditingInfo($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
     importedArcgisServices
     downloadableLayersCount
     eligableDownloadableLayersCount
@@ -82,7 +88,6 @@ query layersAndSourcesForItems(
       renderUnder
       sourceLayer
       sublayer
-      sublayerType
     }
   }
 }
@@ -223,6 +228,7 @@ query GetLayerItem($id: Int!) {
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
       staticId
       sprites {
         id

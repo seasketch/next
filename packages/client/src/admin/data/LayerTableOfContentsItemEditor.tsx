@@ -12,6 +12,7 @@ import {
   useUpdateEnableHighDpiRequestsMutation,
   ArcgisFeatureLayerFetchStrategy,
   useUpdateFetchStrategyMutation,
+  SublayerType,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import Spinner from "../../components/Spinner";
@@ -384,7 +385,9 @@ export default function LayerTableOfContentsItemEditor(
             )}
           </div>
 
-          {source?.type === DataSourceTypes.ArcgisVector && (
+          {(source?.type === DataSourceTypes.ArcgisVector ||
+            (source?.type === DataSourceTypes.ArcgisDynamicMapserver &&
+              layer?.sublayerType === SublayerType.Vector)) && (
             <div className="mt-5">
               <div className="flex">
                 <div className={`flex-1 text-sm font-medium text-gray-700`}>
@@ -420,7 +423,7 @@ export default function LayerTableOfContentsItemEditor(
                   >
                     ArcGIS REST API query endpoint
                   </a>
-                  . Data may be cached and up to 3 hours old.
+                  . Cached data may be up to 3 hours old.
                 </Trans>
               </p>
             </div>
