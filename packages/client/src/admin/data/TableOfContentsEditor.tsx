@@ -133,10 +133,6 @@ export default function TableOfContentsEditor() {
   ]);
 
   useEffect(() => {
-    console.log("draftTableOfContentsItems changed");
-  }, [tocQuery.data?.projectBySlug?.draftTableOfContentsItems]);
-
-  useEffect(() => {
     tocQuery.refetch();
   }, [slug]);
 
