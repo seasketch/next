@@ -1,6 +1,5 @@
 import SegmentControl from "../../components/SegmentControl";
 import useSegmentState from "../../components/useSegmentState";
-import DataUploadTaskList from "../uploads/DataUploadTaskList";
 import BackgroundJobList from "./BackgroundJobList";
 import BaseMapEditor from "./BasemapEditor";
 import TableOfContentsEditor from "./TableOfContentsEditor";
@@ -37,7 +36,6 @@ export default function LayerAdminSidebar() {
         </div>
       </div>
       <BackgroundJobList className="flex-0 overflow-y-hidden" />
-      {/* <DataUploadTaskList className="flex-none max-h-96 xl:max-h-127 overflow-y-auto" /> */}
     </div>
   );
 }
