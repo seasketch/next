@@ -215,7 +215,7 @@ export default async function handleUpload(
       const rioInfo = await logger.exec(
         ["rio", ["info", "-v", workingFilePath]],
         "Problem reading file. Rasters should be uploaded as GeoTIFF.",
-        1 / 20
+        2 / 30
       );
       const rioData = JSON.parse(rioInfo);
       if (rioData.driver !== "GTiff") {
@@ -260,7 +260,7 @@ export default async function handleUpload(
       const fc = await logger.exec(
         ["rio", ["bounds", workingFilePath]],
         "Problem determining bounds of raster",
-        1 / 20
+        2 / 30
       );
       rasterInfo.bounds = JSON.parse(fc).bbox;
     } else {
@@ -322,7 +322,7 @@ export default async function handleUpload(
         await logger.exec(
           ["rio", ["warp", inputPath, warpedPath, "--dst-crs", "EPSG:3857"]],
           "Problem reprojecting raster",
-          1 / 20
+          5 / 30
         );
         inputPath = warpedPath;
       }
@@ -332,7 +332,7 @@ export default async function handleUpload(
         await logger.exec(
           ["gdal_translate", ["-expand", "rgb", inputPath, rgbPath]],
           "Problem converting palletized raster to RGB",
-          1 / 20
+          2 / 30
         );
         inputPath = rgbPath;
       } else if (rasterInfo.colorInterp === ColorInterp.GRAY) {
@@ -360,7 +360,7 @@ export default async function handleUpload(
             ],
           ],
           "Problem converting raster to RGB",
-          1 / 20
+          2 / 30
         );
         inputPath = rgbPath;
       }
@@ -397,13 +397,13 @@ export default async function handleUpload(
           ],
         ],
         "Problem converting raster to mbtiles",
-        3 / 20
+        8 / 30
       );
 
       await logger.exec(
         ["gdaladdo", ["-minsize", "8", "-r", "cubic", mbtilesPath]],
         "Problem adding overviews to mbtiles",
-        2 / 20
+        4 / 30
       );
 
       // Convert to pmtiles
@@ -411,7 +411,7 @@ export default async function handleUpload(
       await logger.exec(
         [`pmtiles`, ["convert", mbtilesPath, pmtilesPath]],
         "PMTiles conversion failed",
-        5 / 20
+        4 / 30
       );
       outputs.push({
         type: "PMTiles",
