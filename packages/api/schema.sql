@@ -616,6 +616,29 @@ CREATE TYPE public.project_access_status AS ENUM (
 
 
 --
+-- Name: project_background_job_state; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.project_background_job_state AS ENUM (
+    'queued',
+    'running',
+    'complete',
+    'failed'
+);
+
+
+--
+-- Name: project_background_job_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.project_background_job_type AS ENUM (
+    'data_upload',
+    'arcgis_import',
+    'consolidate_data_sources'
+);
+
+
+--
 -- Name: project_invite_details; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -2086,29 +2109,6 @@ $$;
 
 
 --
--- Name: after_data_upload_task_insert_or_update_notify_subscriptions(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.after_data_upload_task_insert_or_update_notify_subscriptions() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-  DECLARE
-    slug text;
-    event_topic text;
-  BEGIN
-  select projects.slug into slug from projects where id = NEW.project_id;
-  select concat('graphql:project:', slug, ':dataUploadTasks') into event_topic;
-  if OLD is null then
-    perform pg_notify(event_topic, json_build_object('dataUploadTaskId', NEW.id, 'projectId', NEW.project_id, 'previousState', null)::text);
-  else
-    perform pg_notify(event_topic, json_build_object('dataUploadTaskId', NEW.id, 'projectId', NEW.project_id, 'previousState', OLD.state)::text);
-  end if;
-  return NEW;
-  END;
-$$;
-
-
---
 -- Name: after_insert_or_update_or_delete_project_invite_email(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2211,6 +2211,29 @@ CREATE FUNCTION public.after_post_insert_notify_subscriptions() RETURNS trigger
   return NEW;
   END;
   $$;
+
+
+--
+-- Name: after_project_background_jobs_insert_or_update_notify_subscript(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_project_background_jobs_insert_or_update_notify_subscript() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  DECLARE
+    slug text;
+    event_topic text;
+  BEGIN
+  select projects.slug into slug from projects where id = NEW.project_id;
+  select concat('graphql:project:', slug, ':projectBackgroundJobs') into event_topic;
+  if OLD is null then
+    perform pg_notify(event_topic, json_build_object('id', NEW.id, 'projectId', NEW.project_id, 'previousState', null)::text);
+  else
+    perform pg_notify(event_topic, json_build_object('id', NEW.id, 'projectId', NEW.project_id, 'previousState', OLD.state)::text);
+  end if;
+  return NEW;
+  END;
+$$;
 
 
 --
@@ -3162,6 +3185,25 @@ $$;
 
 
 --
+-- Name: before_insert_or_update_data_upload_tasks_trigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_or_update_data_upload_tasks_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    job project_background_jobs;
+  begin
+    if new.project_background_job_id is null then
+    insert into project_background_jobs (project_id, title, user_id, type) values (new.project_id, new.filename, new.user_id, 'data_upload') returning * into job;
+      new.project_background_job_id = job.id;
+    end if;
+    return new;
+  end;
+  $$;
+
+
+--
 -- Name: before_insert_or_update_form_logic_conditions_100(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -3289,9 +3331,6 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
     end if;
     if length(trim(new.title)) = 0 then
       raise 'title cannot be empty';
-    end if;
-    if new.enable_download = true and not table_of_contents_items_is_downloadable_source_type(new) then
-      raise 'Cannot enable download for this source type %', new.data_source_type;
     end if;
     return new;
   end;
@@ -3853,15 +3892,16 @@ COMMENT ON FUNCTION public.can_digitize(scid integer) IS '@omit';
 
 
 --
--- Name: cancel_data_upload(integer, uuid); Type: FUNCTION; Schema: public; Owner: -
+-- Name: cancel_background_job(integer, uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.cancel_data_upload(project_id integer, upload_id uuid) RETURNS void
+CREATE FUNCTION public.cancel_background_job(project_id integer, job_id uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     begin
       if session_is_admin(project_id) then
-        delete from data_upload_tasks where id = upload_id and state = 'awaiting_upload';
+        delete from data_upload_tasks where project_background_job_id = job_id;
+        delete from project_background_jobs where id = job_id;
       else
         raise exception 'permission denied';
       end if;
@@ -4890,25 +4930,12 @@ COMMENT ON FUNCTION public.create_consent_document(fid integer, version integer,
 
 CREATE TABLE public.data_upload_tasks (
     id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    project_id integer NOT NULL,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    started_at timestamp with time zone,
-    state public.data_upload_state DEFAULT 'awaiting_upload'::public.data_upload_state NOT NULL,
-    progress numeric,
     filename text NOT NULL,
     content_type text NOT NULL,
-    error_message text,
     outputs jsonb,
-    user_id integer NOT NULL,
-    CONSTRAINT data_upload_tasks_progress_check CHECK (((progress <= 1.0) AND (progress >= 0.0)))
+    project_background_job_id uuid NOT NULL
 );
-
-
---
--- Name: COLUMN data_upload_tasks.progress; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_upload_tasks.progress IS '0.0 to 1.0 scale, applies to tiling process.';
 
 
 --
@@ -4936,11 +4963,34 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
       upload data_upload_tasks;
       used bigint;
       quota bigint;
+      job project_background_jobs;
     begin
       if session_is_admin(project_id) then
         select projects_data_hosting_quota_used(projects.*), projects_data_hosting_quota(projects.*) into used, quota from projects where id = project_id;
         if quota - used > 0 then
-          insert into data_upload_tasks(project_id, filename, content_type, user_id) values (create_data_upload.project_id, create_data_upload.filename, create_data_upload.content_type, nullif(current_setting('session.user_id', TRUE), '')::integer) returning * into upload;
+          insert into project_background_jobs (
+            project_id, 
+            title, 
+            user_id, 
+            type,
+            timeout_at
+          ) values (
+            project_id, 
+            filename, 
+            nullif(current_setting('session.user_id', TRUE), '')::integer, 
+            'data_upload',
+            timezone('utc'::text, now()) + interval '15 minutes'
+          )
+          returning * into job;
+          insert into data_upload_tasks(
+            filename, 
+            content_type, 
+            project_background_job_id
+          ) values (
+            create_data_upload.filename, 
+            create_data_upload.content_type, 
+            job.id
+          ) returning * into upload;
           return upload;
         else
           raise exception 'data hosting quota exceeded';
@@ -6158,20 +6208,6 @@ COMMENT ON FUNCTION public.create_topic("forumId" integer, title text, message j
 
 
 --
--- Name: create_upload_task_job(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_upload_task_job() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-    perform graphile_worker.add_job('processDataUpload', json_build_object('uploadId', NEW.id), max_attempts := 1);
-    RETURN NEW;
-END;
-$$;
-
-
---
 -- Name: create_visibility_logic_rule(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6599,6 +6635,8 @@ CREATE TABLE public.data_sources (
     upload_task_id uuid,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     arcgis_fetch_strategy public.arcgis_feature_layer_fetch_strategy DEFAULT 'tiled'::public.arcgis_feature_layer_fetch_strategy NOT NULL,
+    user_id integer,
+    uploaded_by integer,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -6880,6 +6918,13 @@ COMMENT ON COLUMN public.data_sources.upload_task_id IS 'UUID of the upload proc
 
 
 --
+-- Name: COLUMN data_sources.uploaded_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.uploaded_by IS '@omit';
+
+
+--
 -- Name: data_sources_uploaded_by(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6887,17 +6932,15 @@ CREATE FUNCTION public.data_sources_uploaded_by(data_source public.data_sources)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
   declare
-    uid int;
     author text;
   begin
     if session_is_admin(data_source.project_id) then
-      select user_id into uid from data_upload_tasks where id = data_source.upload_task_id;
-      if uid is null then
+      if data_source.uploaded_by is null then
         return null;
       else
-        select coalesce(fullname, nickname, email) into author from user_profiles where user_id = uid;
+        select coalesce(fullname, nickname, email) into author from user_profiles where user_id = data_source.uploaded_by;
         if author is null then
-          select canonical_email into author from users where id = uid;
+          select canonical_email into author from users where id = data_source.uploaded_by;
         end if;
         return author;
       end if;
@@ -6905,6 +6948,45 @@ CREATE FUNCTION public.data_sources_uploaded_by(data_source public.data_sources)
       raise exception 'Permission denied';
     end if;
   end
+  $$;
+
+
+--
+-- Name: project_background_jobs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_background_jobs (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    project_id integer NOT NULL,
+    title text NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    started_at timestamp with time zone,
+    user_id integer NOT NULL,
+    progress numeric,
+    progress_message text DEFAULT 'queued'::text NOT NULL,
+    error_message text,
+    state public.project_background_job_state DEFAULT 'queued'::public.project_background_job_state NOT NULL,
+    timeout_at timestamp with time zone DEFAULT (timezone('utc'::text, now()) + '00:03:00'::interval) NOT NULL,
+    type public.project_background_job_type DEFAULT 'data_upload'::public.project_background_job_type NOT NULL,
+    CONSTRAINT project_background_jobs_progress_check CHECK (((progress <= 1.0) AND (progress >= 0.0)))
+);
+
+
+--
+-- Name: TABLE project_background_jobs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_background_jobs IS '@simpleCollections only';
+
+
+--
+-- Name: data_upload_tasks_job(public.data_upload_tasks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_upload_tasks_job(task public.data_upload_tasks) RETURNS public.project_background_jobs
+    LANGUAGE sql STABLE
+    AS $$
+    select * from project_background_jobs where id = task.project_background_job_id;
   $$;
 
 
@@ -7132,18 +7214,19 @@ COMMENT ON FUNCTION public.disable_forum_posting("userId" integer, "projectId" i
 
 
 --
--- Name: dismiss_failed_upload(uuid); Type: FUNCTION; Schema: public; Owner: -
+-- Name: dismiss_failed_job(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.dismiss_failed_upload(id uuid) RETURNS public.data_upload_tasks
+CREATE FUNCTION public.dismiss_failed_job(id uuid) RETURNS public.project_background_jobs
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
-      upload data_upload_tasks;
+      job project_background_jobs;
     begin
-      if session_is_admin((select project_id from data_upload_tasks where data_upload_tasks.id = dismiss_failed_upload.id)) then
-        update data_upload_tasks set state = 'failed_dismissed' where data_upload_tasks.id = dismiss_failed_upload.id returning * into upload;
-        return upload;
+      if session_is_admin((select project_id from project_background_jobs where project_background_jobs.id = dismiss_failed_job.id)) then
+        delete from data_upload_tasks where project_background_job_id = dismiss_failed_job.id;
+        delete from project_background_jobs where project_background_jobs.id = dismiss_failed_job.id returning * into job;
+        return job;
       else
         raise exception 'permission denied';
       end if;
@@ -9846,6 +9929,17 @@ CREATE FUNCTION public.project_access_status(pid integer) RETURNS public.project
       raise exception 'Unknown reason for denying project access. userid = %, project_id = %', uid, pid;
     end;
 $$;
+
+
+--
+-- Name: project_background_jobs_data_upload_task(public.project_background_jobs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_background_jobs_data_upload_task(job public.project_background_jobs) RETURNS public.data_upload_tasks
+    LANGUAGE sql STABLE
+    AS $$
+    select * from data_upload_tasks where project_background_job_id = job.id limit 1;
+  $$;
 
 
 --
@@ -12811,15 +12905,35 @@ COMMENT ON FUNCTION public.soft_delete_sprite(id integer) IS 'Superusers only. "
 -- Name: submit_data_upload(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.submit_data_upload(id uuid) RETURNS public.data_upload_tasks
+CREATE FUNCTION public.submit_data_upload(id uuid) RETURNS public.project_background_jobs
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
-      upload data_upload_tasks;
+      job project_background_jobs;
+      pid integer;
     begin
-      if session_is_admin((select project_id from data_upload_tasks where data_upload_tasks.id = submit_data_upload.id)) then
-        update data_upload_tasks set state = 'uploaded' where data_upload_tasks.id = submit_data_upload.id returning * into upload;
-        return upload;
+      select 
+        project_id 
+      from 
+        project_background_jobs 
+      where 
+        project_background_jobs.id = project_background_jobs.id 
+      into pid;
+      if session_is_admin(pid) then
+        update 
+          project_background_jobs 
+        set 
+          state = 'running', 
+          progress_message = 'uploaded' 
+        where 
+          project_background_jobs.id = submit_data_upload.id 
+        returning * into job;
+        perform graphile_worker.add_job(
+          'processDataUpload', 
+          json_build_object('jobId', job.id), 
+          max_attempts := 1
+        );
+        return job;
       else
         raise exception 'permission denied';
       end if;
@@ -15989,6 +16103,14 @@ ALTER TABLE ONLY public.posts
 
 
 --
+-- Name: project_background_jobs project_background_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_background_jobs
+    ADD CONSTRAINT project_background_jobs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: project_group_members project_group_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -16388,17 +16510,10 @@ CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (pro
 
 
 --
--- Name: data_upload_tasks_project_id_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: data_upload_tasks_project_background_job_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX data_upload_tasks_project_id_idx ON public.data_upload_tasks USING btree (project_id);
-
-
---
--- Name: data_upload_tasks_state_project_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX data_upload_tasks_state_project_id_idx ON public.data_upload_tasks USING btree (state, project_id);
+CREATE INDEX data_upload_tasks_project_background_job_id_idx ON public.data_upload_tasks USING btree (project_background_job_id);
 
 
 --
@@ -16686,6 +16801,13 @@ CREATE INDEX posts_topic_id_idx ON public.posts USING btree (topic_id);
 --
 
 CREATE INDEX project_access_control ON public.projects USING btree (access_control);
+
+
+--
+-- Name: project_background_jobs_project_id_state_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_background_jobs_project_id_state_idx ON public.project_background_jobs USING btree (project_id, state);
 
 
 --
@@ -17193,6 +17315,13 @@ CREATE TRIGGER before_insert_or_update_data_sources BEFORE INSERT OR UPDATE ON p
 
 
 --
+-- Name: data_upload_tasks before_insert_or_update_data_upload_tasks_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_data_upload_tasks_trigger BEFORE INSERT OR UPDATE ON public.data_upload_tasks FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_data_upload_tasks_trigger();
+
+
+--
 -- Name: form_logic_conditions before_insert_or_update_form_logic_conditions_100_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -17291,13 +17420,6 @@ CREATE TRIGGER before_valid_children_insert_or_update_trigger BEFORE INSERT OR U
 
 
 --
--- Name: data_upload_tasks data_upload_task_notify_subscriptions; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER data_upload_task_notify_subscriptions AFTER INSERT OR UPDATE ON public.data_upload_tasks FOR EACH ROW EXECUTE FUNCTION public.after_data_upload_task_insert_or_update_notify_subscriptions();
-
-
---
 -- Name: projects draft_table_of_contents_has_changes_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -17351,6 +17473,13 @@ CREATE TRIGGER on_map_bookmark_update_trigger AFTER UPDATE ON public.map_bookmar
 --
 
 CREATE TRIGGER post_after_insert_notify_subscriptions AFTER INSERT ON public.posts FOR EACH ROW EXECUTE FUNCTION public.after_post_insert_notify_subscriptions();
+
+
+--
+-- Name: project_background_jobs project_background_job_notify_subscriptions; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER project_background_job_notify_subscriptions AFTER INSERT OR UPDATE ON public.project_background_jobs FOR EACH ROW EXECUTE FUNCTION public.after_project_background_jobs_insert_or_update_notify_subscript();
 
 
 --
@@ -17456,13 +17585,6 @@ CREATE TRIGGER trig_create_sketch_class_acl AFTER INSERT ON public.sketch_classe
 --
 
 CREATE TRIGGER trig_create_table_of_contents_item_acl AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.create_table_of_contents_item_acl();
-
-
---
--- Name: data_upload_tasks trigger_data_upload_ready; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trigger_data_upload_ready AFTER UPDATE ON public.data_upload_tasks FOR EACH ROW WHEN (((old.state = 'awaiting_upload'::public.data_upload_state) AND (new.state = 'uploaded'::public.data_upload_state))) EXECUTE FUNCTION public.create_upload_task_job();
 
 
 --
@@ -17642,6 +17764,22 @@ ALTER TABLE ONLY public.data_sources
 
 
 --
+-- Name: data_sources data_sources_uploaded_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: data_sources data_sources_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
 -- Name: data_upload_outputs data_upload_outputs_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -17658,19 +17796,11 @@ ALTER TABLE ONLY public.data_upload_outputs
 
 
 --
--- Name: data_upload_tasks data_upload_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: data_upload_tasks data_upload_tasks_project_background_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.data_upload_tasks
-    ADD CONSTRAINT data_upload_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
-
-
---
--- Name: data_upload_tasks data_upload_tasks_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.data_upload_tasks
-    ADD CONSTRAINT data_upload_tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+    ADD CONSTRAINT data_upload_tasks_project_background_job_id_fkey FOREIGN KEY (project_background_job_id) REFERENCES public.project_background_jobs(id) ON DELETE CASCADE;
 
 
 --
@@ -17957,6 +18087,22 @@ ALTER TABLE ONLY public.posts
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_background_jobs project_background_jobs_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_background_jobs
+    ADD CONSTRAINT project_background_jobs_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_background_jobs project_background_jobs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_background_jobs
+    ADD CONSTRAINT project_background_jobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --
@@ -18674,7 +18820,9 @@ ALTER TABLE public.data_upload_tasks ENABLE ROW LEVEL SECURITY;
 -- Name: data_upload_tasks data_upload_tasks_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_upload_tasks_select ON public.data_upload_tasks USING (public.session_is_admin(project_id));
+CREATE POLICY data_upload_tasks_select ON public.data_upload_tasks FOR SELECT USING (public.session_is_admin(( SELECT project_background_jobs.project_id
+   FROM public.project_background_jobs
+  WHERE (project_background_jobs.id = data_upload_tasks.project_background_job_id))));
 
 
 --
@@ -18938,6 +19086,19 @@ CREATE POLICY posts_select ON public.posts FOR SELECT TO anon USING ((public.ses
      JOIN public.topics ON ((topics.id = posts.topic_id)))
      JOIN public.forums ON ((forums.id = topics.forum_id)))
   WHERE (access_control_lists.forum_id_read = forums.id)))));
+
+
+--
+-- Name: project_background_jobs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_background_jobs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: project_background_jobs project_background_jobs_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY project_background_jobs_select ON public.project_background_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
 
 --
@@ -20496,13 +20657,6 @@ REVOKE ALL ON FUNCTION public.after_data_sources_update_or_delete_set_draft_tabl
 
 
 --
--- Name: FUNCTION after_data_upload_task_insert_or_update_notify_subscriptions(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.after_data_upload_task_insert_or_update_notify_subscriptions() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION after_insert_or_update_or_delete_project_invite_email(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -20528,6 +20682,13 @@ REVOKE ALL ON FUNCTION public.after_post_insert() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.after_post_insert_notify_subscriptions() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_project_background_jobs_insert_or_update_notify_subscript(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_project_background_jobs_insert_or_update_notify_subscript() FROM PUBLIC;
 
 
 --
@@ -20875,6 +21036,13 @@ REVOKE ALL ON FUNCTION public.before_insert_or_update_data_sources_trigger() FRO
 
 
 --
+-- Name: FUNCTION before_insert_or_update_data_upload_tasks_trigger(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_or_update_data_upload_tasks_trigger() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION before_insert_or_update_form_logic_conditions_100(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -21199,11 +21367,11 @@ GRANT ALL ON FUNCTION public.can_digitize(scid integer) TO anon;
 
 
 --
--- Name: FUNCTION cancel_data_upload(project_id integer, upload_id uuid); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION cancel_background_job(project_id integer, job_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.cancel_data_upload(project_id integer, upload_id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.cancel_data_upload(project_id integer, upload_id uuid) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.cancel_background_job(project_id integer, job_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.cancel_background_job(project_id integer, job_id uuid) TO seasketch_user;
 
 
 --
@@ -21688,31 +21856,10 @@ GRANT SELECT(id) ON TABLE public.data_upload_tasks TO seasketch_user;
 
 
 --
--- Name: COLUMN data_upload_tasks.project_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(project_id) ON TABLE public.data_upload_tasks TO seasketch_user;
-
-
---
 -- Name: COLUMN data_upload_tasks.created_at; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT SELECT(created_at) ON TABLE public.data_upload_tasks TO seasketch_user;
-
-
---
--- Name: COLUMN data_upload_tasks.state; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(state) ON TABLE public.data_upload_tasks TO seasketch_user;
-
-
---
--- Name: COLUMN data_upload_tasks.progress; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(progress) ON TABLE public.data_upload_tasks TO seasketch_user;
 
 
 --
@@ -21727,13 +21874,6 @@ GRANT SELECT(filename) ON TABLE public.data_upload_tasks TO seasketch_user;
 --
 
 GRANT SELECT(content_type) ON TABLE public.data_upload_tasks TO seasketch_user;
-
-
---
--- Name: COLUMN data_upload_tasks.error_message; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(error_message) ON TABLE public.data_upload_tasks TO seasketch_user;
 
 
 --
@@ -22175,13 +22315,6 @@ GRANT ALL ON FUNCTION public.create_topic("forumId" integer, title text, message
 
 
 --
--- Name: FUNCTION create_upload_task_job(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.create_upload_task_job() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION create_visibility_logic_rule("formElementId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22453,6 +22586,21 @@ GRANT ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_so
 
 
 --
+-- Name: TABLE project_background_jobs; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_background_jobs TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_upload_tasks_job(task public.data_upload_tasks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_upload_tasks_job(task public.data_upload_tasks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_upload_tasks_job(task public.data_upload_tasks) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION data_upload_tasks_layers(upload public.data_upload_tasks); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22566,11 +22714,11 @@ REVOKE ALL ON FUNCTION public.disablelongtransactions() FROM PUBLIC;
 
 
 --
--- Name: FUNCTION dismiss_failed_upload(id uuid); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION dismiss_failed_job(id uuid); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.dismiss_failed_upload(id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.dismiss_failed_upload(id uuid) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.dismiss_failed_job(id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.dismiss_failed_job(id uuid) TO seasketch_user;
 
 
 --
@@ -25339,6 +25487,14 @@ GRANT ALL ON FUNCTION public.posts_sketch_ids(post public.posts) TO anon;
 
 REVOKE ALL ON FUNCTION public.project_access_status(pid integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_access_status(pid integer) TO anon;
+
+
+--
+-- Name: FUNCTION project_background_jobs_data_upload_task(job public.project_background_jobs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_background_jobs_data_upload_task(job public.project_background_jobs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_background_jobs_data_upload_task(job public.project_background_jobs) TO seasketch_user;
 
 
 --

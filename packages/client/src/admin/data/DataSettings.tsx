@@ -4,7 +4,7 @@ import LayerAdminSidebar from "./LayerAdminSidebar";
 import { useProjectRegionQuery } from "../../generated/graphql";
 import bbox from "@turf/bbox";
 import { MapContext, useMapContext } from "../../dataLayers/MapContextManager";
-import DataUploadDropzone from "../uploads/DataUploadDropzone";
+import DataUploadDropzone from "../uploads/ProjectBackgroundJobContext";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import Legend from "../../dataLayers/Legend";

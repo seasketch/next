@@ -1,11 +1,15 @@
 fragment DataUploadDetails on DataUploadTask {
-  createdAt
-  filename
   id
-  progress
-  state
-  errorMessage
+  filename
   tableOfContentsItemStableIds
+  projectBackgroundJobId
+}
+
+fragment DataUploadExtendedDetails on DataUploadTask {
+  ...DataUploadDetails
+  job {
+    ...JobDetails
+  }
 }
 
 mutation createDataUpload(
@@ -21,16 +25,35 @@ mutation createDataUpload(
     }
   ) {
     dataUploadTask {
-      ...DataUploadDetails
+      ...DataUploadExtendedDetails
       presignedUploadUrl
     }
   }
 }
 
-mutation submitDataUpload($id: UUID!) {
-  submitDataUpload(input: { id: $id }) {
-    dataUploadTask {
-      ...DataUploadDetails
+fragment JobDetails on ProjectBackgroundJob {
+  id
+  state
+  progress
+  progressMessage
+  errorMessage
+  createdAt
+  startedAt
+  title
+  type
+  dataUploadTask {
+    ...DataUploadDetails
+  }
+}
+
+mutation submitDataUpload($jobId: UUID!) {
+  submitDataUpload(input: { id: $jobId }) {
+    projectBackgroundJob {
+      id
+      state
+      dataUploadTask {
+        ...DataUploadExtendedDetails
+      }
     }
   }
 }
@@ -39,15 +62,24 @@ query DataUploadTasks($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     activeDataUploads {
-      ...DataUploadDetails
+      ...DataUploadExtendedDetails
     }
   }
 }
 
-mutation DismissFailedTask($id: UUID!) {
-  dismissFailedUpload(input: { id: $id }) {
-    dataUploadTask {
-      ...DataUploadDetails
+query ProjectBackgroundJobs($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    projectBackgroundJobs {
+      ...JobDetails
+    }
+  }
+}
+
+mutation DismissFailedJob($id: UUID!) {
+  dismissFailedJob(input: { id: $id }) {
+    projectBackgroundJob {
+      ...JobDetails
     }
   }
 }
@@ -55,7 +87,8 @@ mutation DismissFailedTask($id: UUID!) {
 mutation FailUpload($id: UUID!, $message: String!) {
   failDataUpload(input: { id: $id, msg: $message }) {
     dataUploadTask {
-      ...DataUploadDetails
+      id
+      projectBackgroundJobId
     }
   }
 }
@@ -68,24 +101,9 @@ query ProjectDataQuotaRemaining($slug: String!) {
   }
 }
 
-mutation CancelUpload($projectId: Int!, $uploadId: UUID!) {
-  cancelDataUpload(input: { projectId: $projectId, uploadId: $uploadId }) {
+mutation CancelUpload($projectId: Int!, $jobId: UUID!) {
+  cancelBackgroundJob(input: { projectId: $projectId, jobId: $jobId }) {
     clientMutationId
-  }
-}
-
-fragment DataUploadEvent on DataUploadTaskSubscriptionPayload {
-  projectId
-  dataUploadTaskId
-  previousState
-  dataUploadTask {
-    ...DataUploadDetails
-  }
-}
-
-subscription DataUploads($slug: String!) {
-  dataUploadTasks(slug: $slug) {
-    ...DataUploadEvent
   }
 }
 
@@ -96,5 +114,19 @@ mutation UpdateDataHostingQuota($projectId: Int!, $quota: BigInt!) {
       dataHostingQuota
       dataHostingQuotaUsed
     }
+  }
+}
+
+fragment BackgroundJobSubscriptionEvent on ProjectBackgroundJobSubscriptionPayload {
+  id
+  previousState
+  job {
+    ...JobDetails
+  }
+}
+
+subscription ProjectBackgroundJob($slug: String!) {
+  backgroundJobs(slug: $slug) {
+    ...BackgroundJobSubscriptionEvent
   }
 }

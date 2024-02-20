@@ -5,6 +5,7 @@ interface ProgressBarProps {
   /** 0.0 - 1.0 */
   progress: number;
   indeterminate?: boolean;
+  colorClassName?: string;
 }
 
 // background: linear-gradient(-100deg, #f0f0f0 0%, #fafafa 50%, #f0f0f0 100%);
@@ -22,6 +23,7 @@ interface ProgressBarProps {
 // }
 
 export default function ProgressBar(props: ProgressBarProps) {
+  const colorClassName = props.colorClassName || "bg-primary-300";
   return (
     <div className="mb-2">
       <motion.div
@@ -45,7 +47,7 @@ export default function ProgressBar(props: ProgressBarProps) {
         }}
       >
         <div
-          className="bg-primary-300 float-left h-3"
+          className={`${colorClassName} float-left h-3`}
           style={{
             width: `${props.indeterminate ? 0 : props.progress * 100}%`,
             transition: "width 500ms",

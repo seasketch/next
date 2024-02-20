@@ -32,7 +32,7 @@ import {
   MenubarTrigger,
 } from "../../components/Menubar";
 import bbox from "@turf/bbox";
-import { DataUploadDropzoneContext } from "../uploads/DataUploadDropzone";
+import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobContext";
 import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -540,7 +540,7 @@ function Header({
   sharedLayersCount: number;
   eligibleLayersCount: number;
 }) {
-  const uploadContext = useContext(DataUploadDropzoneContext);
+  const uploadContext = useContext(ProjectBackgroundJobContext);
   const { t } = useTranslation("admin:data");
   const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
   const onError = useGlobalErrorHandler();

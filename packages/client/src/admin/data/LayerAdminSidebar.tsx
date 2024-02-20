@@ -1,6 +1,6 @@
 import SegmentControl from "../../components/SegmentControl";
 import useSegmentState from "../../components/useSegmentState";
-import DataUploadTaskList from "../uploads/DataUploadTaskList";
+import BackgroundJobList from "./BackgroundJobList";
 import BaseMapEditor from "./BasemapEditor";
 import TableOfContentsEditor from "./TableOfContentsEditor";
 
@@ -23,7 +23,7 @@ export default function LayerAdminSidebar() {
           />
         </div>
       </header>
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-2 overflow-y-auto">
         <div
           className={
             selectedTab === "Overlay Layers" ? containerClassName : "hidden"
@@ -35,7 +35,7 @@ export default function LayerAdminSidebar() {
           <BaseMapEditor />
         </div>
       </div>
-      <DataUploadTaskList className="flex-none max-h-96 xl:max-h-127 overflow-y-auto" />
+      <BackgroundJobList className="flex-0 overflow-y-hidden" />
     </div>
   );
 }

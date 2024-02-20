@@ -13,19 +13,27 @@ import { createDBRecordsForProcessedUpload } from "../src/spatialUploads";
  */
 export default async function processDataUpload(
   payload: {
-    uploadId: string;
+    jobId: string;
     data: ProcessedUploadResponse;
   },
   helpers: Helpers
 ) {
-  const { uploadId, data } = payload;
-  helpers.logger.info(`Handling spatial data upload: ${uploadId}`);
+  const { jobId, data } = payload;
+  helpers.logger.info(`Handling spatial data upload: ${jobId}`);
   helpers.logger.info(`Data: ${data}`);
   await helpers.withPgClient(async (client) => {
     const results = await client.query(
-      `update data_upload_tasks set state = 'cartography', started_at = now() where id = $1 returning *`,
-      [uploadId]
+      `update project_background_jobs set progress_message = 'cartography' where id = $1 returning *`,
+      [jobId]
     );
+    const q = await client.query(
+      `select id from data_upload_tasks where project_background_job_id = $1 limit 1`,
+      [jobId]
+    );
+    if (!q.rows[0]) {
+      throw new Error("Could not find upload task for job with ID=" + jobId);
+    }
+    const uploadId = q.rows[0].id;
     try {
       const projectId = results.rows[0].project_id;
       if (!data.error) {
@@ -39,19 +47,23 @@ export default async function processDataUpload(
           );
         }
         await client.query(
-          `update data_upload_tasks set state = 'complete', outputs = $1 where id = $2`,
-          [data, uploadId]
+          `update project_background_jobs set progress_message = 'complete', state = 'complete' where id = $1`,
+          [jobId]
+        );
+        await client.query(
+          `update data_upload_tasks set outputs = $2 where id = $1`,
+          [uploadId, JSON.stringify(data)]
         );
       } else {
         await client.query(
-          `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
-          [data.error, uploadId]
+          `update project_background_jobs set state = 'failed', error_message = $1, progress_message = 'failed' where id = $2`,
+          [data.error, jobId]
         );
       }
     } catch (e) {
       await client.query(
-        `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
-        [(e as Error).toString(), uploadId]
+        `update project_background_jobs set progress_message = 'failed', state = 'failed', error_message = $1 where id = $2`,
+        [(e as Error).toString(), jobId]
       );
     }
   });

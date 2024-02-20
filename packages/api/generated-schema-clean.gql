@@ -690,19 +690,19 @@ enum CacheableOfflineAssetType {
   SPRITE
 }
 
-"""All input for the `cancelDataUpload` mutation."""
-input CancelDataUploadInput {
+"""All input for the `cancelBackgroundJob` mutation."""
+input CancelBackgroundJobInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  jobId: UUID
   projectId: Int
-  uploadId: UUID
 }
 
-"""The output of our `cancelDataUpload` mutation."""
-type CancelDataUploadPayload {
+"""The output of our `cancelBackgroundJob` mutation."""
+type CancelBackgroundJobPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -1165,8 +1165,10 @@ type CreateDataUploadPayload {
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksEdge
 
-  """Reads a single `Project` that is related to this `DataUploadTask`."""
-  project: Project
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -3076,32 +3078,15 @@ enum DataUploadOutputType {
   ZIPPED_SHAPEFILE
 }
 
-enum DataUploadState {
-  AWAITING_UPLOAD
-  CARTOGRAPHY
-  COMPLETE
-  CONVERTING_FORMAT
-  FAILED
-  FAILED_DISMISSED
-  FETCHING
-  PROCESSING
-  REQUIRES_USER_INPUT
-  TILING
-  UPLOADED
-  UPLOADING_PRODUCTS
-  VALIDATING
-  WORKER_COMPLETE
-}
-
 type DataUploadTask implements Node {
   """Content-Type of the original upload."""
   contentType: String!
   createdAt: Datetime!
-  errorMessage: String
 
   """Original name of file as uploaded by the user."""
   filename: String!
   id: UUID!
+  job: ProjectBackgroundJob
 
   """Reads and enables pagination through a set of `DataLayer`."""
   layers(
@@ -3121,16 +3106,12 @@ type DataUploadTask implements Node {
   """Use to upload source data to s3. Must be an admin."""
   presignedUploadUrl: String
 
-  """0.0 to 1.0 scale, applies to tiling process."""
-  progress: BigFloat
-
-  """Reads a single `Project` that is related to this `DataUploadTask`."""
-  project: Project
-  projectId: Int!
-  startedAt: Datetime
-  state: DataUploadState!
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
+  projectBackgroundJobId: UUID!
   tableOfContentsItemStableIds: [String]
-  userId: Int!
 }
 
 """
@@ -3141,11 +3122,8 @@ input DataUploadTaskCondition {
   """Checks for equality with the object’s `id` field."""
   id: UUID
 
-  """Checks for equality with the object’s `projectId` field."""
-  projectId: Int
-
-  """Checks for equality with the object’s `state` field."""
-  state: DataUploadState
+  """Checks for equality with the object’s `projectBackgroundJobId` field."""
+  projectBackgroundJobId: UUID
 }
 
 """A connection to a list of `DataUploadTask` values."""
@@ -3181,18 +3159,8 @@ enum DataUploadTasksOrderBy {
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
-  STATE_ASC
-  STATE_DESC
-}
-
-type DataUploadTaskSubscriptionPayload {
-  dataUploadTask: DataUploadTask
-  dataUploadTaskId: UUID!
-  previousState: DataUploadState
-  project: Project!
-  projectId: Int!
+  PROJECT_BACKGROUND_JOB_ID_ASC
+  PROJECT_BACKGROUND_JOB_ID_DESC
 }
 
 """The day, does not include a time."""
@@ -4670,8 +4638,8 @@ type DisableForumPostingPayload {
   query: Query
 }
 
-"""All input for the `dismissFailedUpload` mutation."""
-input DismissFailedUploadInput {
+"""All input for the `dismissFailedJob` mutation."""
+input DismissFailedJobInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -4680,23 +4648,19 @@ input DismissFailedUploadInput {
   id: UUID
 }
 
-"""The output of our `dismissFailedUpload` mutation."""
-type DismissFailedUploadPayload {
+"""The output of our `dismissFailedJob` mutation."""
+type DismissFailedJobPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  dataUploadTask: DataUploadTask
 
-  """An edge for our `DataUploadTask`. May be used by Relay 1."""
-  dataUploadTaskEdge(
-    """The method to use when ordering `DataUploadTask`."""
-    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
-  ): DataUploadTasksEdge
-
-  """Reads a single `Project` that is related to this `DataUploadTask`."""
+  """
+  Reads a single `Project` that is related to this `ProjectBackgroundJob`.
+  """
   project: Project
+  projectBackgroundJob: ProjectBackgroundJob
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -4980,8 +4944,10 @@ type FailDataUploadPayload {
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksEdge
 
-  """Reads a single `Project` that is related to this `DataUploadTask`."""
-  project: Project
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -7245,12 +7211,12 @@ type Mutation {
     """
     input: ArchiveResponsesInput!
   ): ArchiveResponsesPayload
-  cancelDataUpload(
+  cancelBackgroundJob(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: CancelDataUploadInput!
-  ): CancelDataUploadPayload
+    input: CancelBackgroundJobInput!
+  ): CancelBackgroundJobPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -8090,12 +8056,12 @@ type Mutation {
     """
     input: DisableForumPostingInput!
   ): DisableForumPostingPayload
-  dismissFailedUpload(
+  dismissFailedJob(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: DismissFailedUploadInput!
-  ): DismissFailedUploadPayload
+    input: DismissFailedJobInput!
+  ): DismissFailedJobPayload
   enableDownloadForEligibleLayers(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9847,35 +9813,6 @@ type Project implements Node {
     tableOfContentsItemIds: [Int]
   ): [DataSource!]
 
-  """Reads and enables pagination through a set of `DataUploadTask`."""
-  dataUploadTasksConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: DataUploadTaskCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `DataUploadTask`."""
-    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
-  ): DataUploadTasksConnection!
-
   """Should be a short length in order to fit in the project header."""
   description: String
   downloadableLayersCount: Int
@@ -10139,6 +10076,23 @@ type Project implements Node {
     offset: Int
     orderBy: ParticipantSortBy
   ): [User!]
+
+  """Reads and enables pagination through a set of `ProjectBackgroundJob`."""
+  projectBackgroundJobs(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ProjectBackgroundJobCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `ProjectBackgroundJob`."""
+    orderBy: [ProjectBackgroundJobsOrderBy!]
+  ): [ProjectBackgroundJob!]!
   region: GeometryPolygon!
 
   """
@@ -10315,6 +10269,103 @@ enum ProjectAccessStatus {
   DENIED_NOT_REQUESTED
   GRANTED
   PROJECT_DOES_NOT_EXIST
+}
+
+type ProjectBackgroundJob implements Node {
+  createdAt: Datetime!
+  dataUploadTask: DataUploadTask
+
+  """Reads and enables pagination through a set of `DataUploadTask`."""
+  dataUploadTasksConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: DataUploadTaskCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `DataUploadTask`."""
+    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
+  ): DataUploadTasksConnection!
+  errorMessage: String
+  id: UUID!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  progress: BigFloat
+  progressMessage: String!
+
+  """
+  Reads a single `Project` that is related to this `ProjectBackgroundJob`.
+  """
+  project: Project
+  projectId: Int!
+  startedAt: Datetime
+  state: ProjectBackgroundJobState!
+  timeoutAt: Datetime!
+  title: String!
+  type: ProjectBackgroundJobType!
+  userId: Int!
+}
+
+"""
+A condition to be used against `ProjectBackgroundJob` object types. All fields
+are tested for equality and combined with a logical ‘and.’
+"""
+input ProjectBackgroundJobCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""Methods to use when ordering `ProjectBackgroundJob`."""
+enum ProjectBackgroundJobsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
+enum ProjectBackgroundJobState {
+  COMPLETE
+  FAILED
+  QUEUED
+  RUNNING
+}
+
+type ProjectBackgroundJobSubscriptionPayload {
+  id: UUID!
+  project: Project!
+  projectId: Int!
+}
+
+enum ProjectBackgroundJobType {
+  ARCGIS_IMPORT
+  CONSOLIDATE_DATA_SOURCES
+  DATA_UPLOAD
 }
 
 """
@@ -11282,6 +11333,32 @@ type Query implements Node {
   profileByUserId(userId: Int!): Profile
   project(id: Int!): Project
   projectAccessStatus(pid: Int): ProjectAccessStatus
+  projectBackgroundJob(id: UUID!): ProjectBackgroundJob
+
+  """Reads a single `ProjectBackgroundJob` using its globally unique `ID`."""
+  projectBackgroundJobByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `ProjectBackgroundJob`.
+    """
+    nodeId: ID!
+  ): ProjectBackgroundJob
+
+  """Reads a set of `ProjectBackgroundJob`."""
+  projectBackgroundJobs(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ProjectBackgroundJobCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `ProjectBackgroundJob`."""
+    orderBy: [ProjectBackgroundJobsOrderBy!]
+  ): [ProjectBackgroundJob!]
 
   """Reads a single `Project` using its globally unique `ID`."""
   projectByNodeId(
@@ -12705,16 +12782,12 @@ type SubmitDataUploadPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  dataUploadTask: DataUploadTask
 
-  """An edge for our `DataUploadTask`. May be used by Relay 1."""
-  dataUploadTaskEdge(
-    """The method to use when ordering `DataUploadTask`."""
-    orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
-  ): DataUploadTasksEdge
-
-  """Reads a single `Project` that is related to this `DataUploadTask`."""
+  """
+  Reads a single `Project` that is related to this `ProjectBackgroundJob`.
+  """
   project: Project
+  projectBackgroundJob: ProjectBackgroundJob
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -12727,7 +12800,7 @@ The root subscription type: contains realtime events you can subscribe to with t
 """
 type Subscription {
   """Triggered on all updates to DataUploadTasks in a project"""
-  dataUploadTasks(slug: String!): DataUploadTaskSubscriptionPayload
+  backgroundJobs(slug: String!): ProjectBackgroundJobSubscriptionPayload
 
   """Triggered when a new post is created in the subscribed topic"""
   forumActivity(slug: String!): ForumActivityPayload

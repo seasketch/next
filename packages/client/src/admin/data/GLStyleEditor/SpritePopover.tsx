@@ -23,7 +23,7 @@ import getSlug from "../../../getSlug";
 import useProjectId from "../../../useProjectId";
 import { getBestSpriteImage } from "./extensions/glStyleSprites";
 import { EditorView } from "@codemirror/view";
-import { DataUploadDropzoneContext } from "../../uploads/DataUploadDropzone";
+import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobContext";
 import useIsSuperuser from "../../../useIsSuperuser";
 import { CollectionIcon, ShareIcon, TrashIcon } from "@heroicons/react/outline";
 import useDialog from "../../../components/useDialog";
@@ -160,20 +160,22 @@ export default function SpritePopover({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
-  const [popperElement, setPopperElement] =
-    useState<HTMLDivElement | null>(null);
+  const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(
+    null
+  );
   const [arrowElement, setArrowElement] = useState<HTMLDivElement | null>(null);
   const { styles, attributes } = usePopper(spriteState?.target, popperElement, {
     modifiers: [{ name: "arrow", options: { element: arrowElement } }],
   });
-  const uploadContext = useContext(DataUploadDropzoneContext);
+  const uploadContext = useContext(ProjectBackgroundJobContext);
 
   const [share, shareMutationState] = useShareSpriteMutation();
 
   const superuser = useIsSuperuser();
   const { confirm, alert } = useDialog();
-  const [selectedCategory, setSelectedCategory] =
-    useState<null | "uploads" | string>(null);
+  const [selectedCategory, setSelectedCategory] = useState<
+    null | "uploads" | string
+  >(null);
 
   useEffect(() => {
     if (spriteState?.target) {

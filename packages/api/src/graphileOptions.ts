@@ -41,6 +41,7 @@ import DataUploadTasksSubscriptionPlugin from "./plugins/dataUploadTasksSubscrip
 import DraftTocStatusPlugin from "./plugins/projectDraftTableOfContentsStatusSubscription";
 import ComputedMetadataPlugin from "./plugins/computedMetadataPlugin";
 import SearchOverlaysRateLimiterPlugin from "./plugins/searchOverlaysRateLimiterPlugin";
+import ProjectBackgroundJobSubscriptionPlugin from "./plugins/projectBackgroundJobSubscriptionPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -89,10 +90,10 @@ export default function graphileOptions(): PostGraphileOptions {
       TranslatedPropsPlugin,
       VerifyEmailPlugin,
       SketchClassStylePlugin,
-      DataUploadTasksSubscriptionPlugin,
       DraftTocStatusPlugin,
       ComputedMetadataPlugin,
       SearchOverlaysRateLimiterPlugin,
+      ProjectBackgroundJobSubscriptionPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

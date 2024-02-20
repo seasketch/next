@@ -36,11 +36,13 @@
     "@turf/bbox": "^6.5.0",
     "@types/bytes": "^3.1.1",
     "@types/geojson": "^7946.0.10",
+    "@types/lodash.debounce": "^4.0.9",
     "@types/node": "^18.11.4",
     "@types/pg": "^8.6.5",
     "@types/tmp": "^0.2.3",
     "aws-sdk": "^2.1234.0",
     "bytes": "^3.1.2",
+    "lodash.debounce": "^4.0.8",
     "pg": "^8.8.0",
     "sanitize-filename": "^1.6.3",
     "tmp": "^0.2.1"
