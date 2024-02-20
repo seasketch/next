@@ -162,7 +162,7 @@ export default function DataUploadDropzone({
     if (message) {
       const description = isPartOfShapefile
         ? t(
-            `This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.`
+            `Parts of shapefiles cannot be uploaded directly. To upload a shapefile, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.`
           )
         : isUnsupportedRaster
         ? t(
@@ -189,9 +189,10 @@ export default function DataUploadDropzone({
           const { message, description } = supported;
           const response = await confirm(message, {
             description,
-            primaryButtonText: "Upload anyway",
+            secondaryButtonText: "Upload anyway",
+            primaryButtonText: "Cancel",
           });
-          if (response) {
+          if (!response) {
             filteredFiles.push(file);
             // Something weird happens when opening these confirm dialogs over and over again
             await sleep(100);

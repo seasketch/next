@@ -103,6 +103,7 @@ export default function useDialog() {
           description?: string;
           icon?: "alert" | "delete";
           primaryButtonText?: string;
+          secondaryButtonText?: string;
           onSubmit?: (value: string) => void | Promise<string | void>;
         }
       ): Promise<boolean> => {
@@ -118,6 +119,7 @@ export default function useDialog() {
             onCancel: () => resolve(false),
             submitting: false,
             primaryButtonText: options?.primaryButtonText,
+            secondaryButtonText: options?.secondaryButtonText,
           });
         });
       },
@@ -157,6 +159,7 @@ type DialogContextState = {
   icon?: "alert" | "delete";
   primaryButtonVariant?: "primary" | "danger";
   primaryButtonText?: string;
+  secondaryButtonText?: string;
   disableBackdropClick?: boolean;
   choices?: ReactNode[];
 };
@@ -253,7 +256,7 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
                   },
                   {
                     disabled: state.submitting,
-                    label: t("Cancel"),
+                    label: state.secondaryButtonText || t("Cancel"),
                     onClick: () => {
                       if (state.onCancel) {
                         state.onCancel();

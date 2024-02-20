@@ -18,11 +18,13 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 import { SpatialUploadsHandlerRequest } from "../handler";
 import { Readable } from "node:stream";
 import { WebClient } from "@slack/web-api";
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+import debounce from "lodash.debounce";
 
 export { SpatialUploadsHandlerRequest };
 
@@ -67,6 +69,8 @@ export interface ProcessedUploadResponse {
   error?: string;
 }
 
+let globalProgressMessage = "";
+
 // Create a tileset if flatgeobuf is > 100kb (~1mb geojson)
 const MVT_THRESHOLD = 100000;
 // Outputs should not exceed 1 GB
@@ -106,6 +110,7 @@ export default async function handleUpload(
     progressMessage: string,
     progress?: number
   ) {
+    globalProgressMessage = progressMessage;
     if (skipLoggingProgress) {
       return;
     }
@@ -132,13 +137,13 @@ export default async function handleUpload(
 
   // Logger/task executor which tracks all stdout/stderr outputs so they can be
   // saved to a log file
-  const logger = new Logger(async (increment: number) => {
+  const logger = new Logger(async (progress: number) => {
     if (skipLoggingProgress) {
       return;
     }
     const { rows } = await pgClient.query(
-      `update project_background_jobs set progress = least(progress + $1, 1) where id = $2 returning progress`,
-      [increment, uuid]
+      `update project_background_jobs set progress = least($1, 1.0) where id = $2 returning progress`,
+      [progress, uuid]
     );
   });
 
@@ -161,9 +166,9 @@ export default async function handleUpload(
     await getObject(
       workingFilePath,
       `s3://${path.join(process.env.BUCKET!, objectKey)}`,
-      logger
+      logger,
+      2 / 30
     );
-    logger.updateProgress(1 / 20);
 
     if (isZip) {
       const workingDir = tmpobj.name;
@@ -171,7 +176,7 @@ export default async function handleUpload(
       await logger.exec(
         ["unzip", ["-o", workingFilePath, "-d", workingDir]],
         "Problem unzipping file",
-        1 / 20
+        1 / 30
       );
 
       // Find the first shapefile (.shp) in the working Dir
@@ -193,7 +198,7 @@ export default async function handleUpload(
           ],
         ],
         "Problem finding shapefile in zip archive",
-        1 / 20
+        1 / 30
       );
       workingFilePath = shapefile.trim();
     }
@@ -265,7 +270,7 @@ export default async function handleUpload(
         ext === ".shp"
           ? "Could not read file. Shapefiles should be uploaded as a zip archive with related sidecar files"
           : "Could not run ogrinfo on file",
-        1 / 20
+        1 / 30
       );
       if (/GeoJSON/.test(ogrInfo)) {
         type = "GeoJSON";
@@ -375,49 +380,6 @@ export default async function handleUpload(
       await updateProgress("running", "tiling");
       const mbtilesPath = path.join(dist, name + ".mbtiles");
 
-      // Not necessary when using gdal_translate & gdaladdo
-      // Using resolution output from rio info and some hints from:
-      // https://gis.stackexchange.com/questions/268107/gdal2tiles-py-how-to-find-optimal-zoom-level-for-leaflet
-      // const radius = 6378137;
-      // const equator = 2 * Math.PI * radius;
-      // const tileSize = 512;
-      // const minzoom = 0;
-      // const maxzoom = Math.min(
-      //   // At most, tile to zoom level 16
-      //   16,
-      //   Math.ceil(Math.log2(equator / tileSize / rasterInfo.resolution))
-      // );
-
-      // await logger.exec(
-      //   [
-      //     "rio",
-      //     [
-      //       "mbtiles",
-      //       inputPath,
-      //       mbtilesPath,
-      //       "--format",
-      //       "PNG",
-      //       "--include-empty-tiles",
-      //       "--title",
-      //       name,
-      //       "--description",
-      //       name + ext,
-      //       "--zoom-levels",
-      //       `${minzoom}..${maxzoom}`,
-      //       "--tile-size",
-      //       tileSize.toString(),
-      //       "--resampling",
-      //       rasterInfo.colorInterp === ColorInterp.GRAY ? "nearest" : "cubic",
-      //       ...(rasterInfo.colorInterp === ColorInterp.RGBA ? ["--rgba"] : []),
-      //       "--progress-bar",
-      //       "--implementation",
-      //       "cf",
-      //     ],
-      //   ],
-      //   "Problem converting raster to mbtiles",
-      //   5 / 20
-      // );
-
       await logger.exec(
         [
           "gdal_translate",
@@ -484,7 +446,7 @@ export default async function handleUpload(
             ],
           ],
           "Problem converting to FlatGeobuf",
-          1 / 20
+          2 / 30
         );
       } catch (e) {
         if (
@@ -509,7 +471,7 @@ export default async function handleUpload(
               ],
             ],
             "Problem converting to FlatGeobuf",
-            1 / 20
+            1 / 30
           );
         }
       }
@@ -546,7 +508,7 @@ export default async function handleUpload(
             ],
           ],
           "Problem converting to GeoJSON",
-          1 / 20
+          15 / 30
         );
         outputs.push({
           type: "GeoJSON",
@@ -566,7 +528,7 @@ export default async function handleUpload(
       const fioInfo = await logger.exec(
         ["fio", ["info", normalizedVectorPath]],
         "Problem detecting numeric properties using fiona.",
-        1 / 20
+        1 / 30
       );
       const fioData = JSON.parse(fioInfo);
       const schema = fioData?.schema?.properties || {};
@@ -620,7 +582,7 @@ export default async function handleUpload(
                   ],
                 ],
                 "Problem calculating quantiles",
-                1 / 20
+                1 / 30 / numericAttributes.length
               );
               const attrData = JSON.parse(
                 readFileSync(attrDataFname).toString()
@@ -678,12 +640,12 @@ export default async function handleUpload(
             ],
           ],
           "Tippecanoe failed",
-          10 / 20
+          12 / 30
         );
         await logger.exec(
           [`pmtiles`, ["convert", mvtPath, pmtilesPath]],
           "PMTiles conversion failed",
-          2 / 20
+          3 / 30
         );
         outputs.push({
           type: "PMTiles",
@@ -744,9 +706,9 @@ export default async function handleUpload(
     }
     for (const output of outputs) {
       if (/s3:/.test(output.remote)) {
-        await putObject(output.local, output.remote, logger, 2 / 20);
+        await putObject(output.local, output.remote, logger, 1 / 30); // 23/20th of the task
       } else if (/r2:/.test(output.remote)) {
-        await putObject(output.local, output.remote, logger, 2 / 20);
+        await putObject(output.local, output.remote, logger, 1 / 30); // 25/20th of the task
       } else {
         throw new Error(`Unrecognized remote ${output.remote}`);
       }
@@ -844,11 +806,25 @@ export default async function handleUpload(
 
 class Logger {
   output: string;
-  updateProgress: (increment: number) => Promise<void>;
+  updateProgress: (increment: number) => Promise<void> | undefined;
+  currentProgress = 0;
 
-  constructor(updateProgress: (increment: number) => Promise<void>) {
+  constructor(updateProgress: (progress: number) => Promise<void>) {
     this.output = "";
-    this.updateProgress = updateProgress;
+    const self = this;
+    const doUpdate = debounce(
+      async (progress: number) => {
+        return updateProgress(progress);
+      },
+      100,
+      {
+        maxWait: 200,
+      }
+    );
+    this.updateProgress = async (increment: number) => {
+      self.currentProgress += increment;
+      return doUpdate(self.currentProgress);
+    };
   }
 
   /**
@@ -963,11 +939,19 @@ async function putObject(
 async function getObject(
   filepath: string,
   remote: string,
-  logger: Logger
+  logger: Logger,
+  finishedProgressValue: number
 ): Promise<string> {
   const parts = remote.replace("s3://", "").split("/");
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
+  // get s3 object size using a head request before running GetObject
+  const headParams = {
+    Bucket,
+    Key,
+  };
+  const headResponse = await s3Client.send(new HeadObjectCommand(headParams));
+  const fileSizeBytes = headResponse.ContentLength;
   logger.output += `getObject ${remote} to ${filepath}\n`;
   const response = await s3Client.send(
     new GetObjectCommand({
@@ -975,15 +959,29 @@ async function getObject(
       Key,
     })
   );
+  const initialProgress = parseFloat(logger.currentProgress.toString());
+  const finishedProgressIncrement =
+    initialProgress <= 0
+      ? finishedProgressValue
+      : initialProgress - finishedProgressValue;
+  let downloadedBytes = 0;
   if (response.Body) {
     return new Promise((resolve, reject) => {
       if (response.Body instanceof Readable) {
         response.Body.on("data", (chunk) => {
-          console.log("data", chunk.length);
+          downloadedBytes += chunk.length;
+          if (fileSizeBytes) {
+            const progressFraction = downloadedBytes / fileSizeBytes;
+            const chunkIncrement = chunk.length / fileSizeBytes;
+            logger.updateProgress(chunkIncrement * finishedProgressValue);
+          }
         });
         response.Body.pipe(createWriteStream(filepath))
           .on("error", (err) => reject(err))
-          .on("close", () => resolve(filepath));
+          .on("close", () => {
+            logger.updateProgress(finishedProgressValue);
+            return resolve(filepath);
+          });
       }
     });
   } else {

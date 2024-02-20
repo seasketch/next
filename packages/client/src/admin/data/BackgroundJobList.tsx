@@ -17,16 +17,19 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobContext";
 import Modal from "../../components/Modal";
 import { InformationCircleIcon } from "@heroicons/react/outline";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function BackgroundJobList({
   className,
 }: {
   className?: string;
 }) {
-  const { data, loading, error } = useBackgroundJobsQuery({
+  const onError = useGlobalErrorHandler();
+  const { data } = useBackgroundJobsQuery({
     variables: {
       slug: getSlug(),
     },
+    onError,
   });
   const { t } = useTranslation("admin:data");
   const [hidden, setHidden] = useState(false);
@@ -79,7 +82,7 @@ export default function BackgroundJobList({
       .forEach((j) => {
         context.manager?.dismissFailedUpload(j.id);
       });
-  }, [context.jobs, context.manager]);
+  }, [context.manager, activeJobs]);
 
   const LeavingMsg = t(
     "Leaving this page will cancel your spatial data file upload. Are you sure you want to cancel?"
@@ -159,12 +162,25 @@ export default function BackgroundJobList({
             "flex overflow-y-hidden flex-col rounded-tr-lg rounded-tl-lg  text-white bg-gradient-to-tl from-gray-500 to-gray-600 z-20"
           }
         >
-          <h3 className="font-semibold  p-4 flex items-center">
+          <h3 className="font-semibold  p-4 flex items-center space-x-1">
             <span className="flex-1">
               <Trans ns="admin:data">Background Jobs</Trans>
               {hidden && ` (${activeJobs.length})`}
             </span>
+            {!hidden &&
+              activeJobs.filter(
+                (u) => u.state === ProjectBackgroundJobState.Failed
+              ).length > 0 && (
+                <button
+                  className="hover:bg-gray-600 rounded px-1 py-0.5 text-sm text-indigo-100"
+                  onClick={dismissAllFailures}
+                >
+                  {t("dismiss all failures")}
+                </button>
+              )}
+
             <button
+              className="rounded-full hover:bg-gray-600"
               onClick={() => {
                 setHidden((prev) => !prev);
               }}
@@ -239,7 +255,11 @@ export default function BackgroundJobList({
                         job.state === ProjectBackgroundJobState.Complete) && (
                         <div className="h-6 w-full overflow-hidden mb-2 -mt-1.5">
                           <ProgressBar
-                            progress={job.progress}
+                            progress={
+                              job.state === ProjectBackgroundJobState.Complete
+                                ? 1
+                                : job.progress
+                            }
                             colorClassName={
                               job.progressMessage === "uploading"
                                 ? "bg-green-400"

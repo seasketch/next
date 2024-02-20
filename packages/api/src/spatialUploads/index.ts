@@ -28,14 +28,30 @@ export async function createDBRecordsForProcessedUpload(
   uploadTaskId: string
 ) {
   const uploadCountResult = await client.query(
-    `select count(*) as count from project_background_jobs where type = 'data_upload' and project_id = $1`,
-    [projectId]
+    `
+      select 
+        row_number 
+      from (
+        select 
+          id, 
+          row_number() over (order by created_at) 
+        from 
+          project_background_jobs 
+        where project_id = $1
+      ) as foo 
+      where id = (
+        select 
+          project_background_job_id 
+        from 
+          data_upload_tasks 
+        where id = $2
+      )`,
+    [projectId, uploadTaskId]
   );
-  let uploadCount = uploadCountResult.rows[0].count;
+  let uploadCount = parseInt(uploadCountResult.rows[0].row_number);
   const isVector = layer.outputs.find((o) => o.type === "FlatGeobuf");
   const normalizedOutput = layer.outputs.find((o) => o.isNormalizedOutput);
   const geojson = layer.outputs.find((output) => output.type === "GeoJSON");
-  const fgb = layer.outputs.find((output) => output.type === "FlatGeobuf");
   const original = layer.outputs.find((output) => output.isOriginal);
   if (!normalizedOutput) {
     throw new Error("Normalized output not listed in outputs");
@@ -104,7 +120,6 @@ export async function createDBRecordsForProcessedUpload(
     ]
   );
   const dataSourceId = rows[0].id;
-  const color = getColor(uploadCount);
   const layerResult = await client.query(
     `
       insert into data_layers (
