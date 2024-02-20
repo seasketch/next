@@ -316,7 +316,6 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
    * @param id DataUploadTask id
    */
   abortUpload(id: string) {
-    console.log("abort upload", id);
     this.abortControllers[id]?.abort("User cancelled upload");
     delete this.abortControllers[id];
     this.client.mutate<CancelUploadMutation>({
