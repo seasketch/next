@@ -151,6 +151,7 @@ export default function MetadataEditor({
           className="border-t border-b mb-4 pl-0"
           state={state}
           schema={schema}
+          dynamicMetadataAvailable={dynamicMetadataAvailable}
           onUseServiceMetadata={
             usingDynamicMetadata
               ? undefined

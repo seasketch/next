@@ -60,6 +60,7 @@ interface EditorMenuBarProps {
     contentType: string
   ) => Promise<UploaderResponse | null>;
   onUseServiceMetadata?: () => void;
+  dynamicMetadataAvailable?: boolean;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -592,7 +593,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           <ChevronDownIcon className="w-4 h-4 ml-1" />
         </button>
       )}
-      {props.onUseServiceMetadata && (
+      {props.dynamicMetadataAvailable && props.onUseServiceMetadata && (
         <button className="ml-0.5" onClick={props.onUseServiceMetadata}>
           {t("Convert to dynamic service metadata")}
         </button>
