@@ -70,7 +70,6 @@ export default async function processDataUpload(
       email?: string | null;
     } = userResults.rows[0];
 
-    console.log("calling lambda");
     // Fire off request to lambda (or local http server if in development)
     try {
       await runLambda({
