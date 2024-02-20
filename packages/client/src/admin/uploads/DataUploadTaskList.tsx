@@ -6,11 +6,12 @@ import { Prompt, useParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import ProgressBar from "../../components/ProgressBar";
 import {
-  DataUploadDetailsFragment,
+  JobDetailsFragment,
+  ProjectBackgroundJobState,
+  ProjectBackgroundJobType,
   useProjectDataQuotaRemainingQuery,
 } from "../../generated/graphql";
-import { DataUploadState } from "../../generated/queries";
-import { DataUploadDropzoneContext } from "./DataUploadDropzone";
+import { ProjectBackgroundJobContext } from "./ProjectBackgroundJobContext";
 import bytes from "bytes";
 import useDialog from "../../components/useDialog";
 
@@ -20,9 +21,7 @@ export default function DataUploadTaskList({
   className: string;
 }) {
   const { slug } = useParams<{ slug: string }>();
-  const [modalOpen, setModalOpen] = useState<DataUploadDetailsFragment | null>(
-    null
-  );
+  const [modalOpen, setModalOpen] = useState<JobDetailsFragment | null>(null);
 
   const { t } = useTranslation("admin:data");
   const { data } = useProjectDataQuotaRemainingQuery({
@@ -41,17 +40,17 @@ export default function DataUploadTaskList({
   // DataUploadDropzoneContext provides a list of files that have been dropped into
   // the browser. It is up to sub-components to get this list of files, request
   // upload tasks for them, and then clear them from the context.
-  const context = useContext(DataUploadDropzoneContext);
+  const context = useContext(ProjectBackgroundJobContext);
 
   useEffect(() => {
     const listener = (event: BeforeUnloadEvent) => {
       if (
         Boolean(
-          context.uploads.find(
-            (u) =>
-              u.state === DataUploadState.AwaitingUpload &&
+          context.jobs.find(
+            (j) =>
+              j.state === ProjectBackgroundJobState.Queued &&
               context.manager &&
-              context.manager.isUploadFromMySession(u.id)
+              context.manager.isUploadFromMySession(j.id)
           )
         )
       ) {
@@ -63,24 +62,23 @@ export default function DataUploadTaskList({
     return () => {
       window.removeEventListener("beforeunload", listener);
     };
-  }, [LeavingMsg, context.manager, context.uploads]);
+  }, [LeavingMsg, context.manager, context.jobs]);
 
   const dismissAllFailures = useCallback(() => {
-    context.uploads
-      .filter((u) => u.state === DataUploadState.Failed)
-      .forEach((u) => {
-        context.manager?.dismissFailedUpload(u.id);
+    context.jobs
+      .filter((j) => j.state === ProjectBackgroundJobState.Failed)
+      .forEach((j) => {
+        context.manager?.dismissFailedUpload(j.id);
       });
-  }, [context.uploads, context.manager]);
+  }, [context.jobs, context.manager]);
 
-  const tasks = context.uploads || [];
+  const tasks = (context.jobs || []).filter(
+    (j) => j.type === ProjectBackgroundJobType.DataUpload
+  );
 
   const hasActiveUploads =
-    tasks.filter(
-      (u) =>
-        u.state !== DataUploadState.Complete &&
-        u.state !== DataUploadState.FailedDismissed
-    ).length > 0;
+    tasks.filter((j) => j.state !== ProjectBackgroundJobState.Complete).length >
+    0;
 
   if (!hasActiveUploads) {
     return null;
@@ -90,9 +88,7 @@ export default function DataUploadTaskList({
     <div className={`bg-gray-50 p-4 space-y-2 border-t ${className}`}>
       <Prompt
         when={Boolean(
-          context.uploads.find(
-            (u) => u.state === DataUploadState.AwaitingUpload
-          )
+          tasks.find((j) => j.state === ProjectBackgroundJobState.Queued)
         )}
         message={LeavingMsg}
       />
@@ -141,7 +137,7 @@ export default function DataUploadTaskList({
             &nbsp;
           </span>
           <span>
-            {context.uploads.filter((u) => u.state === DataUploadState.Failed)
+            {tasks.filter((u) => u.state === ProjectBackgroundJobState.Failed)
               .length > 1 && (
               <button className="underline" onClick={dismissAllFailures}>
                 dismiss failures
@@ -153,9 +149,8 @@ export default function DataUploadTaskList({
       {tasks
         .filter(
           (u) =>
-            u.state !== DataUploadState.Complete &&
-            u.state !== DataUploadState.FailedDismissed &&
-            (u.state !== DataUploadState.AwaitingUpload ||
+            u.state !== ProjectBackgroundJobState.Complete &&
+            (u.state !== ProjectBackgroundJobState.Queued ||
               (context.manager && context.manager.isUploadFromMySession(u.id)))
         )
         .sort(
@@ -166,43 +161,22 @@ export default function DataUploadTaskList({
           <div key={upload.id}>
             <div
               className={`p-2 px-4  rounded ${
-                upload.state === DataUploadState.Failed
+                upload.state === ProjectBackgroundJobState.Failed
                   ? "bg-red-100"
                   : "bg-indigo-50"
               }`}
             >
               <div className=" flex items-center text-sm ">
-                <span className="flex-1 truncate">{upload.filename}</span>
+                <span className="flex-1 truncate">
+                  {upload.dataUploadTask?.filename}
+                </span>
                 <span className="italic">
-                  {upload.state === DataUploadState.AwaitingUpload && (
+                  {upload.state === ProjectBackgroundJobState.Failed && (
                     <div className="flex items-center space-x-2">
-                      <Trans ns="admin:data">uploading...</Trans>
-                      <button
-                        title={t("Cancel upload")}
-                        onClick={() => {
-                          context.manager?.abortUpload(upload.id);
-                        }}
-                      >
-                        <XIcon className="w-5 h-5 ml-2" />
-                      </button>
-                    </div>
-                  )}
-                  {upload.state === DataUploadState.Uploaded && (
-                    <Trans ns="admin:data">queued...</Trans>
-                  )}
-                  {upload.state === DataUploadState.Complete && (
-                    <Trans ns="admin:data">complete</Trans>
-                  )}
-                  {upload.state === DataUploadState.Failed && (
-                    <div className="flex items-center space-x-2">
-                      <Trans ns="admin:data">failed</Trans>
+                      <Trans ns="admin:data">{upload.progressMessage}</Trans>
                       <button
                         onClick={() =>
-                          setModalOpen(
-                            (context.uploads || []).find(
-                              (t) => t.id === upload.id
-                            )!
-                          )
+                          setModalOpen(tasks.find((t) => t.id === upload.id)!)
                         }
                       >
                         <InformationCircleIcon className="w-5 h-5 ml-2" />
@@ -210,48 +184,18 @@ export default function DataUploadTaskList({
                       </button>
                     </div>
                   )}
-                  {upload.state === DataUploadState.FailedDismissed && (
-                    <Trans ns="admin:data">dismissed</Trans>
-                  )}
-                  {upload.state === DataUploadState.Fetching && (
-                    <Trans ns="admin:data">retrieving...</Trans>
-                  )}
-                  {upload.state === DataUploadState.RequiresUserInput && (
-                    <Trans ns="admin:data">requires input</Trans>
-                  )}
-                  {upload.state === DataUploadState.Tiling && (
-                    <Trans ns="admin:data">tiling...</Trans>
-                  )}
-                  {upload.state === DataUploadState.UploadingProducts && (
-                    <Trans ns="admin:data">saving...</Trans>
-                  )}
-                  {upload.state === DataUploadState.Validating && (
-                    <Trans ns="admin:data">validating...</Trans>
-                  )}
-                  {upload.state === DataUploadState.ConvertingFormat && (
-                    <Trans ns="admin:data">converting...</Trans>
-                  )}
-                  {upload.state === DataUploadState.Processing && (
-                    <Trans ns="admin:data">queued...</Trans>
-                  )}
-                  {upload.state === DataUploadState.WorkerComplete && (
-                    <Trans ns="admin:data">worker complete...</Trans>
-                  )}
-                  {upload.state === DataUploadState.Cartography && (
-                    <Trans ns="admin:data">applying cartography</Trans>
-                  )}
+                  {upload.state !== ProjectBackgroundJobState.Failed &&
+                    upload.progressMessage}
                 </span>
               </div>
-              {upload.state !== DataUploadState.Failed &&
-                upload.state !== DataUploadState.FailedDismissed &&
-                upload.state !== DataUploadState.Complete && (
-                  <div className="h-6 w-full overflow-hidden mb-2 -mt-2">
-                    <ProgressBar
-                      // indeterminate={f.state === DataUploadState.AwaitingUpload}
-                      progress={upload.progress}
-                    />
-                  </div>
-                )}
+              {upload.state === ProjectBackgroundJobState.Running && (
+                <div className="h-6 w-full overflow-hidden mb-2 -mt-2">
+                  <ProgressBar
+                    // indeterminate={f.state === DataUploadState.AwaitingUpload}
+                    progress={upload.progress}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))}

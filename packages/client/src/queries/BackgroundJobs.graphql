@@ -1,0 +1,15 @@
+query BackgroundJobs($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    projectBackgroundJobs {
+      id
+      title
+      userId
+      errorMessage
+      progress
+      progressMessage
+      state
+      type
+    }
+  }
+}

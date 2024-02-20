@@ -94,9 +94,7 @@ export default async function handleUpload(
   requestingUser: string,
   skipLoggingProgress?: boolean
 ): Promise<ProcessedUploadResponse> {
-  console.log("handle");
   const pgClient = await getClient();
-  console.log("got client");
 
   /**
    * Updates progress of the upload task
@@ -104,32 +102,22 @@ export default async function handleUpload(
    * @param progress Optional 0.0-1.0 value
    */
   async function updateProgress(
-    state:
-      | "fetching"
-      | "processing"
-      | "validating"
-      | "requires_user_input"
-      | "converting_format"
-      | "tiling"
-      | "uploading_products"
-      | "complete"
-      | "failed"
-      | "worker_complete",
+    state: "running" | "complete" | "failed",
+    progressMessage: string,
     progress?: number
   ) {
     if (skipLoggingProgress) {
-      console.log("progress logging skipped");
       return;
     }
     if (progress !== undefined) {
       await pgClient.query(
-        `update data_upload_tasks set state = $1, progress = least($2, 1) where id = $3 returning progress`,
-        [state, progress, uuid]
+        `update project_background_jobs set state = $1, progress = least($2, 1), progress_message = $3 where id = $4 returning progress`,
+        [state, progress, progressMessage, uuid]
       );
     } else {
       await pgClient.query(
-        `update data_upload_tasks set state = $1 where id = $2 returning progress`,
-        [state, uuid]
+        `update project_background_jobs set state = $1, progress_message = $2 where id = $3 returning progress`,
+        [state, progressMessage, uuid]
       );
     }
   }
@@ -149,7 +137,7 @@ export default async function handleUpload(
       return;
     }
     const { rows } = await pgClient.query(
-      `update data_upload_tasks set progress = least(progress + $1, 1) where id = $2 returning progress`,
+      `update project_background_jobs set progress = least(progress + $1, 1) where id = $2 returning progress`,
       [increment, uuid]
     );
   });
@@ -169,11 +157,7 @@ export default async function handleUpload(
     // Step 1) Fetch the uploaded file from S3
     let workingFilePath = `${path.join(tmpobj.name, objectKey.split("/")[1])}`;
     let originalFilePath = workingFilePath;
-    await updateProgress("fetching", 0.0);
-    console.log(
-      workingFilePath,
-      `s3://${path.join(process.env.BUCKET!, objectKey)}`
-    );
+    await updateProgress("running", "fetching", 0.0);
     await getObject(
       workingFilePath,
       `s3://${path.join(process.env.BUCKET!, objectKey)}`,
@@ -215,7 +199,7 @@ export default async function handleUpload(
     }
 
     // Step 2) Use ogr/gdal to see if it is a supported file format
-    await updateProgress("validating");
+    await updateProgress("running", "validating");
     let type: SupportedTypes;
     let wgs84 = false;
     const rasterInfo = {
@@ -306,7 +290,7 @@ export default async function handleUpload(
      *
      * Rasters are converted to pmtiles with no intermediate format
      */
-    await updateProgress("converting_format");
+    await updateProgress("running", "converting format");
     const outputs: (ResponseOutput & { local: string })[] = [];
     const baseKey = `projects/${suffix}/public`;
 
@@ -388,7 +372,7 @@ export default async function handleUpload(
       });
 
       // Convert to mbtiles
-      await updateProgress("tiling");
+      await updateProgress("running", "tiling");
       const mbtilesPath = path.join(dist, name + ".mbtiles");
 
       // Not necessary when using gdal_translate & gdaladdo
@@ -673,7 +657,7 @@ export default async function handleUpload(
       if (normalizedVectorFileSize > MVT_THRESHOLD) {
         const mvtPath = path.join(dist, name + ".mbtiles");
         const pmtilesPath = path.join(dist, name + ".pmtiles");
-        await updateProgress("tiling");
+        await updateProgress("running", "tiling");
         await logger.exec(
           [
             "tippecanoe",
@@ -750,7 +734,7 @@ export default async function handleUpload(
     // Step 4) Upload outputs to s3 and the tile server (cloudflare r2)
 
     // Ensure that outputs do not exceed file size limits
-    await updateProgress("uploading_products");
+    await updateProgress("running", "uploading products");
     for (const output of outputs) {
       if (output.size > MAX_OUTPUT_SIZE) {
         throw new Error(
@@ -767,7 +751,7 @@ export default async function handleUpload(
         throw new Error(`Unrecognized remote ${output.remote}`);
       }
     }
-    await updateProgress("worker_complete", 1);
+    await updateProgress("running", "worker complete", 1);
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
@@ -798,21 +782,26 @@ export default async function handleUpload(
       `SELECT graphile_worker.add_job('processDataUploadOutputs', $1::json)`,
       [
         JSON.stringify({
-          uploadId: uuid,
+          jobId: uuid,
           data: response,
         }),
       ]
     );
     return response;
   } catch (e) {
+    console.log("caught an error", e);
     const error = e as Error;
     if (!skipLoggingProgress) {
-      await pgClient.query(
-        `update data_upload_tasks set state = 'failed', error_message = $1 where id = $2`,
+      const q = await pgClient.query(
+        `update project_background_jobs set state = 'failed', error_message = $1, progress_message = 'failed' where id = $2 returning *`,
         [error.message || error.name, uuid]
       );
     }
-    if (process.env.SLACK_TOKEN && process.env.SLACK_CHANNEL) {
+    if (
+      process.env.SLACK_TOKEN &&
+      process.env.SLACK_CHANNEL &&
+      process.env.NODE_ENV === "production"
+    ) {
       const command = new GetObjectCommand({
         Bucket: process.env.BUCKET,
         Key: objectKey,
@@ -989,6 +978,9 @@ async function getObject(
   if (response.Body) {
     return new Promise((resolve, reject) => {
       if (response.Body instanceof Readable) {
+        response.Body.on("data", (chunk) => {
+          console.log("data", chunk.length);
+        });
         response.Body.pipe(createWriteStream(filepath))
           .on("error", (err) => reject(err))
           .on("close", () => resolve(filepath));

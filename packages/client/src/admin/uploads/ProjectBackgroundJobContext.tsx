@@ -10,8 +10,10 @@ import { useDropzone } from "react-dropzone";
 import {
   DataUploadDetailsFragment,
   DraftTableOfContentsDocument,
+  JobDetailsFragment,
   ProjectDataQuotaRemainingDocument,
   useDataUploadTasksQuery,
+  useProjectBackgroundJobsQuery,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
@@ -23,19 +25,19 @@ import { useApolloClient } from "@apollo/client";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useDialog from "../../components/useDialog";
-import DataUploadManager, {
+import ProjectBackgroundJobManager, {
   DataUploadErrorEvent,
   DataUploadProcessingCompleteEvent,
-} from "./DataUploadManager";
+} from "./ProjectBackgroundJobManager";
 import sleep from "../../sleep";
 
-export const DataUploadDropzoneContext = createContext<{
-  uploads: DataUploadDetailsFragment[];
-  manager?: DataUploadManager;
+export const ProjectBackgroundJobContext = createContext<{
+  jobs: JobDetailsFragment[];
+  manager?: ProjectBackgroundJobManager;
   setDisabled: (disabled: boolean) => void;
   handleFiles: (files: File[]) => void;
 }>({
-  uploads: [],
+  jobs: [],
   setDisabled: () => {},
   handleFiles: () => {},
 });
@@ -54,7 +56,7 @@ export default function DataUploadDropzone({
     droppedFiles: number;
     uploads: DataUploadDetailsFragment[];
     error?: string;
-    manager?: DataUploadManager;
+    manager?: ProjectBackgroundJobManager;
     disabled?: boolean;
   }>({
     droppedFiles: 0,
@@ -67,15 +69,16 @@ export default function DataUploadDropzone({
   const { alert } = useDialog();
   const { t } = useTranslation("admin:data");
 
-  const uploadsQuery = useDataUploadTasksQuery({
+  const jobsQuery = useProjectBackgroundJobsQuery({
     variables: {
       slug,
     },
   });
+
   useEffect(() => {
     const mapManager = mapContext.manager;
     if (projectId && mapManager) {
-      const manager = new DataUploadManager(slug, projectId, client);
+      const manager = new ProjectBackgroundJobManager(slug, projectId, client);
       manager.on(
         "processing-complete",
         (event: DataUploadProcessingCompleteEvent) => {
@@ -236,9 +239,9 @@ export default function DataUploadDropzone({
   );
 
   return (
-    <DataUploadDropzoneContext.Provider
+    <ProjectBackgroundJobContext.Provider
       value={{
-        uploads: uploadsQuery.data?.projectBySlug?.activeDataUploads || [],
+        jobs: jobsQuery.data?.projectBySlug?.projectBackgroundJobs || [],
         manager: state.manager,
         setDisabled,
         handleFiles: onDrop,
@@ -283,6 +286,6 @@ export default function DataUploadDropzone({
             document.body
           )}
       </div>
-    </DataUploadDropzoneContext.Provider>
+    </ProjectBackgroundJobContext.Provider>
   );
 }

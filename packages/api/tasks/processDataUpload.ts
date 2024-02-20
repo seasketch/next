@@ -16,17 +16,37 @@ const s3 = new S3();
  * @param helpers
  */
 export default async function processDataUpload(
-  payload: { uploadId: string },
+  payload: { jobId: string },
   helpers: Helpers
 ) {
-  const { uploadId } = payload;
-  helpers.logger.info(`Handling spatial data upload: ${uploadId}`);
+  const { jobId } = payload;
+  helpers.logger.info(`Handling spatial data upload: ${jobId}`);
   await helpers.withPgClient(async (client) => {
     const results = await client.query(
-      `update data_upload_tasks set state = 'processing', started_at = now() where id = $1 returning *`,
-      [uploadId]
+      `update project_background_jobs set progress_message = 'processing', state = 'running', started_at = now() where id = $1 returning *`,
+      [jobId]
     );
-    const projectId = results.rows[0].project_id;
+    const job = results.rows[0];
+    const q = await client.query(
+      `
+      select
+        id || '/' || filename as object_key
+      from
+        data_upload_tasks
+      where
+        project_background_job_id = $1
+      limit 1
+    `,
+      [jobId]
+    );
+    if (!q.rows[0]) {
+      throw new Error("Could not find objectKey for job with ID=" + jobId);
+    }
+    const objectKey = q.rows[0].object_key;
+    if (!job) {
+      throw new Error("Could not find job with ID=" + job.id);
+    }
+    const projectId = job.project_id;
     const source_buckets = await client.query(
       `select bucket, url from data_sources_buckets where url = (select data_sources_bucket_id from projects where id = $1)`,
       [projectId]
@@ -44,18 +64,18 @@ export default async function processDataUpload(
     );
 
     const slug = slugResults.rows[0].slug;
-    const filename = results.rows[0].filename;
     const user: {
       canonical_email: string;
       fullname?: string | null;
       email?: string | null;
     } = userResults.rows[0];
 
+    console.log("calling lambda");
     // Fire off request to lambda (or local http server if in development)
     try {
       await runLambda({
-        taskId: uploadId,
-        objectKey: `${uploadId}/${filename}`,
+        taskId: jobId,
+        objectKey,
         dataSourcesBucket: source_buckets.rows[0].bucket,
         dataSourcesUrl: source_buckets.rows[0].url,
         suffix: slug,
@@ -67,13 +87,13 @@ export default async function processDataUpload(
       console.error("error!!", e);
       if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
         await client.query(
-          `update data_upload_tasks set state = 'failed', error_message = $2 where id = $1`,
-          [uploadId, (e as Error).message]
+          `update project_background_jobs set state = 'failed', error_message = $2, progress_message = 'failed' where id = $1`,
+          [jobId, (e as Error).message]
         );
       } else {
         await client.query(
-          `update data_upload_tasks set state = 'failed', error_message = 'Lambda invocation failure' where id = $1`,
-          [uploadId]
+          `update project_background_tasks set state = 'failed', progress_message = 'failed', error_message = 'Lambda invocation failure' where id = $1`,
+          [jobId]
         );
       }
     }

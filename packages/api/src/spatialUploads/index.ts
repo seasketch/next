@@ -28,7 +28,7 @@ export async function createDBRecordsForProcessedUpload(
   uploadTaskId: string
 ) {
   const uploadCountResult = await client.query(
-    `select count(*) as count from data_upload_tasks where project_id = $1`,
+    `select count(*) as count from project_background_jobs where type = 'data_upload' and project_id = $1`,
     [projectId]
   );
   let uploadCount = uploadCountResult.rows[0].count;

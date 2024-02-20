@@ -64,9 +64,20 @@ export default async function cleanupDeletedOverlayRecords(
     }
 
     results = await client.query(`
-      select id, outputs from data_upload_tasks where not exists (
-        select id from data_sources where upload_task_id = data_upload_tasks.id
-      ) and state = 'complete'
+      select 
+        data_upload_tasks.id, 
+        data_upload_tasks.outputs 
+      from 
+        data_upload_tasks 
+      inner join
+        project_background_jobs as job
+      on
+        job.id = data_upload_tasks.project_background_job_id
+      where 
+        not exists (
+          select id from data_sources where upload_task_id = data_upload_tasks.id
+        ) and 
+        job.state = 'complete'
     `);
 
     if (results.rowCount > 0) {

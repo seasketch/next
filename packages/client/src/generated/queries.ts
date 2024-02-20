@@ -593,20 +593,20 @@ export enum CacheableOfflineAssetType {
   Sprite = 'SPRITE'
 }
 
-/** All input for the `cancelDataUpload` mutation. */
-export type CancelDataUploadInput = {
+/** All input for the `cancelBackgroundJob` mutation. */
+export type CancelBackgroundJobInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  jobId?: Maybe<Scalars['UUID']>;
   projectId?: Maybe<Scalars['Int']>;
-  uploadId?: Maybe<Scalars['UUID']>;
 };
 
-/** The output of our `cancelDataUpload` mutation. */
-export type CancelDataUploadPayload = {
-  __typename?: 'CancelDataUploadPayload';
+/** The output of our `cancelBackgroundJob` mutation. */
+export type CancelBackgroundJobPayload = {
+  __typename?: 'CancelBackgroundJobPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -1015,8 +1015,8 @@ export type CreateDataUploadPayload = {
   dataUploadTask?: Maybe<DataUploadTask>;
   /** An edge for our `DataUploadTask`. May be used by Relay 1. */
   dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
-  /** Reads a single `Project` that is related to this `DataUploadTask`. */
-  project?: Maybe<Project>;
+  /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -2183,6 +2183,7 @@ export type DataSource = Node & {
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  userId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -2359,6 +2360,7 @@ export type DataSourceInput = {
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  userId?: Maybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `DataSource`. Fields that are set will be updated. */
@@ -2584,32 +2586,15 @@ export enum DataUploadOutputType {
   ZippedShapefile = 'ZIPPED_SHAPEFILE'
 }
 
-export enum DataUploadState {
-  AwaitingUpload = 'AWAITING_UPLOAD',
-  Cartography = 'CARTOGRAPHY',
-  Complete = 'COMPLETE',
-  ConvertingFormat = 'CONVERTING_FORMAT',
-  Failed = 'FAILED',
-  FailedDismissed = 'FAILED_DISMISSED',
-  Fetching = 'FETCHING',
-  Processing = 'PROCESSING',
-  RequiresUserInput = 'REQUIRES_USER_INPUT',
-  Tiling = 'TILING',
-  Uploaded = 'UPLOADED',
-  UploadingProducts = 'UPLOADING_PRODUCTS',
-  Validating = 'VALIDATING',
-  WorkerComplete = 'WORKER_COMPLETE'
-}
-
 export type DataUploadTask = Node & {
   __typename?: 'DataUploadTask';
   /** Content-Type of the original upload. */
   contentType: Scalars['String'];
   createdAt: Scalars['Datetime'];
-  errorMessage?: Maybe<Scalars['String']>;
   /** Original name of file as uploaded by the user. */
   filename: Scalars['String'];
   id: Scalars['UUID'];
+  job?: Maybe<ProjectBackgroundJob>;
   /** Reads and enables pagination through a set of `DataLayer`. */
   layers?: Maybe<Array<DataLayer>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -2617,15 +2602,10 @@ export type DataUploadTask = Node & {
   outputs?: Maybe<Scalars['JSON']>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
-  /** 0.0 to 1.0 scale, applies to tiling process. */
-  progress?: Maybe<Scalars['BigFloat']>;
-  /** Reads a single `Project` that is related to this `DataUploadTask`. */
-  project?: Maybe<Project>;
-  projectId: Scalars['Int'];
-  startedAt?: Maybe<Scalars['Datetime']>;
-  state: DataUploadState;
+  /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  projectBackgroundJobId: Scalars['UUID'];
   tableOfContentsItemStableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
-  userId: Scalars['Int'];
 };
 
 
@@ -2641,19 +2621,8 @@ export type DataUploadTaskLayersArgs = {
 export type DataUploadTaskCondition = {
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['UUID']>;
-  /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `state` field. */
-  state?: Maybe<DataUploadState>;
-};
-
-export type DataUploadTaskSubscriptionPayload = {
-  __typename?: 'DataUploadTaskSubscriptionPayload';
-  dataUploadTask?: Maybe<DataUploadTask>;
-  dataUploadTaskId: Scalars['UUID'];
-  previousState?: Maybe<DataUploadState>;
-  project: Project;
-  projectId: Scalars['Int'];
+  /** Checks for equality with the object’s `projectBackgroundJobId` field. */
+  projectBackgroundJobId?: Maybe<Scalars['UUID']>;
 };
 
 /** A connection to a list of `DataUploadTask` values. */
@@ -2685,10 +2654,8 @@ export enum DataUploadTasksOrderBy {
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC',
-  StateAsc = 'STATE_ASC',
-  StateDesc = 'STATE_DESC'
+  ProjectBackgroundJobIdAsc = 'PROJECT_BACKGROUND_JOB_ID_ASC',
+  ProjectBackgroundJobIdDesc = 'PROJECT_BACKGROUND_JOB_ID_DESC'
 }
 
 
@@ -3993,8 +3960,8 @@ export type DisableForumPostingPayload = {
   query?: Maybe<Query>;
 };
 
-/** All input for the `dismissFailedUpload` mutation. */
-export type DismissFailedUploadInput = {
+/** All input for the `dismissFailedJob` mutation. */
+export type DismissFailedJobInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
@@ -4003,27 +3970,19 @@ export type DismissFailedUploadInput = {
   id?: Maybe<Scalars['UUID']>;
 };
 
-/** The output of our `dismissFailedUpload` mutation. */
-export type DismissFailedUploadPayload = {
-  __typename?: 'DismissFailedUploadPayload';
+/** The output of our `dismissFailedJob` mutation. */
+export type DismissFailedJobPayload = {
+  __typename?: 'DismissFailedJobPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  dataUploadTask?: Maybe<DataUploadTask>;
-  /** An edge for our `DataUploadTask`. May be used by Relay 1. */
-  dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
-  /** Reads a single `Project` that is related to this `DataUploadTask`. */
+  /** Reads a single `Project` that is related to this `ProjectBackgroundJob`. */
   project?: Maybe<Project>;
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-};
-
-
-/** The output of our `dismissFailedUpload` mutation. */
-export type DismissFailedUploadPayloadDataUploadTaskEdgeArgs = {
-  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
 export type DownloadOption = {
@@ -4267,8 +4226,8 @@ export type FailDataUploadPayload = {
   dataUploadTask?: Maybe<DataUploadTask>;
   /** An edge for our `DataUploadTask`. May be used by Relay 1. */
   dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
-  /** Reads a single `Project` that is related to this `DataUploadTask`. */
-  project?: Maybe<Project>;
+  /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -6214,7 +6173,7 @@ export type Mutation = {
   alternateLanguageLabelsForFormElement?: Maybe<AlternateLanguageLabelsForFormElementPayload>;
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
-  cancelDataUpload?: Maybe<CancelDataUploadPayload>;
+  cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
@@ -6463,7 +6422,7 @@ export type Mutation = {
   disableDownloadForSharedLayers?: Maybe<DisableDownloadForSharedLayersPayload>;
   /** Ban a user from posting in the discussion forum */
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
-  dismissFailedUpload?: Maybe<DismissFailedUploadPayload>;
+  dismissFailedJob?: Maybe<DismissFailedJobPayload>;
   enableDownloadForEligibleLayers?: Maybe<EnableDownloadForEligibleLayersPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
@@ -6822,8 +6781,8 @@ export type MutationArchiveResponsesArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCancelDataUploadArgs = {
-  input: CancelDataUploadInput;
+export type MutationCancelBackgroundJobArgs = {
+  input: CancelBackgroundJobInput;
 };
 
 
@@ -7460,8 +7419,8 @@ export type MutationDisableForumPostingArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationDismissFailedUploadArgs = {
-  input: DismissFailedUploadInput;
+export type MutationDismissFailedJobArgs = {
+  input: DismissFailedJobInput;
 };
 
 
@@ -8730,8 +8689,6 @@ export type Project = Node & {
    * when users request layers be displayed on the map.
    */
   dataSourcesForItems?: Maybe<Array<DataSource>>;
-  /** Reads and enables pagination through a set of `DataUploadTask`. */
-  dataUploadTasksConnection: DataUploadTasksConnection;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   downloadableLayersCount?: Maybe<Scalars['Int']>;
@@ -8821,6 +8778,8 @@ export type Project = Node & {
    * in this list. Those users can be accessed via `unapprovedParticipants()`
    */
   participants?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
+  projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
   /**
    * Whether the current user has any discussion forum posts in this project. Use
@@ -8974,21 +8933,6 @@ export type ProjectDataSourcesForItemsArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
-export type ProjectDataUploadTasksConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<DataUploadTaskCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
-};
-
-
-/**
- * SeaSketch Project type. This root type contains most of the fields and queries
- * needed to drive the application.
- */
 export type ProjectDraftTableOfContentsItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -9129,6 +9073,18 @@ export type ProjectParticipantsArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
+export type ProjectProjectBackgroundJobsArgs = {
+  condition?: Maybe<ProjectBackgroundJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ProjectBackgroundJobsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
 export type ProjectSessionOutstandingSurveyInvitesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -9224,6 +9180,84 @@ export enum ProjectAccessStatus {
   DeniedNotRequested = 'DENIED_NOT_REQUESTED',
   Granted = 'GRANTED',
   ProjectDoesNotExist = 'PROJECT_DOES_NOT_EXIST'
+}
+
+export type ProjectBackgroundJob = Node & {
+  __typename?: 'ProjectBackgroundJob';
+  createdAt: Scalars['Datetime'];
+  dataUploadTask?: Maybe<DataUploadTask>;
+  /** Reads and enables pagination through a set of `DataUploadTask`. */
+  dataUploadTasksConnection: DataUploadTasksConnection;
+  errorMessage?: Maybe<Scalars['String']>;
+  id: Scalars['UUID'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  progress?: Maybe<Scalars['BigFloat']>;
+  progressMessage: Scalars['String'];
+  /** Reads a single `Project` that is related to this `ProjectBackgroundJob`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  startedAt?: Maybe<Scalars['Datetime']>;
+  state: ProjectBackgroundJobState;
+  timeoutAt: Scalars['Datetime'];
+  title: Scalars['String'];
+  type: ProjectBackgroundJobType;
+  userId: Scalars['Int'];
+};
+
+
+export type ProjectBackgroundJobDataUploadTasksConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<DataUploadTaskCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
+};
+
+/**
+ * A condition to be used against `ProjectBackgroundJob` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type ProjectBackgroundJobCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+export enum ProjectBackgroundJobState {
+  Complete = 'COMPLETE',
+  Failed = 'FAILED',
+  Queued = 'QUEUED',
+  Running = 'RUNNING'
+}
+
+export type ProjectBackgroundJobSubscriptionPayload = {
+  __typename?: 'ProjectBackgroundJobSubscriptionPayload';
+  id: Scalars['UUID'];
+  job?: Maybe<ProjectBackgroundJob>;
+  previousState?: Maybe<ProjectBackgroundJobState>;
+  project: Project;
+  projectId: Scalars['Int'];
+};
+
+export enum ProjectBackgroundJobType {
+  ArcgisImport = 'ARCGIS_IMPORT',
+  ConsolidateDataSources = 'CONSOLIDATE_DATA_SOURCES',
+  DataUpload = 'DATA_UPLOAD'
+}
+
+/** Methods to use when ordering `ProjectBackgroundJob`. */
+export enum ProjectBackgroundJobsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
 /** A condition to be used against `Project` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -9771,6 +9805,11 @@ export type Query = Node & {
   profileByUserId?: Maybe<Profile>;
   project?: Maybe<Project>;
   projectAccessStatus?: Maybe<ProjectAccessStatus>;
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  /** Reads a single `ProjectBackgroundJob` using its globally unique `ID`. */
+  projectBackgroundJobByNodeId?: Maybe<ProjectBackgroundJob>;
+  /** Reads a set of `ProjectBackgroundJob`. */
+  projectBackgroundJobs?: Maybe<Array<ProjectBackgroundJob>>;
   /** Reads a single `Project` using its globally unique `ID`. */
   projectByNodeId?: Maybe<Project>;
   projectBySlug?: Maybe<Project>;
@@ -10387,6 +10426,27 @@ export type QueryProjectArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryProjectAccessStatusArgs = {
   pid?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryProjectBackgroundJobArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryProjectBackgroundJobByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryProjectBackgroundJobsArgs = {
+  condition?: Maybe<ProjectBackgroundJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ProjectBackgroundJobsOrderBy>>;
 };
 
 
@@ -11639,26 +11699,18 @@ export type SubmitDataUploadPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  dataUploadTask?: Maybe<DataUploadTask>;
-  /** An edge for our `DataUploadTask`. May be used by Relay 1. */
-  dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
-  /** Reads a single `Project` that is related to this `DataUploadTask`. */
+  /** Reads a single `Project` that is related to this `ProjectBackgroundJob`. */
   project?: Maybe<Project>;
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-};
-
-
-/** The output of our `submitDataUpload` mutation. */
-export type SubmitDataUploadPayloadDataUploadTaskEdgeArgs = {
-  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type Subscription = {
   __typename?: 'Subscription';
   /** Triggered on all updates to DataUploadTasks in a project */
-  dataUploadTasks?: Maybe<DataUploadTaskSubscriptionPayload>;
+  backgroundJobs?: Maybe<ProjectBackgroundJobSubscriptionPayload>;
   /** Triggered when a new post is created in the subscribed topic */
   forumActivity?: Maybe<ForumActivityPayload>;
   /**
@@ -11675,7 +11727,7 @@ export type Subscription = {
 
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionDataUploadTasksArgs = {
+export type SubscriptionBackgroundJobsArgs = {
   slug: Scalars['String'];
 };
 
@@ -15139,6 +15191,23 @@ export type RequestInviteOnlyProjectAccessMutation = (
   )> }
 );
 
+export type BackgroundJobsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type BackgroundJobsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { projectBackgroundJobs: Array<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & Pick<ProjectBackgroundJob, 'id' | 'title' | 'userId' | 'errorMessage' | 'progress' | 'progressMessage' | 'state' | 'type'>
+    )> }
+  )> }
+);
+
 export type BasemapDetailsFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'id' | 'attribution' | 'labelsLayerId' | 'name' | 'description' | 'projectId' | 'terrainExaggeration' | 'terrainMaxZoom' | 'terrainOptional' | 'terrainTileSize' | 'terrainUrl' | 'terrainVisibilityDefault' | 'thumbnail' | 'tileSize' | 'type' | 'url' | 'surveysOnly' | 'translatedProps' | 'isArcgisTiledMapservice' | 'maxzoom'>
@@ -15600,7 +15669,16 @@ export type VerifyEmailMutation = (
 
 export type DataUploadDetailsFragment = (
   { __typename?: 'DataUploadTask' }
-  & Pick<DataUploadTask, 'createdAt' | 'filename' | 'id' | 'progress' | 'state' | 'errorMessage' | 'tableOfContentsItemStableIds'>
+  & Pick<DataUploadTask, 'id' | 'filename' | 'tableOfContentsItemStableIds' | 'projectBackgroundJobId'>
+);
+
+export type DataUploadExtendedDetailsFragment = (
+  { __typename?: 'DataUploadTask' }
+  & { job?: Maybe<(
+    { __typename?: 'ProjectBackgroundJob' }
+    & JobDetailsFragment
+  )> }
+  & DataUploadDetailsFragment
 );
 
 export type CreateDataUploadMutationVariables = Exact<{
@@ -15617,13 +15695,22 @@ export type CreateDataUploadMutation = (
     & { dataUploadTask?: Maybe<(
       { __typename?: 'DataUploadTask' }
       & Pick<DataUploadTask, 'presignedUploadUrl'>
-      & DataUploadDetailsFragment
+      & DataUploadExtendedDetailsFragment
     )> }
   )> }
 );
 
+export type JobDetailsFragment = (
+  { __typename?: 'ProjectBackgroundJob' }
+  & Pick<ProjectBackgroundJob, 'id' | 'state' | 'progress' | 'progressMessage' | 'errorMessage' | 'createdAt' | 'startedAt' | 'title' | 'type'>
+  & { dataUploadTask?: Maybe<(
+    { __typename?: 'DataUploadTask' }
+    & DataUploadDetailsFragment
+  )> }
+);
+
 export type SubmitDataUploadMutationVariables = Exact<{
-  id: Scalars['UUID'];
+  jobId: Scalars['UUID'];
 }>;
 
 
@@ -15631,9 +15718,13 @@ export type SubmitDataUploadMutation = (
   { __typename?: 'Mutation' }
   & { submitDataUpload?: Maybe<(
     { __typename?: 'SubmitDataUploadPayload' }
-    & { dataUploadTask?: Maybe<(
-      { __typename?: 'DataUploadTask' }
-      & DataUploadDetailsFragment
+    & { projectBackgroundJob?: Maybe<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & Pick<ProjectBackgroundJob, 'id' | 'state'>
+      & { dataUploadTask?: Maybe<(
+        { __typename?: 'DataUploadTask' }
+        & DataUploadExtendedDetailsFragment
+      )> }
     )> }
   )> }
 );
@@ -15650,23 +15741,40 @@ export type DataUploadTasksQuery = (
     & Pick<Project, 'id'>
     & { activeDataUploads?: Maybe<Array<(
       { __typename?: 'DataUploadTask' }
-      & DataUploadDetailsFragment
+      & DataUploadExtendedDetailsFragment
     )>> }
   )> }
 );
 
-export type DismissFailedTaskMutationVariables = Exact<{
+export type ProjectBackgroundJobsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectBackgroundJobsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { projectBackgroundJobs: Array<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & JobDetailsFragment
+    )> }
+  )> }
+);
+
+export type DismissFailedJobMutationVariables = Exact<{
   id: Scalars['UUID'];
 }>;
 
 
-export type DismissFailedTaskMutation = (
+export type DismissFailedJobMutation = (
   { __typename?: 'Mutation' }
-  & { dismissFailedUpload?: Maybe<(
-    { __typename?: 'DismissFailedUploadPayload' }
-    & { dataUploadTask?: Maybe<(
-      { __typename?: 'DataUploadTask' }
-      & DataUploadDetailsFragment
+  & { dismissFailedJob?: Maybe<(
+    { __typename?: 'DismissFailedJobPayload' }
+    & { projectBackgroundJob?: Maybe<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & JobDetailsFragment
     )> }
   )> }
 );
@@ -15683,7 +15791,7 @@ export type FailUploadMutation = (
     { __typename?: 'FailDataUploadPayload' }
     & { dataUploadTask?: Maybe<(
       { __typename?: 'DataUploadTask' }
-      & DataUploadDetailsFragment
+      & Pick<DataUploadTask, 'id' | 'projectBackgroundJobId'>
     )> }
   )> }
 );
@@ -15703,37 +15811,15 @@ export type ProjectDataQuotaRemainingQuery = (
 
 export type CancelUploadMutationVariables = Exact<{
   projectId: Scalars['Int'];
-  uploadId: Scalars['UUID'];
+  jobId: Scalars['UUID'];
 }>;
 
 
 export type CancelUploadMutation = (
   { __typename?: 'Mutation' }
-  & { cancelDataUpload?: Maybe<(
-    { __typename?: 'CancelDataUploadPayload' }
-    & Pick<CancelDataUploadPayload, 'clientMutationId'>
-  )> }
-);
-
-export type DataUploadEventFragment = (
-  { __typename?: 'DataUploadTaskSubscriptionPayload' }
-  & Pick<DataUploadTaskSubscriptionPayload, 'projectId' | 'dataUploadTaskId' | 'previousState'>
-  & { dataUploadTask?: Maybe<(
-    { __typename?: 'DataUploadTask' }
-    & DataUploadDetailsFragment
-  )> }
-);
-
-export type DataUploadsSubscriptionVariables = Exact<{
-  slug: Scalars['String'];
-}>;
-
-
-export type DataUploadsSubscription = (
-  { __typename?: 'Subscription' }
-  & { dataUploadTasks?: Maybe<(
-    { __typename?: 'DataUploadTaskSubscriptionPayload' }
-    & DataUploadEventFragment
+  & { cancelBackgroundJob?: Maybe<(
+    { __typename?: 'CancelBackgroundJobPayload' }
+    & Pick<CancelBackgroundJobPayload, 'clientMutationId'>
   )> }
 );
 
@@ -15751,6 +15837,28 @@ export type UpdateDataHostingQuotaMutation = (
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
     )> }
+  )> }
+);
+
+export type BackgroundJobSubscriptionEventFragment = (
+  { __typename?: 'ProjectBackgroundJobSubscriptionPayload' }
+  & Pick<ProjectBackgroundJobSubscriptionPayload, 'id' | 'previousState'>
+  & { job?: Maybe<(
+    { __typename?: 'ProjectBackgroundJob' }
+    & JobDetailsFragment
+  )> }
+);
+
+export type ProjectBackgroundJobSubscriptionVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectBackgroundJobSubscription = (
+  { __typename?: 'Subscription' }
+  & { backgroundJobs?: Maybe<(
+    { __typename?: 'ProjectBackgroundJobSubscriptionPayload' }
+    & BackgroundJobSubscriptionEventFragment
   )> }
 );
 
@@ -20072,25 +20180,46 @@ export const BasemapAdminDetailsFragmentDoc = /*#__PURE__*/ gql`
     ${BasemapDetailsFragmentDoc}`;
 export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment DataUploadDetails on DataUploadTask {
-  createdAt
-  filename
   id
-  progress
-  state
-  errorMessage
+  filename
   tableOfContentsItemStableIds
+  projectBackgroundJobId
 }
     `;
-export const DataUploadEventFragmentDoc = /*#__PURE__*/ gql`
-    fragment DataUploadEvent on DataUploadTaskSubscriptionPayload {
-  projectId
-  dataUploadTaskId
-  previousState
+export const JobDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment JobDetails on ProjectBackgroundJob {
+  id
+  state
+  progress
+  progressMessage
+  errorMessage
+  createdAt
+  startedAt
+  title
+  type
   dataUploadTask {
     ...DataUploadDetails
   }
 }
     ${DataUploadDetailsFragmentDoc}`;
+export const DataUploadExtendedDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment DataUploadExtendedDetails on DataUploadTask {
+  ...DataUploadDetails
+  job {
+    ...JobDetails
+  }
+}
+    ${DataUploadDetailsFragmentDoc}
+${JobDetailsFragmentDoc}`;
+export const BackgroundJobSubscriptionEventFragmentDoc = /*#__PURE__*/ gql`
+    fragment BackgroundJobSubscriptionEvent on ProjectBackgroundJobSubscriptionPayload {
+  id
+  previousState
+  job {
+    ...JobDetails
+  }
+}
+    ${JobDetailsFragmentDoc}`;
 export const ForumListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumListDetails on Forum {
   id
@@ -21330,6 +21459,23 @@ export const RequestInviteOnlyProjectAccessDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const BackgroundJobsDocument = /*#__PURE__*/ gql`
+    query BackgroundJobs($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    projectBackgroundJobs {
+      id
+      title
+      userId
+      errorMessage
+      progress
+      progressMessage
+      state
+      type
+    }
+  }
+}
+    `;
 export const GetBasemapsDocument = /*#__PURE__*/ gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21625,49 +21771,64 @@ export const CreateDataUploadDocument = /*#__PURE__*/ gql`
     input: {filename: $filename, projectId: $projectId, contentType: $contentType}
   ) {
     dataUploadTask {
-      ...DataUploadDetails
+      ...DataUploadExtendedDetails
       presignedUploadUrl
     }
   }
 }
-    ${DataUploadDetailsFragmentDoc}`;
+    ${DataUploadExtendedDetailsFragmentDoc}`;
 export const SubmitDataUploadDocument = /*#__PURE__*/ gql`
-    mutation submitDataUpload($id: UUID!) {
-  submitDataUpload(input: {id: $id}) {
-    dataUploadTask {
-      ...DataUploadDetails
+    mutation submitDataUpload($jobId: UUID!) {
+  submitDataUpload(input: {id: $jobId}) {
+    projectBackgroundJob {
+      id
+      state
+      dataUploadTask {
+        ...DataUploadExtendedDetails
+      }
     }
   }
 }
-    ${DataUploadDetailsFragmentDoc}`;
+    ${DataUploadExtendedDetailsFragmentDoc}`;
 export const DataUploadTasksDocument = /*#__PURE__*/ gql`
     query DataUploadTasks($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     activeDataUploads {
-      ...DataUploadDetails
+      ...DataUploadExtendedDetails
     }
   }
 }
-    ${DataUploadDetailsFragmentDoc}`;
-export const DismissFailedTaskDocument = /*#__PURE__*/ gql`
-    mutation DismissFailedTask($id: UUID!) {
-  dismissFailedUpload(input: {id: $id}) {
-    dataUploadTask {
-      ...DataUploadDetails
+    ${DataUploadExtendedDetailsFragmentDoc}`;
+export const ProjectBackgroundJobsDocument = /*#__PURE__*/ gql`
+    query ProjectBackgroundJobs($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    projectBackgroundJobs {
+      ...JobDetails
     }
   }
 }
-    ${DataUploadDetailsFragmentDoc}`;
+    ${JobDetailsFragmentDoc}`;
+export const DismissFailedJobDocument = /*#__PURE__*/ gql`
+    mutation DismissFailedJob($id: UUID!) {
+  dismissFailedJob(input: {id: $id}) {
+    projectBackgroundJob {
+      ...JobDetails
+    }
+  }
+}
+    ${JobDetailsFragmentDoc}`;
 export const FailUploadDocument = /*#__PURE__*/ gql`
     mutation FailUpload($id: UUID!, $message: String!) {
   failDataUpload(input: {id: $id, msg: $message}) {
     dataUploadTask {
-      ...DataUploadDetails
+      id
+      projectBackgroundJobId
     }
   }
 }
-    ${DataUploadDetailsFragmentDoc}`;
+    `;
 export const ProjectDataQuotaRemainingDocument = /*#__PURE__*/ gql`
     query ProjectDataQuotaRemaining($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -21678,19 +21839,12 @@ export const ProjectDataQuotaRemainingDocument = /*#__PURE__*/ gql`
 }
     `;
 export const CancelUploadDocument = /*#__PURE__*/ gql`
-    mutation CancelUpload($projectId: Int!, $uploadId: UUID!) {
-  cancelDataUpload(input: {projectId: $projectId, uploadId: $uploadId}) {
+    mutation CancelUpload($projectId: Int!, $jobId: UUID!) {
+  cancelBackgroundJob(input: {projectId: $projectId, jobId: $jobId}) {
     clientMutationId
   }
 }
     `;
-export const DataUploadsDocument = /*#__PURE__*/ gql`
-    subscription DataUploads($slug: String!) {
-  dataUploadTasks(slug: $slug) {
-    ...DataUploadEvent
-  }
-}
-    ${DataUploadEventFragmentDoc}`;
 export const UpdateDataHostingQuotaDocument = /*#__PURE__*/ gql`
     mutation UpdateDataHostingQuota($projectId: Int!, $quota: BigInt!) {
   updateDataHostingQuota(input: {projectId: $projectId, quota: $quota}) {
@@ -21702,6 +21856,13 @@ export const UpdateDataHostingQuotaDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ProjectBackgroundJobDocument = /*#__PURE__*/ gql`
+    subscription ProjectBackgroundJob($slug: String!) {
+  backgroundJobs(slug: $slug) {
+    ...BackgroundJobSubscriptionEvent
+  }
+}
+    ${BackgroundJobSubscriptionEventFragmentDoc}`;
 export const DownloadableOfflineTilePackagesDocument = /*#__PURE__*/ gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -24382,6 +24543,7 @@ export const namedOperations = {
     GetAcl: 'GetAcl',
     Groups: 'Groups',
     VerifyProjectInvite: 'VerifyProjectInvite',
+    BackgroundJobs: 'BackgroundJobs',
     GetBasemaps: 'GetBasemaps',
     GetBasemap: 'GetBasemap',
     OptionalLayer: 'OptionalLayer',
@@ -24389,6 +24551,7 @@ export const namedOperations = {
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
     DataUploadTasks: 'DataUploadTasks',
+    ProjectBackgroundJobs: 'ProjectBackgroundJobs',
     ProjectDataQuotaRemaining: 'ProjectDataQuotaRemaining',
     DownloadableOfflineTilePackages: 'DownloadableOfflineTilePackages',
     DownloadBasemapDetails: 'DownloadBasemapDetails',
@@ -24495,7 +24658,7 @@ export const namedOperations = {
     VerifyEmail: 'VerifyEmail',
     createDataUpload: 'createDataUpload',
     submitDataUpload: 'submitDataUpload',
-    DismissFailedTask: 'DismissFailedTask',
+    DismissFailedJob: 'DismissFailedJob',
     FailUpload: 'FailUpload',
     CancelUpload: 'CancelUpload',
     UpdateDataHostingQuota: 'UpdateDataHostingQuota',
@@ -24608,7 +24771,7 @@ export const namedOperations = {
     UpdateProfile: 'UpdateProfile'
   },
   Subscription: {
-    DataUploads: 'DataUploads',
+    ProjectBackgroundJob: 'ProjectBackgroundJob',
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
@@ -24640,7 +24803,9 @@ export const namedOperations = {
     BasemapDetails: 'BasemapDetails',
     BasemapAdminDetails: 'BasemapAdminDetails',
     DataUploadDetails: 'DataUploadDetails',
-    DataUploadEvent: 'DataUploadEvent',
+    DataUploadExtendedDetails: 'DataUploadExtendedDetails',
+    JobDetails: 'JobDetails',
+    BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',

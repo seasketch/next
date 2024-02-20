@@ -1,26 +1,26 @@
 import { ApolloClient, gql } from "@apollo/client";
 import { EventEmitter } from "eventemitter3";
 import {
+  BackgroundJobSubscriptionEventFragment,
   CancelUploadDocument,
   CancelUploadMutation,
   CreateDataUploadDocument,
   CreateDataUploadMutation,
-  DataUploadDetailsFragment,
-  DataUploadDetailsFragmentDoc,
-  DataUploadEventFragment,
-  DataUploadState,
-  DataUploadTasksDocument,
-  DataUploadTasksQuery,
-  DataUploadsDocument,
-  DataUploadsSubscription,
-  DismissFailedTaskDocument,
-  DismissFailedTaskMutation,
+  DismissFailedJobDocument,
+  DismissFailedJobInput,
+  JobDetailsFragment,
+  ProjectBackgroundJobDocument,
+  ProjectBackgroundJobState,
+  ProjectBackgroundJobSubscription,
+  ProjectBackgroundJobsDocument,
+  ProjectBackgroundJobsQuery,
   SubmitDataUploadDocument,
   SubmitDataUploadMutation,
 } from "../../generated/graphql";
 import axios from "axios";
 
 export interface DataUploadProcessingCompleteEvent {
+  jobId: string;
   uploadTaskId: string;
   /** Current browser session (not just user) uploaded this file.
    * If the user is in a different tab or refreshes their browser after
@@ -33,27 +33,39 @@ export interface DataUploadErrorEvent {
   error: string;
   /** True if the error is due to the user exceeding their upload quota */
   isQuotaError: boolean;
+  jobId: string;
 }
 
 /**
+ * Manages project background jobs, which includes:
+ *
+ *   * data uploads
+ *   * conversion of dynamic arcgis service links to hosted services
+ *   * TBD, but likely pmtiles consolidation
+ *
+ * This scheme can be expanded in the future to accomadate different background
+ * jobs as well.
+ *
+ * ## Uploads
+ *
  * Manages uploads of spatial data, monitoring progress of upload and processing
  * while updating the Apollo Cache. The primary way of monitoring uploads for
- * the client should be to use the DataUploadTasksQuery, whose results are
+ * the client should be to use the ProjectBackgroundJobsQuery, whose results are
  * updated by this manager.
  *
- * In addition to monitoring DataUploadTasksQuery, clients can listen for a
- * couple useful events emitted by this manager:
+ * In addition to monitoring ProjectBackgroundJobsQuery, clients can listen for
+ * a couple useful events emitted by this manager:
  *   * upload-error, which will have isQuotaError set to true if the error is
- *    due to the user exceeding their upload quota
+ *     due to the user exceeding their upload quota
  *   * processing-complete, which will have isFromCurrentSession set to true if
  *     the upload was initiated in the current browser session. This is useful
  *     for updating the table of contents and displaying uploaded layers.
  *
- * @param slug The slug of the project to monitor uploads for
+ * @param slug The slug of the project to monitor background jobs for
  * @param client ApolloClient
  * @usage
  * ```ts
- * const manager = new DataUploadManager(slug, client);
+ * const manager = new ProjectBackgroundJobManager(slug, client);
  * manager.on("upload-error", (e) => {
  *  if (e.isQuotaError) {
  *    alert("You have exceeded your upload quota");
@@ -67,7 +79,7 @@ export interface DataUploadErrorEvent {
  * });
  * ```
  */
-export default class DataUploadManager extends EventEmitter<{
+export default class ProjectBackgroundJobManager extends EventEmitter<{
   "upload-error": DataUploadErrorEvent;
   /**
    * When a data upload processing is complete, as in it is ready to be used
@@ -79,11 +91,10 @@ export default class DataUploadManager extends EventEmitter<{
   client: ApolloClient<any>;
   slug: string;
   subscription: { unsubscribe: () => void };
-  private sessionUploadIds: string[] = [];
-  // uploadProgress: { [uploadTaskId: string]: number } = {};
-  private abortControllers: { [uploadTaskId: string]: AbortController } = {};
+  private sessionUploadJobIds: string[] = [];
+  private abortControllers: { [jobId: string]: AbortController } = {};
   private completedTasks = new Set<string>();
-  private activeTasks = new Set<string>();
+  private activeJobs = new Set<string>();
   projectId: number;
 
   constructor(slug: string, projectId: number, client: ApolloClient<any>) {
@@ -94,15 +105,15 @@ export default class DataUploadManager extends EventEmitter<{
 
     // subscribe to data upload task progress using apollo client
     this.subscription = this.client
-      .subscribe<DataUploadsSubscription>({
-        query: DataUploadsDocument,
+      .subscribe<ProjectBackgroundJobSubscription>({
+        query: ProjectBackgroundJobDocument,
         variables: {
           slug,
         },
       })
       .subscribe(({ data, errors }) => {
-        if (data?.dataUploadTasks?.dataUploadTask) {
-          this.handleEvent(data.dataUploadTasks);
+        if (data?.backgroundJobs?.job) {
+          this.handleEvent(data.backgroundJobs);
         }
       });
   }
@@ -116,22 +127,22 @@ export default class DataUploadManager extends EventEmitter<{
     this.removeAllListeners();
   }
 
-  addTaskToQueryCache(task: DataUploadDetailsFragment) {
-    this.client.cache.updateQuery<DataUploadTasksQuery>(
+  addJobToQueryCache(task: JobDetailsFragment) {
+    this.client.cache.updateQuery<ProjectBackgroundJobsQuery>(
       {
-        query: DataUploadTasksDocument,
+        query: ProjectBackgroundJobsDocument,
         variables: {
           slug: this.slug,
         },
       },
       (data) => {
-        if (data?.projectBySlug?.activeDataUploads) {
+        if (data?.projectBySlug?.projectBackgroundJobs) {
           return {
             ...data,
             projectBySlug: {
               ...data.projectBySlug,
-              activeDataUploads: [
-                ...data.projectBySlug.activeDataUploads.filter((u) => {
+              projectBackgroundJobs: [
+                ...data.projectBySlug.projectBackgroundJobs.filter((u) => {
                   return u.id !== task.id;
                 }),
                 task,
@@ -165,14 +176,20 @@ export default class DataUploadManager extends EventEmitter<{
               );
             }
 
+            const job = upload.data.createDataUpload.dataUploadTask.job;
             const task = upload.data.createDataUpload.dataUploadTask;
 
-            // Add the new task to DataUploadTasksQuery cache
-            this.addTaskToQueryCache(task);
+            if (!job) {
+              throw new Error("No job found in task");
+            }
 
-            this.sessionUploadIds.push(task.id);
-            this.activeTasks.add(task.id);
-            this.abortControllers[task.id] = new AbortController();
+            const jobId = job.id;
+            // Add the new task to DataUploadTasksQuery cache
+            this.addJobToQueryCache(job);
+
+            this.sessionUploadJobIds.push(jobId);
+            this.activeJobs.add(jobId);
+            this.abortControllers[jobId] = new AbortController();
             if (!task.presignedUploadUrl) {
               throw new Error("No presigned upload url found in task");
             }
@@ -190,7 +207,14 @@ export default class DataUploadManager extends EventEmitter<{
       );
       Promise.all(
         tasksAndFiles.map(([task, file]) => {
-          const signal = this.abortControllers[task.id].signal;
+          if (!task.job) {
+            throw new Error("No job found in task");
+          }
+          const jobId = task.projectBackgroundJobId;
+          if (!jobId) {
+            throw new Error("No jobId found in task");
+          }
+          const signal = this.abortControllers[jobId].signal;
           return axios({
             url: task.presignedUploadUrl!,
             method: "PUT",
@@ -204,14 +228,16 @@ export default class DataUploadManager extends EventEmitter<{
                 const progress = progressEvent.loaded / progressEvent.total;
                 // update the progress in the apollo cache
                 this.client.cache.writeFragment({
-                  id: `DataUploadTask:${task.id}`,
+                  id: `ProjectBackgroundJob:${jobId}`,
                   fragment: gql`
-                    fragment DUProgress on DataUploadTask {
+                    fragment DUProgress on ProjectBackgroundJob {
                       progress
+                      progressMessage
                     }
                   `,
                   data: {
                     progress,
+                    progressMessage: `uploading`,
                   },
                 });
               }
@@ -222,14 +248,15 @@ export default class DataUploadManager extends EventEmitter<{
                 await this.client.mutate<SubmitDataUploadMutation>({
                   mutation: SubmitDataUploadDocument,
                   variables: {
-                    id: task.id,
+                    jobId,
                   },
                 });
-                delete this.abortControllers[task.id];
+                delete this.abortControllers[jobId];
               } catch (e) {
                 if (/quota exceeded/.test(e.message)) {
                   this.emit("upload-error", {
                     uploadTaskId: task.id,
+                    jobId,
                   });
                 } else {
                   throw e;
@@ -245,58 +272,41 @@ export default class DataUploadManager extends EventEmitter<{
   }
 
   isUploadFromMySession(taskId: string) {
-    return this.sessionUploadIds.includes(taskId);
+    return this.sessionUploadJobIds.includes(taskId);
   }
 
-  /**
-   * Handles data upload task update events from the graphql api. These
-   * fire on insert or update. Progress updates may fire *a lot*.
-   *
-   * Responsible for:
-   *   * Updating the apollo cache with the latest data upload task
-   *   * Emitting events for processing-complete
-   */
-  private handleEvent(event: DataUploadEventFragment) {
-    const task = event.dataUploadTask;
-    if (!task) {
-      throw new Error("No data upload task found in event");
+  private handleEvent(event: BackgroundJobSubscriptionEventFragment) {
+    if (!event.job) {
+      throw new Error("No job found in event");
     }
     if (
-      !this.activeTasks.has(task.id) &&
-      task.state !== DataUploadState.Complete &&
-      task.state !== DataUploadState.Failed &&
-      task.state !== DataUploadState.AwaitingUpload
+      !this.activeJobs.has(event.job.id) &&
+      event.job.state !== ProjectBackgroundJobState.Complete &&
+      event.job.state !== ProjectBackgroundJobState.Failed
     ) {
-      this.addTaskToQueryCache(task);
-      this.activeTasks.add(task.id);
+      this.addJobToQueryCache(event.job.id);
+      this.activeJobs.add(event.job.id);
     }
 
-    // Update apollo cache
-    this.client.cache.writeFragment({
-      id: `DataUploadTask:${task.id}`,
-      fragment: DataUploadDetailsFragmentDoc,
-      data: event.dataUploadTask,
-    });
-    // Detect if processing is complete
+    // If it's an upload task, detect if processing is complete
+    const dataUploadTask = event.job.dataUploadTask;
     if (
-      !this.completedTasks.has(task.id) &&
+      dataUploadTask &&
+      !this.completedTasks.has(event.job.id) &&
       event.previousState &&
-      event.previousState !== DataUploadState.Complete &&
-      task.state === DataUploadState.Complete
+      event.previousState !== ProjectBackgroundJobState.Complete &&
+      event.job.state === ProjectBackgroundJobState.Complete
     ) {
-      const isFromCurrentSession = this.sessionUploadIds.includes(task.id);
-      this.completedTasks.add(task.id);
+      const jobId = event.job.id;
+      const isFromCurrentSession = this.sessionUploadJobIds.includes(jobId);
+      this.completedTasks.add(event.job.id);
       this.emit("processing-complete", {
-        uploadTaskId: task.id,
+        jobId,
+        uploadTaskId: dataUploadTask.id,
         isFromCurrentSession,
-        layerStaticIds: task.tableOfContentsItemStableIds || [],
+        layerStaticIds: dataUploadTask.tableOfContentsItemStableIds || [],
       });
-      if (isFromCurrentSession) {
-        this.sessionUploadIds = this.sessionUploadIds.filter(
-          (id) => id !== task.id
-        );
-      }
-      this.activeTasks.delete(task.id);
+      this.activeJobs.delete(jobId);
     }
   }
 
@@ -306,6 +316,7 @@ export default class DataUploadManager extends EventEmitter<{
    * @param id DataUploadTask id
    */
   abortUpload(id: string) {
+    console.log("abort upload", id);
     this.abortControllers[id]?.abort("User cancelled upload");
     delete this.abortControllers[id];
     this.client.mutate<CancelUploadMutation>({
@@ -320,15 +331,39 @@ export default class DataUploadManager extends EventEmitter<{
   // using this method of function definition so that `this` is bound even
   // when called from react event handlers
   dismissFailedUpload = async (id: string) => {
-    await this.client.mutate<DismissFailedTaskMutation>({
-      mutation: DismissFailedTaskDocument,
+    await this.client.mutate<DismissFailedJobInput>({
+      mutation: DismissFailedJobDocument,
       variables: {
         id,
       },
     });
     delete this.abortControllers[id];
-    this.sessionUploadIds = this.sessionUploadIds.filter((u) => u !== id);
-    this.activeTasks.delete(id);
+    this.sessionUploadJobIds = this.sessionUploadJobIds.filter((u) => u !== id);
+    this.activeJobs.delete(id);
+    // Remove from job list query
+    this.client.cache.updateQuery<ProjectBackgroundJobsQuery>(
+      {
+        query: ProjectBackgroundJobsDocument,
+        variables: {
+          slug: this.slug,
+        },
+      },
+      (data) => {
+        if (data?.projectBySlug?.projectBackgroundJobs) {
+          return {
+            ...data,
+            projectBySlug: {
+              ...data.projectBySlug,
+              projectBackgroundJobs: [
+                ...data.projectBySlug.projectBackgroundJobs.filter((u) => {
+                  return u.id !== id;
+                }),
+              ],
+            },
+          };
+        }
+      }
+    );
   };
 
   // dismissAllFailures = async () => {

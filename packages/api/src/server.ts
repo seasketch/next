@@ -239,7 +239,7 @@ run({
     : 1000,
   taskDirectory: path.join(__dirname, "..", "tasks"),
   crontab: `
-    * * * * * cleanupDataUploads
+  * * * * * cleanupProjectBackgroundJobs
     * * * * * cleanupDeletedOverlayRecords
   `,
 }).then((runner) => {
