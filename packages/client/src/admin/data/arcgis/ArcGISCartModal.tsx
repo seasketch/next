@@ -235,14 +235,16 @@ export default function ArcGISCartModal({
 
   const [useFeatureLayers, setUseFeatureLayers] = useState(false);
 
-  const items = (catalogInfo || []).filter(
-    (i) =>
-      (i.type === "MapServer" ||
-        i.type === "FeatureServer" ||
-        i.type === "Folder") &&
-      (search.length === 0 ||
-        i.name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const items = useMemo(() => {
+    return (catalogInfo || []).filter(
+      (i) =>
+        (i.type === "MapServer" ||
+          i.type === "FeatureServer" ||
+          i.type === "Folder") &&
+        (search.length === 0 ||
+          i.name.toLowerCase().includes(search.toLowerCase()))
+    );
+  }, [search, catalogInfo]);
 
   useEffect(() => {
     setSourceLoading(false);
@@ -903,6 +905,10 @@ export default function ArcGISCartModal({
                             loading="lazy"
                             alt="thumbnail map"
                             className="bg-gray-100 flex-none rounded-sm"
+                            onError={(e) => {
+                              // @ts-ignore
+                              e.target.style.display = "none";
+                            }}
                           />
                           {selection &&
                             selection === item &&
