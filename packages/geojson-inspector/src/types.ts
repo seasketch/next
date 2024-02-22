@@ -1,4 +1,4 @@
-import {GeostatsLayer} from "../../spatial-uploads-handler/src/geostats";
+import { GeostatsLayer } from '../../spatial-uploads-handler/src/geostats';
 interface BaseInspectorResponse {
 	location: string;
 }

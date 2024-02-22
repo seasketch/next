@@ -31,7 +31,8 @@ export default {
 		if (!location) {
 			return new Response('Please provide a location', { status: 400 });
 		}
-		// fetch the geojson from the provided location, and calculate the latency
+		// https://uploads.seasketch.org/projects/cburt/public/4b08062c-9218-45d7-a00c-5147e103e02b.geojson.json
+		// fetch the geojson from the provided location
 		const startT = performance.now();
 		const response = await fetch(location, {
 			headers: {
