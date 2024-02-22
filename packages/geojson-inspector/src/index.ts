@@ -51,7 +51,7 @@ export default {
 		});
 		const endT = performance.now();
 		let failedResponse: FailedInspectorResponse;
-
+		console.log(response.headers);
 		// if the fetch fails return an error
 		if (!response.ok) {
 			if (response.status === 404) {
@@ -82,7 +82,14 @@ export default {
 				},
 			});
 		} else {
-			const contentLength = response.headers.get('content-length');
+			let contentLength = parseInt(response.headers.get('content-length') || '0');
+			if (contentLength === 0) {
+				console.log(response.headers);
+				// @ts-ignore
+				console.log(response.body.byteLength);
+				// @ts-ignore
+				contentLength = response.body ? response.body.byteLength : 0;
+			}
 			const contentType = response.headers.get('content-type');
 			const cacheControl = response.headers.get('cache-control');
 			try {
