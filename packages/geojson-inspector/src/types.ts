@@ -15,6 +15,7 @@ export interface SuccessfulInspectorResponse extends BaseInspectorResponse {
 	featureCount: number;
 	geometryType: 'Point' | 'MultiPoint' | 'LineString' | 'MultiLineString' | 'Polygon' | 'MultiPolygon';
 	rootType: 'FeatureCollection' | 'Feature';
+	bbox: number[];
 }
 
 export type InspectorResponse = FailedInspectorResponse | SuccessfulInspectorResponse;

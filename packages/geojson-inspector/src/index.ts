@@ -9,6 +9,7 @@
  */
 
 import { FailedInspectorResponse, InspectorResponse } from './types';
+import calcBBox from '@turf/bbox';
 
 export interface Env {
 	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
@@ -51,7 +52,6 @@ export default {
 		});
 		const endT = performance.now();
 		let failedResponse: FailedInspectorResponse;
-		console.log(response.headers);
 		// if the fetch fails return an error
 		if (!response.ok) {
 			if (response.status === 404) {
@@ -84,11 +84,8 @@ export default {
 		} else {
 			let contentLength = parseInt(response.headers.get('content-length') || '0');
 			if (contentLength === 0) {
-				console.log(response.headers);
-				// @ts-ignore
-				console.log(response.body.byteLength);
-				// @ts-ignore
-				contentLength = response.body ? response.body.byteLength : 0;
+				const blob = await response.clone().blob();
+				contentLength = blob.size;
 			}
 			const contentType = response.headers.get('content-type');
 			const cacheControl = response.headers.get('cache-control');
@@ -125,13 +122,14 @@ export default {
 					return new Response(
 						JSON.stringify({
 							location,
-							contentLength: contentLength ? parseInt(contentLength) : 0,
+							contentLength,
 							contentType: contentType || '',
 							cacheControl: cacheControl || '',
 							latency: endT - startT,
 							rootType,
 							featureCount: rootType === 'FeatureCollection' ? geojson.features.length : 1,
 							geometryType: rootType === 'FeatureCollection' ? geojson.features[0]?.geometry?.type || 'Unknown' : geojson.geometry.type,
+							bbox: calcBBox(geojson),
 						} as InspectorResponse),
 						{
 							status: 200,
