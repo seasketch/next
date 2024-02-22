@@ -1,6 +1,15 @@
 {
   "packages": [
-    "packages/*"
+    "packages/api",
+    "packages/client",
+    "packages/email-status-handler",
+    "packages/lambda-db-client",
+    "packages/map-screenshotter",
+    "packages/map-tile-cache-calculator",
+    "packages/mapbox-gl-esri-sources",
+    "packages/spatial-uploads-handler",
+    "packages/uploads-server",
+    "packages/vector-data-source"
   ],
   "version": "independent"
 }
