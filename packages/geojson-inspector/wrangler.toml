@@ -1,6 +1,8 @@
 name = "geojson-inspector"
 main = "src/index.ts"
 compatibility_date = "2024-02-08"
+# https://github.com/cloudflare/workerd/issues/787
+compatibility_flags = ["no_minimal_subrequests"]
 
 # Variable bindings. These are arbitrary, plaintext strings (similar to environment variables)
 # Note: Use secrets to store sensitive data.
