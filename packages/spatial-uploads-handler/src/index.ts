@@ -9,7 +9,8 @@ import {
 } from "fs";
 import * as path from "path";
 import { spawn } from "node:child_process";
-import geostats, { statsFromMBTiles, GeostatsLayer } from "./geostats";
+import geostats, { GeostatsLayer } from "./geostats";
+import { statsFromMBTiles } from "./statsFromMBTiles";
 import { Feature, FeatureCollection } from "geojson";
 import bytes from "bytes";
 import bbox from "@turf/bbox";

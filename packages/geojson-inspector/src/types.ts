@@ -1,3 +1,4 @@
+import {GeostatsLayer} from "../../spatial-uploads-handler/src/geostats";
 interface BaseInspectorResponse {
 	location: string;
 }
@@ -9,13 +10,11 @@ export interface FailedInspectorResponse extends BaseInspectorResponse {
 
 export interface SuccessfulInspectorResponse extends BaseInspectorResponse {
 	contentLength: number;
-	contentType: string;
-	cacheControl: string;
+	contentType?: string;
+	cacheControl?: string;
 	latency: number;
-	featureCount: number;
-	geometryType: 'Point' | 'MultiPoint' | 'LineString' | 'MultiLineString' | 'Polygon' | 'MultiPolygon';
-	rootType: 'FeatureCollection' | 'Feature';
 	bbox: number[];
+	geostats: GeostatsLayer;
 }
 
 export type InspectorResponse = FailedInspectorResponse | SuccessfulInspectorResponse;
