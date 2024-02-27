@@ -114,7 +114,6 @@ export async function createDBRecordsForProcessedLayer(
   );
   const conversionTask = conversionTaskQuery.rows[0];
 
-  console.log(conversionTaskQuery);
   // create data source
   const { rows } = await client.query(
     `

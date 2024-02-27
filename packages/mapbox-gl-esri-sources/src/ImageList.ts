@@ -7,7 +7,7 @@ import {
 } from "arcgis-rest-api";
 import { v4 as uuid } from "uuid";
 import drawSMS from "./symbols/drawSMS";
-import fillPatterns from "./symbols/fillPatterns";
+import fillPatterns, { PatternFn } from "./symbols/fillPatterns";
 import { rgba, ptToPx, createCanvas } from "./symbols/utils";
 
 export interface Image {
@@ -175,13 +175,13 @@ export class ImageList {
    */
   addEsriSFS(symbol: SimpleFillSymbol) {
     const imageId = uuid();
-    const pattern = fillPatterns[symbol.style!](rgba(symbol.color));
+    const pattern = fillPatterns[symbol.style!];
     this.imageSets.push({
       id: imageId,
       images: [
-        createFillImage(pattern, 1),
-        createFillImage(pattern, 2),
-        createFillImage(pattern, 3),
+        // createFillImage(pattern, 1, rgba(symbol.color)),
+        createFillImage(pattern, rgba(symbol.color)),
+        // createFillImage(pattern, 3, rgba(symbol.color)),
       ],
     });
     return imageId;
@@ -266,26 +266,27 @@ async function createImage(
 }
 
 /** @hidden */
-function createFillImage(pattern: CanvasPattern, pixelRatio: 1 | 2 | 3): Image {
-  const size = 4 * 2 ** pixelRatio;
-  const canvas = createCanvas(size, size);
+function createFillImage(pattern: PatternFn, strokeStyle: string): Image {
+  const canvas = createCanvas(16, 16);
   const ctx = canvas.getContext("2d")!;
-
-  ctx.fillStyle = pattern;
-  ctx.beginPath();
-
-  ctx.moveTo(0, 0);
-  ctx.lineTo(0, size);
-  ctx.lineTo(size, size);
-  ctx.lineTo(size, 0);
-  ctx.closePath();
-  ctx.fill();
+  ctx.imageSmoothingEnabled = true;
+  pattern(ctx, strokeStyle);
   return {
-    pixelRatio,
-    dataURI: canvas.toDataURL(),
-    width: size,
-    height: size,
+    pixelRatio: 2,
+    dataURI: CANVAS_TO_DATA_URL(canvas),
+    width: 16,
+    height: 16,
   };
+}
+
+let CANVAS_TO_DATA_URL = (canvas: HTMLCanvasElement) => {
+  return canvas.toDataURL();
+};
+
+export function setCanvasToDataURLPolyfill(
+  polyfill: (canvas: HTMLCanvasElement) => string
+) {
+  CANVAS_TO_DATA_URL = polyfill;
 }
 
 /** @hidden */
@@ -303,7 +304,6 @@ async function fetchLegendImage(
   pixelRatio: 2 | 3
 ): Promise<Image> {
   const legendData = await fetchLegendData(serviceRoot, pixelRatio);
-  console.log("legendData", serviceRoot, legendData);
   const sublayerData = legendData.layers.find(
     (lyr: any) => lyr.layerId === sublayer
   );

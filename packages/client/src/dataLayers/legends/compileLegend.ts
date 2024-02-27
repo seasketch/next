@@ -2721,7 +2721,16 @@ function createFillSymbol(
       1
     );
   }
-  const color = extruded
+
+  const fillPattern = getPaintProp(
+    paint,
+    "fill-pattern",
+    featureData,
+    representedProperties,
+    undefined
+  );
+
+  let color = extruded
     ? getPaintProp(
         paint,
         "fill-extrusion-color",
@@ -2736,6 +2745,10 @@ function createFillSymbol(
         representedProperties,
         "rgba(0,0,0,0.2)"
       );
+
+  if (fillPattern && !paint.hasOwnProperty("fill-color")) {
+    color = "transparent";
+  }
   return {
     type: "fill",
     color: skipFill ? "transparent" : color,
@@ -2753,13 +2766,7 @@ function createFillSymbol(
           representedProperties,
           undefined
         )
-      : getPaintProp(
-          paint,
-          "fill-pattern",
-          featureData,
-          representedProperties,
-          undefined
-        ),
+      : fillPattern,
   };
 }
 

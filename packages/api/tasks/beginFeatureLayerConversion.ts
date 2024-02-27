@@ -6,15 +6,66 @@ import {
   ImageList,
   styleForFeatureLayer,
   setCanvasPolyfill,
+  setCanvasToDataURLPolyfill,
 } from "@seasketch/mapbox-gl-esri-sources/dist/index";
 import { createHash } from "crypto";
 import { v4 as uuid } from "uuid";
 import * as S3 from "aws-sdk/clients/s3";
-import canvas from "node-canvas";
+import * as PureImage from "pureimage";
+import { PNG } from "pngjs";
 
-setCanvasPolyfill(
-  (w, h) => canvas.createCanvas(w, h) as unknown as HTMLCanvasElement
-);
+setCanvasPolyfill((w, h) => {
+  const canvas = PureImage.make(w, h);
+  const ctx = canvas.getContext("2d");
+  for (let i = 0; i < canvas.width; i++) {
+    for (let j = 0; j < canvas.height; j++) {
+      canvas.setPixelRGBA(i, j, 0);
+    }
+  }
+  return canvas as unknown as HTMLCanvasElement;
+});
+
+export const getByteBigEndian = function (
+  uint32value: number,
+  byteNo: 0 | 1 | 2 | 3
+) {
+  return (uint32value >>> (8 * (3 - byteNo))) & 0xff;
+};
+
+export const getBytesBigEndian = function (
+  /** the source to be extracted */
+  uint32value: number
+) {
+  return [
+    getByteBigEndian(uint32value, 0),
+    getByteBigEndian(uint32value, 1),
+    getByteBigEndian(uint32value, 2),
+    getByteBigEndian(uint32value, 3),
+  ] as [number, number, number, number];
+};
+
+setCanvasToDataURLPolyfill((canvas) => {
+  const bitmap = canvas as unknown as PureImage.Bitmap;
+  const png = new PNG({
+    width: bitmap.width,
+    height: bitmap.height,
+    deflateLevel: 9,
+    deflateStrategy: 3,
+  });
+  for (let i = 0; i < bitmap.width; i++) {
+    for (let j = 0; j < bitmap.height; j++) {
+      const rgba = bitmap.getPixelRGBA(i, j);
+      const n = (j * bitmap.width + i) * 4;
+      const bytes = getBytesBigEndian(rgba);
+      for (let k = 0; k < 4; k++) {
+        png.data[n + k] = bytes[k];
+      }
+    }
+  }
+  const data = PNG.sync.write(png);
+  const url = `data:image/png;base64,${data.toString("base64")}`;
+  return url;
+});
 
 const s3 = new S3.default({
   region: process.env.S3_REGION,
