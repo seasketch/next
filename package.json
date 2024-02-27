@@ -23,6 +23,6 @@
   "dependencies": {
     "form-data": "^4.0.0",
     "node-fetch": "^2.6.7",
-    "typescript": "^5.2"
+    "typescript": "^5.3"
   }
 }
