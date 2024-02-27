@@ -7,7 +7,7 @@ import {
   styleForFeatureLayer,
   setCanvasPolyfill,
   setCanvasToDataURLPolyfill,
-} from "@seasketch/mapbox-gl-esri-sources/dist/index";
+} from "@seasketch/mapbox-gl-esri-sources";
 import { createHash } from "crypto";
 import { v4 as uuid } from "uuid";
 import * as S3 from "aws-sdk/clients/s3";
@@ -257,6 +257,9 @@ export default async function beginFeatureLayerConversion(
         } catch (e: any) {
           console.error(e);
           return handleError(`Problem generating style. ${e.message}`);
+        }
+        if (!styleInfo) {
+          return handleError("Problem generating style");
         }
         glStyle = styleInfo.layers.map((l) => {
           // @ts-ignore
