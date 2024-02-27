@@ -13,6 +13,8 @@
     "wrangler": "^3.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.515.0",
+    "@aws-sdk/lib-storage": "^3.515.0",
     "@types/geojson": "^7946.0.14"
   }
 }

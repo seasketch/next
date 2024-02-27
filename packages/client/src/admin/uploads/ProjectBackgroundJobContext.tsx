@@ -10,9 +10,10 @@ import { useDropzone } from "react-dropzone";
 import {
   DataUploadDetailsFragment,
   DraftTableOfContentsDocument,
+  GetLayerItemDocument,
   JobDetailsFragment,
+  LayersAndSourcesForItemsDocument,
   ProjectDataQuotaRemainingDocument,
-  useDataUploadTasksQuery,
   useProjectBackgroundJobsQuery,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
@@ -30,16 +31,19 @@ import ProjectBackgroundJobManager, {
   DataUploadProcessingCompleteEvent,
 } from "./ProjectBackgroundJobManager";
 import sleep from "../../sleep";
+import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayerToHostedModal";
 
 export const ProjectBackgroundJobContext = createContext<{
   jobs: JobDetailsFragment[];
   manager?: ProjectBackgroundJobManager;
   setDisabled: (disabled: boolean) => void;
   handleFiles: (files: File[]) => void;
+  openHostFeatureLayerOnSeaSketchModal: (tocId: number) => void;
 }>({
   jobs: [],
   setDisabled: () => {},
   handleFiles: () => {},
+  openHostFeatureLayerOnSeaSketchModal: (tocId: number) => {},
 });
 
 export default function DataUploadDropzone({
@@ -68,6 +72,7 @@ export default function DataUploadDropzone({
   const onError = useGlobalErrorHandler();
   const { alert } = useDialog();
   const { t } = useTranslation("admin:data");
+  const [hostOnSeaSketch, setHostOnSeasketch] = useState<null | number>(null);
 
   const jobsQuery = useProjectBackgroundJobsQuery({
     variables: {
@@ -80,7 +85,7 @@ export default function DataUploadDropzone({
     if (projectId && mapManager) {
       const manager = new ProjectBackgroundJobManager(slug, projectId, client);
       manager.on(
-        "processing-complete",
+        "upload-processing-complete",
         (event: DataUploadProcessingCompleteEvent) => {
           client
             .refetchQueries({
@@ -94,6 +99,19 @@ export default function DataUploadDropzone({
                 mapManager.showTocItems(event.layerStaticIds);
               }
             });
+        }
+      );
+      manager.on(
+        "feature-layer-conversion-complete",
+        (event: DataUploadProcessingCompleteEvent) => {
+          client.refetchQueries({
+            include: [
+              DraftTableOfContentsDocument,
+              ProjectDataQuotaRemainingDocument,
+              LayersAndSourcesForItemsDocument,
+              GetLayerItemDocument,
+            ],
+          });
         }
       );
       manager.on("upload-error", (event: DataUploadErrorEvent) => {
@@ -246,6 +264,7 @@ export default function DataUploadDropzone({
         manager: state.manager,
         setDisabled,
         handleFiles: onDrop,
+        openHostFeatureLayerOnSeaSketchModal: setHostOnSeasketch,
       }}
     >
       <div
@@ -254,6 +273,12 @@ export default function DataUploadDropzone({
         role=""
         className={className}
       >
+        {hostOnSeaSketch && (
+          <ConvertFeatureLayerToHostedModal
+            tocId={hostOnSeaSketch}
+            onRequestClose={() => setHostOnSeasketch(null)}
+          />
+        )}
         <input {...getInputProps()} className="w-1 h-1" />
         {children}
         {(isDragActive || state.droppedFiles > 0) &&

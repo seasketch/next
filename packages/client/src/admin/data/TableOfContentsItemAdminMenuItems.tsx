@@ -6,14 +6,17 @@ import { MenuBarItemClasses } from "../../components/Menubar";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../../components/useDialog";
 import {
+  DataSourceTypes,
   ExtraTocEditingInfoDocument,
   useDeleteBranchMutation,
   useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { LayerEditingContext } from "./LayerEditingContext";
 import getSlug from "../../getSlug";
+import ConvertFeatureLayerToHostedModal from "./arcgis/ConvertFeatureLayerToHostedModal";
+import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobContext";
 
 export default function TableOfContentsItemAdminMenuItems({
   type,
@@ -36,6 +39,7 @@ export default function TableOfContentsItemAdminMenuItems({
       slug: getSlug(),
     },
   });
+  const backgroundJobContext = useContext(ProjectBackgroundJobContext);
 
   const item = items[0];
 
@@ -66,6 +70,25 @@ export default function TableOfContentsItemAdminMenuItems({
       >
         {t("Edit Metadata")}
       </MenuType.Item>
+      {(item.dataSourceType ===
+        DataSourceTypes.ArcgisDynamicMapserverVectorSublayer ||
+        item.dataSourceType === DataSourceTypes.ArcgisVector) && (
+        <>
+          <MenuType.Item
+            style={{
+              minWidth: 120,
+            }}
+            onSelect={() => {
+              backgroundJobContext?.openHostFeatureLayerOnSeaSketchModal(
+                item.id
+              );
+            }}
+            className={MenuBarItemClasses}
+          >
+            {t("Host on SeaSketch...")}
+          </MenuType.Item>
+        </>
+      )}
       <MenuType.Item
         onSelect={async () => {
           if (item) {

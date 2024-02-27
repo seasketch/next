@@ -4,7 +4,6 @@ import {
   ProcessedUploadResponse,
   SpatialUploadsHandlerRequest,
 } from "spatial-uploads-handler";
-import { createDBRecordsForProcessedUpload } from "../src/spatialUploads";
 import AWS from "aws-sdk";
 const s3 = new S3();
 
@@ -47,10 +46,6 @@ export default async function processDataUpload(
       throw new Error("Could not find job with ID=" + job.id);
     }
     const projectId = job.project_id;
-    const source_buckets = await client.query(
-      `select bucket, url from data_sources_buckets where url = (select data_sources_bucket_id from projects where id = $1)`,
-      [projectId]
-    );
     const slugResults = await client.query(
       `select slug from projects where id = $1`,
       [projectId]
@@ -75,8 +70,6 @@ export default async function processDataUpload(
       await runLambda({
         taskId: jobId,
         objectKey,
-        dataSourcesBucket: source_buckets.rows[0].bucket,
-        dataSourcesUrl: source_buckets.rows[0].url,
         suffix: slug,
         requestingUser: user.fullname
           ? `${user.fullname} <${user.email || user.canonical_email}>`

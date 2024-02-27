@@ -8,7 +8,7 @@ import {
 import { v4 as uuid } from "uuid";
 import drawSMS from "./symbols/drawSMS";
 import fillPatterns from "./symbols/fillPatterns";
-import { rgba, ptToPx } from "./symbols/utils";
+import { rgba, ptToPx, createCanvas } from "./symbols/utils";
 
 export interface Image {
   pixelRatio: number;
@@ -36,7 +36,9 @@ export class ImageList {
   }
 
   toJSON() {
-    return this.imageSets as ImageSet[];
+    return Promise.all(this.imageSets).then((imageSets) => {
+      return imageSets;
+    });
   }
 
   /**
@@ -266,9 +268,7 @@ async function createImage(
 /** @hidden */
 function createFillImage(pattern: CanvasPattern, pixelRatio: 1 | 2 | 3): Image {
   const size = 4 * 2 ** pixelRatio;
-  const canvas = document.createElement("canvas");
-  canvas.setAttribute("width", size.toString());
-  canvas.setAttribute("height", size.toString());
+  const canvas = createCanvas(size, size);
   const ctx = canvas.getContext("2d")!;
 
   ctx.fillStyle = pattern;

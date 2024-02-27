@@ -61,7 +61,8 @@ export const TableOfContentsItemMenu = React.forwardRef<
       }
     }, [currentOpacity]);
 
-    const intersectsBottom = (transform?.y || 0) > window.innerHeight - 160;
+    // TODO: adjust this value as context menu grows in size
+    const intersectsBottom = (transform?.y || 0) > window.innerHeight - 260;
     const metadataContext = useContext(TableOfContentsMetadataModalContext);
     const manager = mapContext.manager;
     return (
@@ -115,6 +116,9 @@ export const TableOfContentsItemMenu = React.forwardRef<
           <Suspense
             fallback={
               <>
+                <MenuType.Item className={MenuBarItemClasses}>
+                  <Skeleton className="w-32 h-4" />
+                </MenuType.Item>
                 <MenuType.Item className={MenuBarItemClasses}>
                   <Skeleton className="w-32 h-4" />
                 </MenuType.Item>
@@ -242,4 +246,5 @@ export type TocMenuItemType = Pick<
   | "id"
   | "title"
   | "primaryDownloadUrl"
+  | "dataSourceType"
 >;

@@ -122,6 +122,16 @@ fragment BackgroundJobSubscriptionEvent on ProjectBackgroundJobSubscriptionPaylo
   previousState
   job {
     ...JobDetails
+    esriFeatureLayerConversionTask {
+      projectBackgroundJobId
+      tableOfContentsItem {
+        id
+        stableId
+        projectBackgroundJobs {
+          ...JobDetails
+        }
+      }
+    }
   }
 }
 

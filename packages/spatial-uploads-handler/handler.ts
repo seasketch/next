@@ -3,10 +3,6 @@ import handleUpload from "./src/index";
 export interface SpatialUploadsHandlerRequest {
   taskId: string;
   objectKey: string;
-  /** Used for storing GeoJSON */
-  dataSourcesBucket: string;
-  /** Used for storing GeoJSON */
-  dataSourcesUrl: string;
   // prepended to the key used to save outputs
   // e.g. /projects/cburt/public
   suffix: string;

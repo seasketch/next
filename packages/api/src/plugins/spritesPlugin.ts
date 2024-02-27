@@ -152,7 +152,7 @@ const SpritesPlugin = makeExtendSchemaPlugin((build) => {
   };
 });
 
-async function saveSpriteImage(
+export async function saveSpriteImage(
   stream: any,
   mimetype: string,
   filename: string

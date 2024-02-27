@@ -11,7 +11,7 @@ import { Helpers } from "graphile-worker";
 async function cleanupProjectBackgroundJobs(payload: {}, helpers: Helpers) {
   await helpers.withPgClient(async (client) => {
     await client.query(`
-      update project_background_jobs set state = 'failed', error_message = 'Timed out', progress_message = 'timeout' where state = 'queued' or state = 'running' and now() >= timeout_at
+      update project_background_jobs set state = 'failed', error_message = 'Timed out', progress_message = 'timeout' where (state = 'queued' or state = 'running') and now() >= timeout_at
     `);
     await client.query(`
       delete from project_background_jobs where state = 'queued' and created_at < now() - interval '1 day'

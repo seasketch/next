@@ -1,14 +1,39 @@
 import { fetchFeatures, getLayerName } from "./fetchFeatures";
 import { FeatureCollectionBuffer } from "./featureCollectionBuffer";
 import { Deferred } from "./Deferred";
+import {
+  PutObjectCommandOutput,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 
 interface Env {
   STREAMING_RESPONSE_BYTES_THRESHOLD: number;
   STREAMING_RESPONSE_PAGES_THRESHOLD: number;
+  SEASKETCH_UPLOADS_ACCESS_KEY_ID: string;
+  SEASKETCH_UPLOADS_SECRET_ACCESS_KEY: string;
+  SEASKETCH_UPLOADS_BUCKET: string;
+  SEASKETCH_UPLOADS_REGION: string;
 }
 
+let client: S3Client;
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    // return with cache if possible
+    const cachedResponse = await caches.default.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    if (!client) {
+      client = new S3Client({
+        region: env.SEASKETCH_UPLOADS_REGION,
+        credentials: {
+          accessKeyId: env.SEASKETCH_UPLOADS_ACCESS_KEY_ID,
+          secretAccessKey: env.SEASKETCH_UPLOADS_SECRET_ACCESS_KEY,
+        },
+      });
+    }
     if (request.method !== "GET") {
       return new Response("Only GET requests are supported", {
         status: 405,
@@ -21,6 +46,7 @@ export default {
         status: 400,
       });
     }
+    const store = params.get("store") === "true";
     // Exclude requests from unauthorized origins
     const referer = request.headers.get("referer");
     if (referer) {
@@ -45,10 +71,11 @@ export default {
         });
       }
     }
+
     const headers = {
       "content-type": "application/json",
       // Cache for 3 hours
-      "cache-control": "public, max-age=10800, s-maxage=10800",
+      "cache-control": "public, max-age=10800",
       "content-disposition": `attachment; filename=${layerName}.geojson`,
     };
 
@@ -63,6 +90,38 @@ export default {
       env.STREAMING_RESPONSE_PAGES_THRESHOLD
     );
 
+    let upload: Promise<Response> | undefined;
+    if (store) {
+      const Key = `${crypto.randomUUID()}/${layerName}.geojson.json`;
+      const command = new PutObjectCommand({
+        Bucket: env.SEASKETCH_UPLOADS_BUCKET,
+        Key,
+        Body: readable,
+      });
+      upload = new Upload({
+        client,
+        params: {
+          Bucket: env.SEASKETCH_UPLOADS_BUCKET,
+          Key,
+          Body: readable,
+        },
+      })
+        .done()
+        .then((result) => {
+          return new Response(
+            JSON.stringify({
+              key: Key,
+            }),
+            {
+              headers: {
+                "content-type": "application/json",
+                "cache-control": "public, max-age=10800",
+              },
+            }
+          );
+        });
+    }
+
     // Represent the response as a deffered promise so that the function can
     // return the response only after it is determined whether to return a
     // streaming response or to buffer the entire feature collection in memory
@@ -76,7 +135,11 @@ export default {
       (async () => {
         for await (const page of fetchFeatures(location)) {
           // If thresholds are met, immediately return a streaming response
-          if (!deferred.isResolved && collection.overStreamingThreshold()) {
+          if (
+            !deferred.isResolved &&
+            collection.overStreamingThreshold() &&
+            !upload
+          ) {
             deferred.resolve!(
               new Response(readable, {
                 headers,
@@ -88,7 +151,7 @@ export default {
         // After paging through all features, if a streaming response has not
         // been returned yet, resolve a response with the entire feature
         // collection buffered in memory.
-        if (!deferred.isResolved) {
+        if (!deferred.isResolved && !upload) {
           return deferred.resolve!(
             new Response(collection.toJSON(), {
               headers: {
@@ -107,12 +170,19 @@ export default {
       })()
     );
 
-    // Only return a response after the deferred promise has been resolved.
-    // This may be a streaming response, in which case the waitUntil call
-    // will keep the worker open until the streaming response is complete.
-    // Or, it may be a buffered response, in which case the worker will
-    // close after the response is returned.
-    const response = await deferred.promise;
-    return response;
+    if (upload) {
+      const response = await upload;
+      caches.default.put(request, response.clone());
+      return response;
+    } else {
+      // Only return a response after the deferred promise has been resolved.
+      // This may be a streaming response, in which case the waitUntil call
+      // will keep the worker open until the streaming response is complete.
+      // Or, it may be a buffered response, in which case the worker will
+      // close after the response is returned.
+      const response = await deferred.promise;
+      caches.default.put(request, response.clone());
+      return response;
+    }
   },
 };
