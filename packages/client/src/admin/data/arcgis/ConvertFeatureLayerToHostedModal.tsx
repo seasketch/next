@@ -70,7 +70,11 @@ export default function ConvertFeatureLayerToHostedModal({
                 (j) => j.type === ProjectBackgroundJobType.ArcgisImport
               ).length > 0
             }
-            onClick={() => mutate()}
+            onClick={() => {
+              mutate().then(() => {
+                onRequestClose();
+              });
+            }}
           >
             {t("Convert to SeaSketch hosted layer")}
           </button>
