@@ -36,6 +36,7 @@ export async function* fetchFeatures(
     returnGeometry: "true",
     geometryPrecision: "6",
     returnIdsOnly: "false",
+    resultRecordCount: "200",
     f: "geojson",
   });
   let pagesFetched = 0;
@@ -50,7 +51,7 @@ export async function* fetchFeatures(
   while (pagesFetched < PAGINATION_LIMIT) {
     const response = await fetch(`${baseUrl}/query?${params.toString()}`, opts);
     const str = await response.text();
-    const fc = JSON.parse(str) as FeatureCollection & {
+    let fc: FeatureCollection & {
       error?: {
         code: number;
         message: string;
@@ -61,6 +62,18 @@ export async function* fetchFeatures(
         exceededTransferLimit?: boolean;
       };
     };
+    try {
+      fc = JSON.parse(str);
+    } catch (e: any) {
+      const errorMatches = /<p class="errorLabel">([^<]+)</.exec(str);
+      if (errorMatches?.[1]) {
+        throw new Error(
+          `ArcGIS Server returned an error while attempting to export feature data: ${errorMatches[1].trim()}`
+        );
+      } else {
+        throw new Error(`Failed to parse response: ${e.toString()}`);
+      }
+    }
     if (fc.error) {
       throw new Error(fc.error.message);
     }
@@ -70,6 +83,8 @@ export async function* fetchFeatures(
       if (!objectIdFieldName) {
         // Fetch objectIds to do manual paging (where objectId > lastObjectId)
         params.set("returnIdsOnly", "true");
+        // params.delete("resultRecordCount");
+        const oldResultRecordCount = params.get("resultRecordCount");
         params.set("resultRecordCount", "1");
         const r = await fetch(`${baseUrl}/query?${params.toString()}`, opts);
         const objectIdParameters = (await r.json()) as any;
@@ -83,7 +98,11 @@ export async function* fetchFeatures(
         }
         // remove the param so future requests get the full geometry
         params.delete("returnIdsOnly");
-        params.delete("resultRecordCount");
+        if (oldResultRecordCount) {
+          params.set("resultRecordCount", oldResultRecordCount);
+        } else {
+          params.delete("resultRecordCount");
+        }
       }
       params.delete("where");
       params.set("orderByFields", objectIdFieldName);
@@ -102,7 +121,14 @@ export async function getLayerName(baseUrl: string) {
     error?: { message: string; details: string[] };
   };
   if (json.error) {
-    throw new Error(json.error.message || json.error.details.join(", "));
+    if (json.error.message && json.error.message === "Invalid URL") {
+      throw new Error(
+        "Location refers to ArcGIS Server but not to a valid feature layer. Does this layer still exist on the server? " +
+          baseUrl
+      );
+    } else {
+      throw new Error(json.error.message || json.error.details.join(", "));
+    }
   }
   return json.name;
 }

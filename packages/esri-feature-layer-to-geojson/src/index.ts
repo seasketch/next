@@ -1,11 +1,7 @@
 import { fetchFeatures, getLayerName } from "./fetchFeatures";
 import { FeatureCollectionBuffer } from "./featureCollectionBuffer";
 import { Deferred } from "./Deferred";
-import {
-  PutObjectCommandOutput,
-  PutObjectCommand,
-  S3Client,
-} from "@aws-sdk/client-s3";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 
 interface Env {
@@ -21,10 +17,10 @@ let client: S3Client;
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     // return with cache if possible
-    const cachedResponse = await caches.default.match(request);
-    if (cachedResponse) {
-      return cachedResponse;
-    }
+    // const cachedResponse = await caches.default.match(request);
+    // if (cachedResponse) {
+    //   return cachedResponse;
+    // }
     if (!client) {
       client = new S3Client({
         region: env.SEASKETCH_UPLOADS_REGION,
@@ -133,39 +129,57 @@ export default {
     // may return a Response with a streaming body.
     ctx.waitUntil(
       (async () => {
-        for await (const page of fetchFeatures(location)) {
-          // If thresholds are met, immediately return a streaming response
-          if (
-            !deferred.isResolved &&
-            collection.overStreamingThreshold() &&
-            !upload
-          ) {
-            deferred.resolve!(
-              new Response(readable, {
-                headers,
+        try {
+          for await (const page of fetchFeatures(location)) {
+            // If thresholds are met, immediately return a streaming response
+            if (
+              !deferred.isResolved &&
+              collection.overStreamingThreshold() &&
+              !upload
+            ) {
+              deferred.resolve!(
+                new Response(readable, {
+                  headers,
+                })
+              );
+            }
+            collection.writePage(page);
+          }
+          // After paging through all features, if a streaming response has not
+          // been returned yet, resolve a response with the entire feature
+          // collection buffered in memory.
+          if (!deferred.isResolved && !upload) {
+            return deferred.resolve!(
+              new Response(collection.toJSON(), {
+                headers: {
+                  ...headers,
+                  "content-length": collection.contentLength.toString(),
+                  "x-seasketch-pages": collection.pagesFetched.toString(),
+                },
               })
             );
+          } else {
+            // If a streaming response has been returned, finish writing the
+            // feature collection to the stream and close the writer.
+            collection.finish();
+            return writer.close();
           }
-          collection.writePage(page);
-        }
-        // After paging through all features, if a streaming response has not
-        // been returned yet, resolve a response with the entire feature
-        // collection buffered in memory.
-        if (!deferred.isResolved && !upload) {
-          return deferred.resolve!(
-            new Response(collection.toJSON(), {
-              headers: {
-                ...headers,
-                "content-length": collection.contentLength.toString(),
-                "x-seasketch-pages": collection.pagesFetched.toString(),
-              },
-            })
-          );
-        } else {
-          // If a streaming response has been returned, finish writing the
-          // feature collection to the stream and close the writer.
-          collection.finish();
-          return writer.close();
+        } catch (e: any) {
+          let errorMessage =
+            "Failed to complete retrieval of features from ArcGIS server. ";
+          if (e && "message" in e) {
+            errorMessage = e.message.toString();
+          }
+          if (!deferred.isResolved) {
+            // can return a more helpful error message here
+            deferred.resolve!(
+              new Response(errorMessage, {
+                status: 400,
+              })
+            );
+          } else {
+            throw new Error(errorMessage);
+          }
         }
       })()
     );
