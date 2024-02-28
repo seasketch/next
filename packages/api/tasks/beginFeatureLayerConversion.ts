@@ -207,6 +207,7 @@ export default async function beginFeatureLayerConversion(
       const request = await fetch(
         `https://arcgis-export.seasketch.org/?store=true&location=${location}`
       );
+
       const response = await request.json();
       const objectKey = response.key;
 

@@ -1,6 +1,7 @@
 import { Feature, FeatureCollection, Geometry } from "geojson";
 
 const PAGINATION_LIMIT = 100;
+const RESULT_RECORD_COUNT = 500;
 /** Yielded by fetchFeatures */
 export interface PagedFeatures {
   /** Array of GeoJSON features */
@@ -36,7 +37,7 @@ export async function* fetchFeatures(
     returnGeometry: "true",
     geometryPrecision: "6",
     returnIdsOnly: "false",
-    resultRecordCount: "200",
+    resultRecordCount: RESULT_RECORD_COUNT.toString(),
     f: "geojson",
   });
   let pagesFetched = 0;

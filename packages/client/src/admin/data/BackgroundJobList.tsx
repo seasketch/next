@@ -291,7 +291,7 @@ function FailedBackgroundJobModal({
 }) {
   return (
     <Modal
-      title={<Trans ns="admin:data">Upload Failed</Trans>}
+      title={<Trans ns="admin:data">Job Failed</Trans>}
       onRequestClose={async () => {
         manager.dismissFailedUpload(item.id);
         onRequestClose();
