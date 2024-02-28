@@ -1,6 +1,7 @@
 {
   "packages": [
     "packages/api",
+    "packages/infra",
     "packages/client",
     "packages/email-status-handler",
     "packages/lambda-db-client",
