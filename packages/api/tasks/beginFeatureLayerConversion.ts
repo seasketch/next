@@ -328,7 +328,7 @@ export default async function beginFeatureLayerConversion(
               await s3
                 .putObject({
                   Bucket: process.env.PUBLIC_S3_BUCKET!,
-                  Key: filename,
+                  Key: `sprites/${filename}`,
                   Body: buffer,
                   ContentType: mimeType,
                   CacheControl: "public, max-age=31536000",
