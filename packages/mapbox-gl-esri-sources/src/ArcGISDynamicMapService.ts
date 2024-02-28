@@ -73,7 +73,7 @@ export class ArcGISDynamicMapService
 
   private layers?: OrderedLayerSettings;
   private supportsDynamicLayers = false;
-  private debounceTimeout?: Timer;
+  private debounceTimeout?: any;
   private _loading = true;
   private resolution?: string;
   error?: string;
