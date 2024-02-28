@@ -324,8 +324,7 @@ export async function createDBRecordsForProcessedLayer(
     const dataLayer = layerResult.rows[0];
     if (!dataLayer) {
       throw new Error(
-        "Could not find layer with data_source_id=",
-        dataSourceId
+        "Could not find layer with data_source_id=" + dataSourceId
       );
     }
     // update metadata on table of contents item
