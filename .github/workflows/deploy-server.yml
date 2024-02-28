@@ -71,7 +71,7 @@ jobs:
           cache: "npm"
       - name: Install CDK
         run: |
-          npm install -g aws-cdk typescript
+          npm install -g aws-cdk typescript@5.2
       - name: Install dependencies
         run: |
           npx lerna@6.6.2 bootstrap --ci --scope=infra
