@@ -93,9 +93,15 @@ const DEFAULT_RASTER_INFO = {
 };
 
 export default async function handleUpload(
-  uuid: string,
+  /** project_background_jobs uuid */
+  jobId: string,
+  /** full s3 object key */
   objectKey: string,
-  suffix: string,
+  /** Project identifier */
+  slug: string,
+  /**
+   * For logging purposes only. In the form of "Full Name<email@example.com>"
+   */
   requestingUser: string,
   skipLoggingProgress?: boolean
 ): Promise<ProcessedUploadResponse> {
@@ -118,12 +124,12 @@ export default async function handleUpload(
     if (progress !== undefined) {
       await pgClient.query(
         `update project_background_jobs set state = $1, progress = least($2, 1), progress_message = $3 where id = $4 returning progress`,
-        [state, progress, progressMessage, uuid]
+        [state, progress, progressMessage, jobId]
       );
     } else {
       await pgClient.query(
         `update project_background_jobs set state = $1, progress_message = $2 where id = $3 returning progress`,
-        [state, progressMessage, uuid]
+        [state, progressMessage, jobId]
       );
     }
   }
@@ -144,18 +150,18 @@ export default async function handleUpload(
     }
     const { rows } = await pgClient.query(
       `update project_background_jobs set progress = least($1, 1.0) where id = $2 returning progress`,
-      [progress, uuid]
+      [progress, jobId]
     );
   });
 
   /** Final url that should be assigned to mapbox-gl-style source */
   let sourceUrl: string | undefined;
 
-  const s3LogPath = `s3://${process.env.BUCKET}/${uuid}.log.txt`;
+  const s3LogPath = `s3://${process.env.BUCKET}/${jobId}.log.txt`;
   let { name, ext, base } = path.parse(objectKey);
   name = sanitize(name);
   const originalName = name;
-  name = `${uuid}`;
+  name = `${jobId}`;
   const isZip = ext === ".zip";
   const isTif = ext === ".tif";
 
@@ -298,7 +304,7 @@ export default async function handleUpload(
      */
     await updateProgress("running", "converting format");
     const outputs: (ResponseOutput & { local: string })[] = [];
-    const baseKey = `projects/${suffix}/public`;
+    const baseKey = `projects/${slug}/public`;
 
     outputs.push({
       type: type,
@@ -369,11 +375,11 @@ export default async function handleUpload(
       const ext = path.parse(inputPath).ext;
       outputs.push({
         type: ext === ".tif" ? "GeoTIFF" : "PNG",
-        remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}${ext}`,
+        remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
         local: inputPath,
         size: statSync(inputPath).size,
-        url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}${ext}`,
-        filename: `${uuid}${ext}`,
+        url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}${ext}`,
+        filename: `${jobId}${ext}`,
         isNormalizedOutput: true,
       });
 
@@ -416,13 +422,13 @@ export default async function handleUpload(
       );
       outputs.push({
         type: "PMTiles",
-        remote: `${process.env.TILES_REMOTE}/${baseKey}/${uuid}.pmtiles`,
+        remote: `${process.env.TILES_REMOTE}/${baseKey}/${jobId}.pmtiles`,
         local: pmtilesPath,
         size: statSync(pmtilesPath).size,
-        url: `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}.pmtiles`,
-        filename: `${uuid}.pmtiles`,
+        url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
+        filename: `${jobId}.pmtiles`,
       });
-      sourceUrl = `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}.json`;
+      sourceUrl = `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.json`;
     } else {
       const normalizedVectorPath = path.join(dist, name + ".fgb");
 
@@ -480,11 +486,11 @@ export default async function handleUpload(
       const normalizedVectorFileSize = statSync(normalizedVectorPath).size;
       outputs.push({
         type: "FlatGeobuf",
-        filename: `${uuid}.fgb`,
-        remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}.fgb`,
+        filename: `${jobId}.fgb`,
+        remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}.fgb`,
         local: normalizedVectorPath,
         size: normalizedVectorFileSize,
-        url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.fgb`,
+        url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}.fgb`,
         isNormalizedOutput: true,
       });
 
@@ -513,13 +519,13 @@ export default async function handleUpload(
         );
         outputs.push({
           type: "GeoJSON",
-          remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${uuid}.geojson.json`,
+          remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}.geojson.json`,
           local: geojsonPath,
-          url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`,
+          url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}.geojson.json`,
           size: statSync(geojsonPath).size,
-          filename: `${uuid}.geojson.json`,
+          filename: `${jobId}.geojson.json`,
         });
-        sourceUrl = `${process.env.UPLOADS_BASE_URL}/${baseKey}/${uuid}.geojson.json`;
+        sourceUrl = `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}.geojson.json`;
       }
 
       // For some reason tippecanoe often converts numeric columns from fgb
@@ -650,13 +656,13 @@ export default async function handleUpload(
         );
         outputs.push({
           type: "PMTiles",
-          remote: `${process.env.TILES_REMOTE}/${baseKey}/${uuid}.pmtiles`,
+          remote: `${process.env.TILES_REMOTE}/${baseKey}/${jobId}.pmtiles`,
           local: pmtilesPath,
           size: statSync(pmtilesPath).size,
-          url: `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}.pmtiles`,
-          filename: `${uuid}.pmtiles`,
+          url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
+          filename: `${jobId}.pmtiles`,
         });
-        sourceUrl = `${process.env.TILES_BASE_URL}/${baseKey}/${uuid}`;
+        sourceUrl = `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}`;
 
         // Collect mapbox-geostats from mbtiles archive
         // (generated automatically by tippecanoe)
@@ -745,7 +751,7 @@ export default async function handleUpload(
       `SELECT graphile_worker.add_job('processDataUploadOutputs', $1::json)`,
       [
         JSON.stringify({
-          jobId: uuid,
+          jobId: jobId,
           data: response,
         }),
       ]
@@ -757,7 +763,7 @@ export default async function handleUpload(
     if (!skipLoggingProgress) {
       const q = await pgClient.query(
         `update project_background_jobs set state = 'failed', error_message = $1, progress_message = 'failed' where id = $2 returning *`,
-        [error.message || error.name, uuid]
+        [error.message || error.name, jobId]
       );
     }
     if (

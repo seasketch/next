@@ -871,6 +871,36 @@ type ConfirmProjectInviteWithVerifiedEmailPayload {
   query: Query
 }
 
+"""All input for the `convertEsriFeatureLayerToSeasketchHosted` mutation."""
+input ConvertEsriFeatureLayerToSeasketchHostedInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  tableOfContentsItemId: Int
+}
+
+"""The output of our `convertEsriFeatureLayerToSeasketchHosted` mutation."""
+type ConvertEsriFeatureLayerToSeasketchHostedPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `Project` that is related to this `ProjectBackgroundJob`.
+  """
+  project: Project
+  projectBackgroundJob: ProjectBackgroundJob
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `copyAppearance` mutation."""
 input CopyAppearanceInput {
   """
@@ -2538,6 +2568,7 @@ type DataSource implements Node {
   """
   useDevicePixelRatio: Boolean
   userId: Int
+  wasConvertedFromEsriFeatureLayer: Boolean!
 }
 
 enum DataSourceImportTypes {
@@ -2765,6 +2796,7 @@ input DataSourceInput {
   """
   useDevicePixelRatio: Boolean
   userId: Int
+  wasConvertedFromEsriFeatureLayer: Boolean
 }
 
 """
@@ -4908,6 +4940,30 @@ type EnableOfflineSupportPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type EsriFeatureLayerConversionTask implements Node {
+  attribution: String
+  location: String
+  mapboxGlStyles: JSON
+  metadata: JSON
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `EsriFeatureLayerConversionTask`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
+  projectBackgroundJobId: UUID!
+
+  """
+  Reads a single `TableOfContentsItem` that is related to this `EsriFeatureLayerConversionTask`.
+  """
+  tableOfContentsItem: TableOfContentsItem
+  tableOfContentsItemId: Int!
 }
 
 enum ExtendedGeostatsType {
@@ -7283,6 +7339,12 @@ type Mutation {
     """
     input: ConfirmProjectInviteWithVerifiedEmailInput!
   ): ConfirmProjectInviteWithVerifiedEmailPayload
+  convertEsriFeatureLayerToSeasketchHosted(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ConvertEsriFeatureLayerToSeasketchHostedInput!
+  ): ConvertEsriFeatureLayerToSeasketchHostedPayload
 
   """
   Copies appearance settings like layout and background_image from one form
@@ -10306,6 +10368,7 @@ type ProjectBackgroundJob implements Node {
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection!
   errorMessage: String
+  esriFeatureLayerConversionTask: EsriFeatureLayerConversionTask
   id: UUID!
 
   """
@@ -13536,6 +13599,15 @@ type TableOfContentsItem implements Node {
   parentStableId: String
   primaryDownloadUrl: String
   project: Project
+
+  """Reads and enables pagination through a set of `ProjectBackgroundJob`."""
+  projectBackgroundJobs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ProjectBackgroundJob!]
   projectId: Int!
 
   """

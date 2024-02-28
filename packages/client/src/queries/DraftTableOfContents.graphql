@@ -1,3 +1,16 @@
+fragment AdminOverlay on TableOfContentsItem {
+  ...Overlay
+  projectBackgroundJobs {
+    id
+    type
+    title
+    state
+    progress
+    progressMessage
+    errorMessage
+  }
+}
+
 query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -7,7 +20,7 @@ query DraftTableOfContents($slug: String!) {
       geojson
     }
     draftTableOfContentsItems {
-      ...Overlay
+      ...AdminOverlay
     }
   }
 }
@@ -211,6 +224,7 @@ query GetLayerItem($id: Int!) {
     }
     bounds
     dataLayerId
+    dataSourceType
     metadata
     parentStableId
     projectId
@@ -219,6 +233,15 @@ query GetLayerItem($id: Int!) {
     enableDownload
     geoprocessingReferenceId
     primaryDownloadUrl
+    projectBackgroundJobs {
+      id
+      type
+      title
+      state
+      progress
+      progressMessage
+      errorMessage
+    }
     hasOriginalSourceUpload
     dataLayer {
       id
@@ -661,6 +684,22 @@ mutation DisableDownloadForSharedLayers($slug: String!) {
         enableDownload
         primaryDownloadUrl
       }
+    }
+  }
+}
+
+mutation ConvertFeatureLayerToHosted($tocId: Int!) {
+  convertEsriFeatureLayerToSeasketchHosted(
+    input: { tableOfContentsItemId: $tocId }
+  ) {
+    projectBackgroundJob {
+      id
+      type
+      title
+      state
+      progress
+      progressMessage
+      errorMessage
     }
   }
 }

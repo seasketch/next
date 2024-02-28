@@ -1,6 +1,15 @@
 // @ts-ignore
 import { v4 as uuid } from "uuid";
 
+let CANVAS_POLYFILL: null | ((w: number, h: number) => HTMLCanvasElement) =
+  null;
+
+export function setCanvasPolyfill(
+  polyfill: (w: number, h: number) => HTMLCanvasElement
+) {
+  CANVAS_POLYFILL = polyfill;
+}
+
 /** @hidden */
 type RGBA = [number, number, number, number];
 
@@ -11,10 +20,14 @@ export function generateId() {
 
 /** @hidden */
 export function createCanvas(w: number, h: number) {
-  const canvas = document.createElement("canvas");
-  canvas.setAttribute("width", w.toString());
-  canvas.setAttribute("height", h.toString());
-  return canvas;
+  if (CANVAS_POLYFILL) {
+    return CANVAS_POLYFILL(w, h);
+  } else {
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("width", w.toString());
+    canvas.setAttribute("height", h.toString());
+    return canvas;
+  }
 }
 
 /** @hidden */

@@ -252,7 +252,6 @@ async function fetchData(
   });
   const str = await response.text();
   bytesReceived += byteLength(str);
-  console.log("got", bytesReceived, response);
   if (bytesLimit && bytesReceived >= bytesLimit) {
     const e = new Error(
       `Exceeded bytesLimit. ${bytesReceived} >= ${bytesLimit}`
@@ -267,9 +266,7 @@ async function fetchData(
     };
     exceededTransferLimit?: boolean;
   };
-  console.log("fc", fc);
   if (fc.error) {
-    console.log("fc.error found", fc.error);
     return onError(new Error(fc.error.message));
   } else {
     featureCollection.features.push(...fc.features);
@@ -301,7 +298,6 @@ async function fetchData(
         }
       }
 
-      console.log("on page receivved", onPageReceived);
       if (onPageReceived) {
         onPageReceived(
           bytesReceived,

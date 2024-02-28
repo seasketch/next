@@ -1006,7 +1006,7 @@ export function useImportArcGISService(
                 if (
                   !isDynamic &&
                   layer.imageList &&
-                  layer.imageList.toJSON().length > 0
+                  (await layer.imageList.toJSON()).length > 0
                 ) {
                   // upload any sprites if needed
                   setState((prev) => {
@@ -1326,7 +1326,7 @@ export async function getOrCreateSpritesFromImageSet(
   ) => Promise<any>
 ): Promise<{ [oldId: string]: string }> {
   const replacementIds: { [oldId: string]: string } = {};
-  const imageSetJSON = imageList.toJSON();
+  const imageSetJSON = await imageList.toJSON();
   if (imageSetJSON.length) {
     for (const imageSet of imageSetJSON) {
       const dpi1Image = imageSet.images.find((i) => i.pixelRatio === 1);

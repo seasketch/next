@@ -42,3 +42,5 @@ export { generateMetadataForLayer } from "./src/utils";
 export { default as styleForFeatureLayer } from "./src/styleForFeatureLayer";
 export { ImageList } from "./src/ImageList";
 export { fetchFeatureLayerData } from "./src/ArcGISVectorSource";
+export { setCanvasPolyfill } from "./src/symbols/utils";
+export { setCanvasToDataURLPolyfill } from "./src/ImageList";

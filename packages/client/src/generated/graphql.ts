@@ -755,6 +755,31 @@ export type ConfirmProjectInviteWithVerifiedEmailPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `convertEsriFeatureLayerToSeasketchHosted` mutation. */
+export type ConvertEsriFeatureLayerToSeasketchHostedInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `convertEsriFeatureLayerToSeasketchHosted` mutation. */
+export type ConvertEsriFeatureLayerToSeasketchHostedPayload = {
+  __typename?: 'ConvertEsriFeatureLayerToSeasketchHostedPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `ProjectBackgroundJob`. */
+  project?: Maybe<Project>;
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `copyAppearance` mutation. */
 export type CopyAppearanceInput = {
   /**
@@ -2186,6 +2211,7 @@ export type DataSource = Node & {
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
   userId?: Maybe<Scalars['Int']>;
+  wasConvertedFromEsriFeatureLayer: Scalars['Boolean'];
 };
 
 
@@ -2363,6 +2389,7 @@ export type DataSourceInput = {
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
   userId?: Maybe<Scalars['Int']>;
+  wasConvertedFromEsriFeatureLayer?: Maybe<Scalars['Boolean']>;
 };
 
 /** Represents an update to a `DataSource`. Fields that are set will be updated. */
@@ -4194,6 +4221,22 @@ export type EnableOfflineSupportPayload = {
 /** The output of our `enableOfflineSupport` mutation. */
 export type EnableOfflineSupportPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+export type EsriFeatureLayerConversionTask = Node & {
+  __typename?: 'EsriFeatureLayerConversionTask';
+  attribution?: Maybe<Scalars['String']>;
+  location?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  metadata?: Maybe<Scalars['JSON']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `ProjectBackgroundJob` that is related to this `EsriFeatureLayerConversionTask`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  projectBackgroundJobId: Scalars['UUID'];
+  /** Reads a single `TableOfContentsItem` that is related to this `EsriFeatureLayerConversionTask`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemId: Scalars['Int'];
 };
 
 export enum ExtendedGeostatsType {
@@ -6208,6 +6251,7 @@ export type Mutation = {
    * wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
    */
   confirmProjectInviteWithVerifiedEmail?: Maybe<ConfirmProjectInviteWithVerifiedEmailPayload>;
+  convertEsriFeatureLayerToSeasketchHosted?: Maybe<ConvertEsriFeatureLayerToSeasketchHostedPayload>;
   /**
    * Copies appearance settings like layout and background_image from one form
    * element to another. Useful when initializing custom appearance on an element
@@ -6815,6 +6859,12 @@ export type MutationConfirmProjectInviteWithSurveyTokenArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmProjectInviteWithVerifiedEmailArgs = {
   input: ConfirmProjectInviteWithVerifiedEmailInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationConvertEsriFeatureLayerToSeasketchHostedArgs = {
+  input: ConvertEsriFeatureLayerToSeasketchHostedInput;
 };
 
 
@@ -9191,6 +9241,7 @@ export type ProjectBackgroundJob = Node & {
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection: DataUploadTasksConnection;
   errorMessage?: Maybe<Scalars['String']>;
+  esriFeatureLayerConversionTask?: Maybe<EsriFeatureLayerConversionTask>;
   id: Scalars['UUID'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -12297,6 +12348,8 @@ export type TableOfContentsItem = Node & {
   parentStableId?: Maybe<Scalars['String']>;
   primaryDownloadUrl?: Maybe<Scalars['String']>;
   project?: Maybe<Project>;
+  /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
+  projectBackgroundJobs?: Maybe<Array<ProjectBackgroundJob>>;
   projectId: Scalars['Int'];
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
@@ -12329,6 +12382,22 @@ export type TableOfContentsItem = Node & {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItemDownloadOptionsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemProjectBackgroundJobsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -15847,6 +15916,18 @@ export type BackgroundJobSubscriptionEventFragment = (
   & Pick<ProjectBackgroundJobSubscriptionPayload, 'id' | 'previousState'>
   & { job?: Maybe<(
     { __typename?: 'ProjectBackgroundJob' }
+    & { esriFeatureLayerConversionTask?: Maybe<(
+      { __typename?: 'EsriFeatureLayerConversionTask' }
+      & Pick<EsriFeatureLayerConversionTask, 'projectBackgroundJobId'>
+      & { tableOfContentsItem?: Maybe<(
+        { __typename?: 'TableOfContentsItem' }
+        & Pick<TableOfContentsItem, 'id' | 'stableId'>
+        & { projectBackgroundJobs?: Maybe<Array<(
+          { __typename?: 'ProjectBackgroundJob' }
+          & JobDetailsFragment
+        )>> }
+      )> }
+    )> }
     & JobDetailsFragment
   )> }
 );
@@ -15923,6 +16004,15 @@ export type ImportBasemapDetailsQuery = (
   )> }
 );
 
+export type AdminOverlayFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & { projectBackgroundJobs?: Maybe<Array<(
+    { __typename?: 'ProjectBackgroundJob' }
+    & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
+  )>> }
+  & OverlayFragment
+);
+
 export type DraftTableOfContentsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -15938,7 +16028,7 @@ export type DraftTableOfContentsQuery = (
       & Pick<GeometryPolygon, 'geojson'>
     ), draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & OverlayFragment
+      & AdminOverlayFragment
     )>> }
   )> }
 );
@@ -16087,7 +16177,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -16095,7 +16185,10 @@ export type GetLayerItemQuery = (
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
       )>> }
-    )>, dataLayer?: Maybe<(
+    )>, projectBackgroundJobs?: Maybe<Array<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
+    )>>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType' | 'staticId' | 'dataSourceId'>
       & { sprites?: Maybe<Array<(
@@ -16524,6 +16617,22 @@ export type DisableDownloadForSharedLayersMutation = (
         { __typename?: 'TableOfContentsItem' }
         & Pick<TableOfContentsItem, 'id' | 'enableDownload' | 'primaryDownloadUrl'>
       )>> }
+    )> }
+  )> }
+);
+
+export type ConvertFeatureLayerToHostedMutationVariables = Exact<{
+  tocId: Scalars['Int'];
+}>;
+
+
+export type ConvertFeatureLayerToHostedMutation = (
+  { __typename?: 'Mutation' }
+  & { convertEsriFeatureLayerToSeasketchHosted?: Maybe<(
+    { __typename?: 'ConvertEsriFeatureLayerToSeasketchHostedPayload' }
+    & { projectBackgroundJob?: Maybe<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
     )> }
   )> }
 );
@@ -17547,7 +17656,7 @@ export type ProjectSlugExistsQuery = (
 
 export type OverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps' | 'hasMetadata' | 'primaryDownloadUrl'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'enableDownload' | 'hideChildren' | 'isClickOffOnly' | 'isFolder' | 'parentStableId' | 'showRadioChildren' | 'sortIndex' | 'stableId' | 'title' | 'geoprocessingReferenceId' | 'translatedProps' | 'hasMetadata' | 'primaryDownloadUrl' | 'dataSourceType'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
@@ -20219,9 +20328,58 @@ export const BackgroundJobSubscriptionEventFragmentDoc = gql`
   previousState
   job {
     ...JobDetails
+    esriFeatureLayerConversionTask {
+      projectBackgroundJobId
+      tableOfContentsItem {
+        id
+        stableId
+        projectBackgroundJobs {
+          ...JobDetails
+        }
+      }
+    }
   }
 }
     ${JobDetailsFragmentDoc}`;
+export const OverlayFragmentDoc = gql`
+    fragment Overlay on TableOfContentsItem {
+  id
+  acl {
+    id
+    type
+  }
+  bounds
+  dataLayerId
+  enableDownload
+  hideChildren
+  isClickOffOnly
+  isFolder
+  parentStableId
+  showRadioChildren
+  sortIndex
+  stableId
+  title
+  geoprocessingReferenceId
+  translatedProps
+  hasMetadata
+  primaryDownloadUrl
+  dataSourceType
+}
+    `;
+export const AdminOverlayFragmentDoc = gql`
+    fragment AdminOverlay on TableOfContentsItem {
+  ...Overlay
+  projectBackgroundJobs {
+    id
+    type
+    title
+    state
+    progress
+    progressMessage
+    errorMessage
+  }
+}
+    ${OverlayFragmentDoc}`;
 export const ForumListDetailsFragmentDoc = gql`
     fragment ForumListDetails on Forum {
   id
@@ -20551,30 +20709,6 @@ export const ProjectMetadataMeFragFragmentDoc = gql`
     picture
     affiliations
   }
-}
-    `;
-export const OverlayFragmentDoc = gql`
-    fragment Overlay on TableOfContentsItem {
-  id
-  acl {
-    id
-    type
-  }
-  bounds
-  dataLayerId
-  enableDownload
-  hideChildren
-  isClickOffOnly
-  isFolder
-  parentStableId
-  showRadioChildren
-  sortIndex
-  stableId
-  title
-  geoprocessingReferenceId
-  translatedProps
-  hasMetadata
-  primaryDownloadUrl
 }
     `;
 export const DataSourceDetailsFragmentDoc = gql`
@@ -23611,11 +23745,11 @@ export const DraftTableOfContentsDocument = gql`
       geojson
     }
     draftTableOfContentsItems {
-      ...Overlay
+      ...AdminOverlay
     }
   }
 }
-    ${OverlayFragmentDoc}`;
+    ${AdminOverlayFragmentDoc}`;
 
 /**
  * __useDraftTableOfContentsQuery__
@@ -24012,6 +24146,7 @@ export const GetLayerItemDocument = gql`
     }
     bounds
     dataLayerId
+    dataSourceType
     metadata
     parentStableId
     projectId
@@ -24020,6 +24155,15 @@ export const GetLayerItemDocument = gql`
     enableDownload
     geoprocessingReferenceId
     primaryDownloadUrl
+    projectBackgroundJobs {
+      id
+      type
+      title
+      state
+      progress
+      progressMessage
+      errorMessage
+    }
     hasOriginalSourceUpload
     dataLayer {
       id
@@ -25108,6 +25252,47 @@ export function useDisableDownloadForSharedLayersMutation(baseOptions?: Apollo.M
 export type DisableDownloadForSharedLayersMutationHookResult = ReturnType<typeof useDisableDownloadForSharedLayersMutation>;
 export type DisableDownloadForSharedLayersMutationResult = Apollo.MutationResult<DisableDownloadForSharedLayersMutation>;
 export type DisableDownloadForSharedLayersMutationOptions = Apollo.BaseMutationOptions<DisableDownloadForSharedLayersMutation, DisableDownloadForSharedLayersMutationVariables>;
+export const ConvertFeatureLayerToHostedDocument = gql`
+    mutation ConvertFeatureLayerToHosted($tocId: Int!) {
+  convertEsriFeatureLayerToSeasketchHosted(input: {tableOfContentsItemId: $tocId}) {
+    projectBackgroundJob {
+      id
+      type
+      title
+      state
+      progress
+      progressMessage
+      errorMessage
+    }
+  }
+}
+    `;
+export type ConvertFeatureLayerToHostedMutationFn = Apollo.MutationFunction<ConvertFeatureLayerToHostedMutation, ConvertFeatureLayerToHostedMutationVariables>;
+
+/**
+ * __useConvertFeatureLayerToHostedMutation__
+ *
+ * To run a mutation, you first call `useConvertFeatureLayerToHostedMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConvertFeatureLayerToHostedMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [convertFeatureLayerToHostedMutation, { data, loading, error }] = useConvertFeatureLayerToHostedMutation({
+ *   variables: {
+ *      tocId: // value for 'tocId'
+ *   },
+ * });
+ */
+export function useConvertFeatureLayerToHostedMutation(baseOptions?: Apollo.MutationHookOptions<ConvertFeatureLayerToHostedMutation, ConvertFeatureLayerToHostedMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ConvertFeatureLayerToHostedMutation, ConvertFeatureLayerToHostedMutationVariables>(ConvertFeatureLayerToHostedDocument, options);
+      }
+export type ConvertFeatureLayerToHostedMutationHookResult = ReturnType<typeof useConvertFeatureLayerToHostedMutation>;
+export type ConvertFeatureLayerToHostedMutationResult = Apollo.MutationResult<ConvertFeatureLayerToHostedMutation>;
+export type ConvertFeatureLayerToHostedMutationOptions = Apollo.BaseMutationOptions<ConvertFeatureLayerToHostedMutation, ConvertFeatureLayerToHostedMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -31231,6 +31416,7 @@ export const namedOperations = {
     UpdateEnableDownloadByDefault: 'UpdateEnableDownloadByDefault',
     EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',
     DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
+    ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
@@ -31354,6 +31540,7 @@ export const namedOperations = {
     DataUploadExtendedDetails: 'DataUploadExtendedDetails',
     JobDetails: 'JobDetails',
     BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
+    AdminOverlay: 'AdminOverlay',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',

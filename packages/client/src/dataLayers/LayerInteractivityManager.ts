@@ -49,7 +49,7 @@ export default class LayerInteractivityManager extends EventEmitter {
    */
   private imageSources: { [sourceId: string]: DataSourceDetailsFragment } = {};
   private previousInteractionTarget?: string;
-  private debouncedMouseMoveListenerReference?: NodeJS.Timeout;
+  private debouncedMouseMoveListenerReference?: any;
   private popupAbortController: AbortController | undefined;
   private interactiveVectorLayerIds: string[] = [];
   private interactiveImageLayerIds: string[] = [];

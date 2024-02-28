@@ -19,6 +19,7 @@ fragment Overlay on TableOfContentsItem {
   translatedProps
   hasMetadata
   primaryDownloadUrl
+  dataSourceType
 }
 
 query PublishedTableOfContents($slug: String!) {

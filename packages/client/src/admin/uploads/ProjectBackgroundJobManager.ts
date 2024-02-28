@@ -12,6 +12,7 @@ import {
   ProjectBackgroundJobDocument,
   ProjectBackgroundJobState,
   ProjectBackgroundJobSubscription,
+  ProjectBackgroundJobType,
   ProjectBackgroundJobsDocument,
   ProjectBackgroundJobsQuery,
   SubmitDataUploadDocument,
@@ -27,6 +28,11 @@ export interface DataUploadProcessingCompleteEvent {
    * upload this will not be true. */
   isFromCurrentSession: boolean;
   layerStaticIds: string[];
+}
+
+export interface FeatureLayerConversionCompleteEvent {
+  jobId: string;
+  stableId?: string;
 }
 
 export interface DataUploadErrorEvent {
@@ -86,7 +92,8 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
    * from the table of contents (which may need refetching). This event is
    * fired for all uploads, not just those from the current session.
    */
-  "processing-complete": DataUploadProcessingCompleteEvent;
+  "upload-processing-complete": DataUploadProcessingCompleteEvent;
+  "feature-layer-conversion-complete": FeatureLayerConversionCompleteEvent;
 }> {
   client: ApolloClient<any>;
   slug: string;
@@ -300,13 +307,27 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
       const jobId = event.job.id;
       const isFromCurrentSession = this.sessionUploadJobIds.includes(jobId);
       this.completedTasks.add(event.job.id);
-      this.emit("processing-complete", {
+      this.emit("upload-processing-complete", {
         jobId,
         uploadTaskId: dataUploadTask.id,
         isFromCurrentSession,
         layerStaticIds: dataUploadTask.tableOfContentsItemStableIds || [],
       });
-      this.activeJobs.delete(jobId);
+    }
+    if (
+      event.job?.type === ProjectBackgroundJobType.ArcgisImport &&
+      !this.completedTasks.has(event.job.id) &&
+      event.previousState &&
+      event.previousState !== ProjectBackgroundJobState.Complete &&
+      event.job.state === ProjectBackgroundJobState.Complete
+    ) {
+      this.completedTasks.add(event.job.id);
+      this.emit("feature-layer-conversion-complete", {
+        jobId: event.job.id,
+        stableId:
+          event.job.esriFeatureLayerConversionTask?.tableOfContentsItem
+            ?.stableId,
+      });
     }
   }
 
@@ -339,6 +360,53 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
     delete this.abortControllers[id];
     this.sessionUploadJobIds = this.sessionUploadJobIds.filter((u) => u !== id);
     this.activeJobs.delete(id);
+    const cachedItem = this.client.cache.readFragment<JobDetailsFragment>({
+      // eslint-disable-next-line i18next/no-literal-string
+      id: `ProjectBackgroundJob:${id}`,
+      // eslint-disable-next-line i18next/no-literal-string
+      fragment: gql`
+        fragment DismissedJob on ProjectBackgroundJob {
+          id
+          esriFeatureLayerConversionTask {
+            tableOfContentsItem {
+              id
+            }
+          }
+        }
+      `,
+    });
+    const tocId =
+      // @ts-ignore
+      cachedItem?.esriFeatureLayerConversionTask?.tableOfContentsItem?.id;
+    this.client.cache.updateFragment(
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `TableOfContentsItem:${tocId}`,
+        // eslint-disable-next-line i18next/no-literal-string
+        fragment: gql`
+          fragment DismissedJob on TableOfContentsItem {
+            id
+            projectBackgroundJobs {
+              id
+            }
+          }
+        `,
+      },
+      (data) => {
+        if (data?.projectBackgroundJobs) {
+          return {
+            ...data,
+            projectBackgroundJobs: [
+              ...data.projectBackgroundJobs.filter((u: any) => {
+                return u.id !== id;
+              }),
+            ],
+          };
+        } else {
+          return data;
+        }
+      }
+    );
     // Remove from job list query
     this.client.cache.updateQuery<ProjectBackgroundJobsQuery>(
       {

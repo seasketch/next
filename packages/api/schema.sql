@@ -3164,7 +3164,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.import_type is null and (new.type = 'seasketch-vector' or new.type = 'seasketch-mvt') then
       raise 'import_type property is required for seasketch-vector sources';
     end if;
-    if new.original_source_url is not null and new.type != 'seasketch-vector' then
+    if new.original_source_url is not null and (new.type != 'seasketch-vector' and new.type != 'seasketch-mvt') then
       raise 'original_source_url may only be set on seasketch-vector sources';
     end if;
     if new.enhanced_security is not null and new.type != 'seasketch-vector' then
@@ -4423,6 +4423,92 @@ invite. Outstanding (or confirmed) invites can be accessed via the
 
 More details on how to handle invites can be found [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
 ';
+
+
+--
+-- Name: project_background_jobs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_background_jobs (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    project_id integer NOT NULL,
+    title text NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    started_at timestamp with time zone,
+    user_id integer NOT NULL,
+    progress numeric,
+    progress_message text DEFAULT 'queued'::text NOT NULL,
+    error_message text,
+    state public.project_background_job_state DEFAULT 'queued'::public.project_background_job_state NOT NULL,
+    timeout_at timestamp with time zone DEFAULT (timezone('utc'::text, now()) + '00:03:00'::interval) NOT NULL,
+    type public.project_background_job_type DEFAULT 'data_upload'::public.project_background_job_type NOT NULL,
+    CONSTRAINT project_background_jobs_progress_check CHECK (((progress <= 1.0) AND (progress >= 0.0)))
+);
+
+
+--
+-- Name: TABLE project_background_jobs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_background_jobs IS '@simpleCollections only';
+
+
+--
+-- Name: convert_esri_feature_layer_to_seasketch_hosted(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.convert_esri_feature_layer_to_seasketch_hosted(table_of_contents_item_id integer) RETURNS public.project_background_jobs
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      job project_background_jobs;
+      data_source data_sources;
+      data_layer data_layers;
+      ds_type text;
+      item_name text;
+      pid int;
+    begin
+      select project_id, title into pid, item_name from table_of_contents_items where id = table_of_contents_item_id;
+      -- Check permissions
+      if session_is_admin(pid) = false then
+        raise exception 'Permission denied';
+      end if;
+      -- Validate that the item is an esri feature layer
+      select data_source_type into ds_type from table_of_contents_items where id = table_of_contents_item_id;
+      if ds_type is null then
+        raise exception 'Table of contents item not found';
+      end if;
+      if ds_type != 'arcgis-dynamic-mapserver-vector-sublayer' and ds_type != 'arcgis-vector' then
+        raise exception 'Table of contents item is not an esri feature layer';
+      end if;
+      -- Create a background job and task
+      insert into project_background_jobs(
+        project_id,
+        title,
+        user_id,
+        timeout_at,
+        type
+      ) values (
+        pid,
+        'Converting ' || item_name,
+        nullif(current_setting('session.user_id', TRUE), '')::integer,
+        now() + interval '30 minutes',
+        'arcgis_import'
+      ) returning * into job;
+      insert into esri_feature_layer_conversion_tasks(
+        project_background_job_id,
+        table_of_contents_item_id
+      ) values (
+        job.id,
+        table_of_contents_item_id
+      );
+      -- start graphile job
+      perform graphile_worker.add_job('beginFeatureLayerConversion', json_build_object(
+        'jobId', job.id
+      ));
+      return job;
+    end;
+  $$;
 
 
 --
@@ -6637,6 +6723,7 @@ CREATE TABLE public.data_sources (
     arcgis_fetch_strategy public.arcgis_feature_layer_fetch_strategy DEFAULT 'tiled'::public.arcgis_feature_layer_fetch_strategy NOT NULL,
     user_id integer,
     uploaded_by integer,
+    was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -6949,34 +7036,6 @@ CREATE FUNCTION public.data_sources_uploaded_by(data_source public.data_sources)
     end if;
   end
   $$;
-
-
---
--- Name: project_background_jobs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_background_jobs (
-    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
-    project_id integer NOT NULL,
-    title text NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    started_at timestamp with time zone,
-    user_id integer NOT NULL,
-    progress numeric,
-    progress_message text DEFAULT 'queued'::text NOT NULL,
-    error_message text,
-    state public.project_background_job_state DEFAULT 'queued'::public.project_background_job_state NOT NULL,
-    timeout_at timestamp with time zone DEFAULT (timezone('utc'::text, now()) + '00:03:00'::interval) NOT NULL,
-    type public.project_background_job_type DEFAULT 'data_upload'::public.project_background_job_type NOT NULL,
-    CONSTRAINT project_background_jobs_progress_check CHECK (((progress <= 1.0) AND (progress >= 0.0)))
-);
-
-
---
--- Name: TABLE project_background_jobs; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.project_background_jobs IS '@simpleCollections only';
 
 
 --
@@ -9939,6 +9998,36 @@ CREATE FUNCTION public.project_background_jobs_data_upload_task(job public.proje
     LANGUAGE sql STABLE
     AS $$
     select * from data_upload_tasks where project_background_job_id = job.id limit 1;
+  $$;
+
+
+--
+-- Name: esri_feature_layer_conversion_tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.esri_feature_layer_conversion_tasks (
+    project_background_job_id uuid NOT NULL,
+    table_of_contents_item_id integer NOT NULL,
+    mapbox_gl_styles jsonb,
+    metadata jsonb,
+    location text,
+    attribution text
+);
+
+
+--
+-- Name: project_background_jobs_esri_feature_layer_conversion_task(public.project_background_jobs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_background_jobs_esri_feature_layer_conversion_task(job public.project_background_jobs) RETURNS public.esri_feature_layer_conversion_tasks
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      * 
+    from 
+      esri_feature_layer_conversion_tasks 
+    where 
+      project_background_job_id = job.id;
   $$;
 
 
@@ -13519,6 +13608,36 @@ CREATE FUNCTION public.table_of_contents_items_project(t public.table_of_content
 
 
 --
+-- Name: table_of_contents_items_project_background_jobs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_project_background_jobs(item public.table_of_contents_items) RETURNS SETOF public.project_background_jobs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select 
+      * 
+    from 
+      project_background_jobs 
+    where 
+      id = (
+        select 
+          project_background_job_id 
+        from 
+          esri_feature_layer_conversion_tasks 
+        where 
+          table_of_contents_item_id = item.id
+      ) and session_is_admin(item.project_id);
+  $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_project_background_jobs(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_project_background_jobs(item public.table_of_contents_items) IS '@simpleCollections only';
+
+
+--
 -- Name: table_of_contents_items_project_update(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15943,6 +16062,22 @@ ALTER TABLE ONLY public.survey_invites
 
 
 --
+-- Name: esri_feature_layer_conversion_tasks esri_feature_layer_conversion_tas_table_of_contents_item_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.esri_feature_layer_conversion_tasks
+    ADD CONSTRAINT esri_feature_layer_conversion_tas_table_of_contents_item_id_key UNIQUE (table_of_contents_item_id);
+
+
+--
+-- Name: esri_feature_layer_conversion_tasks esri_feature_layer_conversion_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.esri_feature_layer_conversion_tasks
+    ADD CONSTRAINT esri_feature_layer_conversion_tasks_pkey PRIMARY KEY (project_background_job_id);
+
+
+--
 -- Name: file_uploads file_uploads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -17809,6 +17944,22 @@ ALTER TABLE ONLY public.data_upload_tasks
 
 ALTER TABLE ONLY public.email_notification_preferences
     ADD CONSTRAINT email_notification_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: esri_feature_layer_conversion_tasks esri_feature_layer_conversion_ta_project_background_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.esri_feature_layer_conversion_tasks
+    ADD CONSTRAINT esri_feature_layer_conversion_ta_project_background_job_id_fkey FOREIGN KEY (project_background_job_id) REFERENCES public.project_background_jobs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: esri_feature_layer_conversion_tasks esri_feature_layer_conversion_ta_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.esri_feature_layer_conversion_tasks
+    ADD CONSTRAINT esri_feature_layer_conversion_ta_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
 
 
 --
@@ -21689,6 +21840,21 @@ REVOKE ALL ON FUNCTION public.contains_2d(public.geometry, public.box2df) FROM P
 
 
 --
+-- Name: TABLE project_background_jobs; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_background_jobs TO seasketch_user;
+
+
+--
+-- Name: FUNCTION convert_esri_feature_layer_to_seasketch_hosted(table_of_contents_item_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.convert_esri_feature_layer_to_seasketch_hosted(table_of_contents_item_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.convert_esri_feature_layer_to_seasketch_hosted(table_of_contents_item_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION copy_appearance(form_element_id integer, copy_from_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22583,13 +22749,6 @@ GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_us
 
 REVOKE ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_sources) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_sources) TO seasketch_user;
-
-
---
--- Name: TABLE project_background_jobs; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.project_background_jobs TO seasketch_user;
 
 
 --
@@ -25495,6 +25654,14 @@ GRANT ALL ON FUNCTION public.project_access_status(pid integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.project_background_jobs_data_upload_task(job public.project_background_jobs) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_background_jobs_data_upload_task(job public.project_background_jobs) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION project_background_jobs_esri_feature_layer_conversion_task(job public.project_background_jobs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_background_jobs_esri_feature_layer_conversion_task(job public.project_background_jobs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_background_jobs_esri_feature_layer_conversion_task(job public.project_background_jobs) TO seasketch_user;
 
 
 --
@@ -29404,6 +29571,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_primary_download_url(item p
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_project(t public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_project_background_jobs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_project_background_jobs(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_project_background_jobs(item public.table_of_contents_items) TO seasketch_user;
 
 
 --

@@ -1,99 +1,82 @@
-import { createCanvas } from "./utils";
 /** @hidden */
 export default {
-  esriSFSVertical: (strokeStyle = "#000000") => {
-    var canvas = createCanvas(16, 16);
-    var ctx = canvas.getContext("2d")!;
+  esriSFSVertical: (ctx, strokeStyle = "#000000") => {
     ctx.strokeStyle = strokeStyle || "#000000";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(8, 16);
+    ctx.moveTo(8, -4);
+    ctx.lineTo(8, 20);
     ctx.stroke();
-    return ctx.createPattern(canvas, "repeat")!;
   },
-  esriSFSHorizontal: (strokeStyle = "#000000") => {
-    var canvas = createCanvas(16, 16);
-    var ctx = canvas.getContext("2d")!;
-
+  esriSFSHorizontal: (ctx, strokeStyle = "#000000") => {
     ctx.strokeStyle = strokeStyle || "#000000";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(16, 8);
+    ctx.moveTo(-4, 8);
+    ctx.lineTo(20, 8);
     ctx.stroke();
-    return ctx.createPattern(canvas, "repeat")!;
   },
-  esriSFSBackwardDiagonal: (strokeStyle = "#000000") => {
-    var canvas = createCanvas(16, 16);
-    var ctx = canvas.getContext("2d")!;
-
+  esriSFSBackwardDiagonal: (ctx, strokeStyle = "#000000") => {
     ctx.strokeStyle = strokeStyle;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(8, 0);
+    ctx.moveTo(-1, 9);
+    ctx.lineTo(9, -1);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(0, 24);
-    ctx.lineTo(24, 0);
+    ctx.moveTo(17, 7);
+    ctx.lineTo(7, 17);
     ctx.stroke();
-    return ctx.createPattern(canvas, "repeat")!;
   },
-  esriSFSForwardDiagonal: (strokeStyle = "#000000") => {
-    var canvas = createCanvas(16, 16);
-    var ctx = canvas.getContext("2d")!;
-
+  esriSFSForwardDiagonal: (ctx, strokeStyle = "#000000") => {
     ctx.strokeStyle = strokeStyle;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(8, 16);
+    ctx.moveTo(-1, 7);
+    ctx.lineTo(9, 17);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(16, 8);
+    ctx.moveTo(7, -1);
+    ctx.lineTo(17, 9);
     ctx.stroke();
-    return ctx.createPattern(canvas, "repeat")!;
   },
-  esriSFSCross: (strokeStyle = "#000000") => {
-    var canvas = createCanvas(16, 16);
-    var ctx = canvas.getContext("2d")!;
-
+  esriSFSCross: (ctx, strokeStyle = "#000000") => {
     ctx.strokeStyle = strokeStyle;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(16, 8);
+    ctx.moveTo(-1, 8);
+    ctx.lineTo(17, 8);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(8, 16);
+    ctx.moveTo(8, -1);
+    ctx.lineTo(8, 17);
     ctx.stroke();
-    return ctx.createPattern(canvas, "repeat")!;
   },
-  esriSFSDiagonalCross: (strokeStyle = "#000000") => {
-    var canvas = createCanvas(16, 16);
-    var ctx = canvas.getContext("2d")!;
-
+  esriSFSDiagonalCross: (ctx, strokeStyle = "#000000") => {
     ctx.strokeStyle = strokeStyle;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(8, 16);
+    ctx.moveTo(-1, 7);
+    ctx.lineTo(9, 17);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(8, 0);
-    ctx.lineTo(16, 8);
+    ctx.moveTo(7, -1);
+    ctx.lineTo(17, 9);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(8, 0);
+    ctx.moveTo(-1, 9);
+    ctx.lineTo(9, -1);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(0, 24);
-    ctx.lineTo(24, 0);
+    ctx.moveTo(7, 17);
+    ctx.lineTo(17, 7);
     ctx.stroke();
-    return ctx.createPattern(canvas, "repeat")!;
   },
-} as { [key: string]: (strokeStyle: string) => CanvasPattern };
+} as {
+  [key: string]: PatternFn;
+};
+
+export type PatternFn = (
+  ctx: CanvasRenderingContext2D,
+  strokeStyle: string
+) => void;

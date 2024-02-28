@@ -180,7 +180,7 @@ class MapContextManager extends EventEmitter {
   private visibleLayers: { [id: string]: LayerState } = {};
   private basemaps: { [id: string]: BasemapDetailsFragment } = {};
   private _setState: Dispatch<SetStateAction<MapContextInterface>>;
-  private updateStateDebouncerReference?: NodeJS.Timeout;
+  private updateStateDebouncerReference?: any;
   private initialCameraOptions?: CameraOptions;
   private initialBounds?: LngLatBoundsLike;
   private internalState: MapContextInterface;
@@ -611,7 +611,7 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  onMapMoveDebouncerReference: NodeJS.Timeout | undefined;
+  onMapMoveDebouncerReference: any | undefined;
 
   onMapMove = (event: MouseEvent) => {
     if (this.onMapMoveDebouncerReference) {
@@ -865,7 +865,7 @@ class MapContextManager extends EventEmitter {
     this.updatePreferences();
   }
 
-  private updateStyleDebouncerReference: NodeJS.Timeout | undefined;
+  private updateStyleDebouncerReference: any | undefined;
 
   private async debouncedUpdateStyle(backoff = 2) {
     if (this.updateStyleDebouncerReference) {
@@ -2676,7 +2676,7 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  bookmarkBannerHideTimeout?: NodeJS.Timeout;
+  bookmarkBannerHideTimeout?: any;
 
   /**
    *

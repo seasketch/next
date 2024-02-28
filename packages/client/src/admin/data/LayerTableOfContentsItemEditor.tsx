@@ -45,6 +45,8 @@ import FeatureLayerPerformanceDetailsModal from "./FeatureLayerPerformanceDetail
 import { ChartBarIcon } from "@heroicons/react/solid";
 import ArcGISTiledRasterSettings from "./ArcGISTiledRasterSettings";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import Button from "../../components/Button";
+import ConvertFeatureLayerToHostedBlock from "./ConvertFeatureLayerToHostedBlock";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -219,7 +221,7 @@ export default function LayerTableOfContentsItemEditor(
   }, [setReferenceCopied, item]);
   return (
     <div
-      className="bg-white z-20 absolute bottom-0 w-128 flex flex-col"
+      className="bg-white z-30 absolute bottom-0 w-128 flex flex-col"
       style={{ height: "calc(100vh)" }}
     >
       <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
@@ -652,6 +654,9 @@ export default function LayerTableOfContentsItemEditor(
                           </button>
                         </Trans>
                       </InputBlock>
+                      <div className="py-4 text-sm text-gray-500">
+                        <ConvertFeatureLayerToHostedBlock item={item} />
+                      </div>
                     </SettingsDefinitionList>
                     {perfModalOpen && (
                       <FeatureLayerPerformanceDetailsModal

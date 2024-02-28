@@ -1,7 +1,24 @@
 import { FailedInspectorResponse, InspectorResponse } from "./types";
 import calcBBox from "@turf/bbox";
-import geostats, {GeostatsLayer} from "../../spatial-uploads-handler/src/geostats";
+import geostats, {
+  GeostatsLayer,
+} from "../../spatial-uploads-handler/src/geostats";
 
+export interface Env {}
+
+/**
+ * The geojson-inspector is designed to validate GeoJSON data for use in
+ * SeaSketch using a direct connection as a remote data source. To support that,
+ * it confirms:
+ *
+ *   * The url is valid and returns a 200 status code
+ *   * The response is a valid GeoJSON object
+ *   * The GeoJSON object is a Feature or FeatureCollection with a simple
+ *     geometry type
+ * 	 * And includes some useful context for consideration such as the bounding
+ * 	   box, content length, and latency
+ *
+ */
 export interface Env {}
 
 /**
@@ -81,7 +98,12 @@ export default {
           );
         } else {
           const rootType = geojson.type;
-          let geometryType = rootType === "Feature" ? geojson.geometry.type : geojson.features && geojson.features.length > 0 ? geojson.features[0]?.geometry?.type : "Unknown";
+          let geometryType =
+            rootType === "Feature"
+              ? geojson.geometry.type
+              : geojson.features && geojson.features.length > 0
+              ? geojson.features[0]?.geometry?.type
+              : "Unknown";
           return new Response(
             JSON.stringify({
               location,
@@ -94,7 +116,7 @@ export default {
                 rootType === "FeatureCollection" ? geojson.features.length : 1,
               geometryType,
               bbox: calcBBox(geojson),
-              geostats: geostats(geojson, 'geojson'),
+              geostats: geostats(geojson, "geojson"),
             } as InspectorResponse),
             {
               status: 200,

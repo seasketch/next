@@ -10,6 +10,7 @@ import ProgressBar from "../../components/ProgressBar";
 import {
   CaretDownIcon,
   CrossCircledIcon,
+  GearIcon,
   UploadIcon,
 } from "@radix-ui/react-icons";
 import { AnimatePresence, motion } from "framer-motion";
@@ -18,6 +19,7 @@ import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobCont
 import Modal from "../../components/Modal";
 import { InformationCircleIcon } from "@heroicons/react/outline";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import ProjectBackgroundJobManager from "../uploads/ProjectBackgroundJobManager";
 
 export default function BackgroundJobList({
   className,
@@ -34,13 +36,11 @@ export default function BackgroundJobList({
   const { t } = useTranslation("admin:data");
   const [hidden, setHidden] = useState(false);
   const context = useContext(ProjectBackgroundJobContext);
-  const [modalOpen, setModalOpen] = useState<JobDetailsFragment | null>(null);
-
   const [hiddenLocalUploads, setHiddenLocalUploads] = useState<string[]>([]);
   const backgroundJobContext = useContext(ProjectBackgroundJobContext);
   useEffect(() => {
     if (backgroundJobContext.manager) {
-      backgroundJobContext.manager.on("processing-complete", (event) => {
+      backgroundJobContext.manager.on("upload-processing-complete", (event) => {
         setTimeout(() => {
           setHiddenLocalUploads((prev) => [...prev, event.jobId]);
         }, 50);
@@ -112,48 +112,6 @@ export default function BackgroundJobList({
 
   return (
     <>
-      {Boolean(modalOpen) && (
-        <Modal
-          title={<Trans ns="admin:data">Upload Failed</Trans>}
-          onRequestClose={async () => {
-            if (modalOpen) {
-              context.manager?.dismissFailedUpload(modalOpen.id);
-              setModalOpen(null);
-            }
-          }}
-          footer={[
-            {
-              label: <Trans ns="admin:data">Dismiss</Trans>,
-              onClick: () => {
-                if (modalOpen) {
-                  context.manager?.dismissFailedUpload(modalOpen.id);
-                  setModalOpen(null);
-                }
-              },
-              variant: "primary",
-              loading: false,
-              autoFocus: true,
-            },
-          ]}
-        >
-          <code>{modalOpen?.errorMessage}</code>
-          <p>
-            <Trans ns="admin:data">
-              Check that you uploaded a supported file type. If you would like
-              to{" "}
-              <a
-                className="text-primary-500 underline"
-                href={`mailto:support@seasketch.org?subject=Failed Upload ${
-                  modalOpen!.id
-                }`}
-              >
-                contact support
-              </a>{" "}
-              about this error, reference upload ID {modalOpen!.id}
-            </Trans>
-          </p>
-        </Modal>
-      )}
       {activeJobs.length > 0 && (
         <div
           className={
@@ -195,87 +153,175 @@ export default function BackgroundJobList({
           {!hidden && (
             <ul className="space-y-3 flex-1 overflow-y-auto px-4 pb-4">
               <AnimatePresence initial={false}>
-                {sortedJobs.map((job) => {
-                  let complete =
-                    job.state === ProjectBackgroundJobState.Complete;
-                  const isMyUpload =
-                    backgroundJobContext.manager?.isUploadFromMySession(
-                      job.id || hiddenLocalUploads.includes(job.id)
-                    );
-                  if (
-                    complete &&
-                    (!isMyUpload || hiddenLocalUploads.includes(job.id))
-                  ) {
-                    return null;
-                  }
-                  return (
-                    <motion.li
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{
-                        opacity: 0,
-                        scale: 0.5,
-                        transition: {
-                          delay:
-                            job.state === ProjectBackgroundJobState.Complete
-                              ? 0.2
-                              : 0,
-                        },
-                      }}
-                      key={job.id}
-                      className={`p-2 px-3 rounded shadow-lg  text-black ${
-                        job.state === ProjectBackgroundJobState.Failed
-                          ? "bg-red-50 text-red-800"
-                          : job.state === ProjectBackgroundJobState.Complete
-                          ? "bg-indigo-100"
-                          : "bg-white"
-                      }`}
-                    >
-                      <div className="flex items-center">
-                        {job.state === ProjectBackgroundJobState.Failed && (
-                          <CrossCircledIcon className="w-4 h-4 mr-1.5" />
-                        )}
-                        {job.state !== ProjectBackgroundJobState.Failed &&
-                          job.type === ProjectBackgroundJobType.DataUpload && (
-                            <UploadIcon className="w-4 h-4 mr-1.5" />
-                          )}
-                        <span className="flex-1 truncate">{job.title}</span>
-                        <span className="flex-none italic text-sm">
-                          {job.progressMessage}
-                        </span>
-                        {job.state === ProjectBackgroundJobState.Failed && (
-                          <button onClick={() => setModalOpen(job)}>
-                            <InformationCircleIcon className="w-5 h-5 ml-2" />
-                            {/* <TrashIcon className="w-5 h-5 ml-2" /> */}
-                          </button>
-                        )}
-                      </div>
-                      {(job.state === ProjectBackgroundJobState.Queued ||
-                        job.state === ProjectBackgroundJobState.Running ||
-                        job.state === ProjectBackgroundJobState.Complete) && (
-                        <div className="h-6 w-full overflow-hidden mb-2 -mt-1.5">
-                          <ProgressBar
-                            progress={
-                              job.state === ProjectBackgroundJobState.Complete
-                                ? 1
-                                : job.progress
-                            }
-                            colorClassName={
-                              job.progressMessage === "uploading"
-                                ? "bg-green-400"
-                                : "bg-indigo-400"
-                            }
-                          />
-                        </div>
-                      )}
-                    </motion.li>
-                  );
-                })}
+                {sortedJobs.map((job) => (
+                  <BackgroundJobListItem
+                    key={job.id}
+                    job={job}
+                    manager={backgroundJobContext.manager}
+                    hiddenLocalUploads={hiddenLocalUploads}
+                  />
+                ))}
               </AnimatePresence>
             </ul>
           )}
         </div>
       )}
     </>
+  );
+}
+
+export function BackgroundJobListItem({
+  job,
+  manager,
+  hiddenLocalUploads,
+  className,
+  showCompletedItems,
+}: {
+  job: Pick<
+    JobDetailsFragment,
+    | "id"
+    | "state"
+    | "progress"
+    | "progressMessage"
+    | "errorMessage"
+    | "type"
+    | "title"
+  >;
+  manager?: ProjectBackgroundJobManager;
+  hiddenLocalUploads?: string[];
+  className?: string;
+  showCompletedItems?: boolean;
+}) {
+  hiddenLocalUploads = hiddenLocalUploads || [];
+  let complete = job.state === ProjectBackgroundJobState.Complete;
+  const isMyUpload = manager?.isUploadFromMySession(
+    job.id || hiddenLocalUploads.includes(job.id)
+  );
+  const [modalOpen, setModalOpen] = useState(false);
+  if (
+    !showCompletedItems &&
+    complete &&
+    (!isMyUpload || hiddenLocalUploads.includes(job.id))
+  ) {
+    return null;
+  }
+
+  return (
+    <motion.li
+      initial={{ opacity: 0, scale: 0.5 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{
+        opacity: 0,
+        scale: 0.5,
+        transition: {
+          delay: job.state === ProjectBackgroundJobState.Complete ? 0.2 : 0,
+        },
+      }}
+      key={job.id}
+      className={`p-2 px-3 rounded shadow-lg  text-black ${
+        job.state === ProjectBackgroundJobState.Failed
+          ? "bg-red-50 text-red-800"
+          : job.state === ProjectBackgroundJobState.Complete
+          ? "bg-indigo-100"
+          : "bg-white"
+      } ${className}`}
+    >
+      {modalOpen && manager && (
+        <FailedBackgroundJobModal
+          item={job}
+          onRequestClose={() => setModalOpen(false)}
+          manager={manager}
+        />
+      )}
+      <div className="flex items-center">
+        {job.state === ProjectBackgroundJobState.Failed && (
+          <CrossCircledIcon className="w-4 h-4 mr-1.5" />
+        )}
+        {job.state !== ProjectBackgroundJobState.Failed &&
+          job.type === ProjectBackgroundJobType.DataUpload && (
+            <UploadIcon className="w-4 h-4 mr-1.5" />
+          )}
+        {job.state !== ProjectBackgroundJobState.Failed &&
+          job.type === ProjectBackgroundJobType.ArcgisImport && (
+            <GearIcon className="w-4 h-4 mr-1.5" />
+          )}
+
+        <span className="flex-1 truncate">{job.title}</span>
+        <span className="flex-none italic text-sm">{job.progressMessage}</span>
+        {job.state === ProjectBackgroundJobState.Failed && (
+          <button onClick={() => setModalOpen(true)}>
+            <InformationCircleIcon className="w-5 h-5 ml-2" />
+            {/* <TrashIcon className="w-5 h-5 ml-2" /> */}
+          </button>
+        )}
+      </div>
+      {(job.state === ProjectBackgroundJobState.Queued ||
+        job.state === ProjectBackgroundJobState.Running ||
+        job.state === ProjectBackgroundJobState.Complete) && (
+        <div className="h-6 w-full overflow-hidden mb-2 -mt-1.5">
+          <ProgressBar
+            progress={
+              job.state === ProjectBackgroundJobState.Complete
+                ? 1
+                : job.progress
+            }
+            colorClassName={
+              job.progressMessage === "uploading"
+                ? "bg-green-400"
+                : "bg-indigo-400"
+            }
+          />
+        </div>
+      )}
+    </motion.li>
+  );
+}
+
+function FailedBackgroundJobModal({
+  item,
+  onRequestClose,
+  manager,
+}: {
+  item: Pick<
+    JobDetailsFragment,
+    "id" | "state" | "progress" | "progressMessage" | "errorMessage" | "type"
+  >;
+  onRequestClose: () => void;
+  manager: ProjectBackgroundJobManager;
+}) {
+  return (
+    <Modal
+      title={<Trans ns="admin:data">Upload Failed</Trans>}
+      onRequestClose={async () => {
+        manager.dismissFailedUpload(item.id);
+        onRequestClose();
+      }}
+      footer={[
+        {
+          label: <Trans ns="admin:data">Dismiss</Trans>,
+          onClick: () => {
+            manager.dismissFailedUpload(item.id);
+            onRequestClose();
+          },
+          variant: "primary",
+          loading: false,
+          autoFocus: true,
+        },
+      ]}
+    >
+      <code>{item.errorMessage}</code>
+      <p>
+        <Trans ns="admin:data">
+          Check that you uploaded a supported file type. If you would like to{" "}
+          <a
+            className="text-primary-500 underline"
+            href={`mailto:support@seasketch.org?subject=Failed Upload ${item.id}`}
+          >
+            contact support
+          </a>{" "}
+          about this error, reference upload ID {item.id}
+        </Trans>
+      </p>
+    </Modal>
   );
 }
