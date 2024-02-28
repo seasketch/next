@@ -305,7 +305,7 @@ export async function createDBRecordsForProcessedLayer(
     const layerResult = await client.query(
       `
         update data_layers set data_source_id = $1, source_layer = $2,
-          mapbox_gl_styles = $3 where data_layers.id = $4 returning *
+          mapbox_gl_styles = $3, sublayer = null where data_layers.id = $4 returning *
       `,
       [
         dataSourceId,
