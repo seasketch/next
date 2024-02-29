@@ -49,7 +49,8 @@ export default function ArcGISSearchPage({
         );
         setLoading(false);
         if (serviceResponse.currentVersion) {
-          addServer({ location: location.baseUrl, type: "arcgis" });
+          console.log("add server", location.baseUrl, location);
+          addServer({ location: location.servicesRoot, type: "arcgis" });
           if (onResult) {
             let catalogItem: CatalogItem | undefined;
             let folder: CatalogItem | undefined;
@@ -165,18 +166,18 @@ export default function ArcGISSearchPage({
               .filter((server) => server.type === "arcgis")
               .map((server) => (
                 <li
-                  key={server.location}
+                  key={server.location
+                    .replace("arcgis/rest/services", "")
+                    .replace("rest/services", "")}
                   className="text-sm text-gray-700 hover:text-gray-900 cursor-pointer"
-                  onClick={() =>
-                    loadServerUrl({
-                      baseUrl: server.location,
-                      location: "/",
-                      servicesRoot: server.location + "/arcgis/rest/services",
-                      updateInput: true,
-                    })
-                  }
+                  onClick={() => {
+                    const l = normalizeArcGISServerUrl(server.location);
+                    loadServerUrl(l);
+                  }}
                 >
-                  {server.location}
+                  {server.location
+                    .replace("arcgis/rest/services", "")
+                    .replace("rest/services", "")}
                 </li>
               ))}
           </ul>
