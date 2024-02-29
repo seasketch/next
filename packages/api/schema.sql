@@ -6721,7 +6721,6 @@ CREATE TABLE public.data_sources (
     upload_task_id uuid,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     arcgis_fetch_strategy public.arcgis_feature_layer_fetch_strategy DEFAULT 'tiled'::public.arcgis_feature_layer_fetch_strategy NOT NULL,
-    user_id integer,
     uploaded_by integer,
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
@@ -17904,14 +17903,6 @@ ALTER TABLE ONLY public.data_sources
 
 ALTER TABLE ONLY public.data_sources
     ADD CONSTRAINT data_sources_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.users(id) ON DELETE SET NULL;
-
-
---
--- Name: data_sources data_sources_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.data_sources
-    ADD CONSTRAINT data_sources_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;
 
 
 --

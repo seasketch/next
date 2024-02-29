@@ -2208,7 +2208,6 @@ export type DataSource = Node & {
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
-  userId?: Maybe<Scalars['Int']>;
   wasConvertedFromEsriFeatureLayer: Scalars['Boolean'];
 };
 
@@ -2386,7 +2385,6 @@ export type DataSourceInput = {
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
-  userId?: Maybe<Scalars['Int']>;
   wasConvertedFromEsriFeatureLayer?: Maybe<Scalars['Boolean']>;
 };
 

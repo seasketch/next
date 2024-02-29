@@ -2567,7 +2567,6 @@ type DataSource implements Node {
   ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.
   """
   useDevicePixelRatio: Boolean
-  userId: Int
   wasConvertedFromEsriFeatureLayer: Boolean!
 }
 
@@ -2795,7 +2794,6 @@ input DataSourceInput {
   ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.
   """
   useDevicePixelRatio: Boolean
-  userId: Int
   wasConvertedFromEsriFeatureLayer: Boolean
 }
 
