@@ -23,8 +23,10 @@ import ProjectBackgroundJobManager from "../uploads/ProjectBackgroundJobManager"
 
 export default function BackgroundJobList({
   className,
+  style,
 }: {
   className?: string;
+  style?: React.CSSProperties;
 }) {
   const onError = useGlobalErrorHandler();
   const { data } = useBackgroundJobsQuery({
@@ -114,6 +116,7 @@ export default function BackgroundJobList({
     <>
       {activeJobs.length > 0 && (
         <div
+          style={style}
           className={
             className +
             " " +

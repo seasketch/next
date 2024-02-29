@@ -35,7 +35,10 @@ export default function LayerAdminSidebar() {
           <BaseMapEditor />
         </div>
       </div>
-      <BackgroundJobList className="flex-0 overflow-y-hidden" />
+      <BackgroundJobList
+        style={{ maxHeight: 400 }}
+        className="flex-0 overflow-y-hidden"
+      />
     </div>
   );
 }
