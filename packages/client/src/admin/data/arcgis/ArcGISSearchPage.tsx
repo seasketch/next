@@ -49,7 +49,6 @@ export default function ArcGISSearchPage({
         );
         setLoading(false);
         if (serviceResponse.currentVersion) {
-          console.log("add server", location.baseUrl, location);
           addServer({ location: location.servicesRoot, type: "arcgis" });
           if (onResult) {
             let catalogItem: CatalogItem | undefined;

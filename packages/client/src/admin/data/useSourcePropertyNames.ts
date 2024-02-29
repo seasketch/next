@@ -54,6 +54,9 @@ export default function useSourcePropertyNames(
                 }
                 setNames(fieldNames);
               }
+            })
+            .catch((e) => {
+              console.error(e);
             });
         } else if (type === DataSourceTypes.ArcgisDynamicMapserver) {
           fetch(`${url}/${sublayer}?f=json`)

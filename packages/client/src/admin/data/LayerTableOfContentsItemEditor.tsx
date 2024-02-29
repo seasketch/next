@@ -43,9 +43,10 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import FeatureLayerPerformanceDetailsModal from "./FeatureLayerPerformanceDetailsModal";
 import { ChartBarIcon } from "@heroicons/react/solid";
 import ArcGISTiledRasterSettings from "./ArcGISTiledRasterSettings";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { CaretRightIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import ConvertFeatureLayerToHostedBlock from "./ConvertFeatureLayerToHostedBlock";
 import Skeleton from "../../components/Skeleton";
+import FolderIcon from "../../components/FolderIcon";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -224,7 +225,7 @@ export default function LayerTableOfContentsItemEditor(
       className="bg-white z-30 absolute bottom-0 w-128 flex flex-col"
       style={{ height: "calc(100vh)" }}
     >
-      <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+      <div className="flex-0 px-4 pt-4 pb-1 shadow-sm bg-gray-700 text-primary-300 flex items-center">
         <h4 className="font-medium text-indigo-100 flex-1 truncate">
           {error ? t("Error") : item?.title || props.title || t("Loading")}
         </h4>
@@ -248,7 +249,25 @@ export default function LayerTableOfContentsItemEditor(
           </svg>
         </button>
       </div>
-      <div className="flex-0 p-2 px-4 -mt-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
+      {item?.containedBy && item.containedBy.length > 0 && (
+        <div
+          style={
+            {
+              // backgroundColor: "rgb(60 79 145)",
+            }
+          }
+          className="px-4 py-1 bg-gray-700 text-gray-300 text-sm"
+        >
+          {item.containedBy.map((parent) => (
+            <span className="inline-flex items-center" key={parent!.id}>
+              <CaretRightIcon />
+              <FolderIcon />
+              <span className="pl-1">{parent?.title}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="flex-0 p-2 px-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
         <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
       </div>
       {error && (

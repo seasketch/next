@@ -228,6 +228,11 @@ query GetLayerItem($id: Int!) {
     metadata
     parentStableId
     projectId
+    containedBy {
+      id
+      stableId
+      title
+    }
     stableId
     title
     enableDownload

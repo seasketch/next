@@ -13383,6 +13383,43 @@ $$;
 
 
 --
+-- Name: table_of_contents_items_contained_by(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_contained_by(t public.table_of_contents_items) RETURNS public.table_of_contents_items[]
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare 
+      parents table_of_contents_items[];
+      parent table_of_contents_items;
+    begin
+      if t.parent_stable_id is null then
+        return null;
+      else
+        select * into parent from table_of_contents_items where stable_id = t.parent_stable_id limit 1;
+        parents := array_append(parents, parent);
+        while parent.parent_stable_id is not null loop
+          select * into parent from table_of_contents_items where stable_id = parent.parent_stable_id limit 1;
+          if parent is null
+          then
+            return parents;
+          end if;
+          parents := array_append(parents, parent);
+        end loop;
+      end if;
+      return parents;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_contained_by(t public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_contained_by(t public.table_of_contents_items) IS '@simpleCollections only';
+
+
+--
 -- Name: table_of_contents_items_download_options(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -29498,6 +29535,14 @@ GRANT ALL ON FUNCTION public.surveys_responses_spatial_extent(survey public.surv
 
 REVOKE ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surveys) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surveys) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_contained_by(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_contained_by(t public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_contained_by(t public.table_of_contents_items) TO seasketch_user;
 
 
 --

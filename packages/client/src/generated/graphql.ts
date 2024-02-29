@@ -12289,6 +12289,7 @@ export type TableOfContentsItem = Node & {
    * depending on the data source type.
    */
   computedMetadata?: Maybe<Scalars['JSON']>;
+  containedBy?: Maybe<Array<Maybe<TableOfContentsItem>>>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
@@ -16183,7 +16184,10 @@ export type GetLayerItemQuery = (
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
       )>> }
-    )>, projectBackgroundJobs?: Maybe<Array<(
+    )>, containedBy?: Maybe<Array<Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title'>
+    )>>>, projectBackgroundJobs?: Maybe<Array<(
       { __typename?: 'ProjectBackgroundJob' }
       & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
     )>>, dataLayer?: Maybe<(
@@ -24148,6 +24152,11 @@ export const GetLayerItemDocument = gql`
     metadata
     parentStableId
     projectId
+    containedBy {
+      id
+      stableId
+      title
+    }
     stableId
     title
     enableDownload

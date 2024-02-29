@@ -13514,6 +13514,7 @@ type TableOfContentsItem implements Node {
   depending on the data source type.
   """
   computedMetadata: JSON
+  containedBy: [TableOfContentsItem]
 
   """
   Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
