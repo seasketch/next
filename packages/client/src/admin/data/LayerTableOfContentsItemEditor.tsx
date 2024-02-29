@@ -15,7 +15,6 @@ import {
   SublayerType,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
-import Spinner from "../../components/Spinner";
 import MutableAutosaveInput from "../MutableAutosaveInput";
 import { MutableRadioGroup } from "../../components/RadioGroup";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
@@ -45,22 +44,24 @@ import FeatureLayerPerformanceDetailsModal from "./FeatureLayerPerformanceDetail
 import { ChartBarIcon } from "@heroicons/react/solid";
 import ArcGISTiledRasterSettings from "./ArcGISTiledRasterSettings";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import Button from "../../components/Button";
 import ConvertFeatureLayerToHostedBlock from "./ConvertFeatureLayerToHostedBlock";
+import Skeleton from "../../components/Skeleton";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
   onRequestClose?: () => void;
+  title: string;
 }
 
 export default function LayerTableOfContentsItemEditor(
   props: LayerTableOfContentsItemEditorProps
 ) {
   const { t } = useTranslation("admin");
-  const { data } = useGetLayerItemQuery({
+  const { data, loading, error } = useGetLayerItemQuery({
     variables: {
       id: props.itemId,
     },
+    fetchPolicy: "cache-and-network",
   });
 
   const mapContext = useContext(MapContext);
@@ -135,8 +136,6 @@ export default function LayerTableOfContentsItemEditor(
 
   const item = data?.tableOfContentsItem;
   const [downloadEnabled, setDownloadEnabled] = useState<boolean>();
-
-  const [showMoreColumns, setShowMoreColums] = useState(false);
 
   const [style, setStyle] = useState<string>();
   const debouncedStyle = useDebounce(style, 250);
@@ -219,6 +218,7 @@ export default function LayerTableOfContentsItemEditor(
       }, 2000);
     }
   }, [setReferenceCopied, item]);
+
   return (
     <div
       className="bg-white z-30 absolute bottom-0 w-128 flex flex-col"
@@ -226,7 +226,7 @@ export default function LayerTableOfContentsItemEditor(
     >
       <div className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
         <h4 className="font-medium text-indigo-100 flex-1 truncate">
-          {item?.title}
+          {error ? t("Error") : item?.title || props.title || t("Loading")}
         </h4>
         <button
           className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
@@ -251,7 +251,40 @@ export default function LayerTableOfContentsItemEditor(
       <div className="flex-0 p-2 px-4 -mt-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
         <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
       </div>
-      {!item && <Spinner />}
+      {error && (
+        <div className="p-4 py-6 space-y-2 text-red-800">
+          <p>{t("Failed to load overlay settings.")}</p>
+          <p>{error.message}</p>
+        </div>
+      )}
+      {!item && !error && (
+        <div className="p-4 py-6 space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="w-1/4 h-4" />
+            <Skeleton className="w-full h-4" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="w-1/4 h-4" />
+            <Skeleton className="w-full h-4" />
+            <Skeleton className="w-full h-4" />
+            <Skeleton className="w-full h-4" />
+            <Skeleton className="w-full h-4" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="w-1/4 h-4" />
+            <Skeleton className="w-full h-12 rounded" />
+            <Skeleton className="w-full h-12 rounded" />
+            <Skeleton className="w-full h-12 rounded" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="w-1/4 h-4" />
+            <Skeleton className="w-full h-4" />
+            <Skeleton className="w-full h-4" />
+            <Skeleton className="w-full h-4" />
+            <Skeleton className="w-full h-4" />
+          </div>
+        </div>
+      )}
       {item && selectedTab === "settings" && (
         <div className="flex-1 overflow-y-auto px-4 pb-4">
           <div className="md:max-w-sm mt-5 relative">
@@ -425,7 +458,16 @@ export default function LayerTableOfContentsItemEditor(
                   >
                     ArcGIS REST API query endpoint
                   </a>
-                  . Cached data may be up to 3 hours old.
+                  . Cached data may be up to 3 hours old. As an admin, you can
+                  always{" "}
+                  <a
+                    target="_blank"
+                    className="text-primary-500"
+                    href={item.primaryDownloadUrl!}
+                  >
+                    click here to download
+                  </a>
+                  .
                 </Trans>
               </p>
             </div>
@@ -680,16 +722,16 @@ export default function LayerTableOfContentsItemEditor(
                         <a
                           target="_blank"
                           className="text-primary-600 underline"
-                          href={source.url!}
+                          href={source.url! + "/" + layer?.sublayer}
                           rel="noreferrer"
                         >
                           {source
                             .url!.replace("https://", "")
-                            .replace("http://", "")}
+                            .replace("http://", "") + layer?.sublayer}
                         </a>
                       }
                     />
-                    <SettingsDLListItem
+                    {/* <SettingsDLListItem
                       term={t("Dynamic Layers")}
                       description={
                         source.supportsDynamicLayers ? (
@@ -705,7 +747,7 @@ export default function LayerTableOfContentsItemEditor(
                           </Trans>
                         )
                       }
-                    />
+                    /> */}
                     <InputBlock
                       title={t("Enable High-DPI Requests")}
                       className="py-4 text-sm font-medium text-gray-500"
@@ -778,6 +820,11 @@ export default function LayerTableOfContentsItemEditor(
                         others <code>png</code> is usually the right choice.
                       </Trans>
                     </InputBlock>
+                    {layer?.sublayerType === SublayerType.Vector && (
+                      <div className="py-4 text-sm text-gray-500">
+                        <ConvertFeatureLayerToHostedBlock item={item} />
+                      </div>
+                    )}
                   </SettingsDefinitionList>
                 )}
                 {source?.type === DataSourceTypes.ArcgisRasterTiles && (

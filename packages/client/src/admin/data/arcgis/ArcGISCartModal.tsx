@@ -55,6 +55,7 @@ import {
   useMotionValue,
   useTransform,
 } from "framer-motion";
+import Warning from "../../../components/Warning";
 
 const requestManager = new ArcGISRESTServiceRequestManager();
 
@@ -799,7 +800,12 @@ export default function ArcGISCartModal({
                   </div>
                 )}
                 <div className="overflow-y-auto w-full flex-1">
-                  {items.length === 0 && loading && (
+                  {error && (
+                    <Warning className="mx-4 mt-4" level="error">
+                      {error}
+                    </Warning>
+                  )}
+                  {items.length === 0 && loading && !error && (
                     <>
                       <LoadingSkeleton />
                       <LoadingSkeleton />

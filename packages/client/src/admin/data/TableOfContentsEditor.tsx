@@ -472,6 +472,7 @@ export default function TableOfContentsEditor() {
           <LayerTableOfContentsItemEditor
             onRequestClose={() => layerEditingContext.setOpenEditor(undefined)}
             itemId={layerEditingContext.openEditor.id}
+            title={layerEditingContext.openEditor.title}
           />
         )}
       {layerEditingContext.openEditor?.isFolder && (

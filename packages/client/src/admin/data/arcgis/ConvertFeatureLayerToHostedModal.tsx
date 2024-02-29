@@ -41,6 +41,19 @@ export default function ConvertFeatureLayerToHostedModal({
           label: "Close",
           onClick: onRequestClose,
         },
+        {
+          label: t("Convert to SeaSketch hosted layer"),
+          onClick: () => {
+            mutate().then(() => {
+              onRequestClose();
+            });
+          },
+          disabled:
+            (item?.projectBackgroundJobs || []).filter(
+              (j) => j.type === ProjectBackgroundJobType.ArcgisImport
+            ).length > 0,
+          variant: "primary",
+        },
       ]}
       loading={loading}
       open={true}
@@ -57,27 +70,6 @@ export default function ConvertFeatureLayerToHostedModal({
               take a few minutes and will operate in the background.
             </Trans>
           </p>
-          <button
-            className={`text-sm mt-2 px-1.5 py-1 border-gray-300 bg-white border shadow-sm text-black rounded ${
-              (item.projectBackgroundJobs || []).filter(
-                (j) => j.type === ProjectBackgroundJobType.ArcgisImport
-              ).length > 0
-                ? "opacity-50 cursor-default"
-                : ""
-            }`}
-            disabled={
-              (item.projectBackgroundJobs || []).filter(
-                (j) => j.type === ProjectBackgroundJobType.ArcgisImport
-              ).length > 0
-            }
-            onClick={() => {
-              mutate().then(() => {
-                onRequestClose();
-              });
-            }}
-          >
-            {t("Convert to SeaSketch hosted layer")}
-          </button>
           {context.manager &&
             (item.projectBackgroundJobs || [])?.length > 0 && (
               <ul className="pt-3">

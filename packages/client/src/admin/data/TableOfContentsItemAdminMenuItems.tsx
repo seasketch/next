@@ -53,6 +53,7 @@ export default function TableOfContentsItemAdminMenuItems({
           layerEditingContext.setOpenEditor({
             id: item.id,
             isFolder: item.isFolder,
+            title: item.title,
           });
         }}
         className={MenuBarItemClasses}

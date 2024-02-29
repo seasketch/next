@@ -89,52 +89,55 @@ export class ImageList {
     legendIndex: number
   ): string {
     const imageid = uuid();
-    if (this.supportsHighDPILegends) {
-      this.imageSets.push(
-        new Promise<ImageSet>(async (resolve) => {
-          const imageSet = {
-            id: imageid,
-            images: [
-              {
-                pixelRatio: 1,
-                dataURI: `data:${symbol.contentType};base64,${symbol.imageData}`,
-                width: ptToPx(symbol.width!),
-                height: ptToPx(symbol.height!),
-              },
-            ],
-          };
-          // FeatureServers don't have a legend endpoint
-          if (/MapServer/.test(serviceBaseUrl)) {
-            const legend2x = await fetchLegendImage(
-              serviceBaseUrl,
-              sublayer,
-              legendIndex,
-              2
-            );
-            const legend3x = await fetchLegendImage(
-              serviceBaseUrl,
-              sublayer,
-              legendIndex,
-              3
-            );
-            imageSet.images.push(legend2x, legend3x);
-          }
-          resolve(imageSet);
-        })
-      );
-    } else {
-      this.imageSets.push({
-        id: imageid,
-        images: [
-          {
-            pixelRatio: 1,
-            dataURI: `data:${symbol.contentType};base64,${symbol.imageData}`,
-            width: ptToPx(symbol.width!),
-            height: ptToPx(symbol.height!),
-          },
-        ],
-      });
-    }
+    // cb - this is proving not be reliable with older servers in some case,
+    // and I'm not sure it's adding much value. I'm going to remove it for now
+    // 2/29/2024
+    // if (this.supportsHighDPILegends) {
+    //   this.imageSets.push(
+    //     new Promise<ImageSet>(async (resolve) => {
+    //       const imageSet = {
+    //         id: imageid,
+    //         images: [
+    //           {
+    //             pixelRatio: 1,
+    //             dataURI: `data:${symbol.contentType};base64,${symbol.imageData}`,
+    //             width: ptToPx(symbol.width!),
+    //             height: ptToPx(symbol.height!),
+    //           },
+    //         ],
+    //       };
+    //       // FeatureServers don't have a legend endpoint
+    //       if (/MapServer/.test(serviceBaseUrl)) {
+    //         const legend2x = await fetchLegendImage(
+    //           serviceBaseUrl,
+    //           sublayer,
+    //           legendIndex,
+    //           2
+    //         );
+    //         const legend3x = await fetchLegendImage(
+    //           serviceBaseUrl,
+    //           sublayer,
+    //           legendIndex,
+    //           3
+    //         );
+    //         imageSet.images.push(legend2x, legend3x);
+    //       }
+    //       resolve(imageSet);
+    //     })
+    //   );
+    // } else {
+    this.imageSets.push({
+      id: imageid,
+      images: [
+        {
+          pixelRatio: 1,
+          dataURI: `data:${symbol.contentType};base64,${symbol.imageData}`,
+          width: ptToPx(symbol.width!),
+          height: ptToPx(symbol.height!),
+        },
+      ],
+    });
+    // }
     return imageid;
   }
 
@@ -308,6 +311,11 @@ async function fetchLegendImage(
     (lyr: any) => lyr.layerId === sublayer
   );
   const legendItem = sublayerData.legend[legendIndex];
+  if (!legendItem) {
+    throw new Error(
+      `No legend item found at index ${legendIndex} for sublayer ${sublayer}`
+    );
+  }
   return {
     dataURI: `data:${legendItem.contentType};base64,${legendItem.imageData}`,
     pixelRatio,
