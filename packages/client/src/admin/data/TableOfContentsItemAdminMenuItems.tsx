@@ -60,7 +60,7 @@ export default function TableOfContentsItemAdminMenuItems({
       >
         {t("Edit")}
       </MenuType.Item>
-      <MenuType.Item
+      {/* <MenuType.Item
         style={{
           minWidth: 120,
         }}
@@ -70,7 +70,7 @@ export default function TableOfContentsItemAdminMenuItems({
         className={MenuBarItemClasses}
       >
         {t("Edit Metadata")}
-      </MenuType.Item>
+      </MenuType.Item> */}
       {(item.dataSourceType ===
         DataSourceTypes.ArcgisDynamicMapserverVectorSublayer ||
         item.dataSourceType === DataSourceTypes.ArcgisVector) && (

@@ -47,6 +47,8 @@ import { CaretRightIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import ConvertFeatureLayerToHostedBlock from "./ConvertFeatureLayerToHostedBlock";
 import Skeleton from "../../components/Skeleton";
 import FolderIcon from "../../components/FolderIcon";
+import OverlayMetataEditor from "./OverlayMetadataEditor";
+import useDialog from "../../components/useDialog";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -58,6 +60,51 @@ export default function LayerTableOfContentsItemEditor(
   props: LayerTableOfContentsItemEditorProps
 ) {
   const { t } = useTranslation("admin");
+  const { confirm } = useDialog();
+  const [preventUnloadMessages, setPreventUnloadMessages] = useState<{
+    [component: string]: string;
+  }>({});
+
+  const onRequestClose = useCallback(async () => {
+    for (const message of Object.values(preventUnloadMessages)) {
+      if (!(await confirm(message))) {
+        return;
+      }
+    }
+    if (props.onRequestClose) {
+      props.onRequestClose();
+    }
+  }, [props, preventUnloadMessages, confirm]);
+
+  useEffect(() => {
+    const firstMessage = Object.values(preventUnloadMessages)[0];
+    if (firstMessage) {
+      const handler = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = firstMessage;
+      };
+      window.addEventListener("beforeunload", handler);
+      return () => {
+        window.removeEventListener("beforeunload", handler);
+      };
+    }
+  }, [preventUnloadMessages]);
+
+  const registerPreventUnload = useCallback(
+    (componentId: string, message?: string) => {
+      setPreventUnloadMessages((prev) => {
+        if (message) {
+          return { ...prev, [componentId]: message };
+        } else {
+          const n = { ...prev };
+          delete n[componentId];
+          return n;
+        }
+      });
+    },
+    [setPreventUnloadMessages]
+  );
+
   const { data, loading, error } = useGetLayerItemQuery({
     variables: {
       id: props.itemId,
@@ -189,6 +236,11 @@ export default function LayerTableOfContentsItemEditor(
         current: selectedTab === "settings",
       },
       {
+        name: "Metadata",
+        id: "metadata",
+        current: selectedTab === "metadata",
+      },
+      {
         name: "Interactivity",
         id: "interactivity",
         current: selectedTab === "interactivity",
@@ -231,7 +283,7 @@ export default function LayerTableOfContentsItemEditor(
         </h4>
         <button
           className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
-          onClick={props.onRequestClose}
+          onClick={onRequestClose}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -302,6 +354,14 @@ export default function LayerTableOfContentsItemEditor(
             <Skeleton className="w-full h-4" />
             <Skeleton className="w-full h-4" />
           </div>
+        </div>
+      )}
+      {item && (
+        <div className={selectedTab !== "metadata" ? "hidden" : ""}>
+          <OverlayMetataEditor
+            id={item.id}
+            registerPreventUnload={registerPreventUnload}
+          />
         </div>
       )}
       {item && selectedTab === "settings" && (

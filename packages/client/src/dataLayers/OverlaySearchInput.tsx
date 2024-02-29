@@ -22,7 +22,10 @@ export default function OverlaySearchInput({
         (e.key === "/" || e.key === "?") &&
         // @ts-ignore
         "tagName" in e.target &&
-        e.target.tagName !== "INPUT"
+        e.target.tagName !== "INPUT" &&
+        (!("hasAttribute" in e.target) ||
+          // @ts-ignore
+          !e.target.hasAttribute("contenteditable"))
       ) {
         e.preventDefault();
         inputRef.current?.focus();

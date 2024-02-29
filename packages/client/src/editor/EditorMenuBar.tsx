@@ -42,10 +42,7 @@ import useDialog from "../components/useDialog";
 import { treeItemId } from "../components/TreeView";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import useIsSuperuser from "../useIsSuperuser";
-import { useAuth0 } from "@auth0/auth0-react";
 import axios from "axios";
-import { Link1Icon, Link2Icon } from "@radix-ui/react-icons";
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -61,6 +58,7 @@ interface EditorMenuBarProps {
   ) => Promise<UploaderResponse | null>;
   onUseServiceMetadata?: () => void;
   dynamicMetadataAvailable?: boolean;
+  children?: ReactNode;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -77,8 +75,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const dialog = useDialog();
   const { isSmall } = currentSidebarState();
   const onError = useGlobalErrorHandler();
-  const isSuperuser = useIsSuperuser();
-  const { user } = useAuth0();
   const { progress, updateProgress } = useContext(
     EditorAttachmentProgressContext
   );
@@ -267,7 +263,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     );
                   },
                 })
-                  .then((response) => {
+                  .then(() => {
                     updateProgress(uploadRecord.id, 1);
                   })
                   .catch((e) => {
@@ -293,9 +289,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                   method: "POST",
                   data: formData,
                   onUploadProgress: (progressEvent) => {
-                    const percentCompleted = Math.round(
-                      (progressEvent.loaded * 100) / progressEvent.total
-                    );
                     if (progressEvent.loaded - progress.total < 0.95) {
                       updateProgress(
                         uploadRecord.id,
@@ -306,7 +299,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     }
                   },
                 })
-                  .then((response) => {
+                  .then(() => {
                     updateProgress(uploadRecord.id, 1);
                   })
                   .catch((e) => {
@@ -598,6 +591,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           {t("Convert to dynamic service metadata")}
         </button>
       )}
+      {props.children}
 
       {chooseSketchesOpen && (
         <ShareSketchesModal
@@ -782,7 +776,7 @@ export function deleteAttachment(
   // Remove bookmark from attachments
   const attachments = getAttachmentsNode(state);
   const children: Node[] = [];
-  attachments.forEach((node, offset, index) => {
+  attachments.forEach((node) => {
     if (node.attrs["id"] !== id) {
       children.push(node);
     }

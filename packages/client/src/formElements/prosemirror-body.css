@@ -132,3 +132,19 @@
 div[attachments="forumAttachments"] {
   display: none;
 }
+
+.metadata.small-variant .ProseMirror h1 {
+  @apply text-2xl;
+}
+
+.metadata.small-variant .ProseMirror h2 {
+  @apply text-xl;
+}
+
+.metadata.small-variant .ProseMirror h3 {
+  @apply text-lg;
+}
+
+.metadata.small-variant .ProseMirror p {
+  @apply text-sm;
+}

@@ -14,6 +14,7 @@ import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../components/useDialog";
 import Modal from "../components/Modal";
 import { Pencil1Icon } from "@radix-ui/react-icons";
+import useMetadataEditor from "./data/useMetadataEditor";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
@@ -43,38 +44,18 @@ export default function MetadataEditor({
   usingDynamicMetadata,
   dynamicMetadataAvailable,
 }: MetadataEditorProps) {
-  const [state, setState] = useProseMirror({ schema });
-  const [changes, setChanges] = useState(false);
-  const [originalDoc, setOriginalDoc] = useState<Node>();
-  const viewRef = useRef<{ view: EditorView }>();
   const { t } = useTranslation("admin");
   const { confirm } = useDialog();
 
-  useEffect(() => {
-    if (!loading) {
-      const doc = startingDocument
-        ? Node.fromJSON(schema, startingDocument)
-        : undefined;
-      if (doc) {
-        setOriginalDoc(doc);
-      }
-      // initial render
-      const state = EditorState.create({
-        schema: schema,
-        plugins,
-        doc,
-      });
-      setState(state);
-      // view.current = new EditorView(viewHost.current!, { state });
-      // applyDevTools(view.current);
-      // return () => view.current!.destroy();
-    }
-  }, [loading, setState, startingDocument]);
+  const { state, hasChanges, viewRef, onChange } = useMetadataEditor({
+    startingDocument,
+    loading,
+  });
 
   return (
     <Modal
       onRequestClose={() => {
-        if (!changes && onRequestClose) {
+        if (!hasChanges && onRequestClose) {
           onRequestClose();
         }
       }}
@@ -84,7 +65,7 @@ export default function MetadataEditor({
           <div className="text-lg flex-1">
             <Trans ns="admin">Edit Metadata</Trans>
           </div>
-          {changes && (
+          {hasChanges && (
             <button
               disabled={mutationState.loading}
               onClick={async () => {
@@ -120,15 +101,15 @@ export default function MetadataEditor({
             disabled={mutationState.loading}
             className=""
             onClick={async () => {
-              if (changes) {
+              if (hasChanges) {
                 await mutation(state.doc.toJSON());
                 onRequestClose && onRequestClose();
               } else {
                 onRequestClose && onRequestClose();
               }
             }}
-            label={changes ? t(`Save and Close`) : t(`Close`)}
-            primary={changes}
+            label={hasChanges ? t(`Save and Close`) : t(`Close`)}
+            primary={hasChanges}
           />
         </div>
       }
@@ -179,16 +160,7 @@ export default function MetadataEditor({
             // @ts-ignore
             ref={viewRef}
             state={state}
-            onChange={(state) => {
-              if (originalDoc && !state.doc.eq(originalDoc)) {
-                setChanges(true);
-              } else if (!originalDoc && !!state.doc) {
-                setChanges(true);
-              } else {
-                setChanges(false);
-              }
-              setState(state);
-            }}
+            onChange={onChange}
           />
         )}
       </div>
