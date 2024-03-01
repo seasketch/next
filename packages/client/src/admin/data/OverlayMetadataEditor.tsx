@@ -118,7 +118,7 @@ export default function OverlayMetataEditor({
           >
             <EditorMenuBar
               view={viewRef.current?.view}
-              className="border-t border-b pl-0"
+              className="border-t border-b pl-0 bg-gray-100 shadow-sm mb-1 border-black border-opacity-10"
               state={state}
               schema={schema}
               dynamicMetadataAvailable={dynamicMetadataAvailable}
