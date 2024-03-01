@@ -542,7 +542,12 @@ export default function LayerTableOfContentsItemEditor(
                   <a
                     target="_blank"
                     className="text-primary-500"
-                    href={item.primaryDownloadUrl!}
+                    href={`https://arcgis-export.seasketch.org/?location=${
+                      source.url +
+                      (source?.type === DataSourceTypes.ArcgisDynamicMapserver
+                        ? "/" + layer?.sublayer
+                        : "")
+                    }&download=${item.title}`}
                   >
                     click here to download
                   </a>
