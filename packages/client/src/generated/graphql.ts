@@ -1549,6 +1549,47 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+/** All input for the `createRemoteMvtSource` mutation. */
+export type CreateRemoteMvtSourceInput = {
+  attribution?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  maxZoom?: Maybe<Scalars['Int']>;
+  minZoom?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  sourceLayer?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+  url?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createRemoteMvtSource` mutation. */
+export type CreateRemoteMvtSourcePayload = {
+  __typename?: 'CreateRemoteMvtSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `createRemoteMvtSource` mutation. */
+export type CreateRemoteMvtSourcePayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the `createSketchClassFromTemplate` mutation. */
 export type CreateSketchClassFromTemplateInput = {
   /**
@@ -6311,6 +6352,7 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7026,6 +7068,12 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateRemoteMvtSourceArgs = {
+  input: CreateRemoteMvtSourceInput;
 };
 
 
@@ -16639,6 +16687,30 @@ export type ConvertFeatureLayerToHostedMutation = (
   )> }
 );
 
+export type CreateMvtSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+  sourceLayer: Scalars['String'];
+  title: Scalars['String'];
+  maxZoom: Scalars['Int'];
+  minZoom: Scalars['Int'];
+  attribution?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  stableId: Scalars['String'];
+}>;
+
+
+export type CreateMvtSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createRemoteMvtSource?: Maybe<(
+    { __typename?: 'CreateRemoteMvtSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & AdminOverlayFragment
+    )> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -25300,6 +25372,51 @@ export function useConvertFeatureLayerToHostedMutation(baseOptions?: Apollo.Muta
 export type ConvertFeatureLayerToHostedMutationHookResult = ReturnType<typeof useConvertFeatureLayerToHostedMutation>;
 export type ConvertFeatureLayerToHostedMutationResult = Apollo.MutationResult<ConvertFeatureLayerToHostedMutation>;
 export type ConvertFeatureLayerToHostedMutationOptions = Apollo.BaseMutationOptions<ConvertFeatureLayerToHostedMutation, ConvertFeatureLayerToHostedMutationVariables>;
+export const CreateMvtSourceDocument = gql`
+    mutation CreateMVTSource($projectId: Int!, $url: String!, $sourceLayer: String!, $title: String!, $maxZoom: Int!, $minZoom: Int!, $attribution: String, $mapboxGlStyles: JSON, $stableId: String!) {
+  createRemoteMvtSource(
+    input: {projectId: $projectId, url: $url, sourceLayer: $sourceLayer, title: $title, maxZoom: $maxZoom, minZoom: $minZoom, attribution: $attribution, mapboxGlStyles: $mapboxGlStyles, stableId: $stableId}
+  ) {
+    tableOfContentsItem {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
+export type CreateMvtSourceMutationFn = Apollo.MutationFunction<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>;
+
+/**
+ * __useCreateMvtSourceMutation__
+ *
+ * To run a mutation, you first call `useCreateMvtSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateMvtSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createMvtSourceMutation, { data, loading, error }] = useCreateMvtSourceMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      url: // value for 'url'
+ *      sourceLayer: // value for 'sourceLayer'
+ *      title: // value for 'title'
+ *      maxZoom: // value for 'maxZoom'
+ *      minZoom: // value for 'minZoom'
+ *      attribution: // value for 'attribution'
+ *      mapboxGlStyles: // value for 'mapboxGlStyles'
+ *      stableId: // value for 'stableId'
+ *   },
+ * });
+ */
+export function useCreateMvtSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>(CreateMvtSourceDocument, options);
+      }
+export type CreateMvtSourceMutationHookResult = ReturnType<typeof useCreateMvtSourceMutation>;
+export type CreateMvtSourceMutationResult = Apollo.MutationResult<CreateMvtSourceMutation>;
+export type CreateMvtSourceMutationOptions = Apollo.BaseMutationOptions<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -31424,6 +31541,7 @@ export const namedOperations = {
     EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',
     DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
+    CreateMVTSource: 'CreateMVTSource',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
