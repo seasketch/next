@@ -194,6 +194,12 @@ export default function TreeView({
   const [contextMenuOptions, setContextMenuOptions] = useState<
     (DropdownOption | DropdownDividerProps)[]
   >([]);
+  console.log(
+    "contextMenu",
+    contextMenu,
+    contextMenuOptions,
+    props.getContextMenuContent
+  );
 
   useEffect(() => {
     if (getContextMenuItems) {
@@ -407,6 +413,7 @@ export default function TreeView({
       offsetX: number,
       clickEvent: React.MouseEvent
     ) => {
+      console.log("on context mnu");
       if (getContextMenuItems || props.getContextMenuContent) {
         setContextMenu({
           id: node.id,
@@ -415,6 +422,7 @@ export default function TreeView({
           clickEvent,
         });
         if (getContextMenuItems) {
+          console.log("old style");
           setContextMenuOptions(getContextMenuItems(node));
         }
       }
