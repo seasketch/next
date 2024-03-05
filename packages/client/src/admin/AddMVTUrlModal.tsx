@@ -14,6 +14,7 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
 import { generateStableId } from "./data/arcgis/arcgis";
 import Button from "../components/Button";
+import tilebelt from "@mapbox/tilebelt";
 
 export default function AddMVTUrlModal({
   onRequestClose,
@@ -47,6 +48,9 @@ export default function AddMVTUrlModal({
           setValidationMessage(urlInput.current, validationErrors.join("\n"));
           setCanImport(false);
         } else {
+          evaluateMVTUrlTemplate(url).then((result) => {
+            console.log("result", result);
+          });
           setValidationMessage(urlInput.current, "");
           // Add to map
           if (map) {
@@ -377,4 +381,43 @@ function getGLStyleLayers(source: string, sourceLayer: string) {
     filter: ["==", "$type", "Polygon"],
   });
   return layers;
+}
+
+/**
+ * Attempts to determine details of the MVT service such that a good
+ * source configuration can be created.
+ * @param url
+ */
+async function evaluateMVTUrlTemplate(url: string): Promise<{
+  bounds?: number[];
+  minZoom?: number;
+  maxZoom?: number;
+  sourceLayers: string[];
+}> {
+  // Use tilebelt to find the first tile which is not 404
+  // Use that tile to determine the bounds and minZoom
+  const wholeEarthTile = [0, 0, 0];
+  let currentTile = wholeEarthTile;
+  let biggestTile: null | number[] = null;
+  while (!biggestTile && currentTile[0] < 5) {
+    console.log("check tile", currentTile);
+    const tileUrl = url
+      .replace("{z}", currentTile[0].toString())
+      .replace("{x}", currentTile[1].toString())
+      .replace("{y}", currentTile[2].toString());
+    const response = await fetch(tileUrl);
+    if (response.status !== 404) {
+      biggestTile = currentTile;
+    } else {
+      const children = tilebelt.getChildren(currentTile);
+      currentTile = children[0];
+    }
+  }
+  return {
+    bounds: biggestTile
+      ? tilebelt.tileToBBOX(biggestTile)
+      : [-180, -85.0511, 180, 85.0511],
+    minZoom: biggestTile ? biggestTile[0] : 0,
+    sourceLayers: [],
+  };
 }
