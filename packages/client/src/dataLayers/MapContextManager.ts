@@ -1399,6 +1399,7 @@ class MapContextManager extends EventEmitter {
               if (!baseStyle.sources[source.id.toString()]) {
                 switch (source.type) {
                   case DataSourceTypes.Vector:
+                    console.log("vector type", source);
                     baseStyle.sources[source.id.toString()] = {
                       type: "vector",
                       attribution: source.attribution || "",
