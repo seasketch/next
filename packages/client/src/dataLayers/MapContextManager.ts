@@ -475,34 +475,40 @@ class MapContextManager extends EventEmitter {
         };
       }
     }
-    const Url = new URL(url);
-    if (
-      this.internalState.offlineTileSimulatorActive &&
-      /api\.mapbox\./.test(url)
-    ) {
-      url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
-    } else if (
-      this.userAccessToken &&
-      Url.host === graphqlURL.host &&
-      /\/sketches\/\d+\.geojson.json/.test(url)
-    ) {
-      const id = url.match(/sketches\/(\d+)\.geojson/)![1];
-      const timestamp = this.sketchTimestamps.get(parseInt(id));
-      if (timestamp) {
-        Url.searchParams.set("timestamp", timestamp);
+    try {
+      const Url = new URL(url);
+      if (
+        this.internalState.offlineTileSimulatorActive &&
+        /api\.mapbox\./.test(url)
+      ) {
+        url = url.replace("api.mapbox.com", "api.mapbox-offline.com");
+      } else if (
+        this.userAccessToken &&
+        Url.host === graphqlURL.host &&
+        /\/sketches\/\d+\.geojson.json/.test(url)
+      ) {
+        const id = url.match(/sketches\/(\d+)\.geojson/)![1];
+        const timestamp = this.sketchTimestamps.get(parseInt(id));
+        if (timestamp) {
+          Url.searchParams.set("timestamp", timestamp);
+        }
+        return {
+          url: Url.toString(),
+          // eslint-disable-next-line i18next/no-literal-string
+          headers: { authorization: `Bearer ${this.userAccessToken}` },
+        };
+      } else if (!/^data:/.test(url)) {
+        if (!/gateway.api.globalfishingwatch.org/.test(url)) {
+          Url.searchParams.set("ssn-tr", "true");
+        }
+        url = Url.toString();
       }
-      return {
-        url: Url.toString(),
-        // eslint-disable-next-line i18next/no-literal-string
-        headers: { authorization: `Bearer ${this.userAccessToken}` },
-      };
-    } else if (!/^data:/.test(url)) {
-      Url.searchParams.set("ssn-tr", "true");
-      url = Url.toString();
+      return { url };
+    } catch (e) {
+      console.error(e);
+      return { url };
     }
-    return { url };
   };
-
   /**
    * Adds a local Feature to cache so that the map client need not request
    * GeoJSON or MVT representations of a Sketch. This is useful when editing
@@ -1393,6 +1399,7 @@ class MapContextManager extends EventEmitter {
               if (!baseStyle.sources[source.id.toString()]) {
                 switch (source.type) {
                   case DataSourceTypes.Vector:
+                    console.log("vector type", source);
                     baseStyle.sources[source.id.toString()] = {
                       type: "vector",
                       attribution: source.attribution || "",

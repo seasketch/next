@@ -16685,6 +16685,30 @@ export type ConvertFeatureLayerToHostedMutation = (
   )> }
 );
 
+export type CreateMvtSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+  sourceLayer: Scalars['String'];
+  title: Scalars['String'];
+  maxZoom: Scalars['Int'];
+  minZoom: Scalars['Int'];
+  attribution?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  stableId: Scalars['String'];
+}>;
+
+
+export type CreateMvtSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createRemoteMvtSource?: Maybe<(
+    { __typename?: 'CreateRemoteMvtSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & AdminOverlayFragment
+    )> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -22708,6 +22732,17 @@ export const ConvertFeatureLayerToHostedDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CreateMvtSourceDocument = /*#__PURE__*/ gql`
+    mutation CreateMVTSource($projectId: Int!, $url: String!, $sourceLayer: String!, $title: String!, $maxZoom: Int!, $minZoom: Int!, $attribution: String, $mapboxGlStyles: JSON, $stableId: String!) {
+  createRemoteMvtSource(
+    input: {projectId: $projectId, url: $url, sourceLayer: $sourceLayer, title: $title, maxZoom: $maxZoom, minZoom: $minZoom, attribution: $attribution, mapboxGlStyles: $mapboxGlStyles, stableId: $stableId}
+  ) {
+    tableOfContentsItem {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -24898,6 +24933,7 @@ export const namedOperations = {
     EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',
     DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
+    CreateMVTSource: 'CreateMVTSource',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

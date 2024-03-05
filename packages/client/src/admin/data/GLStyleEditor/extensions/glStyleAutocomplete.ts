@@ -12,6 +12,9 @@ import {
   interpolatePlasma as interpolateColorScale,
 } from "d3-scale-chromatic";
 
+console.log(
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => interpolateColorScale(n / 10))
+);
 export interface GeostatsAttribute {
   attribute: string;
   count: number;

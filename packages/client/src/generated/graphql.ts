@@ -16687,6 +16687,30 @@ export type ConvertFeatureLayerToHostedMutation = (
   )> }
 );
 
+export type CreateMvtSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+  sourceLayer: Scalars['String'];
+  title: Scalars['String'];
+  maxZoom: Scalars['Int'];
+  minZoom: Scalars['Int'];
+  attribution?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  stableId: Scalars['String'];
+}>;
+
+
+export type CreateMvtSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createRemoteMvtSource?: Maybe<(
+    { __typename?: 'CreateRemoteMvtSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & AdminOverlayFragment
+    )> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -25348,6 +25372,51 @@ export function useConvertFeatureLayerToHostedMutation(baseOptions?: Apollo.Muta
 export type ConvertFeatureLayerToHostedMutationHookResult = ReturnType<typeof useConvertFeatureLayerToHostedMutation>;
 export type ConvertFeatureLayerToHostedMutationResult = Apollo.MutationResult<ConvertFeatureLayerToHostedMutation>;
 export type ConvertFeatureLayerToHostedMutationOptions = Apollo.BaseMutationOptions<ConvertFeatureLayerToHostedMutation, ConvertFeatureLayerToHostedMutationVariables>;
+export const CreateMvtSourceDocument = gql`
+    mutation CreateMVTSource($projectId: Int!, $url: String!, $sourceLayer: String!, $title: String!, $maxZoom: Int!, $minZoom: Int!, $attribution: String, $mapboxGlStyles: JSON, $stableId: String!) {
+  createRemoteMvtSource(
+    input: {projectId: $projectId, url: $url, sourceLayer: $sourceLayer, title: $title, maxZoom: $maxZoom, minZoom: $minZoom, attribution: $attribution, mapboxGlStyles: $mapboxGlStyles, stableId: $stableId}
+  ) {
+    tableOfContentsItem {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
+export type CreateMvtSourceMutationFn = Apollo.MutationFunction<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>;
+
+/**
+ * __useCreateMvtSourceMutation__
+ *
+ * To run a mutation, you first call `useCreateMvtSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateMvtSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createMvtSourceMutation, { data, loading, error }] = useCreateMvtSourceMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      url: // value for 'url'
+ *      sourceLayer: // value for 'sourceLayer'
+ *      title: // value for 'title'
+ *      maxZoom: // value for 'maxZoom'
+ *      minZoom: // value for 'minZoom'
+ *      attribution: // value for 'attribution'
+ *      mapboxGlStyles: // value for 'mapboxGlStyles'
+ *      stableId: // value for 'stableId'
+ *   },
+ * });
+ */
+export function useCreateMvtSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>(CreateMvtSourceDocument, options);
+      }
+export type CreateMvtSourceMutationHookResult = ReturnType<typeof useCreateMvtSourceMutation>;
+export type CreateMvtSourceMutationResult = Apollo.MutationResult<CreateMvtSourceMutation>;
+export type CreateMvtSourceMutationOptions = Apollo.BaseMutationOptions<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -31472,6 +31541,7 @@ export const namedOperations = {
     EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',
     DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
+    CreateMVTSource: 'CreateMVTSource',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

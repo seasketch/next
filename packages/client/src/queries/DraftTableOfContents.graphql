@@ -708,3 +708,33 @@ mutation ConvertFeatureLayerToHosted($tocId: Int!) {
     }
   }
 }
+
+mutation CreateMVTSource(
+  $projectId: Int!
+  $url: String!
+  $sourceLayer: String!
+  $title: String!
+  $maxZoom: Int!
+  $minZoom: Int!
+  $attribution: String
+  $mapboxGlStyles: JSON
+  $stableId: String!
+) {
+  createRemoteMvtSource(
+    input: {
+      projectId: $projectId
+      url: $url
+      sourceLayer: $sourceLayer
+      title: $title
+      maxZoom: $maxZoom
+      minZoom: $minZoom
+      attribution: $attribution
+      mapboxGlStyles: $mapboxGlStyles
+      stableId: $stableId
+    }
+  ) {
+    tableOfContentsItem {
+      ...AdminOverlay
+    }
+  }
+}

@@ -50,6 +50,7 @@ import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useDialog from "../../components/useDialog";
 import Warning from "../../components/Warning";
+import AddMVTUrlModal from "../AddMVTUrlModal";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -557,6 +558,7 @@ function Header({
     },
     onError,
   });
+  const [mvtUrlModalOpen, setMVTUrlModalOpen] = useState(false);
 
   const { confirm } = useDialog();
   return (
@@ -645,8 +647,29 @@ function Header({
                     openArcGISCart();
                   }}
                 >
-                  {t("Esri ArcGIS Service...")}
+                  {t("Esri ArcGIS service...")}
                 </MenuBarItem>
+                <MenuBarItem
+                  onClick={() => {
+                    setMVTUrlModalOpen(true);
+                  }}
+                >
+                  {t("Vector tiles by URL...")}
+                </MenuBarItem>
+                {/* <MenuBarItem
+                  onClick={() => {
+                    // openArcGISCart();
+                  }}
+                >
+                  {t("TileJSON endpoint...")}
+                </MenuBarItem>
+                <MenuBarItem
+                  onClick={() => {
+                    // openArcGISCart();
+                  }}
+                >
+                  {t("GeoJSON by URL...")}
+                </MenuBarItem> */}
               </MenuBarSubmenu>
               <MenuBarSeparator />
               <MenuBarLabel>
@@ -761,6 +784,9 @@ function Header({
         <DataDownloadDefaultSettingModal
           onRequestClose={() => setDataDownloadSettingOpen(false)}
         />
+      )}
+      {mvtUrlModalOpen && (
+        <AddMVTUrlModal onRequestClose={() => setMVTUrlModalOpen(false)} />
       )}
     </header>
   );
