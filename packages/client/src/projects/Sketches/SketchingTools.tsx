@@ -45,16 +45,6 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
 
   const getContextMenuItems = useCallback(
     (item: TreeItem) => {
-      console.log(
-        "get context menu items",
-        getMenuOptions(
-          [item.id],
-          item.type === "Sketch"
-            ? { sketch: true, folder: false, collection: !item.isLeaf }
-            : { sketch: false, folder: true, collection: false },
-          item.bbox
-        ).contextMenu
-      );
       if (item) {
         return getMenuOptions(
           [item.id],
