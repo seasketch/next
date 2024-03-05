@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 import { setBlockType, toggleMark } from "prosemirror-commands";
@@ -34,8 +33,6 @@ import {
 } from "../generated/graphql";
 import { sketchType } from "./config";
 import { ChevronDownIcon } from "@heroicons/react/outline";
-import ContextMenuDropdown from "../components/ContextMenuDropdown";
-import { DropdownOption } from "../components/DropdownButton";
 import { SketchUIStateContext } from "../projects/Sketches/SketchUIStateContextProvider";
 import { MapContext } from "../dataLayers/MapContextManager";
 import useDialog from "../components/useDialog";
@@ -43,6 +40,12 @@ import { treeItemId } from "../components/TreeView";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import axios from "axios";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import {
+  MenuBarContentClasses,
+  MenuBarItemClasses,
+} from "../components/Menubar";
+require("../admin/data/GLStyleEditor/RadixDropdown.css");
 
 interface EditorMenuBarProps {
   state?: EditorState;
@@ -149,176 +152,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
 
   const [contextMenuTarget, setContextMenuTarget] =
     useState<HTMLButtonElement | null>(null);
-
-  const contextMenuOptions = useMemo(() => {
-    const options: DropdownOption[] = [];
-    if (schema.nodes.sketch) {
-      options.push({
-        label: t("Sketches"),
-        onClick: () => {
-          setChooseSketchesOpen(true);
-        },
-      });
-    }
-    if (schema.marks.attachmentLink && props.createMapBookmark) {
-      options.push({
-        label: t("Map Bookmark"),
-        onClick: async () => {
-          if (mapContext.manager) {
-            const relatedSketchIds = mapContext.manager
-              .getVisibleSketchIds()
-              .filter(({ sharedInForum }) => !sharedInForum);
-            // TODO: have an option to just share these sketches from here
-            if (relatedSketchIds.length > 0) {
-              const answer = await dialog.confirm(
-                t("Unshared sketches visible on the map"),
-                {
-                  description: t(
-                    "You have one or more sketches visible that have not been shared. Share them first if you would like them to be visible in your bookmark."
-                  ),
-                  primaryButtonText: t("Create Bookmark"),
-                }
-              );
-              if (!answer) {
-                return;
-              }
-            }
-          }
-          if (props.createMapBookmark && props.view) {
-            setDisableSharing(true);
-            if (mapContext?.manager) {
-              mapContext.manager.setLoadingOverlay(t("Saving map bookmark"));
-            }
-            try {
-              const bookmark = await props.createMapBookmark();
-              if (mapContext?.manager) {
-                mapContext.manager.setLoadingOverlay(null);
-              }
-              setDisableSharing(false);
-              if (bookmark) {
-                props.view!.focus();
-                attachBookmark(bookmark, props.view.state, props.view.dispatch);
-                return false;
-              }
-            } catch (e) {
-              if (/Rate limit/.test(e.message)) {
-                onError(
-                  new Error("Rate limited. Please try again in a few seconds.")
-                );
-                setDisableSharing(false);
-                if (mapContext?.manager) {
-                  mapContext.manager.setLoadingOverlay(null);
-                }
-              } else {
-                onError(e);
-                setDisableSharing(false);
-                if (mapContext?.manager) {
-                  mapContext.manager.setLoadingOverlay(null);
-                }
-              }
-            }
-          }
-        },
-      });
-    }
-    const createFileUpload = props.createFileUpload;
-    if (schema.marks.attachmentLink && createFileUpload) {
-      options.push({
-        label: t("File Upload"),
-        onClick: async () => {
-          var input = document.createElement("input");
-          input.type = "file";
-          input.click();
-          input.onchange = async () => {
-            if (input.files?.length) {
-              const file = input.files[0];
-              const response = await createFileUpload(
-                file.name,
-                file.size,
-                file.type
-              );
-              const uploadRecord = response?.fileUpload;
-              const view = props.view;
-              if (
-                !response?.cloudflareImagesUploadUrl &&
-                uploadRecord?.presignedUploadUrl &&
-                view
-              ) {
-                props.view!.focus();
-                updateProgress(uploadRecord.id, 0);
-                attachFileUpload(uploadRecord, view.state, view.dispatch);
-                axios({
-                  url: uploadRecord.presignedUploadUrl,
-                  method: "PUT",
-                  data: file,
-                  headers: {
-                    "Content-Type": file.type,
-                    "Content-Disposition": `attachment; filename="${uploadRecord.filename}"`,
-                    "Cache-Control": "public, immutable, max-age=31536000",
-                  },
-                  onUploadProgress: (progressEvent) => {
-                    updateProgress(
-                      uploadRecord.id,
-                      progressEvent.loaded / progressEvent.total
-                    );
-                  },
-                })
-                  .then(() => {
-                    updateProgress(uploadRecord.id, 1);
-                  })
-                  .catch((e) => {
-                    onError(e);
-                    deleteAttachment(
-                      uploadRecord.id,
-                      view.state,
-                      view.dispatch
-                    );
-                  });
-              } else if (
-                view &&
-                uploadRecord &&
-                response?.cloudflareImagesUploadUrl
-              ) {
-                const formData = new FormData();
-                formData.append("file", file);
-                props.view!.focus();
-                updateProgress(uploadRecord.id, 0);
-                attachFileUpload(uploadRecord, view.state, view.dispatch);
-                axios({
-                  url: response.cloudflareImagesUploadUrl,
-                  method: "POST",
-                  data: formData,
-                  onUploadProgress: (progressEvent) => {
-                    if (progressEvent.loaded - progress.total < 0.95) {
-                      updateProgress(
-                        uploadRecord.id,
-                        progressEvent.loaded / progressEvent.total
-                      );
-                    } else {
-                      updateProgress(uploadRecord.id, 0.95);
-                    }
-                  },
-                })
-                  .then(() => {
-                    updateProgress(uploadRecord.id, 1);
-                  })
-                  .catch((e) => {
-                    onError(e);
-                    deleteAttachment(
-                      uploadRecord.id,
-                      view.state,
-                      view.dispatch
-                    );
-                  });
-              }
-            }
-          };
-        },
-      });
-    }
-    return options;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.createMapBookmark, props.view, schema, t, mapContext?.manager]);
 
   useEffect(() => {
     if (contextMenuTarget) {
@@ -571,20 +404,225 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         </svg>
       </button>
       {(schema.nodes.sketches || schema.marks.attachmentLink) && (
-        <button
-          className={`border rounded px-1 py-0.5 flex items-center border-gray-300 ml-1.5 ${
-            disableSharing ? "opacity-50 pointer-events-none" : ""
-          }`}
-          disabled={disableSharing}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setContextMenuTarget(e.currentTarget as HTMLButtonElement);
-          }}
-        >
-          {isSmall ? t("Share") : t("Share content")}{" "}
-          <ChevronDownIcon className="w-4 h-4 ml-1" />
-        </button>
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              className={`border rounded px-1 py-0.5 flex items-center border-gray-300 ml-1.5 ${
+                disableSharing ? "opacity-50 pointer-events-none" : ""
+              }`}
+              disabled={disableSharing}
+              // onClick={(e) => {
+              //   e.preventDefault();
+              //   e.stopPropagation();
+              //   setContextMenuTarget(e.currentTarget as HTMLButtonElement);
+              // }}
+            >
+              {isSmall ? t("Share") : t("Share content")}{" "}
+              <ChevronDownIcon className="w-4 h-4 ml-1" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="top"
+              align="end"
+              className={
+                MenuBarContentClasses +
+                " ToCMenuContent text-sm DropdownMenuContent"
+              }
+              style={{ backdropFilter: "blur(3px)", minWidth: 150 }}
+            >
+              {schema.nodes.sketch && (
+                <DropdownMenu.Item
+                  className={MenuBarItemClasses}
+                  onSelect={() => {
+                    setChooseSketchesOpen(true);
+                  }}
+                >
+                  <DropdownMenu.Label>{t("Sketches")}</DropdownMenu.Label>
+                </DropdownMenu.Item>
+              )}
+              {schema.marks.attachmentLink && props.createMapBookmark && (
+                <DropdownMenu.Item
+                  className={MenuBarItemClasses}
+                  onSelect={async () => {
+                    if (mapContext.manager) {
+                      const relatedSketchIds = mapContext.manager
+                        .getVisibleSketchIds()
+                        .filter(({ sharedInForum }) => !sharedInForum);
+                      // TODO: have an option to just share these sketches from here
+                      if (relatedSketchIds.length > 0) {
+                        const answer = await dialog.confirm(
+                          t("Unshared sketches visible on the map"),
+                          {
+                            description: t(
+                              "You have one or more sketches visible that have not been shared. Share them first if you would like them to be visible in your bookmark."
+                            ),
+                            primaryButtonText: t("Create Bookmark"),
+                          }
+                        );
+                        if (!answer) {
+                          return;
+                        }
+                      }
+                    }
+                    if (props.createMapBookmark && props.view) {
+                      setDisableSharing(true);
+                      if (mapContext?.manager) {
+                        mapContext.manager.setLoadingOverlay(
+                          t("Saving map bookmark")
+                        );
+                      }
+                      try {
+                        const bookmark = await props.createMapBookmark();
+                        if (mapContext?.manager) {
+                          mapContext.manager.setLoadingOverlay(null);
+                        }
+                        setDisableSharing(false);
+                        if (bookmark) {
+                          props.view!.focus();
+                          attachBookmark(
+                            bookmark,
+                            props.view.state,
+                            props.view.dispatch
+                          );
+                          return false;
+                        }
+                      } catch (e) {
+                        if (/Rate limit/.test(e.message)) {
+                          onError(
+                            new Error(
+                              "Rate limited. Please try again in a few seconds."
+                            )
+                          );
+                          setDisableSharing(false);
+                          if (mapContext?.manager) {
+                            mapContext.manager.setLoadingOverlay(null);
+                          }
+                        } else {
+                          onError(e);
+                          setDisableSharing(false);
+                          if (mapContext?.manager) {
+                            mapContext.manager.setLoadingOverlay(null);
+                          }
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <DropdownMenu.Label>{t("Map Bookmark")}</DropdownMenu.Label>
+                </DropdownMenu.Item>
+              )}
+              {schema.marks.attachmentLink && props.createFileUpload && (
+                <DropdownMenu.Item
+                  className={MenuBarItemClasses}
+                  onSelect={async () => {
+                    var input = document.createElement("input");
+                    input.type = "file";
+                    input.click();
+                    input.onchange = async () => {
+                      if (input.files?.length) {
+                        const file = input.files[0];
+                        const response = await props.createFileUpload!(
+                          file.name,
+                          file.size,
+                          file.type
+                        );
+                        const uploadRecord = response?.fileUpload;
+                        const view = props.view;
+                        if (
+                          !response?.cloudflareImagesUploadUrl &&
+                          uploadRecord?.presignedUploadUrl &&
+                          view
+                        ) {
+                          props.view!.focus();
+                          updateProgress(uploadRecord.id, 0);
+                          attachFileUpload(
+                            uploadRecord,
+                            view.state,
+                            view.dispatch
+                          );
+                          axios({
+                            url: uploadRecord.presignedUploadUrl,
+                            method: "PUT",
+                            data: file,
+                            headers: {
+                              "Content-Type": file.type,
+                              "Content-Disposition": `attachment; filename="${uploadRecord.filename}"`,
+                              "Cache-Control":
+                                "public, immutable, max-age=31536000",
+                            },
+                            onUploadProgress: (progressEvent) => {
+                              updateProgress(
+                                uploadRecord.id,
+                                progressEvent.loaded / progressEvent.total
+                              );
+                            },
+                          })
+                            .then(() => {
+                              updateProgress(uploadRecord.id, 1);
+                            })
+                            .catch((e) => {
+                              onError(e);
+                              deleteAttachment(
+                                uploadRecord.id,
+                                view.state,
+                                view.dispatch
+                              );
+                            });
+                        } else if (
+                          view &&
+                          uploadRecord &&
+                          response?.cloudflareImagesUploadUrl
+                        ) {
+                          const formData = new FormData();
+                          formData.append("file", file);
+                          props.view!.focus();
+                          updateProgress(uploadRecord.id, 0);
+                          attachFileUpload(
+                            uploadRecord,
+                            view.state,
+                            view.dispatch
+                          );
+                          axios({
+                            url: response.cloudflareImagesUploadUrl,
+                            method: "POST",
+                            data: formData,
+                            onUploadProgress: (progressEvent) => {
+                              if (
+                                progressEvent.loaded - progress.total <
+                                0.95
+                              ) {
+                                updateProgress(
+                                  uploadRecord.id,
+                                  progressEvent.loaded / progressEvent.total
+                                );
+                              } else {
+                                updateProgress(uploadRecord.id, 0.95);
+                              }
+                            },
+                          })
+                            .then(() => {
+                              updateProgress(uploadRecord.id, 1);
+                            })
+                            .catch((e) => {
+                              onError(e);
+                              deleteAttachment(
+                                uploadRecord.id,
+                                view.state,
+                                view.dispatch
+                              );
+                            });
+                        }
+                      }
+                    };
+                  }}
+                >
+                  <DropdownMenu.Label>{t("File Upload")}</DropdownMenu.Label>
+                </DropdownMenu.Item>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
       )}
       {props.dynamicMetadataAvailable && props.onUseServiceMetadata && (
         <button className="ml-0.5" onClick={props.onUseServiceMetadata}>
@@ -597,17 +635,6 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
         <ShareSketchesModal
           cancel={() => setChooseSketchesOpen(false)}
           onSubmit={onSubmitCopiedTocItems}
-        />
-      )}
-      {contextMenuTarget && contextMenuOptions.length > 0 && (
-        <ContextMenuDropdown
-          placement="top-start"
-          offsetY={2}
-          options={contextMenuOptions}
-          target={contextMenuTarget}
-          onClick={() => {
-            setContextMenuTarget(null);
-          }}
         />
       )}
       {!!linkModalState && (

@@ -163,11 +163,7 @@ export default function Button(props: ButtonProps) {
       className={`inline-flex relative ${props.shadowSize || "shadow-sm"} ${
         props.className
       }`}
-      onClick={() => {
-        if (!props.disabled) {
-          onClick && onClick();
-        }
-      }}
+      onClick={props.disabled ? undefined : onClick}
       id={props.id}
     >
       {props.labelFor ? (
