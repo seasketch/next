@@ -399,12 +399,12 @@ async function evaluateMVTUrlTemplate(url: string): Promise<{
   const wholeEarthTile = [0, 0, 0];
   let currentTile = wholeEarthTile;
   let biggestTile: null | number[] = null;
-  while (!biggestTile && currentTile[0] < 5) {
+  while (!biggestTile && currentTile[2] < 5) {
     console.log("check tile", currentTile);
     const tileUrl = url
-      .replace("{z}", currentTile[0].toString())
-      .replace("{x}", currentTile[1].toString())
-      .replace("{y}", currentTile[2].toString());
+      .replace("{z}", currentTile[2].toString())
+      .replace("{x}", currentTile[0].toString())
+      .replace("{y}", currentTile[1].toString());
     const response = await fetch(tileUrl);
     if (response.status !== 404) {
       biggestTile = currentTile;
@@ -413,11 +413,33 @@ async function evaluateMVTUrlTemplate(url: string): Promise<{
       currentTile = children[0];
     }
   }
+  let nextTile = biggestTile;
+  let maxZoom = biggestTile ? biggestTile[2] : undefined;
+  // find the deepest zoom level
+  while (nextTile && nextTile[2] <= 18) {
+    maxZoom = nextTile[2];
+    const children = tilebelt.getChildren(nextTile);
+    nextTile = null;
+    for (const child of children) {
+      console.log("checking tile", child);
+      const tileUrl = url
+        .replace("{z}", child[2].toString())
+        .replace("{x}", child[0].toString())
+        .replace("{y}", child[1].toString());
+      const response = await fetch(tileUrl);
+      if (response.status === 200) {
+        nextTile = child;
+        break;
+      }
+    }
+  }
+
   return {
     bounds: biggestTile
       ? tilebelt.tileToBBOX(biggestTile)
       : [-180, -85.0511, 180, 85.0511],
     minZoom: biggestTile ? biggestTile[0] : 0,
+    maxZoom,
     sourceLayers: [],
   };
 }
