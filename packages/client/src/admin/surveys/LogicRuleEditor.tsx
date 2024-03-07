@@ -451,7 +451,7 @@ export default function LogicRuleEditor({
         )}
       </div>
 
-      {formElement.type.supportedOperators.length > 0 ? (
+      {formElement.type.supportedOperators.length > -1 ? (
         <>
           <p className="p-2 text-sm">
             {rules.length === 0 ? (
