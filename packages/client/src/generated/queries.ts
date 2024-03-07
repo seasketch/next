@@ -1547,6 +1547,47 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+/** All input for the `createRemoteMvtSource` mutation. */
+export type CreateRemoteMvtSourceInput = {
+  attribution?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  maxZoom?: Maybe<Scalars['Int']>;
+  minZoom?: Maybe<Scalars['Int']>;
+  projectId?: Maybe<Scalars['Int']>;
+  sourceLayer?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+  url?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createRemoteMvtSource` mutation. */
+export type CreateRemoteMvtSourcePayload = {
+  __typename?: 'CreateRemoteMvtSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `createRemoteMvtSource` mutation. */
+export type CreateRemoteMvtSourcePayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the `createSketchClassFromTemplate` mutation. */
 export type CreateSketchClassFromTemplateInput = {
   /**
@@ -6309,6 +6350,7 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7024,6 +7066,12 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateRemoteMvtSourceArgs = {
+  input: CreateRemoteMvtSourceInput;
 };
 
 

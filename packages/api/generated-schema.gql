@@ -1752,6 +1752,51 @@ type CreateProjectsSharedBasemapPayload {
   query: Query
 }
 
+"""All input for the `createRemoteMvtSource` mutation."""
+input CreateRemoteMvtSourceInput {
+  attribution: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  mapboxGlStyles: JSON
+  maxZoom: Int
+  minZoom: Int
+  projectId: Int
+  sourceLayer: String
+  stableId: String
+  title: String
+  url: String
+}
+
+"""The output of our `createRemoteMvtSource` mutation."""
+type CreateRemoteMvtSourcePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
+  """
+  dataLayer: DataLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItem: TableOfContentsItem
+
+  """An edge for our `TableOfContentsItem`. May be used by Relay 1."""
+  tableOfContentsItemEdge(
+    """The method to use when ordering `TableOfContentsItem`."""
+    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): TableOfContentsItemsEdge
+}
+
 """All input for the `createSketchClassFromTemplate` mutation."""
 input CreateSketchClassFromTemplateInput {
   """
@@ -7537,6 +7582,12 @@ type Mutation {
     """
     input: CreateProjectsSharedBasemapInput!
   ): CreateProjectsSharedBasemapPayload
+  createRemoteMvtSource(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateRemoteMvtSourceInput!
+  ): CreateRemoteMvtSourcePayload
 
   """
   Create a new sketch in the user's account. If preprocessing is enabled,
