@@ -1,21 +1,12 @@
 import {
   FieldRuleOperator,
-  FormElement,
-  FormElementDetailsFragment,
   FormElementFullDetailsFragment,
-  FormLogicCondition,
-  FormLogicRule,
   LogicRuleDetailsFragment,
-  Maybe,
   SketchGeometryType,
 } from "../../generated/graphql";
 import { components } from "../../formElements";
 import ReactFlow, {
-  removeElements,
-  addEdge,
-  MiniMap,
   Controls,
-  Background,
   Elements,
   isNode,
   Position,
@@ -23,13 +14,11 @@ import ReactFlow, {
   ArrowHeadType,
 } from "react-flow-renderer";
 import dagre from "dagre";
-import { collectHeaders, collectQuestion, collectText } from "./collectText";
-import { defaultFormElementIcon } from "../../formElements/FormElement";
+import { collectHeaders, collectQuestion } from "./collectText";
 import { sortFormElements } from "../../formElements/sortFormElements";
 import { FunctionComponent, memo, useMemo } from "react";
 import { OPERATOR_LABELS } from "./LogicRuleEditor";
 import { Trans } from "react-i18next";
-import { Icons } from "../../components/SketchGeometryTypeSelector";
 
 type Rule = LogicRuleDetailsFragment;
 
@@ -70,7 +59,13 @@ export default function SurveyFlowMap({
       onConnect={(params) => {}}
       onSelectionChange={(elements) => {
         if (onSelection) {
-          onSelection(elements ? elements.map((e) => parseInt(e.id)) : []);
+          onSelection(
+            elements
+              ? elements
+                  .filter((e) => e.type === "formElement")
+                  .map((e) => parseInt(e.id))
+              : []
+          );
         }
       }}
       // multiSelectionKeyCode={"meta"}
@@ -201,108 +196,6 @@ function getElementsForForm(
     const applicableRules = rules.filter(
       (r) => r.formElementId === formElement.id && r.jumpToId
     );
-    // if (formElement.sketchClass?.form?.formElements?.length) {
-    //   const subElements = getElementsForForm(
-    //     formElement.sketchClass.form.id,
-    //     formElements,
-    //     rules,
-    //     formElement.id,
-    //     formElement.sketchClass.geometryType,
-    //     formElement.typeId !== "SingleSpatialInput"
-    //   );
-    //   elements.push(...subElements);
-    //   // Connect current form element to subform
-    //   elements.push({
-    //     // eslint-disable-next-line i18next/no-literal-string
-    //     id: `eRoot${formElement.id}`,
-    //     position: { x: 0, y: 0 },
-    //     source: formElement.id.toString(),
-    //     target: subElements[0].id,
-    //     // arrowHeadType: ArrowHeadType.ArrowClosed,
-    //     // animated: true,
-    //     // label: applicableRules.length ? "default" : undefined,
-    //   });
-    //   const nextQuestion =
-    //     formElement.jumpToId?.toString() ||
-    //     sortedElements[index + 1].id.toString();
-    //   // connect end of sub-form to next form element
-    //   if (subElements[subElements.length - 1].data.jumpToId === null) {
-    //     elements.push({
-    //       // eslint-disable-next-line i18next/no-literal-string
-    //       id: `eFinish${formElement.id}`,
-    //       position: { x: 0, y: 0 },
-    //       source: subElements[subElements.length - 1].id.toString(),
-    //       target: nextQuestion,
-    //       arrowHeadType: ArrowHeadType.ArrowClosed,
-    //       // label: applicableRules.length ? "default" : undefined,
-    //     });
-    //   }
-    //   // connect any jumpTo -> parent links to the next question
-    //   for (const subElement of subElements.filter((el) => isNode(el))) {
-    //     const applicableRules = rules.filter(
-    //       (r) => r.formElementId === subElement.data.id
-    //     );
-    //     if (subElement.data.jumpToId === formElement.id) {
-    //       elements.push({
-    //         // eslint-disable-next-line i18next/no-literal-string
-    //         id: `eFinish${formElement.id}-${subElement.id}`,
-    //         position: { x: 0, y: 0 },
-    //         source: subElement.id,
-    //         target: nextQuestion,
-    //         arrowHeadType: ArrowHeadType.ArrowClosed,
-    //         label: applicableRules.length ? "default" : undefined,
-    //       });
-    //     }
-    //     for (const rule of applicableRules) {
-    //       if (rule.jumpToId === formElement.id) {
-    //         elements.push({
-    //           // type: "smoothstep",
-    //           // eslint-disable-next-line i18next/no-literal-string
-    //           id: `e${formElement.id}-r${rule.id}`,
-    //           position: { x: 0, y: 0 },
-    //           source: subElement.id.toString(),
-    //           target: nextQuestion,
-    //           arrowHeadType: ArrowHeadType.ArrowClosed,
-    //           label:
-    //             (rule.conditions || [])
-    //               .map((condition) =>
-    //                 condition.operator === FieldRuleOperator.IsBlank
-    //                   ? `${OPERATOR_LABELS[condition.operator]}`
-    //                   : `${OPERATOR_LABELS[condition.operator]} ${
-    //                       condition.value
-    //                     }`
-    //               )
-    //               .join(", ") || "",
-    //         });
-    //       }
-    //     }
-    //   }
-
-    //   // Connect any jump logic defined for the spatial input element from the
-    //   // last subelement to the approprate nodes
-    //   for (const rule of applicableRules) {
-    //     if (rule.jumpToId) {
-    //       elements.push({
-    //         // type: "smoothstep",
-    //         // eslint-disable-next-line i18next/no-literal-string
-    //         id: `e${formElement.id}-r${rule.id}`,
-    //         position: { x: 0, y: 0 },
-    //         source: subElements[subElements.length - 1].id.toString(),
-    //         target: rule.jumpToId!.toString(),
-    //         arrowHeadType: ArrowHeadType.ArrowClosed,
-    //         label:
-    //           (rule.conditions || [])
-    //             .map((condition) =>
-    //               condition.operator === FieldRuleOperator.IsBlank
-    //                 ? `${OPERATOR_LABELS[condition.operator]}`
-    //                 : `${OPERATOR_LABELS[condition.operator]} ${
-    //                     condition.value
-    //                   }`
-    //             )
-    //             .join(", ") || "",
-    //       });
-    //     }
-    //   }
     if (formElement.sketchClass) {
       // Sketch Class with no form elements (singlespatialinput?)
       const nextQuestion =
