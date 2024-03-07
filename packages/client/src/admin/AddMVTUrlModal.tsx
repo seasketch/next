@@ -73,17 +73,10 @@ export default function AddMVTUrlModal({
             error: undefined,
           });
           try {
-            if (map) {
-              // @ts-ignore
-              window.map = map;
-              // @ts-ignore
-              map.fitBounds(tilebelt.tileToBBOX([0, 0, 0]), {
-                // duration: 5000,
-                // speed: 0.2,
-              });
-            }
+            const bounds = map!.getBounds().toArray();
             const data = await evaluateMVTUrlTemplate(
               url,
+              [bounds[0][0], bounds[0][1], bounds[1][0], bounds[1][1]],
               (message, geostats, minZoom, maxZoom, tile) => {
                 if (tile) {
                   const geojson = tilebelt.tileToGeoJSON(tile);
@@ -99,8 +92,8 @@ export default function AddMVTUrlModal({
                       });
                       // @ts-ignore
                       map.fitBounds(tilebelt.tileToBBOX(tile), {
-                        // duration: 5000,
-                        speed: 0.2,
+                        duration: 3000,
+                        // speed: 0.2,
                       });
                     }
                   }
@@ -180,49 +173,20 @@ export default function AddMVTUrlModal({
   }, [map]);
 
   const resetMap = useCallback(() => {
-    return new Promise((resolve) => {
-      if (map) {
-        map.once("render", (e) => {
-          const map = e.target;
-          if (!map.getLayer("search-tile-fill")) {
-            if (!map.getSource("search-tile")) {
-              map.addSource("search-tile", {
-                type: "geojson",
-                data: {
-                  type: "FeatureCollection",
-                  features: [],
-                },
-              });
-            }
-            map.addLayer({
-              id: "search-tile-fill",
-              type: "fill",
-              source: "search-tile",
-              paint: {
-                "fill-color": "#0a0",
-                "fill-outline-color": "green",
-                "fill-opacity": 0.2,
-              },
-            });
-            map.addLayer({
-              id: "search-tile-line",
-              type: "line",
-              source: "search-tile",
-              paint: {
-                "line-color": "rgb(128, 255, 57)",
-                "line-width": 5,
-                "line-blur": 1,
-              },
-            });
-          }
-          resolve(null);
-        });
-        map.setStyle(STYLE);
-      } else {
-        console.log("resolving with no map");
-        resolve(null);
+    if (map) {
+      const layers = map.getStyle().layers || [];
+      const forRemoval = layers.filter((l) => l.id.startsWith("mvt-"));
+      const sourcesToRemove = new Set<string>();
+      for (const layer of forRemoval) {
+        if ("source" in layer) {
+          sourcesToRemove.add(layer.source as string);
+        }
+        map.removeLayer(layer.id);
       }
-    });
+      for (const source of sourcesToRemove) {
+        map.removeSource(source);
+      }
+    }
   }, [map]);
 
   const onChange = useCallback(
@@ -290,7 +254,55 @@ export default function AddMVTUrlModal({
     <AddRemoteServiceMapModal
       title={t("Add Mapbox Vector Tiles by URL")}
       onRequestClose={onRequestClose}
-      onMapLoad={setMap}
+      onMapLoad={(map) => {
+        // @ts-ignore
+        window.map = map;
+        if (!map.getLayer("search-tile-fill")) {
+          if (!map.getSource("search-tile")) {
+            map.addSource("search-tile", {
+              type: "geojson",
+              data: {
+                type: "FeatureCollection",
+                features: [],
+              },
+            });
+          }
+          map.addLayer({
+            id: "search-tile-fill",
+            type: "fill",
+            source: "search-tile",
+            paint: {
+              "fill-color": "#0a0",
+              "fill-outline-color": "green",
+              "fill-opacity": 0.2,
+            },
+          });
+          map.addLayer({
+            id: "search-tile-line-blur",
+            type: "line",
+            source: "search-tile",
+            layout: {
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "rgba(100, 255, 100, 0.3)",
+              "line-width": 15,
+              "line-offset": -3,
+              "line-blur": 10,
+            },
+          });
+          map.addLayer({
+            id: "search-tile-line",
+            type: "line",
+            source: "search-tile",
+            paint: {
+              "line-color": "rgb(128, 255, 57)",
+              "line-width": 3,
+            },
+          });
+        }
+        setMap(map);
+      }}
     >
       <div className="absolute right-0 rounded z-50 bg-black text-indigo-300 px-1.5 py-0.5 mr-1 mt-1 bg-opacity-50">
         <Trans data={{ zoom }} ns="admin:data">
@@ -639,6 +651,7 @@ function getGLStyleLayers(
  */
 export async function evaluateMVTUrlTemplate(
   url: string,
+  hintBounds: number[],
   onProgress?: (
     message: string,
     geostats: Geostats,
@@ -673,7 +686,8 @@ export async function evaluateMVTUrlTemplate(
           tile
         );
       }
-    }
+    },
+    hintBounds
   );
   console.log("firstTile", firstTile);
   addTileToGeostats(geostats, await response.arrayBuffer());
@@ -720,10 +734,60 @@ export async function evaluateMVTUrlTemplate(
 async function findFirstTile(
   url: string,
   onProgress?: (requests: number, z: number, tile: number[]) => void,
-  queue = [[0, 0, 0]] as number[][],
-  latestError?: string
+  hintRegion?: number[]
 ): Promise<[number[], Response]> {
+  const queue = [] as number[][];
+  let latestError: string | undefined = undefined;
   let numberOfRequests = 0;
+  // first see if you can find a tile within the current viewport, or a couple
+  // levels deeper
+  if (hintRegion) {
+    const hintTile = tilebelt.bboxToTile(hintRegion);
+    queue.push(hintTile);
+    while (queue.length > 0) {
+      const currentTile = queue.shift() as number[];
+      const tileUrl = url
+        .replace("{z}", currentTile[2].toString())
+        .replace("{x}", currentTile[0].toString())
+        .replace("{y}", currentTile[1].toString());
+      const response = await fetch(tileUrl);
+      onProgress && onProgress(numberOfRequests++, currentTile[2], currentTile);
+      let lastSuccessfulResponse = response;
+      if (response.status === 200) {
+        console.log("found in viewport", numberOfRequests);
+        queue.push(currentTile);
+        while (queue.length > 0) {
+          const child = queue.pop()!;
+          const parent = tilebelt.getParent(child);
+          const tileUrl = url
+            .replace("{z}", parent[2].toString())
+            .replace("{x}", parent[0].toString())
+            .replace("{y}", parent[1].toString());
+          const response = await fetch(tileUrl);
+          onProgress && onProgress(numberOfRequests++, parent[2], currentTile);
+          if (response.status === 200) {
+            lastSuccessfulResponse = response;
+            queue.push(parent);
+          } else {
+            return [child, lastSuccessfulResponse];
+          }
+        }
+        return [currentTile, response];
+      } else {
+        if (currentTile[2] > hintTile[2] + 2) {
+          console.log("could not find tile in current region.");
+        } else {
+          latestError = (await response.text()) || response.statusText;
+          const children = tilebelt.getChildren(currentTile);
+          for (const child of children) {
+            queue.push(child);
+          }
+        }
+      }
+    }
+  }
+  queue.push([0, 0, 0]);
+  console.log("could not find in viewport");
   while (queue.length > 0) {
     const currentTile = queue.shift() as number[];
     const tileUrl = url
