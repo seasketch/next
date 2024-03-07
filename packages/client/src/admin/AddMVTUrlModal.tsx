@@ -22,6 +22,7 @@ import Spinner from "../components/Spinner";
 import Switch from "../components/Switch";
 import Warning from "../components/Warning";
 import { GeoJSONSource } from "mapbox-gl";
+import bbox from "@turf/bbox";
 
 export default function AddMVTUrlModal({
   onRequestClose,
@@ -43,6 +44,7 @@ export default function AddMVTUrlModal({
     maxZoom: 1,
     bounds: null as number[] | null,
     error: undefined as string | undefined,
+    abortController: new AbortController(),
   });
   const projectId = useProjectId();
 
@@ -57,6 +59,7 @@ export default function AddMVTUrlModal({
       e.preventDefault();
       const form = e.target as HTMLFormElement;
       if (form && urlInput.current) {
+        resetMap();
         setState((s) => ({ ...s, wasSubmitted: true }));
         const formData = new FormData(form);
         const url = formData.get("urlTemplate") as string;
@@ -65,18 +68,21 @@ export default function AddMVTUrlModal({
           setValidationMessage(urlInput.current, validationErrors.join("\n"));
           setState((s) => ({ ...s, canImport: false }));
         } else {
+          const abortController = new AbortController();
           setState({
             ...state,
             evaluating: true,
             progressMessage: "Fetching data...",
             geostats: null,
             error: undefined,
+            abortController,
           });
           try {
             const bounds = map!.getBounds().toArray();
             const data = await evaluateMVTUrlTemplate(
               url,
               [bounds[0][0], bounds[0][1], bounds[1][0], bounds[1][1]],
+              abortController.signal,
               (message, geostats, minZoom, maxZoom, tile) => {
                 if (tile) {
                   const geojson = tilebelt.tileToGeoJSON(tile);
@@ -114,30 +120,45 @@ export default function AddMVTUrlModal({
               maxZoom: data.maxZoom || 0,
               bounds: data.bounds || null,
               selectedLayers: data.geostats.layers.map((l) => l.layer),
+              error: undefined,
             });
             if (data.bounds && map) {
               // @ts-ignore
-              map.fitBounds(data.bounds, { padding: 20 });
+              map.fitBounds(data.roughFeatureBounds || data.bounds, {
+                padding: 350,
+              });
             }
             setValidationMessage(urlInput.current, "");
             // Add to map
             if (map) {
               setState((s) => ({ ...s, canImport: true }));
+              const source = map.getSource("search-tile") as GeoJSONSource;
+              if (source) {
+                source.setData({
+                  type: "FeatureCollection",
+                  features: [],
+                });
+              }
               const sourceId = uuid();
+              console.log("add source", sourceId, url);
               map.addSource(sourceId, {
                 type: "vector",
                 tiles: [url],
-                maxzoom: state.maxZoom,
-                minzoom: state.minZoom,
+                maxzoom: data.maxZoom,
+                minzoom: data.minZoom,
+                bounds: data.bounds,
               });
-              for (const sourceLayer of state.geostats?.layers.map(
+              console.log("data.geostats", data.geostats);
+              for (const sourceLayer of (data.geostats?.layers || []).map(
                 (l) => l.layer
               ) || []) {
+                console.log("sourceLayer", sourceLayer);
                 for (const layer of getGLStyleLayers(
-                  state.geostats!,
+                  data.geostats!,
                   sourceId,
                   sourceLayer
                 )) {
+                  console.log("add layer", layer);
                   map.addLayer(layer);
                 }
               }
@@ -145,12 +166,22 @@ export default function AddMVTUrlModal({
               alert("Map not ready");
             }
           } catch (e) {
-            setState({
-              ...state,
-              evaluating: false,
-              geostats: null,
-              error: e.message,
-            });
+            if (/aborted/i.test(e.message)) {
+              setState({
+                ...state,
+                evaluating: false,
+                geostats: null,
+                error: undefined,
+              });
+              resetMap();
+            } else {
+              setState({
+                ...state,
+                evaluating: false,
+                geostats: null,
+                error: e.message,
+              });
+            }
           }
         }
       }
@@ -186,6 +217,13 @@ export default function AddMVTUrlModal({
       for (const source of sourcesToRemove) {
         map.removeSource(source);
       }
+      const source = map.getSource("search-tile") as GeoJSONSource;
+      if (source) {
+        source.setData({
+          type: "FeatureCollection",
+          features: [],
+        });
+      }
     }
   }, [map]);
 
@@ -213,6 +251,11 @@ export default function AddMVTUrlModal({
               canImport: false,
               error: undefined,
             }));
+          } else if (state.error) {
+            setState((prev) => ({
+              ...prev,
+              error: undefined,
+            }));
           }
         }
       } else {
@@ -226,7 +269,7 @@ export default function AddMVTUrlModal({
         }
       }
     },
-    [urlInput, setState, state.geostats, state.wasSubmitted]
+    [urlInput, setState, state.geostats, state.wasSubmitted, state.error]
   );
 
   useEffect(() => {
@@ -374,7 +417,7 @@ export default function AddMVTUrlModal({
                 </p>
                 {state.geostats.layers.map((layer) => {
                   return (
-                    <div className="flex">
+                    <div className="flex" key={layer.layer}>
                       <span className="block text-sm font-medium leading-5 text-gray-800 flex-1 font-mono">
                         {layer.layer}
                       </span>
@@ -454,9 +497,27 @@ export default function AddMVTUrlModal({
             </div>
           )}
           {state.evaluating && state.progressMessage && (
-            <div className="flex items-center text-sm space-x-3 border rounded p-2 bg-gray-50">
-              <Spinner />
-              <span>{state.progressMessage}</span>
+            <div className="flex items-center text-sm space-x-4 border rounded p-2 bg-gray-50">
+              <Spinner large />
+              <div>
+                <span>{state.progressMessage}</span>
+                {/valid tiles/.test(state.progressMessage) && (
+                  <div>
+                    {t(
+                      "You can speed up the process of finding tileset boundaries by moving the map to the approximate location of the dataset."
+                    )}
+                    <br />
+                    <button
+                      className="text-primary-500 underline"
+                      onClick={() => {
+                        state.abortController?.abort();
+                      }}
+                    >
+                      {t("Cancel")}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </form>
@@ -652,6 +713,7 @@ function getGLStyleLayers(
 export async function evaluateMVTUrlTemplate(
   url: string,
   hintBounds: number[],
+  signal: AbortSignal,
   onProgress?: (
     message: string,
     geostats: Geostats,
@@ -664,6 +726,7 @@ export async function evaluateMVTUrlTemplate(
   minZoom?: number;
   maxZoom?: number;
   geostats: Geostats;
+  roughFeatureBounds: number[];
 }> {
   const geostats: Geostats = {
     layerCount: 0,
@@ -672,29 +735,109 @@ export async function evaluateMVTUrlTemplate(
   let tileRequests = 0;
   // Use tilebelt to find the first tile which is not 404
   // Use that tile to determine the bounds and minZoom
-  const [firstTile, response] = await findFirstTile(
-    url,
-    (requests, z, tile) => {
-      tileRequests = requests;
-      if (onProgress) {
+  const failedTiles = new Set<string>();
+  const progressHandler = onProgress
+    ? (tile: number[]) => {
         onProgress(
           // eslint-disable-next-line i18next/no-literal-string
-          `Searching for first tile. ${requests} requests. z=${z}`,
+          `Looking for valid tiles. ${tileRequests++} requests.`,
           geostats,
           0,
           0,
           tile
         );
       }
-    },
-    hintBounds
+    : undefined;
+
+  let firstTile: number[] | undefined = undefined;
+  let response: Response | undefined;
+  let error: string | undefined;
+  // First, see if it's a global dataset with a quick query of levels 0-1
+  // That's just 5 tiles to check
+  console.log("search global (shallow)", [0, 0, 0]);
+  const globalSearch = await findTopTile(
+    url,
+    signal,
+    [0, 0, 0],
+    failedTiles,
+    1,
+    progressHandler
   );
+  if (globalSearch.firstTile) {
+    firstTile = globalSearch.firstTile;
+    response = globalSearch.response!;
+  } else {
+    error = globalSearch.errorMessage;
+    // If not a global dataset or tiled up to zoom 1, try looking in the
+    // current viewport
+    console.log("search viewport", hintBounds);
+    const viewportSearch = await findTopTile(
+      url,
+      signal,
+      tilebelt.bboxToTile(hintBounds),
+      failedTiles,
+      2,
+      progressHandler
+    );
+    if (viewportSearch.firstTile) {
+      firstTile = viewportSearch.firstTile;
+      response = viewportSearch.response!;
+    } else {
+      error = viewportSearch.errorMessage;
+      // As a last resort, search globally down to zoom level 5
+      console.log("search deep globally", [0, 0, 0], 5);
+      const deepSearch = await findTopTile(
+        url,
+        signal,
+        [0, 0, 0],
+        failedTiles,
+        5,
+        progressHandler
+      );
+      if (deepSearch.firstTile) {
+        firstTile = deepSearch.firstTile;
+        response = deepSearch.response!;
+      } else {
+        error = deepSearch.errorMessage;
+        throw new Error(
+          `Could not find a valid tile. Last error from the server was:\n${error}`
+        );
+      }
+    }
+  }
+
+  if (signal.aborted) {
+    throw new Error("Aborted");
+  }
+
+  // const [firstTile, response] = await findFirstTile(
+  //   url,
+  //   signal,
+  //   (requests, z, tile) => {
+  //     tileRequests = requests;
+  //     if (onProgress) {
+  //       onProgress(
+  //         // eslint-disable-next-line i18next/no-literal-string
+  //         `Searching for first tile. ${requests} requests. z=${z}`,
+  //         geostats,
+  //         0,
+  //         0,
+  //         tile
+  //       );
+  //     }
+  //   },
+  //   hintBounds
+  // );
+  const firstTileResponseData = await response.arrayBuffer();
   console.log("firstTile", firstTile);
-  addTileToGeostats(geostats, await response.arrayBuffer());
+  addTileToGeostats(geostats, firstTileResponseData);
   let nextTile = firstTile as number[] | null;
   let maxZoom = firstTile[2];
   // find the deepest zoom level
   while (nextTile && nextTile[2] <= 18) {
+    if (signal.aborted) {
+      throw new Error("Aborted");
+    }
     maxZoom = nextTile[2];
     const children = tilebelt.getChildren(nextTile);
     nextTile = null;
@@ -711,7 +854,7 @@ export async function evaluateMVTUrlTemplate(
         if (onProgress) {
           onProgress(
             // eslint-disable-next-line i18next/no-literal-string
-            `Searching for max zoom. ${tileRequests} tiles accessed. z=${child[2]}`,
+            `Searching for max zoom. ${tileRequests} tiles checked.`,
             geostats,
             firstTile[2],
             maxZoom,
@@ -723,86 +866,236 @@ export async function evaluateMVTUrlTemplate(
     }
   }
 
+  let roughFeatureBounds = tilebelt.tileToBBOX(firstTile);
+  // skip this if it is a global dataset
+  if (firstTile.join(",") !== "0,0,0") {
+    // calculate rough feature bounds from bbox of all features in first tile
+    const tile = new VectorTile(new Protobuf(firstTileResponseData));
+    const featureCollection = {
+      type: "FeatureCollection",
+      features: [] as any[],
+    };
+    for (const layerId of Object.keys(tile.layers)) {
+      for (let i = 0; i < tile.layers[layerId].length; i++) {
+        const feature = tile.layers[layerId].feature(i);
+        featureCollection.features.push(
+          feature.toGeoJSON(firstTile[0], firstTile[1], firstTile[2])
+        );
+      }
+    }
+    console.log("featureCollection", featureCollection);
+    roughFeatureBounds = bbox(featureCollection);
+  }
   return {
     bounds: tilebelt.tileToBBOX(firstTile),
     minZoom: firstTile[2],
     maxZoom,
     geostats,
+    roughFeatureBounds,
   };
 }
 
-async function findFirstTile(
+// async function findFirstTile(
+//   url: string,
+//   signal: AbortSignal,
+//   onProgress?: (requests: number, z: number, tile: number[]) => void,
+//   hintRegion?: number[]
+// ): Promise<[number[], Response]> {
+//   const failedTiles = new Set<string>();
+//   const queue = [] as number[][];
+//   let latestError: string | undefined = undefined;
+//   let numberOfRequests = 0;
+//   // first see if you can find a tile within the current viewport, or a couple
+//   // levels deeper
+//   if (hintRegion) {
+//     const hintTile = tilebelt.bboxToTile(hintRegion);
+//     queue.push(hintTile);
+//     while (queue.length > 0) {
+//       const currentTile = queue.shift() as number[];
+//       const tileUrl = url
+//         .replace("{z}", currentTile[2].toString())
+//         .replace("{x}", currentTile[0].toString())
+//         .replace("{y}", currentTile[1].toString());
+//       const response = await fetch(tileUrl);
+//       onProgress && onProgress(numberOfRequests++, currentTile[2], currentTile);
+//       let lastSuccessfulResponse = response;
+//       if (response.status === 200) {
+//         console.log("found in viewport", numberOfRequests);
+//         queue.push(currentTile);
+//         while (queue.length > 0) {
+//           const child = queue.pop()!;
+//           const parent = tilebelt.getParent(child);
+//           const tileUrl = url
+//             .replace("{z}", parent[2].toString())
+//             .replace("{x}", parent[0].toString())
+//             .replace("{y}", parent[1].toString());
+//           const response = await fetch(tileUrl);
+//           onProgress && onProgress(numberOfRequests++, parent[2], currentTile);
+//           if (response.status === 200) {
+//             lastSuccessfulResponse = response;
+//             queue.push(parent);
+//           } else {
+//             return [child, lastSuccessfulResponse];
+//           }
+//         }
+//         return [currentTile, response];
+//       } else {
+//         if (currentTile[2] > hintTile[2] + 2) {
+//           console.log("could not find tile in current region.");
+//         } else {
+//           latestError = (await response.text()) || response.statusText;
+//           const children = tilebelt.getChildren(currentTile);
+//           for (const child of children) {
+//             queue.push(child);
+//           }
+//         }
+//       }
+//     }
+//   }
+//   queue.push([0, 0, 0]);
+//   console.log("could not find in viewport");
+//   while (queue.length > 0) {
+//     const currentTile = queue.shift() as number[];
+//     const tileUrl = url
+//       .replace("{z}", currentTile[2].toString())
+//       .replace("{x}", currentTile[0].toString())
+//       .replace("{y}", currentTile[1].toString());
+//     const response = await fetch(tileUrl);
+//     onProgress && onProgress(numberOfRequests++, currentTile[2], currentTile);
+//     if (response.status === 200) {
+//       return [currentTile, response];
+//     } else {
+//       if (currentTile[2] > 5) {
+//         throw new Error("Could not find a valid tile. " + latestError);
+//       } else {
+//         latestError = (await response.text()) || response.statusText;
+//         const children = tilebelt.getChildren(currentTile);
+//         for (const child of children) {
+//           queue.push(child);
+//         }
+//       }
+//     }
+//   }
+//   throw new Error("Could not find a valid tile. " + latestError);
+// }
+
+async function fetchTile(
+  tile: number[],
   url: string,
-  onProgress?: (requests: number, z: number, tile: number[]) => void,
-  hintRegion?: number[]
-): Promise<[number[], Response]> {
+  signal: AbortSignal,
+  failedTiles: Set<string>
+) {
+  if (failedTiles.has(tilebelt.tileToQuadkey(tile))) {
+    return {
+      error: "Tile was previously found to be invalid",
+      response: null,
+    };
+  }
+  try {
+    const response = await fetch(
+      url
+        .replace("{z}", tile[2].toString())
+        .replace("{x}", tile[0].toString())
+        .replace("{y}", tile[1].toString()),
+      { signal }
+    );
+    if (response.status !== 200) {
+      failedTiles.add(tilebelt.tileToQuadkey(tile));
+    }
+    return {
+      response,
+      error: null,
+    };
+  } catch (e) {
+    failedTiles.add(tilebelt.tileToQuadkey(tile));
+    return {
+      error: e.message,
+      response: null,
+    };
+  }
+}
+
+async function findTopTile(
+  url: string,
+  signal: AbortSignal,
+  startingTile: number[],
+  failedTiles: Set<string>,
+  depthLimit = 3,
+  onProgress?: (tile: number[]) => void
+): Promise<{
+  firstTile?: number[];
+  response?: Response;
+  errorMessage?: string;
+}> {
   const queue = [] as number[][];
   let latestError: string | undefined = undefined;
-  let numberOfRequests = 0;
-  // first see if you can find a tile within the current viewport, or a couple
-  // levels deeper
-  if (hintRegion) {
-    const hintTile = tilebelt.bboxToTile(hintRegion);
-    queue.push(hintTile);
-    while (queue.length > 0) {
-      const currentTile = queue.shift() as number[];
-      const tileUrl = url
-        .replace("{z}", currentTile[2].toString())
-        .replace("{x}", currentTile[0].toString())
-        .replace("{y}", currentTile[1].toString());
-      const response = await fetch(tileUrl);
-      onProgress && onProgress(numberOfRequests++, currentTile[2], currentTile);
+  queue.push(startingTile);
+  while (queue.length > 0) {
+    if (signal.aborted) {
+      throw new Error("Aborted");
+    }
+    const currentTile = queue.shift() as number[];
+    console.log("currentTile", currentTile);
+    const { response, error } = await fetchTile(
+      currentTile,
+      url,
+      signal,
+      failedTiles
+    );
+    if (error) {
+      latestError = error;
+    }
+    onProgress && onProgress(currentTile);
+    if (response?.status === 200) {
       let lastSuccessfulResponse = response;
-      if (response.status === 200) {
-        console.log("found in viewport", numberOfRequests);
-        queue.push(currentTile);
-        while (queue.length > 0) {
-          const child = queue.pop()!;
+      queue.push(currentTile);
+      // See if the tile has any parents which are also valid
+      while (queue.length > 0) {
+        if (signal.aborted) {
+          throw new Error("Aborted");
+        }
+        const child = queue.pop()!;
+        try {
           const parent = tilebelt.getParent(child);
           const tileUrl = url
             .replace("{z}", parent[2].toString())
             .replace("{x}", parent[0].toString())
             .replace("{y}", parent[1].toString());
           const response = await fetch(tileUrl);
-          onProgress && onProgress(numberOfRequests++, parent[2], currentTile);
+          onProgress && onProgress(currentTile);
           if (response.status === 200) {
+            console.log("z", parent[2]);
             lastSuccessfulResponse = response;
-            queue.push(parent);
+            if (parent[2] === 0) {
+              return {
+                firstTile: parent,
+                response: lastSuccessfulResponse,
+              };
+            } else {
+              queue.push(parent);
+            }
           } else {
-            return [child, lastSuccessfulResponse];
+            return {
+              firstTile: child,
+              response: lastSuccessfulResponse,
+            };
           }
-        }
-        return [currentTile, response];
-      } else {
-        if (currentTile[2] > hintTile[2] + 2) {
-          console.log("could not find tile in current region.");
-        } else {
-          latestError = (await response.text()) || response.statusText;
-          const children = tilebelt.getChildren(currentTile);
-          for (const child of children) {
-            queue.push(child);
-          }
+        } catch (e) {
+          return {
+            firstTile: child,
+            response: lastSuccessfulResponse,
+          };
         }
       }
-    }
-  }
-  queue.push([0, 0, 0]);
-  console.log("could not find in viewport");
-  while (queue.length > 0) {
-    const currentTile = queue.shift() as number[];
-    const tileUrl = url
-      .replace("{z}", currentTile[2].toString())
-      .replace("{x}", currentTile[0].toString())
-      .replace("{y}", currentTile[1].toString());
-    const response = await fetch(tileUrl);
-    onProgress && onProgress(numberOfRequests++, currentTile[2], currentTile);
-    if (response.status === 200) {
-      return [currentTile, response];
     } else {
-      if (currentTile[2] > 5) {
-        throw new Error("Could not find a valid tile. " + latestError);
+      if (currentTile[2] > startingTile[2] + depthLimit) {
+        return {
+          errorMessage: latestError,
+        };
       } else {
-        latestError = (await response.text()) || response.statusText;
+        if (response) {
+          latestError = (await response.text()) || response.statusText;
+        }
         const children = tilebelt.getChildren(currentTile);
         for (const child of children) {
           queue.push(child);
@@ -810,7 +1103,9 @@ async function findFirstTile(
       }
     }
   }
-  throw new Error("Could not find a valid tile. " + latestError);
+  return {
+    errorMessage: latestError,
+  };
 }
 
 function addTileToGeostats(geostats: Geostats, data: ArrayBuffer) {
