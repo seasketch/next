@@ -5884,6 +5884,302 @@ More details on project invite management [can be found in the wiki](https://git
 
 
 --
+-- Name: toc_to_tsvector(text, text, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) RETURNS tsvector
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    DECLARE
+      title_translated_prop_is_filled_in boolean;
+      supported_languages jsonb := get_supported_languages();
+      langkey text := supported_languages->>lang;
+      conf regconfig := lang::regconfig;
+    BEGIN
+      title_translated_prop_is_filled_in = (translated_props->lang->>'title') is not null and (translated_props->lang->>'title') <> '';
+      if supported_languages->>lang is null then
+        raise exception 'Language % not supported', lang;
+      end if;
+      -- TODO: add support for translating metadata
+      if lang = 'simple' THEN
+        -- The simple index matches against absolutely everything in
+        -- all languages. It's a fallback that can be used when you
+        -- aren't getting any matches from the language-specific
+        -- indexes.
+        return (
+          setweight(to_tsvector(conf, title), 'A') || 
+          setweight(
+            to_tsvector(conf, extract_all_titles(translated_props)),  
+          'A') ||
+          setweight(
+            jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'
+          ), 'B')
+        );
+      elsif lang = 'english' THEN
+          return (
+            setweight(to_tsvector(conf, title), 'A') ||
+            setweight(
+              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
+            'A') ||
+            setweight(
+              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
+            'B')
+          );
+      else
+        return (
+          setweight(
+              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
+            'A') ||
+            setweight(
+              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
+            'B') ||
+            setweight(to_tsvector(conf, title), 'C')
+        );
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) IS '@omit';
+
+
+--
+-- Name: table_of_contents_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.table_of_contents_items (
+    id integer NOT NULL,
+    path public.ltree NOT NULL,
+    stable_id text NOT NULL,
+    parent_stable_id text,
+    is_draft boolean DEFAULT true NOT NULL,
+    project_id integer NOT NULL,
+    title text NOT NULL,
+    is_folder boolean DEFAULT true NOT NULL,
+    show_radio_children boolean DEFAULT false NOT NULL,
+    is_click_off_only boolean DEFAULT false NOT NULL,
+    metadata jsonb,
+    bounds numeric[],
+    data_layer_id integer,
+    sort_index integer NOT NULL,
+    hide_children boolean DEFAULT false NOT NULL,
+    enable_download boolean DEFAULT true NOT NULL,
+    geoprocessing_reference_id text,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    fts_simple tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('simple'::text, title, metadata, translated_props)) STORED,
+    fts_en tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('english'::text, title, metadata, translated_props)) STORED,
+    fts_pt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('portuguese'::text, title, metadata, translated_props)) STORED,
+    fts_ar tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('arabic'::text, title, metadata, translated_props)) STORED,
+    fts_da tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('danish'::text, title, metadata, translated_props)) STORED,
+    fts_nl tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('dutch'::text, title, metadata, translated_props)) STORED,
+    fts_fr tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('french'::text, title, metadata, translated_props)) STORED,
+    fts_de tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('german'::text, title, metadata, translated_props)) STORED,
+    fts_id tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('indonesian'::text, title, metadata, translated_props)) STORED,
+    fts_it tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('italian'::text, title, metadata, translated_props)) STORED,
+    fts_lt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('lithuanian'::text, title, metadata, translated_props)) STORED,
+    fts_no tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('norwegian'::text, title, metadata, translated_props)) STORED,
+    fts_ro tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('romanian'::text, title, metadata, translated_props)) STORED,
+    fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
+    fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
+    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
+    data_source_type text,
+    original_source_upload_available boolean DEFAULT false NOT NULL,
+    CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
+    CONSTRAINT titlechk CHECK ((char_length(title) > 0))
+);
+
+
+--
+-- Name: TABLE table_of_contents_items; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.table_of_contents_items IS '
+@omit all
+TableOfContentsItems represent a tree-view of folders and operational layers 
+that can be added to the map. Both layers and folders may be nested into other 
+folders for organization, and each folder has its own access control list.
+
+Items that represent data layers have a `DataLayer` relation, which in turn has
+a reference to a `DataSource`. Usually these relations should be fetched in 
+batch only once the layer is turned on, using the 
+`dataLayersAndSourcesByLayerId` query.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.path IS '
+@omit
+ltree-compatible, period delimited list of ancestor stable_ids
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.stable_id IS '
+The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+should be used with a custom alphabet that excludes dashes and has a lenght of 
+9. The purpose of the stable_id is to control the nesting arrangement of items
+and provide a stable reference for layer visibility settings and map bookmarks.
+When published, the id primary key property of the item will change but not the 
+stable_id.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.parent_stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.parent_stable_id IS '
+stable_id of the parent folder, if any. This property cannot be changed 
+directly. To rearrange items into folders, use the 
+`updateTableOfContentsItemParent` mutation.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_draft; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_draft IS 'Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation';
+
+
+--
+-- Name: COLUMN table_of_contents_items.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.title IS 'Name used in the table of contents rendering';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_folder; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_folder IS 'If not a folder, the item is a layer-type and must have a data_layer_id';
+
+
+--
+-- Name: COLUMN table_of_contents_items.show_radio_children; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.show_radio_children IS 'If set, children of this folder will appear as radio options so that only one may be toggle at a time';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_click_off_only; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_click_off_only IS 'If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off';
+
+
+--
+-- Name: COLUMN table_of_contents_items.metadata; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.metadata IS 'DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders';
+
+
+--
+-- Name: COLUMN table_of_contents_items.bounds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.bounds IS 'If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]';
+
+
+--
+-- Name: COLUMN table_of_contents_items.data_layer_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.data_layer_id IS 'If is_folder=false, a DataLayers visibility will be controlled by this item';
+
+
+--
+-- Name: COLUMN table_of_contents_items.sort_index; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.sort_index IS 'Position in the layer list';
+
+
+--
+-- Name: COLUMN table_of_contents_items.original_source_upload_available; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_available IS '@name has_original_source_upload';
+
+
+--
+-- Name: create_remote_mvt_source(integer, text, text, text, integer, integer, text, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    source_id int;
+    layer_id int;
+    item table_of_contents_items;
+  begin
+    if session_is_admin(project_id) then
+      insert into data_sources (
+        project_id,
+        type,
+        tiles,
+        maxzoom,
+        minzoom,
+        attribution
+      ) values (
+        create_remote_mvt_source.project_id,
+        'vector',
+        array[url],
+        create_remote_mvt_source.max_zoom,
+        create_remote_mvt_source.min_zoom,
+        create_remote_mvt_source.attribution
+      ) returning id into source_id;
+      insert into data_layers (
+        project_id,
+        data_source_id,
+        source_layer,
+        mapbox_gl_styles
+      ) values (
+        create_remote_mvt_source.project_id,
+        source_id,
+        create_remote_mvt_source.source_layer,
+        create_remote_mvt_source.mapbox_gl_styles
+      ) returning id into layer_id;
+      insert into table_of_contents_items (
+        project_id,
+        title,
+        data_layer_id,
+        is_folder,
+        enable_download,
+        stable_id,
+        path
+      ) values (
+        create_remote_mvt_source.project_id,
+        create_remote_mvt_source.title,
+        layer_id,
+        false,
+        false,
+        create_remote_mvt_source.stable_id,
+        create_remote_mvt_source.stable_id::ltree
+      ) returning * into item;
+      return item;
+    else
+      raise exception 'Permission denied.';
+    end if;
+  end;
+  $$;
+
+
+--
 -- Name: create_sketch_class_acl(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8537,238 +8833,6 @@ CREATE FUNCTION public.id_lookup_set_key(lookup jsonb, key integer, value intege
       end if;
     end;
   $$;
-
-
---
--- Name: toc_to_tsvector(text, text, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) RETURNS tsvector
-    LANGUAGE plpgsql IMMUTABLE
-    AS $$
-    DECLARE
-      title_translated_prop_is_filled_in boolean;
-      supported_languages jsonb := get_supported_languages();
-      langkey text := supported_languages->>lang;
-      conf regconfig := lang::regconfig;
-    BEGIN
-      title_translated_prop_is_filled_in = (translated_props->lang->>'title') is not null and (translated_props->lang->>'title') <> '';
-      if supported_languages->>lang is null then
-        raise exception 'Language % not supported', lang;
-      end if;
-      -- TODO: add support for translating metadata
-      if lang = 'simple' THEN
-        -- The simple index matches against absolutely everything in
-        -- all languages. It's a fallback that can be used when you
-        -- aren't getting any matches from the language-specific
-        -- indexes.
-        return (
-          setweight(to_tsvector(conf, title), 'A') || 
-          setweight(
-            to_tsvector(conf, extract_all_titles(translated_props)),  
-          'A') ||
-          setweight(
-            jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'
-          ), 'B')
-        );
-      elsif lang = 'english' THEN
-          return (
-            setweight(to_tsvector(conf, title), 'A') ||
-            setweight(
-              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
-            'A') ||
-            setweight(
-              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
-            'B')
-          );
-      else
-        return (
-          setweight(
-              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
-            'A') ||
-            setweight(
-              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
-            'B') ||
-            setweight(to_tsvector(conf, title), 'C')
-        );
-      end if;
-    end;
-  $$;
-
-
---
--- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) IS '@omit';
-
-
---
--- Name: table_of_contents_items; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.table_of_contents_items (
-    id integer NOT NULL,
-    path public.ltree NOT NULL,
-    stable_id text NOT NULL,
-    parent_stable_id text,
-    is_draft boolean DEFAULT true NOT NULL,
-    project_id integer NOT NULL,
-    title text NOT NULL,
-    is_folder boolean DEFAULT true NOT NULL,
-    show_radio_children boolean DEFAULT false NOT NULL,
-    is_click_off_only boolean DEFAULT false NOT NULL,
-    metadata jsonb,
-    bounds numeric[],
-    data_layer_id integer,
-    sort_index integer NOT NULL,
-    hide_children boolean DEFAULT false NOT NULL,
-    enable_download boolean DEFAULT true NOT NULL,
-    geoprocessing_reference_id text,
-    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
-    fts_simple tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('simple'::text, title, metadata, translated_props)) STORED,
-    fts_en tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('english'::text, title, metadata, translated_props)) STORED,
-    fts_pt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('portuguese'::text, title, metadata, translated_props)) STORED,
-    fts_ar tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('arabic'::text, title, metadata, translated_props)) STORED,
-    fts_da tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('danish'::text, title, metadata, translated_props)) STORED,
-    fts_nl tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('dutch'::text, title, metadata, translated_props)) STORED,
-    fts_fr tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('french'::text, title, metadata, translated_props)) STORED,
-    fts_de tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('german'::text, title, metadata, translated_props)) STORED,
-    fts_id tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('indonesian'::text, title, metadata, translated_props)) STORED,
-    fts_it tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('italian'::text, title, metadata, translated_props)) STORED,
-    fts_lt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('lithuanian'::text, title, metadata, translated_props)) STORED,
-    fts_no tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('norwegian'::text, title, metadata, translated_props)) STORED,
-    fts_ro tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('romanian'::text, title, metadata, translated_props)) STORED,
-    fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
-    fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
-    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
-    data_source_type text,
-    original_source_upload_available boolean DEFAULT false NOT NULL,
-    CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
-    CONSTRAINT titlechk CHECK ((char_length(title) > 0))
-);
-
-
---
--- Name: TABLE table_of_contents_items; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.table_of_contents_items IS '
-@omit all
-TableOfContentsItems represent a tree-view of folders and operational layers 
-that can be added to the map. Both layers and folders may be nested into other 
-folders for organization, and each folder has its own access control list.
-
-Items that represent data layers have a `DataLayer` relation, which in turn has
-a reference to a `DataSource`. Usually these relations should be fetched in 
-batch only once the layer is turned on, using the 
-`dataLayersAndSourcesByLayerId` query.
-';
-
-
---
--- Name: COLUMN table_of_contents_items.path; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.path IS '
-@omit
-ltree-compatible, period delimited list of ancestor stable_ids
-';
-
-
---
--- Name: COLUMN table_of_contents_items.stable_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.stable_id IS '
-The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
-should be used with a custom alphabet that excludes dashes and has a lenght of 
-9. The purpose of the stable_id is to control the nesting arrangement of items
-and provide a stable reference for layer visibility settings and map bookmarks.
-When published, the id primary key property of the item will change but not the 
-stable_id.
-';
-
-
---
--- Name: COLUMN table_of_contents_items.parent_stable_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.parent_stable_id IS '
-stable_id of the parent folder, if any. This property cannot be changed 
-directly. To rearrange items into folders, use the 
-`updateTableOfContentsItemParent` mutation.
-';
-
-
---
--- Name: COLUMN table_of_contents_items.is_draft; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.is_draft IS 'Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation';
-
-
---
--- Name: COLUMN table_of_contents_items.title; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.title IS 'Name used in the table of contents rendering';
-
-
---
--- Name: COLUMN table_of_contents_items.is_folder; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.is_folder IS 'If not a folder, the item is a layer-type and must have a data_layer_id';
-
-
---
--- Name: COLUMN table_of_contents_items.show_radio_children; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.show_radio_children IS 'If set, children of this folder will appear as radio options so that only one may be toggle at a time';
-
-
---
--- Name: COLUMN table_of_contents_items.is_click_off_only; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.is_click_off_only IS 'If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off';
-
-
---
--- Name: COLUMN table_of_contents_items.metadata; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.metadata IS 'DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders';
-
-
---
--- Name: COLUMN table_of_contents_items.bounds; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.bounds IS 'If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]';
-
-
---
--- Name: COLUMN table_of_contents_items.data_layer_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.data_layer_id IS 'If is_folder=false, a DataLayers visibility will be controlled by this item';
-
-
---
--- Name: COLUMN table_of_contents_items.sort_index; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.sort_index IS 'Position in the layer list';
-
-
---
--- Name: COLUMN table_of_contents_items.original_source_upload_available; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_available IS '@name has_original_source_upload';
 
 
 --
@@ -12162,7 +12226,7 @@ CREATE FUNCTION public.session_is_admin("projectId" integer) RETURNS boolean
     LANGUAGE sql SECURITY DEFINER
     AS $$
     select session_is_superuser() or (
-      current_setting('session.email_verified', true) = 'true' and
+      -- current_setting('session.email_verified', true) = 'true' and
       is_admin("projectId", nullif(current_setting('session.user_id', TRUE), '')::integer));
 $$;
 
@@ -13002,11 +13066,12 @@ CREATE FUNCTION public.submit_data_upload(id uuid) RETURNS public.project_backgr
     begin
       select 
         project_id 
+      into
+        pid
       from 
         project_background_jobs 
       where 
-        project_background_jobs.id = project_background_jobs.id 
-      into pid;
+        project_background_jobs.id = submit_data_upload.id;
       if session_is_admin(pid) then
         update 
           project_background_jobs 
@@ -13023,7 +13088,7 @@ CREATE FUNCTION public.submit_data_upload(id uuid) RETURNS public.project_backgr
         );
         return job;
       else
-        raise exception 'permission denied';
+        raise exception 'permission denied.';
       end if;
     end;
   $$;
@@ -22380,6 +22445,168 @@ GRANT ALL ON FUNCTION public.create_project_invites("projectId" integer, "sendEm
 
 
 --
+-- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) TO anon;
+
+
+--
+-- Name: TABLE table_of_contents_items; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.path; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(path) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.stable_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(stable_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.parent_stable_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(parent_stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(parent_stable_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_draft; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_draft) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(project_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(project_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.title; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(title),UPDATE(title) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(title) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_folder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(is_folder) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(is_folder) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.show_radio_children; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(show_radio_children),UPDATE(show_radio_children) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(show_radio_children) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_click_off_only; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(is_click_off_only),UPDATE(is_click_off_only) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(is_click_off_only) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.metadata; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(metadata),UPDATE(metadata) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(metadata) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.bounds; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(bounds),UPDATE(bounds) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(bounds) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.data_layer_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(data_layer_id),UPDATE(data_layer_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(data_layer_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.sort_index; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(sort_index) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.hide_children; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(hide_children),INSERT(hide_children),UPDATE(hide_children) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: COLUMN table_of_contents_items.enable_download; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(enable_download) ON TABLE public.table_of_contents_items TO anon;
+GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: COLUMN table_of_contents_items.geoprocessing_reference_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.table_of_contents_items TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_sketch_class_acl(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -24213,160 +24440,6 @@ REVOKE ALL ON FUNCTION public.id_lookup_get_key(lookup jsonb, key integer) FROM 
 --
 
 REVOKE ALL ON FUNCTION public.id_lookup_set_key(lookup jsonb, key integer, value integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) TO anon;
-
-
---
--- Name: TABLE table_of_contents_items; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.path; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(path) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.stable_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(stable_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.parent_stable_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(parent_stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(parent_stable_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.is_draft; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_draft) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.project_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(project_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(project_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.title; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(title),UPDATE(title) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(title) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.is_folder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(is_folder) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(is_folder) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.show_radio_children; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(show_radio_children),UPDATE(show_radio_children) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(show_radio_children) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.is_click_off_only; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(is_click_off_only),UPDATE(is_click_off_only) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(is_click_off_only) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.metadata; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(metadata),UPDATE(metadata) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(metadata) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.bounds; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(bounds),UPDATE(bounds) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(bounds) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.data_layer_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(data_layer_id),UPDATE(data_layer_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(data_layer_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.sort_index; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(sort_index) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.hide_children; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(hide_children),INSERT(hide_children),UPDATE(hide_children) ON TABLE public.table_of_contents_items TO seasketch_user;
-
-
---
--- Name: COLUMN table_of_contents_items.enable_download; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(enable_download) ON TABLE public.table_of_contents_items TO anon;
-GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_contents_items TO seasketch_user;
-
-
---
--- Name: COLUMN table_of_contents_items.geoprocessing_reference_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.translated_props; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(translated_props) ON TABLE public.table_of_contents_items TO anon;
-GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seasketch_user;
 
 
 --
