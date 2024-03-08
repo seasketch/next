@@ -18,17 +18,16 @@ export default function OverlaySearchInput({
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (
-        (e.key === "/" || e.key === "?") &&
-        // @ts-ignore
-        "tagName" in e.target &&
-        e.target.tagName !== "INPUT" &&
-        (!("hasAttribute" in e.target) ||
-          // @ts-ignore
-          !e.target.hasAttribute("contenteditable"))
-      ) {
-        e.preventDefault();
-        inputRef.current?.focus();
+      if (e.target instanceof Element) {
+        if (
+          (e.key === "/" || e.key === "?") &&
+          e.target.tagName !== "INPUT" &&
+          e.target.tagName !== "TEXTAREA" &&
+          !e.target.hasAttribute("contenteditable")
+        ) {
+          e.preventDefault();
+          inputRef.current?.focus();
+        }
       }
     };
     document.body.addEventListener("keydown", handler);
