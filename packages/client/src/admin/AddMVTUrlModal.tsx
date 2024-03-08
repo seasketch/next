@@ -1,6 +1,13 @@
 import { Trans, useTranslation } from "react-i18next";
 import AddRemoteServiceMapModal from "./data/AddRemoteServiceMapModal";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import useDialog from "../components/useDialog";
 import { v4 as uuid } from "uuid";
 import {
@@ -9,7 +16,6 @@ import {
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
-import { generateStableId } from "./data/arcgis/arcgis";
 import Button from "../components/Button";
 import tilebelt from "@mapbox/tilebelt";
 import Protobuf from "pbf";
@@ -20,6 +26,7 @@ import Switch from "../components/Switch";
 import Warning from "../components/Warning";
 import { GeoJSONSource } from "mapbox-gl";
 import bbox from "@turf/bbox";
+import { MapContext } from "../dataLayers/MapContextManager";
 
 export default function AddMVTUrlModal({
   onRequestClose,
@@ -42,6 +49,7 @@ export default function AddMVTUrlModal({
     bounds: null as number[] | null,
     error: undefined as string | undefined,
     abortController: new AbortController(),
+    featureBounds: null as number[] | null,
   });
   const projectId = useProjectId();
 
@@ -50,6 +58,8 @@ export default function AddMVTUrlModal({
     onError,
     refetchQueries: [DraftTableOfContentsDocument],
   });
+
+  const mapContext = useContext(MapContext);
 
   const resetMap = useCallback(() => {
     if (map) {
@@ -143,6 +153,7 @@ export default function AddMVTUrlModal({
               bounds: data.bounds || null,
               selectedLayers: data.geostats.layers.map((l) => l.layer),
               error: undefined,
+              featureBounds: data.roughFeatureBounds,
             });
             if (data.bounds && map) {
               // @ts-ignore
@@ -516,15 +527,14 @@ export default function AddMVTUrlModal({
           )}
         </form>
         {state.geostats && state.canImport && (
-          <Button
-            primary
-            loading={mutationState.loading}
+          <button
+            className={`bg-primary-500 text-white rounded shadow-sm p-2 flex items-center space-x-2 ${
+              mutationState.loading || state.selectedLayers.length === 0
+                ? "opacity-50 pointer-events-none"
+                : ""
+            }`}
+            // loading={mutationState.loading}
             disabled={state.selectedLayers.length === 0}
-            label={
-              state.selectedLayers.length < 2
-                ? t("Import layer")
-                : t(`Import ${state.selectedLayers.length} layers`)
-            }
             // disabled={!canImport}
             onClick={() => {
               const form = document.getElementById(
@@ -536,42 +546,53 @@ export default function AddMVTUrlModal({
               }
               const formData = new FormData(form);
               const url = formData.get("urlTemplate") as string;
-              const errors = validateUrl(url);
-              if (errors.length) {
-                alert(errors.join("\n"));
+              if (state.error?.length) {
+                alert(state.error);
                 return;
               }
               if (!projectId) {
                 alert("Project not found");
                 return;
               }
-              const sourceLayer = state.selectedLayers[0];
               mutate({
                 variables: {
                   url,
                   minZoom: state.minZoom,
                   maxZoom: state.maxZoom,
-                  sourceLayer,
+                  sourceLayers: state.selectedLayers,
                   projectId,
-                  title: sourceLayer,
-                  stableId: generateStableId(),
-                  mapboxGlStyles: getGLStyleLayers(
-                    state.geostats!,
-                    uuid(),
-                    sourceLayer
-                  ).map((l) => {
-                    const layer = {
-                      ...l,
-                    } as any;
-                    delete layer.id;
-                    delete layer.source;
-                    delete layer["source-layer"];
-                    return layer;
-                  }),
+                  geostats: state.geostats!,
+                  bounds: state.bounds,
+                  featureBounds: state.featureBounds,
                 },
+              }).then((response) => {
+                if (
+                  (
+                    response.data?.createRemoteMvtSource
+                      ?.tableOfContentsItems || []
+                  ).length
+                ) {
+                  if (mapContext.manager) {
+                    mapContext.manager.showTocItems(
+                      response.data!.createRemoteMvtSource!.tableOfContentsItems!.map(
+                        (t) => {
+                          return t.stableId;
+                        }
+                      )
+                    );
+                  }
+                }
+                onRequestClose();
               });
             }}
-          />
+          >
+            <span>
+              {state.selectedLayers.length < 2
+                ? t("Import layer")
+                : t(`Import ${state.selectedLayers.length} layers`)}
+            </span>
+            {mutationState.loading && <Spinner color="white" />}
+          </button>
         )}
       </div>
     </AddRemoteServiceMapModal>

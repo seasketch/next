@@ -3000,6 +3000,64 @@ COMMENT ON FUNCTION public.basemaps_related_form_elements(basemap public.basemap
 
 
 --
+-- Name: basic_mapbox_gl_style_for_type(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.basic_mapbox_gl_style_for_type(type text) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+    begin
+    if type = 'Point' or type = 'MultiPoint' then
+      return '[
+        {
+          "type": "circle",
+          "paint": {
+            "circle-radius": 5,
+            "circle-color": "#ff0055"
+          }
+        }
+      ]'::jsonb;
+    elsif type = 'LineString' or type = 'MultiLineString' then
+      return '[
+        {
+          "type": "line",
+          "paint": {
+            "line-color": "#ff0055",
+            "line-width": 2
+          }
+        }
+      ]'::jsonb;
+    elsif type = 'Polygon' or type = 'MultiPolygon' then
+      return '[
+        {
+          "type": "fill",
+          "paint": {
+            "fill-color": "#ff0055",
+            "fill-opacity": 0.7
+          }
+        },
+        {
+          "type": "line",
+          "paint": {
+            "line-color": "#ff0055",
+            "line-width": 1
+          }
+        }
+      ]'::jsonb;
+    end if;
+    return '[]'::jsonb;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION basic_mapbox_gl_style_for_type(type text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.basic_mapbox_gl_style_for_type(type text) IS '@omit';
+
+
+--
 -- Name: before_basemap_insert_create_interactivity_settings_func(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6116,62 +6174,81 @@ COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_availabl
 
 
 --
--- Name: create_remote_mvt_source(integer, text, text, text, integer, integer, text, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_remote_mvt_source(integer, text, text[], integer, integer, numeric[], jsonb, numeric[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) RETURNS public.table_of_contents_items
+CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]) RETURNS SETOF public.table_of_contents_items
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
   declare
     source_id int;
     layer_id int;
     item table_of_contents_items;
+    stableid text;
+    i int;
+    source_layer text;
+    geostats_layer jsonb;
+    table_of_contents_item_ids int[];
   begin
     if session_is_admin(project_id) then
       insert into data_sources (
         project_id,
         type,
         tiles,
-        maxzoom,
         minzoom,
-        attribution
+        maxzoom,
+        geostats,
+        bounds
       ) values (
         create_remote_mvt_source.project_id,
         'vector',
         array[url],
-        create_remote_mvt_source.max_zoom,
-        create_remote_mvt_source.min_zoom,
-        create_remote_mvt_source.attribution
+        min_zoom,
+        max_zoom,
+        create_remote_mvt_source.geostats,
+        create_remote_mvt_source.bounds
       ) returning id into source_id;
-      insert into data_layers (
-        project_id,
-        data_source_id,
-        source_layer,
-        mapbox_gl_styles
-      ) values (
-        create_remote_mvt_source.project_id,
-        source_id,
-        create_remote_mvt_source.source_layer,
-        create_remote_mvt_source.mapbox_gl_styles
-      ) returning id into layer_id;
-      insert into table_of_contents_items (
-        project_id,
-        title,
-        data_layer_id,
-        is_folder,
-        enable_download,
-        stable_id,
-        path
-      ) values (
-        create_remote_mvt_source.project_id,
-        create_remote_mvt_source.title,
-        layer_id,
-        false,
-        false,
-        create_remote_mvt_source.stable_id,
-        create_remote_mvt_source.stable_id::ltree
-      ) returning * into item;
-      return item;
+      for i in array_lower(source_layers, 1)..array_upper(source_layers, 1) loop
+        source_layer := source_layers[i];
+        for l in 0..jsonb_array_length(geostats->'layers') loop
+          if (((geostats->'layers')->>l)::jsonb)->>'layer' = source_layer then
+            geostats_layer := ((geostats->'layers')->>l)::jsonb;
+          end if;
+        end loop;
+        insert into data_layers (
+          project_id,
+          data_source_id,
+          source_layer,
+          mapbox_gl_styles
+        ) values (
+          create_remote_mvt_source.project_id,
+          source_id,
+          create_remote_mvt_source.source_layers[i],
+          basic_mapbox_gl_style_for_type(geostats_layer->>'geometry')
+        ) returning id into layer_id;
+        stableid := create_stable_id();
+        insert into table_of_contents_items (
+          project_id,
+          title,
+          data_layer_id,
+          is_folder,
+          enable_download,
+          stable_id,
+          path,
+          bounds
+        ) values (
+          create_remote_mvt_source.project_id,
+          create_remote_mvt_source.source_layers[i],
+          layer_id,
+          false,
+          false,
+          stableid,
+          stableid::ltree,
+          coalesce(feature_bounds, bounds)
+        ) returning id into item;
+        table_of_contents_item_ids := array_append(table_of_contents_item_ids, item.id);
+      end loop;
+      return query select * from table_of_contents_items where id = any(table_of_contents_item_ids);
     else
       raise exception 'Permission denied.';
     end if;
@@ -6280,6 +6357,24 @@ $$;
 --
 
 COMMENT ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) IS '@omit';
+
+
+--
+-- Name: create_stable_id(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_stable_id() RETURNS text
+    LANGUAGE sql
+    AS $$
+    select nanoid(9, '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz');
+  $$;
+
+
+--
+-- Name: FUNCTION create_stable_id(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_stable_id() IS '@omit';
 
 
 --
@@ -9680,6 +9775,80 @@ CREATE FUNCTION public.my_sketches("projectId" integer) RETURNS SETOF public.ske
 COMMENT ON FUNCTION public.my_sketches("projectId" integer) IS '
 @omit
 ';
+
+
+--
+-- Name: nanoid(integer, text, double precision); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.nanoid(size integer DEFAULT 21, alphabet text DEFAULT '_-0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'::text, additionalbytesfactor double precision DEFAULT 1.6) RETURNS text
+    LANGUAGE plpgsql LEAKPROOF PARALLEL SAFE
+    AS $$
+DECLARE
+    alphabetArray  text[];
+    alphabetLength int := 64;
+    mask           int := 63;
+    step           int := 34;
+BEGIN
+    IF size IS NULL OR size < 1 THEN
+        RAISE EXCEPTION 'The size must be defined and greater than 0!';
+    END IF;
+
+    IF alphabet IS NULL OR length(alphabet) = 0 OR length(alphabet) > 255 THEN
+        RAISE EXCEPTION 'The alphabet can''t be undefined, zero or bigger than 255 symbols!';
+    END IF;
+
+    IF additionalBytesFactor IS NULL OR additionalBytesFactor < 1 THEN
+        RAISE EXCEPTION 'The additional bytes factor can''t be less than 1!';
+    END IF;
+
+    alphabetArray := regexp_split_to_array(alphabet, '');
+    alphabetLength := array_length(alphabetArray, 1);
+    mask := (2 << cast(floor(log(alphabetLength - 1) / log(2)) as int)) - 1;
+    step := cast(ceil(additionalBytesFactor * mask * size / alphabetLength) AS int);
+
+    IF step > 1024 THEN
+        step := 1024; -- The step size % can''t be bigger then 1024!
+    END IF;
+
+    RETURN nanoid_optimized(size, alphabet, mask, step);
+END
+$$;
+
+
+--
+-- Name: nanoid_optimized(integer, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.nanoid_optimized(size integer, alphabet text, mask integer, step integer) RETURNS text
+    LANGUAGE plpgsql LEAKPROOF PARALLEL SAFE
+    AS $$
+DECLARE
+    idBuilder      text := '';
+    counter        int  := 0;
+    bytes          bytea;
+    alphabetIndex  int;
+    alphabetArray  text[];
+    alphabetLength int  := 64;
+BEGIN
+    alphabetArray := regexp_split_to_array(alphabet, '');
+    alphabetLength := array_length(alphabetArray, 1);
+
+    LOOP
+        bytes := gen_random_bytes(step);
+        FOR counter IN 0..step - 1
+            LOOP
+                alphabetIndex := (get_byte(bytes, counter) & mask) + 1;
+                IF alphabetIndex <= alphabetLength THEN
+                    idBuilder := idBuilder || alphabetArray[alphabetIndex];
+                    IF length(idBuilder) = size THEN
+                        RETURN idBuilder;
+                    END IF;
+                END IF;
+            END LOOP;
+    END LOOP;
+END
+$$;
 
 
 --
@@ -21245,6 +21414,14 @@ GRANT ALL ON FUNCTION public.basemaps_related_form_elements(basemap public.basem
 
 
 --
+-- Name: FUNCTION basic_mapbox_gl_style_for_type(type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.basic_mapbox_gl_style_for_type(type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.basic_mapbox_gl_style_for_type(type text) TO anon;
+
+
+--
 -- Name: FUNCTION before_basemap_insert_create_interactivity_settings_func(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22599,11 +22776,11 @@ GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seaske
 
 
 --
--- Name: FUNCTION create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]) TO seasketch_user;
 
 
 --
@@ -22635,6 +22812,14 @@ GRANT ALL ON FUNCTION public.create_sketch_folder(slug text, name text, "folderI
 
 REVOKE ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type public.sprite_type, _pixel_ratio integer, _width integer, _height integer, _url text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_stable_id(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_stable_id() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_stable_id() TO anon;
 
 
 --
@@ -25005,6 +25190,20 @@ GRANT ALL ON FUNCTION public.my_folders("projectId" integer) TO anon;
 REVOKE ALL ON FUNCTION public.my_sketches("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_sketches("projectId" integer) TO seasketch_user;
 GRANT ALL ON FUNCTION public.my_sketches("projectId" integer) TO anon;
+
+
+--
+-- Name: FUNCTION nanoid(size integer, alphabet text, additionalbytesfactor double precision); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.nanoid(size integer, alphabet text, additionalbytesfactor double precision) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION nanoid_optimized(size integer, alphabet text, mask integer, step integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.nanoid_optimized(size integer, alphabet text, mask integer, step integer) FROM PUBLIC;
 
 
 --
