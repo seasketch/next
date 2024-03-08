@@ -1399,11 +1399,29 @@ class MapContextManager extends EventEmitter {
               if (!baseStyle.sources[source.id.toString()]) {
                 switch (source.type) {
                   case DataSourceTypes.Vector:
-                    console.log("vector type", source);
                     baseStyle.sources[source.id.toString()] = {
                       type: "vector",
                       attribution: source.attribution || "",
                       tiles: source.tiles as string[],
+                      ...(source.bounds
+                        ? { bounds: source.bounds.map((b) => parseFloat(b)) }
+                        : {}),
+                      // minzoom
+                      ...(source.minzoom !== undefined
+                        ? {
+                            minzoom: parseInt(
+                              source.minzoom?.toString() || "0"
+                            ),
+                          }
+                        : {}),
+                      // maxzoom
+                      ...(source.maxzoom !== undefined
+                        ? {
+                            maxzoom: parseInt(
+                              source.maxzoom?.toString() || "0"
+                            ),
+                          }
+                        : {}),
                     };
                     break;
                   case DataSourceTypes.SeasketchMvt:

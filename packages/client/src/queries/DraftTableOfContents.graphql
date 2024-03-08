@@ -712,28 +712,26 @@ mutation ConvertFeatureLayerToHosted($tocId: Int!) {
 mutation CreateMVTSource(
   $projectId: Int!
   $url: String!
-  $sourceLayer: String!
-  $title: String!
+  $sourceLayers: [String!]!
   $maxZoom: Int!
   $minZoom: Int!
-  $attribution: String
-  $mapboxGlStyles: JSON
-  $stableId: String!
+  $geostats: JSON!
+  $bounds: [BigFloat]!
+  $featureBounds: [BigFloat]
 ) {
   createRemoteMvtSource(
     input: {
       projectId: $projectId
       url: $url
-      sourceLayer: $sourceLayer
-      title: $title
+      sourceLayers: $sourceLayers
       maxZoom: $maxZoom
       minZoom: $minZoom
-      attribution: $attribution
-      mapboxGlStyles: $mapboxGlStyles
-      stableId: $stableId
+      geostats: $geostats
+      bounds: $bounds
+      featureBounds: $featureBounds
     }
   ) {
-    tableOfContentsItem {
+    tableOfContentsItems {
       ...AdminOverlay
     }
   }

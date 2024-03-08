@@ -162,7 +162,16 @@ export async function createDBRecordsForProcessedLayer(
         .slice(1)
         .join("/"),
       original.size,
-      layer.geostats,
+      layer.geostats === null
+        ? null
+        : "layers" in layer.geostats
+        ? layer.geostats
+        : // If geostats is just a fragment layer, put it into a complete
+          // geostats layer list
+          {
+            layers: [layer.geostats],
+            layerCount: 1,
+          },
       pmtiles && !isVector ? 512 : null,
       conversionTask?.attribution || null,
       conversionTask?.location || null,

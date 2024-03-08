@@ -228,6 +228,10 @@ export default function LayerTableOfContentsItemEditor(
 
   const [selectedTab, setSelectedTab] = useState("settings");
 
+  const geostats = (source?.geostats?.layers || []).find(
+    (l: { layer: string }) => l.layer === layer?.sourceLayer
+  );
+
   const tabs: NonLinkTabItem[] = useMemo(() => {
     return [
       {
@@ -638,16 +642,16 @@ export default function LayerTableOfContentsItemEditor(
                           </>
                         }
                       />
-                      {source.geostats && source.geostats.geometry && (
+                      {geostats && geostats.geometry && (
                         <SettingsDLListItem
                           term={t("Geometry Type")}
-                          description={source.geostats.geometry}
+                          description={geostats.geometry}
                         />
                       )}
-                      {source.geostats && source.geostats.count && (
+                      {geostats && geostats.count && (
                         <SettingsDLListItem
                           term={t("Feature Count")}
-                          description={source.geostats.count}
+                          description={geostats.count}
                         />
                       )}
                       <SettingsDLListItem
@@ -929,7 +933,7 @@ export default function LayerTableOfContentsItemEditor(
                   id={layer.interactivitySettingsId}
                   dataSourceId={layer.dataSourceId}
                   sublayer={layer.sublayer}
-                  geostats={source.geostats}
+                  geostats={geostats}
                 />
               )}
             {source &&
@@ -1011,7 +1015,7 @@ export default function LayerTableOfContentsItemEditor(
                 )}
                 <GLStyleEditor
                   tocItemId={item.stableId}
-                  geostats={source.geostats}
+                  geostats={geostats}
                   type={
                     source.type === DataSourceTypes.SeasketchRaster
                       ? "raster"
