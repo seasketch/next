@@ -6174,62 +6174,81 @@ COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_availabl
 
 
 --
--- Name: create_remote_mvt_source(integer, text, text, text, integer, integer, text, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_remote_mvt_source(integer, text, text[], integer, integer, numeric[], jsonb, numeric[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) RETURNS public.table_of_contents_items
+CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]) RETURNS SETOF public.table_of_contents_items
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
   declare
     source_id int;
     layer_id int;
     item table_of_contents_items;
+    stableid text;
+    i int;
+    source_layer text;
+    geostats_layer jsonb;
+    table_of_contents_item_ids int[];
   begin
     if session_is_admin(project_id) then
       insert into data_sources (
         project_id,
         type,
         tiles,
-        maxzoom,
         minzoom,
-        attribution
+        maxzoom,
+        geostats,
+        bounds
       ) values (
         create_remote_mvt_source.project_id,
         'vector',
         array[url],
-        create_remote_mvt_source.max_zoom,
-        create_remote_mvt_source.min_zoom,
-        create_remote_mvt_source.attribution
+        min_zoom,
+        max_zoom,
+        create_remote_mvt_source.geostats,
+        create_remote_mvt_source.bounds
       ) returning id into source_id;
-      insert into data_layers (
-        project_id,
-        data_source_id,
-        source_layer,
-        mapbox_gl_styles
-      ) values (
-        create_remote_mvt_source.project_id,
-        source_id,
-        create_remote_mvt_source.source_layer,
-        create_remote_mvt_source.mapbox_gl_styles
-      ) returning id into layer_id;
-      insert into table_of_contents_items (
-        project_id,
-        title,
-        data_layer_id,
-        is_folder,
-        enable_download,
-        stable_id,
-        path
-      ) values (
-        create_remote_mvt_source.project_id,
-        create_remote_mvt_source.title,
-        layer_id,
-        false,
-        false,
-        create_remote_mvt_source.stable_id,
-        create_remote_mvt_source.stable_id::ltree
-      ) returning * into item;
-      return item;
+      for i in array_lower(source_layers, 1)..array_upper(source_layers, 1) loop
+        source_layer := source_layers[i];
+        for l in 0..jsonb_array_length(geostats->'layers') loop
+          if (((geostats->'layers')->>l)::jsonb)->>'layer' = source_layer then
+            geostats_layer := ((geostats->'layers')->>l)::jsonb;
+          end if;
+        end loop;
+        insert into data_layers (
+          project_id,
+          data_source_id,
+          source_layer,
+          mapbox_gl_styles
+        ) values (
+          create_remote_mvt_source.project_id,
+          source_id,
+          create_remote_mvt_source.source_layers[i],
+          basic_mapbox_gl_style_for_type(geostats_layer->>'geometry')
+        ) returning id into layer_id;
+        stableid := create_stable_id();
+        insert into table_of_contents_items (
+          project_id,
+          title,
+          data_layer_id,
+          is_folder,
+          enable_download,
+          stable_id,
+          path,
+          bounds
+        ) values (
+          create_remote_mvt_source.project_id,
+          create_remote_mvt_source.source_layers[i],
+          layer_id,
+          false,
+          false,
+          stableid,
+          stableid::ltree,
+          coalesce(feature_bounds, bounds)
+        ) returning id into item;
+        table_of_contents_item_ids := array_append(table_of_contents_item_ids, item.id);
+      end loop;
+      return query select * from table_of_contents_items where id = any(table_of_contents_item_ids);
     else
       raise exception 'Permission denied.';
     end if;
@@ -22757,11 +22776,11 @@ GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seaske
 
 
 --
--- Name: FUNCTION create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layer text, title text, max_zoom integer, min_zoom integer, attribution text, mapbox_gl_styles jsonb, stable_id text) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]) TO seasketch_user;
 
 
 --
