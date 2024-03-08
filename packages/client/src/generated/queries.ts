@@ -1549,19 +1549,18 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
 
 /** All input for the `createRemoteMvtSource` mutation. */
 export type CreateRemoteMvtSourceInput = {
-  attribution?: Maybe<Scalars['String']>;
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  featureBounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  geostats?: Maybe<Scalars['JSON']>;
   maxZoom?: Maybe<Scalars['Int']>;
   minZoom?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
-  sourceLayer?: Maybe<Scalars['String']>;
-  stableId?: Maybe<Scalars['String']>;
-  title?: Maybe<Scalars['String']>;
+  sourceLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
   url?: Maybe<Scalars['String']>;
 };
 
@@ -1573,19 +1572,9 @@ export type CreateRemoteMvtSourcePayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
-  dataLayer?: Maybe<DataLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
-  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
-};
-
-
-/** The output of our `createRemoteMvtSource` mutation. */
-export type CreateRemoteMvtSourcePayloadTableOfContentsItemEdgeArgs = {
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
 /** All input for the `createSketchClassFromTemplate` mutation. */
@@ -16685,6 +16674,29 @@ export type ConvertFeatureLayerToHostedMutation = (
   )> }
 );
 
+export type CreateMvtSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+  sourceLayers: Array<Scalars['String']> | Scalars['String'];
+  maxZoom: Scalars['Int'];
+  minZoom: Scalars['Int'];
+  geostats: Scalars['JSON'];
+  bounds: Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>;
+  featureBounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
+}>;
+
+
+export type CreateMvtSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createRemoteMvtSource?: Maybe<(
+    { __typename?: 'CreateRemoteMvtSourcePayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & AdminOverlayFragment
+    )>> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -22708,6 +22720,17 @@ export const ConvertFeatureLayerToHostedDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CreateMvtSourceDocument = /*#__PURE__*/ gql`
+    mutation CreateMVTSource($projectId: Int!, $url: String!, $sourceLayers: [String!]!, $maxZoom: Int!, $minZoom: Int!, $geostats: JSON!, $bounds: [BigFloat]!, $featureBounds: [BigFloat]) {
+  createRemoteMvtSource(
+    input: {projectId: $projectId, url: $url, sourceLayers: $sourceLayers, maxZoom: $maxZoom, minZoom: $minZoom, geostats: $geostats, bounds: $bounds, featureBounds: $featureBounds}
+  ) {
+    tableOfContentsItems {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -24898,6 +24921,7 @@ export const namedOperations = {
     EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',
     DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
+    CreateMVTSource: 'CreateMVTSource',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

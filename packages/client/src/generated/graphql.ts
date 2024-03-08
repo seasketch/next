@@ -1551,19 +1551,18 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
 
 /** All input for the `createRemoteMvtSource` mutation. */
 export type CreateRemoteMvtSourceInput = {
-  attribution?: Maybe<Scalars['String']>;
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  featureBounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  geostats?: Maybe<Scalars['JSON']>;
   maxZoom?: Maybe<Scalars['Int']>;
   minZoom?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
-  sourceLayer?: Maybe<Scalars['String']>;
-  stableId?: Maybe<Scalars['String']>;
-  title?: Maybe<Scalars['String']>;
+  sourceLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
   url?: Maybe<Scalars['String']>;
 };
 
@@ -1575,19 +1574,9 @@ export type CreateRemoteMvtSourcePayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
-  dataLayer?: Maybe<DataLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
-  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
-};
-
-
-/** The output of our `createRemoteMvtSource` mutation. */
-export type CreateRemoteMvtSourcePayloadTableOfContentsItemEdgeArgs = {
-  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
 /** All input for the `createSketchClassFromTemplate` mutation. */
@@ -16687,6 +16676,29 @@ export type ConvertFeatureLayerToHostedMutation = (
   )> }
 );
 
+export type CreateMvtSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+  sourceLayers: Array<Scalars['String']> | Scalars['String'];
+  maxZoom: Scalars['Int'];
+  minZoom: Scalars['Int'];
+  geostats: Scalars['JSON'];
+  bounds: Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>;
+  featureBounds?: Maybe<Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>>;
+}>;
+
+
+export type CreateMvtSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createRemoteMvtSource?: Maybe<(
+    { __typename?: 'CreateRemoteMvtSourcePayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & AdminOverlayFragment
+    )>> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -25348,6 +25360,50 @@ export function useConvertFeatureLayerToHostedMutation(baseOptions?: Apollo.Muta
 export type ConvertFeatureLayerToHostedMutationHookResult = ReturnType<typeof useConvertFeatureLayerToHostedMutation>;
 export type ConvertFeatureLayerToHostedMutationResult = Apollo.MutationResult<ConvertFeatureLayerToHostedMutation>;
 export type ConvertFeatureLayerToHostedMutationOptions = Apollo.BaseMutationOptions<ConvertFeatureLayerToHostedMutation, ConvertFeatureLayerToHostedMutationVariables>;
+export const CreateMvtSourceDocument = gql`
+    mutation CreateMVTSource($projectId: Int!, $url: String!, $sourceLayers: [String!]!, $maxZoom: Int!, $minZoom: Int!, $geostats: JSON!, $bounds: [BigFloat]!, $featureBounds: [BigFloat]) {
+  createRemoteMvtSource(
+    input: {projectId: $projectId, url: $url, sourceLayers: $sourceLayers, maxZoom: $maxZoom, minZoom: $minZoom, geostats: $geostats, bounds: $bounds, featureBounds: $featureBounds}
+  ) {
+    tableOfContentsItems {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
+export type CreateMvtSourceMutationFn = Apollo.MutationFunction<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>;
+
+/**
+ * __useCreateMvtSourceMutation__
+ *
+ * To run a mutation, you first call `useCreateMvtSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateMvtSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createMvtSourceMutation, { data, loading, error }] = useCreateMvtSourceMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      url: // value for 'url'
+ *      sourceLayers: // value for 'sourceLayers'
+ *      maxZoom: // value for 'maxZoom'
+ *      minZoom: // value for 'minZoom'
+ *      geostats: // value for 'geostats'
+ *      bounds: // value for 'bounds'
+ *      featureBounds: // value for 'featureBounds'
+ *   },
+ * });
+ */
+export function useCreateMvtSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>(CreateMvtSourceDocument, options);
+      }
+export type CreateMvtSourceMutationHookResult = ReturnType<typeof useCreateMvtSourceMutation>;
+export type CreateMvtSourceMutationResult = Apollo.MutationResult<CreateMvtSourceMutation>;
+export type CreateMvtSourceMutationOptions = Apollo.BaseMutationOptions<CreateMvtSourceMutation, CreateMvtSourceMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -31472,6 +31528,7 @@ export const namedOperations = {
     EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',
     DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
+    CreateMVTSource: 'CreateMVTSource',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
