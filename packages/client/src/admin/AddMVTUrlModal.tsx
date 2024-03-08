@@ -1,11 +1,8 @@
 import { Trans, useTranslation } from "react-i18next";
-import AddRemoteServiceMapModal, {
-  STYLE,
-} from "./data/AddRemoteServiceMapModal";
+import AddRemoteServiceMapModal from "./data/AddRemoteServiceMapModal";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import useDialog from "../components/useDialog";
 import { v4 as uuid } from "uuid";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
 import {
   DraftTableOfContentsDocument,
   useCreateMvtSourceMutation,
@@ -54,6 +51,30 @@ export default function AddMVTUrlModal({
     refetchQueries: [DraftTableOfContentsDocument],
   });
 
+  const resetMap = useCallback(() => {
+    if (map) {
+      const layers = map.getStyle().layers || [];
+      const forRemoval = layers.filter((l) => l.id.startsWith("mvt-"));
+      const sourcesToRemove = new Set<string>();
+      for (const layer of forRemoval) {
+        if ("source" in layer) {
+          sourcesToRemove.add(layer.source as string);
+        }
+        map.removeLayer(layer.id);
+      }
+      for (const source of sourcesToRemove) {
+        map.removeSource(source);
+      }
+      const source = map.getSource("search-tile") as GeoJSONSource;
+      if (source) {
+        source.setData({
+          type: "FeatureCollection",
+          features: [],
+        });
+      }
+    }
+  }, [map]);
+
   const onSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
@@ -100,6 +121,7 @@ export default function AddMVTUrlModal({
                       map.fitBounds(tilebelt.tileToBBOX(tile), {
                         duration: 3000,
                         // speed: 0.2,
+                        padding: 150,
                       });
                     }
                   }
@@ -140,7 +162,6 @@ export default function AddMVTUrlModal({
                 });
               }
               const sourceId = uuid();
-              console.log("add source", sourceId, url);
               map.addSource(sourceId, {
                 type: "vector",
                 tiles: [url],
@@ -148,17 +169,14 @@ export default function AddMVTUrlModal({
                 minzoom: data.minZoom,
                 bounds: data.bounds,
               });
-              console.log("data.geostats", data.geostats);
               for (const sourceLayer of (data.geostats?.layers || []).map(
                 (l) => l.layer
               ) || []) {
-                console.log("sourceLayer", sourceLayer);
                 for (const layer of getGLStyleLayers(
                   data.geostats!,
                   sourceId,
                   sourceLayer
                 )) {
-                  console.log("add layer", layer);
                   map.addLayer(layer);
                 }
               }
@@ -186,7 +204,7 @@ export default function AddMVTUrlModal({
         }
       }
     },
-    [setState, map, alert, urlInput]
+    [setState, map, alert, urlInput, resetMap, state]
   );
 
   const [zoom, setZoom] = useState(0);
@@ -200,30 +218,6 @@ export default function AddMVTUrlModal({
       return () => {
         map?.off("zoom", onZoom);
       };
-    }
-  }, [map]);
-
-  const resetMap = useCallback(() => {
-    if (map) {
-      const layers = map.getStyle().layers || [];
-      const forRemoval = layers.filter((l) => l.id.startsWith("mvt-"));
-      const sourcesToRemove = new Set<string>();
-      for (const layer of forRemoval) {
-        if ("source" in layer) {
-          sourcesToRemove.add(layer.source as string);
-        }
-        map.removeLayer(layer.id);
-      }
-      for (const source of sourcesToRemove) {
-        map.removeSource(source);
-      }
-      const source = map.getSource("search-tile") as GeoJSONSource;
-      if (source) {
-        source.setData({
-          type: "FeatureCollection",
-          features: [],
-        });
-      }
     }
   }, [map]);
 
@@ -364,7 +358,7 @@ export default function AddMVTUrlModal({
               Mapbox Vector Tile specification
             </a>{" "}
             (mvt) can be added to SeaSketch using a url template. Enter the url
-            of the vector tile service above, with placeholders for {`{z}`},{" "}
+            of the vector tile service below, with placeholders for {`{z}`},{" "}
             {`{x}`}, and {`{y}`}. Cartography can be customized after import.
           </Trans>
         </p>
@@ -754,7 +748,6 @@ export async function evaluateMVTUrlTemplate(
   let error: string | undefined;
   // First, see if it's a global dataset with a quick query of levels 0-1
   // That's just 5 tiles to check
-  console.log("search global (shallow)", [0, 0, 0]);
   const globalSearch = await findTopTile(
     url,
     signal,
@@ -770,7 +763,6 @@ export async function evaluateMVTUrlTemplate(
     error = globalSearch.errorMessage;
     // If not a global dataset or tiled up to zoom 1, try looking in the
     // current viewport
-    console.log("search viewport", hintBounds);
     const viewportSearch = await findTopTile(
       url,
       signal,
@@ -785,7 +777,6 @@ export async function evaluateMVTUrlTemplate(
     } else {
       error = viewportSearch.errorMessage;
       // As a last resort, search globally down to zoom level 5
-      console.log("search deep globally", [0, 0, 0], 5);
       const deepSearch = await findTopTile(
         url,
         signal,
@@ -810,26 +801,7 @@ export async function evaluateMVTUrlTemplate(
     throw new Error("Aborted");
   }
 
-  // const [firstTile, response] = await findFirstTile(
-  //   url,
-  //   signal,
-  //   (requests, z, tile) => {
-  //     tileRequests = requests;
-  //     if (onProgress) {
-  //       onProgress(
-  //         // eslint-disable-next-line i18next/no-literal-string
-  //         `Searching for first tile. ${requests} requests. z=${z}`,
-  //         geostats,
-  //         0,
-  //         0,
-  //         tile
-  //       );
-  //     }
-  //   },
-  //   hintBounds
-  // );
   const firstTileResponseData = await response.arrayBuffer();
-  console.log("firstTile", firstTile);
   addTileToGeostats(geostats, firstTileResponseData);
   let nextTile = firstTile as number[] | null;
   let maxZoom = firstTile[2];
@@ -883,7 +855,6 @@ export async function evaluateMVTUrlTemplate(
         );
       }
     }
-    console.log("featureCollection", featureCollection);
     roughFeatureBounds = bbox(featureCollection);
   }
   return {
@@ -894,90 +865,6 @@ export async function evaluateMVTUrlTemplate(
     roughFeatureBounds,
   };
 }
-
-// async function findFirstTile(
-//   url: string,
-//   signal: AbortSignal,
-//   onProgress?: (requests: number, z: number, tile: number[]) => void,
-//   hintRegion?: number[]
-// ): Promise<[number[], Response]> {
-//   const failedTiles = new Set<string>();
-//   const queue = [] as number[][];
-//   let latestError: string | undefined = undefined;
-//   let numberOfRequests = 0;
-//   // first see if you can find a tile within the current viewport, or a couple
-//   // levels deeper
-//   if (hintRegion) {
-//     const hintTile = tilebelt.bboxToTile(hintRegion);
-//     queue.push(hintTile);
-//     while (queue.length > 0) {
-//       const currentTile = queue.shift() as number[];
-//       const tileUrl = url
-//         .replace("{z}", currentTile[2].toString())
-//         .replace("{x}", currentTile[0].toString())
-//         .replace("{y}", currentTile[1].toString());
-//       const response = await fetch(tileUrl);
-//       onProgress && onProgress(numberOfRequests++, currentTile[2], currentTile);
-//       let lastSuccessfulResponse = response;
-//       if (response.status === 200) {
-//         console.log("found in viewport", numberOfRequests);
-//         queue.push(currentTile);
-//         while (queue.length > 0) {
-//           const child = queue.pop()!;
-//           const parent = tilebelt.getParent(child);
-//           const tileUrl = url
-//             .replace("{z}", parent[2].toString())
-//             .replace("{x}", parent[0].toString())
-//             .replace("{y}", parent[1].toString());
-//           const response = await fetch(tileUrl);
-//           onProgress && onProgress(numberOfRequests++, parent[2], currentTile);
-//           if (response.status === 200) {
-//             lastSuccessfulResponse = response;
-//             queue.push(parent);
-//           } else {
-//             return [child, lastSuccessfulResponse];
-//           }
-//         }
-//         return [currentTile, response];
-//       } else {
-//         if (currentTile[2] > hintTile[2] + 2) {
-//           console.log("could not find tile in current region.");
-//         } else {
-//           latestError = (await response.text()) || response.statusText;
-//           const children = tilebelt.getChildren(currentTile);
-//           for (const child of children) {
-//             queue.push(child);
-//           }
-//         }
-//       }
-//     }
-//   }
-//   queue.push([0, 0, 0]);
-//   console.log("could not find in viewport");
-//   while (queue.length > 0) {
-//     const currentTile = queue.shift() as number[];
-//     const tileUrl = url
-//       .replace("{z}", currentTile[2].toString())
-//       .replace("{x}", currentTile[0].toString())
-//       .replace("{y}", currentTile[1].toString());
-//     const response = await fetch(tileUrl);
-//     onProgress && onProgress(numberOfRequests++, currentTile[2], currentTile);
-//     if (response.status === 200) {
-//       return [currentTile, response];
-//     } else {
-//       if (currentTile[2] > 5) {
-//         throw new Error("Could not find a valid tile. " + latestError);
-//       } else {
-//         latestError = (await response.text()) || response.statusText;
-//         const children = tilebelt.getChildren(currentTile);
-//         for (const child of children) {
-//           queue.push(child);
-//         }
-//       }
-//     }
-//   }
-//   throw new Error("Could not find a valid tile. " + latestError);
-// }
 
 async function fetchTile(
   tile: number[],
@@ -1035,7 +922,6 @@ async function findTopTile(
       throw new Error("Aborted");
     }
     const currentTile = queue.shift() as number[];
-    console.log("currentTile", currentTile);
     const { response, error } = await fetchTile(
       currentTile,
       url,
@@ -1064,7 +950,6 @@ async function findTopTile(
           const response = await fetch(tileUrl);
           onProgress && onProgress(currentTile);
           if (response.status === 200) {
-            console.log("z", parent[2]);
             lastSuccessfulResponse = response;
             if (parent[2] === 0) {
               return {
