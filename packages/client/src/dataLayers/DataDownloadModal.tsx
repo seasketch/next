@@ -77,6 +77,10 @@ export default function DataDownloadModal({
     );
   }, [data?.tableOfContentsItem?.dataLayer?.dataSource?.type]);
 
+  const type = useMemo(() => {
+    return data?.tableOfContentsItem?.dataLayer?.dataSource?.type;
+  }, [data?.tableOfContentsItem?.dataLayer?.dataSource?.type]);
+
   const original = useMemo(() => {
     if (
       data?.tableOfContentsItem?.dataLayer?.dataSource?.type ===
@@ -140,41 +144,65 @@ export default function DataDownloadModal({
             </p>
           </div>
         )}
-        {!isEsriVectorService && original?.url && (
-          <div className="shadow-sm p-4 py-2 border rounded">
-            <h3>
-              {data?.tableOfContentsItem?.dataLayer?.dataSource?.createdAt ? (
-                <span>
-                  {t("Original file uploaded on ")}
-                  {new Date(
-                    data.tableOfContentsItem.dataLayer.dataSource.createdAt
-                  ).toLocaleDateString()}
-                </span>
-              ) : (
-                t("Original file")
-              )}
-            </h3>
-            <div className="flex">
-              <a
-                className="flex-1 text-primary-500 underline"
-                download={
-                  data?.tableOfContentsItem?.dataLayer?.dataSource
-                    ?.uploadedSourceFilename || "Download..."
-                }
-                href={original.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {data?.tableOfContentsItem?.dataLayer?.dataSource
-                  ?.uploadedSourceFilename || "Download..."}
-              </a>
-              <span>{bytes(parseInt(original.size) || 0)}</span>
+        {type === DataSourceTypes.Geojson &&
+          data?.tableOfContentsItem?.primaryDownloadUrl && (
+            <div className="">
+              <p className="text-sm">
+                <Trans ns="homepage">
+                  This data source comes from a GeoJSON file on a 3rd party
+                  server. Click the link below to download it from the original
+                  source.
+                </Trans>
+              </p>
+              <p className="my-4 bg-primary-500 bg-opacity-5 p-2 border rounded">
+                <a
+                  className="text-primary-500 underline "
+                  href={data.tableOfContentsItem.primaryDownloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {data.tableOfContentsItem.primaryDownloadUrl}
+                </a>
+              </p>
             </div>
-            <div className="py-1">
-              <DownloadFormatDescription type={original.type!} />
+          )}
+        {!isEsriVectorService &&
+          type !== DataSourceTypes.Geojson &&
+          original?.url && (
+            <div className="shadow-sm p-4 py-2 border rounded">
+              <h3>
+                {data?.tableOfContentsItem?.dataLayer?.dataSource?.createdAt ? (
+                  <span>
+                    {t("Original file uploaded on ")}
+                    {new Date(
+                      data.tableOfContentsItem.dataLayer.dataSource.createdAt
+                    ).toLocaleDateString()}
+                  </span>
+                ) : (
+                  t("Original file")
+                )}
+              </h3>
+              <div className="flex">
+                <a
+                  className="flex-1 text-primary-500 underline"
+                  download={
+                    data?.tableOfContentsItem?.dataLayer?.dataSource
+                      ?.uploadedSourceFilename || "Download..."
+                  }
+                  href={original.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {data?.tableOfContentsItem?.dataLayer?.dataSource
+                    ?.uploadedSourceFilename || "Download..."}
+                </a>
+                <span>{bytes(parseInt(original.size) || 0)}</span>
+              </div>
+              <div className="py-1">
+                <DownloadFormatDescription type={original.type!} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
         {sortedOptions.length > 0 && (
           <div>
             <h3>{t("Alternate formats")}</h3>

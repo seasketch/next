@@ -51,6 +51,7 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useDialog from "../../components/useDialog";
 import Warning from "../../components/Warning";
 import AddMVTUrlModal from "../AddMVTUrlModal";
+import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -559,6 +560,7 @@ function Header({
     onError,
   });
   const [mvtUrlModalOpen, setMVTUrlModalOpen] = useState(false);
+  const [remoteGeoJSONModalOpen, setRemoteGeoJSONModalOpen] = useState(false);
 
   const { confirm } = useDialog();
   return (
@@ -662,14 +664,14 @@ function Header({
                   }}
                 >
                   {t("TileJSON endpoint...")}
-                </MenuBarItem>
+                </MenuBarItem>*/}
                 <MenuBarItem
                   onClick={() => {
-                    // openArcGISCart();
+                    setRemoteGeoJSONModalOpen(true);
                   }}
                 >
-                  {t("GeoJSON by URL...")}
-                </MenuBarItem> */}
+                  {t("Remote GeoJSON...")}
+                </MenuBarItem>
               </MenuBarSubmenu>
               <MenuBarSeparator />
               <MenuBarLabel>
@@ -787,6 +789,11 @@ function Header({
       )}
       {mvtUrlModalOpen && (
         <AddMVTUrlModal onRequestClose={() => setMVTUrlModalOpen(false)} />
+      )}
+      {remoteGeoJSONModalOpen && (
+        <AddRemoteGeoJSONModal
+          onRequestClose={() => setRemoteGeoJSONModalOpen(false)}
+        />
       )}
     </header>
   );

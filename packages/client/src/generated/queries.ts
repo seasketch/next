@@ -1547,6 +1547,42 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+/** All input for the `createRemoteGeojsonSource` mutation. */
+export type CreateRemoteGeojsonSourceInput = {
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  geostats?: Maybe<Scalars['JSON']>;
+  slug?: Maybe<Scalars['String']>;
+  url?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createRemoteGeojsonSource` mutation. */
+export type CreateRemoteGeojsonSourcePayload = {
+  __typename?: 'CreateRemoteGeojsonSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `createRemoteGeojsonSource` mutation. */
+export type CreateRemoteGeojsonSourcePayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the `createRemoteMvtSource` mutation. */
 export type CreateRemoteMvtSourceInput = {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
@@ -6339,6 +6375,7 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
@@ -7055,6 +7092,12 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateRemoteGeojsonSourceArgs = {
+  input: CreateRemoteGeojsonSourceInput;
 };
 
 
@@ -16697,6 +16740,25 @@ export type CreateMvtSourceMutation = (
   )> }
 );
 
+export type CreateRemoteGeoJsonSourceMutationVariables = Exact<{
+  slug: Scalars['String'];
+  url: Scalars['String'];
+  geostats: Scalars['JSON'];
+  bounds: Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>;
+}>;
+
+
+export type CreateRemoteGeoJsonSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createRemoteGeojsonSource?: Maybe<(
+    { __typename?: 'CreateRemoteGeojsonSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & AdminOverlayFragment
+    )> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -22731,6 +22793,17 @@ export const CreateMvtSourceDocument = /*#__PURE__*/ gql`
   }
 }
     ${AdminOverlayFragmentDoc}`;
+export const CreateRemoteGeoJsonSourceDocument = /*#__PURE__*/ gql`
+    mutation CreateRemoteGeoJSONSource($slug: String!, $url: String!, $geostats: JSON!, $bounds: [BigFloat]!) {
+  createRemoteGeojsonSource(
+    input: {slug: $slug, url: $url, geostats: $geostats, bounds: $bounds}
+  ) {
+    tableOfContentsItem {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -24922,6 +24995,7 @@ export const namedOperations = {
     DisableDownloadForSharedLayers: 'DisableDownloadForSharedLayers',
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
     CreateMVTSource: 'CreateMVTSource',
+    CreateRemoteGeoJSONSource: 'CreateRemoteGeoJSONSource',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

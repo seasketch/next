@@ -6174,6 +6174,71 @@ COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_availabl
 
 
 --
+-- Name: create_remote_geojson_source(text, text, jsonb, numeric[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_remote_geojson_source(slug text, url text, geostats jsonb, bounds numeric[]) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      stableid text := create_stable_id();
+      pid int;
+      item table_of_contents_items;
+      layer_id int;
+      source_id int;
+      geostats_layer jsonb;
+    begin
+      select id into pid from projects where projects.slug = create_remote_geojson_source.slug;
+      geostats_layer := geostats->'layers'->0;
+      if session_is_admin(pid) then
+        insert into data_sources (
+          project_id,
+          type,
+          url,
+          geostats
+        ) values (
+          pid,
+          'geojson',
+          create_remote_geojson_source.url,
+          create_remote_geojson_source.geostats
+        ) returning id into source_id;
+        insert into data_layers (
+          project_id,
+          data_source_id,
+          mapbox_gl_styles
+        ) values (
+          pid,
+          source_id,
+          basic_mapbox_gl_style_for_type(geostats_layer->>'geometry')
+        ) returning id into layer_id;
+        insert into table_of_contents_items (
+          project_id,
+          title,
+          data_layer_id,
+          stable_id,
+          is_draft,
+          metadata,
+          is_folder,
+          bounds
+        ) values (
+          pid,
+          geostats_layer->>'layer',
+          layer_id,
+          stableid,
+          true,
+          make_url_source_metadata(geostats_layer->>'layer', url),
+          false,
+          create_remote_geojson_source.bounds
+        ) returning * into item;
+        return item;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: create_remote_mvt_source(integer, text, text[], integer, integer, numeric[], jsonb, numeric[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9597,6 +9662,64 @@ CREATE FUNCTION public.make_survey(name text, project_id integer, template_id in
     AS $$
     select _create_survey(name, project_id, template_id);
 $$;
+
+
+--
+-- Name: make_url_source_metadata(text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.make_url_source_metadata(title text, url text) RETURNS jsonb
+    LANGUAGE plpgsql
+    AS $$
+    declare
+      metadata jsonb;
+
+    begin
+      metadata := jsonb_build_object(
+        'type', 'doc',
+        'content', jsonb_build_array(
+          jsonb_build_object(
+            'type', 'heading',
+            'attrs', jsonb_build_object(
+              'level', 1
+            ),
+            'content', jsonb_build_array(
+              jsonb_build_object(
+                'type', 'text',
+                'text', title
+              )
+            )
+          ),
+          jsonb_build_object(
+            'type', 'paragraph',
+            'content', jsonb_build_array(
+              jsonb_build_object(
+                'type', 'text',
+                'text', url,
+                'marks', jsonb_build_array(
+                  jsonb_build_object(
+                    'type', 'link',
+                    'attrs', jsonb_build_object(
+                      'href', url,
+                      'title', 'GeoJSON'
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      );
+      return metadata;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION make_url_source_metadata(title text, url text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.make_url_source_metadata(title text, url text) IS '@omit';
 
 
 --
@@ -13800,6 +13923,7 @@ CREATE FUNCTION public.table_of_contents_items_is_downloadable_source_type(item 
     select 
       item.data_source_type = 'arcgis-dynamic-mapserver-vector-sublayer' or
       item.data_source_type = 'arcgis-vector' or
+      item.data_source_type = 'geojson' or
       (
         (
           item.data_source_type = 'seasketch-vector' or
@@ -13844,6 +13968,20 @@ CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.
               data_upload_outputs.is_original = true
               limit 1
           )
+        when item.data_source_type = 'geojson' then
+          (
+            select 
+              url 
+            from 
+              data_sources 
+            where id = (
+              select 
+                data_source_id 
+              from 
+                data_layers 
+              where data_layers.id = item.data_layer_id
+            )
+          ) 
         else (
           select 
             'https://arcgis-export.seasketch.org/?download=' || 
@@ -22776,6 +22914,14 @@ GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seaske
 
 
 --
+-- Name: FUNCTION create_remote_geojson_source(slug text, url text, geostats jsonb, bounds numeric[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_remote_geojson_source(slug text, url text, geostats jsonb, bounds numeric[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_remote_geojson_source(slug text, url text, geostats jsonb, bounds numeric[]) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_remote_mvt_source(project_id integer, url text, source_layers text[], max_zoom integer, min_zoom integer, bounds numeric[], geostats jsonb, feature_bounds numeric[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25124,6 +25270,14 @@ GRANT ALL ON FUNCTION public.make_sketch_class(name text, project_id integer, te
 
 REVOKE ALL ON FUNCTION public.make_survey(name text, project_id integer, template_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.make_survey(name text, project_id integer, template_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION make_url_source_metadata(title text, url text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.make_url_source_metadata(title text, url text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.make_url_source_metadata(title text, url text) TO anon;
 
 
 --

@@ -63,7 +63,7 @@ export default {
 
     // if the fetch fails return an error
     if (!response.ok) {
-      return handleFailedResponse(response, location);
+      return handleFailedResponse(response, location, request);
     } else {
       let contentLength = parseInt(
         response.headers.get("content-length") || "0"
@@ -82,7 +82,7 @@ export default {
               error: "Response is not a valid GeoJSON",
               errorsStatus: 200,
             }),
-            FAILED_RESPONSE_OPTS
+            FAILED_RESPONSE_OPTS(request)
           );
         } else if (
           geojson.type !== "FeatureCollection" &&
@@ -94,7 +94,7 @@ export default {
               error: "GeoJSON object must be a Feature or FeatureCollection",
               errorsStatus: 200,
             }),
-            FAILED_RESPONSE_OPTS
+            FAILED_RESPONSE_OPTS(request)
           );
         } else {
           const rootType = geojson.type;
@@ -104,6 +104,7 @@ export default {
               : geojson.features && geojson.features.length > 0
               ? geojson.features[0]?.geometry?.type
               : "Unknown";
+          const fname = location.substr(1 + location.lastIndexOf("/"));
           return new Response(
             JSON.stringify({
               location,
@@ -116,13 +117,22 @@ export default {
                 rootType === "FeatureCollection" ? geojson.features.length : 1,
               geometryType,
               bbox: calcBBox(geojson),
-              geostats: geostats(geojson, "geojson"),
+              geostats: geostats(
+                geojson,
+                fname && fname.length ? fname : "geojson"
+              ),
             } as InspectorResponse),
             {
               status: 200,
               headers: {
                 "Content-Type": "application/json",
                 "Cache-Control": "public, max-age=120, s-maxage=120",
+                ...(isAllowedOrigin(request.headers.get("origin") || "")
+                  ? {
+                      "Access-Control-Allow-Origin":
+                        request.headers.get("origin")!,
+                    }
+                  : {}),
               },
             }
           );
@@ -134,22 +144,32 @@ export default {
             error: "Failed to parse response as JSON",
             errorsStatus: 200,
           }),
-          FAILED_RESPONSE_OPTS
+          FAILED_RESPONSE_OPTS(request)
         );
       }
     }
   },
 };
 
-const FAILED_RESPONSE_OPTS = {
-  status: 200,
-  headers: {
-    "Content-Type": "application/json",
-    "Cache-Control": "public, max-age=10, s-maxage=10",
-  },
+const FAILED_RESPONSE_OPTS = (req: Request) => {
+  const origin = req.headers.get("origin");
+  return {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "public, max-age=10, s-maxage=10",
+      ...(origin && isAllowedOrigin(origin)
+        ? { "Access-Control-Allow-Origin": origin }
+        : {}),
+    },
+  };
 };
 
-async function handleFailedResponse(response: Response, location: string) {
+async function handleFailedResponse(
+  response: Response,
+  location: string,
+  req: Request
+) {
   let failedResponse: FailedInspectorResponse;
   if (response.status === 404) {
     failedResponse = {
@@ -171,5 +191,37 @@ async function handleFailedResponse(response: Response, location: string) {
       errorsStatus: response.status,
     };
   }
-  return new Response(JSON.stringify(failedResponse), FAILED_RESPONSE_OPTS);
+  return new Response(
+    JSON.stringify(failedResponse),
+    FAILED_RESPONSE_OPTS(req)
+  );
+}
+
+const allowedOrigins = [
+  "localhost",
+  "127.0.0.1",
+  "*.seasketch.org",
+  "seasketch.org",
+];
+
+function isAllowedOrigin(origin: string) {
+  // No origin provided, possibly a non-CORS request or server-to-server request
+  if (!origin) return false;
+
+  // Extract the domain from the origin
+  const domain = new URL(origin).hostname;
+
+  if (allowedOrigins.includes(domain)) {
+    return true;
+  }
+
+  const wildCardOrigins = allowedOrigins.filter((o) => o.startsWith("*."));
+  for (const origin of wildCardOrigins) {
+    if (domain.endsWith(origin.slice(2))) {
+      return true;
+    }
+  }
+
+  // Origin does not match any allowed pattern
+  return false;
 }

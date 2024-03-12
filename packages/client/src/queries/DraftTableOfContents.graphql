@@ -736,3 +736,18 @@ mutation CreateMVTSource(
     }
   }
 }
+
+mutation CreateRemoteGeoJSONSource(
+  $slug: String!
+  $url: String!
+  $geostats: JSON!
+  $bounds: [BigFloat]!
+) {
+  createRemoteGeojsonSource(
+    input: { slug: $slug, url: $url, geostats: $geostats, bounds: $bounds }
+  ) {
+    tableOfContentsItem {
+      ...AdminOverlay
+    }
+  }
+}

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import getSlug from "../../getSlug";
 import { useProjectRegionQuery } from "../../generated/graphql";
 import bbox from "@turf/bbox";
+import { XCircleIcon } from "@heroicons/react/solid";
 
 export const STYLE = "mapbox://styles/seasketch/cl892c7ia001e14qpbr4gnf4k";
 
@@ -58,13 +59,18 @@ export default function AddRemoteServiceMapModal({
   return createPortal(
     <>
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+        className="fixed inset-0 bg-black bg-opacity-50 z-30"
         onClick={onRequestClose}
       />
-      <div className="z-50 pointer-events-none absolute bg-transparent left-0 top-0 w-screen h-screen flex items-center justify-center">
+      <div className="z-30 pointer-events-none absolute bg-transparent left-0 top-0 w-screen h-screen flex items-center justify-center">
         <div className="bg-white w-3/4 h-3/4 pointer-events-auto shadow-lg rounded-lg flex flex-col items-center justify-center">
           <div className="flex flex-col w-full bg-gray-100 rounded-t-md p-4 font-semibold shadow z-10">
-            {title}
+            <div className="flex items-center">
+              <span className="flex-1">{title}</span>
+              <button onClick={onRequestClose}>
+                <XCircleIcon className="w-7 h-7 opacity-70 hover:opacity-90" />
+              </button>
+            </div>
           </div>
           <div className="flex-1 bg-green-200 w-full flex overflow-hidden relative">
             <div className="bg-white border-r w-96 flex flex-col">

@@ -1,5 +1,4 @@
 /* eslint-disable i18next/no-literal-string */
-import Badge from "../../../components/Badge";
 import Modal from "../../../components/Modal";
 import { GeostatsLayer } from "./extensions/glStyleAutocomplete";
 
@@ -11,6 +10,7 @@ export interface Geostats {
 interface GeostatsModalProps {
   geostats: Geostats;
   onRequestClose: () => void;
+  className?: string;
 }
 
 /**
@@ -20,7 +20,11 @@ interface GeostatsModalProps {
  */
 export default function GeostatsModal(props: GeostatsModalProps) {
   return (
-    <Modal onRequestClose={props.onRequestClose} open={true}>
+    <Modal
+      className={props.className}
+      onRequestClose={props.onRequestClose}
+      open={true}
+    >
       <div className="px-0 py-4 pb-1">
         <h2 className="text-lg font-medium leading-6 text-gray-900">Layers</h2>
         <div className="mt-4">

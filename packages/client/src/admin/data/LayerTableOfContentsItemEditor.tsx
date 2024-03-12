@@ -229,7 +229,13 @@ export default function LayerTableOfContentsItemEditor(
   const [selectedTab, setSelectedTab] = useState("settings");
 
   const geostats = (source?.geostats?.layers || []).find(
-    (l: { layer: string }) => l.layer === layer?.sourceLayer
+    (l: { layer: string }) => {
+      if (!Boolean(layer?.sourceLayer)) {
+        return true;
+      } else {
+        return l.layer === layer?.sourceLayer;
+      }
+    }
   );
 
   const tabs: NonLinkTabItem[] = useMemo(() => {
@@ -574,12 +580,13 @@ export default function LayerTableOfContentsItemEditor(
                     disabled={
                       !Boolean(
                         data.tableOfContentsItem?.hasOriginalSourceUpload
-                      )
+                      ) && source?.type !== DataSourceTypes.Geojson
                     }
                     isToggled={
-                      Boolean(
+                      (Boolean(
                         data.tableOfContentsItem?.hasOriginalSourceUpload
-                      ) &&
+                      ) ||
+                        source?.type === DataSourceTypes.Geojson) &&
                       (downloadEnabled === undefined
                         ? item.enableDownload
                         : downloadEnabled)
@@ -594,26 +601,46 @@ export default function LayerTableOfContentsItemEditor(
                   />
                 </div>
               </div>
-              {Boolean(data.tableOfContentsItem?.hasOriginalSourceUpload) ? (
-                <p className="text-sm text-gray-500 mt-1">
-                  <Trans ns={["admin"]}>
-                    If enabled, users will be able to download the original data
-                    file uploaded to SeaSketch.
-                  </Trans>
-                </p>
-              ) : (
-                <div className="flex border p-2 mt-1 items-center space-x-4 rounded">
-                  <ExclamationTriangleIcon className="h-24 w-24 px-2 text-gray-500" />
-                  <p className="text-sm text-gray-500">
-                    <Trans ns={["admin"]}>
-                      Data download cannot be enabled because the original is
-                      not available. SeaSketch only recently began storing
-                      original uploaded files, so older data layers may need to
-                      be uploaded again to support this capability.
-                    </Trans>
-                  </p>
-                </div>
-              )}
+              {(() => {
+                if (source.type === DataSourceTypes.Geojson) {
+                  return (
+                    <p className="text-sm text-gray-500 mt-1">
+                      <Trans ns={["admin"]}>
+                        If enabled, users will be able to download GeoJSON data
+                        from the source service.
+                      </Trans>
+                    </p>
+                  );
+                } else {
+                  if (
+                    Boolean(data.tableOfContentsItem?.hasOriginalSourceUpload)
+                  ) {
+                    return (
+                      <p className="text-sm text-gray-500 mt-1">
+                        <Trans ns={["admin"]}>
+                          If enabled, users will be able to download the
+                          original data file uploaded to SeaSketch.
+                        </Trans>
+                      </p>
+                    );
+                  } else {
+                    return (
+                      <div className="flex border p-2 mt-1 items-center space-x-4 rounded">
+                        <ExclamationTriangleIcon className="h-24 w-24 px-2 text-gray-500" />
+                        <p className="text-sm text-gray-500">
+                          <Trans ns={["admin"]}>
+                            Data download cannot be enabled because the original
+                            is not available. SeaSketch only recently began
+                            storing original uploaded files, so older data
+                            layers may need to be uploaded again to support this
+                            capability.
+                          </Trans>
+                        </p>
+                      </div>
+                    );
+                  }
+                }
+              })()}
             </div>
           )}
 
@@ -917,6 +944,78 @@ export default function LayerTableOfContentsItemEditor(
                 )}
                 {source?.type === DataSourceTypes.ArcgisRasterTiles && (
                   <ArcGISTiledRasterSettings source={source} />
+                )}
+                {source?.type === DataSourceTypes.Geojson && (
+                  <>
+                    <SettingsDefinitionList>
+                      <SettingsDLListItem
+                        term={t("Source Type")}
+                        description={t("Remote GeoJSON data")}
+                      />
+                      <SettingsDLListItem
+                        truncate
+                        term={t("Source Location")}
+                        description={
+                          <a
+                            target="_blank"
+                            className="text-primary-600 underline"
+                            href={source.url!}
+                            rel="noreferrer"
+                          >
+                            {source
+                              .url!.replace("https://", "")
+                              .replace("http://", "")}
+                          </a>
+                        }
+                      />
+                    </SettingsDefinitionList>
+                  </>
+                )}
+                {source?.type === DataSourceTypes.Vector && (
+                  <>
+                    <SettingsDefinitionList>
+                      <SettingsDLListItem
+                        term={t("Source Type")}
+                        description={t("Remote Vector Tileset")}
+                      />
+                      <SettingsDLListItem
+                        term={t("URL Template")}
+                        description={
+                          <div className="w-full font-mono max-h-24 overflow-auto">
+                            {source.tiles![0]!.split("?").map((part) => (
+                              <span>
+                                {part.split("&").map((p) => (
+                                  <span>{p}</span>
+                                ))}
+                              </span>
+                            ))}
+                          </div>
+                        }
+                      />
+                      <SettingsDLListItem
+                        term={t("Min, Max Zoom")}
+                        description={
+                          <div>
+                            {source.minzoom}, {source.maxzoom}
+                          </div>
+                        }
+                      />
+                      {source.bounds && (
+                        <SettingsDLListItem
+                          term={t("Bounds")}
+                          description={
+                            <div>
+                              [
+                              {source.bounds
+                                .map((b) => Math.round(b * 1000) / 1000)
+                                .join(", ")}
+                              ]
+                            </div>
+                          }
+                        />
+                      )}
+                    </SettingsDefinitionList>
+                  </>
                 )}
               </div>
             </div>
