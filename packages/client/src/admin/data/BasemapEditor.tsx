@@ -13,6 +13,7 @@ import { useApolloClient } from "@apollo/client";
 import { useParams } from "react-router-dom";
 import BasemapControl from "../../dataLayers/BasemapControl";
 import useDialog from "../../components/useDialog";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function BaseMapEditor() {
   const mapContext = useContext(MapContext);
@@ -34,6 +35,7 @@ export default function BaseMapEditor() {
       mapContext.manager.setBasemaps(data.projectBySlug.basemaps);
     }
   }, [data?.projectBySlug?.basemaps, mapContext.manager]);
+  const onError = useGlobalErrorHandler();
 
   const { confirmDelete } = useDialog();
   return (
@@ -69,6 +71,7 @@ export default function BaseMapEditor() {
                       variables: {
                         id: parseInt(mapContext.selectedBasemap!),
                       },
+                      onError,
                       update: (cache) => {
                         const id = cache.identify(
                           data!.projectBySlug!.basemaps!.find(
@@ -101,9 +104,6 @@ export default function BaseMapEditor() {
                           },
                         });
                       },
-                    }).catch((e) => {
-                      console.error(e);
-                      throw e;
                     });
                   },
                 });
