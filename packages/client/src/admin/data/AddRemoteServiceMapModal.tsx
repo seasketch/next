@@ -7,6 +7,7 @@ import bbox from "@turf/bbox";
 import { XCircleIcon } from "@heroicons/react/solid";
 
 export const STYLE = "mapbox://styles/seasketch/cl892c7ia001e14qpbr4gnf4k";
+// export const STYLE = "mapbox://styles/mapbox/streets-v12";
 
 export default function AddRemoteServiceMapModal({
   onMapLoad,

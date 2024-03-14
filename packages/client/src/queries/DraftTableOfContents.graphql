@@ -751,3 +751,31 @@ mutation CreateRemoteGeoJSONSource(
     }
   }
 }
+
+mutation CreateGFWSource(
+  $slug: String!
+  $datasets: [String!]!
+  $dateRange: String!
+  $filters: [String!]!
+  $format: Gfw4WingsFormat!
+  $glStyles: JSON!
+  $title: String!
+  $token: String!
+) {
+  createGfw4WingsSource(
+    input: {
+      slug: $slug
+      datasets: $datasets
+      dateRange: $dateRange
+      filters: $filters
+      format: $format
+      glStyles: $glStyles
+      title: $title
+      token: $token
+    }
+  ) {
+    tableOfContentsItems {
+      ...AdminOverlay
+    }
+  }
+}

@@ -15,5 +15,6 @@ declare namespace NodeJS {
     REACT_APP_SENTRY_ENV?: string;
     REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT: string;
     REACT_APP_ARCGIS_DEVELOPER_API_KEY: string;
+    REACT_APP_GFW_TOKEN: string;
   }
 }

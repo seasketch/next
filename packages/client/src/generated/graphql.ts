@@ -1262,6 +1262,36 @@ export type CreateForumPayloadForumEdgeArgs = {
   orderBy?: Maybe<Array<ForumsOrderBy>>;
 };
 
+/** All input for the `createGfw4WingsSource` mutation. */
+export type CreateGfw4WingsSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  datasets?: Maybe<Array<Maybe<Scalars['String']>>>;
+  dateRange?: Maybe<Scalars['String']>;
+  filters?: Maybe<Array<Maybe<Scalars['String']>>>;
+  format?: Maybe<Gfw4WingsFormat>;
+  glStyles?: Maybe<Scalars['JSON']>;
+  slug?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+  token?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createGfw4WingsSource` mutation. */
+export type CreateGfw4WingsSourcePayload = {
+  __typename?: 'CreateGfw4WingsSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
 /** All input for the create `Group` mutation. */
 export type CreateGroupInput = {
   /**
@@ -2193,6 +2223,11 @@ export type DataSource = Node & {
    * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
    */
   geostats?: Maybe<Scalars['JSON']>;
+  gfw4WingsDatasets?: Maybe<Array<Maybe<Scalars['String']>>>;
+  gfw4WingsDateRange?: Maybe<Scalars['String']>;
+  gfw4WingsFilters?: Maybe<Array<Maybe<Scalars['String']>>>;
+  gfw4WingsFormat?: Maybe<Gfw4WingsFormat>;
+  gfw4WingsToken?: Maybe<Scalars['String']>;
   /** Should be used as sourceId in stylesheets. */
   id: Scalars['Int'];
   /**
@@ -2375,6 +2410,11 @@ export type DataSourceInput = {
    * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
    */
   geostats?: Maybe<Scalars['JSON']>;
+  gfw4WingsDatasets?: Maybe<Array<Maybe<Scalars['String']>>>;
+  gfw4WingsDateRange?: Maybe<Scalars['String']>;
+  gfw4WingsFilters?: Maybe<Array<Maybe<Scalars['String']>>>;
+  gfw4WingsFormat?: Maybe<Gfw4WingsFormat>;
+  gfw4WingsToken?: Maybe<Scalars['String']>;
   /** Should be used as sourceId in stylesheets. */
   id?: Maybe<Scalars['Int']>;
   /**
@@ -2565,6 +2605,8 @@ export enum DataSourceTypes {
   ArcgisVector = 'ARCGIS_VECTOR',
   /** MapBox GL Style "geojson" source */
   Geojson = 'GEOJSON',
+  /** 4Wings data source hosted by Global Fishing Watch */
+  Gfw_4Wings = 'GFW_4WINGS',
   /** MapBox GL Style "image" source */
   Image = 'IMAGE',
   /** MapBox GL Style "raster" source */
@@ -5591,6 +5633,11 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+export enum Gfw4WingsFormat {
+  Mvt = 'MVT',
+  Png = 'PNG'
+}
+
 /** All input for the `grantAdminAccess` mutation. */
 export type GrantAdminAccessInput = {
   /**
@@ -6345,6 +6392,7 @@ export type Mutation = {
   createFormTemplateFromSurvey?: Maybe<CreateFormTemplateFromSurveyPayload>;
   /** Creates a single `Forum`. */
   createForum?: Maybe<CreateForumPayload>;
+  createGfw4WingsSource?: Maybe<CreateGfw4WingsSourcePayload>;
   /** Creates a single `Group`. */
   createGroup?: Maybe<CreateGroupPayload>;
   /** Creates a single `InteractivitySetting`. */
@@ -7033,6 +7081,12 @@ export type MutationCreateFormTemplateFromSurveyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateForumArgs = {
   input: CreateForumInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateGfw4WingsSourceArgs = {
+  input: CreateGfw4WingsSourceInput;
 };
 
 
@@ -16761,6 +16815,29 @@ export type CreateRemoteGeoJsonSourceMutation = (
   )> }
 );
 
+export type CreateGfwSourceMutationVariables = Exact<{
+  slug: Scalars['String'];
+  datasets: Array<Scalars['String']> | Scalars['String'];
+  dateRange: Scalars['String'];
+  filters: Array<Scalars['String']> | Scalars['String'];
+  format: Gfw4WingsFormat;
+  glStyles: Scalars['JSON'];
+  title: Scalars['String'];
+  token: Scalars['String'];
+}>;
+
+
+export type CreateGfwSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { createGfw4WingsSource?: Maybe<(
+    { __typename?: 'CreateGfw4WingsSourcePayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & AdminOverlayFragment
+    )>> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -25506,6 +25583,50 @@ export function useCreateRemoteGeoJsonSourceMutation(baseOptions?: Apollo.Mutati
 export type CreateRemoteGeoJsonSourceMutationHookResult = ReturnType<typeof useCreateRemoteGeoJsonSourceMutation>;
 export type CreateRemoteGeoJsonSourceMutationResult = Apollo.MutationResult<CreateRemoteGeoJsonSourceMutation>;
 export type CreateRemoteGeoJsonSourceMutationOptions = Apollo.BaseMutationOptions<CreateRemoteGeoJsonSourceMutation, CreateRemoteGeoJsonSourceMutationVariables>;
+export const CreateGfwSourceDocument = gql`
+    mutation CreateGFWSource($slug: String!, $datasets: [String!]!, $dateRange: String!, $filters: [String!]!, $format: Gfw4WingsFormat!, $glStyles: JSON!, $title: String!, $token: String!) {
+  createGfw4WingsSource(
+    input: {slug: $slug, datasets: $datasets, dateRange: $dateRange, filters: $filters, format: $format, glStyles: $glStyles, title: $title, token: $token}
+  ) {
+    tableOfContentsItems {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
+export type CreateGfwSourceMutationFn = Apollo.MutationFunction<CreateGfwSourceMutation, CreateGfwSourceMutationVariables>;
+
+/**
+ * __useCreateGfwSourceMutation__
+ *
+ * To run a mutation, you first call `useCreateGfwSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateGfwSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createGfwSourceMutation, { data, loading, error }] = useCreateGfwSourceMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      datasets: // value for 'datasets'
+ *      dateRange: // value for 'dateRange'
+ *      filters: // value for 'filters'
+ *      format: // value for 'format'
+ *      glStyles: // value for 'glStyles'
+ *      title: // value for 'title'
+ *      token: // value for 'token'
+ *   },
+ * });
+ */
+export function useCreateGfwSourceMutation(baseOptions?: Apollo.MutationHookOptions<CreateGfwSourceMutation, CreateGfwSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateGfwSourceMutation, CreateGfwSourceMutationVariables>(CreateGfwSourceDocument, options);
+      }
+export type CreateGfwSourceMutationHookResult = ReturnType<typeof useCreateGfwSourceMutation>;
+export type CreateGfwSourceMutationResult = Apollo.MutationResult<CreateGfwSourceMutation>;
+export type CreateGfwSourceMutationOptions = Apollo.BaseMutationOptions<CreateGfwSourceMutation, CreateGfwSourceMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -31632,6 +31753,7 @@ export const namedOperations = {
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
     CreateMVTSource: 'CreateMVTSource',
     CreateRemoteGeoJSONSource: 'CreateRemoteGeoJSONSource',
+    CreateGFWSource: 'CreateGFWSource',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

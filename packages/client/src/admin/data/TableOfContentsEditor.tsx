@@ -52,6 +52,7 @@ import useDialog from "../../components/useDialog";
 import Warning from "../../components/Warning";
 import AddMVTUrlModal from "../AddMVTUrlModal";
 import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
+import AddGFWSourceModal from "./AddGFWSourceModal";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -561,6 +562,7 @@ function Header({
   });
   const [mvtUrlModalOpen, setMVTUrlModalOpen] = useState(false);
   const [remoteGeoJSONModalOpen, setRemoteGeoJSONModalOpen] = useState(false);
+  const [gfwModalOpen, setGFWModalOpen] = useState(false);
 
   const { confirm } = useDialog();
   return (
@@ -671,6 +673,15 @@ function Header({
                   }}
                 >
                   {t("Remote GeoJSON...")}
+                </MenuBarItem>
+                <MenuBarSeparator />
+                <MenuBarLabel>{t("From Authoritative Sources")}</MenuBarLabel>
+                <MenuBarItem
+                  onClick={() => {
+                    setGFWModalOpen(true);
+                  }}
+                >
+                  {t("Global Fishing Watch...")}
                 </MenuBarItem>
               </MenuBarSubmenu>
               <MenuBarSeparator />
@@ -794,6 +805,9 @@ function Header({
         <AddRemoteGeoJSONModal
           onRequestClose={() => setRemoteGeoJSONModalOpen(false)}
         />
+      )}
+      {gfwModalOpen && (
+        <AddGFWSourceModal onRequestClose={() => setGFWModalOpen(false)} />
       )}
     </header>
   );

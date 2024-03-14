@@ -1427,6 +1427,38 @@ type CreateForumPayload {
   query: Query
 }
 
+"""All input for the `createGfw4WingsSource` mutation."""
+input CreateGfw4WingsSourceInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  datasets: [String]
+  dateRange: String
+  filters: [String]
+  format: Gfw4WingsFormat
+  glStyles: JSON
+  slug: String
+  title: String
+  token: String
+}
+
+"""The output of our `createGfw4WingsSource` mutation."""
+type CreateGfw4WingsSourcePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItems: [TableOfContentsItem!]
+}
+
 """All input for the create `Group` mutation."""
 input CreateGroupInput {
   """
@@ -2513,6 +2545,11 @@ type DataSource implements Node {
   cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
   """
   geostats: JSON
+  gfw4WingsDatasets: [String]
+  gfw4WingsDateRange: String
+  gfw4WingsFilters: [String]
+  gfw4WingsFormat: Gfw4WingsFormat
+  gfw4WingsToken: String
 
   """Should be used as sourceId in stylesheets."""
   id: Int!
@@ -2749,6 +2786,11 @@ input DataSourceInput {
   cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
   """
   geostats: JSON
+  gfw4WingsDatasets: [String]
+  gfw4WingsDateRange: String
+  gfw4WingsFilters: [String]
+  gfw4WingsFormat: Gfw4WingsFormat
+  gfw4WingsToken: String
 
   """Should be used as sourceId in stylesheets."""
   id: Int
@@ -3148,6 +3190,9 @@ enum DataSourceTypes {
 
   """MapBox GL Style "geojson" source"""
   GEOJSON
+
+  """4Wings data source hosted by Global Fishing Watch"""
+  GFW_4WINGS
 
   """MapBox GL Style "image" source"""
   IMAGE
@@ -6500,6 +6545,11 @@ type GetChildFoldersRecursivePayload {
   query: Query
 }
 
+enum Gfw4WingsFormat {
+  MVT
+  PNG
+}
+
 """All input for the `grantAdminAccess` mutation."""
 input GrantAdminAccessInput {
   """
@@ -7524,6 +7574,12 @@ type Mutation {
     """
     input: CreateForumInput!
   ): CreateForumPayload
+  createGfw4WingsSource(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateGfw4WingsSourceInput!
+  ): CreateGfw4WingsSourcePayload
 
   """Creates a single `Group`."""
   createGroup(

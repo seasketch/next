@@ -982,13 +982,7 @@ export default function LayerTableOfContentsItemEditor(
                         term={t("URL Template")}
                         description={
                           <div className="w-full font-mono max-h-24 overflow-auto">
-                            {source.tiles![0]!.split("?").map((part) => (
-                              <span>
-                                {part.split("&").map((p) => (
-                                  <span>{p}</span>
-                                ))}
-                              </span>
-                            ))}
+                            {source.tiles![0]!}
                           </div>
                         }
                       />
