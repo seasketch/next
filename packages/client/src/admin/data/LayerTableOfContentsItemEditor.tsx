@@ -367,7 +367,13 @@ export default function LayerTableOfContentsItemEditor(
         </div>
       )}
       {item && (
-        <div className={selectedTab !== "metadata" ? "hidden" : ""}>
+        <div
+          className={
+            selectedTab !== "metadata"
+              ? "hidden"
+              : "flex-1 flex flex-col overflow-y-hidden"
+          }
+        >
           <OverlayMetataEditor
             id={item.id}
             registerPreventUnload={registerPreventUnload}
