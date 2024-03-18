@@ -46,6 +46,7 @@ function sanitizeInput(input: string) {
   input = input.replace(/\{\{\&/g, "{{");
   input = input.replace(/\}\}\}/g, "}}");
   input = sanitizeHtml(input, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"]),
     allowedAttributes: {
       ...sanitizeHtml.defaults.allowedAttributes,
       "*": ["style", "class"],
