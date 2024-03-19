@@ -78,7 +78,7 @@ describe("Basemaps", () => {
           const basemaps = await conn.any(
             sql`select projects_basemaps(projects.*) from projects where id = ${projectId}`
           );
-          expect(basemaps.length).toBe(1);
+          expect(basemaps.length).toBe(3);
         }
       );
     });
@@ -111,7 +111,7 @@ describe("Basemaps", () => {
           );
           await createSession(conn);
           const basemaps = await conn.any(sql`select * from basemaps`);
-          expect(basemaps.length).toBe(1);
+          expect(basemaps.length).toBe(3);
         }
       );
     });
@@ -138,7 +138,7 @@ describe("Basemaps", () => {
           const basemaps = await conn.any(
             sql`select projects_basemaps(projects.*) from projects where id = ${projectId}`
           );
-          expect(basemaps.length).toBe(2);
+          expect(basemaps.length).toBe(4);
         }
       );
     });

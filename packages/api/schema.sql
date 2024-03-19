@@ -1864,6 +1864,81 @@ CREATE FUNCTION public.acl_update_draft_toc_has_changes() RETURNS trigger
 
 
 --
+-- Name: add_default_basemaps(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_default_basemaps(pid integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      basemapid int;
+    begin
+      insert into basemaps (
+        project_id,
+        name,
+        url,
+        labels_layer_id,
+        thumbnail,
+        attribution,
+        type
+      ) values (
+        pid,
+        'Light',
+        'mapbox://styles/seasketch/cltyob7pm01vf01oi6w1zbmbp',
+        'path-pedestrian-label',
+        'https://d17krkm4g5m2af.cloudfront.net/937928e3-22a1-436c-999a-9d59b18d835c.png',
+        '<a href="https://marineregions.org" target="_blank">MarineRegions.org</a>',
+        'MAPBOX'
+      ) returning id into basemapid;
+      insert into optional_basemap_layers (
+        basemap_id,
+        layers,
+        default_visibility,
+        name,
+        metadata
+      ) values (
+        basemapid,
+        '{eez,eez-labels}',
+        true,
+        'EEZ Boundaries',
+        '{"type": "doc", "content": [{"type": "paragraph", "content": [{"text": "Flanders Marine Institute (2020). Union of the ESRI Country shapefile and the Exclusive Economic Zones (version 3). Available online at ", "type": "text"}, {"text": "https://www.marineregions.org/", "type": "text", "marks": [{"type": "link", "attrs": {"href": "https://www.marineregions.org/", "title": null}}]}, {"text": ". ", "type": "text"}, {"text": "https://doi.org/10.14284/403", "type": "text", "marks": [{"type": "link", "attrs": {"href": "https://doi.org/10.14284/403", "title": null}}]}, {"text": ". Consulted on 2024-03-19.", "type": "text"}]}]}'::jsonb
+      );
+      
+      insert into basemaps (
+        project_id,
+        name,
+        url,
+        labels_layer_id,
+        thumbnail,
+        attribution,
+        type
+      ) values (
+        pid,
+        'Satellite',
+        'mapbox://styles/seasketch/cltypb2ym01w301o82akda443',
+        'path-pedestrian-label',
+        'https://d17krkm4g5m2af.cloudfront.net/a78a89e5-86f9-46ec-99f6-c24946e01010.png',
+        '<a href="https://marineregions.org" target="_blank">MarineRegions.org</a>',
+        'MAPBOX'
+      ) returning id into basemapid;
+      insert into optional_basemap_layers (
+        basemap_id,
+        layers,
+        default_visibility,
+        name,
+        metadata
+      ) values (
+        basemapid,
+        '{eez,eez-labels}',
+        true,
+        'EEZ Boundaries',
+        '{"type": "doc", "content": [{"type": "paragraph", "content": [{"text": "Flanders Marine Institute (2020). Union of the ESRI Country shapefile and the Exclusive Economic Zones (version 3). Available online at ", "type": "text"}, {"text": "https://www.marineregions.org/", "type": "text", "marks": [{"type": "link", "attrs": {"href": "https://www.marineregions.org/", "title": null}}]}, {"text": ". ", "type": "text"}, {"text": "https://doi.org/10.14284/403", "type": "text", "marks": [{"type": "link", "attrs": {"href": "https://doi.org/10.14284/403", "title": null}}]}, {"text": ". Consulted on 2024-03-19.", "type": "text"}]}]}'::jsonb
+      );
+    end;
+  $$;
+
+
+--
 -- Name: add_group_to_acl(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5769,6 +5844,7 @@ CREATE FUNCTION public.create_project(name text, slug text, OUT project public.p
         true, 
         true
       );
+      perform add_default_basemaps(project.id);
     else
       raise exception 'Email must be verified to create a project';
     end if;
@@ -21117,6 +21193,13 @@ GRANT ALL ON FUNCTION public.account_exists(email text) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.acl_update_draft_toc_has_changes() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION add_default_basemaps(pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_default_basemaps(pid integer) FROM PUBLIC;
 
 
 --
