@@ -96,7 +96,14 @@ code {
 .metadata .ProseMirror a {
   color: rgb(49, 115, 201);
   text-decoration: underline;
-  word-break: break-all;
+  max-width: 100%;
+  display: inline-block;
+  @apply truncate;
+  margin-bottom: -0.4rem;
+}
+
+.small-variant.metadata .ProseMirror a {
+  margin-bottom: -0.32rem;
 }
 
 .metadata .ProseMirror ul,
