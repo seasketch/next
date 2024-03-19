@@ -97,13 +97,13 @@ code {
   color: rgb(49, 115, 201);
   text-decoration: underline;
   max-width: 100%;
-  display: inline-block;
-  @apply truncate;
-  margin-bottom: -0.4rem;
+  display: inline;
+  /* @apply truncate; */
+  /* margin-bottom: -0.4rem; */
 }
 
 .small-variant.metadata .ProseMirror a {
-  margin-bottom: -0.32rem;
+  /* margin-bottom: -0.32rem; */
 }
 
 .metadata .ProseMirror ul,
