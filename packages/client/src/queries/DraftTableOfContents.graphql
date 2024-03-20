@@ -751,3 +751,30 @@ mutation CreateRemoteGeoJSONSource(
     }
   }
 }
+
+query QuotaUsageDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+    uploadedDraftDataSources {
+      id
+      quotaUsed {
+        bytes
+        id
+        isOriginal
+        type
+      }
+      dataLayersConnection {
+        nodes {
+          id
+          tableOfContentsItem {
+            id
+            title
+            stableId
+          }
+        }
+      }
+    }
+  }
+}

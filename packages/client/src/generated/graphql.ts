@@ -2244,6 +2244,8 @@ export type DataSource = Node & {
    * querystring parameters that will be added to requests.
    */
   queryParameters?: Maybe<Scalars['JSON']>;
+  /** Reads and enables pagination through a set of `QuotaDetail`. */
+  quotaUsed?: Maybe<Array<QuotaDetail>>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
@@ -2295,6 +2297,19 @@ export type DataSourceDataLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<DataLayersOrderBy>>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceQuotaUsedArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 export enum DataSourceImportTypes {
@@ -8970,6 +8985,8 @@ export type Project = Node & {
    * Users can be approved using the `approveParticipant()` mutation.
    */
   unapprovedParticipants?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `DataSource`. */
+  uploadedDraftDataSources?: Maybe<Array<DataSource>>;
   /** Project url will resolve to `https://seasketch.org/{slug}/` */
   url?: Maybe<Scalars['String']>;
   /** List of all banned users. Listing only accessible to admins. */
@@ -9284,6 +9301,16 @@ export type ProjectUnapprovedParticipantsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<ParticipantSortBy>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectUploadedDraftDataSourcesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -10958,6 +10985,14 @@ export type QueryVerifyProjectInviteArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryVerifySurveyInviteArgs = {
   token: Scalars['String'];
+};
+
+export type QuotaDetail = {
+  __typename?: 'QuotaDetail';
+  bytes?: Maybe<Scalars['BigInt']>;
+  id?: Maybe<Scalars['Int']>;
+  isOriginal?: Maybe<Scalars['Boolean']>;
+  type?: Maybe<DataUploadOutputType>;
 };
 
 export enum RasterDemEncoding {
@@ -16758,6 +16793,37 @@ export type CreateRemoteGeoJsonSourceMutation = (
       { __typename?: 'TableOfContentsItem' }
       & AdminOverlayFragment
     )> }
+  )> }
+);
+
+export type QuotaUsageDetailsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type QuotaUsageDetailsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
+    & { uploadedDraftDataSources?: Maybe<Array<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id'>
+      & { quotaUsed?: Maybe<Array<(
+        { __typename?: 'QuotaDetail' }
+        & Pick<QuotaDetail, 'bytes' | 'id' | 'isOriginal' | 'type'>
+      )>>, dataLayersConnection: (
+        { __typename?: 'DataLayersConnection' }
+        & { nodes: Array<(
+          { __typename?: 'DataLayer' }
+          & Pick<DataLayer, 'id'>
+          & { tableOfContentsItem?: Maybe<(
+            { __typename?: 'TableOfContentsItem' }
+            & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId'>
+          )> }
+        )> }
+      ) }
+    )>> }
   )> }
 );
 
@@ -25506,6 +25572,62 @@ export function useCreateRemoteGeoJsonSourceMutation(baseOptions?: Apollo.Mutati
 export type CreateRemoteGeoJsonSourceMutationHookResult = ReturnType<typeof useCreateRemoteGeoJsonSourceMutation>;
 export type CreateRemoteGeoJsonSourceMutationResult = Apollo.MutationResult<CreateRemoteGeoJsonSourceMutation>;
 export type CreateRemoteGeoJsonSourceMutationOptions = Apollo.BaseMutationOptions<CreateRemoteGeoJsonSourceMutation, CreateRemoteGeoJsonSourceMutationVariables>;
+export const QuotaUsageDetailsDocument = gql`
+    query QuotaUsageDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+    uploadedDraftDataSources {
+      id
+      quotaUsed {
+        bytes
+        id
+        isOriginal
+        type
+      }
+      dataLayersConnection {
+        nodes {
+          id
+          tableOfContentsItem {
+            id
+            title
+            stableId
+          }
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useQuotaUsageDetailsQuery__
+ *
+ * To run a query within a React component, call `useQuotaUsageDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useQuotaUsageDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useQuotaUsageDetailsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useQuotaUsageDetailsQuery(baseOptions: Apollo.QueryHookOptions<QuotaUsageDetailsQuery, QuotaUsageDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<QuotaUsageDetailsQuery, QuotaUsageDetailsQueryVariables>(QuotaUsageDetailsDocument, options);
+      }
+export function useQuotaUsageDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<QuotaUsageDetailsQuery, QuotaUsageDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<QuotaUsageDetailsQuery, QuotaUsageDetailsQueryVariables>(QuotaUsageDetailsDocument, options);
+        }
+export type QuotaUsageDetailsQueryHookResult = ReturnType<typeof useQuotaUsageDetailsQuery>;
+export type QuotaUsageDetailsLazyQueryHookResult = ReturnType<typeof useQuotaUsageDetailsLazyQuery>;
+export type QuotaUsageDetailsQueryResult = Apollo.QueryResult<QuotaUsageDetailsQuery, QuotaUsageDetailsQueryVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -31513,6 +31635,7 @@ export const namedOperations = {
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
     ProjectDownloadSetting: 'ProjectDownloadSetting',
+    QuotaUsageDetails: 'QuotaUsageDetails',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',

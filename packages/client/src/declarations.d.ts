@@ -49,3 +49,5 @@ declare module "geojson-antimeridian-cut" {
 
   export = splitGeojson;
 }
+
+declare module "d3-treemap";

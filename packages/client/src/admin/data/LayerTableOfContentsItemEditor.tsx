@@ -13,6 +13,7 @@ import {
   ArcgisFeatureLayerFetchStrategy,
   useUpdateFetchStrategyMutation,
   SublayerType,
+  OverlayFragment,
 } from "../../generated/graphql";
 import { useTranslation, Trans } from "react-i18next";
 import MutableAutosaveInput from "../MutableAutosaveInput";
@@ -320,13 +321,9 @@ export default function LayerTableOfContentsItemEditor(
           }
           className="px-4 py-1 bg-gray-700 text-gray-300 text-sm"
         >
-          {item.containedBy.map((parent) => (
-            <span className="inline-flex items-center" key={parent!.id}>
-              <CaretRightIcon />
-              <FolderIcon />
-              <span className="pl-1">{parent?.title}</span>
-            </span>
-          ))}
+          <TableOfContentsItemFolderBreadcrumbs
+            parents={item.containedBy as OverlayFragment[]}
+          />
         </div>
       )}
       <div className="flex-0 p-2 px-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
@@ -1198,4 +1195,22 @@ function UploadedSourceName({
   } else {
     return <span>{filename || "User upload"}</span>;
   }
+}
+
+export function TableOfContentsItemFolderBreadcrumbs({
+  parents,
+}: {
+  parents: OverlayFragment[];
+}) {
+  return (
+    <>
+      {parents.map((parent) => (
+        <span className="inline-flex items-center" key={parent!.id}>
+          <CaretRightIcon />
+          <FolderIcon />
+          <span className="pl-1">{parent?.title}</span>
+        </span>
+      ))}
+    </>
+  );
 }

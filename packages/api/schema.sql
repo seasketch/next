@@ -677,6 +677,18 @@ CREATE TYPE public.public_project_details AS (
 
 
 --
+-- Name: quota_details; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.quota_details AS (
+	bytes bigint,
+	id integer,
+	type public.data_upload_output_type,
+	is_original boolean
+);
+
+
+--
 -- Name: raster_dem_encoding; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -7543,6 +7555,32 @@ COMMENT ON COLUMN public.data_sources.uploaded_by IS '@omit';
 
 
 --
+-- Name: data_sources_quota_used(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_quota_used(source public.data_sources) RETURNS SETOF public.quota_details
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select
+      size as bytes,
+      id,
+      type,
+      is_original
+    from
+      data_upload_outputs
+    where
+      data_source_id = source.id;
+  $$;
+
+
+--
+-- Name: FUNCTION data_sources_quota_used(source public.data_sources); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_sources_quota_used(source public.data_sources) IS '@simpleCollections only';
+
+
+--
 -- Name: data_sources_uploaded_by(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10903,7 +10941,20 @@ CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETUR
     if session_is_admin(p.id) != true then
       raise 'Permission denied';
     end if;
-    select sum(byte_length) into sum_bytes from data_sources where project_id = p.id;
+    select 
+      sum(size) 
+    into 
+      sum_bytes 
+    from 
+      data_upload_outputs
+    where
+      data_source_id = any (
+        select id from data_sources where id = any (
+          select data_source_id from data_layers where id = any (
+            select data_layer_id from table_of_contents_items where project_id = p.id and data_layer_id is not null and is_draft = true
+          )
+        )
+      );
     select projects_data_hosting_quota(p) into quota;
     if sum_bytes < quota then
       return sum_bytes;
@@ -11666,6 +11717,28 @@ For invite-only projects. List all pending participation requests.
 
 Users can be approved using the `approveParticipant()` mutation.
 ';
+
+
+--
+-- Name: projects_uploaded_draft_data_sources(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_uploaded_draft_data_sources(p public.projects) RETURNS SETOF public.data_sources
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select * from data_sources where type = any ('{seasketch-mvt,seasketch-vector,seasketch-raster}') and id = any (
+    select data_source_id from data_layers where id = any (
+      select data_layer_id from table_of_contents_items where project_id = p.id and data_layer_id is not null and is_draft = true
+    )
+  );
+$$;
+
+
+--
+-- Name: FUNCTION projects_uploaded_draft_data_sources(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_uploaded_draft_data_sources(p public.projects) IS '@simpleCollections only';
 
 
 --
@@ -23413,6 +23486,14 @@ GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_us
 
 
 --
+-- Name: FUNCTION data_sources_quota_used(source public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_quota_used(source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_quota_used(source public.data_sources) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION data_sources_uploaded_by(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
 --
 
@@ -26540,6 +26621,14 @@ GRANT ALL ON FUNCTION public.projects_unapproved_participant_count(p public.proj
 
 REVOKE ALL ON FUNCTION public.projects_unapproved_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_unapproved_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_uploaded_draft_data_sources(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_uploaded_draft_data_sources(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_uploaded_draft_data_sources(p public.projects) TO seasketch_user;
 
 
 --

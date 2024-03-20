@@ -52,6 +52,7 @@ import useDialog from "../../components/useDialog";
 import Warning from "../../components/Warning";
 import AddMVTUrlModal from "../AddMVTUrlModal";
 import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
+import QuotaUsageDetails from "./QuotaUsageDetails";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -69,6 +70,9 @@ export default function TableOfContentsEditor() {
       if (view === "order") {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data/zindex`);
+      } else if (view === "quota") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/quota`);
       } else {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data`);
@@ -79,6 +83,8 @@ export default function TableOfContentsEditor() {
 
   const selectedView = /zindex/.test(history.location.pathname)
     ? "order"
+    : /quota/.test(history.location.pathname)
+    ? "quota"
     : "tree";
   const { manager } = useContext(MapContext);
 
@@ -389,7 +395,9 @@ export default function TableOfContentsEditor() {
         </Warning>
       )}
       <div
-        className="flex-1 overflow-y-auto p-2 px-8"
+        className={`flex-1 overflow-y-auto p-2 ${
+          selectedView === "quota" ? "px-4" : "px-8"
+        }`}
         onContextMenu={(e) => e.preventDefault()}
       >
         {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
@@ -466,6 +474,17 @@ export default function TableOfContentsEditor() {
             dataSources={
               layersAndSources.data?.projectBySlug?.dataSourcesForItems
             }
+          />
+        </Route>
+        <Route path={`/${slug}/admin/data/quota`}>
+          <QuotaUsageDetails // @ts-ignore
+            tableOfContentsItems={
+              tocQuery.data?.projectBySlug?.draftTableOfContentsItems
+            }
+            layers={
+              layersAndSources.data?.projectBySlug?.dataLayersForItems || []
+            }
+            slug={slug}
           />
         </Route>
       </div>
@@ -579,6 +598,9 @@ function Header({
                 </MenubarRadioItem>
                 <MenubarRadioItem value="order">
                   <Trans ns="admin:data">Layer Z-Ordering</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="quota">
+                  <Trans ns="admin:data">Data Hosting Quota</Trans>
                 </MenubarRadioItem>
               </Menubar.RadioGroup>
               <MenuBarSeparator />
