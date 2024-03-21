@@ -155,7 +155,7 @@ export default function QuotaUsageDetails({
             slug={slug}
             tableOfContentsItems={tableOfContentsItems}
           />
-        ) : (
+        ) : loading ? null : (
           <Warning level="info">
             <Trans ns="admin:data">
               This project does not yet have any data sources which contribute
