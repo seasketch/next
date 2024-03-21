@@ -2,6 +2,9 @@
 import { questionBodyFromMarkdown } from "./fromMarkdown";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import MultipleChoice, { MultipleChoiceProps } from "./MultipleChoice";
+import { componentExportHelpers } from "./index";
+
+const exportHelper = componentExportHelpers["MultipleChoice"];
 
 const body = questionBodyFromMarkdown(`# Which option do you prefer?
 `);
@@ -56,4 +59,32 @@ test("multipleSelect: selecting multiple options", async () => {
   });
   fireEvent.click(screen.getByText("Option C"));
   expect(args.onChange).toBeCalledWith(["B", "C"], false);
+});
+
+test("exportHelper - coerce string to array", async () => {
+  const args = makeArgs({ multipleSelect: true });
+  const value = "B";
+  const result = exportHelper.getAnswers(args.componentSettings, "foo", value);
+  expect(result).toEqual({ foo: ["B"] });
+});
+
+test("exportHelper - coerce array to string", async () => {
+  const args = makeArgs({ multipleSelect: false });
+  const value = ["B"];
+  const result = exportHelper.getAnswers(args.componentSettings, "foo", value);
+  expect(result).toEqual({ foo: "B" });
+});
+
+test("exportHelper - multipleSelect with answer in expected format", async () => {
+  const args = makeArgs({ multipleSelect: true });
+  const value = ["B"];
+  const result = exportHelper.getAnswers(args.componentSettings, "foo", value);
+  expect(result).toEqual({ foo: ["B"] });
+});
+
+test("exportHelper - single-select with answer in expected format", async () => {
+  const args = makeArgs({ multipleSelect: false });
+  const value = "B";
+  const result = exportHelper.getAnswers(args.componentSettings, "foo", value);
+  expect(result).toEqual({ foo: "B" });
 });

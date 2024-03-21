@@ -22,21 +22,21 @@ var __spreadValues = (a, b) => {
   return a;
 };
 var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
-var __markAsModule = (target) => __defProp(target, "__esModule", { value: true });
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
-var __reExport = (target, module, copyDefault, desc) => {
-  if (module && typeof module === "object" || typeof module === "function") {
-    for (let key of __getOwnPropNames(module))
-      if (!__hasOwnProp.call(target, key) && (copyDefault || key !== "default"))
-        __defProp(target, key, { get: () => module[key], enumerable: !(desc = __getOwnPropDesc(module, key)) || desc.enumerable });
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
   }
-  return target;
+  return to;
 };
-var __toESM = (module, isNodeMode) => {
-  return __reExport(__markAsModule(__defProp(module != null ? __create(__getProtoOf(module)) : {}, "default", !isNodeMode && module && module.__esModule ? { get: () => module.default, enumerable: true } : { value: module, enumerable: true })), module);
-};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 
 // ../api/node_modules/graphql-tag/node_modules/tslib/tslib.js
 var require_tslib = __commonJS({
@@ -2699,7 +2699,11 @@ var require_visitor = __commonJS({
         enter: function enter(node) {
           for (var i = 0; i < visitors.length; i++) {
             if (!skipping[i]) {
-              var fn = getVisitFn(visitors[i], node.kind, false);
+              var fn = getVisitFn(
+                visitors[i],
+                node.kind,
+                false
+              );
               if (fn) {
                 var result = fn.apply(visitors[i], arguments);
                 if (result === false) {
@@ -2716,7 +2720,11 @@ var require_visitor = __commonJS({
         leave: function leave(node) {
           for (var i = 0; i < visitors.length; i++) {
             if (!skipping[i]) {
-              var fn = getVisitFn(visitors[i], node.kind, true);
+              var fn = getVisitFn(
+                visitors[i],
+                node.kind,
+                true
+              );
               if (fn) {
                 var result = fn.apply(visitors[i], arguments);
                 if (result === BREAK) {
@@ -2736,7 +2744,11 @@ var require_visitor = __commonJS({
       return {
         enter: function enter(node) {
           typeInfo.enter(node);
-          var fn = getVisitFn(visitor, node.kind, false);
+          var fn = getVisitFn(
+            visitor,
+            node.kind,
+            false
+          );
           if (fn) {
             var result = fn.apply(visitor, arguments);
             if (result !== void 0) {
@@ -2749,7 +2761,11 @@ var require_visitor = __commonJS({
           }
         },
         leave: function leave(node) {
-          var fn = getVisitFn(visitor, node.kind, true);
+          var fn = getVisitFn(
+            visitor,
+            node.kind,
+            true
+          );
           var result;
           if (fn) {
             result = fn.apply(visitor, arguments);
@@ -7391,7 +7407,10 @@ var require_ValuesOfCorrectType = __commonJS({
         return;
       }
       try {
-        var parseResult = type.parseLiteral(node, void 0);
+        var parseResult = type.parseLiteral(
+          node,
+          void 0
+        );
         if ((0, _isInvalid.default)(parseResult)) {
           context.reportError(new _GraphQLError.GraphQLError(badValueMessage((0, _inspect.default)(locationType), (0, _printer.print)(node)), node));
         }
@@ -7747,7 +7766,15 @@ var require_OverlappingFieldsCanBeMerged = __commonJS({
         if (fields.length > 1) {
           for (var i = 0; i < fields.length; i++) {
             for (var j = i + 1; j < fields.length; j++) {
-              var conflict = findConflict(context, cachedFieldsAndFragmentNames, comparedFragmentPairs, false, responseName, fields[i], fields[j]);
+              var conflict = findConflict(
+                context,
+                cachedFieldsAndFragmentNames,
+                comparedFragmentPairs,
+                false,
+                responseName,
+                fields[i],
+                fields[j]
+              );
               if (conflict) {
                 conflicts.push(conflict);
               }
@@ -9757,16 +9784,18 @@ var require_graphql = __commonJS({
     function graphql(argsOrSchema, source, rootValue, contextValue, variableValues, operationName, fieldResolver, typeResolver) {
       var _arguments = arguments;
       return new Promise(function(resolve) {
-        return resolve(_arguments.length === 1 ? graphqlImpl(argsOrSchema) : graphqlImpl({
-          schema: argsOrSchema,
-          source,
-          rootValue,
-          contextValue,
-          variableValues,
-          operationName,
-          fieldResolver,
-          typeResolver
-        }));
+        return resolve(
+          _arguments.length === 1 ? graphqlImpl(argsOrSchema) : graphqlImpl({
+            schema: argsOrSchema,
+            source,
+            rootValue,
+            contextValue,
+            variableValues,
+            operationName,
+            fieldResolver,
+            typeResolver
+          })
+        );
       });
     }
     function graphqlSync(argsOrSchema, source, rootValue, contextValue, variableValues, operationName, fieldResolver, typeResolver) {
@@ -14738,7 +14767,9 @@ function sortFormElements(elements) {
   const FeatureName = elements.find((el) => el.typeId === "FeatureName");
   const SAPRange = elements.find((el) => el.typeId === "SAPRange");
   const Consent = elements.find((el) => el.typeId === "Consent");
-  const bodyElements = elements.filter((el) => el.typeId !== "WelcomeMessage" && el.typeId !== "ThankYou" && el.typeId !== "SaveScreen" && el.typeId !== "FeatureName" && el.typeId !== "SAPRange" && el.typeId !== "Consent");
+  const bodyElements = elements.filter(
+    (el) => el.typeId !== "WelcomeMessage" && el.typeId !== "ThankYou" && el.typeId !== "SaveScreen" && el.typeId !== "FeatureName" && el.typeId !== "SAPRange" && el.typeId !== "Consent"
+  );
   bodyElements.sort((a, b) => {
     return a.position - b.position;
   });
@@ -14820,6 +14851,7 @@ registerComponent({
   }
 });
 registerComponent({ name: "Email" });
+registerComponent({ name: "ParticipantCount" });
 registerComponent({
   name: "Consent",
   getColumns: (componentSettings, exportId) => {
@@ -14839,8 +14871,38 @@ registerComponent({
     return [exportId];
   },
   getAnswers: (settings, exportId, answer) => {
+    if (settings.multipleSelect) {
+      if (answer === void 0 || answer === null) {
+        return {
+          [exportId]: []
+        };
+      } else if (!Array.isArray(answer)) {
+        return {
+          [exportId]: [answer]
+        };
+      } else {
+        return {
+          [exportId]: answer
+        };
+      }
+    } else {
+      if (Array.isArray(answer)) {
+        return {
+          [exportId]: answer[0]
+        };
+      } else {
+        return {
+          [exportId]: answer
+        };
+      }
+    }
+  }
+});
+registerComponent({
+  name: "DemographicChoice",
+  getAnswers(componentSettings, exportId, answer) {
     return {
-      [exportId]: Array.isArray(answer) ? answer[0] : answer || void 0
+      [exportId]: JSON.stringify(answer)
     };
   }
 });
@@ -14854,7 +14916,9 @@ registerComponent({ name: "ComboBox" });
 registerComponent({
   name: "Matrix",
   getColumns: (componentSettings, exportId) => {
-    return (componentSettings.rows || []).map((option) => `${exportId}_${option.value || option.label}`);
+    return (componentSettings.rows || []).map(
+      (option) => `${exportId}_${option.value || option.label}`
+    );
   },
   getAnswers: (settings, exportId, answer) => {
     return (settings.rows || []).reduce((prev, option) => {
@@ -14864,8 +14928,15 @@ registerComponent({
   }
 });
 registerComponent({ name: "ThankYou" });
-registerComponent({ name: "SingleSpatialInput" });
-registerComponent({ name: "MultiSpatialInput" });
+registerComponent({
+  name: "MultiSpatialInput",
+  getColumns: (componentSettings, exportId) => [`${exportId}_feature_ids`],
+  getAnswers: (settings, exportId, answer) => {
+    return {
+      [`${exportId}_feature_ids`]: answer.collection
+    };
+  }
+});
 registerComponent({
   name: "SpatialAccessPriorityInput",
   fname: "SpatialAccessPriority/SpatialAccessPriority",
@@ -14942,16 +15013,6 @@ var NewBasemapFragmentDoc = import_client.gql`
   surveysOnly
 }
     `;
-var NewQueryParametersFragmentDoc = import_client.gql`
-    fragment NewQueryParameters on DataSource {
-  queryParameters
-}
-    `;
-var UpdateHighDpiFragmentDoc = import_client.gql`
-    fragment UpdateHighDPI on DataSource {
-  useDevicePixelRatio
-}
-    `;
 var UpdateFormatFragmentDoc = import_client.gql`
     fragment UpdateFormat on DataSource {
   queryParameters
@@ -14962,14 +15023,26 @@ var NewGlStyleFragmentDoc = import_client.gql`
   mapboxGlStyles
 }
     `;
-var NewRenderUnderFragmentDoc = import_client.gql`
-    fragment NewRenderUnder on DataLayer {
-  renderUnder
+var NewRuleFragmentDoc = import_client.gql`
+    fragment NewRule on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    id
+    operator
+    value
+    subjectId
+    ruleId
+  }
 }
     `;
-var NewZIndexFragmentDoc = import_client.gql`
-    fragment NewZIndex on DataLayer {
-  zIndex
+var NewConditionFragmentDoc = import_client.gql`
+    fragment NewCondition on FormLogicCondition {
+  id
 }
     `;
 var NewElementFragmentDoc = import_client.gql`
@@ -15037,23 +15110,6 @@ var LogicRuleEditorRuleFragmentDoc = import_client.gql`
   }
 }
     `;
-var NewRuleFragmentDoc = import_client.gql`
-    fragment NewRule on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
-  }
-}
-    `;
 var NewSurveyFragmentDoc = import_client.gql`
     fragment NewSurvey on Survey {
   id
@@ -15107,6 +15163,43 @@ var UpdateBodyFragmentDoc = import_client.gql`
   body
 }
     `;
+var MySketchFragmentDoc = import_client.gql`
+    fragment MySketch on Sketch {
+  name
+  isCollection
+  collectionId
+  folderId
+  timestamp
+  sharedInForum
+  sketchClassId
+  bbox
+}
+    `;
+var MyFolderFragmentDoc = import_client.gql`
+    fragment MyFolder on SketchFolder {
+  name
+  collectionId
+  folderId
+  sharedInForum
+}
+    `;
+var PopupShareDetailsFragmentDoc = import_client.gql`
+    fragment PopupShareDetails on Post {
+  id
+  topicId
+  topic {
+    id
+    title
+    forumId
+  }
+}
+    `;
+var DataFragmentDoc = import_client.gql`
+    fragment data on SketchFolder {
+  id
+  name
+}
+    `;
 var BasemapDetailsFragmentDoc = import_client.gql`
     fragment BasemapDetails on Basemap {
   id
@@ -15118,6 +15211,7 @@ var BasemapDetailsFragmentDoc = import_client.gql`
     longTemplate
     shortTemplate
     type
+    title
   }
   labelsLayerId
   name
@@ -15145,8 +15239,754 @@ var BasemapDetailsFragmentDoc = import_client.gql`
   type
   url
   surveysOnly
+  translatedProps
+  isArcgisTiledMapservice
+  maxzoom
 }
     `;
+var BasemapAdminDetailsFragmentDoc = import_client.gql`
+    fragment BasemapAdminDetails on Basemap {
+  ...BasemapDetails
+  id
+  attribution
+  interactivitySettings {
+    cursor
+    id
+    layers
+    longTemplate
+    shortTemplate
+    type
+  }
+  description
+  labelsLayerId
+  name
+  optionalBasemapLayers {
+    basemapId
+    defaultVisibility
+    description
+    options
+    groupType
+    id
+    layers
+    metadata
+    name
+  }
+  projectId
+  terrainExaggeration
+  terrainMaxZoom
+  terrainOptional
+  terrainTileSize
+  terrainUrl
+  terrainVisibilityDefault
+  thumbnail
+  tileSize
+  type
+  url
+  surveysOnly
+  isArcgisTiledMapservice
+}
+    ${BasemapDetailsFragmentDoc}`;
+var DataUploadDetailsFragmentDoc = import_client.gql`
+    fragment DataUploadDetails on DataUploadTask {
+  id
+  filename
+  tableOfContentsItemStableIds
+  projectBackgroundJobId
+}
+    `;
+var JobDetailsFragmentDoc = import_client.gql`
+    fragment JobDetails on ProjectBackgroundJob {
+  id
+  state
+  progress
+  progressMessage
+  errorMessage
+  createdAt
+  startedAt
+  title
+  type
+  dataUploadTask {
+    ...DataUploadDetails
+  }
+}
+    ${DataUploadDetailsFragmentDoc}`;
+var DataUploadExtendedDetailsFragmentDoc = import_client.gql`
+    fragment DataUploadExtendedDetails on DataUploadTask {
+  ...DataUploadDetails
+  job {
+    ...JobDetails
+  }
+}
+    ${DataUploadDetailsFragmentDoc}
+${JobDetailsFragmentDoc}`;
+var BackgroundJobSubscriptionEventFragmentDoc = import_client.gql`
+    fragment BackgroundJobSubscriptionEvent on ProjectBackgroundJobSubscriptionPayload {
+  id
+  previousState
+  job {
+    ...JobDetails
+    esriFeatureLayerConversionTask {
+      projectBackgroundJobId
+      tableOfContentsItem {
+        id
+        stableId
+        projectBackgroundJobs {
+          ...JobDetails
+        }
+      }
+    }
+  }
+}
+    ${JobDetailsFragmentDoc}`;
+var OverlayFragmentDoc = import_client.gql`
+    fragment Overlay on TableOfContentsItem {
+  id
+  acl {
+    id
+    type
+  }
+  bounds
+  dataLayerId
+  enableDownload
+  hideChildren
+  isClickOffOnly
+  isFolder
+  parentStableId
+  showRadioChildren
+  sortIndex
+  stableId
+  title
+  geoprocessingReferenceId
+  translatedProps
+  hasMetadata
+  primaryDownloadUrl
+  dataSourceType
+}
+    `;
+var AdminOverlayFragmentDoc = import_client.gql`
+    fragment AdminOverlay on TableOfContentsItem {
+  ...Overlay
+  projectBackgroundJobs {
+    id
+    type
+    title
+    state
+    progress
+    progressMessage
+    errorMessage
+  }
+}
+    ${OverlayFragmentDoc}`;
+var ForumListDetailsFragmentDoc = import_client.gql`
+    fragment ForumListDetails on Forum {
+  id
+  name
+  description
+  archived
+  position
+  topicCount
+  postCount
+  lastPostDate
+  readAcl {
+    id
+    nodeId
+  }
+  writeAcl {
+    id
+    nodeId
+  }
+  translatedProps
+}
+    `;
+var AuthorProfileFragmentDoc = import_client.gql`
+    fragment AuthorProfile on Profile {
+  affiliations
+  email
+  fullname
+  nickname
+  picture
+  userId
+}
+    `;
+var JobFragmentDoc = import_client.gql`
+    fragment Job on WorkerJob {
+  attempts
+  createdAt
+  key
+  lockedAt
+  maxAttempts
+  runAt
+  taskIdentifier
+  lastError
+}
+    `;
+var MapBookmarkDetailsFragmentDoc = import_client.gql`
+    fragment MapBookmarkDetails on MapBookmark {
+  id
+  imageId
+  createdAt
+  basemapOptionalLayerStates
+  cameraOptions
+  projectId
+  selectedBasemap
+  visibleDataLayers
+  mapDimensions
+  visibleSketches
+  screenshotJobStatus
+  basemapName
+  layerNames
+  job {
+    ...Job
+  }
+  basemapName
+  sketchNames
+  clientGeneratedThumbnail
+}
+    ${JobFragmentDoc}`;
+var FileUploadDetailsFragmentDoc = import_client.gql`
+    fragment FileUploadDetails on FileUpload {
+  id
+  filename
+  postId
+  userId
+  fileSizeBytes
+  contentType
+  downloadUrl
+  createdAt
+  usage
+  cloudflareImagesId
+}
+    `;
+var ForumPostFragmentDoc = import_client.gql`
+    fragment ForumPost on Post {
+  id
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  hiddenByModerator
+  topicId
+  html
+  sketchIds
+  mapBookmarks {
+    ...MapBookmarkDetails
+  }
+  fileUploads {
+    ...FileUploadDetails
+  }
+  orderedAttachmentIds
+}
+    ${AuthorProfileFragmentDoc}
+${MapBookmarkDetailsFragmentDoc}
+${FileUploadDetailsFragmentDoc}`;
+var RecentPostFragmentDoc = import_client.gql`
+    fragment RecentPost on Post {
+  ...ForumPost
+  blurb
+  topic {
+    id
+    postsCount
+    title
+    sticky
+    forum {
+      id
+      name
+      translatedProps
+    }
+    participantCount
+    participantsConnection(first: 4) {
+      nodes {
+        ...AuthorProfile
+      }
+    }
+  }
+}
+    ${ForumPostFragmentDoc}
+${AuthorProfileFragmentDoc}`;
+var ForumDetailsFragmentDoc = import_client.gql`
+    fragment ForumDetails on Forum {
+  id
+  archived
+  name
+  description
+  topicCount
+  postCount
+  lastPostDate
+  canPost
+  translatedProps
+}
+    `;
+var ForumTopicFragmentDoc = import_client.gql`
+    fragment ForumTopic on Topic {
+  id
+  title
+  authorProfile {
+    ...AuthorProfile
+  }
+  createdAt
+  locked
+  sticky
+  postsCount
+  lastPostDate
+  blurb
+  forumId
+  participantCount
+  participantsConnection(first: 5) {
+    nodes {
+      userId
+      email
+      picture
+      fullname
+      nickname
+    }
+  }
+}
+    ${AuthorProfileFragmentDoc}`;
+var SketchPresentFragmentDoc = import_client.gql`
+    fragment SketchPresent on Sketch {
+  id
+  name
+}
+    `;
+var SpriteDetailsFragmentDoc = import_client.gql`
+    fragment SpriteDetails on Sprite {
+  id
+  type
+  category
+  projectId
+  spriteImages {
+    spriteId
+    height
+    width
+    pixelRatio
+    url
+  }
+}
+    `;
+var MapEssentialsFragmentDoc = import_client.gql`
+    fragment MapEssentials on Project {
+  id
+  basemaps {
+    ...BasemapDetails
+  }
+  surveyBasemaps {
+    ...BasemapDetails
+  }
+  region {
+    geojson
+  }
+  mapboxPublicKey
+  mapboxSecretKey
+}
+    ${BasemapDetailsFragmentDoc}`;
+var OfflineTilePackageDetailsFragmentDoc = import_client.gql`
+    fragment OfflineTilePackageDetails on OfflineTilePackage {
+  id
+  bytes
+  projectId
+  region {
+    geojson
+  }
+  sourceType
+  jobStatus
+  tilesFetched
+  totalTiles
+  createdAt
+  jobErrors
+  dataSourceUrl
+  isMapboxHosted
+  maxZ
+  maxShorelineZ
+  presignedUrl
+  originalUrlTemplate
+}
+    `;
+var BasemapOfflineSupportInfoFragmentDoc = import_client.gql`
+    fragment BasemapOfflineSupportInfo on OfflineSupportInformation {
+  id
+  styleLastModified
+  staticAssets {
+    url
+    cacheKey
+    type
+  }
+  sources {
+    templateUrl
+    dataSourceUrl
+    tilePackages {
+      ...OfflineTilePackageDetails
+    }
+    type
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+var OfflineBasemapDetailsFragmentDoc = import_client.gql`
+    fragment OfflineBasemapDetails on Basemap {
+  ...BasemapDetails
+  useDefaultOfflineTileSettings
+  offlineTileSettings {
+    basemapId
+    id
+    maxShorelineZ
+    maxZ
+  }
+  offlineSupportInformation {
+    ...BasemapOfflineSupportInfo
+  }
+}
+    ${BasemapDetailsFragmentDoc}
+${BasemapOfflineSupportInfoFragmentDoc}`;
+var OfflineTileSettingsForCalculationFragmentDoc = import_client.gql`
+    fragment OfflineTileSettingsForCalculation on OfflineTileSetting {
+  maxShorelineZ
+  maxZ
+}
+    `;
+var OfflineTileSettingsFragmentDoc = import_client.gql`
+    fragment OfflineTileSettings on OfflineTileSetting {
+  id
+  projectId
+  basemapId
+  maxZ
+  maxShorelineZ
+  region {
+    geojson
+  }
+}
+    `;
+var ProjectMetadataFragmentDoc = import_client.gql`
+    fragment ProjectMetadata on Project {
+  id
+  slug
+  url
+  name
+  description
+  logoLink
+  logoUrl
+  accessControl
+  sessionIsAdmin
+  isFeatured
+  supportEmail
+  isOfflineEnabled
+  sketchGeometryToken
+  sketchClasses {
+    id
+    name
+    canDigitize
+    formElementId
+    isArchived
+    translatedProps
+  }
+  supportedLanguages
+  translatedProps
+  hideForums
+  hideSketches
+  hideOverlays
+}
+    `;
+var ProjectPublicDetailsMetadataFragmentDoc = import_client.gql`
+    fragment ProjectPublicDetailsMetadata on PublicProjectDetail {
+  id
+  accessControl
+  slug
+  name
+  logoUrl
+  supportEmail
+  accessStatus
+}
+    `;
+var ProjectMetadataMeFragFragmentDoc = import_client.gql`
+    fragment ProjectMetadataMeFrag on User {
+  id
+  profile {
+    userId
+    fullname
+    nickname
+    email
+    picture
+    affiliations
+  }
+}
+    `;
+var DataSourceDetailsFragmentDoc = import_client.gql`
+    fragment DataSourceDetails on DataSource {
+  id
+  attribution
+  bounds
+  buffer
+  byteLength
+  cluster
+  clusterMaxZoom
+  clusterProperties
+  clusterRadius
+  coordinates
+  encoding
+  enhancedSecurity
+  importType
+  lineMetrics
+  maxzoom
+  minzoom
+  originalSourceUrl
+  queryParameters
+  scheme
+  tiles
+  tileSize
+  tolerance
+  type
+  url
+  urls
+  useDevicePixelRatio
+  supportsDynamicLayers
+  translatedProps
+  arcgisFetchStrategy
+}
+    `;
+var ClientSpriteFragmentDoc = import_client.gql`
+    fragment ClientSprite on Sprite {
+  id
+  type
+  spriteImages {
+    url
+    height
+    width
+    pixelRatio
+    spriteId
+  }
+}
+    `;
+var DataLayerDetailsFragmentDoc = import_client.gql`
+    fragment DataLayerDetails on DataLayer {
+  id
+  mapboxGlStyles
+  renderUnder
+  sourceLayer
+  sublayer
+  zIndex
+  staticId
+  dataSourceId
+  sprites {
+    ...ClientSprite
+  }
+  interactivitySettings {
+    cursor
+    id
+    longTemplate
+    shortTemplate
+    type
+    title
+  }
+}
+    ${ClientSpriteFragmentDoc}`;
+var ProjectListItemFragmentDoc = import_client.gql`
+    fragment ProjectListItem on Project {
+  id
+  logoUrl
+  name
+  slug
+  description
+  url
+  isFeatured
+  translatedProps
+}
+    `;
+var SketchFormElementFragmentDoc = import_client.gql`
+    fragment SketchFormElement on FormElement {
+  id
+  componentSettings
+  alternateLanguageSettings
+  body
+  isRequired
+  isInput
+  position
+  typeId
+  exportId
+  generatedExportId
+  generatedLabel
+  type {
+    componentName
+    isInput
+    isSingleUseOnly
+    isSurveysOnly
+    label
+    isHidden
+    geostatsType
+    geostatsArrayOf
+  }
+}
+    `;
+var LogicRuleConditionDetailsFragmentDoc = import_client.gql`
+    fragment LogicRuleConditionDetails on FormLogicCondition {
+  id
+  operator
+  value
+  subjectId
+  ruleId
+}
+    `;
+var LogicRuleDetailsFragmentDoc = import_client.gql`
+    fragment LogicRuleDetails on FormLogicRule {
+  booleanOperator
+  command
+  id
+  jumpToId
+  position
+  formElementId
+  conditions {
+    ...LogicRuleConditionDetails
+  }
+}
+    ${LogicRuleConditionDetailsFragmentDoc}`;
+var SketchingDetailsFragmentDoc = import_client.gql`
+    fragment SketchingDetails on SketchClass {
+  id
+  name
+  isArchived
+  isTemplate
+  mapboxGlStyle
+  projectId
+  sketchCount
+  validChildren {
+    id
+    name
+  }
+  allowMulti
+  form {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+    logicRules {
+      ...LogicRuleDetails
+    }
+  }
+  geometryType
+  geoprocessingClientName
+  geoprocessingClientUrl
+  geoprocessingProjectUrl
+  formElementId
+  preprocessingEndpoint
+  preprocessingProjectUrl
+  canDigitize
+  translatedProps
+}
+    ${SketchFormElementFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
+var AdminSketchingDetailsFragmentDoc = import_client.gql`
+    fragment AdminSketchingDetails on SketchClass {
+  ...SketchingDetails
+  acl {
+    nodeId
+    type
+    id
+    sketchClassId
+    groups {
+      id
+      name
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
+var TemplateSketchClassFragmentDoc = import_client.gql`
+    fragment TemplateSketchClass on SketchClass {
+  id
+  name
+  geometryType
+  templateDescription
+}
+    `;
+var LogicRuleEditorFormElementDetailsFragmentDoc = import_client.gql`
+    fragment LogicRuleEditorFormElementDetails on FormElement {
+  ...SketchFormElement
+  generatedLabel
+  componentSettings
+  type {
+    componentName
+    isInput
+    isHidden
+    supportedOperators
+  }
+}
+    ${SketchFormElementFragmentDoc}`;
+var LogicRuleEditorFormDetailsFragmentDoc = import_client.gql`
+    fragment LogicRuleEditorFormDetails on Form {
+  id
+  formElements {
+    ...LogicRuleEditorFormElementDetails
+  }
+  logicRules {
+    ...LogicRuleDetails
+  }
+}
+    ${LogicRuleEditorFormElementDetailsFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
+var SketchFolderDetailsFragmentDoc = import_client.gql`
+    fragment SketchFolderDetails on SketchFolder {
+  collectionId
+  folderId
+  id
+  name
+}
+    `;
+var SketchTocDetailsFragmentDoc = import_client.gql`
+    fragment SketchTocDetails on Sketch {
+  id
+  bbox
+  name
+  numVertices
+  sketchClassId
+  collectionId
+  bbox
+  folderId
+  timestamp
+  updatedAt
+  createdAt
+  isCollection
+  sketchClass {
+    id
+    geometryType
+  }
+}
+    `;
+var SketchEditorModalDetailsFragmentDoc = import_client.gql`
+    fragment SketchEditorModalDetails on Sketch {
+  ...SketchTocDetails
+  userGeom {
+    geojson
+  }
+  properties
+  userAttributes
+  sketchClass {
+    ...SketchingDetails
+  }
+}
+    ${SketchTocDetailsFragmentDoc}
+${SketchingDetailsFragmentDoc}`;
+var SketchCrudResponseFragmentDoc = import_client.gql`
+    fragment SketchCRUDResponse on Sketch {
+  ...SketchTocDetails
+  id
+  name
+  userGeom {
+    geojson
+  }
+  properties
+  geojsonProperties
+  ...SketchEditorModalDetails
+  parentCollection {
+    id
+    updatedAt
+    timestamp
+  }
+}
+    ${SketchTocDetailsFragmentDoc}
+${SketchEditorModalDetailsFragmentDoc}`;
+var ProjectSketchesFragmentDoc = import_client.gql`
+    fragment ProjectSketches on Project {
+  sketchClasses {
+    ...SketchingDetails
+  }
+}
+    ${SketchingDetailsFragmentDoc}`;
 var SurveyListDetailsFragmentDoc = import_client.gql`
     fragment SurveyListDetails on Survey {
   id
@@ -15209,25 +16049,10 @@ var FormElementDetailsFragmentDoc = import_client.gql`
   subordinateTo
   mapBasemaps
   mapCameraOptions
+  generatedExportId
+  generatedLabel
 }
     ${AddFormElementTypeDetailsFragmentDoc}`;
-var LogicRuleDetailsFragmentDoc = import_client.gql`
-    fragment LogicRuleDetails on FormLogicRule {
-  booleanOperator
-  command
-  id
-  jumpToId
-  position
-  formElementId
-  conditions {
-    id
-    operator
-    value
-    subjectId
-    ruleId
-  }
-}
-    `;
 var SketchClassDetailsFragmentDoc = import_client.gql`
     fragment SketchClassDetails on SketchClass {
   id
@@ -15280,6 +16105,9 @@ var SurveyResponseFragmentDoc = import_client.gql`
 var FormElementExtendedDetailsFragmentDoc = import_client.gql`
     fragment FormElementExtendedDetails on FormElement {
   ...FormElementDetails
+  sketchClass {
+    geometryType
+  }
   surveyConsentDocumentsConnection {
     nodes {
       url
@@ -15343,6 +16171,8 @@ var SurveyAppFormElementFragmentDoc = import_client.gql`
   subordinateTo
   mapBasemaps
   mapCameraOptions
+  generatedExportId
+  generatedLabel
 }
     ${SketchClassDetailsFragmentDoc}`;
 var SurveyAppSurveyFragmentDoc = import_client.gql`
@@ -15354,6 +16184,9 @@ var SurveyAppSurveyFragmentDoc = import_client.gql`
   showProgress
   showFacilitationOption
   supportedLanguages
+  basemaps {
+    ...BasemapDetails
+  }
   form {
     id
     logicRules {
@@ -15364,7 +16197,8 @@ var SurveyAppSurveyFragmentDoc = import_client.gql`
     }
   }
 }
-    ${SurveyAppRuleFragmentDoc}
+    ${BasemapDetailsFragmentDoc}
+${SurveyAppRuleFragmentDoc}
 ${SurveyAppFormElementFragmentDoc}`;
 var ParticipantListDetailsFragmentDoc = import_client.gql`
     fragment ParticipantListDetails on User {
@@ -15372,6 +16206,7 @@ var ParticipantListDetailsFragmentDoc = import_client.gql`
   bannedFromForums
   isAdmin
   profile {
+    userId
     email
     fullname
     nickname
@@ -15394,9 +16229,19 @@ var UserListDetailsFragmentDoc = import_client.gql`
     name
     id
   }
+  needsAccessRequestApproval(slug: $slug)
+  approvedBy(projectId: $projectId) {
+    id
+    canonicalEmail
+  }
+  deniedBy(projectId: $projectId) {
+    id
+    canonicalEmail
+  }
+  approvedOrDeniedOn(projectId: $projectId)
   onboarded
-  participationStatus
   profile {
+    userId
     email
     fullname
     nickname
@@ -15428,6 +16273,16 @@ var InviteEmailDetailsFragmentDoc = import_client.gql`
   tokenExpiresAt
   error
   updatedAt
+}
+    `;
+var UserProfileDetailsFragmentDoc = import_client.gql`
+    fragment UserProfileDetails on Profile {
+  userId
+  fullname
+  affiliations
+  email
+  nickname
+  picture
 }
     `;
 var ProjectBucketSettingDocument = import_client.gql`
@@ -15473,21 +16328,29 @@ var UpdateProjectStorageBucketDocument = import_client.gql`
 }
     `;
 var MapboxApiKeysDocument = import_client.gql`
-    query MapboxAPIKeys {
-  currentProject {
+    query MapboxAPIKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
     mapboxPublicKey
     mapboxSecretKey
   }
 }
     `;
-var UpdateKeysDocument = import_client.gql`
-    mutation updateKeys($id: Int!, $public: String, $secret: String) {
-  updateProject(
-    input: {id: $id, patch: {mapboxPublicKey: $public, mapboxSecretKey: $secret}}
-  ) {
+var UpdatePublicKeyDocument = import_client.gql`
+    mutation updatePublicKey($id: Int!, $public: String) {
+  updateProject(input: {id: $id, patch: {mapboxPublicKey: $public}}) {
     project {
       id
       mapboxPublicKey
+    }
+  }
+}
+    `;
+var UpdateSecretKeyDocument = import_client.gql`
+    mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
+  updateMapboxSecretKey(input: {projectId: $id, secret: $mapboxSecretKey}) {
+    project {
+      id
       mapboxSecretKey
     }
   }
@@ -15612,9 +16475,7 @@ var CreateSeaSketchVectorSourceDocument = import_client.gql`
       type
       url
       presignedUploadUrl
-      bucketId
       enhancedSecurity
-      objectKey
     }
   }
 }
@@ -15731,6 +16592,23 @@ var RequestInviteOnlyProjectAccessDocument = import_client.gql`
   }
 }
     `;
+var BackgroundJobsDocument = import_client.gql`
+    query BackgroundJobs($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    projectBackgroundJobs {
+      id
+      title
+      userId
+      errorMessage
+      progress
+      progressMessage
+      state
+      type
+    }
+  }
+}
+    `;
 var GetBasemapsDocument = import_client.gql`
     query GetBasemaps($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -15745,9 +16623,9 @@ var GetBasemapsDocument = import_client.gql`
 }
     ${BasemapDetailsFragmentDoc}`;
 var CreateBasemapDocument = import_client.gql`
-    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean) {
+    mutation CreateBasemap($projectId: Int, $name: String!, $thumbnail: Upload!, $tileSize: Int, $type: BasemapType!, $url: String!, $surveysOnly: Boolean, $isArcgisTiledMapservice: Boolean) {
   createBasemap(
-    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly}}
+    input: {basemap: {projectId: $projectId, name: $name, thumbnail: $thumbnail, tileSize: $tileSize, type: $type, url: $url, surveysOnly: $surveysOnly, isArcgisTiledMapservice: $isArcgisTiledMapservice}}
   ) {
     basemap {
       ...BasemapDetails
@@ -15755,47 +16633,27 @@ var CreateBasemapDocument = import_client.gql`
   }
 }
     ${BasemapDetailsFragmentDoc}`;
+var UploadBasemapDocument = import_client.gql`
+    mutation UploadBasemap($projectId: Int!, $name: String!, $thumbnail: Upload!, $existingId: Int, $style: JSON!, $surveysOnly: Boolean) {
+  uploadStyle(
+    thumb: $thumbnail
+    style: $style
+    projectId: $projectId
+    id: $existingId
+    name: $name
+    surveysOnly: $surveysOnly
+  ) {
+    ...BasemapDetails
+  }
+}
+    ${BasemapDetailsFragmentDoc}`;
 var GetBasemapDocument = import_client.gql`
     query GetBasemap($id: Int!) {
   basemap(id: $id) {
-    id
-    attribution
-    interactivitySettings {
-      cursor
-      id
-      layers
-      longTemplate
-      shortTemplate
-      type
-    }
-    description
-    labelsLayerId
-    name
-    optionalBasemapLayers {
-      basemapId
-      defaultVisibility
-      description
-      options
-      groupType
-      id
-      layers
-      metadata
-      name
-    }
-    projectId
-    terrainExaggeration
-    terrainMaxZoom
-    terrainOptional
-    terrainTileSize
-    terrainUrl
-    terrainVisibilityDefault
-    thumbnail
-    tileSize
-    type
-    url
+    ...BasemapAdminDetails
   }
 }
-    `;
+    ${BasemapAdminDetailsFragmentDoc}`;
 var UpdateBasemapDocument = import_client.gql`
     mutation UpdateBasemap($id: Int!, $name: String) {
   updateBasemap(input: {id: $id, patch: {name: $name}}) {
@@ -15902,6 +16760,9 @@ var CreateOptionalLayerDocument = import_client.gql`
     input: {optionalBasemapLayer: {name: $name, basemapId: $basemapId, groupType: $groupType, options: $options}}
   ) {
     optionalBasemapLayer {
+      basemap {
+        ...BasemapAdminDetails
+      }
       id
       basemapId
       defaultVisibility
@@ -15914,7 +16775,7 @@ var CreateOptionalLayerDocument = import_client.gql`
     }
   }
 }
-    `;
+    ${BasemapAdminDetailsFragmentDoc}`;
 var UpdateOptionalLayerDocument = import_client.gql`
     mutation UpdateOptionalLayer($id: Int!, $name: String, $description: String, $defaultVisibility: Boolean, $metadata: JSON) {
   updateOptionalBasemapLayer(
@@ -16003,11 +16864,21 @@ var UpdateInteractivitySettingsLayersDocument = import_client.gql`
 }
     `;
 var MapboxKeysDocument = import_client.gql`
-    query MapboxKeys {
-  currentProject {
+    query MapboxKeys($slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     mapboxPublicKey
     mapboxSecretKey
+  }
+}
+    `;
+var SetBasemapMaxZoomDocument = import_client.gql`
+    mutation SetBasemapMaxZoom($id: Int!, $maxzoom: Int) {
+  updateBasemap(input: {id: $id, patch: {maxzoom: $maxzoom}}) {
+    basemap {
+      id
+      maxzoom
+    }
   }
 }
     `;
@@ -16022,28 +16893,169 @@ var CreateProjectDocument = import_client.gql`
   }
 }
     `;
+var VerifyEmailDocument = import_client.gql`
+    mutation VerifyEmail($redirectUrl: String) {
+  sendEmailVerification(redirectUrl: $redirectUrl)
+}
+    `;
+var CreateDataUploadDocument = import_client.gql`
+    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!) {
+  createDataUpload(
+    input: {filename: $filename, projectId: $projectId, contentType: $contentType}
+  ) {
+    dataUploadTask {
+      ...DataUploadExtendedDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${DataUploadExtendedDetailsFragmentDoc}`;
+var SubmitDataUploadDocument = import_client.gql`
+    mutation submitDataUpload($jobId: UUID!) {
+  submitDataUpload(input: {id: $jobId}) {
+    projectBackgroundJob {
+      id
+      state
+      dataUploadTask {
+        ...DataUploadExtendedDetails
+      }
+    }
+  }
+}
+    ${DataUploadExtendedDetailsFragmentDoc}`;
+var DataUploadTasksDocument = import_client.gql`
+    query DataUploadTasks($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    activeDataUploads {
+      ...DataUploadExtendedDetails
+    }
+  }
+}
+    ${DataUploadExtendedDetailsFragmentDoc}`;
+var ProjectBackgroundJobsDocument = import_client.gql`
+    query ProjectBackgroundJobs($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    projectBackgroundJobs {
+      ...JobDetails
+    }
+  }
+}
+    ${JobDetailsFragmentDoc}`;
+var DismissFailedJobDocument = import_client.gql`
+    mutation DismissFailedJob($id: UUID!) {
+  dismissFailedJob(input: {id: $id}) {
+    projectBackgroundJob {
+      ...JobDetails
+    }
+  }
+}
+    ${JobDetailsFragmentDoc}`;
+var FailUploadDocument = import_client.gql`
+    mutation FailUpload($id: UUID!, $message: String!) {
+  failDataUpload(input: {id: $id, msg: $message}) {
+    dataUploadTask {
+      id
+      projectBackgroundJobId
+    }
+  }
+}
+    `;
+var ProjectDataQuotaRemainingDocument = import_client.gql`
+    query ProjectDataQuotaRemaining($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+  }
+}
+    `;
+var CancelUploadDocument = import_client.gql`
+    mutation CancelUpload($projectId: Int!, $jobId: UUID!) {
+  cancelBackgroundJob(input: {projectId: $projectId, jobId: $jobId}) {
+    clientMutationId
+  }
+}
+    `;
+var UpdateDataHostingQuotaDocument = import_client.gql`
+    mutation UpdateDataHostingQuota($projectId: Int!, $quota: BigInt!) {
+  updateDataHostingQuota(input: {projectId: $projectId, quota: $quota}) {
+    project {
+      id
+      dataHostingQuota
+      dataHostingQuotaUsed
+    }
+  }
+}
+    `;
+var ProjectBackgroundJobDocument = import_client.gql`
+    subscription ProjectBackgroundJob($slug: String!) {
+  backgroundJobs(slug: $slug) {
+    ...BackgroundJobSubscriptionEvent
+  }
+}
+    ${BackgroundJobSubscriptionEventFragmentDoc}`;
+var DownloadableOfflineTilePackagesDocument = import_client.gql`
+    query DownloadableOfflineTilePackages($slug: String!) {
+  projectBySlug(slug: $slug) {
+    mapboxPublicKey
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+var DownloadBasemapDetailsDocument = import_client.gql`
+    query DownloadBasemapDetails($id: Int!) {
+  basemap(id: $id) {
+    ...OfflineBasemapDetails
+  }
+}
+    ${OfflineBasemapDetailsFragmentDoc}`;
+var ImportBasemapDetailsDocument = import_client.gql`
+    query ImportBasemapDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      basemaps {
+        id
+        thumbnail
+        name
+        offlineSupportInformation {
+          hasUncacheableSources
+          ...BasemapOfflineSupportInfo
+        }
+      }
+    }
+  }
+}
+    ${BasemapOfflineSupportInfoFragmentDoc}`;
 var DraftTableOfContentsDocument = import_client.gql`
     query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    draftTableOfContentsItems {
-      id
-      dataLayerId
-      title
-      acl {
-        id
-        type
-      }
-      isClickOffOnly
-      isFolder
-      stableId
-      parentStableId
-      showRadioChildren
-      bounds
-      sortIndex
-      hideChildren
-      enableDownload
+    draftTableOfContentsHasChanges
+    tableOfContentsLastPublished
+    region {
+      geojson
     }
+    draftTableOfContentsItems {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
+var ExtraTocEditingInfoDocument = import_client.gql`
+    query ExtraTocEditingInfo($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    importedArcgisServices
+    downloadableLayersCount
+    eligableDownloadableLayersCount
   }
 }
     `;
@@ -16054,7 +17066,6 @@ var LayersAndSourcesForItemsDocument = import_client.gql`
     dataSourcesForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -16070,7 +17081,6 @@ var LayersAndSourcesForItemsDocument = import_client.gql`
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       queryParameters
       scheme
@@ -16082,6 +17092,9 @@ var LayersAndSourcesForItemsDocument = import_client.gql`
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+      uploadedSourceFilename
+      translatedProps
+      arcgisFetchStrategy
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -16090,7 +17103,9 @@ var LayersAndSourcesForItemsDocument = import_client.gql`
         longTemplate
         shortTemplate
         type
+        title
       }
+      staticId
       sprites {
         id
         spriteImages {
@@ -16098,6 +17113,7 @@ var LayersAndSourcesForItemsDocument = import_client.gql`
           height
           width
           url
+          spriteId
         }
         type
       }
@@ -16162,6 +17178,10 @@ var GetFolderDocument = import_client.gql`
     showRadioChildren
     title
     hideChildren
+    acl {
+      nodeId
+      id
+    }
   }
 }
     `;
@@ -16196,12 +17216,30 @@ var GetLayerItemDocument = import_client.gql`
     }
     bounds
     dataLayerId
+    dataSourceType
     metadata
     parentStableId
     projectId
+    containedBy {
+      id
+      stableId
+      title
+    }
     stableId
     title
     enableDownload
+    geoprocessingReferenceId
+    primaryDownloadUrl
+    projectBackgroundJobs {
+      id
+      type
+      title
+      state
+      progress
+      progressMessage
+      errorMessage
+    }
+    hasOriginalSourceUpload
     dataLayer {
       id
       zIndex
@@ -16210,6 +17248,8 @@ var GetLayerItemDocument = import_client.gql`
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
+      staticId
       sprites {
         id
         spriteImages {
@@ -16225,7 +17265,6 @@ var GetLayerItemDocument = import_client.gql`
         id
         attribution
         bounds
-        bucketId
         buffer
         byteLength
         cluster
@@ -16241,7 +17280,6 @@ var GetLayerItemDocument = import_client.gql`
         lineMetrics
         maxzoom
         minzoom
-        objectKey
         originalSourceUrl
         promoteId
         queryParameters
@@ -16254,21 +17292,28 @@ var GetLayerItemDocument = import_client.gql`
         urls
         useDevicePixelRatio
         supportsDynamicLayers
+        uploadedSourceFilename
+        uploadedBy
+        geostats
+        translatedProps
+        arcgisFetchStrategy
       }
     }
   }
 }
     `;
 var UpdateTableOfContentsItemDocument = import_client.gql`
-    mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON) {
+    mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON, $geoprocessingReferenceId: String) {
   updateTableOfContentsItem(
-    input: {id: $id, patch: {title: $title, bounds: $bounds, metadata: $metadata}}
+    input: {id: $id, patch: {title: $title, bounds: $bounds, metadata: $metadata, geoprocessingReferenceId: $geoprocessingReferenceId}}
   ) {
     tableOfContentsItem {
       id
       bounds
       metadata
       title
+      geoprocessingReferenceId
+      stableId
     }
   }
 }
@@ -16281,14 +17326,20 @@ var UpdateEnableDownloadDocument = import_client.gql`
     tableOfContentsItem {
       id
       enableDownload
+      project {
+        id
+        downloadableLayersCount
+        eligableDownloadableLayersCount
+      }
+      primaryDownloadUrl
     }
   }
 }
     `;
 var UpdateLayerDocument = import_client.gql`
-    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String) {
+    mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String, $staticId: String) {
   updateDataLayer(
-    input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer}}
+    input: {id: $id, patch: {renderUnder: $renderUnder, mapboxGlStyles: $mapboxGlStyles, sublayer: $sublayer, staticId: $staticId}}
   ) {
     dataLayer {
       id
@@ -16296,6 +17347,7 @@ var UpdateLayerDocument = import_client.gql`
       renderUnder
       mapboxGlStyles
       sublayer
+      staticId
       sprites {
         id
         spriteImages {
@@ -16317,7 +17369,6 @@ var UpdateDataSourceDocument = import_client.gql`
       id
       attribution
       bounds
-      bucketId
       buffer
       byteLength
       cluster
@@ -16333,7 +17384,6 @@ var UpdateDataSourceDocument = import_client.gql`
       lineMetrics
       maxzoom
       minzoom
-      objectKey
       originalSourceUrl
       promoteId
       queryParameters
@@ -16346,6 +17396,7 @@ var UpdateDataSourceDocument = import_client.gql`
       urls
       useDevicePixelRatio
       supportsDynamicLayers
+      translatedProps
     }
   }
 }
@@ -16361,14 +17412,15 @@ var InteractivitySettingsForLayerDocument = import_client.gql`
       longTemplate
       shortTemplate
       type
+      title
     }
   }
 }
     `;
 var UpdateInteractivitySettingsDocument = import_client.gql`
-    mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String) {
+    mutation UpdateInteractivitySettings($id: Int!, $type: InteractivityType, $cursor: CursorType, $longTemplate: String, $shortTemplate: String, $title: String) {
   updateInteractivitySetting(
-    input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate}}
+    input: {id: $id, patch: {type: $type, cursor: $cursor, longTemplate: $longTemplate, shortTemplate: $shortTemplate, title: $title}}
   ) {
     interactivitySetting {
       id
@@ -16376,6 +17428,7 @@ var UpdateInteractivitySettingsDocument = import_client.gql`
       cursor
       longTemplate
       shortTemplate
+      title
     }
   }
 }
@@ -16385,8 +17438,6 @@ var DataSourceUrlPropertiesDocument = import_client.gql`
   dataSource(id: $id) {
     id
     type
-    bucketId
-    objectKey
     url
     originalSourceUrl
     queryParameters
@@ -16425,6 +17476,18 @@ var UpdateQueryParametersDocument = import_client.gql`
   }
 }
     `;
+var UpdateFetchStrategyDocument = import_client.gql`
+    mutation UpdateFetchStrategy($sourceId: Int!, $fetchStrategy: ArcgisFeatureLayerFetchStrategy!) {
+  updateDataSource(
+    input: {id: $sourceId, patch: {arcgisFetchStrategy: $fetchStrategy}}
+  ) {
+    dataSource {
+      id
+      arcgisFetchStrategy
+    }
+  }
+}
+    `;
 var UpdateEnableHighDpiRequestsDocument = import_client.gql`
     mutation UpdateEnableHighDPIRequests($sourceId: Int!, $useDevicePixelRatio: Boolean!) {
   updateDataSource(
@@ -16441,16 +17504,20 @@ var GetMetadataDocument = import_client.gql`
     query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
-    metadata
+    computedMetadata
+    usesDynamicMetadata
+    isCustomGlSource
   }
 }
     `;
 var UpdateMetadataDocument = import_client.gql`
-    mutation UpdateMetadata($itemId: Int!, $metadata: JSON!) {
+    mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
     tableOfContentsItem {
       id
       metadata
+      usesDynamicMetadata
+      computedMetadata
     }
   }
 }
@@ -16473,6 +17540,7 @@ var InteractivitySettingsByIdDocument = import_client.gql`
     longTemplate
     shortTemplate
     type
+    title
   }
 }
     `;
@@ -16485,6 +17553,621 @@ var PublishTableOfContentsDocument = import_client.gql`
   }
 }
     `;
+var DraftStatusDocument = import_client.gql`
+    subscription DraftStatus($slug: String!) {
+  updatedDraftTableOfContentsStatus(slug: $slug) {
+    hasChanges
+    projectId
+    project {
+      id
+      draftTableOfContentsHasChanges
+      tableOfContentsLastPublished
+    }
+  }
+}
+    `;
+var ImportArcGisServiceDocument = import_client.gql`
+    mutation ImportArcGISService($items: [ArcgisImportItemInput!]!, $sources: [ArcgisImportSourceInput!]!, $projectId: Int!) {
+  importArcgisServices(
+    input: {items: $items, sources: $sources, projectId: $projectId}
+  ) {
+    tableOfContentsItems {
+      id
+      title
+    }
+  }
+}
+    `;
+var SetMaxZoomDocument = import_client.gql`
+    mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
+  updateDataSource(input: {id: $sourceId, patch: {maxzoom: $maxzoom}}) {
+    dataSource {
+      id
+      maxzoom
+    }
+  }
+}
+    `;
+var ProjectDownloadSettingDocument = import_client.gql`
+    query ProjectDownloadSetting($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    enableDownloadByDefault
+    downloadableLayersCount
+  }
+}
+    `;
+var UpdateEnableDownloadByDefaultDocument = import_client.gql`
+    mutation UpdateEnableDownloadByDefault($projectId: Int!, $enableDownload: Boolean) {
+  updateProject(
+    input: {id: $projectId, patch: {enableDownloadByDefault: $enableDownload}}
+  ) {
+    project {
+      id
+      enableDownloadByDefault
+      downloadableLayersCount
+    }
+  }
+}
+    `;
+var EnableDownloadForEligibleLayersDocument = import_client.gql`
+    mutation EnableDownloadForEligibleLayers($slug: String!) {
+  enableDownloadForEligibleLayers(input: {slug: $slug}) {
+    project {
+      id
+      downloadableLayersCount
+      eligableDownloadableLayersCount
+      draftTableOfContentsItems {
+        id
+        enableDownload
+        primaryDownloadUrl
+      }
+    }
+  }
+}
+    `;
+var DisableDownloadForSharedLayersDocument = import_client.gql`
+    mutation DisableDownloadForSharedLayers($slug: String!) {
+  disableDownloadForSharedLayers(input: {slug: $slug}) {
+    project {
+      id
+      downloadableLayersCount
+      eligableDownloadableLayersCount
+      draftTableOfContentsItems {
+        id
+        enableDownload
+        primaryDownloadUrl
+      }
+    }
+  }
+}
+    `;
+var ConvertFeatureLayerToHostedDocument = import_client.gql`
+    mutation ConvertFeatureLayerToHosted($tocId: Int!) {
+  convertEsriFeatureLayerToSeasketchHosted(input: {tableOfContentsItemId: $tocId}) {
+    projectBackgroundJob {
+      id
+      type
+      title
+      state
+      progress
+      progressMessage
+      errorMessage
+    }
+  }
+}
+    `;
+var CreateMvtSourceDocument = import_client.gql`
+    mutation CreateMVTSource($projectId: Int!, $url: String!, $sourceLayers: [String!]!, $maxZoom: Int!, $minZoom: Int!, $geostats: JSON!, $bounds: [BigFloat]!, $featureBounds: [BigFloat]) {
+  createRemoteMvtSource(
+    input: {projectId: $projectId, url: $url, sourceLayers: $sourceLayers, maxZoom: $maxZoom, minZoom: $minZoom, geostats: $geostats, bounds: $bounds, featureBounds: $featureBounds}
+  ) {
+    tableOfContentsItems {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
+var CreateRemoteGeoJsonSourceDocument = import_client.gql`
+    mutation CreateRemoteGeoJSONSource($slug: String!, $url: String!, $geostats: JSON!, $bounds: [BigFloat]!) {
+  createRemoteGeojsonSource(
+    input: {slug: $slug, url: $url, geostats: $geostats, bounds: $bounds}
+  ) {
+    tableOfContentsItem {
+      ...AdminOverlay
+    }
+  }
+}
+    ${AdminOverlayFragmentDoc}`;
+var QuotaUsageDetailsDocument = import_client.gql`
+    query QuotaUsageDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingQuota
+    dataHostingQuotaUsed
+    uploadedDraftDataSources {
+      id
+      quotaUsed {
+        bytes
+        id
+        isOriginal
+        type
+      }
+      dataLayersConnection {
+        nodes {
+          id
+          tableOfContentsItem {
+            id
+            title
+            stableId
+          }
+        }
+      }
+    }
+  }
+}
+    `;
+var ForumAdminListDocument = import_client.gql`
+    query ForumAdminList($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    forums {
+      ...ForumListDetails
+    }
+  }
+}
+    ${ForumListDetailsFragmentDoc}`;
+var CreateForumDocument = import_client.gql`
+    mutation CreateForum($name: String!, $projectId: Int!) {
+  createForum(input: {forum: {name: $name, projectId: $projectId}}) {
+    forum {
+      ...ForumListDetails
+    }
+  }
+}
+    ${ForumListDetailsFragmentDoc}`;
+var UpdateForumDocument = import_client.gql`
+    mutation UpdateForum($id: Int!, $name: String, $archived: Boolean, $description: String) {
+  updateForum(
+    input: {id: $id, patch: {name: $name, archived: $archived, description: $description}}
+  ) {
+    forum {
+      id
+      name
+      archived
+      description
+    }
+  }
+}
+    `;
+var DeleteForumDocument = import_client.gql`
+    mutation DeleteForum($id: Int!) {
+  deleteForum(input: {id: $id}) {
+    forum {
+      id
+    }
+  }
+}
+    `;
+var ForumsDocument = import_client.gql`
+    query Forums($slug: String!) {
+  me {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
+  projectBySlug(slug: $slug) {
+    id
+    sessionParticipationStatus
+    forums {
+      ...ForumDetails
+    }
+    latestPostsConnection(first: 5) {
+      nodes {
+        ...RecentPost
+      }
+    }
+  }
+}
+    ${AuthorProfileFragmentDoc}
+${ForumDetailsFragmentDoc}
+${RecentPostFragmentDoc}`;
+var TopicListDocument = import_client.gql`
+    query TopicList($forumId: Int!) {
+  forum(id: $forumId) {
+    id
+    archived
+    name
+    description
+    topicCount
+    postCount
+    lastPostDate
+    project {
+      id
+      sessionParticipationStatus
+    }
+    canPost
+    topicsConnection(orderBy: LAST_POST_CREATED_AT_AND_STICKY) {
+      nodes {
+        ...ForumTopic
+      }
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}`;
+var CreateTopicDocument = import_client.gql`
+    mutation CreateTopic($forumId: Int!, $content: JSON!, $title: String!) {
+  createTopic(forumId: $forumId, message: $content, title: $title) {
+    ...ForumTopic
+    postsCount
+    lastPostDate
+    forum {
+      id
+      topicCount
+      postCount
+      lastPostDate
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}`;
+var BreadcrumbTopicDocument = import_client.gql`
+    query BreadcrumbTopic($topicId: Int!) {
+  topic(id: $topicId) {
+    id
+    title
+  }
+}
+    `;
+var TopicDetailDocument = import_client.gql`
+    query TopicDetail($id: Int!) {
+  topic(id: $id) {
+    ...ForumTopic
+    postsConnection(orderBy: ID_ASC) {
+      nodes {
+        ...ForumPost
+      }
+    }
+    forum {
+      id
+      canPost
+      project {
+        id
+        sessionParticipationStatus
+      }
+    }
+  }
+  me {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
+}
+    ${ForumTopicFragmentDoc}
+${ForumPostFragmentDoc}
+${AuthorProfileFragmentDoc}`;
+var CreateReplyDocument = import_client.gql`
+    mutation CreateReply($topicId: Int!, $content: JSON!) {
+  createPost(topicId: $topicId, message: $content) {
+    ...ForumPost
+    topic {
+      ...ForumTopic
+      forum {
+        id
+        postCount
+        topicCount
+        lastPostDate
+      }
+    }
+  }
+}
+    ${ForumPostFragmentDoc}
+${ForumTopicFragmentDoc}`;
+var CopyTocItemForForumPostDocument = import_client.gql`
+    mutation CopyTocItemForForumPost($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type, forForum: true) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}`;
+var NewPostsDocument = import_client.gql`
+    subscription NewPosts($slug: String!) {
+  forumActivity(slug: $slug) {
+    post {
+      ...ForumPost
+    }
+    topic {
+      ...ForumTopic
+    }
+    forum {
+      ...ForumDetails
+    }
+  }
+}
+    ${ForumPostFragmentDoc}
+${ForumTopicFragmentDoc}
+${ForumDetailsFragmentDoc}`;
+var GetBookmarkDocument = import_client.gql`
+    query GetBookmark($id: UUID!) {
+  bookmarkById(id: $id) {
+    ...MapBookmarkDetails
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
+var CreateMapBookmarkDocument = import_client.gql`
+    mutation CreateMapBookmark($slug: String!, $isPublic: Boolean!, $basemapOptionalLayerStates: JSON, $visibleDataLayers: [String!]!, $cameraOptions: JSON!, $selectedBasemap: Int!, $style: JSON!, $mapDimensions: [Int!]!, $visibleSketches: [Int!]!, $sidebarState: JSON, $basemapName: String!, $layerNames: JSON!, $sketchNames: JSON!, $clientGeneratedThumbnail: String!) {
+  createMapBookmark(
+    input: {isPublic: $isPublic, slug: $slug, basemapOptionalLayerStates: $basemapOptionalLayerStates, visibleDataLayers: $visibleDataLayers, cameraOptions: $cameraOptions, selectedBasemap: $selectedBasemap, style: $style, mapDimensions: $mapDimensions, visibleSketches: $visibleSketches, sidebarState: $sidebarState, basemapName: $basemapName, layerNames: $layerNames, sketchNames: $sketchNames, clientGeneratedThumbnail: $clientGeneratedThumbnail}
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
+var MapBookmarkDocument = import_client.gql`
+    subscription MapBookmark($id: UUID!) {
+  updatedMapBookmark(id: $id) {
+    bookmarkId
+    bookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
+var CreateFileUploadForPostDocument = import_client.gql`
+    mutation createFileUploadForPost($contentType: String!, $filename: String!, $fileSizeBytes: Int!, $projectId: Int!, $usage: FileUploadUsageInput!) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: $usage
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${FileUploadDetailsFragmentDoc}`;
+var SpritesDocument = import_client.gql`
+    query Sprites($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sprites {
+      ...SpriteDetails
+    }
+  }
+  publicSprites {
+    ...SpriteDetails
+  }
+}
+    ${SpriteDetailsFragmentDoc}`;
+var GetSpriteDocument = import_client.gql`
+    query GetSprite($id: Int!) {
+  sprite(id: $id) {
+    ...SpriteDetails
+  }
+}
+    ${SpriteDetailsFragmentDoc}`;
+var ShareSpriteDocument = import_client.gql`
+    mutation ShareSprite($id: Int!, $category: String) {
+  shareSprite(input: {spriteId: $id, category: $category}) {
+    sprite {
+      ...SpriteDetails
+    }
+  }
+}
+    ${SpriteDetailsFragmentDoc}`;
+var DeleteSpriteDocument = import_client.gql`
+    mutation DeleteSprite($id: Int!) {
+  softDeleteSprite(input: {id: $id}) {
+    sprite {
+      ...SpriteDetails
+    }
+  }
+}
+    ${SpriteDetailsFragmentDoc}`;
+var JoinProjectDocument = import_client.gql`
+    mutation JoinProject($projectId: Int!) {
+  joinProject(input: {projectId: $projectId}) {
+    query {
+      project(id: $projectId) {
+        id
+        sessionParticipationStatus
+      }
+    }
+  }
+}
+    `;
+var GetBasemapsAndRegionDocument = import_client.gql`
+    query GetBasemapsAndRegion($slug: String!) {
+  projectBySlug(slug: $slug) {
+    ...MapEssentials
+  }
+}
+    ${MapEssentialsFragmentDoc}`;
+var OfflineSurveysDocument = import_client.gql`
+    query OfflineSurveys($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    surveys {
+      id
+      name
+    }
+  }
+}
+    `;
+var SurveysByIdDocument = import_client.gql`
+    query SurveysById($surveyIds: [Int]!) {
+  getSurveys(ids: $surveyIds) {
+    id
+    projectId
+    name
+    project {
+      id
+      name
+      slug
+    }
+  }
+  me {
+    id
+    canonicalEmail
+    profile {
+      userId
+      email
+      fullname
+      nickname
+      picture
+    }
+  }
+}
+    `;
+var OfflineSurveyMapsDocument = import_client.gql`
+    query OfflineSurveyMaps($slug: String!) {
+  projectBySlug(slug: $slug) {
+    region {
+      geojson
+    }
+    mapboxPublicKey
+    id
+    offlineTileSettings {
+      maxShorelineZ
+      maxZ
+      basemapId
+    }
+    surveys {
+      id
+      name
+      form {
+        id
+      }
+      basemaps {
+        ...OfflineBasemapDetails
+      }
+    }
+    offlineTilePackagesConnection {
+      nodes {
+        ...OfflineTilePackageDetails
+      }
+    }
+  }
+}
+    ${OfflineBasemapDetailsFragmentDoc}
+${OfflineTilePackageDetailsFragmentDoc}`;
+var BasemapOfflineSettingsDocument = import_client.gql`
+    query BasemapOfflineSettings($id: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    mapboxPublicKey
+    region {
+      geojson
+    }
+    offlineTileSettings {
+      ...OfflineTileSettings
+    }
+  }
+  basemap(id: $id) {
+    id
+    name
+    url
+    useDefaultOfflineTileSettings
+    project {
+      id
+      region {
+        geojson
+      }
+    }
+    offlineSupportInformation {
+      id
+      hasUncacheableSources
+      sources {
+        dataSourceUrl
+        type
+      }
+    }
+  }
+}
+    ${OfflineTileSettingsFragmentDoc}`;
+var UpdateBasemapOfflineTileSettingsDocument = import_client.gql`
+    mutation UpdateBasemapOfflineTileSettings($projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $basemapId: Int!, $useDefault: Boolean!) {
+  updateBasemapOfflineTileSettings(
+    input: {basemapId: $basemapId, maxShorelineZ: $maxShorelineZ, maxZ: $maxZ, projectId: $projectId, useDefault: $useDefault}
+  ) {
+    basemap {
+      id
+      useDefaultOfflineTileSettings
+      project {
+        id
+        offlineTileSettings {
+          ...OfflineTileSettings
+        }
+      }
+    }
+  }
+}
+    ${OfflineTileSettingsFragmentDoc}`;
+var GenerateOfflineTilePackageDocument = import_client.gql`
+    mutation generateOfflineTilePackage($dataSourceUrl: String!, $projectId: Int!, $maxZ: Int!, $maxShorelineZ: Int, $sourceType: OfflineTilePackageSourceType, $originalUrlTemplate: String!) {
+  generateOfflineTilePackage(
+    input: {dataSourceUrl: $dataSourceUrl, projectId: $projectId, maxZ: $maxZ, maxShorelineZ: $maxShorelineZ, sourceType: $sourceType, originalUrlTemplate: $originalUrlTemplate}
+  ) {
+    offlineTilePackage {
+      project {
+        id
+        surveys {
+          id
+          basemaps {
+            id
+            offlineSupportInformation {
+              id
+              staticAssets {
+                url
+                type
+              }
+              sources {
+                templateUrl
+                dataSourceUrl
+                tilePackages {
+                  ...OfflineTilePackageDetails
+                }
+                type
+              }
+            }
+          }
+        }
+      }
+      ...OfflineTilePackageDetails
+    }
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
+var DeleteTilePackageDocument = import_client.gql`
+    mutation deleteTilePackage($id: UUID!) {
+  deleteOfflineTilePackage(input: {id: $id}) {
+    offlineTilePackage {
+      id
+    }
+  }
+}
+    `;
+var GetTilePackageDocument = import_client.gql`
+    query getTilePackage($id: UUID!) {
+  offlineTilePackage(id: $id) {
+    ...OfflineTilePackageDetails
+  }
+}
+    ${OfflineTilePackageDetailsFragmentDoc}`;
 var ProjectAccessControlSettingsDocument = import_client.gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -16510,42 +18193,59 @@ var UpdateProjectAccessControlSettingsDocument = import_client.gql`
   }
 }
     `;
-var ProjectMetadataDocument = import_client.gql`
-    query ProjectMetadata($slug: String!) {
-  project: projectBySlug(slug: $slug) {
-    id
-    slug
-    url
-    name
-    description
-    logoLink
-    logoUrl
-    accessControl
-    sessionIsAdmin
-    isFeatured
-  }
-  currentProjectPublicDetails {
-    id
-    accessControl
-    slug
-    name
-    logoUrl
-    supportEmail
-  }
-  currentProjectAccessStatus
-  me {
-    id
-    profile {
-      fullname
-      nickname
-      email
-      picture
-      bio
-      affiliations
+var ToggleLanguageSupportDocument = import_client.gql`
+    mutation toggleLanguageSupport($slug: String!, $enable: Boolean!, $code: String!) {
+  toggleLanguageSupport(input: {code: $code, slug: $slug, enable: $enable}) {
+    project {
+      id
+      supportedLanguages
     }
   }
 }
     `;
+var SetTranslatedPropsDocument = import_client.gql`
+    mutation setTranslatedProps($id: Int!, $typeName: String!, $propName: String!, $translations: [TranslatedPropInput!]!) {
+  setTranslatedProp(
+    id: $id
+    propName: $propName
+    typeName: $typeName
+    translations: $translations
+  ) {
+    id
+    translatedProps
+    typeName
+  }
+}
+    `;
+var ProjectMetadataDocument = import_client.gql`
+    query ProjectMetadata($slug: String!) {
+  project: projectBySlug(slug: $slug) {
+    ...ProjectMetadata
+    sessionParticipationStatus
+    sessionHasPrivilegedAccess
+  }
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
+  }
+  me {
+    ...ProjectMetadataMeFrag
+  }
+  isMyEmailVerified
+}
+    ${ProjectMetadataFragmentDoc}
+${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}`;
+var MeDocument = import_client.gql`
+    query Me {
+  me {
+    id
+    profile {
+      ...UserProfileDetails
+    }
+  }
+  isMyEmailVerified
+}
+    ${UserProfileDetailsFragmentDoc}`;
 var ProjectRegionDocument = import_client.gql`
     query ProjectRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -16591,39 +18291,430 @@ var PublishedTableOfContentsDocument = import_client.gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsItems {
+      ...Overlay
+    }
+  }
+}
+    ${OverlayFragmentDoc}`;
+var SearchOverlaysDocument = import_client.gql`
+    query SearchOverlays($search: String!, $draft: Boolean, $limit: Int, $projectId: Int!, $lang: String!) {
+  searchOverlays(
+    query: $search
+    draft: $draft
+    projectId: $projectId
+    limit: $limit
+    lang: $lang
+  ) {
+    id
+    metadataHeadline
+    stableId
+    titleHeadline
+    isFolder
+  }
+}
+    `;
+var DataDownloadInfoDocument = import_client.gql`
+    query DataDownloadInfo($tocId: Int!) {
+  tableOfContentsItem(id: $tocId) {
+    id
+    title
+    translatedProps
+    primaryDownloadUrl
+    downloadOptions {
+      url
+      type
+      isOriginal
+      size
+    }
+    dataLayer {
       id
-      acl {
+      dataSource {
+        createdAt
         id
         type
+        uploadedSourceFilename
       }
-      bounds
-      dataLayerId
-      enableDownload
-      hideChildren
-      isClickOffOnly
-      isFolder
-      parentStableId
-      showRadioChildren
-      sortIndex
-      stableId
-      title
     }
   }
 }
     `;
-var SimpleProjectListDocument = import_client.gql`
-    query SimpleProjectList($first: Int, $offset: Int) {
-  projectsConnection(first: $first, offset: $offset) {
+var ProjectListingDocument = import_client.gql`
+    query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
+  projects: projectsConnection(
+    first: $first
+    last: $last
+    after: $after
+    before: $before
+    orderBy: NAME_ASC
+  ) {
+    edges {
+      cursor
+      node {
+        ...ProjectListItem
+      }
+    }
+    totalCount
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      endCursor
+      startCursor
+    }
+  }
+  featuredProjects: projectsConnection(condition: {isFeatured: true}) {
     nodes {
+      ...ProjectListItem
+    }
+  }
+}
+    ${ProjectListItemFragmentDoc}`;
+var SketchClassFormDocument = import_client.gql`
+    query SketchClassForm($id: Int!) {
+  form(id: $id) {
+    id
+    formElements {
+      ...SketchFormElement
+    }
+    sketchClassId
+    logicRules {
+      ...LogicRuleDetails
+    }
+  }
+}
+    ${SketchFormElementFragmentDoc}
+${LogicRuleDetailsFragmentDoc}`;
+var CreateSketchClassDocument = import_client.gql`
+    mutation CreateSketchClass($projectId: Int!, $templateId: Int!) {
+  createSketchClassFromTemplate(
+    input: {projectId: $projectId, templateSketchClassId: $templateId}
+  ) {
+    sketchClass {
+      ...AdminSketchingDetails
+    }
+  }
+}
+    ${AdminSketchingDetailsFragmentDoc}`;
+var TemplateSketchClassesDocument = import_client.gql`
+    query TemplateSketchClasses {
+  templateSketchClasses {
+    ...TemplateSketchClass
+  }
+}
+    ${TemplateSketchClassFragmentDoc}`;
+var SketchClassesDocument = import_client.gql`
+    query SketchClasses($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchClasses {
+      ...AdminSketchingDetails
+    }
+  }
+}
+    ${AdminSketchingDetailsFragmentDoc}`;
+var UpdateSketchClassDocument = import_client.gql`
+    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
+  updateSketchClass(
+    input: {id: $id, patch: {name: $name, isArchived: $isArchived}}
+  ) {
+    sketchClass {
+      ...AdminSketchingDetails
+    }
+  }
+}
+    ${AdminSketchingDetailsFragmentDoc}`;
+var DeleteSketchClassDocument = import_client.gql`
+    mutation DeleteSketchClass($id: Int!) {
+  deleteSketchClass(input: {id: $id}) {
+    sketchClass {
+      ...AdminSketchingDetails
+    }
+  }
+}
+    ${AdminSketchingDetailsFragmentDoc}`;
+var UpdateGeoprocessingServicesDocument = import_client.gql`
+    mutation UpdateGeoprocessingServices($id: Int!, $preprocessingEndpoint: String, $preprocessingProjectUrl: String, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
+  updateSketchClass(
+    input: {id: $id, patch: {preprocessingEndpoint: $preprocessingEndpoint, preprocessingProjectUrl: $preprocessingProjectUrl, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
+  ) {
+    sketchClass {
+      id
+      preprocessingEndpoint
+      preprocessingProjectUrl
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+    }
+  }
+}
+    `;
+var UpdateSketchFormElementDocument = import_client.gql`
+    mutation UpdateSketchFormElement($id: Int!, $isRequired: Boolean, $exportId: String) {
+  updateFormElement(
+    input: {id: $id, patch: {isRequired: $isRequired, exportId: $exportId}}
+  ) {
+    formElement {
+      id
+      isRequired
+      exportId
+    }
+  }
+}
+    `;
+var SketchClassLogicRuleDetailsDocument = import_client.gql`
+    query SketchClassLogicRuleDetails($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    form {
+      ...LogicRuleEditorFormDetails
+    }
+  }
+}
+    ${LogicRuleEditorFormDetailsFragmentDoc}`;
+var CreateVisibilityRuleDocument = import_client.gql`
+    mutation createVisibilityRule($formElementId: Int!) {
+  createVisibilityLogicRule(input: {formElementId: $formElementId}) {
+    formLogicRule {
+      id
+      ...LogicRuleDetails
+    }
+  }
+}
+    ${LogicRuleDetailsFragmentDoc}`;
+var UpdateVisibilityRuleDocument = import_client.gql`
+    mutation UpdateVisibilityRule($id: Int!, $command: FormLogicCommand, $booleanOperator: FormLogicOperator) {
+  updateFormLogicRule(
+    input: {id: $id, patch: {command: $command, booleanOperator: $booleanOperator}}
+  ) {
+    formLogicRule {
+      id
+      command
+      booleanOperator
+    }
+  }
+}
+    `;
+var UpdateVisibilityConditionDocument = import_client.gql`
+    mutation UpdateVisibilityCondition($id: Int!, $operator: FieldRuleOperator, $subjectId: Int, $value: JSON) {
+  updateFormLogicCondition(
+    input: {id: $id, patch: {operator: $operator, subjectId: $subjectId, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+    }
+  }
+}
+    `;
+var DeleteVisibilityRuleDocument = import_client.gql`
+    mutation DeleteVisibilityRule($id: Int!) {
+  deleteFormLogicRule(input: {id: $id}) {
+    formLogicRule {
+      id
+    }
+  }
+}
+    `;
+var AddVisibilityConditionDocument = import_client.gql`
+    mutation AddVisibilityCondition($ruleId: Int!, $subjectId: Int!, $operator: FieldRuleOperator!, $value: JSON!) {
+  createFormLogicCondition(
+    input: {formLogicCondition: {ruleId: $ruleId, subjectId: $subjectId, operator: $operator, value: $value}}
+  ) {
+    formLogicCondition {
+      id
+      operator
+      subjectId
+      value
+      ruleId
+    }
+  }
+}
+    `;
+var DeleteVisibilityRuleConditionDocument = import_client.gql`
+    mutation DeleteVisibilityRuleCondition($id: Int!) {
+  deleteFormLogicCondition(input: {id: $id}) {
+    formLogicCondition {
+      id
+    }
+  }
+}
+    `;
+var UpdateSketchClassStyleDocument = import_client.gql`
+    mutation UpdateSketchClassStyle($id: Int!, $style: JSON) {
+  updateSketchClassMapboxGLStyle(sketchClassId: $id, style: $style) {
+    id
+    mapboxGlStyle
+  }
+}
+    `;
+var SketchingDocument = import_client.gql`
+    query Sketching($slug: String!) {
+  me {
+    id
+  }
+  projectBySlug(slug: $slug) {
+    sessionParticipationStatus
+    id
+    supportedLanguages
+    sketchClasses {
+      ...SketchingDetails
+    }
+    mySketches {
+      __typename
+      ...SketchTocDetails
+    }
+    myFolders {
+      __typename
+      ...SketchFolderDetails
+    }
+    sketchGeometryToken
+  }
+}
+    ${SketchingDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}
+${SketchFolderDetailsFragmentDoc}`;
+var CreateSketchFolderDocument = import_client.gql`
+    mutation CreateSketchFolder($slug: String!, $name: String!, $folderId: Int, $collectionId: Int) {
+  createSketchFolder(
+    input: {slug: $slug, name: $name, folderId: $folderId, collectionId: $collectionId}
+  ) {
+    sketchFolder {
+      ...SketchFolderDetails
+    }
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}`;
+var CreateSketchDocument = import_client.gql`
+    mutation CreateSketch($name: String!, $sketchClassId: Int!, $userGeom: GeoJSON, $collectionId: Int, $folderId: Int, $properties: JSON!) {
+  createSketch(
+    name: $name
+    sketchClassId: $sketchClassId
+    userGeom: $userGeom
+    folderId: $folderId
+    collectionId: $collectionId
+    properties: $properties
+  ) {
+    ...SketchCRUDResponse
+  }
+}
+    ${SketchCrudResponseFragmentDoc}`;
+var UpdateSketchDocument = import_client.gql`
+    mutation UpdateSketch($id: Int!, $name: String!, $userGeom: GeoJSON, $properties: JSON!) {
+  updateSketch(id: $id, name: $name, userGeom: $userGeom, properties: $properties) {
+    ...SketchCRUDResponse
+  }
+}
+    ${SketchCrudResponseFragmentDoc}`;
+var DeleteSketchTocItemsDocument = import_client.gql`
+    mutation DeleteSketchTocItems($items: [UpdateTocItemParentInput]!) {
+  deleteSketchTocItems(items: $items) {
+    deletedItems
+    updatedCollections {
+      id
+      updatedAt
+    }
+  }
+}
+    `;
+var RenameFolderDocument = import_client.gql`
+    mutation RenameFolder($id: Int!, $name: String!) {
+  updateSketchFolder(input: {id: $id, patch: {name: $name}}) {
+    sketchFolder {
       id
       name
-      slug
-      description
-      url
     }
   }
 }
     `;
+var GetSketchForEditingDocument = import_client.gql`
+    query GetSketchForEditing($id: Int!) {
+  sketch(id: $id) {
+    ...SketchEditorModalDetails
+  }
+}
+    ${SketchEditorModalDetailsFragmentDoc}`;
+var UpdateTocItemsParentDocument = import_client.gql`
+    mutation UpdateTocItemsParent($folderId: Int, $collectionId: Int, $tocItems: [UpdateTocItemParentInput]!) {
+  updateSketchTocItemParent(
+    folderId: $folderId
+    collectionId: $collectionId
+    tocItems: $tocItems
+  ) {
+    folders {
+      id
+      folderId
+      collectionId
+    }
+    sketches {
+      id
+      updatedAt
+      folderId
+      collectionId
+    }
+    updatedCollections {
+      id
+      updatedAt
+    }
+  }
+}
+    `;
+var SketchReportingDetailsDocument = import_client.gql`
+    query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
+  sketch(id: $id) {
+    id
+    name
+    createdAt
+    updatedAt
+    properties
+    userAttributes
+    childProperties
+  }
+  sketchClass(id: $sketchClassId) {
+    project {
+      id
+      supportedLanguages
+    }
+    id
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    geometryType
+    form {
+      id
+      formElements {
+        exportId
+        id
+        isInput
+        typeId
+        body
+        generatedExportId
+        generatedLabel
+      }
+      logicRules {
+        ...LogicRuleDetails
+      }
+    }
+  }
+}
+    ${LogicRuleDetailsFragmentDoc}`;
+var CopyTocItemDocument = import_client.gql`
+    mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
+  copySketchTocItem(id: $id, type: $type) {
+    folders {
+      ...SketchFolderDetails
+    }
+    sketches {
+      ...SketchTocDetails
+    }
+    parentId
+    updatedCollection {
+      id
+      updatedAt
+    }
+  }
+}
+    ${SketchFolderDetailsFragmentDoc}
+${SketchTocDetailsFragmentDoc}`;
 var SurveysDocument = import_client.gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -16653,9 +18744,6 @@ var SurveyByIdDocument = import_client.gql`
     ${SurveyListDetailsFragmentDoc}`;
 var SurveyFormEditorDetailsDocument = import_client.gql`
     query SurveyFormEditorDetails($id: Int!, $slug: String!) {
-  projectBySlug(slug: $slug) {
-    name
-  }
   formElementTypes {
     ...AddFormElementTypeDetails
   }
@@ -16675,7 +18763,8 @@ var SurveyFormEditorDetailsDocument = import_client.gql`
       }
     }
   }
-  currentProject {
+  projectBySlug(slug: $slug) {
+    id
     name
     url
     region {
@@ -16709,9 +18798,9 @@ var UpdateSurveyBaseSettingsDocument = import_client.gql`
 }
     `;
 var UpdateFormElementSketchClassDocument = import_client.gql`
-    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $mapboxGlStyle: JSON, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
+    mutation UpdateFormElementSketchClass($id: Int!, $geometryType: SketchGeometryType, $allowMulti: Boolean, $geoprocessingClientName: String, $geoprocessingClientUrl: String, $geoprocessingProjectUrl: String) {
   updateSketchClass(
-    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, mapboxGlStyle: $mapboxGlStyle, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
+    input: {id: $id, patch: {geometryType: $geometryType, allowMulti: $allowMulti, geoprocessingClientName: $geoprocessingClientName, geoprocessingClientUrl: $geoprocessingClientUrl, geoprocessingProjectUrl: $geoprocessingProjectUrl}}
   ) {
     sketchClass {
       id
@@ -17045,6 +19134,7 @@ var SurveyResponsesDocument = import_client.gql`
         ...SurveyResponse
       }
     }
+    responsesSpatialExtent
   }
 }
     ${FormElementExtendedDetailsFragmentDoc}
@@ -17152,8 +19242,9 @@ var UpdateFormElementMapCameraDocument = import_client.gql`
 }
     `;
 var AllBasemapsDocument = import_client.gql`
-    query AllBasemaps {
-  currentProject {
+    query AllBasemaps($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
     basemaps {
       ...BasemapDetails
     }
@@ -17166,57 +19257,62 @@ var AllBasemapsDocument = import_client.gql`
   }
 }
     ${BasemapDetailsFragmentDoc}`;
-var SurveyDocument = import_client.gql`
-    query Survey($id: Int!) {
-  me {
-    isAdmin
-    profile {
-      email
-      fullname
+var GetFormElementDocument = import_client.gql`
+    query GetFormElement($id: Int!) {
+  formElement(id: $id) {
+    ...FormElementDetails
+  }
+}
+    ${FormElementDetailsFragmentDoc}`;
+var UpdateOfflineEnabledDocument = import_client.gql`
+    mutation UpdateOfflineEnabled($projectId: Int!, $enabled: Boolean!) {
+  enableOfflineSupport(input: {projectId: $projectId, enable: $enabled}) {
+    project {
+      id
+      isOfflineEnabled
     }
   }
-  currentProject {
+}
+    `;
+var SurveyDocument = import_client.gql`
+    query Survey($id: Int!, $slug: String!) {
+  projectPublicDetails(slug: $slug) {
+    ...ProjectPublicDetailsMetadata
+  }
+  me {
+    id
+    isAdmin
+    ...ProjectMetadataMeFrag
+  }
+  currentProject: projectBySlug(slug: $slug) {
+    id
     name
     url
+    ...MapEssentials
     region {
       geojson
     }
+    ...ProjectMetadata
   }
   survey(id: $id) {
     ...SurveyAppSurvey
   }
 }
-    ${SurveyAppSurveyFragmentDoc}`;
+    ${ProjectPublicDetailsMetadataFragmentDoc}
+${ProjectMetadataMeFragFragmentDoc}
+${MapEssentialsFragmentDoc}
+${ProjectMetadataFragmentDoc}
+${SurveyAppSurveyFragmentDoc}`;
 var CreateResponseDocument = import_client.gql`
-    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!) {
-  createSurveyResponse(
-    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice}
+    mutation CreateResponse($surveyId: Int!, $isDraft: Boolean!, $bypassedDuplicateSubmissionControl: Boolean!, $responseData: JSON!, $facilitated: Boolean!, $practice: Boolean!, $offlineId: UUID) {
+  createSurveyResponseV2(
+    input: {surveyId: $surveyId, draft: $isDraft, responseData: $responseData, bypassedSubmissionControl: $bypassedDuplicateSubmissionControl, facilitated: $facilitated, practice: $practice, offlineId: $offlineId}
   ) {
     clientMutationId
-    surveyResponse {
-      id
-    }
+    id: integer
   }
 }
     `;
-var GetBasemapsAndRegionDocument = import_client.gql`
-    query GetBasemapsAndRegion {
-  currentProject {
-    id
-    basemaps {
-      ...BasemapDetails
-    }
-    surveyBasemaps {
-      ...BasemapDetails
-    }
-    region {
-      geojson
-    }
-    mapboxPublicKey
-    mapboxSecretKey
-  }
-}
-    ${BasemapDetailsFragmentDoc}`;
 var UpdateProjectNameDocument = import_client.gql`
     mutation UpdateProjectName($name: String!, $slug: String!, $clientMutationId: String) {
   updateProjectBySlug(
@@ -17231,9 +19327,9 @@ var UpdateProjectNameDocument = import_client.gql`
 }
     `;
 var UpdateProjectSettingsDocument = import_client.gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $mapboxSecretKey: String) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, mapboxSecretKey: $mapboxSecretKey}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey}}
   ) {
     clientMutationId
     project {
@@ -17245,6 +19341,36 @@ var UpdateProjectSettingsDocument = import_client.gql`
       mapboxPublicKey
       mapboxSecretKey
       isFeatured
+    }
+  }
+}
+    `;
+var UpdateHideSketchesDocument = import_client.gql`
+    mutation UpdateHideSketches($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideSketches: $hidden}}) {
+    project {
+      id
+      hideSketches
+    }
+  }
+}
+    `;
+var UpdateHideForumsDocument = import_client.gql`
+    mutation UpdateHideForums($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideForums: $hidden}}) {
+    project {
+      id
+      hideForums
+    }
+  }
+}
+    `;
+var UpdateHideOverlaysDocument = import_client.gql`
+    mutation UpdateHideOverlays($hidden: Boolean!, $projectId: Int!) {
+  updateProject(input: {id: $projectId, patch: {hideOverlays: $hidden}}) {
+    project {
+      id
+      hideOverlays
     }
   }
 }
@@ -17310,8 +19436,8 @@ var GroupMembersDocument = import_client.gql`
 }
     ${ParticipantListDetailsFragmentDoc}`;
 var UserSettingsListsDocument = import_client.gql`
-    query UserSettingsLists {
-  currentProject {
+    query UserSettingsLists($slug: String!, $projectId: Int!) {
+  projectBySlug(slug: $slug) {
     id
     groups {
       name
@@ -17325,13 +19451,18 @@ var UserSettingsListsDocument = import_client.gql`
     participants {
       ...UserListDetails
     }
+    accessRequestsConnection {
+      nodes {
+        ...UserListDetails
+      }
+    }
     accessControl
   }
 }
     ${InviteDetailsFragmentDoc}
 ${UserListDetailsFragmentDoc}`;
 var UserInfoDocument = import_client.gql`
-    query UserInfo($userId: Int!) {
+    query UserInfo($userId: Int!, $slug: String!, $projectId: Int!) {
   user(id: $userId) {
     id
     isAdmin
@@ -17346,16 +19477,29 @@ var UserInfoDocument = import_client.gql`
     }
     onboarded
     participationStatus
+    needsAccessRequestApproval(slug: $slug)
+    deniedBy(projectId: $projectId) {
+      id
+      canonicalEmail
+    }
+    approvedBy(projectId: $projectId) {
+      id
+      canonicalEmail
+    }
+    approvedOrDeniedOn(projectId: $projectId)
     profile {
+      userId
       affiliations
-      bio
       email
       fullname
       nickname
       picture
     }
   }
-  currentProject {
+  project(id: $projectId) {
+    id
+  }
+  projectBySlug(slug: $slug) {
     id
     groups {
       name
@@ -17432,8 +19576,8 @@ var ProjectInvitesDocument = import_client.gql`
 }
     ${InviteDetailsFragmentDoc}`;
 var InviteEditorModalQueryDocument = import_client.gql`
-    query InviteEditorModalQuery($inviteId: Int!) {
-  currentProject {
+    query InviteEditorModalQuery($inviteId: Int!, $slug: String!) {
+  projectBySlug(slug: $slug) {
     id
     groups {
       id
@@ -17454,6 +19598,7 @@ var InviteEditorModalQueryDocument = import_client.gql`
     inviteEmails {
       ...InviteEmailDetails
     }
+    participationStatus
   }
 }
     ${InviteEmailDetailsFragmentDoc}`;
@@ -17528,8 +19673,46 @@ var ProjectInviteEmailStatusSubscriptionDocument = import_client.gql`
     subscription ProjectInviteEmailStatusSubscription {
   projectInviteStateUpdated {
     invite {
-      opaqueId: id
+      id
       status
+    }
+  }
+}
+    `;
+var ApproveAccessRequestDocument = import_client.gql`
+    mutation ApproveAccessRequest($userId: Int!, $projectId: Int!, $slug: String!) {
+  approveParticipant(input: {projectId: $projectId, userId: $userId}) {
+    user {
+      id
+      needsAccessRequestApproval(slug: $slug)
+      approvedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      deniedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      approvedOrDeniedOn(projectId: $projectId)
+    }
+  }
+}
+    `;
+var DenyAccessRequestDocument = import_client.gql`
+    mutation DenyAccessRequest($userId: Int!, $projectId: Int!, $slug: String!) {
+  denyParticipant(input: {projectId: $projectId, userId: $userId}) {
+    user {
+      id
+      needsAccessRequestApproval(slug: $slug)
+      approvedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      deniedBy(projectId: $projectId) {
+        id
+        canonicalEmail
+      }
+      approvedOrDeniedOn(projectId: $projectId)
     }
   }
 }
@@ -17540,14 +19723,30 @@ var UpdateProfileDocument = import_client.gql`
     input: {userId: $userId, patch: {affiliations: $affiliations, email: $email, fullname: $fullname, nickname: $nickname, picture: $picture}}
   ) {
     profile {
+      userId
       user {
         id
         profile {
-          picture
+          ...UserProfileDetails
         }
       }
     }
   }
+}
+    ${UserProfileDetailsFragmentDoc}`;
+var MyProfileDocument = import_client.gql`
+    query MyProfile {
+  me {
+    id
+    profile {
+      ...UserProfileDetails
+    }
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
+var UserIsSuperuserDocument = import_client.gql`
+    query UserIsSuperuser {
+  currentUserIsSuperuser
 }
     `;
 
@@ -17557,11 +19756,18 @@ function getUnskippedInputElementsForCompletedResponse(sortedFormElements, rules
   if (!ThankYou) {
     throw new Error(`Could not find ThankYou element`);
   }
-  const path = calculatePathToElement(ThankYou.id, sortedFormElements, rules, answers);
+  const path = calculatePathToElement(
+    ThankYou.id,
+    sortedFormElements,
+    rules,
+    answers
+  );
   return path.filter((el) => el.isInput);
 }
 function calculatePathToElement(currentId, sortedFormElements, rules, answers) {
-  const currentIndex = sortedFormElements.findIndex((el) => el.id === currentId);
+  const currentIndex = sortedFormElements.findIndex(
+    (el) => el.id === currentId
+  );
   if (currentIndex === 0) {
     return [sortedFormElements[0]];
   }
@@ -17588,7 +19794,9 @@ function calculatePathToElement(currentId, sortedFormElements, rules, answers) {
   }
 }
 function getNextFormElement(current, sortedFormElements, rules, answers) {
-  const subordinateElements = sortedFormElements.filter((el) => !!el.subordinateTo);
+  const subordinateElements = sortedFormElements.filter(
+    (el) => !!el.subordinateTo
+  );
   sortedFormElements = sortedFormElements.filter((el) => !el.subordinateTo);
   const originalAnswers = answers;
   answers = __spreadValues({}, answers);
@@ -17598,18 +19806,35 @@ function getNextFormElement(current, sortedFormElements, rules, answers) {
       if (!C) {
         throw new Error(`Could not find component ${el.typeId}`);
       }
-      answers[el.id] = C.getValueForRuleEvaluation(answers[el.id], el.componentSettings);
+      answers[el.id] = C.getValueForRuleEvaluation(
+        answers[el.id],
+        el.componentSettings
+      );
     }
   }
-  const matchingSubordinateElements = subordinateElements.filter((el) => el.subordinateTo === current.id).filter((el) => componentExportHelpers[current.typeId].shouldDisplaySubordinateElement(el.id, current.componentSettings, originalAnswers[current.id]));
+  const matchingSubordinateElements = subordinateElements.filter((el) => el.subordinateTo === current.id).filter(
+    (el) => componentExportHelpers[current.typeId].shouldDisplaySubordinateElement(
+      el.id,
+      current.componentSettings,
+      originalAnswers[current.id]
+    )
+  );
   if (matchingSubordinateElements.length) {
     return matchingSubordinateElements[0];
   } else if (current.subordinateTo) {
-    const parent = sortedFormElements.find((el) => el.id === current.subordinateTo);
+    const parent = sortedFormElements.find(
+      (el) => el.id === current.subordinateTo
+    );
     if (!parent) {
       throw new Error("Parent of subordinate not found");
     }
-    const siblings = subordinateElements.filter((el) => el.subordinateTo === current.subordinateTo).filter((el) => componentExportHelpers[parent.typeId].shouldDisplaySubordinateElement(el.id, parent.componentSettings, originalAnswers[parent.id]));
+    const siblings = subordinateElements.filter((el) => el.subordinateTo === current.subordinateTo).filter(
+      (el) => componentExportHelpers[parent.typeId].shouldDisplaySubordinateElement(
+        el.id,
+        parent.componentSettings,
+        originalAnswers[parent.id]
+      )
+    );
     const idx = siblings.indexOf(current);
     if (idx === siblings.length - 1) {
       const currentIndex2 = sortedFormElements.indexOf(parent);
@@ -17622,7 +19847,9 @@ function getNextFormElement(current, sortedFormElements, rules, answers) {
   let nextByPosition = sortedFormElements[currentIndex + 1];
   let nextByJumpToId = current.jumpToId ? sortedFormElements.find((el) => el.id === current.jumpToId) : void 0;
   if (nextByJumpToId && sortedFormElements.indexOf(nextByJumpToId) < currentIndex) {
-    console.warn(`Ignoring invalid skip logic rule that would jump backward in survey`);
+    console.warn(
+      `Ignoring invalid skip logic rule that would jump backward in survey`
+    );
     nextByJumpToId = void 0;
   }
   if (currentIndex === 0) {
@@ -17639,7 +19866,9 @@ function getNextFormElement(current, sortedFormElements, rules, answers) {
       if (evaluateRule(rule, answers)) {
         const next = sortedFormElements.find((el) => el.id === rule.jumpToId);
         if (!next) {
-          console.warn(`Could not find FormElement refered to by jumpToId=${rule.jumpToId}`);
+          console.warn(
+            `Could not find FormElement refered to by jumpToId=${rule.jumpToId}`
+          );
         } else if (sortedFormElements.indexOf(next) < currentIndex) {
           console.warn(`Skipping logic rule that would mean jumping backwards`);
         } else {
@@ -17698,7 +19927,11 @@ function evaluateCondition(operator, value, answer) {
 
 // src/formElements/ExportUtils.ts
 function getAnswers(componentName, exportId, componentSettings, answer) {
-  return componentExportHelpers[componentName].getAnswers(componentSettings, exportId, answer);
+  return componentExportHelpers[componentName].getAnswers(
+    componentSettings,
+    exportId,
+    answer
+  );
 }
 function getDataForExport(responses, formElements, rules) {
   const sortedElements = sortFormElements(formElements);
@@ -17715,10 +19948,15 @@ function getDataForExport(responses, formElements, rules) {
   ];
   for (const element of sortedElements) {
     if (element.isInput) {
-      columns.push(...componentExportHelpers[element.typeId].getColumns(element.componentSettings, element.exportId));
+      columns.push(
+        ...componentExportHelpers[element.typeId].getColumns(
+          element.componentSettings,
+          element.exportId
+        )
+      );
     }
   }
-  for (const response of responses) {
+  for (const response of responses.filter((r) => !r.archived)) {
     const row = {
       id: response.id,
       survey_id: response.surveyId,
@@ -17730,7 +19968,11 @@ function getDataForExport(responses, formElements, rules) {
       account_email: response.accountEmail || null,
       archived: response.archived || false
     };
-    const elements = getUnskippedInputElementsForCompletedResponse(sortedElements, rules, response.data);
+    const elements = getUnskippedInputElementsForCompletedResponse(
+      sortedElements,
+      rules,
+      response.data
+    );
     const answers = getAnswersAsProperties(elements, response.data);
     rows.push(__spreadValues(__spreadValues({}, row), answers));
   }
@@ -17741,7 +19983,12 @@ function getAnswersAsProperties(sortedElements, data) {
   for (const element of sortedElements) {
     const answer = data[element.id];
     if (answer !== void 0) {
-      const columnData = getAnswers(element.typeId, element.exportId, element.componentSettings, answer);
+      const columnData = getAnswers(
+        element.typeId,
+        element.exportId,
+        element.componentSettings,
+        answer
+      );
       for (const col in columnData) {
         answers[col] = columnData[col];
       }

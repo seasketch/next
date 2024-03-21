@@ -52,9 +52,31 @@ registerComponent<MultipleChoiceProps, MultipleChoiceValue>({
     return [exportId];
   },
   getAnswers: (settings, exportId, answer) => {
-    return {
-      [exportId]: Array.isArray(answer) ? answer[0] : answer || undefined,
-    };
+    if (settings.multipleSelect) {
+      if (answer === undefined || answer === null) {
+        return {
+          [exportId]: [],
+        };
+      } else if (!Array.isArray(answer)) {
+        return {
+          [exportId]: [answer],
+        };
+      } else {
+        return {
+          [exportId]: answer,
+        };
+      }
+    } else {
+      if (Array.isArray(answer)) {
+        return {
+          [exportId]: answer[0],
+        };
+      } else {
+        return {
+          [exportId]: answer,
+        };
+      }
+    }
   },
 });
 registerComponent({
