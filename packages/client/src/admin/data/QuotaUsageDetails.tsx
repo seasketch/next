@@ -150,7 +150,7 @@ export default function QuotaUsageDetails({
         {totalQuotaUsage.used > 0 ? (
           <QuotaUsageTreemap
             width={WIDTH}
-            height={containerHeight}
+            height={containerHeight - 14}
             layers={layers}
             slug={slug}
             tableOfContentsItems={tableOfContentsItems}
