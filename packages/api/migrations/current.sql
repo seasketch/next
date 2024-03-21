@@ -1,4 +1,12 @@
 -- Enter migration here
+alter table data_sources drop column if exists gfw_4wings_datasets;
+alter table data_sources drop column if exists gfw_4wings_date_range;
+alter table data_sources drop column if exists gfw_4wings_filters;
+alter table data_sources drop column if exists gfw_4wings_token;
+alter table data_sources drop column if exists gfw_4wings_format;
+drop function if exists create_gfw_4wings_source;
+drop type if exists gfw_4wings_format;
+
 insert into data_source_types (
   type, 
   description
@@ -7,7 +15,6 @@ insert into data_source_types (
   '4Wings data source hosted by Global Fishing Watch'
 ) on conflict do nothing;
 
-alter table data_sources drop column if exists gfw_4wings_format;
 drop function if exists create_gfw_4wings_source;
 drop type if exists gfw_4wings_format;
 CREATE TYPE gfw_4wings_format AS ENUM('mvt', 'png');
@@ -16,6 +23,7 @@ alter table data_sources drop column if exists gfw_4wings_datasets;
 alter table data_sources drop column if exists gfw_4wings_date_range;
 alter table data_sources drop column if exists gfw_4wings_filters;
 alter table data_sources drop column if exists gfw_4wings_token;
+alter table data_sources drop column if exists gfw_4wings_format;
 
 alter table data_sources add column if not exists gfw_4wings_datasets text[];
 alter table data_sources add column if not exists gfw_4wings_date_range text;
