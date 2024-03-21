@@ -30,6 +30,7 @@ export default function AddGFWSourceModal({
       ]
         .map((d) => d.toISOString().split("T")[0])
         .join(",");
+      console.log("dateRange", dateRange);
       const controller = new AbortController();
       const layers = map
         .getStyle()
@@ -49,7 +50,7 @@ export default function AddGFWSourceModal({
             maxzoom: 12,
             promoteId: "cell",
             tiles: [
-              `https://gateway.api.globalfishingwatch.org/v3/4wings/tile/heatmap/{z}/{x}/{y}?datasets[0]=public-global-fishing-effort:latest&date-range=2012-01-01,2024-01-01&token=${process.env.REACT_APP_GFW_API_TOKEN}&interval=YEAR&format=MVT&temporal-aggregation=false`,
+              `https://gateway.api.globalfishingwatch.org/v3/4wings/tile/heatmap/{z}/{x}/{y}?datasets[0]=public-global-fishing-effort:latest&date-range=2023-01-01,2024-01-01&token=${process.env.REACT_APP_GFW_API_TOKEN}&interval=YEAR&format=MVT&temporal-aggregation=true`,
             ],
           });
           const sourceLayer = "main";
@@ -105,14 +106,14 @@ export default function AddGFWSourceModal({
               paint: {
                 "fill-color": [
                   "step",
-                  ["to-number", ["get", state.year.toString()], 0],
+                  ["to-number", ["get", "count"], 0],
                   ...(steps.length <= 2 ? ["transparent", 1, steps[0]] : steps),
                 ],
                 "fill-outline-color": "transparent",
                 "fill-opacity": [
                   "interpolate",
                   ["linear"],
-                  ["to-number", ["get", state.year.toString()], -1],
+                  ["to-number", ["get", "count"], -1],
                   -1,
                   0,
                   0,
@@ -178,6 +179,7 @@ export default function AddGFWSourceModal({
         }
         const f = features[0];
         if (f) {
+          console.log(f.properties);
           map.setFeatureState(
             {
               source: "gfw",
@@ -308,7 +310,7 @@ async function getBins(dateRange: string, signal: AbortSignal, maxZoom = 12) {
       throw new Error("No data found for date range " + dateRange);
     } else {
       bins[z] = data.entries[0].map((entry: number) => ({
-        value: Math.round(entry),
+        value: Math.round(entry) / 400,
         color: scale(data.entries.indexOf(entry) / data.entries.length),
       }));
     }

@@ -2619,6 +2619,15 @@ type DataSource implements Node {
   """
   queryParameters: JSON
 
+  """Reads and enables pagination through a set of `QuotaDetail`."""
+  quotaUsed(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [QuotaDetail!]
+
   """
   For MapBox Vector and Raster sources. Influences the y direction of the tile
   coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
@@ -10442,6 +10451,15 @@ type Project implements Node {
     orderBy: ParticipantSortBy
   ): [User!]
 
+  """Reads and enables pagination through a set of `DataSource`."""
+  uploadedDraftDataSources(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [DataSource!]
+
   """Project url will resolve to `https://seasketch.org/{slug}/`"""
   url: String
 
@@ -11967,6 +11985,13 @@ type Query implements Node {
     """JWT string"""
     token: String!
   ): SurveyInviteTokenVerificationResults
+}
+
+type QuotaDetail {
+  bytes: BigInt
+  id: Int
+  isOriginal: Boolean
+  type: DataUploadOutputType
 }
 
 enum RasterDemEncoding {
