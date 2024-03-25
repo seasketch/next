@@ -5712,7 +5712,7 @@ CREATE TABLE public.projects (
     mapbox_secret_key text,
     mapbox_public_key text,
     is_offline_enabled boolean DEFAULT false,
-    data_hosting_quota bigint DEFAULT 524288000 NOT NULL,
+    data_hosting_quota bigint DEFAULT '10737418240'::bigint NOT NULL,
     supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     draft_table_of_contents_has_changes boolean DEFAULT false NOT NULL,
