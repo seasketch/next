@@ -139,15 +139,17 @@ export default function QuotaUsageDetails({
               <span className="flex-1">
                 <Trans ns="admin:data">Usage by Source</Trans>
               </span>
-              <button
-                className="z-10 text-xs flex items-center bg-gray-100 rounded-full px-2 space-x-1 border"
-                onClick={() => setShowFullscreen(true)}
-              >
-                <span className="">
-                  <Trans ns="admin:data">view larger</Trans>
-                </span>
-                <EnterFullScreenIcon className="inline" />
-              </button>
+              {(data.projectBySlug?.dataHostingQuotaUsed || 0) > 0 && (
+                <button
+                  className="z-10 text-xs flex items-center bg-gray-100 rounded-full px-2 space-x-1 border"
+                  onClick={() => setShowFullscreen(true)}
+                >
+                  <span className="">
+                    <Trans ns="admin:data">view larger</Trans>
+                  </span>
+                  <EnterFullScreenIcon className="inline" />
+                </button>
+              )}
             </h4>
           )}
         </div>
