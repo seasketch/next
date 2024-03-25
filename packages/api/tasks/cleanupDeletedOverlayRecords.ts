@@ -105,19 +105,19 @@ export default async function cleanupDeletedOverlayRecords(
       ]);
     }
 
-    // TODO: migrate this over to use TBD upload_data_resources model
     const data = await client.query(
-      `select deleted_geojson_objects.id, deleted_geojson_objects.object_key, data_sources_buckets.bucket as bucket from deleted_geojson_objects inner join data_sources_buckets on data_sources_buckets.url = deleted_geojson_objects.bucket`
+      `select id, remote from deleted_data_upload_outputs order by deleted_at asc limit 20`
     );
 
     if (data.rowCount > 0) {
       helpers.logger.info(
-        `Deleting ${data.rowCount} imported geojson assets that are no longer being used.`
+        `Deleting ${data.rowCount} uploaded data ouputs that are no longer being used.`
       );
       for (const record of data.rows) {
-        await deleteRemote(`s3://${record.bucket}/${record.object_key}`);
+        await deleteRemote(record.remote);
+        helpers.logger.info(`Deleted ${record.remote}.`);
         await client.query(
-          `delete from deleted_geojson_objects where id = $1`,
+          `delete from deleted_data_upload_outputs where id = $1`,
           [record.id]
         );
       }
