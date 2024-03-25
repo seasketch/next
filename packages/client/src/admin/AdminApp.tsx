@@ -33,7 +33,7 @@ import LanguageSelector from "../surveys/LanguageSelector";
 import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
 
 const LazyBasicSettings = React.lazy(
-  /* webpackChunkName: "AdminSettings" */() => import("./Settings")
+  /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
 );
 const LazyDataSettings = React.lazy(
   () =>
@@ -92,7 +92,7 @@ export default function AdminApp() {
     if (
       data?.project?.sessionParticipationStatus &&
       data?.project?.sessionParticipationStatus !==
-      ParticipationStatus.ParticipantSharedProfile
+        ParticipationStatus.ParticipantSharedProfile
     ) {
       alert(t("The admin dashboard is limited to project participants"), {
         description: t(
@@ -148,26 +148,26 @@ export default function AdminApp() {
       ),
       path: "/admin",
     },
-    {
-      breadcrumb: t("Activity"),
-      icon: (
-        <svg
-          className={iconClassName}
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-      ),
-      path: "/admin/activity",
-    },
+    // {
+    //   breadcrumb: t("Activity"),
+    //   icon: (
+    //     <svg
+    //       className={iconClassName}
+    //       xmlns="http://www.w3.org/2000/svg"
+    //       fill="none"
+    //       viewBox="0 0 24 24"
+    //       stroke="currentColor"
+    //     >
+    //       <path
+    //         strokeLinecap="round"
+    //         strokeLinejoin="round"
+    //         strokeWidth={2}
+    //         d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+    //       />
+    //     </svg>
+    //   ),
+    //   path: "/admin/activity",
+    // },
     {
       breadcrumb: "Users & Groups",
       icon: (
@@ -274,27 +274,27 @@ export default function AdminApp() {
     },
     ...(data?.project?.isOfflineEnabled
       ? [
-        {
-          breadcrumb: "Offline Support",
-          icon: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className={iconClassName}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"
-              />
-            </svg>
-          ),
-          path: "/admin/offline",
-        },
-      ]
+          {
+            breadcrumb: "Offline Support",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={iconClassName}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"
+                />
+              </svg>
+            ),
+            path: "/admin/offline",
+          },
+        ]
       : []),
   ];
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
