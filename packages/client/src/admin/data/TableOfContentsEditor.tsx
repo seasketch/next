@@ -409,6 +409,19 @@ export default function TableOfContentsEditor() {
               search={search}
               searchResults={searchResults}
             />
+            {!searching &&
+              !search?.length &&
+              !tocQuery.loading &&
+              tocQuery.data?.projectBySlug?.draftTableOfContentsItems
+                ?.length === 0 && (
+                <div className="text-center text-gray-500 p-4 text-sm">
+                  <Trans ns="admin:data">
+                    Your project does not have any data layers yet. Drag & drop
+                    shapefiles or geojson here, or choose{" "}
+                    <b>Edit {"->"} Add Data</b> from the toolbar to get started.
+                  </Trans>
+                </div>
+              )}
             <div
               className={
                 "transition-opacity " +
