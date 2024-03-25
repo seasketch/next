@@ -82,7 +82,7 @@ export default function useDialog() {
       alert: (
         message: string | ReactNode,
         options?: {
-          description?: string;
+          description?: string | ReactNode;
         }
       ) => {
         return new Promise((resolve, reject) => {

@@ -14,9 +14,10 @@ import {
   JobDetailsFragment,
   LayersAndSourcesForItemsDocument,
   ProjectDataQuotaRemainingDocument,
+  QuotaUsageDetailsDocument,
   useProjectBackgroundJobsQuery,
 } from "../../generated/graphql";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import Spinner from "../../components/Spinner";
 import { ExclamationCircleIcon } from "@heroicons/react/outline";
@@ -92,6 +93,7 @@ export default function DataUploadDropzone({
               include: [
                 DraftTableOfContentsDocument,
                 ProjectDataQuotaRemainingDocument,
+                QuotaUsageDetailsDocument,
               ],
             })
             .then(() => {
@@ -235,11 +237,24 @@ export default function DataUploadDropzone({
             }));
           })
           .catch((e) => {
-            onError(e);
+            if (/quota exceeded/.test(e.message)) {
+              alert(t("Quota Exceeded"), {
+                description: (
+                  <Trans ns="admin:data">
+                    This project has exceeded its data storage quota. Please
+                    delete some data to make room for new uploads. You can see
+                    how much space your layers are using by selecting{" "}
+                    <b>View {"->"} Data Hosting Quota</b> from the toolbar.
+                  </Trans>
+                ),
+              });
+            } else {
+              onError(e);
+            }
           });
       }
     },
-    [onError, state.manager]
+    [alert, confirm, isUploadForSupported, onError, state.manager, t]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

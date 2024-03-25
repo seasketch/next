@@ -9,7 +9,10 @@ import bytes from "bytes";
 import Warning from "../../components/Warning";
 import Spinner from "../../components/Spinner";
 import QuotaUsageTreemap from "./QuotaUsageTreemap";
-import { EnterFullScreenIcon } from "@radix-ui/react-icons";
+import {
+  EnterFullScreenIcon,
+  ExclamationTriangleIcon,
+} from "@radix-ui/react-icons";
 import QuotaUsageModal from "./QuotaUsageModal";
 
 const WIDTH = 488;
@@ -91,12 +94,26 @@ export default function QuotaUsageDetails({
               </>
             ) : (
               <>
-                {bytes(totalQuotaUsage.used)} / {bytes(totalQuotaUsage.total)}
+                {bytes(totalQuotaUsage.used)} / {bytes(totalQuotaUsage.total)}{" "}
+                {totalQuotaUsage.fraction >= 1 ? (
+                  <span className="text-red-600">
+                    <ExclamationTriangleIcon className="inline mx-1 " />
+                    <Trans ns="admin:data">Over quota</Trans>
+                  </span>
+                ) : (
+                  ""
+                )}
               </>
             )}
             <div className="w-full rounded h-5 bg-gray-100 overflow-hidden border shadow-sm">
               <div
-                className="h-full bg-primary-500 transition-all duration-500"
+                className={`h-full transition-all duration-500 ${
+                  totalQuotaUsage.fraction >= 1
+                    ? "bg-red-500"
+                    : totalQuotaUsage.fraction >= 0.8
+                    ? "bg-yellow-500"
+                    : "bg-primary-500"
+                }`}
                 style={{ width: `${totalQuotaUsage.fraction * 100}%` }}
               ></div>
             </div>
@@ -114,7 +131,7 @@ export default function QuotaUsageDetails({
               >
                 Contact support
               </a>{" "}
-              if you need more space.
+              if you need more space or delete layers to free up quota.
             </Trans>
           </p>
           {data && (
