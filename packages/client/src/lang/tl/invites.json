@@ -1,0 +1,17 @@
+{
+  "Accept as": "Tanggapin bilang {{email}}",
+  "An account with this email address already exists.": "Mayroon nang account na may ganitong email address.",
+  "Confirming invite": "Kinukumpirma ang imbitasyon",
+  "Contact {{supportEmail}} to request a new invitation.": "Makipag-ugnayan sa {{supportEmail}} upang humiling ng bagong imbitasyon.",
+  "Create an Account": "Gumawa ng account",
+  "Logout and sign in as ": "Mag-logout at mag-sign in bilang ",
+  "Sign In": "Mag-sign In",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Ang imbitasyong ito ay tinanggap na.<1> Magpatuloy sa proyekto </1> o <5>makipag-ugnayan sa suporta</5>kung naniniwala kang ito ay isang error.",
+  "This invitation was originally sent to <2></2>.": "Ang imbitasyong ito ay orihinal na ipinadala sa <2></2>.",
+  "Use another account": "Gumamit ng ibang account",
+  "Verifying invitation code": "Bine-verify ang code ng imbitasyon",
+  "Welcome, !": "Maligayang pagdating, !",
+  "Welcome!": "Maligayang pagdating!",
+  "You have been invited to participate in a SeaSketch project.": "Inimbitahan kang lumahok sa isang proyekto ng SeaSketch.",
+  "Your invitation to this project has expired.": "Ang iyong imbitasyon sa proyektong ito ay nag-expire na."
+}

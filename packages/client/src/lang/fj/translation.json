@@ -1,7 +1,13 @@
 {
+  "Basemap": "Basemap",
+  "Cancel": "Bokoca",
+  "Close": "Sogota",
   "Drop Files Here to Upload": "Vakacuruma eke na Faile mo Vakavodoka",
+  "Edit": "Veisautaka",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "Ena gauna oqo sa tokona tiko o SeaSketch na itukutuku ni vector ena GeoJSON, Shapefile (zipped), GeoTiff, kei na FlatGeobuf formats.",
+  "Settings": "iTuvatuva",
   "Starting upload": "Tekivu vakavodoka",
+  "Submit": "Vakauta",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Oqo e vaka me dua na mataqali faile ka sega ni tokona na SeaSketch na uploads spatial.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Oqo e vaka me dua na mataqali faile raster sega ni tokoni. Me baleta na itukutuku raster, vakavodoka e dua na GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "E vaka me tiki walega ni dua na ibulibuli. Mo vakavodoka na shapefiles, bulia e dua na faile .zip vata kei na faile kece sara (.shp, .prj, .shx, kei na so tale) ka vakavodoka na zipfile oya."

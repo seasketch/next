@@ -1,7 +1,13 @@
 {
+  "Basemap": "Базовая карта",
+  "Cancel": "Отмена",
+  "Close": "Закрывать",
   "Drop Files Here to Upload": "Перетащите сюда файлы для загрузки",
+  "Edit": "Редактировать",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "В настоящее время SeaSketch поддерживает векторные данные в форматах GeoJSON, Shapefile (сжатый), GeoTiff и FlatGeobuf.",
+  "Settings": "Настройки",
   "Starting upload": "Начало загрузки",
+  "Submit": "Представлять на рассмотрение",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Судя по всему, это тип файла, который SeaSketch не поддерживает для пространственной загрузки.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Похоже, это неподдерживаемый тип растрового файла. Для растровых данных загрузите файл GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Похоже, это только часть шейп-файла. Чтобы загрузить шейп-файлы, создайте ZIP-файл со всеми связанными файлами (.shp, .prj, .shx и т. д.) и загрузите этот ZIP-файл."

@@ -1,7 +1,13 @@
 {
+  "Basemap": "Mahere turanga",
+  "Cancel": "Whakakore",
+  "Close": "Katia",
   "Drop Files Here to Upload": "Whakatakahia nga konae ki konei hei tuku ake",
+  "Edit": "Whakatikatika",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "I tenei wa kei te tautoko a SeaSketch i nga raraunga vector i roto i nga whakatakotoranga GeoJSON, Shapefile (zipped), GeoTiff, me FlatGeobuf.",
+  "Settings": "Tautuhinga",
   "Starting upload": "Ka timata te tuku",
+  "Submit": "Tukuna",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Te ahua nei he momo konae kaore a SeaSketch e tautoko mo nga tukunga mokowā.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Te ahua nei he momo konae raster kore tautoko. Mo nga raraunga raster, tukuna he GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Te ahua nei he waahanga noa tenei o te ahua ahua. Hei tuku ake i nga konae ahua, hanga he konae .zip me nga konae katoa e pa ana (.shp, .prj, .shx, me etahi atu) ka tuku ake i taua konae zip."

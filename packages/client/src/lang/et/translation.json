@@ -1,7 +1,13 @@
 {
+  "Basemap": "Põhikaart",
+  "Cancel": "Tühista",
+  "Close": "Sulge",
   "Drop Files Here to Upload": "Üleslaadimiseks pukseerige failid siia",
+  "Edit": "Muuda",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch toetab praegu vektorandmeid GeoJSON-, Shapefile- (zipitud), GeoTiff- ja FlatGeobuf-vormingus.",
+  "Settings": "Seaded",
   "Starting upload": "Üleslaadimise alustamine",
+  "Submit": "Esita",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "See näib olevat failitüüp, mida SeaSketch ruumiliste üleslaadimiste puhul ei toeta.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "See näib olevat toetamata rasterfaili tüüp. Rasterandmete jaoks laadige üles GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "See näib olevat vaid osa kujundifailist. Shape-failide üleslaadimiseks looge ZIP-fail kõigi seotud failidega (.shp, .prj, .shx jne) ja laadige see ZIP-fail üles."

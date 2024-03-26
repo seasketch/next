@@ -1,19 +1,12 @@
 {
   "About": "About",
   "Account settings": "Account settings",
-  "Are you sure you want to delete {{name}}?": "Are you sure you want to delete {{name}}?",
   "Contact support": "Contact support",
-  "Delete": "Delete",
-  "Delete Item": "Delete Item",
   "Developer API": "Developer API",
-  "Edit": "Edit",
-  "Edit metadata": "Edit metadata",
-  "Metadata": "Metadata",
   "Projects": "Projects",
   "SeaSketch logo": "SeaSketch logo",
   "Sign In": "Sign In",
   "Sign in": "Sign in",
   "Sign out": "Sign out",
-  "Signed in as": "Signed in as",
-  "Zoom to bounds": "Zoom to bounds"
+  "Signed in as": "Signed in as"
 }

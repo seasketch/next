@@ -1,7 +1,13 @@
 {
+  "Basemap": "Palapala palapala",
+  "Cancel": "Hoʻopau",
+  "Close": "Pani",
   "Drop Files Here to Upload": "E hoʻokuʻu i nā faila ma ʻaneʻi e hoʻouka ai",
+  "Edit": "Hoʻoponopono",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "Kākoʻo ʻo SeaSketch i kēia manawa i ka ʻikepili vector ma GeoJSON, Shapefile (zipped), GeoTiff, a me FlatGeobuf formats.",
+  "Settings": "Nā hoʻonohonoho",
   "Starting upload": "Hoʻomaka e hoʻouka",
+  "Submit": "Waiho mai",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "He ʻano faila kēia i kākoʻo ʻole ʻia e SeaSketch no ka hoʻouka ʻana i nā kikoʻī.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "ʻIke ʻia he ʻano faila raster i kākoʻo ʻole ʻia. No ka ʻikepili raster, e hoʻouka i kahi GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "He ʻāpana wale nō kēia o kahi shapefile. No ka hoʻouka ʻana i nā shapefiles, hana i kahi faila .zip me nā faila pili āpau (.shp, .prj, .shx, etc.) a hoʻouka i kēlā zipfile."

@@ -1,7 +1,13 @@
 {
+  "Basemap": "Pagrindinis žemėlapis",
+  "Cancel": "Atšaukti",
+  "Close": "Uždaryti",
   "Drop Files Here to Upload": "Numeskite failus čia, kad įkeltumėte",
+  "Edit": "Redaguoti",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch šiuo metu palaiko vektorinius duomenis GeoJSON, Shapefile (zip), GeoTiff ir FlatGeobuf formatais.",
+  "Settings": "Nustatymai",
   "Starting upload": "Pradedamas įkėlimas",
+  "Submit": "Pateikti",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Atrodo, kad tai yra failo tipas, kurio SeaSketch nepalaiko erdviniams įkėlimams.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Atrodo, kad tai nepalaikomas rastrinio failo tipas. Norėdami gauti rastrinius duomenis, įkelkite GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Atrodo, kad tai tik formos failo dalis. Norėdami įkelti Shape failus, sukurkite .zip failą su visais susijusiais failais (.shp, .prj, .shx ir kt.) ir įkelkite tą ZIP failą."

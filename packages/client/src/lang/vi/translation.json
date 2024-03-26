@@ -1,7 +1,13 @@
 {
+  "Basemap": "Bản đồ cơ sở",
+  "Cancel": "Hủy bỏ",
+  "Close": "Đóng",
   "Drop Files Here to Upload": "Thả file vào đây để upload",
+  "Edit": "Biên tập",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch hiện hỗ trợ dữ liệu vectơ ở các định dạng GeoJSON, Shapefile (nén), GeoTiff và FlatGeobuf.",
+  "Settings": "Cài đặt",
   "Starting upload": "Bắt đầu tải lên",
+  "Submit": "Nộp",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Có vẻ như đây là loại tệp mà SeaSketch không hỗ trợ tải lên theo không gian.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Có vẻ như đây là loại tệp raster không được hỗ trợ. Đối với dữ liệu raster, hãy tải lên GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Đây dường như chỉ là một phần của một tập tin hình dạng. Để tải lên các tệp hình dạng, hãy tạo tệp .zip với tất cả các tệp liên quan (.shp, .prj, .shx, v.v.) và tải tệp zip đó lên."

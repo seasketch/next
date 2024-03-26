@@ -1,0 +1,14 @@
+{
+  "Basemap": "Basemap",
+  "Cancel": "Kanselahin",
+  "Close": "Isara",
+  "Drop Files Here to Upload": "I-drop ang mga File Dito para Mag-upload",
+  "Edit": "I-edit",
+  "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "Ang SeaSketch ay kasalukuyang sumusuporta sa vector data sa GeoJSON, Shapefile (zipped), GeoTiff, at FlatGeobuf na mga format.",
+  "Settings": "Mga setting",
+  "Starting upload": "Nagsisimula sa pag-upload",
+  "Submit": "Ipasa",
+  "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Ito ay tila isang uri ng file na hindi sinusuportahan ng SeaSketch para sa mga spatial na pag-upload.",
+  "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Ito ay tila isang hindi sinusuportahang uri ng raster file. Para sa raster data, mag-upload ng GeoTiff.",
+  "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Mukhang bahagi lamang ito ng isang formefile. Upang mag-upload ng mga formefile, gumawa ng .zip file kasama ang lahat ng nauugnay na file (.shp, .prj, .shx, atbp) at i-upload ang zipfile na iyon."
+}

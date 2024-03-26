@@ -1,7 +1,13 @@
 {
+  "Basemap": "ބޭސްމެޕް",
+  "Cancel": "ބާތިލުކުރަން",
+  "Close": "ލައްޕާލުމަށް",
   "Drop Files Here to Upload": "އަޕްލޯޑް ކުރަން ފައިލްތައް މިތަނަށް ޑްރޮޕް ކުރޭ",
+  "Edit": "ބަދަލުގެނައުމަށް",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "ސީސްކެޗް އިން މިހާރު ވެސް ޖިއޯޖޭއެސްއެން، ޝޭޕްފައިލް (ޒިޕްޑް)، ޖިއޯޓިފް އަދި ފްލެޓްޖިއޯބަފް ފޯމެޓްތަކުގައި ވެކްޓަރ ޑޭޓާ ސަޕޯޓް ކުރެ އެވެ.",
+  "Settings": "ސެޓިންގސް",
   "Starting upload": "އަޕްލޯޑް ކުރަން ފެށުން",
+  "Submit": "ހުށަހެޅުން",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "މިއީ ސްޕޭޝަލް އަޕްލޯޑްތަކަށް ސީސްކޭޗުން ސަޕޯޓް ނުކުރާ ފައިލް ޓައިޕެއް ކަމަށް ބެލެވެ އެވެ.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "މިއީ ސަޕޯޓެއް ނެތް ރާސްޓާ ފައިލް ވައްތަރެއް ކަމަށް ބެލެވެ އެވެ. ރާސްޓަރ ޑޭޓާއަށް ޖިއޯޓިފް އަޕްލޯޑް ކުރާށެވެ.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "މިއީ ހަމައެކަނި ޝޭޕްފައިލްގެ ބައެއް ކަމަށް ބެލެވެ އެވެ. ޝޭޕްފައިލްތައް އަޕްލޯޑް ކުރުމަށް، އެކަމާ ގުޅުންހުރި ހުރިހާ ފައިލްތަކެއް (.އެސްއެޗްޕީ، .ޕީއާރްޖޭ، .ޝްކްސް ފަދަ) ހިމެނޭ .zip ފައިލެއް ހަދައި، އެ ޒިޕްފައިލް އަޕްލޯޑް ކުރާށެވެ."

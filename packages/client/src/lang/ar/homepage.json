@@ -2,15 +2,22 @@
   "authenticating...": "مصادقة ...",
   "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "قبل إنشاء مشروع ، يجب عليك التحقق من عنوان بريدك الإلكتروني. يرجى التحقق من البريد الوارد بحثًا عن رسالة بريد إلكتروني للتحقق من <2> do-not-reply@seasketch.org </2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "من خلال إنشاء مشروع ، فإنك توافق على <2> شروط الاستخدام </ 2> و <6> سياسة الخصوصية </ 6>.",
+  "Click on the map to start measuring.": "انقر على الخريطة لبدء القياس.",
   "close": "يغلق",
+  "Close": "يغلق",
   "Copied!": "نسخ!",
   "Copy Link": "نسخ الوصلة",
   "Copy Reference": "نسخة المرجع",
   "Create an account": "إنشاء حساب",
   "Create your own SeaSketch project.": "قم بإنشاء مشروع SeaSketch الخاص بك.",
   "Dismiss": "رفض",
+  "Double-click to finish measuring or click to draw a path.": "انقر نقرًا مزدوجًا لإنهاء القياس أو انقر لرسم مسار.",
+  "Download": "تحميل",
+  "Drag points to modify the measured distance.": "اسحب النقاط لتعديل المسافة المقاسة.",
   "Email sent. Check your inbox  📨": "أرسل البريد الإلكتروني. تحقق من صندوق الوارد الخاص بك 📨",
+  "finish": "ينهي",
   "Get started": "البدء",
+  "kilometers": "كيلومترات",
   "Latest activity": "النشاط الاخير",
   "Latest Discussions": "أحدث المناقشات",
   "Learn more": "يتعلم أكثر",
@@ -18,6 +25,9 @@
   "Logging into your account is the first step to creating a new SeaSketch project.": "يعد تسجيل الدخول إلى حسابك الخطوة الأولى لإنشاء مشروع SeaSketch جديد.",
   "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "هل تبحث عن مشاريع مثل <2> برمودا </ 2> أو <5> MaPP </5> أو <8> تنسيق رسم الخرائط في الولايات المتحدة </ 8>؟ يمكنك العثور على هذه المشاريع في <11> SeaSketch Legacy </11>.",
   "Metadata": "البيانات الوصفية",
+  "meters": "متر",
+  "miles": "اميال",
+  "nautical miles": "أميال بحرية",
   "NumPosts": "{{عدد}} مشاركات",
   "NumPosts_plural": "NumPosts_plural",
   "NumTopics": "{{عدد}} مواضيع",
@@ -28,10 +38,13 @@
   "ReplyCount": "{{عدد}} ردود",
   "ReplyCount_plural": "ReplyCount_plural",
   "Resend verification email": "إعادة ارسال بريد التحقق",
+  "reset": "إعادة ضبط",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "يضع SeaSketch أدوات قوية في أيدي مخططي المحيطات ،\n              أصحاب المصلحة والجمهور الذين كانوا في يوم من الأيام يقتصرون على نظم المعلومات الجغرافية\n              المتخصصين ، مما يتيح التخطيط المكاني البحري التشاركي\n              العمليات التي ترتبط ارتباطًا وثيقًا بالعلوم ذات الصلة و\n              معلومة. يتم استخدام SeaSketch حول العالم بشكل صغير\n              فرق الوكالات والمبادرات الكبيرة التي يقودها المجتمع لتحقيق الأفضل\n              قرارات الإدارة كل يوم.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "يدعم SeaSketch التخطيط التعاوني لمحيطاتنا",
   "Sending email...": "إرسال البريد الإلكتروني...",
   "Sign In": "تسجيل الدخول",
+  "Tap again to measure a path, or use the buttons below to finish or start over.": "انقر مرة أخرى لقياس المسار، أو استخدم الأزرار أدناه للانتهاء أو البدء من جديد.",
+  "Tap the map to start measuring.": "اضغط على الخريطة لبدء القياس.",
   "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "أنت تقوم بالوصول إلى SeaSketch من النطاق التجريبي next.seasket.ch. للحصول على أفضل تجربة ، يرجى استخدام <2> www.seasketch.org </2>. إذا كنت تستخدم ميزات دون اتصال ، <5> اقرأ هذه الإرشادات </ 5>.",
   "Zoom to bounds": "تكبير للحدود"
 }

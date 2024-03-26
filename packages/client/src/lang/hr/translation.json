@@ -1,7 +1,13 @@
 {
+  "Basemap": "Osnovna karta",
+  "Cancel": "Otkazati",
+  "Close": "Zatvoriti",
   "Drop Files Here to Upload": "Ispustite datoteke ovdje za prijenos",
+  "Edit": "Uredi",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch trenutno podržava vektorske podatke u formatima GeoJSON, Shapefile (zipped), GeoTiff i FlatGeobuf.",
+  "Settings": "postavke",
   "Starting upload": "Pokretanje prijenosa",
+  "Submit": "podnijeti",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Čini se da je ovo vrsta datoteke koju SeaSketch ne podržava za prostorne prijenose.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Čini se da je ovo nepodržana rasterska vrsta datoteke. Za rasterske podatke prenesite GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Čini se da je ovo samo dio datoteke oblika. Da biste prenijeli shapefile, izradite .zip datoteku sa svim srodnim datotekama (.shp, .prj, .shx itd.) i prenesite tu zip datoteku."

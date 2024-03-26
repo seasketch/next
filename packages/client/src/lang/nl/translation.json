@@ -1,7 +1,13 @@
 {
+  "Basemap": "Basiskaart",
+  "Cancel": "Annuleer",
+  "Close": "Sluit",
   "Drop Files Here to Upload": "Plaats hier bestanden om te uploaden",
+  "Edit": "Bewerk",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "SeaSketch ondersteunt momenteel vectorgegevens in de formaten GeoJSON, Shapefile (gezipt), GeoTiff en FlatGeobuf.",
+  "Settings": "Instellingen",
   "Starting upload": "Beginnen met uploaden",
+  "Submit": "Indienen",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Dit lijkt een bestandstype te zijn dat SeaSketch niet ondersteunt voor ruimtelijke uploads.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Dit lijkt een niet-ondersteund rasterbestandstype te zijn. Upload voor rastergegevens een GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Dit lijkt slechts een deel van een shapefile te zijn. Om shapefiles te uploaden, maakt u een .zip-bestand met alle gerelateerde bestanden (.shp, .prj, .shx, enz.) en uploadt u dat zipbestand."

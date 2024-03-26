@@ -1,7 +1,13 @@
 {
+  "Basemap": "आधार नक्शा",
+  "Cancel": "रद्द करना",
+  "Close": "बंद करना",
   "Drop Files Here to Upload": "अपलोड करने के लिए फ़ाइलें यहाँ डालें",
+  "Edit": "संपादन करना",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "सीस्केच वर्तमान में जियोजसन, शेपफाइल (ज़िप्ड), जियोटीफ और फ्लैटजियोबफ प्रारूपों में वेक्टर डेटा का समर्थन करता है।",
+  "Settings": "समायोजन",
   "Starting upload": "अपलोड प्रारंभ हो रहा है",
+  "Submit": "जमा करना",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "ऐसा प्रतीत होता है कि यह एक फ़ाइल प्रकार है जिसे SeaSketch स्थानिक अपलोड के लिए समर्थन नहीं करता है।",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "यह एक असमर्थित रैस्टर फ़ाइल प्रकार प्रतीत होता है। रैस्टर डेटा के लिए, जियो टिफ़ अपलोड करें।",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "ऐसा प्रतीत होता है कि यह केवल एक शेपफाइल का हिस्सा है। शेपफाइल्स अपलोड करने के लिए, सभी संबंधित फाइलों (.shp, .prj, .shx, आदि) के साथ एक .zip फ़ाइल बनाएं और उस ज़िपफाइल को अपलोड करें।"

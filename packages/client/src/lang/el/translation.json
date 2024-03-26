@@ -1,7 +1,13 @@
 {
+  "Basemap": "Χάρτης βάσης",
+  "Cancel": "Ματαίωση",
+  "Close": "Κλείσε",
   "Drop Files Here to Upload": "Αποθέστε τα αρχεία εδώ για μεταφόρτωση",
+  "Edit": "Επεξεργασία",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "Το SeaSketch υποστηρίζει επί του παρόντος διανυσματικά δεδομένα σε μορφές GeoJSON, Shapefile (zipped), GeoTiff και FlatGeobuf.",
+  "Settings": "Ρυθμίσεις",
   "Starting upload": "Έναρξη μεταφόρτωσης",
+  "Submit": "υποβάλλουν",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Αυτός φαίνεται να είναι ένας τύπος αρχείου που το SeaSketch δεν υποστηρίζει για χωρικές μεταφορτώσεις.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Αυτός φαίνεται να είναι μη υποστηριζόμενος τύπος αρχείου ράστερ. Για δεδομένα ράστερ, ανεβάστε ένα GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Αυτό φαίνεται να είναι μόνο μέρος ενός αρχείου σχήματος. Για να ανεβάσετε shapefiles, δημιουργήστε ένα αρχείο .zip με όλα τα σχετικά αρχεία (.shp, .prj, .shx, κ.λπ.) και ανεβάστε αυτό το αρχείο zip."

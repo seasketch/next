@@ -1,7 +1,13 @@
 {
+  "Basemap": "Harta de bază",
+  "Cancel": "Anulare",
+  "Close": "Închide",
   "Drop Files Here to Upload": "Aruncă fișiere aici pentru a le încărca",
+  "Edit": "Editați | ×",
   "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats.": "În prezent, SeaSketch acceptă date vectoriale în formatele GeoJSON, Shapefile (zipped), GeoTiff și FlatGeobuf.",
+  "Settings": "Setări",
   "Starting upload": "Începe încărcarea",
+  "Submit": "Trimite",
   "This appears to be a file type which SeaSketch does not support for spatial uploads.": "Acesta pare a fi un tip de fișier pe care SeaSketch nu îl acceptă pentru încărcări spațiale.",
   "This appears to be an unsupported raster file type. For raster data, upload a GeoTiff.": "Acesta pare a fi un tip de fișier raster neacceptat. Pentru date raster, încărcați un GeoTiff.",
   "This appears to be only part of a shapefile. To upload shapefiles, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.": "Aceasta pare a fi doar o parte a unui shapefile. Pentru a încărca fișiere shape, creați un fișier .zip cu toate fișierele asociate (.shp, .prj, .shx etc.) și încărcați acel fișier zip."
