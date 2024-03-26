@@ -1,4 +1,7 @@
 {
+  "<0>FlatGeobuf</0> is a compact binary encoding for geographic data based on flatbuffers. It is a relatively new format only compatible with recent versions of open-source software.": "<0>FlatGeobuf</0> هو ترميز ثنائي مضغوط للبيانات الجغرافية يعتمد على Flatbuffers. إنه تنسيق جديد نسبيا متوافق فقط مع الإصدارات الحديثة من البرامج مفتوحة المصدر.",
+  "<0>Zipped shapefiles</0> are a compressed binary format compatible with most software.": "<0>ملفات الأشكال المضغوطة</0> هي تنسيق ثنائي مضغوط متوافق مع معظم البرامج.",
+  "Alternate formats": "التنسيقات البديلة",
   "authenticating...": "مصادقة ...",
   "Before creating a project, you must verify your email address. Please check your inbox for a verification email from <2>do-not-reply@seasketch.org</2>": "قبل إنشاء مشروع ، يجب عليك التحقق من عنوان بريدك الإلكتروني. يرجى التحقق من البريد الوارد بحثًا عن رسالة بريد إلكتروني للتحقق من <2> do-not-reply@seasketch.org </2>",
   "By creating a project, you are agreeing to our <2>Terms of Use</2> and <6>Privacy Policy</6>.": "من خلال إنشاء مشروع ، فإنك توافق على <2> شروط الاستخدام </ 2> و <6> سياسة الخصوصية </ 6>.",
@@ -13,38 +16,58 @@
   "Dismiss": "رفض",
   "Double-click to finish measuring or click to draw a path.": "انقر نقرًا مزدوجًا لإنهاء القياس أو انقر لرسم مسار.",
   "Download": "تحميل",
+  "Download...": "تحميل...",
   "Drag points to modify the measured distance.": "اسحب النقاط لتعديل المسافة المقاسة.",
   "Email sent. Check your inbox  📨": "أرسل البريد الإلكتروني. تحقق من صندوق الوارد الخاص بك 📨",
+  "Error searching overlays": "تراكبات البحث عن الأخطاء",
   "finish": "ينهي",
+  "GeoJSON is an uncompressed text format compatible with most spatial software.": "GeoJSON هو تنسيق نصي غير مضغوط متوافق مع معظم البرامج المكانية.",
+  "GeoTIFF is a public domain metadata standard which allows georeferencing information to be embedded within a TIFF file.": "GeoTIFF هو معيار بيانات تعريف المجال العام الذي يسمح بتضمين معلومات الإسناد الجغرافي في ملف TIFF.",
   "Get started": "البدء",
   "kilometers": "كيلومترات",
   "Latest activity": "النشاط الاخير",
   "Latest Discussions": "أحدث المناقشات",
   "Learn more": "يتعلم أكثر",
+  "Legend": "أسطورة",
   "Link Copied!": "تم نسخ الرابط!",
   "Logging into your account is the first step to creating a new SeaSketch project.": "يعد تسجيل الدخول إلى حسابك الخطوة الأولى لإنشاء مشروع SeaSketch جديد.",
   "Looking for projects like <2>Bermuda</2>, <5>MaPP</5>, or <8>US Mapping Coordination</8>? You can find these projects in <11>SeaSketch Legacy</11>.": "هل تبحث عن مشاريع مثل <2> برمودا </ 2> أو <5> MaPP </5> أو <8> تنسيق رسم الخرائط في الولايات المتحدة </ 8>؟ يمكنك العثور على هذه المشاريع في <11> SeaSketch Legacy </11>.",
   "Metadata": "البيانات الوصفية",
   "meters": "متر",
   "miles": "اميال",
+  "Move to back": "الانتقال إلى الخلف",
+  "Move to front": "الانتقال إلى الأمام",
   "nautical miles": "أميال بحرية",
+  "No matching overlays found": "لم يتم العثور على تراكبات مطابقة",
   "NumPosts": "{{عدد}} مشاركات",
   "NumPosts_plural": "NumPosts_plural",
   "NumTopics": "{{عدد}} مواضيع",
   "NumTopics_plural": "NumTopics_plural",
+  "Opacity": "العتامه",
   "Or": "أو",
+  "Original file": "الملف الأصلي",
+  "Original file uploaded on ": "الملف الأصلي الذي تم تحميله على ",
+  "PNG is a raster-graphics file-format that supports lossless data compression. It has no spatial metadata encoded within it so is not useful in spatial software.": "PNG هو تنسيق ملف رسومات نقطية يدعم ضغط البيانات بدون فقدان. لا يحتوي على بيانات وصفية مكانية مشفرة بداخله ، لذا فهو غير مفيد في البرامج المكانية.",
   "Posted in <1></1>": "تم النشر في <1> </1>",
   "Ready to dive in?": "جاهز للغطس؟",
   "ReplyCount": "{{عدد}} ردود",
   "ReplyCount_plural": "ReplyCount_plural",
   "Resend verification email": "إعادة ارسال بريد التحقق",
   "reset": "إعادة ضبط",
+  "Reset layers": "إعادة تعيين الطبقات",
+  "Reset overlays": "إعادة تعيين التراكبات",
+  "search layers": "طبقات البحث",
+  "Searching for overlays...": "البحث عن التراكبات...",
   "SeaSketch puts powerful tools into the hands of ocean planners,\n              stakeholders and the public that were once limited to GIS\n              professionals, enabling participatory marine spatial planning\n              processes that are closely tied to the relevant science and\n              information. SeaSketch is being used around the globe in small\n              agency teams and large community-driven initiatives to make better\n              management decisions every day.": "يضع SeaSketch أدوات قوية في أيدي مخططي المحيطات ،\n              أصحاب المصلحة والجمهور الذين كانوا في يوم من الأيام يقتصرون على نظم المعلومات الجغرافية\n              المتخصصين ، مما يتيح التخطيط المكاني البحري التشاركي\n              العمليات التي ترتبط ارتباطًا وثيقًا بالعلوم ذات الصلة و\n              معلومة. يتم استخدام SeaSketch حول العالم بشكل صغير\n              فرق الوكالات والمبادرات الكبيرة التي يقودها المجتمع لتحقيق الأفضل\n              قرارات الإدارة كل يوم.",
   "SeaSketch Supports Collaborative Planning for our Oceans": "يدعم SeaSketch التخطيط التعاوني لمحيطاتنا",
   "Sending email...": "إرسال البريد الإلكتروني...",
   "Sign In": "تسجيل الدخول",
+  "Start Download": "ابدأ التنزيل",
   "Tap again to measure a path, or use the buttons below to finish or start over.": "انقر مرة أخرى لقياس المسار، أو استخدم الأزرار أدناه للانتهاء أو البدء من جديد.",
   "Tap the map to start measuring.": "اضغط على الخريطة لبدء القياس.",
+  "This data layer is hosted on an ArcGIS vector service. SeaSketch will extract vector features from the service and return them to you as a GeoJSON file, usable in most modern geospatial software. This extract may be up to 3 hours old.": "تتم استضافة طبقة البيانات هذه على خدمة ArcGIS vector. سيقوم SeaSketch باستخراج ميزات المتجهات من الخدمة وإعادتها إليك كملف GeoJSON ، يمكن استخدامه في معظم البرامج الجغرافية المكانية الحديثة. قد يصل عمر هذا المستخلص إلى 3 ساعات.",
+  "This data source comes from a GeoJSON file on a 3rd party server. Click the link below to download it from the original source.": "يأتي مصدر البيانات هذا من ملف GeoJSON على خادم طرف 3rd. انقر فوق الارتباط أدناه لتنزيله من المصدر الأصلي.",
+  "View metadata": "عرض البيانات الوصفية",
   "You are accessing SeaSketch from the beta domain next.seasket.ch. For the best experience, please use <2>www.seasketch.org</2>. If you are using offline features <5>read these instructions</5>.": "أنت تقوم بالوصول إلى SeaSketch من النطاق التجريبي next.seasket.ch. للحصول على أفضل تجربة ، يرجى استخدام <2> www.seasketch.org </2>. إذا كنت تستخدم ميزات دون اتصال ، <5> اقرأ هذه الإرشادات </ 5>.",
   "Zoom to bounds": "تكبير للحدود"
 }

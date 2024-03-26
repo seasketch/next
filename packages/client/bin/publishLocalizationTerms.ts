@@ -121,7 +121,11 @@ const post = util.promisify(request.post);
   }
 
   // add missing terms
-  if (termsToAdd.length) {
+  if (
+    termsToAdd.length &&
+    (termsToAdd.length > 1 || termsToAdd[0].term !== "")
+  ) {
+    console.log(termsToAdd);
     const { statusCode, body } = await post(
       `https://api.poeditor.com/v2/terms/add`,
       {
@@ -134,6 +138,7 @@ const post = util.promisify(request.post);
     );
     let data = JSON.parse(body);
     if (data.response.status !== "success") {
+      console.log(data.response);
       throw new Error(
         `API response was ${data.response.status}. ${data.response.message}`
       );

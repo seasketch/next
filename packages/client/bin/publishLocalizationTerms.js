@@ -15,7 +15,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
-        while (_) try {
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
             if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
             if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 /* eslint-disable i18next/no-literal-string */
 var request = require("request");
 var fs = require("fs");
@@ -59,8 +59,8 @@ var post = util.promisify(request.post);
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            language: "en"
-                        }
+                            language: "en",
+                        },
                     })];
             case 1:
                 res = _c.sent();
@@ -89,8 +89,8 @@ var post = util.promisify(request.post);
                                     pluralsToUpdate.push({
                                         term: key,
                                         translation: {
-                                            content: plural
-                                        }
+                                            content: plural,
+                                        },
                                     });
                                 }
                             }
@@ -104,7 +104,7 @@ var post = util.promisify(request.post);
                             termsToAdd.push({
                                 term: key,
                                 english: plurals[key] || data_1[key],
-                                tags: [namespace]
+                                tags: [namespace],
                             });
                         }
                     };
@@ -129,8 +129,8 @@ var post = util.promisify(request.post);
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            data: JSON.stringify(termsToUpdate)
-                        }
+                            data: JSON.stringify(termsToUpdate),
+                        },
                     })];
             case 2:
                 updated = _c.sent();
@@ -143,18 +143,21 @@ var post = util.promisify(request.post);
                 }
                 _c.label = 3;
             case 3:
-                if (!termsToAdd.length) return [3 /*break*/, 6];
+                if (!(termsToAdd.length &&
+                    (termsToAdd.length > 1 || termsToAdd[0].term !== ""))) return [3 /*break*/, 6];
+                console.log(termsToAdd);
                 return [4 /*yield*/, post("https://api.poeditor.com/v2/terms/add", {
                         form: {
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
-                            data: JSON.stringify(termsToAdd)
-                        }
+                            data: JSON.stringify(termsToAdd),
+                        },
                     })];
             case 4:
                 _b = _c.sent(), statusCode = _b.statusCode, body = _b.body;
                 data_3 = JSON.parse(body);
                 if (data_3.response.status !== "success") {
+                    console.log(data_3.response);
                     throw new Error("API response was ".concat(data_3.response.status, ". ").concat(data_3.response.message));
                 }
                 else {
@@ -170,10 +173,10 @@ var post = util.promisify(request.post);
                                 .map(function (t) { return ({
                                 term: t.term,
                                 translation: {
-                                    content: t.english
-                                }
-                            }); }))
-                        }
+                                    content: t.english,
+                                },
+                            }); })),
+                        },
                     })];
             case 5:
                 translations = _c.sent();
@@ -192,8 +195,8 @@ var post = util.promisify(request.post);
                             api_token: process.env.POEDITOR_API_TOKEN,
                             id: process.env.POEDITOR_PROJECT,
                             data: JSON.stringify(pluralsToUpdate),
-                            language: "en"
-                        }
+                            language: "en",
+                        },
                     })];
             case 7:
                 updated = _c.sent();
