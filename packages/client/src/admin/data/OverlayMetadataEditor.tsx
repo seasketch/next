@@ -112,13 +112,13 @@ export default function OverlayMetataEditor({
             </Warning>
           )}
           <div
-            className={`${
+            className={`flex flex-col overflow-hidden ${
               usingDynamicMetadata ? "pointer-events-none opacity-20" : ""
             }`}
           >
             <EditorMenuBar
               view={viewRef.current?.view}
-              className="border-t border-b pl-0 bg-gray-100 shadow-sm mb-1 border-black border-opacity-10"
+              className="border-t border-b pl-0 bg-gray-100 shadow-sm mb-1 border-black border-opacity-10 flex-none"
               state={state}
               schema={schema}
               dynamicMetadataAvailable={dynamicMetadataAvailable}
@@ -141,7 +141,7 @@ export default function OverlayMetataEditor({
                 />
               </div>
             </EditorMenuBar>
-            <div className="p-4 pt-2">
+            <div className="p-4 pt-2 flex-1 overflow-y-auto">
               <ProseMirror
                 className="metadata small-variant"
                 state={state}
