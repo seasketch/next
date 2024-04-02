@@ -100,6 +100,73 @@ export type AclPatch = {
   type?: Maybe<AccessControlListType>;
 };
 
+export type ActivityStat = Node & {
+  __typename?: 'ActivityStat';
+  id: Scalars['Int'];
+  interval: Interval;
+  newDataSources: Scalars['Int'];
+  newForumPosts: Scalars['Int'];
+  newSketches: Scalars['Int'];
+  newUploadedBytes: Scalars['BigInt'];
+  newUsers: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `ActivityStat`. */
+  project?: Maybe<Project>;
+  projectId?: Maybe<Scalars['Int']>;
+  registeredUsers: Scalars['Int'];
+  start: Scalars['Datetime'];
+  totalDataSources: Scalars['Int'];
+  totalForumPosts: Scalars['Int'];
+  totalSketches: Scalars['Int'];
+  totalUploadedLayers: Scalars['Int'];
+  uploadsStorageUsed: Scalars['BigInt'];
+};
+
+/**
+ * A condition to be used against `ActivityStat` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type ActivityStatCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `ActivityStat` values. */
+export type ActivityStatsConnection = {
+  __typename?: 'ActivityStatsConnection';
+  /** A list of edges which contains the `ActivityStat` and cursor to aid in pagination. */
+  edges: Array<ActivityStatsEdge>;
+  /** A list of `ActivityStat` objects. */
+  nodes: Array<ActivityStat>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ActivityStat` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ActivityStat` edge in the connection. */
+export type ActivityStatsEdge = {
+  __typename?: 'ActivityStatsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ActivityStat` at the end of the edge. */
+  node: ActivityStat;
+};
+
+/** Methods to use when ordering `ActivityStat`. */
+export enum ActivityStatsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
 /** All input for the `addGroupToAcl` mutation. */
 export type AddGroupToAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -5820,6 +5887,27 @@ export enum InteractivityType {
   Tooltip = 'TOOLTIP'
 }
 
+/** An interval of time that has passed where the smallest distinct unit is a second. */
+export type Interval = {
+  __typename?: 'Interval';
+  /** A quantity of days. */
+  days?: Maybe<Scalars['Int']>;
+  /** A quantity of hours. */
+  hours?: Maybe<Scalars['Int']>;
+  /** A quantity of minutes. */
+  minutes?: Maybe<Scalars['Int']>;
+  /** A quantity of months. */
+  months?: Maybe<Scalars['Int']>;
+  /**
+   * A quantity of seconds. This is the only non-integer field, as all the other
+   * fields will dump their overflow into a smaller unit of time. Intervals don’t
+   * have a smaller unit than seconds.
+   */
+  seconds?: Maybe<Scalars['Float']>;
+  /** A quantity of years. */
+  years?: Maybe<Scalars['Int']>;
+};
+
 /**
  * Invite emails can be associated with either a project or survey invitation.
  * Project invite emails are sent by direct admin action, going into a QUEUED state
@@ -8806,6 +8894,8 @@ export type Project = Node & {
   accessRequestsConnection: UsersConnection;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   activeDataUploads?: Maybe<Array<DataUploadTask>>;
+  /** Reads and enables pagination through a set of `ActivityStat`. */
+  activityStatsConnection: ActivityStatsConnection;
   adminCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
@@ -9016,6 +9106,21 @@ export type ProjectAccessRequestsConnectionArgs = {
 export type ProjectActiveDataUploadsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectActivityStatsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ActivityStatCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ActivityStatsOrderBy>>;
 };
 
 
@@ -9841,6 +9946,11 @@ export type Query = Node & {
   aclByNodeId?: Maybe<Acl>;
   aclBySketchClassId?: Maybe<Acl>;
   aclByTableOfContentsItemId?: Maybe<Acl>;
+  activityStat?: Maybe<ActivityStat>;
+  /** Reads a single `ActivityStat` using its globally unique `ID`. */
+  activityStatByNodeId?: Maybe<ActivityStat>;
+  /** Reads and enables pagination through a set of `ActivityStat`. */
+  activityStatsConnection?: Maybe<ActivityStatsConnection>;
   basemap?: Maybe<Basemap>;
   /** Reads a single `Basemap` using its globally unique `ID`. */
   basemapByNodeId?: Maybe<Basemap>;
@@ -10096,6 +10206,30 @@ export type QueryAclBySketchClassIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryAclByTableOfContentsItemIdArgs = {
   tableOfContentsItemId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryActivityStatArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryActivityStatByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryActivityStatsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ActivityStatCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ActivityStatsOrderBy>>;
 };
 
 

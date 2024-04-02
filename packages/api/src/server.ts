@@ -240,7 +240,8 @@ run({
   taskDirectory: path.join(__dirname, "..", "tasks"),
   crontab: `
   * * * * * cleanupProjectBackgroundJobs
-    * * * * * cleanupDeletedOverlayRecords
+  * * * * * cleanupDeletedOverlayRecords
+  * * * * * collectActivityStats
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {
