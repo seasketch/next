@@ -282,7 +282,7 @@ async function getStatsForInterval(
   let query = `
   select 
     (select count(*)::int from users) as registered_users,
-    (select sum(size)::bigint from data_upload_outputs) as uploads_storage_used,
+    (select coalesce(sum(size)::bigint, 0) from data_upload_outputs) as uploads_storage_used,
     (select count(*)::int from posts) as total_forum_posts,
     (select count(*)::int from sketches) as total_sketches,
     (select count(*)::int from data_sources) as total_data_sources,
@@ -346,7 +346,7 @@ async function getStatsForInterval(
     query = `
       select 
         (select count(*)::int from project_participants where project_id = $2) as registered_users,
-        (select sum(size)::bigint from data_upload_outputs where project_id = $2) as uploads_storage_used,
+        (select coalesce(sum(size)::bigint, 0) from data_upload_outputs where project_id = $2) as uploads_storage_used,
         (select count(*)::int from posts where topic_id in (
           select id from topics where forum_id in (
             select id from forums where project_id = $2
