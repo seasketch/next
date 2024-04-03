@@ -104,7 +104,7 @@ export default async function collectActivityStats(
           ) values (
             null,
             $1::interval,
-            $2::timestamp,
+            $2::timestamp - $1::interval,
             $3,
             $4::bigint,
             $5,
@@ -227,7 +227,7 @@ export default async function collectActivityStats(
             ) values (
               $1,
               $2::interval,
-              $3::timestamp,
+              $3::timestamp - $1::interval,
               $4,
               $5::bigint,
               $6,
