@@ -42,7 +42,6 @@ export default async function collectActivityStats(
         const start = new Date(existingRecord.rows[0].start);
         const data = await getStatsForInterval(client, start);
         activeProjects = data.active_projects;
-        console.log("A");
         await client.query(
           `
           update activity_stats
@@ -83,9 +82,19 @@ export default async function collectActivityStats(
         // we are at the beginning of a new interval, and a new record needs to
         // be created. Note that this interval could start immediately after
         // the a previously stored interval, or there could be a gap.
-        const data = await getStatsForInterval(client, new Date(now));
+        const start = await client.query(
+          `select ($1::timestamp - $2::interval) as start`,
+          [new Date(now), interval]
+        );
+
+        if (!start.rows[0].start) {
+          throw new Error("No start date found");
+        }
+        const data = await getStatsForInterval(
+          client,
+          new Date(start.rows[0].start)
+        );
         activeProjects = data.active_projects;
-        console.log("B");
         await client.query(
           `
           insert into activity_stats (
@@ -106,7 +115,7 @@ export default async function collectActivityStats(
           ) values (
             null,
             $1::interval,
-            $2::timestamp - $1::interval,
+            $2::timestamp,
             $3,
             $4::bigint,
             $5,
@@ -122,7 +131,7 @@ export default async function collectActivityStats(
         `,
           [
             interval,
-            new Date(now).toISOString(),
+            start.rows[0].start,
             data.registered_users,
             data.uploads_storage_used,
             data.total_forum_posts,
@@ -140,7 +149,6 @@ export default async function collectActivityStats(
 
       // Next, collect project specific stats for active projects
       for (const projectId of activeProjects) {
-        console.log("C");
         const existingRecord = await client.query(
           `
           select 
@@ -164,7 +172,6 @@ export default async function collectActivityStats(
           // needs to be updated
           const start = new Date(existingRecord.rows[0].start);
           const data = await getStatsForInterval(client, start, projectId);
-          console.log("D");
           await client.query(
             `
             update activity_stats
@@ -206,12 +213,20 @@ export default async function collectActivityStats(
           // we are at the beginning of a new interval, and a new record needs to
           // be created. Note that this interval could start immediately after
           // the a previously stored interval, or there could be a gap.
+
+          const start = await client.query(
+            `select $1::timestamp - $2::interval as start`,
+            [new Date(now), interval]
+          );
+
+          if (!start.rows[0].start) {
+            throw new Error("No start date found");
+          }
           const data = await getStatsForInterval(
             client,
-            new Date(now),
+            new Date(start.rows[0].start),
             projectId
           );
-          console.log("E");
           await client.query(
             `
             insert into activity_stats (
@@ -232,7 +247,7 @@ export default async function collectActivityStats(
             ) values (
               $1,
               $2::interval,
-              $3::timestamp - $2::interval,
+              $3::timestamp,
               $4,
               $5::bigint,
               $6,
@@ -249,7 +264,7 @@ export default async function collectActivityStats(
             [
               projectId,
               interval,
-              new Date(now).toISOString(),
+              start.rows[0].start,
               data.registered_users,
               data.uploads_storage_used,
               data.total_forum_posts,
@@ -390,7 +405,7 @@ async function getStatsForInterval(
   }
   const response = await client.query(
     query,
-    projectId ? [begin.toISOString(), projectId] : [begin.toISOString()]
+    projectId ? [begin, projectId] : [begin]
   );
 
   if (response.rows.length === 0) {
