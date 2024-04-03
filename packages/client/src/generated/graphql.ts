@@ -9020,11 +9020,6 @@ export type Project = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  numDataSources?: Maybe<Scalars['Int']>;
-  numForumPosts?: Maybe<Scalars['Int']>;
-  numSketches?: Maybe<Scalars['Int']>;
-  numUploads?: Maybe<Scalars['Int']>;
-  numUsers?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `OfflineTilePackage`. */
   offlineTilePackagesConnection: OfflineTilePackagesConnection;
   /** Reads and enables pagination through a set of `OfflineTileSetting`. */
@@ -16058,7 +16053,7 @@ export type DashboardStatsQuery = (
     & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches'>
   )>, activeProjects?: Maybe<Array<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name' | 'url' | 'logoUrl' | 'dataHostingQuotaUsed' | 'numUsers' | 'numSketches' | 'numDataSources' | 'numForumPosts' | 'numUploads'>
+    & Pick<Project, 'id' | 'name' | 'url' | 'logoUrl'>
     & { activity?: Maybe<(
       { __typename?: 'ProjectActivityStat' }
       & Pick<ProjectActivityStat, 'registeredUsers' | 'totalSketches' | 'totalForumPosts' | 'totalDataSources' | 'totalUploadedLayers' | 'uploadsStorageUsed' | 'newUsers' | 'newSketches' | 'newForumPosts' | 'newDataSources' | 'newUploadedBytes'>
@@ -23668,12 +23663,6 @@ export const DashboardStatsDocument = gql`
     name
     url
     logoUrl
-    dataHostingQuotaUsed
-    numUsers
-    numSketches
-    numDataSources
-    numForumPosts
-    numUploads
     activity(period: _24HRS) {
       registeredUsers
       totalSketches

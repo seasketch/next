@@ -14,12 +14,6 @@ query DashboardStats {
     name
     url
     logoUrl
-    dataHostingQuotaUsed
-    numUsers
-    numSketches
-    numDataSources
-    numForumPosts
-    numUploads
     activity(period: _24HRS) {
       registeredUsers
       totalSketches

@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:9e78beeed856232eab9bed7ca8934c3afbfa78a6
 --! Hash: sha1:dc2a4e92ad5ca1df1041e35a154a2d6d149bf8ee
 
@@ -50,60 +51,11 @@ drop function if exists num_data_sources;
 drop function if exists num_forum_posts;
 drop function if exists num_users;
 
-create or replace function projects_num_sketches(p projects)
-  returns int
-  language sql
-  security definer
-  stable
-  as $$
-    select count(*) from sketches where sketch_class_id in (select id from sketch_classes where project_id = p.id);
-  $$;
-
-grant execute on function projects_num_sketches to anon;
-
-create or replace function projects_num_data_sources(p projects)
-  returns int
-  language sql
-  security definer
-  stable
-  as $$
-    select count(*) from data_sources where project_id = p.id;
-  $$;
-
-grant execute on function projects_num_data_sources to anon;
-
-create or replace function projects_num_forum_posts(p projects)
-  returns int
-  language sql
-  security definer
-  stable
-  as $$
-    select count(*) from posts where topic_id in (select id from topics where forum_id in (select id from forums where project_id = p.id));
-  $$;
-
-grant execute on function projects_num_forum_posts to anon;
-
-create or replace function projects_num_users(p projects)
-  returns int
-  language sql
-  security definer
-  stable
-  as $$
-    select count(*) from project_participants where project_id = p.id;
-  $$;
-
-grant execute on function projects_num_users to anon;
-
-create or replace function projects_num_uploads(p projects)
-  returns int
-  language sql
-  security definer
-  stable
-  as $$
-    select count(*) from data_sources where project_id = p.id and uploaded_by is not null;
-  $$;
-
-grant execute on function projects_num_uploads to anon;
+drop function if exists projects_num_users;
+drop function if exists projects_num_sketches;
+drop function if exists projects_num_data_sources;
+drop function if exists projects_num_forum_posts;
+drop function if exists projects_num_uploads;
 
 
 drop type if exists project_activity_stats;
@@ -133,17 +85,17 @@ create or replace function projects_activity(p projects, period activity_stats_p
       stats project_activity_stats;
     begin
       select 
-        sum(new_users), 
-        sum(new_sketches), 
-        sum(new_data_sources), 
-        sum(new_forum_posts), 
-        sum(new_uploaded_bytes), 
-        sum(registered_users), 
-        sum(uploads_storage_used), 
-        sum(total_forum_posts), 
-        sum(total_sketches), 
-        sum(total_data_sources), 
-        sum(total_uploaded_layers)
+        sum(new_users)::integer, 
+        sum(new_sketches)::integer, 
+        sum(new_data_sources)::integer, 
+        sum(new_forum_posts)::integer, 
+        sum(new_uploaded_bytes)::bigint, 
+        sum(registered_users)::integer, 
+        sum(uploads_storage_used)::bigint, 
+        sum(total_forum_posts)::integer, 
+        sum(total_sketches)::integer, 
+        sum(total_data_sources)::integer, 
+        sum(total_uploaded_layers)::integer
       into stats
       from 
         activity_stats 

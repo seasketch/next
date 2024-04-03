@@ -73,7 +73,7 @@ export default function Dashboard() {
             <div className="flex-1 lg:flex-none text-base truncate lg:w-72">
               {project.name}
             </div>
-            <div className="flex-1 hidden md:visible">
+            {/* <div className="flex-1 hidden md:visible">
               {project.numUsers || 0}{" "}
               {project.numUsers === 1 ? "user" : "users"}
               <Increase value={project.activity?.newUsers} />
@@ -107,7 +107,7 @@ export default function Dashboard() {
               {project.numForumPosts || 0}{" "}
               {project.numForumPosts === 1 ? "post" : "posts"}
               <Increase value={project.activity?.newForumPosts} />
-            </div>
+            </div> */}
             <div className="flex-1 space-x-4  flex items-center justify-end">
               <IncreaseSymbol value={project.activity?.newUsers}>
                 <PersonIcon />
