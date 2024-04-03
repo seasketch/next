@@ -6,7 +6,6 @@ import bgBlur from "./bg-blur.jpg";
 import {
   CaretLeftIcon,
   LayersIcon,
-  Pencil1Icon,
   PersonIcon,
   TransformIcon,
 } from "@radix-ui/react-icons";
@@ -21,9 +20,9 @@ export default function Dashboard() {
   return (
     <div className="w-full xl:max-w-6xl mx-auto md:border bg-white flex flex-col md:h-screen">
       <div className="flex items-center space-x-1 md:space-x-2 p-2 py-3 md:p-4">
-        <button>
+        <a href="/">
           <CaretLeftIcon className="h-8 w-8 md:mr-2" />
-        </button>
+        </a>
         <img src={logo} alt="SeaSketch Logo" className="h-8 pr-2 md:pr-0" />
         <h1 className="text-lg">SeaSketch Usage Dashboard </h1>
       </div>
@@ -71,7 +70,9 @@ export default function Dashboard() {
         {data?.activeProjects?.map((project) => (
           <li key={project.id} className="p-2 border-t flex space-x-2">
             <div className="flex-1 lg:flex-none text-base truncate lg:w-72">
-              {project.name}
+              <a className="hover:text-underline" href={project.url!}>
+                {project.name}
+              </a>
             </div>
             {/* <div className="flex-1 hidden md:visible">
               {project.numUsers || 0}{" "}
@@ -114,7 +115,7 @@ export default function Dashboard() {
               </IncreaseSymbol>
               <IncreaseSymbol
                 value={
-                  project.activity?.newUploadedBytes
+                  project.activity?.newUploadedBytes !== "0"
                     ? project.activity?.newUploadedBytes
                       ? bytes(
                           parseInt(project.activity.newUploadedBytes || "0")

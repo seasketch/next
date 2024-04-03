@@ -22310,7 +22310,7 @@ export const DashboardStatsDocument = /*#__PURE__*/ gql`
     sketches
     forumPosts
   }
-  activeProjects {
+  activeProjects(limit: 20, period: _24HRS) {
     id
     name
     url
