@@ -80,6 +80,10 @@ const LazyPrivacyPolicy = React.lazy(
   () => import(/* webpackChunkName: "PrivacyPolicy" */ "./PrivacyPolicy")
 );
 
+const LazySuperuserDashboard = React.lazy(
+  () => import(/* webpackChunkName: "SuperuserDashboard" */ "./Dashboard")
+);
+
 function App() {
   const { user } = useAuth0();
   const { t } = useTranslation("homepage");
@@ -154,6 +158,9 @@ function App() {
                 </Route>
                 <Route path="/new-project">
                   <NewProjectPage />
+                </Route>
+                <Route exact path="/dashboard">
+                  <LazySuperuserDashboard />
                 </Route>
                 <Route path="/authenticate">
                   <span>

@@ -1,0 +1,12 @@
+query DashboardStats {
+  dashboardStats {
+    dataSources
+    forumPosts
+    uploads
+    uploadedBytes
+    projects
+    users
+    sketches
+    forumPosts
+  }
+}

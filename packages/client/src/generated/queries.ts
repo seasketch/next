@@ -1980,6 +1980,17 @@ export enum CursorType {
   Pointer = 'POINTER'
 }
 
+export type DashboardStat = {
+  __typename?: 'DashboardStat';
+  dataSources?: Maybe<Scalars['Int']>;
+  forumPosts?: Maybe<Scalars['Int']>;
+  projects?: Maybe<Scalars['Int']>;
+  sketches?: Maybe<Scalars['Int']>;
+  uploadedBytes?: Maybe<Scalars['BigInt']>;
+  uploads?: Maybe<Scalars['Int']>;
+  users?: Maybe<Scalars['Int']>;
+};
+
 /**
  * Data layers represent multiple MapBox GL Style layers tied to a single source.
  * These layers could also be called "operational layers" in that they are meant to
@@ -9974,6 +9985,7 @@ export type Query = Node & {
   /** @deprecated Use project_access_status(slug) instead */
   currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
   currentUserIsSuperuser: Scalars['Boolean'];
+  dashboardStats?: Maybe<DashboardStat>;
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -15982,6 +15994,17 @@ export type VerifyEmailMutationVariables = Exact<{
 export type VerifyEmailMutation = (
   { __typename?: 'Mutation' }
   & Pick<Mutation, 'sendEmailVerification'>
+);
+
+export type DashboardStatsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardStatsQuery = (
+  { __typename?: 'Query' }
+  & { dashboardStats?: Maybe<(
+    { __typename?: 'DashboardStat' }
+    & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches'>
+  )> }
 );
 
 export type DataUploadDetailsFragment = (
@@ -22223,6 +22246,20 @@ export const VerifyEmailDocument = /*#__PURE__*/ gql`
   sendEmailVerification(redirectUrl: $redirectUrl)
 }
     `;
+export const DashboardStatsDocument = /*#__PURE__*/ gql`
+    query DashboardStats {
+  dashboardStats {
+    dataSources
+    forumPosts
+    uploads
+    uploadedBytes
+    projects
+    users
+    sketches
+    forumPosts
+  }
+}
+    `;
 export const CreateDataUploadDocument = /*#__PURE__*/ gql`
     mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!) {
   createDataUpload(
@@ -25088,6 +25125,7 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
+    DashboardStats: 'DashboardStats',
     DataUploadTasks: 'DataUploadTasks',
     ProjectBackgroundJobs: 'ProjectBackgroundJobs',
     ProjectDataQuotaRemaining: 'ProjectDataQuotaRemaining',

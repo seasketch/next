@@ -1982,6 +1982,17 @@ export enum CursorType {
   Pointer = 'POINTER'
 }
 
+export type DashboardStat = {
+  __typename?: 'DashboardStat';
+  dataSources?: Maybe<Scalars['Int']>;
+  forumPosts?: Maybe<Scalars['Int']>;
+  projects?: Maybe<Scalars['Int']>;
+  sketches?: Maybe<Scalars['Int']>;
+  uploadedBytes?: Maybe<Scalars['BigInt']>;
+  uploads?: Maybe<Scalars['Int']>;
+  users?: Maybe<Scalars['Int']>;
+};
+
 /**
  * Data layers represent multiple MapBox GL Style layers tied to a single source.
  * These layers could also be called "operational layers" in that they are meant to
@@ -9976,6 +9987,7 @@ export type Query = Node & {
   /** @deprecated Use project_access_status(slug) instead */
   currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
   currentUserIsSuperuser: Scalars['Boolean'];
+  dashboardStats?: Maybe<DashboardStat>;
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -15984,6 +15996,17 @@ export type VerifyEmailMutationVariables = Exact<{
 export type VerifyEmailMutation = (
   { __typename?: 'Mutation' }
   & Pick<Mutation, 'sendEmailVerification'>
+);
+
+export type DashboardStatsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardStatsQuery = (
+  { __typename?: 'Query' }
+  & { dashboardStats?: Maybe<(
+    { __typename?: 'DashboardStat' }
+    & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches'>
+  )> }
 );
 
 export type DataUploadDetailsFragment = (
@@ -23571,6 +23594,47 @@ export function useVerifyEmailMutation(baseOptions?: Apollo.MutationHookOptions<
 export type VerifyEmailMutationHookResult = ReturnType<typeof useVerifyEmailMutation>;
 export type VerifyEmailMutationResult = Apollo.MutationResult<VerifyEmailMutation>;
 export type VerifyEmailMutationOptions = Apollo.BaseMutationOptions<VerifyEmailMutation, VerifyEmailMutationVariables>;
+export const DashboardStatsDocument = gql`
+    query DashboardStats {
+  dashboardStats {
+    dataSources
+    forumPosts
+    uploads
+    uploadedBytes
+    projects
+    users
+    sketches
+    forumPosts
+  }
+}
+    `;
+
+/**
+ * __useDashboardStatsQuery__
+ *
+ * To run a query within a React component, call `useDashboardStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardStatsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardStatsQuery(baseOptions?: Apollo.QueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardStatsQuery, DashboardStatsQueryVariables>(DashboardStatsDocument, options);
+      }
+export function useDashboardStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardStatsQuery, DashboardStatsQueryVariables>(DashboardStatsDocument, options);
+        }
+export type DashboardStatsQueryHookResult = ReturnType<typeof useDashboardStatsQuery>;
+export type DashboardStatsLazyQueryHookResult = ReturnType<typeof useDashboardStatsLazyQuery>;
+export type DashboardStatsQueryResult = Apollo.QueryResult<DashboardStatsQuery, DashboardStatsQueryVariables>;
 export const CreateDataUploadDocument = gql`
     mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!) {
   createDataUpload(
@@ -31752,6 +31816,7 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
+    DashboardStats: 'DashboardStats',
     DataUploadTasks: 'DataUploadTasks',
     ProjectBackgroundJobs: 'ProjectBackgroundJobs',
     ProjectDataQuotaRemaining: 'ProjectDataQuotaRemaining',

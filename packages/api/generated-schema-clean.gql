@@ -2222,6 +2222,16 @@ enum CursorType {
   POINTER
 }
 
+type DashboardStat {
+  dataSources: Int
+  forumPosts: Int
+  projects: Int
+  sketches: Int
+  uploadedBytes: BigInt
+  uploads: Int
+  users: Int
+}
+
 """
 Data layers represent multiple MapBox GL Style layers tied to a single source. 
 These layers could also be called "operational layers" in that they are meant to
@@ -11236,6 +11246,7 @@ type Query implements Node {
   currentProject: Project @deprecated(reason: "Use projectBySlug() instead")
   currentProjectAccessStatus: ProjectAccessStatus @deprecated(reason: "Use project_access_status(slug) instead")
   currentUserIsSuperuser: Boolean!
+  dashboardStats: DashboardStat
   dataLayer(id: Int!): DataLayer
   dataLayerByInteractivitySettingsId(interactivitySettingsId: Int!): DataLayer
 
