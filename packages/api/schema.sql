@@ -126,6 +126,20 @@ CREATE TYPE public.access_control_list_type AS ENUM (
 
 
 --
+-- Name: activity_stats_period; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.activity_stats_period AS ENUM (
+    '24hrs',
+    '7-days',
+    '30-days',
+    '6-months',
+    '1-year',
+    'all-time'
+);
+
+
+--
 -- Name: arcgis_feature_layer_fetch_strategy; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -627,6 +641,25 @@ CREATE TYPE public.project_access_status AS ENUM (
     'DENIED_ADMINS_ONLY',
     'DENIED_EMAIL_NOT_VERIFIED',
     'PROJECT_DOES_NOT_EXIST'
+);
+
+
+--
+-- Name: project_activity_stats; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.project_activity_stats AS (
+	new_users integer,
+	new_sketches integer,
+	new_data_sources integer,
+	new_forum_posts integer,
+	new_uploaded_bytes bigint,
+	registered_users integer,
+	uploads_storage_used bigint,
+	total_forum_posts integer,
+	total_sketches integer,
+	total_data_sources integer,
+	total_uploaded_layers integer
 );
 
 
@@ -1888,6 +1921,213 @@ CREATE FUNCTION public.acl_update_draft_toc_has_changes() RETURNS trigger
     return NEW;
   end;
   $$;
+
+
+--
+-- Name: get_default_data_sources_bucket(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_default_data_sources_bucket() RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    bucket_id text;
+  begin
+    select url into bucket_id from data_sources_buckets where region = 'us-west-2';
+    if bucket_id is null then
+      select url into bucket_id from data_sources_buckets limit 1;
+    end if;
+    return bucket_id;
+  end
+$$;
+
+
+--
+-- Name: projects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.projects (
+    id integer NOT NULL,
+    name text NOT NULL,
+    description text,
+    legacy_id text,
+    slug character varying(24) NOT NULL,
+    access_control public.project_access_control_setting DEFAULT 'admins_only'::public.project_access_control_setting NOT NULL,
+    is_listed boolean DEFAULT true NOT NULL,
+    logo_url text,
+    logo_link text,
+    is_featured boolean DEFAULT false NOT NULL,
+    is_deleted boolean DEFAULT false NOT NULL,
+    deleted_at timestamp with time zone,
+    region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
+    data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket(),
+    invite_email_subject text DEFAULT 'You have been invited to a SeaSketch project'::text NOT NULL,
+    support_email text NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    creator_id integer NOT NULL,
+    mapbox_secret_key text,
+    mapbox_public_key text,
+    is_offline_enabled boolean DEFAULT false,
+    data_hosting_quota bigint DEFAULT '10737418240'::bigint NOT NULL,
+    supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    draft_table_of_contents_has_changes boolean DEFAULT false NOT NULL,
+    table_of_contents_last_published timestamp without time zone,
+    hide_forums boolean DEFAULT false NOT NULL,
+    hide_sketches boolean DEFAULT false NOT NULL,
+    hide_overlays boolean DEFAULT false NOT NULL,
+    enable_download_by_default boolean DEFAULT false NOT NULL,
+    CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
+    CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
+    CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
+    CONSTRAINT name_min_length CHECK ((length(name) >= 4))
+);
+
+
+--
+-- Name: TABLE projects; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.projects IS '
+@omit create,delete
+SeaSketch Project type. This root type contains most of the fields and queries
+needed to drive the application.
+';
+
+
+--
+-- Name: COLUMN projects.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.description IS 'Should be a short length in order to fit in the project header.';
+
+
+--
+-- Name: COLUMN projects.legacy_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.legacy_id IS '@omit';
+
+
+--
+-- Name: COLUMN projects.slug; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.slug IS 'Short identifier for the project used in the url. This property cannot be changed after project creation.';
+
+
+--
+-- Name: COLUMN projects.access_control; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.access_control IS 'Admins can control whether a project is public, invite-only, or admins-only.';
+
+
+--
+-- Name: COLUMN projects.is_listed; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.is_listed IS 'Project admins can decide whether their project will be displayed on the public project listing via Query.projectsConnection.';
+
+
+--
+-- Name: COLUMN projects.logo_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.logo_url IS 'URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url.';
+
+
+--
+-- Name: COLUMN projects.logo_link; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.logo_link IS 'If a logoUrl is provided, it will link to this url in a new window if provided.';
+
+
+--
+-- Name: COLUMN projects.is_featured; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.is_featured IS 'Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers.';
+
+
+--
+-- Name: COLUMN projects.is_deleted; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.is_deleted IS '@omit';
+
+
+--
+-- Name: COLUMN projects.deleted_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
+
+
+--
+-- Name: COLUMN projects.mapbox_secret_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.mapbox_secret_key IS '
+@omit
+';
+
+
+--
+-- Name: COLUMN projects.data_hosting_quota; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.data_hosting_quota IS '@omit';
+
+
+--
+-- Name: COLUMN projects.enable_download_by_default; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.enable_download_by_default IS 'When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis.';
+
+
+--
+-- Name: active_projects(public.activity_stats_period, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.active_projects(period public.activity_stats_period, "limit" integer DEFAULT 10) RETURNS SETOF public.projects
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from projects where (access_control = 'public' or session_is_admin(id)) and id in (select project_id from (
+    select 
+      distinct(project_id), 
+      sum(new_users + new_sketches + new_data_sources + new_forum_posts) as sum
+    from activity_stats where interval = (
+      case period
+        when '24hrs' then '15 minutes'::interval
+        when '7-days' then '1 hour'::interval
+        when '30-days' then '1 day'::interval
+        when '6-months' then '1 day'::interval
+        when '1-year' then '1 day'::interval
+        when 'all-time' then '1 day'::interval
+        else '1 day'::interval
+      end
+    ) and 
+    project_id is not null
+    and (
+      new_users > 0 or
+      new_sketches > 0 or
+      new_data_sources > 0 or
+      new_forum_posts > 0
+    )
+    group by project_id
+    order by sum desc
+    limit active_projects.limit) as foo);
+  $$;
+
+
+--
+-- Name: FUNCTION active_projects(period public.activity_stats_period, "limit" integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.active_projects(period public.activity_stats_period, "limit" integer) IS '@simpleCollections only';
 
 
 --
@@ -5699,171 +5939,6 @@ CREATE FUNCTION public.create_post(message jsonb, "topicId" integer, html text) 
 --
 
 COMMENT ON FUNCTION public.create_post(message jsonb, "topicId" integer, html text) IS '@omit';
-
-
---
--- Name: get_default_data_sources_bucket(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_default_data_sources_bucket() RETURNS text
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    AS $$
-  declare
-    bucket_id text;
-  begin
-    select url into bucket_id from data_sources_buckets where region = 'us-west-2';
-    if bucket_id is null then
-      select url into bucket_id from data_sources_buckets limit 1;
-    end if;
-    return bucket_id;
-  end
-$$;
-
-
---
--- Name: projects; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.projects (
-    id integer NOT NULL,
-    name text NOT NULL,
-    description text,
-    legacy_id text,
-    slug character varying(24) NOT NULL,
-    access_control public.project_access_control_setting DEFAULT 'admins_only'::public.project_access_control_setting NOT NULL,
-    is_listed boolean DEFAULT true NOT NULL,
-    logo_url text,
-    logo_link text,
-    is_featured boolean DEFAULT false NOT NULL,
-    is_deleted boolean DEFAULT false NOT NULL,
-    deleted_at timestamp with time zone,
-    region public.geometry(Polygon) DEFAULT public.st_geomfromgeojson('{"coordinates":[[[-157.05324470015358,69.74201326987497],[135.18377661193057,69.74201326987497],[135.18377661193057,-43.27449014737426],[-157.05324470015358,-43.27449014737426],[-157.05324470015358,69.74201326987497]]],"type":"Polygon"}'::text) NOT NULL,
-    data_sources_bucket_id text DEFAULT public.get_default_data_sources_bucket(),
-    invite_email_subject text DEFAULT 'You have been invited to a SeaSketch project'::text NOT NULL,
-    support_email text NOT NULL,
-    created_at timestamp without time zone DEFAULT now(),
-    creator_id integer NOT NULL,
-    mapbox_secret_key text,
-    mapbox_public_key text,
-    is_offline_enabled boolean DEFAULT false,
-    data_hosting_quota bigint DEFAULT '10737418240'::bigint NOT NULL,
-    supported_languages text[] DEFAULT '{}'::text[] NOT NULL,
-    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
-    draft_table_of_contents_has_changes boolean DEFAULT false NOT NULL,
-    table_of_contents_last_published timestamp without time zone,
-    hide_forums boolean DEFAULT false NOT NULL,
-    hide_sketches boolean DEFAULT false NOT NULL,
-    hide_overlays boolean DEFAULT false NOT NULL,
-    enable_download_by_default boolean DEFAULT false NOT NULL,
-    CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
-    CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
-    CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
-    CONSTRAINT name_min_length CHECK ((length(name) >= 4))
-);
-
-
---
--- Name: TABLE projects; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.projects IS '
-@omit create,delete
-SeaSketch Project type. This root type contains most of the fields and queries
-needed to drive the application.
-';
-
-
---
--- Name: COLUMN projects.description; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.description IS 'Should be a short length in order to fit in the project header.';
-
-
---
--- Name: COLUMN projects.legacy_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.legacy_id IS '@omit';
-
-
---
--- Name: COLUMN projects.slug; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.slug IS 'Short identifier for the project used in the url. This property cannot be changed after project creation.';
-
-
---
--- Name: COLUMN projects.access_control; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.access_control IS 'Admins can control whether a project is public, invite-only, or admins-only.';
-
-
---
--- Name: COLUMN projects.is_listed; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.is_listed IS 'Project admins can decide whether their project will be displayed on the public project listing via Query.projectsConnection.';
-
-
---
--- Name: COLUMN projects.logo_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.logo_url IS 'URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url.';
-
-
---
--- Name: COLUMN projects.logo_link; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.logo_link IS 'If a logoUrl is provided, it will link to this url in a new window if provided.';
-
-
---
--- Name: COLUMN projects.is_featured; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.is_featured IS 'Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers.';
-
-
---
--- Name: COLUMN projects.is_deleted; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.is_deleted IS '@omit';
-
-
---
--- Name: COLUMN projects.deleted_at; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
-
-
---
--- Name: COLUMN projects.mapbox_secret_key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.mapbox_secret_key IS '
-@omit
-';
-
-
---
--- Name: COLUMN projects.data_hosting_quota; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.data_hosting_quota IS '@omit';
-
-
---
--- Name: COLUMN projects.enable_download_by_default; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.enable_download_by_default IS 'When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis.';
 
 
 --
@@ -10882,6 +10957,58 @@ COMMENT ON FUNCTION public.projects_active_data_uploads(p public.projects) IS '@
 
 
 --
+-- Name: projects_activity(public.projects, public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_activity(p public.projects, period public.activity_stats_period) RETURNS public.project_activity_stats
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      stats project_activity_stats;
+    begin
+      select 
+        sum(new_users), 
+        sum(new_sketches), 
+        sum(new_data_sources), 
+        sum(new_forum_posts), 
+        sum(new_uploaded_bytes), 
+        sum(registered_users), 
+        sum(uploads_storage_used), 
+        sum(total_forum_posts), 
+        sum(total_sketches), 
+        sum(total_data_sources), 
+        sum(total_uploaded_layers)
+      into stats
+      from 
+        activity_stats 
+      where interval = (
+        case period
+          when '24hrs' then '15 minutes'::interval
+          when '7-days' then '1 hour'::interval
+          when '30-days' then '1 day'::interval
+          when '6-months' then '1 day'::interval
+          when '1-year' then '1 day'::interval
+          when 'all-time' then '1 day'::interval
+          else '1 day'::interval
+        end
+      ) and activity_stats.project_id = p.id and 
+      start >= now() - (
+        case period
+          when '24hrs' then '24 hours'::interval
+          when '7-days' then '7 days'::interval
+          when '30-days' then '30 days'::interval
+          when '6-months' then '6 months'::interval
+          when '1-year' then '1 year'::interval
+          else '1 day'::interval
+        end
+      ) and
+      (session_is_admin(p.id) or p.access_control = 'public');
+      return stats;
+    end;
+  $$;
+
+
+--
 -- Name: projects_admin_count(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11413,6 +11540,61 @@ COMMENT ON FUNCTION public.projects_my_sketches(project public.projects) IS '
 @simpleCollections only
 A list of all sketches for this project and the current user session
 ';
+
+
+--
+-- Name: projects_num_data_sources(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_num_data_sources(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select count(*) from data_sources where project_id = p.id;
+  $$;
+
+
+--
+-- Name: projects_num_forum_posts(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_num_forum_posts(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select count(*) from posts where topic_id in (select id from topics where forum_id in (select id from forums where project_id = p.id));
+  $$;
+
+
+--
+-- Name: projects_num_sketches(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_num_sketches(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select count(*) from sketches where sketch_class_id in (select id from sketch_classes where project_id = p.id);
+  $$;
+
+
+--
+-- Name: projects_num_uploads(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_num_uploads(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select count(*) from data_sources where project_id = p.id and uploaded_by is not null;
+  $$;
+
+
+--
+-- Name: projects_num_users(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_num_users(p public.projects) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select count(*) from project_participants where project_id = p.id;
+  $$;
 
 
 --
@@ -21444,6 +21626,209 @@ REVOKE ALL ON FUNCTION public.acl_update_draft_toc_has_changes() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION geometry(public.geometry, integer, boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) TO anon;
+
+
+--
+-- Name: FUNCTION get_default_data_sources_bucket(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_default_data_sources_bucket() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_default_data_sources_bucket() TO anon;
+
+
+--
+-- Name: FUNCTION st_geomfromgeojson(text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_geomfromgeojson(text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.st_geomfromgeojson(text) TO anon;
+
+
+--
+-- Name: TABLE projects; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.description; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.access_control; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.is_listed; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.logo_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.logo_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.is_featured; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
+
+
+--
+-- Name: COLUMN projects.region; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.data_sources_bucket_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
+GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.invite_email_subject; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.support_email; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(support_email) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.created_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(created_at) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.mapbox_public_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.supported_languages; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(supported_languages) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.projects TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.draft_table_of_contents_has_changes; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(draft_table_of_contents_has_changes) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.table_of_contents_last_published; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(table_of_contents_last_published) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.hide_forums; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.hide_sketches; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.hide_overlays; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(hide_overlays) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.enable_download_by_default; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(enable_download_by_default) ON TABLE public.projects TO anon;
+GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: FUNCTION active_projects(period public.activity_stats_period, "limit" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.active_projects(period public.activity_stats_period, "limit" integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.active_projects(period public.activity_stats_period, "limit" integer) TO anon;
+
+
+--
 -- Name: FUNCTION add_default_basemaps(pid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22617,14 +23002,6 @@ GRANT ALL ON FUNCTION public.create_bbox(geom public.geometry, sketch_id integer
 
 
 --
--- Name: FUNCTION geometry(public.geometry, integer, boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geometry(public.geometry, integer, boolean) TO anon;
-
-
---
 -- Name: FUNCTION st_npoints(public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
@@ -22864,193 +23241,6 @@ GRANT DELETE ON TABLE public.posts TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer, html text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_post(message jsonb, "topicId" integer, html text) TO seasketch_user;
-
-
---
--- Name: FUNCTION get_default_data_sources_bucket(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_default_data_sources_bucket() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_default_data_sources_bucket() TO anon;
-
-
---
--- Name: FUNCTION st_geomfromgeojson(text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_geomfromgeojson(text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.st_geomfromgeojson(text) TO anon;
-
-
---
--- Name: TABLE projects; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.description; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.access_control; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.is_listed; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.logo_url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.logo_link; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.is_featured; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
-
-
---
--- Name: COLUMN projects.region; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.data_sources_bucket_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
-GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.invite_email_subject; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.support_email; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(support_email) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.created_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(created_at) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.mapbox_public_key; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.supported_languages; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(supported_languages) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.translated_props; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(translated_props) ON TABLE public.projects TO anon;
-GRANT UPDATE(translated_props) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.draft_table_of_contents_has_changes; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(draft_table_of_contents_has_changes) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.table_of_contents_last_published; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(table_of_contents_last_published) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.hide_forums; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.hide_sketches; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.hide_overlays; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(hide_overlays) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.enable_download_by_default; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(enable_download_by_default) ON TABLE public.projects TO anon;
-GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -26561,6 +26751,14 @@ GRANT ALL ON FUNCTION public.projects_active_data_uploads(p public.projects) TO 
 
 
 --
+-- Name: FUNCTION projects_activity(p public.projects, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_activity(p public.projects, period public.activity_stats_period) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_activity(p public.projects, period public.activity_stats_period) TO anon;
+
+
+--
 -- Name: FUNCTION projects_admin_count(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -26712,6 +26910,46 @@ GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO ano
 REVOKE ALL ON FUNCTION public.projects_my_sketches(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_num_data_sources(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_num_data_sources(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_num_data_sources(p public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_num_forum_posts(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_num_forum_posts(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_num_forum_posts(p public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_num_sketches(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_num_sketches(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_num_sketches(p public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_num_uploads(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_num_uploads(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_num_uploads(p public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_num_users(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_num_users(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_num_users(p public.projects) TO anon;
 
 
 --

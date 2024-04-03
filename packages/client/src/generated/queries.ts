@@ -165,6 +165,15 @@ export enum ActivityStatsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+export enum ActivityStatsPeriod {
+  '1Year' = '_1_YEAR',
+  '24Hrs' = '_24HRS',
+  '30Days' = '_30_DAYS',
+  '6Months' = '_6_MONTHS',
+  '7Days' = '_7_DAYS',
+  AllTime = 'ALL_TIME'
+}
+
 /** All input for the `addGroupToAcl` mutation. */
 export type AddGroupToAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -8903,6 +8912,7 @@ export type Project = Node & {
   accessRequestsConnection: UsersConnection;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   activeDataUploads?: Maybe<Array<DataUploadTask>>;
+  activity?: Maybe<ProjectActivityStat>;
   /** Reads and enables pagination through a set of `ActivityStat`. */
   activityStatsConnection: ActivityStatsConnection;
   adminCount?: Maybe<Scalars['Int']>;
@@ -9008,6 +9018,11 @@ export type Project = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  numDataSources?: Maybe<Scalars['Int']>;
+  numForumPosts?: Maybe<Scalars['Int']>;
+  numSketches?: Maybe<Scalars['Int']>;
+  numUploads?: Maybe<Scalars['Int']>;
+  numUsers?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `OfflineTilePackage`. */
   offlineTilePackagesConnection: OfflineTilePackagesConnection;
   /** Reads and enables pagination through a set of `OfflineTileSetting`. */
@@ -9115,6 +9130,15 @@ export type ProjectAccessRequestsConnectionArgs = {
 export type ProjectActiveDataUploadsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectActivityArgs = {
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 
@@ -9452,6 +9476,21 @@ export enum ProjectAccessStatus {
   Granted = 'GRANTED',
   ProjectDoesNotExist = 'PROJECT_DOES_NOT_EXIST'
 }
+
+export type ProjectActivityStat = {
+  __typename?: 'ProjectActivityStat';
+  newDataSources?: Maybe<Scalars['Int']>;
+  newForumPosts?: Maybe<Scalars['Int']>;
+  newSketches?: Maybe<Scalars['Int']>;
+  newUploadedBytes?: Maybe<Scalars['BigInt']>;
+  newUsers?: Maybe<Scalars['Int']>;
+  registeredUsers?: Maybe<Scalars['Int']>;
+  totalDataSources?: Maybe<Scalars['Int']>;
+  totalForumPosts?: Maybe<Scalars['Int']>;
+  totalSketches?: Maybe<Scalars['Int']>;
+  totalUploadedLayers?: Maybe<Scalars['Int']>;
+  uploadsStorageUsed?: Maybe<Scalars['BigInt']>;
+};
 
 export type ProjectBackgroundJob = Node & {
   __typename?: 'ProjectBackgroundJob';
@@ -9955,6 +9994,8 @@ export type Query = Node & {
   aclByNodeId?: Maybe<Acl>;
   aclBySketchClassId?: Maybe<Acl>;
   aclByTableOfContentsItemId?: Maybe<Acl>;
+  /** Reads and enables pagination through a set of `Project`. */
+  activeProjects?: Maybe<Array<Project>>;
   activityStat?: Maybe<ActivityStat>;
   /** Reads a single `ActivityStat` using its globally unique `ID`. */
   activityStatByNodeId?: Maybe<ActivityStat>;
@@ -10216,6 +10257,15 @@ export type QueryAclBySketchClassIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryAclByTableOfContentsItemIdArgs = {
   tableOfContentsItemId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryActiveProjectsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  limit?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 
@@ -16004,7 +16054,14 @@ export type DashboardStatsQuery = (
   & { dashboardStats?: Maybe<(
     { __typename?: 'DashboardStat' }
     & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches'>
-  )> }
+  )>, activeProjects?: Maybe<Array<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'name' | 'url' | 'logoUrl' | 'dataHostingQuotaUsed' | 'numUsers' | 'numSketches' | 'numDataSources' | 'numForumPosts' | 'numUploads'>
+    & { activity?: Maybe<(
+      { __typename?: 'ProjectActivityStat' }
+      & Pick<ProjectActivityStat, 'registeredUsers' | 'totalSketches' | 'totalForumPosts' | 'totalDataSources' | 'totalUploadedLayers' | 'uploadsStorageUsed' | 'newUsers' | 'newSketches' | 'newForumPosts' | 'newDataSources' | 'newUploadedBytes'>
+    )> }
+  )>> }
 );
 
 export type DataUploadDetailsFragment = (
@@ -22257,6 +22314,31 @@ export const DashboardStatsDocument = /*#__PURE__*/ gql`
     users
     sketches
     forumPosts
+  }
+  activeProjects {
+    id
+    name
+    url
+    logoUrl
+    dataHostingQuotaUsed
+    numUsers
+    numSketches
+    numDataSources
+    numForumPosts
+    numUploads
+    activity(period: _24HRS) {
+      registeredUsers
+      totalSketches
+      totalForumPosts
+      totalDataSources
+      totalUploadedLayers
+      uploadsStorageUsed
+      newUsers
+      newSketches
+      newForumPosts
+      newDataSources
+      newUploadedBytes
+    }
   }
 }
     `;

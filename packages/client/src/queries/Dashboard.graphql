@@ -9,4 +9,29 @@ query DashboardStats {
     sketches
     forumPosts
   }
+  activeProjects {
+    id
+    name
+    url
+    logoUrl
+    dataHostingQuotaUsed
+    numUsers
+    numSketches
+    numDataSources
+    numForumPosts
+    numUploads
+    activity(period: _24HRS) {
+      registeredUsers
+      totalSketches
+      totalForumPosts
+      totalDataSources
+      totalUploadedLayers
+      uploadsStorageUsed
+      newUsers
+      newSketches
+      newForumPosts
+      newDataSources
+      newUploadedBytes
+    }
+  }
 }

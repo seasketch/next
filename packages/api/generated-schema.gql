@@ -130,6 +130,15 @@ enum ActivityStatsOrderBy {
   PROJECT_ID_DESC
 }
 
+enum ActivityStatsPeriod {
+  _1_YEAR
+  _24HRS
+  _30_DAYS
+  _6_MONTHS
+  _7_DAYS
+  ALL_TIME
+}
+
 """All input for the `addGroupToAcl` mutation."""
 input AddGroupToAclInput {
   aclId: Int
@@ -9991,6 +10000,7 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [DataUploadTask!]
+  activity(period: ActivityStatsPeriod): ProjectActivityStat
 
   """Reads and enables pagination through a set of `ActivityStat`."""
   activityStatsConnection(
@@ -10303,6 +10313,11 @@ type Project implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  numDataSources: Int
+  numForumPosts: Int
+  numSketches: Int
+  numUploads: Int
+  numUsers: Int
 
   """Reads and enables pagination through a set of `OfflineTilePackage`."""
   offlineTilePackagesConnection(
@@ -10575,6 +10590,20 @@ enum ProjectAccessStatus {
   DENIED_NOT_REQUESTED
   GRANTED
   PROJECT_DOES_NOT_EXIST
+}
+
+type ProjectActivityStat {
+  newDataSources: Int
+  newForumPosts: Int
+  newSketches: Int
+  newUploadedBytes: BigInt
+  newUsers: Int
+  registeredUsers: Int
+  totalDataSources: Int
+  totalForumPosts: Int
+  totalSketches: Int
+  totalUploadedLayers: Int
+  uploadsStorageUsed: BigInt
 }
 
 type ProjectBackgroundJob implements Node {
@@ -11147,6 +11176,17 @@ type Query implements Node {
   ): Acl
   aclBySketchClassId(sketchClassId: Int!): Acl
   aclByTableOfContentsItemId(tableOfContentsItemId: Int!): Acl
+
+  """Reads and enables pagination through a set of `Project`."""
+  activeProjects(
+    """Only read the first `n` values of the set."""
+    first: Int
+    limit: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    period: ActivityStatsPeriod
+  ): [Project!]
   activityStat(id: Int!): ActivityStat
 
   """Reads a single `ActivityStat` using its globally unique `ID`."""
