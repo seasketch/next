@@ -42,6 +42,7 @@ export default async function collectActivityStats(
         const start = new Date(existingRecord.rows[0].start);
         const data = await getStatsForInterval(client, start);
         activeProjects = data.active_projects;
+        console.log("A");
         await client.query(
           `
           update activity_stats
@@ -84,6 +85,7 @@ export default async function collectActivityStats(
         // the a previously stored interval, or there could be a gap.
         const data = await getStatsForInterval(client, new Date(now));
         activeProjects = data.active_projects;
+        console.log("B");
         await client.query(
           `
           insert into activity_stats (
@@ -138,6 +140,7 @@ export default async function collectActivityStats(
 
       // Next, collect project specific stats for active projects
       for (const projectId of activeProjects) {
+        console.log("C");
         const existingRecord = await client.query(
           `
           select 
@@ -161,6 +164,7 @@ export default async function collectActivityStats(
           // needs to be updated
           const start = new Date(existingRecord.rows[0].start);
           const data = await getStatsForInterval(client, start, projectId);
+          console.log("D");
           await client.query(
             `
             update activity_stats
@@ -207,6 +211,7 @@ export default async function collectActivityStats(
             new Date(now),
             projectId
           );
+          console.log("E");
           await client.query(
             `
             insert into activity_stats (
@@ -227,7 +232,7 @@ export default async function collectActivityStats(
             ) values (
               $1,
               $2::interval,
-              $3::timestamp - $1::interval,
+              $3::timestamp - $2::interval,
               $4,
               $5::bigint,
               $6,
