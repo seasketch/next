@@ -10313,11 +10313,6 @@ type Project implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-  numDataSources: Int
-  numForumPosts: Int
-  numSketches: Int
-  numUploads: Int
-  numUsers: Int
 
   """Reads and enables pagination through a set of `OfflineTilePackage`."""
   offlineTilePackagesConnection(

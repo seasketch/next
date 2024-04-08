@@ -2110,6 +2110,16 @@ CREATE FUNCTION public.active_projects(period public.activity_stats_period, "lim
         else '1 day'::interval
       end
     ) and 
+    start >= now() - (
+        case period
+          when '24hrs' then '24 hours'::interval
+          when '7-days' then '7 days'::interval
+          when '30-days' then '30 days'::interval
+          when '6-months' then '6 months'::interval
+          when '1-year' then '1 year'::interval
+          else '1 day'::interval
+        end
+    ) and
     project_id is not null
     and (
       new_users > 0 or
@@ -10967,17 +10977,17 @@ CREATE FUNCTION public.projects_activity(p public.projects, period public.activi
       stats project_activity_stats;
     begin
       select 
-        sum(new_users), 
-        sum(new_sketches), 
-        sum(new_data_sources), 
-        sum(new_forum_posts), 
-        sum(new_uploaded_bytes), 
-        sum(registered_users), 
-        sum(uploads_storage_used), 
-        sum(total_forum_posts), 
-        sum(total_sketches), 
-        sum(total_data_sources), 
-        sum(total_uploaded_layers)
+        sum(new_users)::integer, 
+        sum(new_sketches)::integer, 
+        sum(new_data_sources)::integer, 
+        sum(new_forum_posts)::integer, 
+        sum(new_uploaded_bytes)::bigint, 
+        sum(registered_users)::integer, 
+        sum(uploads_storage_used)::bigint, 
+        sum(total_forum_posts)::integer, 
+        sum(total_sketches)::integer, 
+        sum(total_data_sources)::integer, 
+        sum(total_uploaded_layers)::integer
       into stats
       from 
         activity_stats 
@@ -11540,61 +11550,6 @@ COMMENT ON FUNCTION public.projects_my_sketches(project public.projects) IS '
 @simpleCollections only
 A list of all sketches for this project and the current user session
 ';
-
-
---
--- Name: projects_num_data_sources(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_num_data_sources(p public.projects) RETURNS integer
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select count(*) from data_sources where project_id = p.id;
-  $$;
-
-
---
--- Name: projects_num_forum_posts(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_num_forum_posts(p public.projects) RETURNS integer
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select count(*) from posts where topic_id in (select id from topics where forum_id in (select id from forums where project_id = p.id));
-  $$;
-
-
---
--- Name: projects_num_sketches(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_num_sketches(p public.projects) RETURNS integer
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select count(*) from sketches where sketch_class_id in (select id from sketch_classes where project_id = p.id);
-  $$;
-
-
---
--- Name: projects_num_uploads(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_num_uploads(p public.projects) RETURNS integer
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select count(*) from data_sources where project_id = p.id and uploaded_by is not null;
-  $$;
-
-
---
--- Name: projects_num_users(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_num_users(p public.projects) RETURNS integer
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select count(*) from project_participants where project_id = p.id;
-  $$;
 
 
 --
@@ -26910,46 +26865,6 @@ GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO ano
 REVOKE ALL ON FUNCTION public.projects_my_sketches(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO anon;
-
-
---
--- Name: FUNCTION projects_num_data_sources(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_num_data_sources(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_num_data_sources(p public.projects) TO anon;
-
-
---
--- Name: FUNCTION projects_num_forum_posts(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_num_forum_posts(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_num_forum_posts(p public.projects) TO anon;
-
-
---
--- Name: FUNCTION projects_num_sketches(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_num_sketches(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_num_sketches(p public.projects) TO anon;
-
-
---
--- Name: FUNCTION projects_num_uploads(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_num_uploads(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_num_uploads(p public.projects) TO anon;
-
-
---
--- Name: FUNCTION projects_num_users(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_num_users(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_num_users(p public.projects) TO anon;
 
 
 --

@@ -1,6 +1,6 @@
 --! AllowInvalidHash
 --! Previous: sha1:9e78beeed856232eab9bed7ca8934c3afbfa78a6
---! Hash: sha1:3fbeb4e0eb817a996efe4280bdb03358b502c54e
+--! Hash: sha1:dc2a4e92ad5ca1df1041e35a154a2d6d149bf8ee
 
 -- Enter migration here
 drop function if exists projects_activity;
