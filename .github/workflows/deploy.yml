@@ -151,6 +151,9 @@ jobs:
           RESOURCES_REMOTE: ${{ secrets.RESOURCES_REMOTE }}
           TILES_REMOTE: ${{ secrets.TILES_REMOTE }}
           TILES_BASE_URL: ${{ secrets.TILES_BASE_URL }}
+          CLOUDFLARE_ACCOUNT_TAG: ${{ secrets.CLOUDFLARE_ACCOUNT_TAG }}
+          CLOUDFLARE_GRAPHQL_TOKEN: ${{ secrets.CLOUDFLARE_GRAPHQL_TOKEN }}
+          CLOUDFLARE_SITE_TAG: ${{ secrets.CLOUDFLARE_SITE_TAG }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer
   deploy_client:
