@@ -1,4 +1,4 @@
-query DashboardStats {
+query DashboardStats($period: ActivityStatsPeriod) {
   dashboardStats {
     dataSources
     forumPosts
@@ -9,12 +9,12 @@ query DashboardStats {
     sketches
     forumPosts
   }
-  activeProjects(limit: 20, period: _24HRS) {
+  activeProjects(limit: 20, period: $period) {
     id
     name
     url
     logoUrl
-    activity(period: _24HRS) {
+    activity(period: $period) {
       registeredUsers
       totalSketches
       totalForumPosts
@@ -27,5 +27,16 @@ query DashboardStats {
       newDataSources
       newUploadedBytes
     }
+  }
+  visitorMetrics(period: $period) {
+    topOperatingSystems
+    topReferrers
+    topBrowsers
+    topCountries
+    topDeviceTypes
+  }
+  visitors(period: $period) {
+    count
+    timestamp
   }
 }

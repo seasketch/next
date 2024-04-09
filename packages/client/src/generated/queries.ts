@@ -5926,6 +5926,26 @@ export type Interval = {
   years?: Maybe<Scalars['Int']>;
 };
 
+/** An interval of time that has passed where the smallest distinct unit is a second. */
+export type IntervalInput = {
+  /** A quantity of days. */
+  days?: Maybe<Scalars['Int']>;
+  /** A quantity of hours. */
+  hours?: Maybe<Scalars['Int']>;
+  /** A quantity of minutes. */
+  minutes?: Maybe<Scalars['Int']>;
+  /** A quantity of months. */
+  months?: Maybe<Scalars['Int']>;
+  /**
+   * A quantity of seconds. This is the only non-integer field, as all the other
+   * fields will dump their overflow into a smaller unit of time. Intervals don’t
+   * have a smaller unit than seconds.
+   */
+  seconds?: Maybe<Scalars['Float']>;
+  /** A quantity of years. */
+  years?: Maybe<Scalars['Int']>;
+};
+
 /**
  * Invite emails can be associated with either a project or survey invitation.
  * Project invite emails are sent by direct admin action, going into a QUEUED state
@@ -10222,6 +10242,13 @@ export type Query = Node & {
    * [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
    */
   verifySurveyInvite?: Maybe<SurveyInviteTokenVerificationResults>;
+  visitorByIntervalAndTimestamp?: Maybe<Visitor>;
+  /** Reads and enables pagination through a set of `VisitorMetric`. */
+  visitorMetrics?: Maybe<Array<VisitorMetric>>;
+  /** Reads and enables pagination through a set of `Visitor`. */
+  visitors?: Maybe<Array<Visitor>>;
+  /** Reads and enables pagination through a set of `Visitor`. */
+  visitorsConnection?: Maybe<VisitorsConnection>;
 };
 
 
@@ -11174,6 +11201,41 @@ export type QueryVerifyProjectInviteArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryVerifySurveyInviteArgs = {
   token: Scalars['String'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorByIntervalAndTimestampArgs = {
+  interval: IntervalInput;
+  timestamp: Scalars['Datetime'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorMetricsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<VisitorCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<VisitorsOrderBy>>;
 };
 
 export type QuotaDetail = {
@@ -15006,6 +15068,66 @@ export enum UsersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+export type Visitor = {
+  __typename?: 'Visitor';
+  count: Scalars['Int'];
+  interval: Interval;
+  timestamp: Scalars['Datetime'];
+};
+
+/** A condition to be used against `Visitor` object types. All fields are tested for equality and combined with a logical ‘and.’ */
+export type VisitorCondition = {
+  /** Checks for equality with the object’s `interval` field. */
+  interval?: Maybe<IntervalInput>;
+};
+
+export type VisitorMetric = Node & {
+  __typename?: 'VisitorMetric';
+  id: Scalars['Int'];
+  interval: Interval;
+  lastUpdated: Scalars['Datetime'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `VisitorMetric`. */
+  project?: Maybe<Project>;
+  projectId?: Maybe<Scalars['Int']>;
+  start: Scalars['Datetime'];
+  topBrowsers?: Maybe<Scalars['JSON']>;
+  topCountries?: Maybe<Scalars['JSON']>;
+  topDeviceTypes?: Maybe<Scalars['JSON']>;
+  topOperatingSystems?: Maybe<Scalars['JSON']>;
+  topReferrers?: Maybe<Scalars['JSON']>;
+};
+
+/** A connection to a list of `Visitor` values. */
+export type VisitorsConnection = {
+  __typename?: 'VisitorsConnection';
+  /** A list of edges which contains the `Visitor` and cursor to aid in pagination. */
+  edges: Array<VisitorsEdge>;
+  /** A list of `Visitor` objects. */
+  nodes: Array<Visitor>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `Visitor` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `Visitor` edge in the connection. */
+export type VisitorsEdge = {
+  __typename?: 'VisitorsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `Visitor` at the end of the edge. */
+  node: Visitor;
+};
+
+/** Methods to use when ordering `Visitor`. */
+export enum VisitorsOrderBy {
+  IntervalAsc = 'INTERVAL_ASC',
+  IntervalDesc = 'INTERVAL_DESC',
+  Natural = 'NATURAL'
+}
+
 export type WorkerJob = {
   __typename?: 'WorkerJob';
   attempts?: Maybe<Scalars['Int']>;
@@ -16041,7 +16163,9 @@ export type VerifyEmailMutation = (
   & Pick<Mutation, 'sendEmailVerification'>
 );
 
-export type DashboardStatsQueryVariables = Exact<{ [key: string]: never; }>;
+export type DashboardStatsQueryVariables = Exact<{
+  period?: Maybe<ActivityStatsPeriod>;
+}>;
 
 
 export type DashboardStatsQuery = (
@@ -16056,6 +16180,12 @@ export type DashboardStatsQuery = (
       { __typename?: 'ProjectActivityStat' }
       & Pick<ProjectActivityStat, 'registeredUsers' | 'totalSketches' | 'totalForumPosts' | 'totalDataSources' | 'totalUploadedLayers' | 'uploadsStorageUsed' | 'newUsers' | 'newSketches' | 'newForumPosts' | 'newDataSources' | 'newUploadedBytes'>
     )> }
+  )>>, visitorMetrics?: Maybe<Array<(
+    { __typename?: 'VisitorMetric' }
+    & Pick<VisitorMetric, 'topOperatingSystems' | 'topReferrers' | 'topBrowsers' | 'topCountries' | 'topDeviceTypes'>
+  )>>, visitors?: Maybe<Array<(
+    { __typename?: 'Visitor' }
+    & Pick<Visitor, 'count' | 'timestamp'>
   )>> }
 );
 
@@ -22299,7 +22429,7 @@ export const VerifyEmailDocument = /*#__PURE__*/ gql`
 }
     `;
 export const DashboardStatsDocument = /*#__PURE__*/ gql`
-    query DashboardStats {
+    query DashboardStats($period: ActivityStatsPeriod) {
   dashboardStats {
     dataSources
     forumPosts
@@ -22310,12 +22440,12 @@ export const DashboardStatsDocument = /*#__PURE__*/ gql`
     sketches
     forumPosts
   }
-  activeProjects(limit: 20, period: _24HRS) {
+  activeProjects(limit: 20, period: $period) {
     id
     name
     url
     logoUrl
-    activity(period: _24HRS) {
+    activity(period: $period) {
       registeredUsers
       totalSketches
       totalForumPosts
@@ -22328,6 +22458,17 @@ export const DashboardStatsDocument = /*#__PURE__*/ gql`
       newDataSources
       newUploadedBytes
     }
+  }
+  visitorMetrics(period: $period) {
+    topOperatingSystems
+    topReferrers
+    topBrowsers
+    topCountries
+    topDeviceTypes
+  }
+  visitors(period: $period) {
+    count
+    timestamp
   }
 }
     `;

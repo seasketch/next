@@ -41,6 +41,7 @@ export default async function collectActivityStats(
         // needs to be updated
         const start = new Date(existingRecord.rows[0].start);
         const data = await getStatsForInterval(client, start);
+        // console.log("stats for updating existing", interval, data);
         activeProjects = data.active_projects;
         await client.query(
           `
@@ -94,6 +95,8 @@ export default async function collectActivityStats(
           client,
           new Date(start.rows[0].start)
         );
+        // console.log("stats", interval, data);
+
         activeProjects = data.active_projects;
         await client.query(
           `

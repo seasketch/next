@@ -28,6 +28,7 @@ import { Pool } from "pg";
 import { ManagementClient } from "auth0";
 import * as cache from "./cache";
 import { verifyEmailWithToken } from "./emailVerification";
+import { getRealUserVisits, getVisitorMetrics } from "./visitorMetrics";
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -242,6 +243,7 @@ run({
   * * * * * cleanupProjectBackgroundJobs
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
+  * * * * * collectVisitorStats
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {
@@ -285,6 +287,22 @@ app.use("/verify-email", async function (req, res, next) {
   } catch (e: any) {
     return res.status(400).json({ error: e.message });
   }
+});
+
+app.use("/visitor-metrics", async function (req, res, next) {
+  const start = new Date(new Date().getTime() - 1000 * 60 * 60 * 24);
+  const end = new Date();
+  // const slug = req.query.slug as string;
+  const metrics = await getVisitorMetrics(start, end);
+  res.json(metrics);
+});
+
+app.use("/visits", async function (req, res, next) {
+  const start = new Date(new Date().getTime() - 1000 * 60 * 60 * 24);
+  const end = new Date();
+  // const slug = req.query.slug as string;
+  const visits = await getRealUserVisits(start, end, "24 hours");
+  res.json(visits);
 });
 
 app.use(

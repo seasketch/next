@@ -46,5 +46,7 @@ declare namespace NodeJS {
     SCREENSHOTTER_FUNCTION_ARN: string;
     /* For discussion forum and survey file uploads */
     R2_FILE_UPLOADS_BUCKET: string;
+    CLOUDFLARE_ACCOUNT_TAG: string;
+    CLOUDFLARE_SITE_TAG: string;
   }
 }

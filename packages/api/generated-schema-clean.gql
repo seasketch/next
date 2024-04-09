@@ -6907,6 +6907,33 @@ type Interval {
 }
 
 """
+An interval of time that has passed where the smallest distinct unit is a second.
+"""
+input IntervalInput {
+  """A quantity of days."""
+  days: Int
+
+  """A quantity of hours."""
+  hours: Int
+
+  """A quantity of minutes."""
+  minutes: Int
+
+  """A quantity of months."""
+  months: Int
+
+  """
+  A quantity of seconds. This is the only non-integer field, as all the other
+  fields will dump their overflow into a smaller unit of time. Intervals don’t
+  have a smaller unit than seconds.
+  """
+  seconds: Float
+
+  """A quantity of years."""
+  years: Int
+}
+
+"""
 Invite emails can be associated with either a project or survey invitation. 
 Project invite emails are sent by direct admin action, going into a QUEUED state
 and eventually sent out by a backend emailing process. Survey invites are 
@@ -12144,6 +12171,56 @@ type Query implements Node {
     """JWT string"""
     token: String!
   ): SurveyInviteTokenVerificationResults
+  visitorByIntervalAndTimestamp(interval: IntervalInput!, timestamp: Datetime!): Visitor
+
+  """Reads and enables pagination through a set of `VisitorMetric`."""
+  visitorMetrics(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    period: ActivityStatsPeriod
+  ): [VisitorMetric!]
+
+  """Reads and enables pagination through a set of `Visitor`."""
+  visitors(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    period: ActivityStatsPeriod
+  ): [Visitor!]
+
+  """Reads and enables pagination through a set of `Visitor`."""
+  visitorsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: VisitorCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Visitor`."""
+    orderBy: [VisitorsOrderBy!] = [NATURAL]
+  ): VisitorsConnection
 }
 
 type QuotaDetail {
@@ -16698,6 +16775,74 @@ enum UsersOrderBy {
 A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122).
 """
 scalar UUID
+
+type Visitor {
+  count: Int!
+  interval: Interval!
+  timestamp: Datetime!
+}
+
+"""
+A condition to be used against `Visitor` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input VisitorCondition {
+  """Checks for equality with the object’s `interval` field."""
+  interval: IntervalInput
+}
+
+type VisitorMetric implements Node {
+  id: Int!
+  interval: Interval!
+  lastUpdated: Datetime!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `VisitorMetric`."""
+  project: Project
+  projectId: Int
+  start: Datetime!
+  topBrowsers: JSON
+  topCountries: JSON
+  topDeviceTypes: JSON
+  topOperatingSystems: JSON
+  topReferrers: JSON
+}
+
+"""A connection to a list of `Visitor` values."""
+type VisitorsConnection {
+  """
+  A list of edges which contains the `Visitor` and cursor to aid in pagination.
+  """
+  edges: [VisitorsEdge!]!
+
+  """A list of `Visitor` objects."""
+  nodes: [Visitor!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `Visitor` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `Visitor` edge in the connection."""
+type VisitorsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `Visitor` at the end of the edge."""
+  node: Visitor!
+}
+
+"""Methods to use when ordering `Visitor`."""
+enum VisitorsOrderBy {
+  INTERVAL_ASC
+  INTERVAL_DESC
+  NATURAL
+}
 
 type WorkerJob {
   attempts: Int
