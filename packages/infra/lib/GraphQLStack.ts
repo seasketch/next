@@ -90,6 +90,15 @@ export class GraphQLStack extends cdk.Stack {
         `CLOUDFLARE_IMAGES_TOKEN & CLOUDFLARE_IMAGES_ACCOUNT must be set in environment`
       );
     }
+    if (!process.env.CLOUDFLARE_ACCOUNT_TAG) {
+      throw new Error(`CLOUDFLARE_ACCOUNT_TAG must be set in environment`);
+    }
+    if (!process.env.CLOUDFLARE_GRAPHQL_TOKEN) {
+      throw new Error(`CLOUDFLARE_GRAPHQL_TOKEN must be set in environment`);
+    }
+    if (!process.env.CLOUDFLARE_SITE_TAG) {
+      throw new Error(`CLOUDFLARE_SITE_TAG must be set in environment`);
+    }
     // The code that defines your stack goes here
     const service = new ecsPatterns.ApplicationLoadBalancedFargateService(
       this,
