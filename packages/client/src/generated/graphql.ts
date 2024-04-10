@@ -100,73 +100,6 @@ export type AclPatch = {
   type?: Maybe<AccessControlListType>;
 };
 
-export type ActivityStat = Node & {
-  __typename?: 'ActivityStat';
-  id: Scalars['Int'];
-  interval: Interval;
-  newDataSources: Scalars['Int'];
-  newForumPosts: Scalars['Int'];
-  newSketches: Scalars['Int'];
-  newUploadedBytes: Scalars['BigInt'];
-  newUsers: Scalars['Int'];
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  /** Reads a single `Project` that is related to this `ActivityStat`. */
-  project?: Maybe<Project>;
-  projectId?: Maybe<Scalars['Int']>;
-  registeredUsers: Scalars['Int'];
-  start: Scalars['Datetime'];
-  totalDataSources: Scalars['Int'];
-  totalForumPosts: Scalars['Int'];
-  totalSketches: Scalars['Int'];
-  totalUploadedLayers: Scalars['Int'];
-  uploadsStorageUsed: Scalars['BigInt'];
-};
-
-/**
- * A condition to be used against `ActivityStat` object types. All fields are
- * tested for equality and combined with a logical ‘and.’
- */
-export type ActivityStatCondition = {
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `projectId` field. */
-  projectId?: Maybe<Scalars['Int']>;
-};
-
-/** A connection to a list of `ActivityStat` values. */
-export type ActivityStatsConnection = {
-  __typename?: 'ActivityStatsConnection';
-  /** A list of edges which contains the `ActivityStat` and cursor to aid in pagination. */
-  edges: Array<ActivityStatsEdge>;
-  /** A list of `ActivityStat` objects. */
-  nodes: Array<ActivityStat>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `ActivityStat` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `ActivityStat` edge in the connection. */
-export type ActivityStatsEdge = {
-  __typename?: 'ActivityStatsEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `ActivityStat` at the end of the edge. */
-  node: ActivityStat;
-};
-
-/** Methods to use when ordering `ActivityStat`. */
-export enum ActivityStatsOrderBy {
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
-}
-
 export enum ActivityStatsPeriod {
   '1Year' = '_1_YEAR',
   '24Hrs' = '_24HRS',
@@ -8935,8 +8868,6 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   activeDataUploads?: Maybe<Array<DataUploadTask>>;
   activity?: Maybe<ProjectActivityStat>;
-  /** Reads and enables pagination through a set of `ActivityStat`. */
-  activityStatsConnection: ActivityStatsConnection;
   adminCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
@@ -9156,21 +9087,6 @@ export type ProjectActiveDataUploadsArgs = {
  */
 export type ProjectActivityArgs = {
   period?: Maybe<ActivityStatsPeriod>;
-};
-
-
-/**
- * SeaSketch Project type. This root type contains most of the fields and queries
- * needed to drive the application.
- */
-export type ProjectActivityStatsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ActivityStatCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ActivityStatsOrderBy>>;
 };
 
 
@@ -9496,16 +9412,19 @@ export enum ProjectAccessStatus {
 
 export type ProjectActivityStat = {
   __typename?: 'ProjectActivityStat';
+  dataSources?: Maybe<Scalars['Int']>;
+  forumPosts?: Maybe<Scalars['Int']>;
   newDataSources?: Maybe<Scalars['Int']>;
   newForumPosts?: Maybe<Scalars['Int']>;
   newSketches?: Maybe<Scalars['Int']>;
+  newSurveyResponses?: Maybe<Scalars['Int']>;
   newUploadedBytes?: Maybe<Scalars['BigInt']>;
+  newUploadedLayers?: Maybe<Scalars['Int']>;
   newUsers?: Maybe<Scalars['Int']>;
   registeredUsers?: Maybe<Scalars['Int']>;
-  totalDataSources?: Maybe<Scalars['Int']>;
-  totalForumPosts?: Maybe<Scalars['Int']>;
-  totalSketches?: Maybe<Scalars['Int']>;
-  totalUploadedLayers?: Maybe<Scalars['Int']>;
+  sketches?: Maybe<Scalars['Int']>;
+  surveyResponses?: Maybe<Scalars['Int']>;
+  uploadedLayers?: Maybe<Scalars['Int']>;
   uploadsStorageUsed?: Maybe<Scalars['BigInt']>;
 };
 
@@ -10013,11 +9932,6 @@ export type Query = Node & {
   aclByTableOfContentsItemId?: Maybe<Acl>;
   /** Reads and enables pagination through a set of `Project`. */
   activeProjects?: Maybe<Array<Project>>;
-  activityStat?: Maybe<ActivityStat>;
-  /** Reads a single `ActivityStat` using its globally unique `ID`. */
-  activityStatByNodeId?: Maybe<ActivityStat>;
-  /** Reads and enables pagination through a set of `ActivityStat`. */
-  activityStatsConnection?: Maybe<ActivityStatsConnection>;
   basemap?: Maybe<Basemap>;
   /** Reads a single `Basemap` using its globally unique `ID`. */
   basemapByNodeId?: Maybe<Basemap>;
@@ -10290,30 +10204,6 @@ export type QueryActiveProjectsArgs = {
   limit?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   period?: Maybe<ActivityStatsPeriod>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryActivityStatArgs = {
-  id: Scalars['Int'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryActivityStatByNodeIdArgs = {
-  nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryActivityStatsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ActivityStatCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ActivityStatsOrderBy>>;
 };
 
 
@@ -16177,10 +16067,10 @@ export type DashboardStatsQuery = (
     & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches'>
   )>, activeProjects?: Maybe<Array<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'name' | 'url' | 'logoUrl'>
+    & Pick<Project, 'id' | 'name' | 'url' | 'logoUrl' | 'isAdmin'>
     & { activity?: Maybe<(
       { __typename?: 'ProjectActivityStat' }
-      & Pick<ProjectActivityStat, 'registeredUsers' | 'totalSketches' | 'totalForumPosts' | 'totalDataSources' | 'totalUploadedLayers' | 'uploadsStorageUsed' | 'newUsers' | 'newSketches' | 'newForumPosts' | 'newDataSources' | 'newUploadedBytes'>
+      & Pick<ProjectActivityStat, 'registeredUsers' | 'sketches' | 'forumPosts' | 'dataSources' | 'uploadedLayers' | 'surveyResponses' | 'uploadsStorageUsed' | 'newUsers' | 'newSketches' | 'newForumPosts' | 'newDataSources' | 'newUploadedBytes' | 'newSurveyResponses' | 'newUploadedLayers'>
     )> }
   )>>, visitorMetrics?: Maybe<Array<(
     { __typename?: 'VisitorMetric' }
@@ -23793,18 +23683,22 @@ export const DashboardStatsDocument = gql`
     name
     url
     logoUrl
+    isAdmin
     activity(period: $period) {
       registeredUsers
-      totalSketches
-      totalForumPosts
-      totalDataSources
-      totalUploadedLayers
+      sketches
+      forumPosts
+      dataSources
+      uploadedLayers
+      surveyResponses
       uploadsStorageUsed
       newUsers
       newSketches
       newForumPosts
       newDataSources
       newUploadedBytes
+      newSurveyResponses
+      newUploadedLayers
     }
   }
   visitorMetrics(period: $period) {

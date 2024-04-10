@@ -14,18 +14,22 @@ query DashboardStats($period: ActivityStatsPeriod) {
     name
     url
     logoUrl
+    isAdmin
     activity(period: $period) {
       registeredUsers
-      totalSketches
-      totalForumPosts
-      totalDataSources
-      totalUploadedLayers
+      sketches
+      forumPosts
+      dataSources
+      uploadedLayers
+      surveyResponses
       uploadsStorageUsed
       newUsers
       newSketches
       newForumPosts
       newDataSources
       newUploadedBytes
+      newSurveyResponses
+      newUploadedLayers
     }
   }
   visitorMetrics(period: $period) {

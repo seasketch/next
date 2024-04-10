@@ -649,17 +649,20 @@ CREATE TYPE public.project_access_status AS ENUM (
 --
 
 CREATE TYPE public.project_activity_stats AS (
+	registered_users integer,
+	uploads_storage_used bigint,
+	forum_posts integer,
+	sketches integer,
+	survey_responses integer,
+	uploaded_layers integer,
+	data_sources integer,
 	new_users integer,
 	new_sketches integer,
 	new_data_sources integer,
 	new_forum_posts integer,
-	new_uploaded_bytes bigint,
-	registered_users integer,
-	uploads_storage_used bigint,
-	total_forum_posts integer,
-	total_sketches integer,
-	total_data_sources integer,
-	total_uploaded_layers integer
+	new_survey_responses integer,
+	new_uploaded_layers integer,
+	new_uploaded_bytes bigint
 );
 
 
@@ -2095,41 +2098,24 @@ COMMENT ON COLUMN public.projects.enable_download_by_default IS 'When true, over
 CREATE FUNCTION public.active_projects(period public.activity_stats_period, "limit" integer DEFAULT 10) RETURNS SETOF public.projects
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select * from projects where (access_control = 'public' or session_is_admin(id)) and id in (select project_id from (
-    select 
-      distinct(project_id), 
-      sum(new_users + new_sketches + new_data_sources + new_forum_posts) as sum
-    from activity_stats where interval = (
-      case period
-        when '24hrs' then '15 minutes'::interval
-        when '7-days' then '1 hour'::interval
-        when '30-days' then '1 day'::interval
-        when '6-months' then '1 day'::interval
-        when '1-year' then '1 day'::interval
-        when 'all-time' then '1 day'::interval
-        else '1 day'::interval
-      end
-    ) and 
-    start >= now() - (
+    select
+      *
+    from projects
+    where id = any(
+      select
+        distinct(project_id)
+      from project_activity
+      where date >= (
         case period
-          when '24hrs' then '24 hours'::interval
-          when '7-days' then '7 days'::interval
-          when '30-days' then '30 days'::interval
-          when '6-months' then '6 months'::interval
-          when '1-year' then '1 year'::interval
-          else '1 day'::interval
+          when '24hrs' then current_date - interval '24 hours'
+          when '7-days' then current_date - interval '7 days'
+          when '30-days' then current_date - interval '30 days'
+          when '6-months' then current_date - interval '6 months'
+          when '1-year' then current_date - interval '1 year'
+          else current_date - interval '1 year'
         end
-    ) and
-    project_id is not null
-    and (
-      new_users > 0 or
-      new_sketches > 0 or
-      new_data_sources > 0 or
-      new_forum_posts > 0
+      )
     )
-    group by project_id
-    order by sum desc
-    limit active_projects.limit) as foo);
   $$;
 
 
@@ -9054,6 +9040,31 @@ COMMENT ON FUNCTION public.get_project_id(_slug text) IS '@omit';
 
 
 --
+-- Name: get_projects_with_recent_activity(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_projects_with_recent_activity() RETURNS integer[]
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select array_agg(distinct(project_id)) from (
+      select distinct(project_id) from data_upload_outputs where created_at >= current_date
+      union
+      select distinct(project_id) from project_participants where requested_at >= current_date
+      union
+      select distinct(project_id) from sketch_classes where id = any (select sketch_class_id from sketches   where created_at >= current_date)
+      union
+      select distinct(project_id) from surveys where id = any (select survey_id from survey_responses where created_at >= current_date)
+      union
+      select distinct(project_id) from forums where id = any (select forum_id from topics where id = any (
+        select topic_id from posts where created_at >= current_date
+      ))
+      union
+      select distinct(project_id) from data_sources where created_at >= current_date
+    ) as foo;
+  $$;
+
+
+--
 -- Name: get_public_jwk(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10977,32 +10988,26 @@ CREATE FUNCTION public.projects_activity(p public.projects, period public.activi
       stats project_activity_stats;
     begin
       select 
-        sum(new_users)::integer, 
-        sum(new_sketches)::integer, 
-        sum(new_data_sources)::integer, 
-        sum(new_forum_posts)::integer, 
-        sum(new_uploaded_bytes)::bigint, 
-        sum(registered_users)::integer, 
-        sum(uploads_storage_used)::bigint, 
-        sum(total_forum_posts)::integer, 
-        sum(total_sketches)::integer, 
-        sum(total_data_sources)::integer, 
-        sum(total_uploaded_layers)::integer
+        coalesce(sum(registered_users), 0)::integer, 
+        coalesce(sum(uploads_storage_used), 0)::bigint, 
+        coalesce(sum(forum_posts), 0)::integer, 
+        coalesce(sum(sketches), 0)::integer, 
+        coalesce(sum(survey_responses), 0)::integer, 
+        coalesce(sum(uploaded_layers), 0)::integer, 
+        coalesce(sum(data_sources), 0)::integer,
+
+        coalesce(sum(new_users), 0)::integer, 
+        coalesce(sum(new_sketches), 0)::integer, 
+        coalesce(sum(new_data_sources), 0)::integer, 
+        coalesce(sum(new_forum_posts), 0)::integer, 
+        coalesce(sum(new_survey_responses), 0)::integer, 
+        coalesce(sum(new_uploaded_layers), 0)::integer, 
+        coalesce(sum(new_uploaded_bytes), 0)::bigint
       into stats
       from 
-        activity_stats 
-      where interval = (
-        case period
-          when '24hrs' then '15 minutes'::interval
-          when '7-days' then '1 hour'::interval
-          when '30-days' then '1 day'::interval
-          when '6-months' then '1 day'::interval
-          when '1-year' then '1 day'::interval
-          when 'all-time' then '1 day'::interval
-          else '1 day'::interval
-        end
-      ) and activity_stats.project_id = p.id and 
-      start >= now() - (
+        project_activity
+      where project_activity.project_id = p.id and 
+      date >= now() - (
         case period
           when '24hrs' then '24 hours'::interval
           when '7-days' then '7 days'::interval
@@ -12372,6 +12377,200 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
 --
 
 COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Copies all table of contents items, related layers, sources, and access control lists to create a new table of contents that will be displayed to project users.';
+
+
+--
+-- Name: record_global_activity(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.record_global_activity() RETURNS date
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    insert into global_activity (
+      date,
+      registered_users,
+      uploads_storage_used,
+      forum_posts,
+      sketches,
+      survey_responses,
+      uploaded_layers,
+      data_sources,
+      new_users,
+      new_sketches,
+      new_data_sources,
+      new_forum_posts,
+      new_survey_responses,
+      new_uploaded_layers,
+      new_uploaded_bytes
+    )
+    select
+      current_date,
+      (select count(*)::int from users),
+      (select coalesce(sum(size), 0) from data_upload_outputs),
+      (select count(*)::int from posts),
+      (select count(*)::int from sketches where response_id is null),
+      (select count(*)::int from survey_responses),
+      (select count(*)::int from data_sources where type in (
+      'seasketch-vector', 'seasketch-raster', 'seasketch-mvt'
+      )),
+      (select count(*)::int from data_sources),
+      (select count(*)::int from users where registered_at >= current_date),
+      (select count(*)::int from sketches where created_at >= current_date and response_id is null),
+      (select count(*)::int from data_sources where created_at >= current_date),
+      (select count(*)::int from posts where created_at >= current_date),
+      (select count(*)::int from survey_responses where created_at >= current_date),
+      (select count(*)::int from data_sources where created_at >= current_date and type in (
+      'seasketch-vector', 'seasketch-raster', 'seasketch-mvt'
+      )),
+      (select coalesce(sum(size)::bigint, 0) from data_upload_outputs where created_at >= current_date) 
+      on conflict(date) do update
+      set
+        registered_users = excluded.registered_users,
+        uploads_storage_used = excluded.uploads_storage_used,
+        forum_posts = excluded.forum_posts,
+        sketches = excluded.sketches,
+        survey_responses = excluded.survey_responses,
+        uploaded_layers = excluded.uploaded_layers,
+        data_sources = excluded.data_sources,
+        new_users = excluded.new_users,
+        new_sketches = excluded.new_sketches,
+        new_data_sources = excluded.new_data_sources,
+        new_forum_posts = excluded.new_forum_posts,
+        new_survey_responses = excluded.new_survey_responses,
+        new_uploaded_layers = excluded.new_uploaded_layers,
+        new_uploaded_bytes = excluded.new_uploaded_bytes
+    returning current_date;
+  $$;
+
+
+--
+-- Name: project_activity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_activity (
+    project_id integer NOT NULL,
+    date date NOT NULL,
+    registered_users integer NOT NULL,
+    uploads_storage_used bigint NOT NULL,
+    forum_posts integer NOT NULL,
+    sketches integer NOT NULL,
+    survey_responses integer NOT NULL,
+    uploaded_layers integer NOT NULL,
+    data_sources integer NOT NULL,
+    new_users integer NOT NULL,
+    new_sketches integer NOT NULL,
+    new_data_sources integer NOT NULL,
+    new_forum_posts integer NOT NULL,
+    new_survey_responses integer NOT NULL,
+    new_uploaded_layers integer NOT NULL,
+    new_uploaded_bytes bigint NOT NULL
+);
+
+
+--
+-- Name: record_project_activity(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.record_project_activity(pid integer) RETURNS public.project_activity
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    insert into project_activity (
+      project_id,
+      date,
+      registered_users,
+      uploads_storage_used,
+      forum_posts,
+      sketches,
+      survey_responses,
+      uploaded_layers,
+      data_sources,
+      new_users,
+      new_sketches,
+      new_data_sources,
+      new_forum_posts,
+      new_survey_responses,
+      new_uploaded_layers,
+      new_uploaded_bytes
+    )
+    select
+      pid,
+      current_date,
+      (select count(*)::int from project_participants where project_id = pid),
+      (select coalesce(sum(size), 0) from data_upload_outputs where project_id = pid),
+      (select count(*)::int from posts where topic_id = any (
+        select id from topics where forum_id = any (
+          select id from forums where project_id = pid
+        )
+      )),
+      (select count(*)::int from sketches where response_id is null and sketch_class_id = any (
+        select id from sketch_classes where project_id = pid
+      )),
+      (select count(*)::int from survey_responses where survey_id = any (
+        select id from surveys where project_id = pid
+      )),
+      (select count(*)::int from data_sources where project_id = pid and type in (
+      'seasketch-vector', 'seasketch-raster', 'seasketch-mvt'
+      )),
+      (select count(*)::int from data_sources where project_id = pid),
+      (select count(*)::int from project_participants where project_id = pid and requested_at >= current_date),
+      (
+        select count(*)::int from sketches where created_at >= current_date and response_id is null and sketch_class_id = any (
+          select id from sketch_classes where project_id = pid
+        )
+      ),
+      (select count(*)::int from data_sources where project_id = pid and created_at >= current_date),
+      (select count(*)::int from posts where created_at >= current_date and topic_id = any (
+        select id from topics where forum_id = any (
+          select id from forums where project_id = pid
+        )
+      )),
+      (select count(*)::int from survey_responses where created_at >= current_date and survey_id = any (
+        select id from surveys where project_id = pid
+      )),
+      (select count(*)::int from data_sources where project_id = pid and created_at >= current_date and type in (
+      'seasketch-vector', 'seasketch-raster', 'seasketch-mvt'
+      )),
+      (select coalesce(sum(size)::bigint, 0) from data_upload_outputs where project_id = pid and created_at >= current_date)
+      on conflict(project_id, date) do update
+      set
+        registered_users = excluded.registered_users,
+        uploads_storage_used = excluded.uploads_storage_used,
+        forum_posts = excluded.forum_posts,
+        sketches = excluded.sketches,
+        survey_responses = excluded.survey_responses,
+        uploaded_layers = excluded.uploaded_layers,
+        data_sources = excluded.data_sources,
+        new_users = excluded.new_users,
+        new_sketches = excluded.new_sketches,
+        new_data_sources = excluded.new_data_sources,
+        new_forum_posts = excluded.new_forum_posts,
+        new_survey_responses = excluded.new_survey_responses,
+        new_uploaded_layers = excluded.new_uploaded_layers,
+        new_uploaded_bytes = excluded.new_uploaded_bytes
+    returning *;
+  $$;
+
+
+--
+-- Name: record_project_activity_on_delete(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.record_project_activity_on_delete() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    perform graphile_worker.add_job(
+      'recordProjectActivity',
+      payload := json_build_object(
+        'projectId', old.project_id
+      ),
+      run_at := NOW() + '10 seconds',
+      queue_name := 'recordProjectActivity',
+      job_key := 'recordProjectActivity:' || old.project_id
+    );
+    return old;
+  end;
+  $$;
 
 
 --
@@ -15735,43 +15934,6 @@ ALTER TABLE public.access_control_lists ALTER COLUMN id ADD GENERATED BY DEFAULT
 
 
 --
--- Name: activity_stats; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.activity_stats (
-    id integer NOT NULL,
-    project_id integer,
-    start timestamp with time zone NOT NULL,
-    "interval" interval NOT NULL,
-    registered_users integer NOT NULL,
-    uploads_storage_used bigint NOT NULL,
-    total_forum_posts integer NOT NULL,
-    total_sketches integer NOT NULL,
-    total_data_sources integer NOT NULL,
-    total_uploaded_layers integer NOT NULL,
-    new_users integer NOT NULL,
-    new_sketches integer NOT NULL,
-    new_data_sources integer NOT NULL,
-    new_forum_posts integer NOT NULL,
-    new_uploaded_bytes bigint NOT NULL
-);
-
-
---
--- Name: activity_stats_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.activity_stats ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.activity_stats_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
 -- Name: basemaps_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -16109,6 +16271,29 @@ ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
+);
+
+
+--
+-- Name: global_activity; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.global_activity (
+    date date NOT NULL,
+    registered_users integer NOT NULL,
+    uploads_storage_used bigint NOT NULL,
+    forum_posts integer NOT NULL,
+    sketches integer NOT NULL,
+    survey_responses integer NOT NULL,
+    uploaded_layers integer NOT NULL,
+    data_sources integer NOT NULL,
+    new_users integer NOT NULL,
+    new_sketches integer NOT NULL,
+    new_data_sources integer NOT NULL,
+    new_forum_posts integer NOT NULL,
+    new_survey_responses integer NOT NULL,
+    new_uploaded_layers integer NOT NULL,
+    new_uploaded_bytes bigint NOT NULL
 );
 
 
@@ -16888,14 +17073,6 @@ ALTER TABLE ONLY public.access_control_lists
 
 
 --
--- Name: activity_stats activity_stats_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.activity_stats
-    ADD CONSTRAINT activity_stats_pkey PRIMARY KEY (id);
-
-
---
 -- Name: basemaps basemaps_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -17104,6 +17281,14 @@ ALTER TABLE ONLY public.forums
 
 
 --
+-- Name: global_activity global_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.global_activity
+    ADD CONSTRAINT global_activity_pkey PRIMARY KEY (date);
+
+
+--
 -- Name: interactivity_settings interactivity_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -17181,6 +17366,14 @@ ALTER TABLE ONLY public.pending_topic_notifications
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_activity project_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_activity
+    ADD CONSTRAINT project_activity_pkey PRIMARY KEY (project_id, date);
 
 
 --
@@ -17555,13 +17748,6 @@ CREATE UNIQUE INDEX access_control_lists_sketch_class_id_idx ON public.access_co
 --
 
 CREATE UNIQUE INDEX access_control_lists_table_of_contents_item_id_idx ON public.access_control_lists USING btree (table_of_contents_item_id) WHERE (table_of_contents_item_id IS NOT NULL);
-
-
---
--- Name: activity_stats_project_id_start_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX activity_stats_project_id_start_idx ON public.activity_stats USING btree (project_id, start);
 
 
 --
@@ -18629,6 +18815,20 @@ CREATE TRIGGER project_background_job_notify_subscriptions AFTER INSERT OR UPDAT
 
 
 --
+-- Name: data_upload_outputs record_project_activity_on_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER record_project_activity_on_delete AFTER DELETE ON public.data_upload_outputs FOR EACH ROW EXECUTE FUNCTION public.record_project_activity_on_delete();
+
+
+--
+-- Name: table_of_contents_items record_project_activity_on_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER record_project_activity_on_delete AFTER DELETE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.record_project_activity_on_delete();
+
+
+--
 -- Name: users send_email_verification; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -18795,14 +18995,6 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
-
-
---
--- Name: activity_stats activity_stats_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.activity_stats
-    ADD CONSTRAINT activity_stats_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
 
 
 --
@@ -19249,6 +19441,14 @@ ALTER TABLE ONLY public.posts
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_activity project_activity_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_activity
+    ADD CONSTRAINT project_activity_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
 
 
 --
@@ -19859,12 +20059,6 @@ CREATE POLICY access_control_lists_update ON public.access_control_lists FOR UPD
 
 
 --
--- Name: activity_stats; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.activity_stats ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: basemaps; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -20364,13 +20558,6 @@ CREATE POLICY projects_shared_basemaps_select ON public.projects_shared_basemaps
 --
 
 CREATE POLICY projects_update ON public.projects FOR UPDATE TO seasketch_user USING (public.session_is_admin(id)) WITH CHECK (public.session_is_admin(id));
-
-
---
--- Name: activity_stats select_activity_stats_policy; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY select_activity_stats_policy ON public.activity_stats FOR SELECT USING ((public.session_is_superuser() OR ((project_id IS NOT NULL) AND public.session_is_admin(project_id))));
 
 
 --
@@ -25352,6 +25539,13 @@ GRANT ALL ON FUNCTION public.get_project_id(_slug text) TO anon;
 
 
 --
+-- Name: FUNCTION get_projects_with_recent_activity(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION get_public_jwk(id uuid); Type: ACL; Schema: public; Owner: -
 --
 
@@ -26907,7 +27101,7 @@ GRANT ALL ON FUNCTION public.projects_active_data_uploads(p public.projects) TO 
 --
 
 REVOKE ALL ON FUNCTION public.projects_activity(p public.projects, period public.activity_stats_period) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_activity(p public.projects, period public.activity_stats_period) TO anon;
+GRANT ALL ON FUNCTION public.projects_activity(p public.projects, period public.activity_stats_period) TO seasketch_user;
 
 
 --
@@ -27201,6 +27395,27 @@ GRANT ALL ON FUNCTION public.public_sprites() TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION record_global_activity(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.record_global_activity() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION record_project_activity(pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.record_project_activity(pid integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION record_project_activity_on_delete(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.record_project_activity_on_delete() FROM PUBLIC;
 
 
 --
@@ -31467,13 +31682,6 @@ REVOKE ALL ON FUNCTION public.st_union(public.geometry, double precision) FROM P
 --
 
 GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
-
-
---
--- Name: TABLE activity_stats; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.activity_stats TO seasketch_user;
 
 
 --

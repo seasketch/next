@@ -55,81 +55,6 @@ input AclPatch {
   type: AccessControlListType
 }
 
-type ActivityStat implements Node {
-  id: Int!
-  interval: Interval!
-  newDataSources: Int!
-  newForumPosts: Int!
-  newSketches: Int!
-  newUploadedBytes: BigInt!
-  newUsers: Int!
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-
-  """Reads a single `Project` that is related to this `ActivityStat`."""
-  project: Project
-  projectId: Int
-  registeredUsers: Int!
-  start: Datetime!
-  totalDataSources: Int!
-  totalForumPosts: Int!
-  totalSketches: Int!
-  totalUploadedLayers: Int!
-  uploadsStorageUsed: BigInt!
-}
-
-"""
-A condition to be used against `ActivityStat` object types. All fields are
-tested for equality and combined with a logical ‘and.’
-"""
-input ActivityStatCondition {
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `projectId` field."""
-  projectId: Int
-}
-
-"""A connection to a list of `ActivityStat` values."""
-type ActivityStatsConnection {
-  """
-  A list of edges which contains the `ActivityStat` and cursor to aid in pagination.
-  """
-  edges: [ActivityStatsEdge!]!
-
-  """A list of `ActivityStat` objects."""
-  nodes: [ActivityStat!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `ActivityStat` you could get from the connection."""
-  totalCount: Int!
-}
-
-"""A `ActivityStat` edge in the connection."""
-type ActivityStatsEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `ActivityStat` at the end of the edge."""
-  node: ActivityStat!
-}
-
-"""Methods to use when ordering `ActivityStat`."""
-enum ActivityStatsOrderBy {
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
-}
-
 enum ActivityStatsPeriod {
   _1_YEAR
   _24HRS
@@ -10028,35 +9953,6 @@ type Project implements Node {
     offset: Int
   ): [DataUploadTask!]
   activity(period: ActivityStatsPeriod): ProjectActivityStat
-
-  """Reads and enables pagination through a set of `ActivityStat`."""
-  activityStatsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ActivityStatCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `ActivityStat`."""
-    orderBy: [ActivityStatsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ActivityStatsConnection!
   adminCount: Int
 
   """Reads and enables pagination through a set of `User`."""
@@ -10615,16 +10511,19 @@ enum ProjectAccessStatus {
 }
 
 type ProjectActivityStat {
+  dataSources: Int
+  forumPosts: Int
   newDataSources: Int
   newForumPosts: Int
   newSketches: Int
+  newSurveyResponses: Int
   newUploadedBytes: BigInt
+  newUploadedLayers: Int
   newUsers: Int
   registeredUsers: Int
-  totalDataSources: Int
-  totalForumPosts: Int
-  totalSketches: Int
-  totalUploadedLayers: Int
+  sketches: Int
+  surveyResponses: Int
+  uploadedLayers: Int
   uploadsStorageUsed: BigInt
 }
 
@@ -11209,44 +11108,6 @@ type Query implements Node {
     offset: Int
     period: ActivityStatsPeriod
   ): [Project!]
-  activityStat(id: Int!): ActivityStat
-
-  """Reads a single `ActivityStat` using its globally unique `ID`."""
-  activityStatByNodeId(
-    """
-    The globally unique `ID` to be used in selecting a single `ActivityStat`.
-    """
-    nodeId: ID!
-  ): ActivityStat
-
-  """Reads and enables pagination through a set of `ActivityStat`."""
-  activityStatsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ActivityStatCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `ActivityStat`."""
-    orderBy: [ActivityStatsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ActivityStatsConnection
   basemap(id: Int!): Basemap
 
   """Reads a single `Basemap` using its globally unique `ID`."""
