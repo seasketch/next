@@ -1930,6 +1930,7 @@ export type DashboardStat = {
   forumPosts?: Maybe<Scalars['Int']>;
   projects?: Maybe<Scalars['Int']>;
   sketches?: Maybe<Scalars['Int']>;
+  surveyResponses?: Maybe<Scalars['Int']>;
   uploadedBytes?: Maybe<Scalars['BigInt']>;
   uploads?: Maybe<Scalars['Int']>;
   users?: Maybe<Scalars['Int']>;
@@ -16064,7 +16065,7 @@ export type DashboardStatsQuery = (
   { __typename?: 'Query' }
   & { dashboardStats?: Maybe<(
     { __typename?: 'DashboardStat' }
-    & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches'>
+    & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches' | 'surveyResponses'>
   )>, activeProjects?: Maybe<Array<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'name' | 'url' | 'logoUrl' | 'isAdmin'>
@@ -23677,6 +23678,7 @@ export const DashboardStatsDocument = gql`
     users
     sketches
     forumPosts
+    surveyResponses
   }
   activeProjects(limit: 20, period: $period) {
     id

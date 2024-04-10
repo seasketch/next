@@ -8,6 +8,7 @@ query DashboardStats($period: ActivityStatsPeriod) {
     users
     sketches
     forumPosts
+    surveyResponses
   }
   activeProjects(limit: 20, period: $period) {
     id

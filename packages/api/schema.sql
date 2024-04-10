@@ -249,7 +249,8 @@ CREATE TYPE public.dashboard_stats AS (
 	uploaded_bytes bigint,
 	sketches integer,
 	forum_posts integer,
-	data_sources integer
+	data_sources integer,
+	survey_responses integer
 );
 
 
@@ -7173,7 +7174,9 @@ CREATE FUNCTION public.dashboard_stats() RETURNS public.dashboard_stats
         (select sum(size)::bigint from data_upload_outputs) as uploaded_bytes,
         (select count(*)::int from sketches) as sketches,
         (select count(*)::int from posts) as forum_posts,
-        (select count(*)::int from data_sources) as data_sources) as foo;
+        (select count(*)::int from data_sources) as data_sources,
+        (select count(*)::int from survey_responses) as survey_responses
+        ) as foo;
       return result;
     else
       raise exception 'Permission denied';
@@ -9051,7 +9054,7 @@ CREATE FUNCTION public.get_projects_with_recent_activity() RETURNS integer[]
       union
       select distinct(project_id) from project_participants where requested_at >= current_date
       union
-      select distinct(project_id) from sketch_classes where id = any (select sketch_class_id from sketches   where created_at >= current_date)
+      select distinct(project_id) from sketch_classes where id = any (select sketch_class_id from sketches  where created_at >= current_date)
       union
       select distinct(project_id) from surveys where id = any (select survey_id from survey_responses where created_at >= current_date)
       union

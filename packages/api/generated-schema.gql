@@ -2161,6 +2161,7 @@ type DashboardStat {
   forumPosts: Int
   projects: Int
   sketches: Int
+  surveyResponses: Int
   uploadedBytes: BigInt
   uploads: Int
   users: Int
