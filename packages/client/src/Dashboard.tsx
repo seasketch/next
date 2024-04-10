@@ -9,6 +9,7 @@ import logo from "./header/seasketch-logo.png";
 import bgBlur from "./bg-blur.jpg";
 import {
   CaretLeftIcon,
+  ClipboardIcon,
   LayersIcon,
   PersonIcon,
   TransformIcon,
@@ -76,12 +77,17 @@ export default function Dashboard() {
           value={(data?.dashboardStats?.users || 0).toLocaleString()}
         />
         <StatItem
+          className="sm:hidden md:visible"
           label="Data Uploads"
           value={(data?.dashboardStats?.uploads || 0).toLocaleString()}
         />
         <StatItem
           label="Layers Stored"
           value={bytes(parseInt(data?.dashboardStats?.uploadedBytes || "0"))}
+        />
+        <StatItem
+          label="Survey Responses"
+          value={(data?.dashboardStats?.surveyResponses || 0).toLocaleString()}
         />
         <StatItem
           label="Sketches"
@@ -97,7 +103,9 @@ export default function Dashboard() {
         <span className="flex-1">
           {totalVisitors?.toLocaleString()} Total Visitors
         </span>
-        <span className="text-gray-500 italic">Updated every minute.</span>
+        <span className="text-gray-500 italic hidden md:visible">
+          Updated every minute.
+        </span>
         <select
           value={period}
           onChange={(e) => setPeriod(e.target.value as ActivityStatsPeriod)}
@@ -201,6 +209,12 @@ export default function Dashboard() {
                 value={project.activity?.newForumPosts}
               >
                 <ChatIcon className="w-5 h-5" />
+              </IncreaseSymbol>
+              <IncreaseSymbol
+                title="Survey responses"
+                value={4 || project.activity?.newSurveyResponses}
+              >
+                <ClipboardIcon className="w-4 h-4" />
               </IncreaseSymbol>
             </div>
           </li>
