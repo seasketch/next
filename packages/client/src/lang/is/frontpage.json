@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Búðu til verkefni",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Búðu til þitt eigið<1></1><2> SeaSketch Project</2>",
+  "Create your project": "Búðu til verkefnið þitt",
+  "Developer API": "Forritaskil þróunaraðila",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Vinsamlegast hafðu samband við okkur á <2>support@seasketch.org</2> til að skipuleggja umræður um hvernig hægt er að nota SeaSketch til að styðja við skipulagningu þína.",
+  "Project name": "Nafn verkefnis",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Hægt er að aðlaga SeaSketch verkefni með því að nota opinn <2>Geoprocessing Framework</2> okkar. Verkefni geta skilgreint skýrslur sem sýna áhrif væntanlegra svæða með því að nota Typescript, React og AWS Lambda.",
+  "Trusted by": "Treyst af",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Notaðu samvinnu landhönnun og könnunartæki fyrir svæðisskipulag sjávar á þínu svæði. Verkefnið þitt mun innihalda verkfæri til að sjá kort, búa til umræðuvettvang, skissa áætlanir og safna gögnum með könnunum - <i>ókeypis!</i> Hægt er að þróa og sérsníða greiningarskýrslur með <5>landvinnslu ramma</5> okkar. ."
+}

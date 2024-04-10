@@ -1,0 +1,17 @@
+{
+  "Accept as": "Samþykkja sem {{email}}",
+  "An account with this email address already exists.": "Reikningur með þessu netfangi er þegar til.",
+  "Confirming invite": "Staðfestir boð",
+  "Contact {{supportEmail}} to request a new invitation.": "Hafðu samband við {{supportEmail}} til að biðja um nýtt boð.",
+  "Create an Account": "Búðu til reikning",
+  "Logout and sign in as ": "Útskráðu þig og skráðu þig inn sem ",
+  "Sign In": "Skráðu þig inn",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Þetta boð hefur þegar verið samþykkt.<1> Haltu áfram að verkefninu </1> eða <5>hafðu samband við þjónustudeild</5>ef þú telur að þetta sé villa.",
+  "This invitation was originally sent to <2></2>.": "Þetta boð var upphaflega sent til <2></2>.",
+  "Use another account": "Notaðu annan reikning",
+  "Verifying invitation code": "Staðfestir boðskóða",
+  "Welcome, !": "Velkominn, !",
+  "Welcome!": "Velkominn!",
+  "You have been invited to participate in a SeaSketch project.": "Þér hefur verið boðið að taka þátt í SeaSketch verkefni.",
+  "Your invitation to this project has expired.": "Boð þitt í þetta verkefni er útrunnið."
+}
