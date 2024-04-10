@@ -212,7 +212,7 @@ export default function Dashboard() {
               </IncreaseSymbol>
               <IncreaseSymbol
                 title="Survey responses"
-                value={4 || project.activity?.newSurveyResponses}
+                value={project.activity?.newSurveyResponses}
               >
                 <ClipboardIcon className="w-4 h-4" />
               </IncreaseSymbol>
@@ -262,7 +262,7 @@ function IncreaseSymbol({
   }
 }
 
-function StatItem({
+export function StatItem({
   label,
   value,
   className,
