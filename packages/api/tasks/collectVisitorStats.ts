@@ -6,7 +6,7 @@ export default async function collectVisitorStats(
   payload: {},
   helpers: Helpers
 ) {
-  await helpers.withPgClient(async (client) => {
+  return await helpers.withPgClient(async (client) => {
     const intervals: ("24 hours" | "7 days" | "30 days")[] = [
       "24 hours",
       "7 days",

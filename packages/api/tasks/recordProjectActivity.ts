@@ -14,7 +14,7 @@ export default async function recordProjectActivity(
   },
   helpers: Helpers
 ) {
-  await helpers.withPgClient(async (client) => {
+  return await helpers.withPgClient(async (client) => {
     await client.query("select record_project_activity($1)", [
       payload.projectId,
     ]);

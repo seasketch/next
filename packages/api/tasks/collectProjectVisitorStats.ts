@@ -11,8 +11,8 @@ export default async function collectProjectVisitorStats(
   payload: { id: number; slug: string },
   helpers: Helpers
 ) {
-  console.log("running collectProjectVisitorStats", payload);
-  await helpers.withPgClient(async (client) => {
+  return await helpers.withPgClient(async (client) => {
+    console.log("running collectProjectVisitorStats", payload);
     const now = Date.now();
     for (const interval of intervals) {
       const times = await client.query(

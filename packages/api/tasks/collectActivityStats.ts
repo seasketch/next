@@ -12,7 +12,7 @@ export default async function collectActivityStats(
   payload: {},
   helpers: Helpers
 ) {
-  await helpers.withPgClient(async (client) => {
+  return await helpers.withPgClient(async (client) => {
     await client.query("select record_global_activity()");
     const recentProjectActivity = await client.query(`
       select get_projects_with_recent_activity() as project_ids

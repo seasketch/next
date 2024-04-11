@@ -47,6 +47,7 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
       },
       {
         siteTag: process.env.CLOUDFLARE_SITE_TAG,
+        bot: 0,
       },
     ],
   };
