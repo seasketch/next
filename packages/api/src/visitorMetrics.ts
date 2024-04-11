@@ -39,7 +39,7 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
     topOperatingSystems: [],
   };
 
-  const filter = {
+  const filter: any = {
     AND: [
       {
         datetime_geq: start.toISOString(),
@@ -50,6 +50,12 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
       },
     ],
   };
+
+  if (slug) {
+    filter.AND.push({
+      requestPath_like: `/${slug}%`,
+    });
+  }
 
   const response = await client.request<{
     viewer?: {
@@ -144,6 +150,77 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
 
   return metrics;
 }
+
+export async function getVisitedSlugs(start: Date, end: Date) {
+  const filter = {
+    AND: [
+      {
+        datetime_geq: start.toISOString(),
+        datetime_leq: end.toISOString(),
+      },
+      {
+        siteTag: process.env.CLOUDFLARE_SITE_TAG,
+      },
+    ],
+  };
+
+  const response = await client.request<{
+    viewer?: {
+      accounts: {
+        topPaths: {
+          count: number;
+          dimensions: {
+            metric: string;
+          };
+        }[];
+      }[];
+    };
+  }>(TOP_PATHS_QUERY, {
+    accountTag: process.env.CLOUDFLARE_ACCOUNT_TAG,
+    filter,
+    order: "sum_visits_DESC",
+  });
+  if (!response.viewer?.accounts[0]) {
+    throw new Error("No account found in response");
+  }
+  const account = response.viewer?.accounts[0];
+  const slugs = new Set<string>();
+  for (const path of account.topPaths) {
+    const slug = path.dimensions.metric.split("/")[1];
+    if (slug) {
+      slugs.add(slug);
+    }
+  }
+  return [...slugs];
+}
+
+const TOP_PATHS_QUERY = gql`
+  query GetRumAnalyticsTopNs {
+    viewer {
+      accounts(filter: { accountTag: $accountTag }) {
+        topPaths: rumPageloadEventsAdaptiveGroups(
+          filter: $filter
+          limit: 5000
+          orderBy: [$order]
+        ) {
+          count
+          avg {
+            sampleInterval
+            __typename
+          }
+          sum {
+            visits
+            __typename
+          }
+          dimensions {
+            metric: requestPath
+          }
+        }
+      }
+      __typename
+    }
+  }
+`;
 
 const VISITOR_METRICS_QUERY = gql`
   query GetRumAnalyticsTopNs {
@@ -282,6 +359,13 @@ export async function getRealUserVisits(
       },
     ],
   };
+
+  if (slug) {
+    filter.AND.push({
+      // @ts-ignore
+      requestPath_like: `/${slug}%`,
+    });
+  }
 
   const response = await client.request<{
     viewer?: {

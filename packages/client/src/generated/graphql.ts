@@ -9054,6 +9054,10 @@ export type Project = Node & {
   url?: Maybe<Scalars['String']>;
   /** List of all banned users. Listing only accessible to admins. */
   usersBannedFromForums?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `ProjectVisitorMetric`. */
+  visitorMetrics?: Maybe<Array<ProjectVisitorMetric>>;
+  /** Reads and enables pagination through a set of `Visitor`. */
+  visitors?: Maybe<Array<Visitor>>;
 };
 
 
@@ -9393,6 +9397,28 @@ export type ProjectUploadedDraftDataSourcesArgs = {
 export type ProjectUsersBannedFromForumsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectVisitorMetricsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectVisitorsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 export enum ProjectAccessControlSetting {
@@ -9787,6 +9813,23 @@ export type ProjectPatch = {
   name?: Maybe<Scalars['String']>;
   region?: Maybe<Scalars['GeoJSON']>;
   translatedProps?: Maybe<Scalars['JSON']>;
+};
+
+export type ProjectVisitorMetric = Node & {
+  __typename?: 'ProjectVisitorMetric';
+  interval: Interval;
+  month: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `ProjectVisitorMetric`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  timestamp: Scalars['Datetime'];
+  topBrowsers: Scalars['JSON'];
+  topCountries: Scalars['JSON'];
+  topDeviceTypes: Scalars['JSON'];
+  topOperatingSystems: Scalars['JSON'];
+  topReferrers: Scalars['JSON'];
 };
 
 /** A connection to a list of `Project` values. */
@@ -14976,20 +15019,16 @@ export type VisitorCondition = {
 
 export type VisitorMetric = Node & {
   __typename?: 'VisitorMetric';
-  id: Scalars['Int'];
   interval: Interval;
-  lastUpdated: Scalars['Datetime'];
+  month: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /** Reads a single `Project` that is related to this `VisitorMetric`. */
-  project?: Maybe<Project>;
-  projectId?: Maybe<Scalars['Int']>;
-  start: Scalars['Datetime'];
-  topBrowsers?: Maybe<Scalars['JSON']>;
-  topCountries?: Maybe<Scalars['JSON']>;
-  topDeviceTypes?: Maybe<Scalars['JSON']>;
-  topOperatingSystems?: Maybe<Scalars['JSON']>;
-  topReferrers?: Maybe<Scalars['JSON']>;
+  timestamp: Scalars['Datetime'];
+  topBrowsers: Scalars['JSON'];
+  topCountries: Scalars['JSON'];
+  topDeviceTypes: Scalars['JSON'];
+  topOperatingSystems: Scalars['JSON'];
+  topReferrers: Scalars['JSON'];
 };
 
 /** A connection to a list of `Visitor` values. */
@@ -17947,6 +17986,30 @@ export type SetTranslatedPropsMutation = (
     { __typename?: 'setTranslatedPropResult' }
     & Pick<SetTranslatedPropResult, 'id' | 'translatedProps' | 'typeName'>
   ) }
+);
+
+export type ProjectDashboardQueryVariables = Exact<{
+  slug: Scalars['String'];
+  period: ActivityStatsPeriod;
+}>;
+
+
+export type ProjectDashboardQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { activity?: Maybe<(
+      { __typename?: 'ProjectActivityStat' }
+      & Pick<ProjectActivityStat, 'dataSources' | 'sketches' | 'surveyResponses' | 'uploadedLayers' | 'uploadsStorageUsed' | 'forumPosts' | 'registeredUsers'>
+    )>, visitors?: Maybe<Array<(
+      { __typename?: 'Visitor' }
+      & Pick<Visitor, 'count' | 'timestamp'>
+    )>>, visitorMetrics?: Maybe<Array<(
+      { __typename?: 'ProjectVisitorMetric' }
+      & Pick<ProjectVisitorMetric, 'topOperatingSystems' | 'topReferrers' | 'topBrowsers' | 'topCountries' | 'topDeviceTypes'>
+    )>> }
+  )> }
 );
 
 export type ProjectMetadataFragment = (
@@ -27396,6 +27459,62 @@ export function useSetTranslatedPropsMutation(baseOptions?: Apollo.MutationHookO
 export type SetTranslatedPropsMutationHookResult = ReturnType<typeof useSetTranslatedPropsMutation>;
 export type SetTranslatedPropsMutationResult = Apollo.MutationResult<SetTranslatedPropsMutation>;
 export type SetTranslatedPropsMutationOptions = Apollo.BaseMutationOptions<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>;
+export const ProjectDashboardDocument = gql`
+    query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
+  projectBySlug(slug: $slug) {
+    id
+    activity(period: $period) {
+      dataSources
+      sketches
+      surveyResponses
+      uploadedLayers
+      uploadsStorageUsed
+      forumPosts
+      registeredUsers
+    }
+    visitors(period: $period) {
+      count
+      timestamp
+    }
+    visitorMetrics(period: $period) {
+      topOperatingSystems
+      topReferrers
+      topBrowsers
+      topCountries
+      topDeviceTypes
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectDashboardQuery__
+ *
+ * To run a query within a React component, call `useProjectDashboardQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectDashboardQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectDashboardQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      period: // value for 'period'
+ *   },
+ * });
+ */
+export function useProjectDashboardQuery(baseOptions: Apollo.QueryHookOptions<ProjectDashboardQuery, ProjectDashboardQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectDashboardQuery, ProjectDashboardQueryVariables>(ProjectDashboardDocument, options);
+      }
+export function useProjectDashboardLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectDashboardQuery, ProjectDashboardQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectDashboardQuery, ProjectDashboardQueryVariables>(ProjectDashboardDocument, options);
+        }
+export type ProjectDashboardQueryHookResult = ReturnType<typeof useProjectDashboardQuery>;
+export type ProjectDashboardLazyQueryHookResult = ReturnType<typeof useProjectDashboardLazyQuery>;
+export type ProjectDashboardQueryResult = Apollo.QueryResult<ProjectDashboardQuery, ProjectDashboardQueryVariables>;
 export const ProjectMetadataDocument = gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
@@ -31959,6 +32078,7 @@ export const namedOperations = {
     BasemapOfflineSettings: 'BasemapOfflineSettings',
     getTilePackage: 'getTilePackage',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
+    ProjectDashboard: 'ProjectDashboard',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
     ProjectRegion: 'ProjectRegion',

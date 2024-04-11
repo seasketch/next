@@ -10991,13 +10991,23 @@ CREATE FUNCTION public.projects_activity(p public.projects, period public.activi
       stats project_activity_stats;
     begin
       select 
-        coalesce(sum(registered_users), 0)::integer, 
-        coalesce(sum(uploads_storage_used), 0)::bigint, 
-        coalesce(sum(forum_posts), 0)::integer, 
-        coalesce(sum(sketches), 0)::integer, 
-        coalesce(sum(survey_responses), 0)::integer, 
-        coalesce(sum(uploaded_layers), 0)::integer, 
-        coalesce(sum(data_sources), 0)::integer,
+        (select coalesce(count(*), 0) from project_participants where project_id = p.id)::integer,
+        (select coalesce(sum(size), 0) from data_upload_outputs where project_id = p.id)::bigint,
+        (
+          select coalesce(sum(forums_post_count(forums.*)), 0) from forums where project_id = p.id
+        ),
+        (
+          select coalesce(count(*), 0) from sketches where sketch_class_id in (
+            select id from sketch_classes where project_id = p.id
+          )
+        ),
+        (
+          select coalesce(sum(surveys_submitted_response_count(surveys.*)),0) from surveys where project_id = p.id
+        ),
+        (
+          select coalesce(count(*), 0) from data_sources where project_id = p.id and type in ('seasketch-vector', 'seasketch-raster', 'seasketch-mvt')
+        ),
+        (select coalesce(count(*), 0) from data_sources where project_id = p.id)::integer,
 
         coalesce(sum(new_users), 0)::integer, 
         coalesce(sum(new_sketches), 0)::integer, 
@@ -12001,6 +12011,167 @@ List of all banned users. Listing only accessible to admins.
 
 
 --
+-- Name: project_visitor_metrics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_visitor_metrics (
+    project_id integer NOT NULL,
+    "interval" interval NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    month integer GENERATED ALWAYS AS (date_part('month'::text, timezone('UTC'::text, "timestamp"))) STORED NOT NULL,
+    top_referrers jsonb NOT NULL,
+    top_operating_systems jsonb NOT NULL,
+    top_browsers jsonb NOT NULL,
+    top_device_types jsonb NOT NULL,
+    top_countries jsonb NOT NULL
+);
+
+
+--
+-- Name: projects_visitor_metrics(public.projects, public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) RETURNS SETOF public.project_visitor_metrics
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from project_visitor_metrics where session_is_admin(p.id) and
+    project_id = p.id and
+    interval = (
+      case period
+        when '24hrs' then '24 hours'::interval
+        when '7-days' then '7 days'::interval
+        when '30-days' then '30 days'::interval
+        else '1 day'::interval
+      end
+    ) order by timestamp desc limit 1;
+  $$;
+
+
+--
+-- Name: FUNCTION projects_visitor_metrics(p public.projects, period public.activity_stats_period); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) IS '@simpleCollections only';
+
+
+--
+-- Name: visitors; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.visitors (
+    "interval" interval NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    count integer NOT NULL
+);
+
+
+--
+-- Name: projects_visitors(public.projects, public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_visitors(p public.projects, period public.activity_stats_period) RETURNS SETOF public.visitors
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+      select
+        (
+          case period
+            when '24hrs' then '15 minutes'::interval
+            when '7-days' then '1 hour'::interval
+            when '30-days' then '1 day'::interval
+            when '6-months' then '1 day'::interval
+            when '1-year' then '1 day'::interval
+            when 'all-time' then '1 day'::interval
+            else '1 day'::interval
+          end
+        ),
+        dd as timestamp,
+        coalesce(
+          (
+            select 
+              count 
+            from 
+              project_visitors 
+            where timestamp = dd and 
+            interval = (
+              case period
+                when '24hrs' then '15 minutes'::interval
+                when '7-days' then '1 hour'::interval
+                when '30-days' then '1 day'::interval
+                when '6-months' then '1 day'::interval
+                when '1-year' then '1 day'::interval
+                when 'all-time' then '1 day'::interval
+                else '1 day'::interval
+              end
+            ) and
+            project_id = p.id
+          )
+          , 0
+        ) as count
+      FROM generate_series(
+          (
+            case period
+              when '24hrs' then (
+                (date_trunc('hour', now()) + floor(date_part('minute', now())::int / 15) * interval '15 min') - '24 hours'::interval
+              )
+              when '7-days' then date_trunc('day', now() - '7 days'::interval)
+              when '30-days' then date_trunc('day', now())::date - '30 days'::interval
+              when '6-months' then date_trunc('day', now())::date - '6 months'::interval
+              when '1-year' then date_trunc('day', now())::date - '1 year'::interval
+              when 'all-time' then date_trunc('day', now())::date - '1 month'::interval
+              else date_trunc('day', now())::date - '1 month'::interval
+            end
+          ),
+          (
+            now()
+          ), 
+          (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          )
+        ) dd
+      where session_is_admin(p.id)
+      ORDER BY timestamp;
+      -- project_id = p.id and 
+      --   interval = (
+      --     case period
+      --       when '24hrs' then '15 minutes'::interval
+      --       when '7-days' then '1 hour'::interval
+      --       when '30-days' then '1 day'::interval
+      --       when '6-months' then '1 day'::interval
+      --       when '1-year' then '1 day'::interval
+      --       when 'all-time' then '1 day'::interval
+      --       else '1 day'::interval
+      --     end
+      --   )
+      -- and timestamp >= now() - (
+      --   case period
+      --     when '24hrs' then '24 hours'::interval
+      --     when '7-days' then '7 days'::interval
+      --     when '30-days' then '30 days'::interval
+      --     when '6-months' then '6 months'::interval
+      --     when '1-year' then '1 year'::interval
+      --     else '1 year'::interval
+      --   end
+      -- )
+      -- order by timestamp asc
+  $$;
+
+
+--
+-- Name: FUNCTION projects_visitors(p public.projects, period public.activity_stats_period); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_visitors(p public.projects, period public.activity_stats_period) IS '@simpleCollections only';
+
+
+--
 -- Name: public_sprites(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12735,6 +12906,32 @@ CREATE FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer
 COMMENT ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) IS '
 Remove participant admin privileges.
 ';
+
+
+--
+-- Name: schedule_visitor_metric_collection_for_all_projects(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.schedule_visitor_metric_collection_for_all_projects() RETURNS void
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    p projects;
+  begin
+    for p in select * from projects loop
+      perform graphile_worker.add_job(
+      'collectProjectVisitorStats',
+      payload := json_build_object(
+        'id', p.id,
+        'slug', p.slug
+      ),
+      run_at := NOW() + '5 seconds',
+      queue_name := 'project-visitor-stats',
+      job_key := 'collectProjectVisitorStats:' || p.id
+    );
+    end loop;
+  end;
+  $$;
 
 
 --
@@ -15760,16 +15957,14 @@ $$;
 --
 
 CREATE TABLE public.visitor_metrics (
-    id integer NOT NULL,
-    project_id integer,
-    start timestamp with time zone NOT NULL,
-    last_updated timestamp with time zone NOT NULL,
     "interval" interval NOT NULL,
-    top_referrers jsonb,
-    top_operating_systems jsonb,
-    top_browsers jsonb,
-    top_device_types jsonb,
-    top_countries jsonb
+    "timestamp" timestamp with time zone NOT NULL,
+    month integer GENERATED ALWAYS AS (date_part('month'::text, timezone('UTC'::text, "timestamp"))) STORED NOT NULL,
+    top_referrers jsonb NOT NULL,
+    top_operating_systems jsonb NOT NULL,
+    top_browsers jsonb NOT NULL,
+    top_device_types jsonb NOT NULL,
+    top_countries jsonb NOT NULL
 );
 
 
@@ -15780,15 +15975,15 @@ CREATE TABLE public.visitor_metrics (
 CREATE FUNCTION public.visitor_metrics(period public.activity_stats_period) RETURNS SETOF public.visitor_metrics
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select * from visitor_metrics where session_is_superuser() and project_id is null and
+    select * from visitor_metrics where session_is_superuser() and
     interval = (
       case period
-        when '24hrs' then '1 day'::interval
+        when '24hrs' then '24 hours'::interval
         when '7-days' then '7 days'::interval
         when '30-days' then '30 days'::interval
         else '1 day'::interval
       end
-    ) order by start desc limit 1;
+    ) order by timestamp desc limit 1;
   $$;
 
 
@@ -15800,17 +15995,6 @@ COMMENT ON FUNCTION public.visitor_metrics(period public.activity_stats_period) 
 
 
 --
--- Name: visitors; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.visitors (
-    "interval" interval NOT NULL,
-    "timestamp" timestamp with time zone NOT NULL,
-    count integer NOT NULL
-);
-
-
---
 -- Name: visitors(public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15818,10 +16002,7 @@ CREATE FUNCTION public.visitors(period public.activity_stats_period) RETURNS SET
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select
-      *
-    from visitors
-    where session_is_superuser() and 
-      interval = (
+      (
         case period
           when '24hrs' then '15 minutes'::interval
           when '7-days' then '1 hour'::interval
@@ -15831,17 +16012,59 @@ CREATE FUNCTION public.visitors(period public.activity_stats_period) RETURNS SET
           when 'all-time' then '1 day'::interval
           else '1 day'::interval
         end
-      )
-    and timestamp >= now() - (
-      case period
-        when '24hrs' then '24 hours'::interval
-        when '7-days' then '7 days'::interval
-        when '30-days' then '30 days'::interval
-        when '6-months' then '6 months'::interval
-        when '1-year' then '1 year'::interval
-        else '1 year'::interval
-      end
-    )
+      ),
+      dd as timestamp,
+      coalesce(
+        (
+          select 
+            count 
+          from 
+            visitors 
+          where timestamp = dd
+          and interval = (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          )
+        )
+        , 0
+      ) as count
+    from generate_series(
+        (
+          case period
+            when '24hrs' then (
+              (date_trunc('hour', now()) + floor(date_part('minute', now())::int / 15) * interval '15 min') - '24 hours'::interval
+            )
+            when '7-days' then date_trunc('day', now() - '7 days'::interval)
+            when '30-days' then date_trunc('day', now())::date - '30 days'::interval
+            when '6-months' then date_trunc('day', now())::date - '6 months'::interval
+            when '1-year' then date_trunc('day', now())::date - '1 year'::interval
+            when 'all-time' then date_trunc('day', now())::date - '1 month'::interval
+            else date_trunc('day', now())::date - '1 month'::interval
+          end
+        ),
+        (
+          now()
+        ), 
+        (
+          case period
+            when '24hrs' then '15 minutes'::interval
+            when '7-days' then '1 hour'::interval
+            when '30-days' then '1 day'::interval
+            when '6-months' then '1 day'::interval
+            when '1-year' then '1 day'::interval
+            when 'all-time' then '1 day'::interval
+            else '1 day'::interval
+          end
+        )
+      ) dd
+    where session_is_superuser()
     order by timestamp asc
   $$;
 
@@ -16643,6 +16866,18 @@ COMMENT ON COLUMN public.project_participants.share_profile IS 'Whether user pro
 
 
 --
+-- Name: project_visitors; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_visitors (
+    project_id integer NOT NULL,
+    "interval" interval NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    count integer NOT NULL
+);
+
+
+--
 -- Name: projects_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -16966,20 +17201,6 @@ ALTER TABLE public.topics ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 ALTER TABLE public.users ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.users_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: visitor_metrics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.visitor_metrics ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.visitor_metrics_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -17444,6 +17665,22 @@ ALTER TABLE ONLY public.project_participants
 
 
 --
+-- Name: project_visitor_metrics project_visitor_metrics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_visitor_metrics
+    ADD CONSTRAINT project_visitor_metrics_pkey PRIMARY KEY (project_id, "interval", month);
+
+
+--
+-- Name: project_visitors project_visitors_project_id_interval_timestamp_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_visitors
+    ADD CONSTRAINT project_visitors_project_id_interval_timestamp_key UNIQUE (project_id, "interval", "timestamp");
+
+
+--
 -- Name: projects projects_legacy_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -17687,7 +17924,7 @@ ALTER TABLE ONLY public.users
 --
 
 ALTER TABLE ONLY public.visitor_metrics
-    ADD CONSTRAINT visitor_metrics_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT visitor_metrics_pkey PRIMARY KEY ("interval", month);
 
 
 --
@@ -18423,34 +18660,6 @@ CREATE INDEX user_profiles_user_id_idx ON public.user_profiles USING btree (user
 --
 
 CREATE INDEX users_sub ON public.users USING btree (sub);
-
-
---
--- Name: visitor_metrics_project_id_start_interval_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX visitor_metrics_project_id_start_interval_idx ON public.visitor_metrics USING btree (project_id, start, "interval");
-
-
---
--- Name: visitor_metrics_project_id_start_interval_idx1; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX visitor_metrics_project_id_start_interval_idx1 ON public.visitor_metrics USING btree (project_id, start, "interval");
-
-
---
--- Name: visitor_metrics_project_id_start_interval_idx2; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX visitor_metrics_project_id_start_interval_idx2 ON public.visitor_metrics USING btree (project_id, start, "interval");
-
-
---
--- Name: visitor_metrics_project_id_start_interval_idx3; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX visitor_metrics_project_id_start_interval_idx3 ON public.visitor_metrics USING btree (project_id, start, "interval");
 
 
 --
@@ -19573,6 +19782,22 @@ ALTER TABLE ONLY public.project_participants
 
 
 --
+-- Name: project_visitor_metrics project_visitor_metrics_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_visitor_metrics
+    ADD CONSTRAINT project_visitor_metrics_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
+
+
+--
+-- Name: project_visitors project_visitors_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_visitors
+    ADD CONSTRAINT project_visitors_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
+
+
+--
 -- Name: projects projects_creator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -19997,14 +20222,6 @@ ALTER TABLE ONLY public.user_profiles
 --
 
 COMMENT ON CONSTRAINT user_profiles_user_id_fkey ON public.user_profiles IS '@omit many';
-
-
---
--- Name: visitor_metrics visitor_metrics_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.visitor_metrics
-    ADD CONSTRAINT visitor_metrics_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
 
 
 --
@@ -20580,13 +20797,6 @@ CREATE POLICY select_user_profile ON public.user_profiles FOR SELECT TO seasketc
 
 
 --
--- Name: visitor_metrics select_visitor_metrics; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY select_visitor_metrics ON public.visitor_metrics FOR SELECT USING ((public.session_is_superuser() OR ((project_id IS NOT NULL) AND public.session_is_admin(project_id))));
-
-
---
 -- Name: visitors select_visitors_policy; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -20896,12 +21106,6 @@ CREATE POLICY user_profile_update ON public.user_profiles FOR UPDATE USING (publ
 --
 
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
-
---
--- Name: visitor_metrics; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.visitor_metrics ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: visitors; Type: ROW SECURITY; Schema: public; Owner: -
@@ -27385,6 +27589,29 @@ GRANT ALL ON FUNCTION public.projects_users_banned_from_forums(project public.pr
 
 
 --
+-- Name: FUNCTION projects_visitor_metrics(p public.projects, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) TO seasketch_user;
+
+
+--
+-- Name: TABLE visitors; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.visitors TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_visitors(p public.projects, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_visitors(p public.projects, period public.activity_stats_period) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_visitors(p public.projects, period public.activity_stats_period) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION public_sprites(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -27535,6 +27762,13 @@ REVOKE ALL ON FUNCTION public.replace(public.citext, public.citext, public.citex
 
 REVOKE ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION schedule_visitor_metric_collection_for_all_projects(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.schedule_visitor_metric_collection_for_all_projects() FROM PUBLIC;
 
 
 --
@@ -31518,13 +31752,6 @@ REVOKE ALL ON FUNCTION public.uuid_ns_x500() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.visitor_metrics(period public.activity_stats_period) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.visitor_metrics(period public.activity_stats_period) TO seasketch_user;
-
-
---
--- Name: TABLE visitors; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.visitors TO seasketch_user;
 
 
 --

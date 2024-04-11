@@ -1,0 +1,25 @@
+query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
+  projectBySlug(slug: $slug) {
+    id
+    activity(period: $period) {
+      dataSources
+      sketches
+      surveyResponses
+      uploadedLayers
+      uploadsStorageUsed
+      forumPosts
+      registeredUsers
+    }
+    visitors(period: $period) {
+      count
+      timestamp
+    }
+    visitorMetrics(period: $period) {
+      topOperatingSystems
+      topReferrers
+      topBrowsers
+      topCountries
+      topDeviceTypes
+    }
+  }
+}

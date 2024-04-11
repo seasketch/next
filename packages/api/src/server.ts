@@ -244,6 +244,7 @@ run({
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
   * * * * * collectVisitorStats
+  * * * * * identifyVisitedProjects
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {

@@ -1,8 +1,4 @@
 import { Helpers } from "graphile-worker";
-import { PoolClient } from "pg";
-
-const endpoint = `https://api.cloudflare.com/client/v4/graphql`;
-
 /**
  * Database triggers are setup to run this task (debounced) whenever
  * a table of contents item or data upload ouput is deleted. This ensures
@@ -19,7 +15,6 @@ export default async function recordProjectActivity(
   helpers: Helpers
 ) {
   await helpers.withPgClient(async (client) => {
-    console.log("recording project activity");
     await client.query("select record_project_activity($1)", [
       payload.projectId,
     ]);

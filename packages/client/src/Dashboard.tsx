@@ -16,7 +16,7 @@ import {
 } from "@radix-ui/react-icons";
 import { ReactNode, useMemo, useState } from "react";
 import { ChatIcon } from "@heroicons/react/outline";
-import React, { useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import * as d3 from "d3";
 import Warning from "./components/Warning";
 
@@ -287,7 +287,7 @@ export function StatItem({
   );
 }
 
-function VisitorMetrics({
+export function VisitorMetrics({
   label,
   data,
 }: {
@@ -302,6 +302,7 @@ function VisitorMetrics({
     <div className="p-2 md:p-4 flex-1 max-w-sm">
       <h4 className="font-semibold pb-1">{label}</h4>
       <ul className="w-full text-sm">
+        {data.length === 0 && <li>None</li>}
         {data.map((item) => (
           <li key={item.label} className="flex items-center space-x-1">
             <span className="w-36 truncate flex-none">{item.label}</span>
@@ -328,7 +329,7 @@ function VisitorMetrics({
  * VisitorLineChart
  * Line chart of visitors over time, implemented with D3
  */
-function VisitorLineChart({
+export function VisitorLineChart({
   data,
   period,
 }: {
@@ -336,10 +337,23 @@ function VisitorLineChart({
   period: ActivityStatsPeriod;
 }) {
   const chartRef = useRef<SVGSVGElement | null>(null);
+  const [width, setWidth] = useState(document.body.clientWidth);
+  // Update width on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWidth(document.body.clientWidth);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     if (!data || data.length === 0) return;
-
+    if (chartRef.current) {
+      chartRef.current.querySelectorAll("*").forEach((el) => el.remove());
+    }
     const margin = { top: 30, right: 30, bottom: 58, left: 50 };
     const width = chartRef.current?.clientWidth || 0;
     const height = 300;
@@ -354,15 +368,15 @@ function VisitorLineChart({
       .domain(d3.extent(data, (d) => d.timestamp) as [Date, Date])
       .range([margin.left, width - margin.right]);
 
+    const maxY = d3.max(data, (d) => d.count) as number;
     const y = d3
       .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.count) as number])
+      .domain([0, maxY < 3 ? 3 : maxY])
       .nice()
       .range([height - margin.bottom, margin.top]);
 
     const line = d3
       .line<{ timestamp: Date; count: number }>()
-      // .curve(d3.curveBasisOpen)
       .x((d) => x(d.timestamp))
       .y((d) => y(d.count));
 
@@ -424,11 +438,18 @@ function VisitorLineChart({
     svg
       .append("g")
       .attr("transform", `translate(${margin.left},0)`)
-      .call(d3.axisLeft(y));
+      .call(
+        d3.axisLeft(y).tickFormat(function (d: any) {
+          if (d % 1 == 0) {
+            return Math.round(d).toString();
+          } else {
+            return "";
+          }
+        })
+      );
 
     const area = d3
       .area<{ timestamp: Date; count: number }>()
-      // .curve(d3.curveBasis)
       .x((d) => x(d.timestamp))
       .y1((d) => y(d.count))
       .y0((d) => y(0));
@@ -445,7 +466,7 @@ function VisitorLineChart({
     gradient
       .append("stop")
       .attr("offset", "10%")
-      .style("stop-color", "rgb(61,112,200)")
+      .style("stop-color", "rgb(76,124,187)")
       .style("stop-opacity", 0.8);
 
     gradient
@@ -545,7 +566,7 @@ function VisitorLineChart({
         `M${-w / 2 - 10},5H-5l5,-5l5,5H${w / 2 + 10}v${h + 10}h-${w + 20}z`
       );
     }
-  }, [data, period]);
+  }, [data, period, width]);
 
-  return <svg ref={chartRef}></svg>;
+  return <svg className="w-full" ref={chartRef}></svg>;
 }

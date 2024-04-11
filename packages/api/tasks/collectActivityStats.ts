@@ -17,7 +17,10 @@ export default async function collectActivityStats(
     const recentProjectActivity = await client.query(`
       select get_projects_with_recent_activity() as project_ids
     `);
-    if (recentProjectActivity.rowCount === 0) {
+    if (
+      recentProjectActivity.rowCount === 0 ||
+      !recentProjectActivity.rows[0].project_ids
+    ) {
       return;
     }
     const projectIds = recentProjectActivity.rows[0].project_ids as number[];

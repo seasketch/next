@@ -31,6 +31,7 @@ import useDialog from "../components/useDialog";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import LanguageSelector from "../surveys/LanguageSelector";
 import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
+import { useLocalStorage } from "beautiful-react-hooks";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
@@ -56,6 +57,9 @@ const LazyOfflineAdmin = React.lazy(
       /* webpackChunkName: "AdminOffline" */ "../offline/AdminOfflineSettingsPage"
     )
 );
+const LazyActivityAdmin = React.lazy(
+  () => import(/* webpackChunkName: "Activity" */ "./activity/ProjectDashboard")
+);
 
 const LazyBasemapTilingSettingsPage = React.lazy(
   () =>
@@ -75,6 +79,7 @@ interface Section {
   breadcrumb: string;
   icon: React.ReactNode;
   path: string;
+  new?: boolean;
 }
 
 const iconClassName =
@@ -148,26 +153,27 @@ export default function AdminApp() {
       ),
       path: "/admin",
     },
-    // {
-    //   breadcrumb: t("Activity"),
-    //   icon: (
-    //     <svg
-    //       className={iconClassName}
-    //       xmlns="http://www.w3.org/2000/svg"
-    //       fill="none"
-    //       viewBox="0 0 24 24"
-    //       stroke="currentColor"
-    //     >
-    //       <path
-    //         strokeLinecap="round"
-    //         strokeLinejoin="round"
-    //         strokeWidth={2}
-    //         d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-    //       />
-    //     </svg>
-    //   ),
-    //   path: "/admin/activity",
-    // },
+    {
+      breadcrumb: t("Activity"),
+      new: true,
+      icon: (
+        <svg
+          className={iconClassName}
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      ),
+      path: "/admin/activity",
+    },
     {
       breadcrumb: "Users & Groups",
       icon: (
@@ -368,7 +374,11 @@ export default function AdminApp() {
               <LazyBasicSettings />
             </React.Suspense>
           </Route>
-          <Route exact path={`${path}/activity`}></Route>
+          <Route exact path={`${path}/activity`}>
+            <React.Suspense fallback={<Spinner />}>
+              <LazyActivityAdmin />
+            </React.Suspense>
+          </Route>
           <Route
             path={[
               `${path}/users`,
@@ -449,6 +459,12 @@ function SidebarContents(props: {
   sections: Section[];
   supportedLanguages: string[];
 }) {
+  const [newDismissed, setNewDismissed] = useLocalStorage(
+    "new-dismissed-activity",
+    false
+  );
+
+  const showNewFlag = !newDismissed && new Date() < new Date("2024-05-28");
   const cache = useContext(GraphqlQueryCacheContext);
   const { t } = useTranslation("admin");
   const { user, logout } = useAuth0();
@@ -490,12 +506,18 @@ function SidebarContents(props: {
             <NavLink
               exact={section.path === "/admin"}
               key={section.path}
+              onClick={section.new ? () => setNewDismissed(true) : undefined}
               to={`/${props.slug}${section.path}`}
               activeClassName="bg-primary-600 text-white"
               className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
             >
               {section.icon}
               {section.breadcrumb}
+              {section.new && showNewFlag && (
+                <span className="ml-auto inline-block text-xs bg-indigo-500 text-white font-semibold rounded-full px-2 py-0.5">
+                  {t("New")}
+                </span>
+              )}
             </NavLink>
           ))}
           {userId && (
