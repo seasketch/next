@@ -86,11 +86,10 @@ export default function ContextMenuDropdown({
                   ? props.id || label
                   : i.toString()
               }
-              className="text-sm leading-none rounded flex items-center h-6 relative select-none outline-none hover:bg-primary-600 hover:text-gray-100 px-1.5"
+              className="text-sm leading-none rounded flex items-center h-6 relative select-none outline-none hover:bg-primary-600 hover:text-gray-100 px-1.5 cursor-pointer"
+              onClick={onOptionClick(props)}
             >
-              <button disabled={disabled} onClick={onOptionClick(props)}>
-                {label}
-              </button>
+              <button disabled={disabled}>{label}</button>
             </span>
           );
         })}
