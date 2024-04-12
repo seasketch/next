@@ -98,6 +98,15 @@ export type AclPatch = {
   type?: Maybe<AccessControlListType>;
 };
 
+export enum ActivityStatsPeriod {
+  '1Year' = '_1_YEAR',
+  '24Hrs' = '_24HRS',
+  '30Days' = '_30_DAYS',
+  '6Months' = '_6_MONTHS',
+  '7Days' = '_7_DAYS',
+  AllTime = 'ALL_TIME'
+}
+
 /** All input for the `addGroupToAcl` mutation. */
 export type AddGroupToAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -1942,6 +1951,18 @@ export enum CursorType {
   Default = 'DEFAULT',
   Pointer = 'POINTER'
 }
+
+export type DashboardStat = {
+  __typename?: 'DashboardStat';
+  dataSources?: Maybe<Scalars['Int']>;
+  forumPosts?: Maybe<Scalars['Int']>;
+  projects?: Maybe<Scalars['Int']>;
+  sketches?: Maybe<Scalars['Int']>;
+  surveyResponses?: Maybe<Scalars['Int']>;
+  uploadedBytes?: Maybe<Scalars['BigInt']>;
+  uploads?: Maybe<Scalars['Int']>;
+  users?: Maybe<Scalars['Int']>;
+};
 
 /**
  * Data layers represent multiple MapBox GL Style layers tied to a single source.
@@ -5865,6 +5886,47 @@ export enum InteractivityType {
   Tooltip = 'TOOLTIP'
 }
 
+/** An interval of time that has passed where the smallest distinct unit is a second. */
+export type Interval = {
+  __typename?: 'Interval';
+  /** A quantity of days. */
+  days?: Maybe<Scalars['Int']>;
+  /** A quantity of hours. */
+  hours?: Maybe<Scalars['Int']>;
+  /** A quantity of minutes. */
+  minutes?: Maybe<Scalars['Int']>;
+  /** A quantity of months. */
+  months?: Maybe<Scalars['Int']>;
+  /**
+   * A quantity of seconds. This is the only non-integer field, as all the other
+   * fields will dump their overflow into a smaller unit of time. Intervals don’t
+   * have a smaller unit than seconds.
+   */
+  seconds?: Maybe<Scalars['Float']>;
+  /** A quantity of years. */
+  years?: Maybe<Scalars['Int']>;
+};
+
+/** An interval of time that has passed where the smallest distinct unit is a second. */
+export type IntervalInput = {
+  /** A quantity of days. */
+  days?: Maybe<Scalars['Int']>;
+  /** A quantity of hours. */
+  hours?: Maybe<Scalars['Int']>;
+  /** A quantity of minutes. */
+  minutes?: Maybe<Scalars['Int']>;
+  /** A quantity of months. */
+  months?: Maybe<Scalars['Int']>;
+  /**
+   * A quantity of seconds. This is the only non-integer field, as all the other
+   * fields will dump their overflow into a smaller unit of time. Intervals don’t
+   * have a smaller unit than seconds.
+   */
+  seconds?: Maybe<Scalars['Float']>;
+  /** A quantity of years. */
+  years?: Maybe<Scalars['Int']>;
+};
+
 /**
  * Invite emails can be associated with either a project or survey invitation.
  * Project invite emails are sent by direct admin action, going into a QUEUED state
@@ -8858,6 +8920,7 @@ export type Project = Node & {
   accessRequestsConnection: UsersConnection;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   activeDataUploads?: Maybe<Array<DataUploadTask>>;
+  activity?: Maybe<ProjectActivityStat>;
   adminCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
@@ -9043,6 +9106,10 @@ export type Project = Node & {
   url?: Maybe<Scalars['String']>;
   /** List of all banned users. Listing only accessible to admins. */
   usersBannedFromForums?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `ProjectVisitorMetric`. */
+  visitorMetrics?: Maybe<Array<ProjectVisitorMetric>>;
+  /** Reads and enables pagination through a set of `Visitor`. */
+  visitors?: Maybe<Array<Visitor>>;
 };
 
 
@@ -9068,6 +9135,15 @@ export type ProjectAccessRequestsConnectionArgs = {
 export type ProjectActiveDataUploadsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectActivityArgs = {
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 
@@ -9375,6 +9451,28 @@ export type ProjectUsersBannedFromForumsArgs = {
   offset?: Maybe<Scalars['Int']>;
 };
 
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectVisitorMetricsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectVisitorsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
 export enum ProjectAccessControlSetting {
   AdminsOnly = 'ADMINS_ONLY',
   InviteOnly = 'INVITE_ONLY',
@@ -9390,6 +9488,24 @@ export enum ProjectAccessStatus {
   Granted = 'GRANTED',
   ProjectDoesNotExist = 'PROJECT_DOES_NOT_EXIST'
 }
+
+export type ProjectActivityStat = {
+  __typename?: 'ProjectActivityStat';
+  dataSources?: Maybe<Scalars['Int']>;
+  forumPosts?: Maybe<Scalars['Int']>;
+  newDataSources?: Maybe<Scalars['Int']>;
+  newForumPosts?: Maybe<Scalars['Int']>;
+  newSketches?: Maybe<Scalars['Int']>;
+  newSurveyResponses?: Maybe<Scalars['Int']>;
+  newUploadedBytes?: Maybe<Scalars['BigInt']>;
+  newUploadedLayers?: Maybe<Scalars['Int']>;
+  newUsers?: Maybe<Scalars['Int']>;
+  registeredUsers?: Maybe<Scalars['Int']>;
+  sketches?: Maybe<Scalars['Int']>;
+  surveyResponses?: Maybe<Scalars['Int']>;
+  uploadedLayers?: Maybe<Scalars['Int']>;
+  uploadsStorageUsed?: Maybe<Scalars['BigInt']>;
+};
 
 export type ProjectBackgroundJob = Node & {
   __typename?: 'ProjectBackgroundJob';
@@ -9751,6 +9867,23 @@ export type ProjectPatch = {
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
+export type ProjectVisitorMetric = Node & {
+  __typename?: 'ProjectVisitorMetric';
+  interval: Interval;
+  month: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `ProjectVisitorMetric`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  timestamp: Scalars['Datetime'];
+  topBrowsers: Scalars['JSON'];
+  topCountries: Scalars['JSON'];
+  topDeviceTypes: Scalars['JSON'];
+  topOperatingSystems: Scalars['JSON'];
+  topReferrers: Scalars['JSON'];
+};
+
 /** A connection to a list of `Project` values. */
 export type ProjectsConnection = {
   __typename?: 'ProjectsConnection';
@@ -9893,6 +10026,8 @@ export type Query = Node & {
   aclByNodeId?: Maybe<Acl>;
   aclBySketchClassId?: Maybe<Acl>;
   aclByTableOfContentsItemId?: Maybe<Acl>;
+  /** Reads and enables pagination through a set of `Project`. */
+  activeProjects?: Maybe<Array<Project>>;
   basemap?: Maybe<Basemap>;
   /** Reads a single `Basemap` using its globally unique `ID`. */
   basemapByNodeId?: Maybe<Basemap>;
@@ -9918,6 +10053,7 @@ export type Query = Node & {
   /** @deprecated Use project_access_status(slug) instead */
   currentProjectAccessStatus?: Maybe<ProjectAccessStatus>;
   currentUserIsSuperuser: Scalars['Boolean'];
+  dashboardStats?: Maybe<DashboardStat>;
   dataLayer?: Maybe<DataLayer>;
   dataLayerByInteractivitySettingsId?: Maybe<DataLayer>;
   /** Reads a single `DataLayer` using its globally unique `ID`. */
@@ -10118,6 +10254,13 @@ export type Query = Node & {
    * [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
    */
   verifySurveyInvite?: Maybe<SurveyInviteTokenVerificationResults>;
+  visitorByIntervalAndTimestamp?: Maybe<Visitor>;
+  /** Reads and enables pagination through a set of `VisitorMetric`. */
+  visitorMetrics?: Maybe<Array<VisitorMetric>>;
+  /** Reads and enables pagination through a set of `Visitor`. */
+  visitors?: Maybe<Array<Visitor>>;
+  /** Reads and enables pagination through a set of `Visitor`. */
+  visitorsConnection?: Maybe<VisitorsConnection>;
 };
 
 
@@ -10148,6 +10291,15 @@ export type QueryAclBySketchClassIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryAclByTableOfContentsItemIdArgs = {
   tableOfContentsItemId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryActiveProjectsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  limit?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 
@@ -11037,6 +11189,41 @@ export type QueryVerifyProjectInviteArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryVerifySurveyInviteArgs = {
   token: Scalars['String'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorByIntervalAndTimestampArgs = {
+  interval: IntervalInput;
+  timestamp: Scalars['Datetime'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorMetricsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryVisitorsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<VisitorCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<VisitorsOrderBy>>;
 };
 
 export type QuotaDetail = {
@@ -14867,6 +15054,62 @@ export enum UsersOrderBy {
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export type Visitor = {
+  __typename?: 'Visitor';
+  count: Scalars['Int'];
+  interval: Interval;
+  timestamp: Scalars['Datetime'];
+};
+
+/** A condition to be used against `Visitor` object types. All fields are tested for equality and combined with a logical ‘and.’ */
+export type VisitorCondition = {
+  /** Checks for equality with the object’s `interval` field. */
+  interval?: Maybe<IntervalInput>;
+};
+
+export type VisitorMetric = Node & {
+  __typename?: 'VisitorMetric';
+  interval: Interval;
+  month: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  timestamp: Scalars['Datetime'];
+  topBrowsers: Scalars['JSON'];
+  topCountries: Scalars['JSON'];
+  topDeviceTypes: Scalars['JSON'];
+  topOperatingSystems: Scalars['JSON'];
+  topReferrers: Scalars['JSON'];
+};
+
+/** A connection to a list of `Visitor` values. */
+export type VisitorsConnection = {
+  __typename?: 'VisitorsConnection';
+  /** A list of edges which contains the `Visitor` and cursor to aid in pagination. */
+  edges: Array<VisitorsEdge>;
+  /** A list of `Visitor` objects. */
+  nodes: Array<Visitor>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `Visitor` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `Visitor` edge in the connection. */
+export type VisitorsEdge = {
+  __typename?: 'VisitorsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `Visitor` at the end of the edge. */
+  node: Visitor;
+};
+
+/** Methods to use when ordering `Visitor`. */
+export enum VisitorsOrderBy {
+  IntervalAsc = 'INTERVAL_ASC',
+  IntervalDesc = 'INTERVAL_DESC',
+  Natural = 'NATURAL'
 }
 
 export type WorkerJob = {

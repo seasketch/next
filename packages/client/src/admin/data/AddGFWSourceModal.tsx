@@ -30,7 +30,6 @@ export default function AddGFWSourceModal({
       ]
         .map((d) => d.toISOString().split("T")[0])
         .join(",");
-      console.log("dateRange", dateRange);
       const controller = new AbortController();
       const layers = map
         .getStyle()
@@ -48,9 +47,10 @@ export default function AddGFWSourceModal({
           map.addSource("gfw", {
             type: "vector",
             maxzoom: 12,
-            promoteId: "cell",
+            promoteId: "id",
             tiles: [
-              `https://gateway.api.globalfishingwatch.org/v3/4wings/tile/heatmap/{z}/{x}/{y}?datasets[0]=public-global-fishing-effort:latest&date-range=2023-01-01,2024-01-01&token=${process.env.REACT_APP_GFW_API_TOKEN}&interval=YEAR&format=MVT&temporal-aggregation=true`,
+              // `https://gateway.api.globalfishingwatch.org/v3/4wings/tile/heatmap/{z}/{x}/{y}?datasets[0]=public-global-fishing-effort:latest&date-range=2023-01-01,2024-01-01&token=${process.env.REACT_APP_GFW_API_TOKEN}&interval=YEAR&format=MVT&temporal-aggregation=true`,
+              `https://gateway.api.globalfishingwatch.org/v3/4wings/tile/heatmap/{z}/{x}/{y}?datasets[0]=public-global-fishing-effort:latest&date-range=2012-01-01,2024-01-01&token=${process.env.REACT_APP_GFW_API_TOKEN}&interval=YEAR&format=MVT&temporal-aggregation=false`,
             ],
           });
           const sourceLayer = "main";
@@ -98,7 +98,7 @@ export default function AddGFWSourceModal({
               id: `gfw-${z}`,
               minzoom: parseInt(z),
               ...(levels[levels.length - 1] !== z
-                ? { maxzoom: parseInt(z) + 1 }
+                ? { maxzoom: parseInt(z) + 3 }
                 : {}),
               type: "fill",
               source: "gfw",
@@ -106,19 +106,18 @@ export default function AddGFWSourceModal({
               paint: {
                 "fill-color": [
                   "step",
-                  ["to-number", ["get", "count"], 0],
+                  ["to-number", ["get", state.year.toString()], 0],
                   ...(steps.length <= 2 ? ["transparent", 1, steps[0]] : steps),
                 ],
                 "fill-outline-color": "transparent",
                 "fill-opacity": [
                   "interpolate",
                   ["linear"],
-                  ["to-number", ["get", "count"], -1],
-                  -1,
+                  ["to-number", ["get", state.year.toString()], -1],
                   0,
                   0,
-                  0.08,
-                  1,
+                  // @ts-ignore
+                  steps[1] * 1.5,
                   1,
                 ],
               },
@@ -178,8 +177,7 @@ export default function AddGFWSourceModal({
           hoveredId = null;
         }
         const f = features[0];
-        if (f) {
-          console.log(f.properties);
+        if (f && f.properties && f.properties[state.year] > 0) {
           map.setFeatureState(
             {
               source: "gfw",
@@ -241,7 +239,9 @@ export default function AddGFWSourceModal({
             ? t("1 hour fished")
             : !state.hoverData.properties[state.year]
             ? t("< 1 hour fished")
-            : state.hoverData.properties[state.year] + " " + t("hours fished")}
+            : state.hoverData.properties[state.year].toLocaleString() +
+              " " +
+              t("hours fished")}
         </div>
       )}
       <div>
@@ -257,7 +257,7 @@ export default function AddGFWSourceModal({
             }
           >
             {/* <option value="all">{t("All data since 2012")}</option> */}
-            {[...new Array(new Date().getFullYear() - 2012).keys()]
+            {[...new Array(new Date().getFullYear() + 1 - 2012).keys()]
               .reverse()
               .map((n) => n + 2012)
               .map((year) => (
@@ -310,61 +310,73 @@ async function getBins(dateRange: string, signal: AbortSignal, maxZoom = 12) {
       throw new Error("No data found for date range " + dateRange);
     } else {
       bins[z] = data.entries[0].map((entry: number) => ({
-        value: Math.round(entry) / 400,
+        value: Math.round(entry) / (50 * (z / 5)),
         color: scale(data.entries.indexOf(entry) / data.entries.length),
       }));
     }
   }
+  // bins["7"] = [
+  //   { value: 0, color: scale(0) },
+  //   { value: 1, color: scale(0.1) },
+  //   { value: 2, color: scale(0.2) },
+  //   { value: 5, color: scale(0.3) },
+  //   { value: 10, color: scale(0.4) },
+  //   { value: 20, color: scale(0.5) },
+  //   { value: 40, color: scale(0.6) },
+  //   { value: 80, color: scale(0.7) },
+  //   { value: 100, color: scale(0.8) },
+  //   { value: 110, color: scale(0.9) },
+  // ];
   return bins;
 }
 
-let responseCache: any = null;
+// let responseCache: any = null;
 
-async function getBinsByStyleEndpoint(
-  dateRange: string,
-  signal: AbortSignal
-  // maxZoom = 12
-) {
-  // const zoomLevels = Array.from({ length: maxZoom + 1 }, (_, i) => i);
-  const bins: { [z: string]: { color: string; value: number }[] } = {};
-  // for (const z of zoomLevels) {
-  if (signal.aborted) {
-    throw new Error("Aborted");
-  }
-  const url = new URL(
-    `https://gateway.api.globalfishingwatch.org/v3/4wings/generate-png`
-  );
-  url.searchParams.set("date-range", dateRange);
-  url.searchParams.set("datasets[0]", "public-global-fishing-effort:latest");
-  url.searchParams.set("token", process.env.REACT_APP_GFW_API_TOKEN!);
-  url.searchParams.set("interval", "YEAR");
-  url.searchParams.set("color", "#55ffd2");
-  // url.searchParams.set("num-bins", "20");
-  // url.searchParams.set("temporal-aggregation", "true");
-  if (!responseCache) {
-    const response = await fetch(url.toString(), { signal, method: "POST" });
-    const data = await response.json();
-    responseCache = data;
-  }
-  const data = responseCache;
-  if (!data.colorRamp.stepsByZoom) {
-    throw new Error("No data found for date range " + dateRange);
-  } else {
-    for (const key in data.colorRamp.stepsByZoom) {
-      const z = parseInt(key);
-      const entries = data.colorRamp.stepsByZoom[key] as {
-        color: string;
-        value: number;
-      }[];
-      bins[z] = entries.sort((a, b) => a.value - b.value);
-    }
-    // bins[z] = data.entries[0];
-    // if (z === 8) {
-    //   bins[8] = [0, 1, 2, 5, 10, 20, 40, 80, 100, 200];
-    // } else if (z === 9) {
-    //   bins[9] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-    // }
-  }
-  // }
-  return bins;
-}
+// async function getBinsByStyleEndpoint(
+//   dateRange: string,
+//   signal: AbortSignal
+//   // maxZoom = 12
+// ) {
+//   // const zoomLevels = Array.from({ length: maxZoom + 1 }, (_, i) => i);
+//   const bins: { [z: string]: { color: string; value: number }[] } = {};
+//   // for (const z of zoomLevels) {
+//   if (signal.aborted) {
+//     throw new Error("Aborted");
+//   }
+//   const url = new URL(
+//     `https://gateway.api.globalfishingwatch.org/v3/4wings/generate-png`
+//   );
+//   url.searchParams.set("date-range", dateRange);
+//   url.searchParams.set("datasets[0]", "public-global-fishing-effort:latest");
+//   url.searchParams.set("token", process.env.REACT_APP_GFW_API_TOKEN!);
+//   url.searchParams.set("interval", "YEAR");
+//   url.searchParams.set("color", "#55ffd2");
+//   // url.searchParams.set("num-bins", "20");
+//   // url.searchParams.set("temporal-aggregation", "true");
+//   if (!responseCache) {
+//     const response = await fetch(url.toString(), { signal, method: "POST" });
+//     const data = await response.json();
+//     responseCache = data;
+//   }
+//   const data = responseCache;
+//   if (!data.colorRamp.stepsByZoom) {
+//     throw new Error("No data found for date range " + dateRange);
+//   } else {
+//     for (const key in data.colorRamp.stepsByZoom) {
+//       const z = parseInt(key);
+//       const entries = data.colorRamp.stepsByZoom[key] as {
+//         color: string;
+//         value: number;
+//       }[];
+//       bins[z] = entries.sort((a, b) => a.value - b.value);
+//     }
+//     // bins[z] = data.entries[0];
+//     // if (z === 8) {
+//     //   bins[8] = [0, 1, 2, 5, 10, 20, 40, 80, 100, 200];
+//     // } else if (z === 9) {
+//     //   bins[9] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+//     // }
+//   }
+//   // }
+//   return bins;
+// }
