@@ -66,11 +66,17 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
           dimensions: {
             metric: string;
           };
+          sum: {
+            visits: number;
+          };
         }[];
         countries: {
           count: number;
           dimensions: {
             metric: string;
+          };
+          sum: {
+            visits: number;
           };
         }[];
         topBrowsers: {
@@ -78,17 +84,26 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
           dimensions: {
             metric: string;
           };
+          sum: {
+            visits: number;
+          };
         }[];
         topDeviceTypes: {
           count: number;
           dimensions: {
             metric: string;
           };
+          sum: {
+            visits: number;
+          };
         }[];
         topOSs: {
           count: number;
           dimensions: {
             metric: string;
+          };
+          sum: {
+            visits: number;
           };
         }[];
       }[];
@@ -105,32 +120,32 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
 
   metrics.topBrowsers = response.viewer.accounts[0].topBrowsers.map((item) => ({
     label: item.dimensions.metric,
-    count: item.count,
+    count: item.sum.visits,
   }));
 
   metrics.topCountries = response.viewer.accounts[0].countries.map((item) => ({
     label: countryFormatter.of(item.dimensions.metric)?.toString() || "Unknown",
-    count: item.count,
+    count: item.sum.visits,
   }));
 
   metrics.topDeviceTypes = response.viewer.accounts[0].topDeviceTypes.map(
     (item) => ({
       label: item.dimensions.metric,
-      count: item.count,
+      count: item.sum.visits,
     })
   );
 
   metrics.topOperatingSystems = response.viewer.accounts[0].topOSs.map(
     (item) => ({
       label: item.dimensions.metric,
-      count: item.count,
+      count: item.sum.visits,
     })
   );
 
   metrics.topReferrers = response.viewer.accounts[0].topReferers.map(
     (item) => ({
       label: item.dimensions.metric,
-      count: item.count,
+      count: item.sum.visits,
     })
   );
 
@@ -161,6 +176,7 @@ export async function getVisitedSlugs(start: Date, end: Date) {
       },
       {
         siteTag: process.env.CLOUDFLARE_SITE_TAG,
+        bot: 0,
       },
     ],
   };
@@ -172,6 +188,9 @@ export async function getVisitedSlugs(start: Date, end: Date) {
           count: number;
           dimensions: {
             metric: string;
+          };
+          sum: {
+            visits: number;
           };
         }[];
       }[];
