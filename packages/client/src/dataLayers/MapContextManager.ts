@@ -440,7 +440,7 @@ class MapContextManager extends EventEmitter {
     );
 
     if (this.internalState.showScale) {
-      this.map.addControl(this.scaleControl);
+      this.map.addControl(this.scaleControl, "bottom-right");
     }
 
     this.map.on("error", this.onMapError);
@@ -591,7 +591,7 @@ class MapContextManager extends EventEmitter {
     if (this.map) {
       if (show) {
         if (!this.map.hasControl(this.scaleControl)) {
-          this.map.addControl(this.scaleControl);
+          this.map.addControl(this.scaleControl, "bottom-right");
         }
       } else {
         if (this.map.hasControl(this.scaleControl)) {
