@@ -2900,7 +2900,9 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  updateLegends = debounce(this._updateLegends, 20);
+  updateLegends = debounce(this._updateLegends, 20, {
+    maxWait: 1000,
+  });
 
   hideLayer(stableId: string) {
     const state = this.visibleLayers[stableId];
