@@ -116,8 +116,9 @@ export default function AddGFWSourceModal({
                   ["to-number", ["get", state.year.toString()], -1],
                   0,
                   0,
-                  // @ts-ignore
-                  steps[1] * 1.5,
+                  0.5,
+                  0.2,
+                  steps[5],
                   1,
                 ],
               },
@@ -309,9 +310,9 @@ async function getBins(dateRange: string, signal: AbortSignal, maxZoom = 12) {
     if (!data.entries) {
       throw new Error("No data found for date range " + dateRange);
     } else {
-      bins[z] = data.entries[0].map((entry: number) => ({
-        value: Math.round(entry) / (50 * (z / 5)),
-        color: scale(data.entries.indexOf(entry) / data.entries.length),
+      bins[z] = data.entries[0].map((entry: number, index: number) => ({
+        value: Math.round(entry), // / (50 * (z / 5)),
+        color: scale(index + 1 / data.entries.length),
       }));
     }
   }
@@ -327,6 +328,18 @@ async function getBins(dateRange: string, signal: AbortSignal, maxZoom = 12) {
   //   { value: 100, color: scale(0.8) },
   //   { value: 110, color: scale(0.9) },
   // ];
+
+  const binsZero = bins["0"];
+  for (const z in bins) {
+    if (parseInt(z) > 7) {
+      bins[z] = bins["7"];
+    } else {
+      bins[z] = binsZero.map((entry, index) => ({
+        value: entry.value / 4 ** (parseInt(z) + 1),
+        color: entry.color,
+      }));
+    }
+  }
   return bins;
 }
 
