@@ -1,5 +1,4 @@
 import { Helpers } from "graphile-worker";
-import { PoolClient } from "pg";
 import { getVisitorMetrics, getRealUserVisits } from "../src/visitorMetrics";
 
 export default async function collectVisitorStats(

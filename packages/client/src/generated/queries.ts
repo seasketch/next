@@ -6272,6 +6272,16 @@ export enum MapBookmarksOrderBy {
   VisibleDataLayersDesc = 'VISIBLE_DATA_LAYERS_DESC'
 }
 
+export type MapDataRequest = Node & {
+  __typename?: 'MapDataRequest';
+  cacheHitRatio: Scalars['Float'];
+  count: Scalars['Int'];
+  interval: Interval;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  timestamp: Scalars['Datetime'];
+};
+
 /** All input for the `markTopicAsRead` mutation. */
 export type MarkTopicAsReadInput = {
   /**
@@ -10069,6 +10079,8 @@ export type Query = Node & {
   lcfirst?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `MapBookmark`. */
   mapBookmarksConnection?: Maybe<MapBookmarksConnection>;
+  /** Reads and enables pagination through a set of `MapDataRequest`. */
+  mapDataRequests?: Maybe<Array<MapDataRequest>>;
   /** Access the current session's User. The user is determined by the access token embedded in the `Authorization` header. */
   me?: Maybe<User>;
   /** Fetches an object given its globally unique `ID`. */
@@ -10622,6 +10634,14 @@ export type QueryMapBookmarksConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryMapDataRequestsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 
@@ -16116,6 +16136,9 @@ export type DashboardStatsQuery = (
   )>>, visitors?: Maybe<Array<(
     { __typename?: 'Visitor' }
     & Pick<Visitor, 'count' | 'timestamp'>
+  )>>, mapDataRequests?: Maybe<Array<(
+    { __typename?: 'MapDataRequest' }
+    & Pick<MapDataRequest, 'count' | 'timestamp' | 'cacheHitRatio'>
   )>> }
 );
 
@@ -22428,6 +22451,11 @@ export const DashboardStatsDocument = /*#__PURE__*/ gql`
   visitors(period: $period) {
     count
     timestamp
+  }
+  mapDataRequests(period: $period) {
+    count
+    timestamp
+    cacheHitRatio
   }
 }
     `;

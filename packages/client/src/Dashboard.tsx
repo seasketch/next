@@ -34,6 +34,10 @@ export default function Dashboard() {
   const totalVisitors = useMemo(() => {
     return data?.visitors?.reduce((acc, v) => acc + v.count, 0);
   }, [data?.visitors]);
+
+  const totalMapDataRequests = useMemo(() => {
+    return data?.mapDataRequests?.reduce((acc, v) => acc + v.count, 0);
+  }, [data?.mapDataRequests]);
   if (isSuperUserQuery.loading) {
     return null;
   } else if (isSuperUserQuery.data?.currentUserIsSuperuser === false) {
@@ -100,21 +104,26 @@ export default function Dashboard() {
         />
       </div>
       <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex items-center space-x-4">
-        <span className="flex-1">
-          {totalVisitors?.toLocaleString()} Total Visitors
+        <span className="">
+          {totalVisitors?.toLocaleString()} Total Visitors.
+        </span>
+        <span className="">
+          {totalMapDataRequests?.toLocaleString()} Hosted Layer Requests.
         </span>
         <span className="text-gray-500 italic hidden md:visible">
           Updated every minute.
         </span>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as ActivityStatsPeriod)}
-          className="ml-auto py-1 text-sm rounded"
-        >
-          <option value={ActivityStatsPeriod["24Hrs"]}>Last 24 hours</option>
-          <option value={ActivityStatsPeriod["7Days"]}>Last 7 days</option>
-          <option value={ActivityStatsPeriod["30Days"]}>Last 30 days</option>
-        </select>
+        <span className="flex-1 text-right">
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as ActivityStatsPeriod)}
+            className="ml-auto py-1 text-sm rounded"
+          >
+            <option value={ActivityStatsPeriod["24Hrs"]}>Last 24 hours</option>
+            <option value={ActivityStatsPeriod["7Days"]}>Last 7 days</option>
+            <option value={ActivityStatsPeriod["30Days"]}>Last 30 days</option>
+          </select>
+        </span>
       </h2>
       {data?.visitors && (
         <VisitorLineChart
@@ -122,6 +131,11 @@ export default function Dashboard() {
           data={data?.visitors.map((d) => ({
             timestamp: new Date(d.timestamp),
             count: d.count,
+          }))}
+          mapDataRequests={(data?.mapDataRequests || []).map((d) => ({
+            timestamp: new Date(d.timestamp),
+            count: d.count,
+            cacheRatio: d.cacheHitRatio,
           }))}
         />
       )}
@@ -332,8 +346,10 @@ export function VisitorMetrics({
 export function VisitorLineChart({
   data,
   period,
+  mapDataRequests,
 }: {
   data: { timestamp: Date; count: number }[];
+  mapDataRequests: { timestamp: Date; count: number; cacheRatio: number }[];
   period: ActivityStatsPeriod;
 }) {
   const chartRef = useRef<SVGSVGElement | null>(null);
@@ -354,7 +370,7 @@ export function VisitorLineChart({
     if (chartRef.current) {
       chartRef.current.querySelectorAll("*").forEach((el) => el.remove());
     }
-    const margin = { top: 30, right: 30, bottom: 58, left: 50 };
+    const margin = { top: 20, right: 30, bottom: 60, left: 50 };
     const width = chartRef.current?.clientWidth || 0;
     const height = 300;
 
@@ -375,10 +391,25 @@ export function VisitorLineChart({
       .nice()
       .range([height - margin.bottom, margin.top]);
 
+    const maxMapDataRequestsY = d3.max(
+      mapDataRequests,
+      (d) => d.count
+    ) as number;
+    const mapDataRequestsY = d3
+      .scaleLinear()
+      .domain([0, maxMapDataRequestsY < 3 ? 3 : maxMapDataRequestsY])
+      .nice()
+      .range([height - margin.bottom, margin.top]);
+
     const line = d3
       .line<{ timestamp: Date; count: number }>()
       .x((d) => x(d.timestamp))
       .y((d) => y(d.count));
+
+    const mapDataRequestsLine = d3
+      .line<{ timestamp: Date; count: number }>()
+      .x((d) => x(d.timestamp))
+      .y((d) => mapDataRequestsY(d.count));
 
     svg.selectAll("*").remove();
 
@@ -386,6 +417,15 @@ export function VisitorLineChart({
       .on("pointerenter pointermove", pointermoved)
       .on("pointerleave", pointerleft)
       .on("touchstart", (event) => event.preventDefault());
+
+    svg
+      .append("path")
+      .datum(mapDataRequests)
+      .attr("fill", "none")
+      .attr("stroke", "rgba(16,124,17,0.4)")
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "5,2")
+      .attr("d", mapDataRequestsLine);
 
     svg
       .append("path")
@@ -481,6 +521,58 @@ export function VisitorLineChart({
       .attr("d", area)
       .style("fill", "url(#mygrad)"); // assigning to defined id
 
+    // Add a legend to the bottom, identifying the symbols for the two lines.
+    const legend = svg
+      .append("g")
+      .attr("font-family", "sans-serif")
+      .attr("font-size", 10)
+      .attr("text-anchor", "end")
+      .selectAll("g")
+      .data([
+        { label: "Visitors", color: "steelblue" },
+        { label: "Map Requests", color: "rgba(16,124,17, 1)" },
+      ])
+      .join("g")
+      .attr("transform", (d, i) => `translate(${width - 100},${i * 20})`);
+
+    const legendContainer = svg
+      .append("g")
+      .attr(
+        "transform",
+        `translate(${width / 2 - 115},${height - margin.bottom + 40})`
+      );
+
+    const legendEntry = legendContainer
+      .selectAll("g")
+      .data([
+        { label: "Visitors", color: "steelblue", strokeDasharray: "0" },
+        {
+          label: "Map Requests",
+          color: "rgba(16,124,17,0.5)",
+          strokeDasharray: "5,2",
+        },
+      ])
+      .join("g")
+      .attr("transform", (d, i) => `translate(${i * 100}, 0)`);
+
+    legendEntry
+      .append("line")
+      .attr("x1", 0)
+      .attr("x2", 13)
+      .attr("stroke", (d) => d.color)
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", (d) => d.strokeDasharray)
+      .attr("y1", 0)
+      .attr("y2", 0);
+
+    legendEntry
+      .append("text")
+      .attr("x", 20)
+      .attr("y", 0)
+      .attr("dy", "0.35em")
+      .attr("font-size", "12px")
+      .text((d) => d.label);
+
     // Create the tooltip container.
     const tooltip = svg.append("g");
 
@@ -533,6 +625,9 @@ export function VisitorLineChart({
                     data[i].count === 1
                       ? "1 visitor"
                       : `${data[i].count} visitors`,
+                    mapDataRequests[i].count === 1
+                      ? "1 map request"
+                      : `${mapDataRequests[i].count} map requests`,
                   ]
                 : [
                     formatDate(data[i].timestamp),
@@ -540,17 +635,27 @@ export function VisitorLineChart({
                     data[i].count === 1
                       ? "1 visitor"
                       : `${data[i].count} visitors`,
+                    mapDataRequests[i].count === 1
+                      ? "1 map request"
+                      : `${mapDataRequests[i].count} map requests`,
                   ]
             )
             .join("tspan")
             .attr("x", 0)
             .attr("y", (_, i) => `${i * 1.1}em`)
-            .attr("font-weight", (_, i) => (i < 2 ? null : "bold"))
+            .attr("font-weight", (_, i) => (i === 0 ? "bold" : null))
             .attr("font-size", "12px")
             .text((d) => d)
         );
 
-      size(text, path);
+      tooltip
+        .selectAll("circle")
+        .data([,])
+        .join("circle")
+        .attr("r", 3)
+        .attr("fill", "steelblue");
+
+      size(text, path, data[i].count > maxY * 0.8 ? "bottom" : "top");
     }
 
     function pointerleft() {
@@ -558,15 +663,18 @@ export function VisitorLineChart({
     }
 
     // Wraps the text with a callout path of the correct size, as measured in the page.
-    function size(text: any, path: any) {
+    function size(
+      text: any,
+      path: any,
+      orientation: "top" | "bottom" = "bottom"
+    ) {
+      const baseY = orientation === "bottom" ? 0 : -80;
       const { x, y, width: w, height: h } = text.node().getBBox();
-      text.attr("transform", `translate(${-w / 2},${10 - y})`);
-      path.attr(
-        "d",
-        `M${-w / 2 - 10},5H-5l5,-5l5,5H${w / 2 + 10}v${h + 10}h-${w + 20}z`
-      );
+      text.attr("transform", `translate(${-w / 2},${baseY + 10 - y})`);
+      path.attr("d", `M${-w / 2 - 10},5H${w / 2 + 10}v${h + 10}h-${w + 20}z`);
+      path.attr("transform", `translate(0,${baseY})`);
     }
-  }, [data, period, width]);
+  }, [data, mapDataRequests, period, width]);
 
   return <svg className="w-full" ref={chartRef}></svg>;
 }

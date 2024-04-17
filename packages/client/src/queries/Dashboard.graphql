@@ -44,4 +44,9 @@ query DashboardStats($period: ActivityStatsPeriod) {
     count
     timestamp
   }
+  mapDataRequests(period: $period) {
+    count
+    timestamp
+    cacheHitRatio
+  }
 }

@@ -245,6 +245,7 @@ run({
   * * * * * collectActivityStats
   * * * * * collectVisitorStats
   * * * * * identifyVisitedProjects
+  * * * * * collectMapDataRequestCounts
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {

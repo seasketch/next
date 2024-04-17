@@ -10019,6 +10019,121 @@ CREATE FUNCTION public.map_bookmarks_sprites(bookmark public.map_bookmarks) RETU
 
 
 --
+-- Name: map_data_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.map_data_requests (
+    "interval" interval NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    count integer NOT NULL,
+    cache_hit_ratio double precision NOT NULL
+);
+
+
+--
+-- Name: map_data_requests(public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.map_data_requests(period public.activity_stats_period) RETURNS SETOF public.map_data_requests
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select
+      (
+        case period
+          when '24hrs' then '15 minutes'::interval
+          when '7-days' then '1 hour'::interval
+          when '30-days' then '1 day'::interval
+          when '6-months' then '1 day'::interval
+          when '1-year' then '1 day'::interval
+          when 'all-time' then '1 day'::interval
+          else '1 day'::interval
+        end
+      ),
+      dd as timestamp,
+      coalesce(
+        (
+          select 
+            count 
+          from 
+            map_data_requests 
+          where timestamp = dd
+          and interval = (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          )
+        )
+        , 0
+      ) as count,
+      coalesce(
+        (
+          select 
+            cache_hit_ratio 
+          from 
+            map_data_requests 
+          where timestamp = dd
+          and interval = (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          )
+        )
+        , 0
+      ) as cache_hit_ratio
+    from generate_series(
+        (
+          case period
+            when '24hrs' then (
+              (date_trunc('hour', now()) + floor(date_part('minute', now())::int / 15) * interval '15 min') - '24 hours'::interval
+            )
+            when '7-days' then date_trunc('day', now() - '7 days'::interval)
+            when '30-days' then date_trunc('day', now())::date - '30 days'::interval
+            when '6-months' then date_trunc('day', now())::date - '6 months'::interval
+            when '1-year' then date_trunc('day', now())::date - '1 year'::interval
+            when 'all-time' then date_trunc('day', now())::date - '1 month'::interval
+            else date_trunc('day', now())::date - '1 month'::interval
+          end
+        ),
+        (
+          now()
+        ), 
+        (
+          case period
+            when '24hrs' then '15 minutes'::interval
+            when '7-days' then '1 hour'::interval
+            when '30-days' then '1 day'::interval
+            when '6-months' then '1 day'::interval
+            when '1-year' then '1 day'::interval
+            when 'all-time' then '1 day'::interval
+            else '1 day'::interval
+          end
+        )
+      ) dd
+    where session_is_superuser()
+    order by timestamp asc
+  $$;
+
+
+--
+-- Name: FUNCTION map_data_requests(period public.activity_stats_period); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.map_data_requests(period public.activity_stats_period) IS '@simpleCollections only';
+
+
+--
 -- Name: mark_topic_as_read(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12917,18 +13032,21 @@ CREATE FUNCTION public.schedule_visitor_metric_collection_for_all_projects() RET
     AS $$
   declare
     p projects;
+    i integer;
   begin
-    for p in select * from projects loop
+    i = 1;
+    for p in select * from projects order by id desc loop
       perform graphile_worker.add_job(
       'collectProjectVisitorStats',
       payload := json_build_object(
         'id', p.id,
         'slug', p.slug
       ),
-      run_at := NOW() + '5 seconds',
+      run_at := NOW() + (10 || ' seconds')::interval,
       queue_name := 'project-visitor-stats',
       job_key := 'collectProjectVisitorStats:' || p.id
     );
+    i := i + 1;
     end loop;
   end;
   $$;
@@ -17534,6 +17652,14 @@ ALTER TABLE ONLY public.invite_emails
 
 ALTER TABLE ONLY public.jwks
     ADD CONSTRAINT jwks_pkey PRIMARY KEY (kid);
+
+
+--
+-- Name: map_data_requests map_data_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.map_data_requests
+    ADD CONSTRAINT map_data_requests_pkey PRIMARY KEY ("interval", "timestamp");
 
 
 --
@@ -26391,6 +26517,14 @@ GRANT ALL ON FUNCTION public.map_bookmarks_job(bookmark public.map_bookmarks) TO
 
 REVOKE ALL ON FUNCTION public.map_bookmarks_sprites(bookmark public.map_bookmarks) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.map_bookmarks_sprites(bookmark public.map_bookmarks) TO anon;
+
+
+--
+-- Name: FUNCTION map_data_requests(period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.map_data_requests(period public.activity_stats_period) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.map_data_requests(period public.activity_stats_period) TO seasketch_user;
 
 
 --

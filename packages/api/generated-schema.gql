@@ -7292,6 +7292,18 @@ enum MapBookmarksOrderBy {
   VISIBLE_DATA_LAYERS_DESC
 }
 
+type MapDataRequest implements Node {
+  cacheHitRatio: Float!
+  count: Int!
+  interval: Interval!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  timestamp: Datetime!
+}
+
 """All input for the `markTopicAsRead` mutation."""
 input MarkTopicAsReadInput {
   """
@@ -11518,6 +11530,16 @@ type Query implements Node {
     """The method to use when ordering `MapBookmark`."""
     orderBy: [MapBookmarksOrderBy!] = [NATURAL]
   ): MapBookmarksConnection
+
+  """Reads and enables pagination through a set of `MapDataRequest`."""
+  mapDataRequests(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    period: ActivityStatsPeriod
+  ): [MapDataRequest!]
 
   """
   Access the current session's User. The user is determined by the access token embedded in the `Authorization` header.

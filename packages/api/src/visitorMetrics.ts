@@ -521,3 +521,148 @@ const REAL_USER_VISITS_BY_DAY_QUERY = gql`
     }
   }
 `;
+
+export async function getMapDataRequests(
+  start: Date,
+  end: Date,
+  interval: "15 minutes" | "1 hour" | "1 day",
+  slug?: string
+) {
+  const filter = {
+    AND: [
+      {
+        datetime_geq: start.toISOString(),
+        datetime_leq: end.toISOString(),
+      },
+      { requestSource: "eyeball" },
+      { clientRequestHTTPHost: "tiles.seasketch.org" },
+    ],
+  };
+
+  // if (slug) {
+  //   filter.AND.push({
+  //     // @ts-ignore
+  //     requestPath_like: `/projects/${slug}%`,
+  //   });
+  // }
+
+  const response = await client.request<{
+    viewer?: {
+      zones: {
+        series: {
+          sum: {
+            visits: number;
+          };
+          dimensions: {
+            cacheStatus: string;
+            ts: string;
+          };
+          count: number;
+        }[];
+      }[];
+    };
+  }>(
+    interval === "15 minutes"
+      ? DATA_REQUESTS_15M_QUERY
+      : DATA_REQUESTS_1H_QUERY,
+    {
+      zoneTag: process.env.PMTILES_SERVER_ZONE,
+      filter,
+    }
+  );
+
+  const zone = response.viewer?.zones[0];
+  if (!zone?.series) {
+    throw new Error("No series found in response");
+  }
+  const entries: {
+    datetime: Date;
+    interval: "15 minutes" | "1 hour" | "1 day";
+    hit?: number;
+    none?: number;
+    miss?: number;
+  }[] = [];
+
+  for (const item of zone.series) {
+    let datetime = new Date(item.dimensions.ts);
+    // if interval === 1 day, coerce the datetime to be the start of the day
+    if (interval === "1 day") {
+      datetime = new Date(datetime.toISOString().split("T")[0] + "T00:00:00Z");
+    }
+    // existing record?
+    let existing = entries.find(
+      (e) => e.datetime.getTime() === datetime.getTime()
+    );
+    if (!existing) {
+      existing = {
+        datetime,
+        interval,
+      };
+      entries.push(existing);
+    }
+    if (item.dimensions.cacheStatus === "hit") {
+      existing.hit = (existing.hit || 0) + item.count;
+    } else if (item.dimensions.cacheStatus === "none") {
+      existing.none = (existing.none || 0) + item.count;
+    } else if (item.dimensions.cacheStatus === "miss") {
+      existing.hit = (existing.hit || 0) + item.count;
+    }
+  }
+
+  return entries
+    .map((item) => ({
+      count: item.hit || 0 + (item.none || 0) + (item.miss || 0),
+      interval: item.interval,
+      cacheRatio:
+        item.hit && item.hit > 0
+          ? item.hit / (item.hit + (item.none || 0) + (item.miss || 0))
+          : 0,
+      datetime: item.datetime,
+    }))
+    .sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
+}
+
+const DATA_REQUESTS_15M_QUERY = gql`
+  query ZapTimeseriesBydatetimeFifteenMinutesGroupedByall(
+    $zoneTag: string
+    $filter: ZoneHttpRequestsAdaptiveGroupsFilter_InputObject
+  ) {
+    viewer {
+      zones(filter: { zoneTag: $zoneTag }) {
+        series: httpRequestsAdaptiveGroups(limit: 5000, filter: $filter) {
+          count
+          dimensions {
+            ts: datetimeFifteenMinutes
+            cacheStatus
+          }
+        }
+      }
+    }
+  }
+`;
+
+const DATA_REQUESTS_1H_QUERY = gql`
+  query ZapTimeseriesBydatetime1HourGroupedByall(
+    $zoneTag: string
+    $filter: ZoneHttpRequestsAdaptiveGroupsFilter_InputObject
+  ) {
+    viewer {
+      zones(filter: { zoneTag: $zoneTag }) {
+        series: httpRequestsAdaptiveGroups(limit: 5000, filter: $filter) {
+          count
+          dimensions {
+            ts: datetimeHour
+            cacheStatus
+          }
+        }
+      }
+    }
+  }
+`;
+
+// cached: httpRequestsAdaptiveGroups(filter: $filter, limit: 5) {
+//   dimensions {
+//     cacheStatus
+//   }
+//   count
+// }
