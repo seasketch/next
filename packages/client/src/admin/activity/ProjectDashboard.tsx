@@ -112,6 +112,7 @@ export default function ActivityDashboard() {
             timestamp: new Date(d.timestamp),
             count: d.count,
           }))}
+          mapDataRequests={[]}
         />
       )}
       <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">

@@ -624,20 +624,24 @@ export function VisitorLineChart({
                     formatDate(data[i].timestamp),
                     data[i].count === 1
                       ? "1 visitor"
-                      : `${data[i].count} visitors`,
+                      : `${data[i].count.toLocaleString()} visitors`,
                     mapDataRequests[i].count === 1
                       ? "1 map request"
-                      : `${mapDataRequests[i].count} map requests`,
+                      : `${mapDataRequests[
+                          i
+                        ].count.toLocaleString()} map requests`,
                   ]
                 : [
                     formatDate(data[i].timestamp),
                     formatTime(data[i].timestamp),
                     data[i].count === 1
                       ? "1 visitor"
-                      : `${data[i].count} visitors`,
+                      : `${data[i].count.toLocaleString()} visitors`,
                     mapDataRequests[i].count === 1
                       ? "1 map request"
-                      : `${mapDataRequests[i].count} map requests`,
+                      : `${mapDataRequests[
+                          i
+                        ].count.toLocaleString()} map requests`,
                   ]
             )
             .join("tspan")

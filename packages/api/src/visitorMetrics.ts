@@ -578,9 +578,8 @@ export async function getMapDataRequests(
   const entries: {
     datetime: Date;
     interval: "15 minutes" | "1 hour" | "1 day";
-    hit?: number;
-    none?: number;
-    miss?: number;
+    hits: 0;
+    other: number;
   }[] = [];
 
   for (const item of zone.series) {
@@ -597,26 +596,23 @@ export async function getMapDataRequests(
       existing = {
         datetime,
         interval,
+        hits: 0,
+        other: 0,
       };
       entries.push(existing);
     }
     if (item.dimensions.cacheStatus === "hit") {
-      existing.hit = (existing.hit || 0) + item.count;
-    } else if (item.dimensions.cacheStatus === "none") {
-      existing.none = (existing.none || 0) + item.count;
-    } else if (item.dimensions.cacheStatus === "miss") {
-      existing.hit = (existing.hit || 0) + item.count;
+      existing.hits += item.count;
+    } else {
+      existing.other += item.count;
     }
   }
 
   return entries
     .map((item) => ({
-      count: item.hit || 0 + (item.none || 0) + (item.miss || 0),
+      count: item.hits + item.other,
       interval: item.interval,
-      cacheRatio:
-        item.hit && item.hit > 0
-          ? item.hit / (item.hit + (item.none || 0) + (item.miss || 0))
-          : 0,
+      cacheRatio: item.hits > 0 ? item.hits / item.hits + item.other : 0,
       datetime: item.datetime,
     }))
     .sort((a, b) => a.datetime.getTime() - b.datetime.getTime());

@@ -28,7 +28,6 @@ export default async function collectMapDataRequestCounts(
       const end = new Date(times.rows[0].end);
       // Next, get real-user visits
       const mapDataRequests = await getMapDataRequests(start, end, interval);
-      const sum = mapDataRequests.reduce((acc, r) => acc + r.count, 0);
       for (const visit of mapDataRequests) {
         await client.query(
           `
