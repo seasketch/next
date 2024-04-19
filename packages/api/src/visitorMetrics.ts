@@ -700,3 +700,117 @@ const TILE_REQUESTS_QUERY = gql`
 //   }
 //   count
 // }
+
+export async function getRequestsBySource(
+  start: Date,
+  end: Date,
+  interval: "15 minutes" | "1 hour",
+  slug: string
+) {
+  const filter = {
+    AND: [
+      {
+        datetime_geq: start.toISOString(),
+        datetime_leq: end.toISOString(),
+      },
+      {
+        clientRequestHTTPHost: "tiles.seasketch.org",
+      },
+      {
+        clientRequestPath_like: `/projects/${slug}%`,
+      },
+    ],
+  };
+
+  const response = await client.request<{
+    viewer?: {
+      zones: {
+        series: {
+          count: number;
+          dimensions: {
+            clientRequestPath: string;
+            ts: string;
+          };
+        }[];
+      }[];
+    };
+  }>(
+    interval === "15 minutes"
+      ? POPULAR_PATHS_QUERY_15
+      : POPULAR_PATHS_QUERY_HOUR,
+    {
+      zoneTag: process.env.PMTILES_SERVER_ZONE,
+      filter,
+      order: "sum_visits_DESC",
+    }
+  );
+  if (!response.viewer?.zones[0]) {
+    throw new Error("No zone found in response");
+  }
+  const zone = response.viewer?.zones[0];
+  const requestsBySource: { uuid: string; timestamp: string; count: number }[] =
+    [];
+  for (const path of zone.series) {
+    const parts = path.dimensions.clientRequestPath.split("/");
+    const isPublic = parts.includes("public");
+    const isPrivate = parts.includes("private");
+    if (isPublic || isPrivate) {
+      let uuid = parts[parts.indexOf(isPublic ? "public" : "private") + 1];
+      if (uuid) {
+        // remove file extention if present
+        uuid = uuid.split(".")[0];
+        const existing = requestsBySource.find(
+          (r) => r.uuid === uuid && r.timestamp === path.dimensions.ts
+        );
+        if (existing) {
+          existing.count += path.count;
+        } else {
+          requestsBySource.push({
+            uuid,
+            timestamp: path.dimensions.ts,
+            count: path.count,
+          });
+        }
+      }
+    }
+  }
+  return requestsBySource;
+}
+
+const POPULAR_PATHS_QUERY_15 = gql`
+  query TilesDotSeaSketchDotOrgRequests(
+    $zoneTag: string
+    $filter: ZoneHttpRequestsAdaptiveGroupsFilter_InputObject
+  ) {
+    viewer {
+      zones(filter: { zoneTag: $zoneTag }) {
+        series: httpRequestsAdaptiveGroups(limit: 10000, filter: $filter) {
+          count
+          dimensions {
+            clientRequestPath
+            ts: datetimeFifteenMinutes
+          }
+        }
+      }
+    }
+  }
+`;
+
+const POPULAR_PATHS_QUERY_HOUR = gql`
+  query TilesDotSeaSketchDotOrgRequests(
+    $zoneTag: string
+    $filter: ZoneHttpRequestsAdaptiveGroupsFilter_InputObject
+  ) {
+    viewer {
+      zones(filter: { zoneTag: $zoneTag }) {
+        series: httpRequestsAdaptiveGroups(limit: 10000, filter: $filter) {
+          count
+          dimensions {
+            clientRequestPath
+            ts: datetimeHour
+          }
+        }
+      }
+    }
+  }
+`;

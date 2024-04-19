@@ -10,7 +10,7 @@ export default async function identifyProjectsWithDataRequests(
 ) {
   return await helpers.withPgClient(async (client) => {
     const times = await client.query(
-      `select now() - '15 minutes'::interval as start, now() as end`
+      `select now() - '1 hour'::interval as start, now() as end`
     );
     const potentialSlugs = await getSlugsForDataRequests(
       new Date(times.rows[0].start),
@@ -37,6 +37,7 @@ export default async function identifyProjectsWithDataRequests(
         {
           jobKey: `collectProjectDataRequests:${row.id}`,
           queueName: "project-data-requests",
+          runAt: new Date(Date.now() + 1000 * 2 * projectIds.rows.indexOf(row)),
         }
       );
     }

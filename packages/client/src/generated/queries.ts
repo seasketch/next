@@ -8975,6 +8975,8 @@ export type Project = Node & {
   mapboxSecretKey?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `ProjectMapDataRequest`. */
   mapDataRequests?: Maybe<Array<ProjectMapDataRequest>>;
+  /** Reads and enables pagination through a set of `TableOfContentsItem`. */
+  mostUsedLayers?: Maybe<Array<TableOfContentsItem>>;
   /** List of all folders created by this user. */
   myFolders?: Maybe<Array<SketchFolder>>;
   /** A list of all sketches for this project and the current user session */
@@ -9248,6 +9250,17 @@ export type ProjectLatestPostsConnectionArgs = {
  * needed to drive the application.
  */
 export type ProjectMapDataRequestsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectMostUsedLayersArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   period?: Maybe<ActivityStatsPeriod>;
@@ -12711,6 +12724,7 @@ export type TableOfContentsItem = Node & {
   stableId: Scalars['String'];
   /** Name used in the table of contents rendering */
   title: Scalars['String'];
+  totalRequests?: Maybe<Scalars['Int']>;
   translatedProps: Scalars['JSON'];
   usesDynamicMetadata?: Maybe<Scalars['Boolean']>;
 };
@@ -12745,6 +12759,21 @@ export type TableOfContentsItemDownloadOptionsArgs = {
 export type TableOfContentsItemProjectBackgroundJobsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemTotalRequestsArgs = {
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 /**
@@ -18058,6 +18087,13 @@ export type ProjectDashboardQuery = (
     )>>, mapDataRequests?: Maybe<Array<(
       { __typename?: 'ProjectMapDataRequest' }
       & Pick<ProjectMapDataRequest, 'count' | 'timestamp' | 'cacheHitRatio'>
+    )>>, mostUsedLayers?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'totalRequests'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id' | 'dataSourceId'>
+      )> }
     )>> }
   )> }
 );
@@ -23835,6 +23871,15 @@ export const ProjectDashboardDocument = /*#__PURE__*/ gql`
       count
       timestamp
       cacheHitRatio
+    }
+    mostUsedLayers(period: $period) {
+      id
+      title
+      totalRequests(period: $period)
+      dataLayer {
+        id
+        dataSourceId
+      }
     }
   }
 }

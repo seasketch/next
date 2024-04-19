@@ -10,6 +10,8 @@ import bgBlur from "../../bg-blur.jpg";
 import { StatItem, VisitorLineChart, VisitorMetrics } from "../../Dashboard";
 import bytes from "bytes";
 import { useLocalStorage } from "beautiful-react-hooks";
+import Badge from "../../components/Badge";
+import useIsSuperuser from "../../useIsSuperuser";
 
 export default function ActivityDashboard() {
   const { t } = useTranslation("admin:activity");
@@ -25,6 +27,7 @@ export default function ActivityDashboard() {
     },
     onError,
   });
+  const isSuperUser = useIsSuperuser();
 
   const totalVisitors = useMemo(() => {
     return data?.projectBySlug?.visitors?.reduce((acc, v) => acc + v.count, 0);
@@ -44,6 +47,12 @@ export default function ActivityDashboard() {
   if (!activity) {
     return null;
   }
+
+  const mostUsedLayers = [...(data?.projectBySlug?.mostUsedLayers || [])];
+  const maxLayerUsage = mostUsedLayers.reduce(
+    (acc, layer) => Math.max(acc, layer.totalRequests || 0),
+    0
+  );
 
   return (
     <div className="w-full xl:max-w-6xl md:border-r md:border-b bg-white flex flex-col md:min-h-screen">
@@ -159,6 +168,34 @@ export default function ActivityDashboard() {
           data={data?.projectBySlug?.visitorMetrics?.[0]?.topDeviceTypes}
         />
       </div>
+      {isSuperUser === true && (
+        <>
+          <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
+            <span className="flex-1">{t("Most Popular Hosted Layers")}</span>
+          </h2>
+          <div>
+            <ul>
+              {mostUsedLayers
+                .sort((a, b) => (b.totalRequests || 0) - (a.totalRequests || 0))
+                .map((layer) => (
+                  <li key={layer.id} className="p-2 border-b flex">
+                    <span className="truncate flex-1">{layer.title}</span>
+                    <div className="w-1/4 text-right">
+                      <div
+                        className="bg-primary-300 h-4 inline-block"
+                        style={{
+                          width: `${
+                            ((layer.totalRequests || 0) / maxLayerUsage) * 100
+                          }%`,
+                        }}
+                      ></div>
+                    </div>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        </>
+      )}
     </div>
   );
 }

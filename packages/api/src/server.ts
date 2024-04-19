@@ -246,13 +246,25 @@ run({
   * * * * * collectVisitorStats
   * * * * * identifyVisitedProjects
   */2 * * * * collectMapDataRequestCounts
-  * * * * * identifyProjectsWithDataRequests
+  */2 * * * * identifyProjectsWithDataRequests
+  */5 * * * * rollupDataSourceRequests
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {
+    const transaction = Sentry.startTransaction({
+      op: "job",
+      name: `Job Execution: ${job.task_identifier}`,
+    });
+    // @ts-ignore
+    job.__sentry_transaction = transaction;
     updateMatchingTables(job, "started", workerPool);
   });
   runner.events.on("job:success", ({ worker, job }) => {
+    // @ts-ignore
+    if (job.__sentry_transaction) {
+      // @ts-ignore
+      job.__sentry_transaction.finish(); // End the transaction on success
+    }
     updateMatchingTables(job, "finished", workerPool);
   });
   runner.events.on("job:error", ({ worker, job }) => {
@@ -261,6 +273,13 @@ run({
         job: job,
       },
     });
+    // @ts-ignore
+    if (job.__sentry_transaction) {
+      // @ts-ignore
+      job.__sentry_transaction.setStatus("internal_error");
+      // @ts-ignore
+      job.__sentry_transaction.finish();
+    }
     updateMatchingTables(job, "error", workerPool);
   });
   runner.events.on("job:failed", ({ worker, job }) => {
@@ -269,6 +288,13 @@ run({
         job: job,
       },
     });
+    // @ts-ignore
+    if (job.__sentry_transaction) {
+      // @ts-ignore
+      job.__sentry_transaction.setStatus("failed");
+      // @ts-ignore
+      job.__sentry_transaction.finish();
+    }
     updateMatchingTables(job, "failed", workerPool);
   });
 });

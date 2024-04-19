@@ -3,6 +3,7 @@ import {
   getVisitorMetrics,
   getRealUserVisits,
   getMapDataRequests,
+  getRequestsBySource,
 } from "../src/visitorMetrics";
 
 const intervals = ["15 minutes", "1 hour", "1 day"] as (
@@ -61,6 +62,59 @@ export default async function collectProjectDataRequests(
             payload.id,
           ]
         );
+      }
+
+      if (
+        interval !== "1 day" &&
+        mapDataRequests.find((visit) => visit.count > 0)
+      ) {
+        const times = await client.query(
+          `select $1::timestamp  - ($2::interval) * 4 as start, ($1::timestamp) as end`,
+          [new Date(now), interval]
+        );
+        if (!times.rows[0]) {
+          throw new Error("No start date found");
+        }
+        const start = new Date(times.rows[0].start);
+        const end = new Date(times.rows[0].end);
+        // collect requests by source
+        const requestsBySource = await getRequestsBySource(
+          start,
+          end,
+          interval,
+          payload.slug
+        );
+        for (const row of requestsBySource) {
+          // get a source_id if it can be found
+          const results = await client.query(
+            `select data_source_id from data_upload_outputs where url like $1 and (
+              type = 'PMTiles' or type = 'GeoJSON'
+            )`,
+            [`%${row.uuid}%`]
+          );
+          if (results.rows.length > 0) {
+            const sourceId = results.rows[0].data_source_id;
+            await client.query(
+              `
+              insert into data_source_requests (
+                project_id,
+                data_source_id,
+                timestamp,
+                interval,
+                count
+              ) values (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5
+              ) on conflict (project_id, data_source_id, interval, timestamp) do update set
+                count = EXCLUDED.count
+            `,
+              [payload.id, sourceId, row.timestamp, interval, row.count]
+            );
+          }
+        }
       }
     }
 

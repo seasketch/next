@@ -10230,6 +10230,16 @@ type Project implements Node {
     period: ActivityStatsPeriod
   ): [ProjectMapDataRequest!]
 
+  """Reads and enables pagination through a set of `TableOfContentsItem`."""
+  mostUsedLayers(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    period: ActivityStatsPeriod
+  ): [TableOfContentsItem!]
+
   """
   List of all folders created by this user.
   
@@ -13986,6 +13996,7 @@ type TableOfContentsItem implements Node {
 
   """Name used in the table of contents rendering"""
   title: String!
+  totalRequests(period: ActivityStatsPeriod): Int
   translatedProps: JSON!
   usesDynamicMetadata: Boolean
 }

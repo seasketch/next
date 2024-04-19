@@ -94,13 +94,13 @@ export default async function collectVisitorStats(
         );
       }
 
-      // Delete 15 minute interval records older than 48 hours
+      // Delete 15 minute interval records older than 96 hours
       await client.query(
         `
         delete from visitors
         where
           interval = '15 minutes' and
-          timestamp < now() - interval '48 hours'
+          timestamp < now() - interval '96 hours'
       `
       );
       // Delete 1 hour interval records older than 30 days

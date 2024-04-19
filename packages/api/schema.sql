@@ -11776,6 +11776,105 @@ COMMENT ON FUNCTION public.projects_mapbox_secret_key(p public.projects) IS '@fi
 
 
 --
+-- Name: projects_most_used_layers(public.projects, public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_most_used_layers(project public.projects, period public.activity_stats_period) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from table_of_contents_items where data_layer_id = any (
+      select data_layer_id from (
+        select 
+          sum(count), 
+          data_source_requests.data_source_id, 
+          data_layers.id as data_layer_id
+        from 
+          data_source_requests 
+        inner join 
+          data_layers 
+        on 
+          data_layers.data_source_id = data_source_requests.data_source_id 
+        where
+          data_source_requests.project_id = project.id and  
+          interval = (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          ) and timestamp >= now() - (
+            case period
+              when '24hrs' then interval '1 day'
+              when '7-days' then interval '7 days'
+              when '30-days' then interval '30 days'
+              when '6-months' then interval '6 months'
+              when '1-year' then interval '1 year'
+              when 'all-time' then interval '100 years'
+              else interval '1 year'
+            end
+          )
+        group by 
+          data_source_requests.data_source_id, 
+          data_layers.id
+        order by sum desc
+        limit 10
+      ) as most_used_data_layers
+    );
+
+
+    -- select * from table_of_contents_items where session_is_admin(project.id) and data_layer_id = any (
+    --   select id from data_layers where data_source_id = any (
+    --     select data_source_id from (
+    --       select 
+    --         data_source_id, 
+    --         sum(count) as sum
+    --       from 
+    --         data_source_requests 
+    --       where 
+    --         project_id = project.id and 
+    --         interval = (
+    --           case period
+    --             when '24hrs' then '15 minutes'::interval
+    --             when '7-days' then '1 hour'::interval
+    --             when '30-days' then '1 day'::interval
+    --             when '6-months' then '1 day'::interval
+    --             when '1-year' then '1 day'::interval
+    --             when 'all-time' then '1 day'::interval
+    --             else '1 day'::interval
+    --           end
+    --         ) and timestamp >= now() - (
+    --           case period
+    --             when '24hrs' then interval '1 day'
+    --             when '7-days' then interval '7 days'
+    --             when '30-days' then interval '30 days'
+    --             when '6-months' then interval '6 months'
+    --             when '1-year' then interval '1 year'
+    --             when 'all-time' then interval '100 years'
+    --             else interval '1 year'
+    --           end
+    --         )
+    --       group by 
+    --         data_source_id
+    --       order by sum desc 
+    --       limit 10
+    --     ) as most_used_data_sources
+    --   )
+    -- )
+  $$;
+
+
+--
+-- Name: FUNCTION projects_most_used_layers(project public.projects, period public.activity_stats_period); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_most_used_layers(project public.projects, period public.activity_stats_period) IS '@simpleCollections only';
+
+
+--
 -- Name: projects_my_folders(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13153,6 +13252,40 @@ CREATE FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer
 COMMENT ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) IS '
 Remove participant admin privileges.
 ';
+
+
+--
+-- Name: rollup_data_source_requests(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.rollup_data_source_requests() RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    insert into data_source_requests (
+      project_id, 
+      data_source_id, 
+      timestamp, 
+      interval, 
+      count
+    )
+    select 
+      project_id, 
+      data_source_id, 
+      date(timestamp) as timestamp,
+      interval '1 day' as interval,
+      sum(count) as count
+    from 
+      data_source_requests 
+    where
+      interval = interval '15 minutes' and
+      date(timestamp) >= current_date - interval '2 days'
+    group by 
+      project_id, 
+      data_source_id, 
+      date(timestamp) 
+    on conflict (project_id, data_source_id, timestamp, interval) do update
+      set count = excluded.count;
+  $$;
 
 
 --
@@ -15058,6 +15191,44 @@ CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
 
 
 --
+-- Name: table_of_contents_items_total_requests(public.table_of_contents_items, public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_total_requests(item public.table_of_contents_items, period public.activity_stats_period) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select sum(count) from data_source_requests where interval = (
+      case period
+        when '24hrs' then '15 minutes'::interval
+        when '7-days' then '1 hour'::interval
+        when '30-days' then '1 day'::interval
+        when '6-months' then '1 day'::interval
+        when '1-year' then '1 day'::interval
+        when 'all-time' then '1 day'::interval
+        else '1 day'::interval
+      end
+    ) and timestamp >= now() - (
+      case period
+        when '24hrs' then interval '1 day'
+        when '7-days' then interval '7 days'
+        when '30-days' then interval '30 days'
+        when '6-months' then interval '6 months'
+        when '1-year' then interval '1 year'
+        when 'all-time' then interval '100 years'
+        else interval '1 year'
+      end
+    )
+    and data_source_id = (
+      select 
+        data_source_id 
+      from 
+        data_layers 
+      where id = item.data_layer_id
+    )
+  $$;
+
+
+--
 -- Name: table_of_contents_items_uses_dynamic_metadata(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16487,6 +16658,19 @@ COMMENT ON TABLE public.data_source_import_types IS '@enum';
 
 
 --
+-- Name: data_source_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_source_requests (
+    project_id integer NOT NULL,
+    data_source_id integer NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    "interval" interval NOT NULL,
+    count integer NOT NULL
+);
+
+
+--
 -- Name: data_source_types; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -17584,6 +17768,14 @@ ALTER TABLE ONLY public.data_layers
 
 ALTER TABLE ONLY public.data_source_import_types
     ADD CONSTRAINT data_source_import_types_pkey PRIMARY KEY (type);
+
+
+--
+-- Name: data_source_requests data_source_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_requests
+    ADD CONSTRAINT data_source_requests_pkey PRIMARY KEY (project_id, data_source_id, "timestamp", "interval");
 
 
 --
@@ -19538,6 +19730,22 @@ ALTER TABLE ONLY public.data_layers
 --
 
 COMMENT ON CONSTRAINT data_layers_project_id_fkey ON public.data_layers IS '@omit';
+
+
+--
+-- Name: data_source_requests data_source_requests_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_requests
+    ADD CONSTRAINT data_source_requests_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
+
+
+--
+-- Name: data_source_requests data_source_requests_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_source_requests
+    ADD CONSTRAINT data_source_requests_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -27738,6 +27946,14 @@ GRANT ALL ON FUNCTION public.projects_mapbox_secret_key(p public.projects) TO an
 
 
 --
+-- Name: FUNCTION projects_most_used_layers(project public.projects, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_most_used_layers(project public.projects, period public.activity_stats_period) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_most_used_layers(project public.projects, period public.activity_stats_period) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_my_folders(project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -28052,6 +28268,13 @@ REVOKE ALL ON FUNCTION public.replace(public.citext, public.citext, public.citex
 
 REVOKE ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION rollup_data_source_requests(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.rollup_data_source_requests() FROM PUBLIC;
 
 
 --
@@ -31502,6 +31725,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_project_background_jobs(ite
 --
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_project_update() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_total_requests(item public.table_of_contents_items, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.table_of_contents_items, period public.activity_stats_period) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.table_of_contents_items, period public.activity_stats_period) TO seasketch_user;
 
 
 --

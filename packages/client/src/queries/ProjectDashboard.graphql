@@ -26,5 +26,14 @@ query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
       timestamp
       cacheHitRatio
     }
+    mostUsedLayers(period: $period) {
+      id
+      title
+      totalRequests(period: $period)
+      dataLayer {
+        id
+        dataSourceId
+      }
+    }
   }
 }
