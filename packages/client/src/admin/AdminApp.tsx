@@ -32,7 +32,6 @@ import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphq
 import LanguageSelector from "../surveys/LanguageSelector";
 import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
 import { useLocalStorage } from "beautiful-react-hooks";
-import useIsSuperuser from "../useIsSuperuser";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
@@ -93,8 +92,6 @@ export default function AdminApp() {
 
   const history = useHistory();
   const { t } = useTranslation("admin");
-
-  const isSuperuser = useIsSuperuser();
 
   useEffect(() => {
     if (
