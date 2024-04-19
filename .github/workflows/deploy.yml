@@ -154,6 +154,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_TAG: ${{ secrets.CLOUDFLARE_ACCOUNT_TAG }}
           CLOUDFLARE_GRAPHQL_TOKEN: ${{ secrets.CLOUDFLARE_GRAPHQL_TOKEN }}
           CLOUDFLARE_SITE_TAG: ${{ secrets.CLOUDFLARE_SITE_TAG }}
+          PMTILES_SERVER_ZONE: ${{ secrets.PMTILES_SERVER_ZONE }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer
   deploy_client:
