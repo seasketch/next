@@ -10031,6 +10031,13 @@ CREATE TABLE public.map_data_requests (
 
 
 --
+-- Name: TABLE map_data_requests; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.map_data_requests IS '@omit';
+
+
+--
 -- Name: map_data_requests(public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11615,6 +11622,131 @@ CREATE FUNCTION public.projects_latest_posts(project public.projects) RETURNS SE
     AS $$
     select * from posts where topic_id in ((select id from topics where forum_id in ((select id from forums where project_id = project.id)))) order by created_at desc;
   $$;
+
+
+--
+-- Name: project_map_data_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_map_data_requests (
+    project_id integer NOT NULL,
+    "interval" interval NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    count integer NOT NULL,
+    cache_hit_ratio double precision NOT NULL
+);
+
+
+--
+-- Name: TABLE project_map_data_requests; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_map_data_requests IS '@omit';
+
+
+--
+-- Name: projects_map_data_requests(public.projects, public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_map_data_requests(project public.projects, period public.activity_stats_period) RETURNS SETOF public.project_map_data_requests
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select
+      project.id as project_id,
+      (
+        case period
+          when '24hrs' then '15 minutes'::interval
+          when '7-days' then '1 hour'::interval
+          when '30-days' then '1 day'::interval
+          when '6-months' then '1 day'::interval
+          when '1-year' then '1 day'::interval
+          when 'all-time' then '1 day'::interval
+          else '1 day'::interval
+        end
+      ) as interval,
+      dd as timestamp,
+      coalesce(
+        (
+          select 
+            count 
+          from 
+            project_map_data_requests 
+          where project_id = project.id and
+          timestamp = dd
+          and interval = (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          )
+        )
+        , 0
+      ) as count,
+      coalesce(
+        (
+          select 
+            cache_hit_ratio 
+          from 
+            project_map_data_requests 
+          where timestamp = dd and project_id = project.id
+          and interval = (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          )
+        )
+        , 0
+      ) as cache_hit_ratio
+    FROM generate_series(
+          (
+            case period
+              when '24hrs' then (
+                (date_trunc('hour', now()) + floor(date_part('minute', now())::int / 15) * interval '15 min') - '24 hours'::interval
+              )
+              when '7-days' then date_trunc('day', now() - '7 days'::interval)
+              when '30-days' then date_trunc('day', now())::date - '30 days'::interval
+              when '6-months' then date_trunc('day', now())::date - '6 months'::interval
+              when '1-year' then date_trunc('day', now())::date - '1 year'::interval
+              when 'all-time' then date_trunc('day', now())::date - '1 month'::interval
+              else date_trunc('day', now())::date - '1 month'::interval
+            end
+          ),
+          (
+            now()
+          ), 
+          (
+            case period
+              when '24hrs' then '15 minutes'::interval
+              when '7-days' then '1 hour'::interval
+              when '30-days' then '1 day'::interval
+              when '6-months' then '1 day'::interval
+              when '1-year' then '1 day'::interval
+              when 'all-time' then '1 day'::interval
+              else '1 day'::interval
+            end
+          )
+        ) dd
+    where session_is_admin(project.id)
+    order by timestamp asc
+  $$;
+
+
+--
+-- Name: FUNCTION projects_map_data_requests(project public.projects, period public.activity_stats_period); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_map_data_requests(project public.projects, period public.activity_stats_period) IS '@simpleCollections only';
 
 
 --
@@ -17783,6 +17915,14 @@ ALTER TABLE ONLY public.project_invites
 
 
 --
+-- Name: project_map_data_requests project_map_data_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_map_data_requests
+    ADD CONSTRAINT project_map_data_requests_pkey PRIMARY KEY (project_id, "interval", "timestamp");
+
+
+--
 -- Name: project_participants project_participants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -19873,6 +20013,14 @@ ALTER TABLE ONLY public.project_invites
 --
 
 COMMENT ON CONSTRAINT project_invites_user_id_fkey ON public.project_invites IS '@omit';
+
+
+--
+-- Name: project_map_data_requests project_map_data_requests_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_map_data_requests
+    ADD CONSTRAINT project_map_data_requests_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id);
 
 
 --
@@ -27571,6 +27719,14 @@ GRANT ALL ON FUNCTION public.projects_is_admin(p public.projects, "userId" integ
 
 REVOKE ALL ON FUNCTION public.projects_latest_posts(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_latest_posts(project public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_map_data_requests(project public.projects, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_map_data_requests(project public.projects, period public.activity_stats_period) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_map_data_requests(project public.projects, period public.activity_stats_period) TO seasketch_user;
 
 
 --

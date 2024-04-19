@@ -105,10 +105,10 @@ export default function Dashboard() {
       </div>
       <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex items-center space-x-4">
         <span className="">
-          {totalVisitors?.toLocaleString()} Total Visitors.
+          {totalVisitors?.toLocaleString()} Total Visitors
         </span>
         <span className="">
-          {totalMapDataRequests?.toLocaleString()} Hosted Layer Requests.
+          {totalMapDataRequests?.toLocaleString()} Hosted Layer Requests
         </span>
         <span className="text-gray-500 italic hidden md:visible">
           Updated every minute.
@@ -530,7 +530,7 @@ export function VisitorLineChart({
       .selectAll("g")
       .data([
         { label: "Visitors", color: "steelblue" },
-        { label: "Map Requests", color: "rgba(16,124,17, 1)" },
+        { label: "Hosted Layer Requests", color: "rgba(16,124,17, 1)" },
       ])
       .join("g")
       .attr("transform", (d, i) => `translate(${width - 100},${i * 20})`);
@@ -539,7 +539,7 @@ export function VisitorLineChart({
       .append("g")
       .attr(
         "transform",
-        `translate(${width / 2 - 115},${height - margin.bottom + 40})`
+        `translate(${width / 2 - 125},${height - margin.bottom + 40})`
       );
 
     const legendEntry = legendContainer
@@ -547,7 +547,7 @@ export function VisitorLineChart({
       .data([
         { label: "Visitors", color: "steelblue", strokeDasharray: "0" },
         {
-          label: "Map Requests",
+          label: "Hosted Layer Requests",
           color: "rgba(16,124,17,0.5)",
           strokeDasharray: "5,2",
         },

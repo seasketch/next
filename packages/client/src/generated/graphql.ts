@@ -8975,6 +8975,8 @@ export type Project = Node & {
   logoUrl?: Maybe<Scalars['String']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
   mapboxSecretKey?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `ProjectMapDataRequest`. */
+  mapDataRequests?: Maybe<Array<ProjectMapDataRequest>>;
   /** List of all folders created by this user. */
   myFolders?: Maybe<Array<SketchFolder>>;
   /** A list of all sketches for this project and the current user session */
@@ -9240,6 +9242,17 @@ export type ProjectLatestPostsConnectionArgs = {
   first?: Maybe<Scalars['Int']>;
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectMapDataRequestsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  period?: Maybe<ActivityStatsPeriod>;
 };
 
 
@@ -9786,6 +9799,19 @@ export type ProjectInvitesEdge = {
   cursor?: Maybe<Scalars['Cursor']>;
   /** The `ProjectInvite` at the end of the edge. */
   node: ProjectInvite;
+};
+
+export type ProjectMapDataRequest = Node & {
+  __typename?: 'ProjectMapDataRequest';
+  cacheHitRatio: Scalars['Float'];
+  count: Scalars['Int'];
+  interval: Interval;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `ProjectMapDataRequest`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  timestamp: Scalars['Datetime'];
 };
 
 /** Represents an update to a `Project`. Fields that are set will be updated. */
@@ -18031,6 +18057,9 @@ export type ProjectDashboardQuery = (
     )>>, visitorMetrics?: Maybe<Array<(
       { __typename?: 'ProjectVisitorMetric' }
       & Pick<ProjectVisitorMetric, 'topOperatingSystems' | 'topReferrers' | 'topBrowsers' | 'topCountries' | 'topDeviceTypes'>
+    )>>, mapDataRequests?: Maybe<Array<(
+      { __typename?: 'ProjectMapDataRequest' }
+      & Pick<ProjectMapDataRequest, 'count' | 'timestamp' | 'cacheHitRatio'>
     )>> }
   )> }
 );
@@ -27510,6 +27539,11 @@ export const ProjectDashboardDocument = gql`
       topBrowsers
       topCountries
       topDeviceTypes
+    }
+    mapDataRequests(period: $period) {
+      count
+      timestamp
+      cacheHitRatio
     }
   }
 }

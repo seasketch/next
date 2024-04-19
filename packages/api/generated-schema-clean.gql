@@ -10220,6 +10220,16 @@ type Project implements Node {
   mapboxPublicKey: String
   mapboxSecretKey: String
 
+  """Reads and enables pagination through a set of `ProjectMapDataRequest`."""
+  mapDataRequests(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    period: ActivityStatsPeriod
+  ): [ProjectMapDataRequest!]
+
   """
   List of all folders created by this user.
   
@@ -10918,6 +10928,24 @@ type ProjectInviteTokenVerificationResults {
   Indicates whether there is an existing account that matches the email address on the invite
   """
   existingAccount: Boolean
+}
+
+type ProjectMapDataRequest implements Node {
+  cacheHitRatio: Float!
+  count: Int!
+  interval: Interval!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Reads a single `Project` that is related to this `ProjectMapDataRequest`.
+  """
+  project: Project
+  projectId: Int!
+  timestamp: Datetime!
 }
 
 """

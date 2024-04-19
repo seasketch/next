@@ -29,6 +29,12 @@ export default function ActivityDashboard() {
   const totalVisitors = useMemo(() => {
     return data?.projectBySlug?.visitors?.reduce((acc, v) => acc + v.count, 0);
   }, [data?.projectBySlug?.visitors]);
+  const totalMapDataRequests = useMemo(() => {
+    return data?.projectBySlug?.mapDataRequests?.reduce(
+      (acc, v) => acc + v.count,
+      0
+    );
+  }, [data?.projectBySlug?.mapDataRequests]);
 
   if (error) {
     return <div>Error: {error.message}</div>;
@@ -83,27 +89,32 @@ export default function ActivityDashboard() {
         />
       </div>
       <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex items-center space-x-4">
-        <span className="flex-1">
+        <span className="">
           {totalVisitors?.toLocaleString()} {t("Total Visitors")}
+        </span>
+        <span className="">
+          {totalMapDataRequests?.toLocaleString()} {t("Hosted Layer Requests")}
         </span>
         <span className="text-gray-500 italic hidden md:visible">
           {t("Updated every minute.")}
         </span>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as ActivityStatsPeriod)}
-          className="ml-auto py-1 text-sm rounded"
-        >
-          <option value={ActivityStatsPeriod["24Hrs"]}>
-            {t("Last 24 hours")}
-          </option>
-          <option value={ActivityStatsPeriod["7Days"]}>
-            {t("Last 7 days")}
-          </option>
-          <option value={ActivityStatsPeriod["30Days"]}>
-            {t("Last 30 days")}
-          </option>
-        </select>
+        <span className="flex-1 text-right">
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as ActivityStatsPeriod)}
+            className="ml-auto py-1 text-sm rounded"
+          >
+            <option value={ActivityStatsPeriod["24Hrs"]}>
+              {t("Last 24 hours")}
+            </option>
+            <option value={ActivityStatsPeriod["7Days"]}>
+              {t("Last 7 days")}
+            </option>
+            <option value={ActivityStatsPeriod["30Days"]}>
+              {t("Last 30 days")}
+            </option>
+          </select>
+        </span>
       </h2>
       {data?.projectBySlug?.visitors && (
         <VisitorLineChart
@@ -112,7 +123,13 @@ export default function ActivityDashboard() {
             timestamp: new Date(d.timestamp),
             count: d.count,
           }))}
-          mapDataRequests={[]}
+          mapDataRequests={(data?.projectBySlug?.mapDataRequests || []).map(
+            (d) => ({
+              timestamp: new Date(d.timestamp),
+              count: d.count,
+              cacheRatio: d.cacheHitRatio,
+            })
+          )}
         />
       )}
       <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">

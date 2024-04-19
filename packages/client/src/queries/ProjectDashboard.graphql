@@ -21,5 +21,10 @@ query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
       topCountries
       topDeviceTypes
     }
+    mapDataRequests(period: $period) {
+      count
+      timestamp
+      cacheHitRatio
+    }
   }
 }

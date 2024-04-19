@@ -1,4 +1,4 @@
-import { GraphQLClient, gql } from "graphql-request";
+import { GraphQLClient, RequestDocument, gql } from "graphql-request";
 
 type Metric = {
   label: string;
@@ -13,6 +13,14 @@ const client = new GraphQLClient(
     }),
   }
 );
+
+let graphqlRequests = 0;
+
+const apiRequest = <T>(document: RequestDocument, variables: any) => {
+  graphqlRequests++;
+  console.log(`Making request ${graphqlRequests}`);
+  return client.request<T>(document, variables);
+};
 
 interface VisitorMetrics {
   start: Date;
@@ -58,7 +66,7 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
     });
   }
 
-  const response = await client.request<{
+  const response = await apiRequest<{
     viewer?: {
       accounts: {
         topReferers: {
@@ -181,7 +189,7 @@ export async function getVisitedSlugs(start: Date, end: Date) {
     ],
   };
 
-  const response = await client.request<{
+  const response = await apiRequest<{
     viewer?: {
       accounts: {
         topPaths: {
@@ -214,6 +222,53 @@ export async function getVisitedSlugs(start: Date, end: Date) {
   return [...slugs];
 }
 
+export async function getSlugsForDataRequests(start: Date, end: Date) {
+  const filter = {
+    AND: [
+      {
+        datetime_geq: start.toISOString(),
+        datetime_leq: end.toISOString(),
+      },
+      {
+        clientRequestHTTPHost: "tiles.seasketch.org",
+      },
+    ],
+  };
+
+  const response = await apiRequest<{
+    viewer?: {
+      zones: {
+        series: {
+          dimensions: {
+            clientRequestPath: string;
+          };
+        }[];
+      }[];
+    };
+  }>(TILE_REQUESTS_QUERY, {
+    zoneTag: process.env.PMTILES_SERVER_ZONE,
+    filter,
+    order: "sum_visits_DESC",
+  });
+  if (!response.viewer?.zones[0]) {
+    throw new Error("No zone found in response");
+  }
+  const zone = response.viewer?.zones[0];
+  const slugs = new Set<string>();
+  for (const path of zone.series) {
+    const parts = path.dimensions.clientRequestPath.split("/");
+    const isPublic = parts.includes("public");
+    const isPrivate = parts.includes("private");
+    if (isPublic || isPrivate) {
+      const slug = parts[parts.indexOf(isPublic ? "public" : "private") - 1];
+      if (slug) {
+        slugs.add(slug);
+      }
+    }
+  }
+  return [...slugs];
+}
+
 const TOP_PATHS_QUERY = gql`
   query GetRumAnalyticsTopNs {
     viewer {
@@ -226,18 +281,34 @@ const TOP_PATHS_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             metric: requestPath
           }
         }
       }
-      __typename
+    }
+  }
+`;
+
+const TOP_DATA_REQUESTS_QUERY = gql`
+  query ZapTimeseriesBydatetimeFifteenMinutesGroupedByall(
+    $zoneTag: string
+    $filter: ZoneHttpRequestsAdaptiveGroupsFilter_InputObject
+  ) {
+    viewer {
+      zones(filter: { zoneTag: $zoneTag }) {
+        series: httpRequestsAdaptiveGroups(limit: 5000, filter: $filter) {
+          count
+          dimensions {
+            ts: datetimeFifteenMinutes
+            cacheStatus
+          }
+        }
+      }
     }
   }
 `;
@@ -250,9 +321,7 @@ const VISITOR_METRICS_QUERY = gql`
           count
           sum {
             visits
-            __typename
           }
-          __typename
         }
         topReferers: rumPageloadEventsAdaptiveGroups(
           filter: $filter
@@ -262,17 +331,13 @@ const VISITOR_METRICS_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             metric: refererHost
-            __typename
           }
-          __typename
         }
         topBrowsers: rumPageloadEventsAdaptiveGroups(
           filter: $filter
@@ -282,17 +347,13 @@ const VISITOR_METRICS_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             metric: userAgentBrowser
-            __typename
           }
-          __typename
         }
         topOSs: rumPageloadEventsAdaptiveGroups(
           filter: $filter
@@ -302,17 +363,13 @@ const VISITOR_METRICS_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             metric: userAgentOS
-            __typename
           }
-          __typename
         }
         topDeviceTypes: rumPageloadEventsAdaptiveGroups(
           filter: $filter
@@ -322,17 +379,13 @@ const VISITOR_METRICS_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             metric: deviceType
-            __typename
           }
-          __typename
         }
         countries: rumPageloadEventsAdaptiveGroups(
           filter: $filter
@@ -342,21 +395,15 @@ const VISITOR_METRICS_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             metric: countryName
-            __typename
           }
-          __typename
         }
-        __typename
       }
-      __typename
     }
   }
 `;
@@ -387,7 +434,7 @@ export async function getRealUserVisits(
     });
   }
 
-  const response = await client.request<{
+  const response = await apiRequest<{
     viewer?: {
       accounts: {
         series: {
@@ -443,21 +490,15 @@ const REAL_USER_VISITS_BY_HOUR_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             ts: datetimeHour
-            __typename
           }
-          __typename
         }
-        __typename
       }
-      __typename
     }
   }
 `;
@@ -473,21 +514,15 @@ const REAL_USER_VISITS_BY_15_MINUTES_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             ts: datetimeFifteenMinutes
-            __typename
           }
-          __typename
         }
-        __typename
       }
-      __typename
     }
   }
 `;
@@ -503,21 +538,15 @@ const REAL_USER_VISITS_BY_DAY_QUERY = gql`
           count
           avg {
             sampleInterval
-            __typename
           }
           sum {
             visits
-            __typename
           }
           dimensions {
             ts: date
-            __typename
           }
-          __typename
         }
-        __typename
       }
-      __typename
     }
   }
 `;
@@ -539,14 +568,14 @@ export async function getMapDataRequests(
     ],
   };
 
-  // if (slug) {
-  //   filter.AND.push({
-  //     // @ts-ignore
-  //     requestPath_like: `/projects/${slug}%`,
-  //   });
-  // }
+  if (slug) {
+    filter.AND.push({
+      // @ts-ignore
+      clientRequestPath_like: `/projects/${slug}%`,
+    });
+  }
 
-  const response = await client.request<{
+  const response = await apiRequest<{
     viewer?: {
       zones: {
         series: {
@@ -649,6 +678,23 @@ const DATA_REQUESTS_1H_QUERY = gql`
           dimensions {
             ts: datetimeHour
             cacheStatus
+          }
+        }
+      }
+    }
+  }
+`;
+
+const TILE_REQUESTS_QUERY = gql`
+  query TilesDotSeaSketchDotOrgRequests(
+    $zoneTag: string
+    $filter: ZoneHttpRequestsAdaptiveGroupsFilter_InputObject
+  ) {
+    viewer {
+      zones(filter: { zoneTag: $zoneTag }) {
+        series: httpRequestsAdaptiveGroups(limit: 10000, filter: $filter) {
+          dimensions {
+            clientRequestPath
           }
         }
       }
