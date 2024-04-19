@@ -14,14 +14,6 @@ const client = new GraphQLClient(
   }
 );
 
-let graphqlRequests = 0;
-
-const apiRequest = <T>(document: RequestDocument, variables: any) => {
-  graphqlRequests++;
-  console.log(`Making request ${graphqlRequests}`);
-  return client.request<T>(document, variables);
-};
-
 interface VisitorMetrics {
   start: Date;
   end: Date;
@@ -66,7 +58,7 @@ export async function getVisitorMetrics(start: Date, end: Date, slug?: string) {
     });
   }
 
-  const response = await apiRequest<{
+  const response = await client.request<{
     viewer?: {
       accounts: {
         topReferers: {
@@ -189,7 +181,7 @@ export async function getVisitedSlugs(start: Date, end: Date) {
     ],
   };
 
-  const response = await apiRequest<{
+  const response = await client.request<{
     viewer?: {
       accounts: {
         topPaths: {
@@ -235,7 +227,7 @@ export async function getSlugsForDataRequests(start: Date, end: Date) {
     ],
   };
 
-  const response = await apiRequest<{
+  const response = await client.request<{
     viewer?: {
       zones: {
         series: {
@@ -434,7 +426,7 @@ export async function getRealUserVisits(
     });
   }
 
-  const response = await apiRequest<{
+  const response = await client.request<{
     viewer?: {
       accounts: {
         series: {
@@ -575,7 +567,7 @@ export async function getMapDataRequests(
     });
   }
 
-  const response = await apiRequest<{
+  const response = await client.request<{
     viewer?: {
       zones: {
         series: {
