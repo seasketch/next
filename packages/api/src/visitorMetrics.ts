@@ -3,6 +3,22 @@ import * as Sentry from "@sentry/node";
 import "@sentry/tracing";
 import { GraphQLClient, RequestDocument, gql } from "graphql-request";
 
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [
+      // enable HTTP calls tracing
+      new Sentry.Integrations.Http({ tracing: true }),
+    ],
+
+    // Set tracesSampleRate to 1.0 to capture 100%
+    // of transactions for performance monitoring.
+    // We recommend adjusting this value in production
+    tracesSampleRate: 1.0,
+    environment: process.env.REACT_APP_SENTRY_ENV || "production",
+  });
+}
+
 type Metric = {
   label: string;
   count: number;
