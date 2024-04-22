@@ -59,7 +59,7 @@ const SentryPlugin: PostGraphilePlugin = {
                   scope.addBreadcrumb({
                     category: "query-path",
                     message: err.path.join(" > "),
-                    level: Sentry.Severity.Debug,
+                    level: "debug",
                   });
                 }
                 Sentry.captureException(
