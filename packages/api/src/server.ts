@@ -19,8 +19,6 @@ import fs from "fs";
 import graphileOptions from "./graphileOptions";
 import { getFeatureCollection, getMVT } from "./exportSurvey";
 import * as Sentry from "@sentry/node";
-// Importing @sentry/tracing patches the global hub for tracing to work.
-import "@sentry/tracing";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
 import slugify from "slugify";
@@ -44,8 +42,10 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     integrations: [
-      // enable HTTP calls tracing
-      new Sentry.Integrations.Http({ tracing: true }),
+      // Automatically instrument Node.js libraries and frameworks
+      ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
+      // // enable HTTP calls tracing
+      // new Sentry.Integrations.Http({ tracing: true }),
     ],
 
     // Set tracesSampleRate to 1.0 to capture 100%

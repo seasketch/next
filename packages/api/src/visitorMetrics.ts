@@ -1,14 +1,14 @@
 import * as Sentry from "@sentry/node";
 // Importing @sentry/tracing patches the global hub for tracing to work.
-import "@sentry/tracing";
 import { GraphQLClient, RequestDocument, gql } from "graphql-request";
 
 if (process.env.SENTRY_DSN) {
+  console.log("found sentry dsn");
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     integrations: [
-      // enable HTTP calls tracing
-      new Sentry.Integrations.Http({ tracing: true }),
+      // Automatically instrument Node.js libraries and frameworks
+      ...Sentry.autoDiscoverNodePerformanceMonitoringIntegrations(),
     ],
 
     // Set tracesSampleRate to 1.0 to capture 100%
@@ -17,6 +17,8 @@ if (process.env.SENTRY_DSN) {
     tracesSampleRate: 1.0,
     environment: process.env.REACT_APP_SENTRY_ENV || "production",
   });
+} else {
+  console.log("no sentry dsn", process.env);
 }
 
 type Metric = {

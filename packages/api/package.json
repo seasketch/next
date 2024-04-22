@@ -55,7 +55,7 @@
     "@seasketch/map-tile-cache-calculator": "^1.0.0",
     "@seasketch/mapbox-gl-esri-sources": "^0.9.0",
     "@sentry/browser": "^7.44.2",
-    "@sentry/node": "^6.17.9",
+    "@sentry/node": "^7.111.0",
     "@sentry/tracing": "^7.44.2",
     "@turf/bbox": "^6.5.0",
     "@turf/center-of-mass": "^6.5.0",
