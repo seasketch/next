@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:9ac5340f3099df1d7c250b020a1643cc53748ee6
 --! Hash: sha1:5a121ffbecd4ef38ef0cfe56433328d5d5c3dd39
 
@@ -143,7 +144,7 @@ create or replace function table_of_contents_items_total_requests(item table_of_
   stable
   security definer
   as $$
-    select sum(count) from data_source_requests where interval = (
+    select sum(count)::integer from data_source_requests where interval = (
       case period
         when '24hrs' then '15 minutes'::interval
         when '7-days' then '1 hour'::interval
