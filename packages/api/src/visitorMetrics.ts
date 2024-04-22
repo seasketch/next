@@ -3,7 +3,6 @@ import * as Sentry from "@sentry/node";
 import { GraphQLClient, RequestDocument, gql } from "graphql-request";
 
 if (process.env.SENTRY_DSN) {
-  console.log("found sentry dsn");
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     integrations: [
@@ -17,8 +16,6 @@ if (process.env.SENTRY_DSN) {
     tracesSampleRate: 1.0,
     environment: process.env.REACT_APP_SENTRY_ENV || "production",
   });
-} else {
-  console.log("no sentry dsn", process.env);
 }
 
 type Metric = {
