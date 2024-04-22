@@ -105,7 +105,7 @@ export default function ActivityDashboard() {
           {totalMapDataRequests?.toLocaleString()} {t("Hosted Layer Requests")}
         </span>
         <span className="text-gray-500 italic hidden md:visible">
-          {t("Updated every minute.")}
+          {t("Updated every 5 minutes.")}
         </span>
         <span className="flex-1 text-right">
           <select

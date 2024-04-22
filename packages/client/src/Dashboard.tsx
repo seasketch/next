@@ -111,7 +111,7 @@ export default function Dashboard() {
           {totalMapDataRequests?.toLocaleString()} Hosted Layer Requests
         </span>
         <span className="text-gray-500 italic hidden md:visible">
-          Updated every minute.
+          Updated every 5 minutes.
         </span>
         <span className="flex-1 text-right">
           <select

@@ -239,15 +239,22 @@ run({
     ? parseInt(process.env.GRAPHILE_POLL_INTERVAL)
     : 1000,
   taskDirectory: path.join(__dirname, "..", "tasks"),
-  crontab: `
+  crontab:
+    process.env.NODE_ENV === "production"
+      ? `
   * * * * * cleanupProjectBackgroundJobs
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
-  * * * * * collectVisitorStats
-  * * * * * identifyVisitedProjects
+  */2 * * * * collectVisitorStats
+  */3 * * * * identifyVisitedProjects
   */2 * * * * collectMapDataRequestCounts
-  */2 * * * * identifyProjectsWithDataRequests
+  */3 * * * * identifyProjectsWithDataRequests
   */5 * * * * rollupDataSourceRequests
+  `
+      : `
+  * * * * * cleanupProjectBackgroundJobs
+  * * * * * cleanupDeletedOverlayRecords
+  * * * * * collectActivityStats
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {
