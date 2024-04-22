@@ -1,3 +1,6 @@
+import * as Sentry from "@sentry/node";
+// Importing @sentry/tracing patches the global hub for tracing to work.
+import "@sentry/tracing";
 import { GraphQLClient, RequestDocument, gql } from "graphql-request";
 
 type Metric = {
