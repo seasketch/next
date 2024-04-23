@@ -298,6 +298,73 @@ export type ArchiveResponsesPayload = {
   surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
+/**
+ * Admins can upload new version of data sources, and these are tracked from this
+ * table. This is used to track changes to data sources over time with a version
+ * number and optional changelog.
+ */
+export type ArchivedDataSource = Node & {
+  __typename?: 'ArchivedDataSource';
+  /** Optional changelog so that admins can explain what changed in the new version. */
+  changelog?: Maybe<Scalars['String']>;
+  dataLayerId: Scalars['Int'];
+  /** Reads a single `DataSource` that is related to this `ArchivedDataSource`. */
+  dataSource?: Maybe<DataSource>;
+  dataSourceId: Scalars['Int'];
+  /**
+   * Mapbox GL style from the associated data layer at the time of upload of the
+   * new version. This is tracked in case the data source is significantly changed
+   * such that rolling back to a previous version also requires style changes
+   */
+  mapboxGlStyle: Scalars['JSON'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Array of sprite ids used in the archived mapbox_gl_style. */
+  spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /** Version number of the data source. Incremented each time a new version is uploaded. */
+  version: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `ArchivedDataSource` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type ArchivedDataSourceCondition = {
+  /** Checks for equality with the object’s `dataSourceId` field. */
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `ArchivedDataSource` values. */
+export type ArchivedDataSourcesConnection = {
+  __typename?: 'ArchivedDataSourcesConnection';
+  /** A list of edges which contains the `ArchivedDataSource` and cursor to aid in pagination. */
+  edges: Array<ArchivedDataSourcesEdge>;
+  /** A list of `ArchivedDataSource` objects. */
+  nodes: Array<ArchivedDataSource>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ArchivedDataSource` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ArchivedDataSource` edge in the connection. */
+export type ArchivedDataSourcesEdge = {
+  __typename?: 'ArchivedDataSourcesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ArchivedDataSource` at the end of the edge. */
+  node: ArchivedDataSource;
+};
+
+/** Methods to use when ordering `ArchivedDataSource`. */
+export enum ArchivedDataSourcesOrderBy {
+  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
+  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
 export type Basemap = Node & {
   __typename?: 'Basemap';
   /** Reads a single `Acl` that is related to this `Basemap`. */
@@ -2144,6 +2211,8 @@ export enum DataLayersOrderBy {
 export type DataSource = Node & {
   __typename?: 'DataSource';
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy;
+  /** Reads and enables pagination through a set of `ArchivedDataSource`. */
+  archivedDataSources: Array<ArchivedDataSource>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   /**
@@ -2300,6 +2369,21 @@ export type DataSource = Node & {
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
   wasConvertedFromEsriFeatureLayer: Scalars['Boolean'];
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceArchivedDataSourcesArgs = {
+  condition?: Maybe<ArchivedDataSourceCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ArchivedDataSourcesOrderBy>>;
 };
 
 
@@ -10025,6 +10109,11 @@ export type Query = Node & {
   aclByTableOfContentsItemId?: Maybe<Acl>;
   /** Reads and enables pagination through a set of `Project`. */
   activeProjects?: Maybe<Array<Project>>;
+  archivedDataSource?: Maybe<ArchivedDataSource>;
+  /** Reads a single `ArchivedDataSource` using its globally unique `ID`. */
+  archivedDataSourceByNodeId?: Maybe<ArchivedDataSource>;
+  /** Reads and enables pagination through a set of `ArchivedDataSource`. */
+  archivedDataSourcesConnection?: Maybe<ArchivedDataSourcesConnection>;
   basemap?: Maybe<Basemap>;
   /** Reads a single `Basemap` using its globally unique `ID`. */
   basemapByNodeId?: Maybe<Basemap>;
@@ -10299,6 +10388,32 @@ export type QueryActiveProjectsArgs = {
   limit?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryArchivedDataSourceArgs = {
+  dataLayerId: Scalars['Int'];
+  dataSourceId: Scalars['Int'];
+  version: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryArchivedDataSourceByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryArchivedDataSourcesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ArchivedDataSourceCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ArchivedDataSourcesOrderBy>>;
 };
 
 
