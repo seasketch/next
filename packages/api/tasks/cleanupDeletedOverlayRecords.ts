@@ -57,6 +57,8 @@ export default async function cleanupDeletedOverlayRecords(
     results = await client.query(`
       delete from data_sources where not exists (
         select id from data_layers where data_source_id = data_sources.id
+      ) and not exists (
+        select data_source_id from archived_data_sources where data_source_id = data_sources.id
       );
     `);
     if (results.rowCount > 0) {
