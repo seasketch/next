@@ -2518,6 +2518,7 @@ type DataSource implements Node {
   Contains an attribution to be displayed when the map is shown to a user.
   """
   attribution: String
+  authorProfile: Profile
 
   """
   An array containing the longitude and latitude of the southwest and northeast
@@ -2581,6 +2582,7 @@ type DataSource implements Node {
   """
   coordinates: [BigFloat]
   createdAt: Datetime!
+  createdBy: Int
 
   """Reads and enables pagination through a set of `DataLayer`."""
   dataLayersConnection(
@@ -2855,6 +2857,7 @@ input DataSourceInput {
   """
   coordinates: [BigFloat]
   createdAt: Datetime
+  createdBy: Int
 
   """
   Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default

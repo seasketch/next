@@ -6389,12 +6389,14 @@ CREATE FUNCTION public.create_remote_geojson_source(slug text, url text, geostat
           project_id,
           type,
           url,
-          geostats
+          geostats,
+          created_by
         ) values (
           pid,
           'geojson',
           create_remote_geojson_source.url,
-          create_remote_geojson_source.geostats
+          create_remote_geojson_source.geostats,
+          current_user_id()
         ) returning id into source_id;
         insert into data_layers (
           project_id,
@@ -6457,7 +6459,8 @@ CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, so
         minzoom,
         maxzoom,
         geostats,
-        bounds
+        bounds,
+        created_by
       ) values (
         create_remote_mvt_source.project_id,
         'vector',
@@ -6465,7 +6468,8 @@ CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, so
         min_zoom,
         max_zoom,
         create_remote_mvt_source.geostats,
-        create_remote_mvt_source.bounds
+        create_remote_mvt_source.bounds,
+        current_user_id()
       ) returning id into source_id;
       for i in array_lower(source_layers, 1)..array_upper(source_layers, 1) loop
         source_layer := source_layers[i];
@@ -7157,6 +7161,17 @@ COMMENT ON FUNCTION public.current_project_access_status() IS '@deprecated Use p
 
 
 --
+-- Name: current_user_id(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.current_user_id() RETURNS integer
+    LANGUAGE sql
+    AS $$
+    select nullif(current_setting('session.user_id', TRUE), '')::int;
+  $$;
+
+
+--
 -- Name: dashboard_stats(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7402,6 +7417,7 @@ CREATE TABLE public.data_sources (
     arcgis_fetch_strategy public.arcgis_feature_layer_fetch_strategy DEFAULT 'tiled'::public.arcgis_feature_layer_fetch_strategy NOT NULL,
     uploaded_by integer,
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
+    created_by integer,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -7687,6 +7703,62 @@ COMMENT ON COLUMN public.data_sources.upload_task_id IS 'UUID of the upload proc
 --
 
 COMMENT ON COLUMN public.data_sources.uploaded_by IS '@omit';
+
+
+--
+-- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_profiles (
+    user_id integer NOT NULL,
+    fullname text,
+    nickname text,
+    picture text,
+    email public.email,
+    affiliations text,
+    CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+);
+
+
+--
+-- Name: TABLE user_profiles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.user_profiles IS '@omit all
+@name profile
+Personal information that users have contributed. This information is only 
+accessible directly to admins on projects where the user has chosen to share the
+information (via the `joinProject()` mutation).
+
+Regular SeaSketch users can access user profiles thru accessor fields on shared
+content like forum posts if they have been shared, but regular users have no 
+means of listing out all profiles in bulk.
+';
+
+
+--
+-- Name: data_sources_author_profile(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_author_profile(source public.data_sources) RETURNS public.user_profiles
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select
+      user_profiles.*
+    from
+      user_profiles
+    inner join
+      project_participants
+    on
+      project_participants.user_id = coalesce(source.created_by, source.uploaded_by)
+    where
+      session_is_admin(source.project_id) and
+      (project_participants.is_admin = true or (
+      project_participants.share_profile = true and
+      project_participants.project_id = source.project_id)) and
+      user_profiles.user_id = coalesce(source.created_by, source.uploaded_by)
+    limit 1;
+  $$;
 
 
 --
@@ -9298,12 +9370,14 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
               project_id, 
               type,
               url,
-              arcgis_fetch_strategy
+              arcgis_fetch_strategy,
+              created_by
             ) values (
               "projectId", 
               'arcgis-vector', 
               source.url, 
-              source.fetch_strategy
+              source.fetch_strategy,
+              current_user_id()
             ) returning id into source_id;
             select 
               id_lookup_set_key(source_id_map, source.id, source_id) 
@@ -9325,12 +9399,14 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
               project_id, 
               type,
               url,
-              use_device_pixel_ratio
+              use_device_pixel_ratio,
+              created_by
             ) values (
               "projectId", 
               'arcgis-raster-tiles', 
               source.url,
-              true
+              true,
+              current_user_id()
             ) returning id into source_id;
             insert into data_layers (
               project_id,
@@ -9344,12 +9420,14 @@ CREATE FUNCTION public.import_arcgis_services("projectId" integer, items public.
               project_id,
               type,
               url,
-              use_device_pixel_ratio
+              use_device_pixel_ratio,
+              created_by
             ) values (
               "projectId",
               'arcgis-dynamic-mapserver',
               source.url,
-              true
+              true,
+              current_user_id()
             ) returning id into source_id;
             -- create data layers for each sublayer
             for i in array_lower(items, 1)..array_upper(items, 1) loop
@@ -10473,37 +10551,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.onboarded() IS '@omit';
-
-
---
--- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_profiles (
-    user_id integer NOT NULL,
-    fullname text,
-    nickname text,
-    picture text,
-    email public.email,
-    affiliations text,
-    CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
-);
-
-
---
--- Name: TABLE user_profiles; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.user_profiles IS '@omit all
-@name profile
-Personal information that users have contributed. This information is only 
-accessible directly to admins on projects where the user has chosen to share the
-information (via the `joinProject()` mutation).
-
-Regular SeaSketch users can access user profiles thru accessor fields on shared
-content like forum posts if they have been shared, but regular users have no 
-means of listing out all profiles in bulk.
-';
 
 
 --
@@ -12797,7 +12844,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           geostats,
           upload_task_id,
           translated_props,
-          arcgis_fetch_strategy
+          arcgis_fetch_strategy,
+          created_by
         )
           select 
             "projectId", 
@@ -12836,7 +12884,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           geostats,
           upload_task_id,
           translated_props,
-          arcgis_fetch_strategy
+          arcgis_fetch_strategy,
+          created_by
           from 
             data_sources 
           where
@@ -19842,6 +19891,14 @@ ALTER TABLE ONLY public.data_sources
 
 
 --
+-- Name: data_sources data_sources_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_sources
+    ADD CONSTRAINT data_sources_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
 -- Name: data_sources data_sources_import_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -24754,6 +24811,13 @@ GRANT ALL ON FUNCTION public.current_project_access_status() TO anon;
 
 
 --
+-- Name: FUNCTION current_user_id(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.current_user_id() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION dashboard_stats(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -24991,6 +25055,22 @@ GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
 --
 
 GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: TABLE user_profiles; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.user_profiles TO anon;
+GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_sources_author_profile(source public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO seasketch_user;
 
 
 --
@@ -27714,14 +27794,6 @@ REVOKE ALL ON FUNCTION public.postgis_version() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.postgis_wagyu_version() FROM PUBLIC;
-
-
---
--- Name: TABLE user_profiles; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.user_profiles TO anon;
-GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
 
 
 --
