@@ -2637,6 +2637,7 @@ type DataSource implements Node {
   cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
   """
   geostats: JSON
+  hostingQuotaUsed: BigInt
 
   """Should be used as sourceId in stylesheets."""
   id: Int!
@@ -2689,6 +2690,15 @@ type DataSource implements Node {
   copy of the data source if necessary.
   """
   originalSourceUrl: String
+
+  """Reads and enables pagination through a set of `DataUploadOutput`."""
+  outputs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [DataUploadOutput!]
 
   """Use to upload source data to s3. Must be an admin."""
   presignedUploadUrl: String
@@ -3306,6 +3316,25 @@ enum DataSourceTypes {
 
   """MapBox GL Style "video" source"""
   VIDEO
+}
+
+type DataUploadOutput implements Node {
+  createdAt: Datetime!
+  dataSourceId: Int
+  filename: String!
+  id: Int!
+  isOriginal: Boolean!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  originalFilename: String
+  projectId: Int
+  remote: String!
+  size: BigInt!
+  type: DataUploadOutputType!
+  url: String!
 }
 
 enum DataUploadOutputType {

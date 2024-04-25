@@ -210,103 +210,131 @@ mutation UpdateFolder(
   }
 }
 
-query GetLayerItem($id: Int!) {
-  tableOfContentsItem(id: $id) {
+fragment FullAdminSource on DataSource {
+  id
+  attribution
+  bounds
+  buffer
+  byteLength
+  cluster
+  clusterMaxZoom
+  clusterProperties
+  clusterRadius
+  coordinates
+  createdAt
+  encoding
+  enhancedSecurity
+  generateId
+  importType
+  lineMetrics
+  maxzoom
+  minzoom
+  originalSourceUrl
+  promoteId
+  queryParameters
+  scheme
+  tiles
+  tileSize
+  tolerance
+  type
+  url
+  urls
+  useDevicePixelRatio
+  supportsDynamicLayers
+  uploadedSourceFilename
+  uploadedBy
+  geostats
+  translatedProps
+  arcgisFetchStrategy
+  authorProfile {
+    userId
+    affiliations
+    email
+    fullname
+    nickname
+    picture
+  }
+  hostingQuotaUsed
+  outputs {
     id
-    acl {
-      nodeId
-      id
-      type
-      groups {
-        id
-        name
-      }
+    isOriginal
+    url
+    type
+    size
+    originalFilename
+  }
+}
+
+fragment FullAdminDataLayer on DataLayer {
+  id
+  zIndex
+  mapboxGlStyles
+  interactivitySettingsId
+  renderUnder
+  sourceLayer
+  sublayer
+  sublayerType
+  sprites {
+    id
+    spriteImages {
+      pixelRatio
+      height
+      width
+      url
     }
-    bounds
-    dataLayerId
-    dataSourceType
-    metadata
-    parentStableId
-    projectId
-    containedBy {
+    type
+  }
+  dataSourceId
+  dataSource {
+    ...FullAdminSource
+  }
+}
+
+fragment FullAdminOverlay on TableOfContentsItem {
+  id
+  acl {
+    nodeId
+    id
+    type
+    groups {
       id
-      stableId
-      title
+      name
     }
+  }
+  bounds
+  dataLayerId
+  dataSourceType
+  metadata
+  parentStableId
+  projectId
+  containedBy {
+    id
     stableId
     title
-    enableDownload
-    geoprocessingReferenceId
-    primaryDownloadUrl
-    projectBackgroundJobs {
-      id
-      type
-      title
-      state
-      progress
-      progressMessage
-      errorMessage
-    }
-    hasOriginalSourceUpload
-    dataLayer {
-      id
-      zIndex
-      mapboxGlStyles
-      interactivitySettingsId
-      renderUnder
-      sourceLayer
-      sublayer
-      sublayerType
-      staticId
-      sprites {
-        id
-        spriteImages {
-          pixelRatio
-          height
-          width
-          url
-        }
-        type
-      }
-      dataSourceId
-      dataSource {
-        id
-        attribution
-        bounds
-        buffer
-        byteLength
-        cluster
-        clusterMaxZoom
-        clusterProperties
-        clusterRadius
-        coordinates
-        createdAt
-        encoding
-        enhancedSecurity
-        generateId
-        importType
-        lineMetrics
-        maxzoom
-        minzoom
-        originalSourceUrl
-        promoteId
-        queryParameters
-        scheme
-        tiles
-        tileSize
-        tolerance
-        type
-        url
-        urls
-        useDevicePixelRatio
-        supportsDynamicLayers
-        uploadedSourceFilename
-        uploadedBy
-        geostats
-        translatedProps
-        arcgisFetchStrategy
-      }
-    }
+  }
+  stableId
+  title
+  enableDownload
+  geoprocessingReferenceId
+  primaryDownloadUrl
+  projectBackgroundJobs {
+    id
+    type
+    title
+    state
+    progress
+    progressMessage
+    errorMessage
+  }
+  hasOriginalSourceUpload
+  dataLayer {
+    ...FullAdminDataLayer
+  }
+}
+
+query GetLayerItem($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    ...FullAdminOverlay
   }
 }
 

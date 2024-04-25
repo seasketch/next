@@ -8,7 +8,8 @@ export function SettingsDefinitionList({
   const childArray = Children.toArray(children);
   return (
     <dl className="sm:divide-y sm:divide-gray-200 zebra-stripe-child-div">
-      {childArray.map((child, i) => {
+      {children}
+      {/* {childArray.map((child, i) => {
         return (
           <div
             key={i}
@@ -24,7 +25,7 @@ export function SettingsDefinitionList({
             {child}
           </div>
         );
-      })}
+      })} */}
     </dl>
   );
 }
@@ -46,7 +47,7 @@ export function SettingsDLListItem({
     );
   }
   return (
-    <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4">
+    <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 px-2">
       <dt className="flex items-center text-sm font-medium text-gray-500">
         {term}
       </dt>

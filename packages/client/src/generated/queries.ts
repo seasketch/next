@@ -2213,6 +2213,7 @@ export type DataSource = Node & {
   archivedDataSources: Array<ArchivedDataSource>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
+  authorProfile?: Maybe<Profile>;
   /**
    * An array containing the longitude and latitude of the southwest and northeast
    * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
@@ -2260,6 +2261,7 @@ export type DataSource = Node & {
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt: Scalars['Datetime'];
+  createdBy?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `DataLayer`. */
   dataLayersConnection: DataLayersConnection;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
@@ -2281,6 +2283,7 @@ export type DataSource = Node & {
    * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
    */
   geostats?: Maybe<Scalars['JSON']>;
+  hostingQuotaUsed?: Maybe<Scalars['BigInt']>;
   /** Should be used as sourceId in stylesheets. */
   id: Scalars['Int'];
   /**
@@ -2319,6 +2322,8 @@ export type DataSource = Node & {
    * copy of the data source if necessary.
    */
   originalSourceUrl?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `DataUploadOutput`. */
+  outputs?: Maybe<Array<DataUploadOutput>>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
@@ -2410,6 +2415,19 @@ export type DataSourceDataLayersConnectionArgs = {
  *
  * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
  */
+export type DataSourceOutputsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
 export type DataSourceQuotaUsedArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -2474,6 +2492,7 @@ export type DataSourceInput = {
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
+  createdBy?: Maybe<Scalars['Int']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
   /**
@@ -2787,6 +2806,23 @@ export enum DataSourcesOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
+
+export type DataUploadOutput = Node & {
+  __typename?: 'DataUploadOutput';
+  createdAt: Scalars['Datetime'];
+  dataSourceId?: Maybe<Scalars['Int']>;
+  filename: Scalars['String'];
+  id: Scalars['Int'];
+  isOriginal: Scalars['Boolean'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  originalFilename?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  remote: Scalars['String'];
+  size: Scalars['BigInt'];
+  type: DataUploadOutputType;
+  url: Scalars['String'];
+};
 
 export enum DataUploadOutputType {
   FlatGeobuf = 'FLAT_GEOBUF',
@@ -15348,14 +15384,14 @@ export type UpdateProjectStorageBucketMutation = (
   )> }
 );
 
-export type UpdateFormatFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
-
 export type NewGlStyleFragment = (
   { __typename?: 'DataLayer' }
   & Pick<DataLayer, 'mapboxGlStyles'>
+);
+
+export type UpdateFormatFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'queryParameters'>
 );
 
 export type NewRuleFragment = (
@@ -16742,6 +16778,56 @@ export type UpdateFolderMutation = (
   )> }
 );
 
+export type FullAdminSourceFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'hostingQuotaUsed'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
+  )>, outputs?: Maybe<Array<(
+    { __typename?: 'DataUploadOutput' }
+    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename'>
+  )>> }
+);
+
+export type FullAdminDataLayerFragment = (
+  { __typename?: 'DataLayer' }
+  & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType' | 'dataSourceId'>
+  & { sprites?: Maybe<Array<(
+    { __typename?: 'Sprite' }
+    & Pick<Sprite, 'id' | 'type'>
+    & { spriteImages: Array<(
+      { __typename?: 'SpriteImage' }
+      & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
+    )> }
+  )>>, dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & FullAdminSourceFragment
+  )> }
+);
+
+export type FullAdminOverlayFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'nodeId' | 'id' | 'type'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )>, containedBy?: Maybe<Array<Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title'>
+  )>>>, projectBackgroundJobs?: Maybe<Array<(
+    { __typename?: 'ProjectBackgroundJob' }
+    & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
+  )>>, dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & FullAdminDataLayerFragment
+  )> }
+);
+
 export type GetLayerItemQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -16751,35 +16837,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & Pick<Acl, 'nodeId' | 'id' | 'type'>
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )>, containedBy?: Maybe<Array<Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title'>
-    )>>>, projectBackgroundJobs?: Maybe<Array<(
-      { __typename?: 'ProjectBackgroundJob' }
-      & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
-    )>>, dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType' | 'staticId' | 'dataSourceId'>
-      & { sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>>, dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy'>
-      )> }
-    )> }
+    & FullAdminOverlayFragment
   )> }
 );
 
@@ -20700,14 +20758,14 @@ export const NewBasemapFragmentDoc = /*#__PURE__*/ gql`
   surveysOnly
 }
     `;
-export const UpdateFormatFragmentDoc = /*#__PURE__*/ gql`
-    fragment UpdateFormat on DataSource {
-  queryParameters
-}
-    `;
 export const NewGlStyleFragmentDoc = /*#__PURE__*/ gql`
     fragment NewGLStyle on DataLayer {
   mapboxGlStyles
+}
+    `;
+export const UpdateFormatFragmentDoc = /*#__PURE__*/ gql`
+    fragment UpdateFormat on DataSource {
+  queryParameters
 }
     `;
 export const NewRuleFragmentDoc = /*#__PURE__*/ gql`
@@ -21064,6 +21122,131 @@ export const AdminOverlayFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${OverlayFragmentDoc}`;
+export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
+    fragment FullAdminSource on DataSource {
+  id
+  attribution
+  bounds
+  buffer
+  byteLength
+  cluster
+  clusterMaxZoom
+  clusterProperties
+  clusterRadius
+  coordinates
+  createdAt
+  encoding
+  enhancedSecurity
+  generateId
+  importType
+  lineMetrics
+  maxzoom
+  minzoom
+  originalSourceUrl
+  promoteId
+  queryParameters
+  scheme
+  tiles
+  tileSize
+  tolerance
+  type
+  url
+  urls
+  useDevicePixelRatio
+  supportsDynamicLayers
+  uploadedSourceFilename
+  uploadedBy
+  geostats
+  translatedProps
+  arcgisFetchStrategy
+  authorProfile {
+    userId
+    affiliations
+    email
+    fullname
+    nickname
+    picture
+  }
+  hostingQuotaUsed
+  outputs {
+    id
+    isOriginal
+    url
+    type
+    size
+    originalFilename
+  }
+}
+    `;
+export const FullAdminDataLayerFragmentDoc = /*#__PURE__*/ gql`
+    fragment FullAdminDataLayer on DataLayer {
+  id
+  zIndex
+  mapboxGlStyles
+  interactivitySettingsId
+  renderUnder
+  sourceLayer
+  sublayer
+  sublayerType
+  sprites {
+    id
+    spriteImages {
+      pixelRatio
+      height
+      width
+      url
+    }
+    type
+  }
+  dataSourceId
+  dataSource {
+    ...FullAdminSource
+  }
+}
+    ${FullAdminSourceFragmentDoc}`;
+export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
+    fragment FullAdminOverlay on TableOfContentsItem {
+  id
+  acl {
+    nodeId
+    id
+    type
+    groups {
+      id
+      name
+    }
+  }
+  bounds
+  dataLayerId
+  dataSourceType
+  metadata
+  parentStableId
+  projectId
+  containedBy {
+    id
+    stableId
+    title
+  }
+  stableId
+  title
+  enableDownload
+  geoprocessingReferenceId
+  primaryDownloadUrl
+  projectBackgroundJobs {
+    id
+    type
+    title
+    state
+    progress
+    progressMessage
+    errorMessage
+  }
+  hasOriginalSourceUpload
+  dataLayer {
+    ...FullAdminDataLayer
+  }
+}
+    ${FullAdminDataLayerFragmentDoc}`;
 export const ForumListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumListDetails on Forum {
   id
@@ -22945,104 +23128,10 @@ export const UpdateFolderDocument = /*#__PURE__*/ gql`
 export const GetLayerItemDocument = /*#__PURE__*/ gql`
     query GetLayerItem($id: Int!) {
   tableOfContentsItem(id: $id) {
-    id
-    acl {
-      nodeId
-      id
-      type
-      groups {
-        id
-        name
-      }
-    }
-    bounds
-    dataLayerId
-    dataSourceType
-    metadata
-    parentStableId
-    projectId
-    containedBy {
-      id
-      stableId
-      title
-    }
-    stableId
-    title
-    enableDownload
-    geoprocessingReferenceId
-    primaryDownloadUrl
-    projectBackgroundJobs {
-      id
-      type
-      title
-      state
-      progress
-      progressMessage
-      errorMessage
-    }
-    hasOriginalSourceUpload
-    dataLayer {
-      id
-      zIndex
-      mapboxGlStyles
-      interactivitySettingsId
-      renderUnder
-      sourceLayer
-      sublayer
-      sublayerType
-      staticId
-      sprites {
-        id
-        spriteImages {
-          pixelRatio
-          height
-          width
-          url
-        }
-        type
-      }
-      dataSourceId
-      dataSource {
-        id
-        attribution
-        bounds
-        buffer
-        byteLength
-        cluster
-        clusterMaxZoom
-        clusterProperties
-        clusterRadius
-        coordinates
-        createdAt
-        encoding
-        enhancedSecurity
-        generateId
-        importType
-        lineMetrics
-        maxzoom
-        minzoom
-        originalSourceUrl
-        promoteId
-        queryParameters
-        scheme
-        tiles
-        tileSize
-        tolerance
-        type
-        url
-        urls
-        useDevicePixelRatio
-        supportsDynamicLayers
-        uploadedSourceFilename
-        uploadedBy
-        geostats
-        translatedProps
-        arcgisFetchStrategy
-      }
-    }
+    ...FullAdminOverlay
   }
 }
-    `;
+    ${FullAdminOverlayFragmentDoc}`;
 export const UpdateTableOfContentsItemDocument = /*#__PURE__*/ gql`
     mutation UpdateTableOfContentsItem($id: Int!, $title: String, $bounds: [BigFloat], $metadata: JSON, $geoprocessingReferenceId: String) {
   updateTableOfContentsItem(
@@ -25783,8 +25872,8 @@ export const namedOperations = {
     NewLabelsLayer: 'NewLabelsLayer',
     NewTerrain: 'NewTerrain',
     NewBasemap: 'NewBasemap',
-    UpdateFormat: 'UpdateFormat',
     NewGLStyle: 'NewGLStyle',
+    UpdateFormat: 'UpdateFormat',
     NewRule: 'NewRule',
     NewCondition: 'NewCondition',
     NewElement: 'NewElement',
@@ -25808,6 +25897,9 @@ export const namedOperations = {
     JobDetails: 'JobDetails',
     BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
     AdminOverlay: 'AdminOverlay',
+    FullAdminSource: 'FullAdminSource',
+    FullAdminDataLayer: 'FullAdminDataLayer',
+    FullAdminOverlay: 'FullAdminOverlay',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',
