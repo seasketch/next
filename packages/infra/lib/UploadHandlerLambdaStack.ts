@@ -37,6 +37,11 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
     if (!process.env.TILES_BASE_URL) {
       throw new Error("TILES_BASE_URL must be set in environment");
     }
+    if (!process.env.SLACK_CHANNEL || !process.env.SLACK_TOKEN) {
+      throw new Error(
+        "SLACK_CHANNEL and SLACK_TOKEN must be set in environment"
+      );
+    }
 
     const {
       UPLOADS_BASE_URL,
@@ -67,8 +72,8 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
         R2_ENDPOINT: process.env.R2_ENDPOINT!,
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
-        SLACK_TOKEN: process.env.SLACK_TOKEN!,
-        SLACK_CHANNEL: process.env.SLACK_CHANNEL!,
+        SLACK_TOKEN: process.env.SLACK_TOKEN,
+        SLACK_CHANNEL: process.env.SLACK_CHANNEL,
         UPLOADS_BASE_URL,
         RESOURCES_REMOTE,
         TILES_REMOTE,

@@ -1,14 +1,15 @@
 FROM amazon/aws-lambda-nodejs:18 as builder
 WORKDIR /usr/app
-RUN yum install -y unzip
+RUN yum install -y tar unzip
 RUN curl https://rclone.org/install.sh | bash
 RUN yum install -y git clang sqlite-devel zlib-devel make install build-essential libsqlite3-dev zlib1g-dev
-RUN git clone https://github.com/felt/tippecanoe.git
+RUN curl -O -L https://github.com/felt/tippecanoe/archive/refs/tags/2.53.0.tar.gz
+RUN mkdir ./tippecanoe
+RUN tar -zxvf 2.53.0.tar.gz -C ./tippecanoe --strip-components=1
 WORKDIR /usr/app/tippecanoe
 RUN make -j
 RUN make install
 WORKDIR /usr/app
-RUN yum install -y tar unzip
 RUN curl -L https://github.com/protomaps/go-pmtiles/releases/download/v1.8.0/go-pmtiles_1.8.0_Linux_x86_64.tar.gz > ./pmtiles.tar.gz
 RUN tar -zxvf ./pmtiles.tar.gz
 RUN npm install -g typescript@5.1.5
