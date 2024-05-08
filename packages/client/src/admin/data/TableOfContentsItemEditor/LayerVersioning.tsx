@@ -755,6 +755,8 @@ function VersionDot({
 }) {
   return (
     <div className="relative">
+      {/* Adding this hidden element so that tailwind border color classes (which are dynamically built with string interpolation) are included in the production build */}
+      <div className="border-green-500 border-indigo-500 border-gray-400 border-gray-500 hidden"></div>
       <button
         disabled={selected}
         onClick={onClick}
