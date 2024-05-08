@@ -7508,7 +7508,7 @@ CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RE
 CREATE FUNCTION public.data_layers_version(data_layer public.data_layers) RETURNS integer
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select coalesce(max(version), 0) + 1 from archived_data_sources where data_layer_id = data_layer.id;
+    select coalesce(max(version), 0)::integer + 1 from archived_data_sources where data_layer_id = data_layer.id;
     $$;
 
 
@@ -11837,7 +11837,7 @@ CREATE FUNCTION public.projects_estimate_deleted_data_for_retention_change(proje
     begin
       if session_is_admin(project.id) then
         select 
-          count(distinct(data_source_id)),
+          count(distinct(data_source_id))::integer,
           sum(size) into estimate.num_sources, estimate.bytes
         from 
           data_upload_outputs 

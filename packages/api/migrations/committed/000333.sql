@@ -1,5 +1,5 @@
 --! Previous: sha1:5ee4e72d4f7f8783cfe5a111000c54384d242908
---! Hash: sha1:841db5c024872ea48c9d94a916b5c035a6e1af33
+--! Hash: sha1:70edc56c2a63ec0b505f21165f69bce0fa17f2aa
 
 -- Enter migration here
 alter type project_background_job_type add value if not exists 'replacement_upload';
@@ -140,7 +140,7 @@ create or replace function data_layers_version(data_layer data_layers)
   security definer
   stable
   as $$
-    select coalesce(max(version), 0) + 1 from archived_data_sources where data_layer_id = data_layer.id;
+    select coalesce(max(version), 0)::integer + 1 from archived_data_sources where data_layer_id = data_layer.id;
     $$;
 
 grant execute on function data_layers_version to anon;
@@ -512,7 +512,7 @@ create or replace function projects_estimate_deleted_data_for_retention_change(p
     begin
       if session_is_admin(project.id) then
         select 
-          count(distinct(data_source_id)),
+          count(distinct(data_source_id))::integer,
           sum(size) into estimate.num_sources, estimate.bytes
         from 
           data_upload_outputs 
