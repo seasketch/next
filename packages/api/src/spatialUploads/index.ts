@@ -26,7 +26,8 @@ export async function createDBRecordsForProcessedLayer(
   projectId: number,
   client: PoolClient | Client,
   jobId: string,
-  jobType: "upload" | "conversion"
+  jobType: "upload" | "conversion",
+  replaceSourceId?: number
 ) {
   const uploadCountResult = await client.query(
     `
@@ -68,11 +69,13 @@ export async function createDBRecordsForProcessedLayer(
 
   let uploadTaskId: number | null = null;
   let uploadedBy: number | null = null;
+  let changelog: string | null = null;
   if (jobType === "upload") {
     const q = await client.query(
       `
       select
-        id
+        id,
+        changelog
       from
         data_upload_tasks
       where
@@ -85,6 +88,10 @@ export async function createDBRecordsForProcessedLayer(
       throw new Error("Could not find upload task related to background job");
     }
     uploadTaskId = q.rows[0].id;
+    changelog = q.rows[0].changelog;
+  } else if (jobType === "conversion") {
+    changelog =
+      "Converted from ESRI Feature Layer to vector data hosted on SeaSketch.";
   }
 
   const userResults = await client.query(
@@ -137,8 +144,9 @@ export async function createDBRecordsForProcessedLayer(
         original_source_url,
         was_converted_from_esri_feature_layer,
         uploaded_by,
-        created_by
-      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19)
+        created_by,
+        changelog
+      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19, $20)
       returning *
     `,
     [
@@ -178,9 +186,11 @@ export async function createDBRecordsForProcessedLayer(
       conversionTask?.location || null,
       Boolean(conversionTask),
       uploadedBy,
+      changelog,
     ]
   );
   const dataSourceId = rows[0].id;
+  const dataSourceBounds = rows[0].bounds;
 
   // Create data_upload_outputs for each output
   for (const output of layer.outputs) {
@@ -212,7 +222,84 @@ export async function createDBRecordsForProcessedLayer(
     );
   }
 
-  if (jobType === "upload") {
+  const sourceLayer = pmtiles ? layer.name : undefined;
+
+  // if (jobType === "upload") {
+  if (replaceSourceId) {
+    // create archived_data_sources record with the old data_source
+    // first, get the related source, layer, and table of contents items
+    const sourceResults = await client.query(
+      `
+          select * from data_sources where id = $1
+        `,
+      [replaceSourceId]
+    );
+    if (!sourceResults.rows.length) {
+      throw new Error("Could not find source to replace");
+    }
+    const source = sourceResults.rows[0];
+    const layerResults = await client.query(
+      `
+          select * from data_layers where data_source_id = $1
+        `,
+      [replaceSourceId]
+    );
+    if (!layerResults.rows.length) {
+      throw new Error("Could not find layer to replace");
+    }
+    if (layerResults.rows.length > 1) {
+      throw new Error("Not implemented. Found multiple layers to replace");
+    }
+    const dataLayer = layerResults.rows[0];
+    const tocResults = await client.query(
+      `
+          select * from table_of_contents_items where data_layer_id = $1
+        `,
+      [dataLayer.id]
+    );
+    if (!tocResults.rows.length) {
+      throw new Error("Could not find table of contents item to replace");
+    }
+    if (tocResults.rows.length > 1) {
+      throw new Error(
+        "Not implemented. Found multiple table of contents items to replace"
+      );
+    }
+    const tocItem = tocResults.rows[0];
+    // attach the new data source to the existing layer
+    // Do this as a single transaction using a stored procedure to avoid any
+    // inconsistency in state
+    await client.query(
+      `
+        select replace_data_source($1, $2, $3, $4, $5)
+      `,
+      [
+        dataLayer.id,
+        dataSourceId,
+        sourceLayer,
+        layer.bounds,
+        conversionTask ? JSON.stringify(conversionTask.mapbox_gl_styles) : null,
+      ]
+    );
+
+    // TODO: if it is a conversion task, update
+    // metadata using the data on the conversion task
+    if (conversionTask) {
+      await client.query(
+        `
+          update table_of_contents_items set metadata = $1 where id = $2
+        `,
+        [conversionTask.metadata, tocItem.id]
+      );
+    }
+
+    // return dataSourceId, dataLayerId, tableOfContentsItemId
+    return {
+      dataSourceId,
+      dataLayerId: dataLayer.id,
+      tableOfContentsItemId: tocItem.id,
+    };
+  } else {
     const layerResult = await client.query(
       `
         insert into data_layers (
@@ -303,59 +390,60 @@ export async function createDBRecordsForProcessedLayer(
       dataLayerId,
       tableOfContentsItemId,
     };
-  } else if (jobType === "conversion") {
-    const dataLayerIdQ = await client.query(
-      `select data_layer_id from table_of_contents_items where id = $1`,
-      [conversionTask.table_of_contents_item_id]
-    );
-    const dataLayerId = dataLayerIdQ.rows[0].data_layer_id;
-    if (!dataLayerId) {
-      throw new Error("Could not find data_layer_id for conversion task");
-    }
-    const layerResult = await client.query(
-      `
-        update data_layers set data_source_id = $1, source_layer = $2,
-          mapbox_gl_styles = $3, sublayer = null where data_layers.id = $4 returning *
-      `,
-      [
-        dataSourceId,
-        pmtiles ? layer.name : undefined,
-        JSON.stringify(
-          conversionTask?.mapbox_gl_styles ||
-            getStyle(
-              isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
-              uploadCount,
-              layer.geostats
-            )
-        ),
-        dataLayerId,
-      ]
-    );
-    const dataLayer = layerResult.rows[0];
-    if (!dataLayer) {
-      throw new Error(
-        "Could not find layer with data_source_id=" + dataSourceId
-      );
-    }
-    // update metadata on table of contents item
-    await client.query(
-      `
-      update table_of_contents_items set metadata = $1, bounds = $2 where id = $3
-    `,
-      [
-        JSON.stringify(conversionTask.metadata || {}),
-        layer.bounds,
-        conversionTask.table_of_contents_item_id,
-      ]
-    );
-    return {
-      dataSourceId,
-      dataLayerId: dataLayer.id,
-      tableOfContentsItemId: conversionTask.table_of_contents_item_id,
-    };
-  } else {
-    throw new Error(`Invalid jobType "${jobType}"`);
   }
+  // } else if (jobType === "conversion") {
+  //   const dataLayerIdQ = await client.query(
+  //     `select data_layer_id from table_of_contents_items where id = $1`,
+  //     [conversionTask.table_of_contents_item_id]
+  //   );
+  //   const dataLayerId = dataLayerIdQ.rows[0].data_layer_id;
+  //   if (!dataLayerId) {
+  //     throw new Error("Could not find data_layer_id for conversion task");
+  //   }
+  //   const layerResult = await client.query(
+  //     `
+  //       update data_layers set data_source_id = $1, source_layer = $2,
+  //         mapbox_gl_styles = $3, sublayer = null where data_layers.id = $4 returning *
+  //     `,
+  //     [
+  //       dataSourceId,
+  //       pmtiles ? layer.name : undefined,
+  //       JSON.stringify(
+  //         conversionTask?.mapbox_gl_styles ||
+  //           getStyle(
+  //             isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
+  //             uploadCount,
+  //             layer.geostats
+  //           )
+  //       ),
+  //       dataLayerId,
+  //     ]
+  //   );
+  //   const dataLayer = layerResult.rows[0];
+  //   if (!dataLayer) {
+  //     throw new Error(
+  //       "Could not find layer with data_source_id=" + dataSourceId
+  //     );
+  //   }
+  //   // update metadata on table of contents item
+  //   await client.query(
+  //     `
+  //     update table_of_contents_items set metadata = $1, bounds = $2 where id = $3
+  //   `,
+  //     [
+  //       JSON.stringify(conversionTask.metadata || {}),
+  //       layer.bounds,
+  //       conversionTask.table_of_contents_item_id,
+  //     ]
+  //   );
+  //   return {
+  //     dataSourceId,
+  //     dataLayerId: dataLayer.id,
+  //     tableOfContentsItemId: conversionTask.table_of_contents_item_id,
+  //   };
+  // } else {
+  //   throw new Error(`Invalid jobType "${jobType}"`);
+  // }
 }
 
 // Colors borrowed from https://github.com/mapbox/mbview/blob/master/views/vector.ejs#L75

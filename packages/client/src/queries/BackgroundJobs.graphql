@@ -1,15 +1,33 @@
+fragment BackgroundJobDetails on ProjectBackgroundJob {
+  id
+  title
+  userId
+  errorMessage
+  progress
+  progressMessage
+  state
+  type
+  createdAt
+  dataUploadTask {
+    id
+    filename
+    replaceSourceId
+    createdAt
+  }
+  esriFeatureLayerConversionTask {
+    tableOfContentsItemId
+    tableOfContentsItem {
+      id
+      title
+    }
+  }
+}
+
 query BackgroundJobs($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     projectBackgroundJobs {
-      id
-      title
-      userId
-      errorMessage
-      progress
-      progressMessage
-      state
-      type
+      ...BackgroundJobDetails
     }
   }
 }

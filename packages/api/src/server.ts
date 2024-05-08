@@ -250,11 +250,13 @@ run({
   */2 * * * * collectMapDataRequestCounts
   */3 * * * * identifyProjectsWithDataRequests
   */5 * * * * rollupDataSourceRequests
+  * * * * * deleteExpiredArchivedDataSources
   `
       : `
   * * * * * cleanupProjectBackgroundJobs
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
+  * * * * * deleteExpiredArchivedDataSources
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {

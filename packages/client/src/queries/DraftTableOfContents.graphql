@@ -263,6 +263,34 @@ fragment FullAdminSource on DataSource {
     size
     originalFilename
   }
+  changelog
+}
+
+fragment ArchivedSource on ArchivedDataSource {
+  nodeId
+  dataSourceId
+  changelog
+  dataSource {
+    ...FullAdminSource
+  }
+  sprites {
+    id
+    spriteImages {
+      spriteId
+      pixelRatio
+      height
+      width
+      url
+    }
+    type
+  }
+  version
+  mapboxGlStyle
+  sourceLayer
+  spriteIds
+  dataLayerId
+  bounds
+  changelog
 }
 
 fragment FullAdminDataLayer on DataLayer {
@@ -287,6 +315,10 @@ fragment FullAdminDataLayer on DataLayer {
   dataSourceId
   dataSource {
     ...FullAdminSource
+  }
+  version
+  archivedSources {
+    ...ArchivedSource
   }
 }
 
@@ -785,24 +817,113 @@ query QuotaUsageDetails($slug: String!) {
     id
     dataHostingQuota
     dataHostingQuotaUsed
-    uploadedDraftDataSources {
+    draftTableOfContentsItems {
+      isFolder
       id
+      title
+      stableId
+      breadcrumbs {
+        id
+        title
+        stableId
+      }
       quotaUsed {
         bytes
         id
         isOriginal
         type
+        isArchived
       }
-      dataLayersConnection {
-        nodes {
-          id
-          tableOfContentsItem {
-            id
-            title
-            stableId
-          }
-        }
+    }
+  }
+}
+
+mutation SetChangelog($dataUploadTaskId: UUID!, $changelog: String!) {
+  setDataUploadTaskChangelog(
+    input: { dataUploadTaskId: $dataUploadTaskId, changelog: $changelog }
+  ) {
+    dataUploadTask {
+      id
+      changelog
+      dataSource {
+        id
+        changelog
       }
+    }
+  }
+}
+
+query LayerTotalQuotaUsed($id: Int!) {
+  dataLayer(id: $id) {
+    id
+    totalQuotaUsed
+  }
+}
+
+mutation DeleteArchivedDataSource($id: Int!) {
+  deleteArchivedSource(input: { sourceId: $id }) {
+    tableOfContentsItem {
+      id
+      ...FullAdminOverlay
+      dataLayer {
+        id
+        ...FullAdminDataLayer
+        totalQuotaUsed
+      }
+    }
+  }
+}
+
+mutation RollbackArchivedDataSource($id: Int!, $rollbackGLStyle: Boolean) {
+  rollbackToArchivedSource(
+    input: { sourceId: $id, rollbackGlStyle: $rollbackGLStyle }
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+      dataLayer {
+        ...FullAdminDataLayer
+        totalQuotaUsed
+      }
+    }
+  }
+}
+
+mutation SetProjectDataHostingRetentionPeriod(
+  $id: Int!
+  $period: IntervalInput
+) {
+  updateProject(
+    input: { id: $id, patch: { dataHostingRetentionPeriod: $period } }
+  ) {
+    project {
+      id
+      dataHostingRetentionPeriod {
+        days
+      }
+    }
+  }
+}
+
+query ProjectHostingRetentionPeriod($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingRetentionPeriod {
+      days
+    }
+  }
+}
+
+query EstimatedDataHostingQuotaUsage(
+  $slug: String!
+  $newRetentionPeriod: IntervalInput
+) {
+  projectBySlug(slug: $slug) {
+    id
+    estimateDeletedDataForRetentionChange(
+      newRetentionPeriod: $newRetentionPeriod
+    ) {
+      bytes
+      numSources
     }
   }
 }

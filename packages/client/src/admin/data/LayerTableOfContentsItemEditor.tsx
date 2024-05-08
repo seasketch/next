@@ -366,7 +366,7 @@ export default function LayerTableOfContentsItemEditor(
 export function TableOfContentsItemFolderBreadcrumbs({
   parents,
 }: {
-  parents: OverlayFragment[];
+  parents: { title: string; id: number }[];
 }) {
   return (
     <>

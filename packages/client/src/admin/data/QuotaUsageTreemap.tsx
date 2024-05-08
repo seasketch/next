@@ -21,12 +21,13 @@ interface Node {
   children?: Node[];
   stableId?: string;
   id: string;
-  items: AdminOverlayFragment[];
+  breadcrumbs?: { id: number; title: string; stableId: number }[];
+  // items: AdminOverlayFragment[];
   quotaDetails: {
     bytes: number;
     id: number;
     isOriginal?: boolean;
-    type: DataUploadOutputType;
+    type: "Archives" | DataUploadOutputType;
   }[];
 }
 
@@ -46,7 +47,8 @@ export default function QuotaUsageTreemap({
   const [hovered, setHovered] = useState<null | {
     x: number;
     y: number;
-    tableOfContentsItems: AdminOverlayFragment[];
+    title: string;
+    breadcrumbs: { id: number; title: string; stableId: number }[];
     quotaDetails: {
       bytes: number;
       id: number;
@@ -67,101 +69,71 @@ export default function QuotaUsageTreemap({
       value: 0,
       children: [],
       id: "root",
-      items: [],
       quotaDetails: [],
     };
 
-    if (!tableOfContentsItems?.length || !layers?.length) {
+    if (!data?.projectBySlug?.draftTableOfContentsItems) {
       return null;
     }
-    function addFolder(node: Node) {
-      const childFolders = tableOfContentsItems.filter(
-        (i) =>
-          ((!node.stableId && !i.parentStableId) ||
-            i.parentStableId === node.stableId) &&
-          i.isFolder
-      );
-      for (const folder of childFolders) {
-        const child: Node = {
-          type: "node",
-          name: folder.title,
-          items: [folder],
-          value: 0,
-          children: [],
-          stableId: folder.stableId,
-          id: "folder-" + folder.id,
-          quotaDetails: [],
-        };
-        node.children!.push(child);
-        addFolder(child);
+
+    for (const item of data.projectBySlug.draftTableOfContentsItems || []) {
+      if (item.isFolder) {
+        continue;
       }
-      // add layers with matching type
-      const childItems = tableOfContentsItems.filter(
-        (i) =>
-          ((!node.stableId && !i.parentStableId) ||
-            i.parentStableId === node.stableId) &&
-          !i.isFolder &&
-          (i.dataSourceType === DataSourceTypes.SeasketchMvt ||
-            i.dataSourceType === DataSourceTypes.SeasketchVector ||
-            i.dataSourceType === DataSourceTypes.SeasketchRaster)
-      );
-      const dataSourceDetails = {} as {
-        [sourceId: number]: {
-          sourceId: number;
-          tableOfContentsItems: AdminOverlayFragment[];
-          quotaDetails: {
-            bytes: number;
-            id: number;
-            isOriginal?: boolean;
-            type: DataUploadOutputType;
-          }[];
-        };
+      let parent = root;
+      const child: Node = {
+        type: "leaf",
+        name: item.title,
+        value: (item.quotaUsed || []).reduce(
+          (acc, q) => acc + parseInt(q.bytes),
+          0
+        ),
+        // @ts-ignore
+        breadcrumbs: item.breadcrumbs || [],
+        id: item.stableId,
+        quotaDetails: [
+          ...(item.quotaUsed || [])
+            .filter((q) => !q.isArchived)
+            .map((q) => ({
+              bytes: parseInt(q.bytes),
+              id: q.id as number,
+              isOriginal: q.isOriginal as boolean,
+              type: q.type as DataUploadOutputType,
+              isArchived: Boolean(q.isArchived),
+            })),
+          {
+            id: -9999999,
+            isOriginal: false,
+            // @ts-ignore
+            type: "Archives",
+            bytes: (item.quotaUsed || []).reduce(
+              (acc, q) => acc + (q.isArchived ? parseInt(q.bytes) : 0),
+              0
+            ),
+          },
+        ],
       };
-      for (const item of childItems) {
-        const layer = layers.find((l) => l.id === item.dataLayerId);
-        if (layer && layer.dataSourceId) {
-          const quotaDetails = (
-            data?.projectBySlug?.uploadedDraftDataSources || []
-          ).find((d) => d.id === layer.dataSourceId);
-          if (quotaDetails) {
-            if (!dataSourceDetails[layer.dataSourceId]) {
-              dataSourceDetails[layer.dataSourceId] = {
-                sourceId: layer.dataSourceId,
-                tableOfContentsItems: [],
-                quotaDetails: (quotaDetails.quotaUsed || []).map((q) => ({
-                  bytes: parseInt(q.bytes),
-                  id: q.id as number,
-                  isOriginal: q.isOriginal as boolean,
-                  type: q.type as DataUploadOutputType,
-                })),
-              };
-            }
-            dataSourceDetails[layer.dataSourceId].tableOfContentsItems.push(
-              item
-            );
-          }
+      for (const crumb of item.breadcrumbs || []) {
+        const existing = parent.children?.find((c) => c.id === crumb.stableId);
+        if (existing) {
+          parent = existing;
         } else {
-          // console.error(`Layer ${item.id} has no dataSourceId`);
-          throw new Error(`Layer ${item.id} has no dataSourceId`);
+          const folder: Node = {
+            type: "node",
+            name: crumb.title!,
+            value: 0,
+            children: [],
+            id: crumb.stableId!,
+            quotaDetails: [],
+          };
+          parent.children!.push(folder);
+          parent = folder;
         }
       }
-      for (const sourceId in dataSourceDetails) {
-        const source = dataSourceDetails[sourceId];
-        const child: Node = {
-          type: "leaf",
-          name: source.tableOfContentsItems.map((i) => i.title).join(", "),
-          value: source.quotaDetails.reduce((acc, q) => acc + q.bytes, 0),
-          id: "source-" + source.sourceId,
-          items: source.tableOfContentsItems,
-          quotaDetails: source.quotaDetails,
-        };
-        node.children!.push(child);
-        node.value += child.value;
-      }
+      parent.children!.push(child);
+      parent.value += child.value;
     }
-    if (tableOfContentsItems) {
-      addFolder(root);
-    }
+
     // Recursively go through each node and sort children by value, then set the
     // value to zero for nodes which have children
     function sortChildren(node: Node) {
@@ -188,7 +160,7 @@ export default function QuotaUsageTreemap({
       name: string;
       value: number;
       id: string;
-      items: AdminOverlayFragment[];
+      breadcrumbs?: { id: number; title: string; stableId: number }[];
       quotaDetails: {
         bytes: number;
         id: number;
@@ -205,12 +177,12 @@ export default function QuotaUsageTreemap({
       name: string;
       value: number;
       id: string;
-      items: AdminOverlayFragment[];
+      // items: AdminOverlayFragment[];
       quotaDetails: {
         bytes: number;
         id: number;
         isOriginal?: boolean;
-        type: DataUploadOutputType;
+        type: DataUploadOutputType | "Archives";
       }[];
     }>(root)
       .sum((d) => d.value)
@@ -245,7 +217,8 @@ export default function QuotaUsageTreemap({
                     setHovered({
                       x: e.clientX,
                       y: e.clientY,
-                      tableOfContentsItems: d.data.items,
+                      title: d.data.name,
+                      breadcrumbs: d.data.breadcrumbs || [],
                       quotaDetails: d.data.quotaDetails,
                     });
                   }
@@ -333,7 +306,17 @@ export default function QuotaUsageTreemap({
           }}
         >
           <div>
-            {hovered.tableOfContentsItems.map((item) => {
+            <div className="">
+              <div className="truncate font-semibold mb-1">{hovered.title}</div>
+              <div className="-ml-1.5 text-xs text-gray-500 truncate">
+                {hovered.breadcrumbs.length > 0 && (
+                  <TableOfContentsItemFolderBreadcrumbs
+                    parents={hovered.breadcrumbs}
+                  />
+                )}
+              </div>
+            </div>
+            {/* {hovered.tableOfContentsItems.map((item) => {
               const parents: OverlayFragment[] = [];
               let i = item;
               while (i.parentStableId) {
@@ -360,10 +343,11 @@ export default function QuotaUsageTreemap({
                   </div>
                 </div>
               );
-            })}
+            })} */}
           </div>
 
           {hovered.quotaDetails
+            .filter((q) => q.bytes)
             .sort((a, b) => b.type.localeCompare(a.type))
             .map((q) => (
               <div className="flex w-full">
@@ -398,7 +382,7 @@ export default function QuotaUsageTreemap({
   );
 }
 
-export function humanizeOutputType(type: DataUploadOutputType) {
+export function humanizeOutputType(type: DataUploadOutputType | "Archives") {
   switch (type) {
     case DataUploadOutputType.FlatGeobuf:
       return "FlatGeoBuf";
@@ -412,6 +396,8 @@ export function humanizeOutputType(type: DataUploadOutputType) {
       return "Shapefile";
     case DataUploadOutputType.Png:
       return "PNG Image";
+    case "Archives":
+      return "Archived Versions";
     default:
       return type;
   }

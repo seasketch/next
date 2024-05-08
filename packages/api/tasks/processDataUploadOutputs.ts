@@ -29,6 +29,7 @@ export default async function processDataUpload(
       );
     }
     try {
+      let replaceSourceId: number | undefined = undefined;
       const results = await client.query(
         `update project_background_jobs set progress_message = 'cartography' where id = $1 returning *`,
         [jobId]
@@ -40,11 +41,26 @@ export default async function processDataUpload(
         [jobId]
       );
       const uploadTaskQuery = await client.query(
-        `select id from data_upload_tasks where project_background_job_id = $1 limit 1`,
+        `select id, replace_source_id from data_upload_tasks where project_background_job_id = $1 limit 1`,
         [jobId]
       );
       const isConversionTask = conversionTaskQuery.rows.length > 0;
       const isUploadTask = uploadTaskQuery.rows.length > 0;
+      if (isUploadTask) {
+        replaceSourceId = uploadTaskQuery.rows[0].replace_source_id;
+      } else if (isConversionTask) {
+        const originalSource = await client.query(
+          `
+          select data_source_id from data_layers where id = (
+            select data_layer_id from table_of_contents_items where id = $1
+          )
+        `,
+          [conversionTaskQuery.rows[0].table_of_contents_item_id]
+        );
+        if (originalSource.rows.length >= 1) {
+          replaceSourceId = originalSource.rows[0].data_source_id;
+        }
+      }
       if (!isConversionTask && !isUploadTask) {
         return handleError(
           "Could not find conversion or upload task related to background job " +
@@ -60,7 +76,8 @@ export default async function processDataUpload(
             projectId,
             client,
             jobId,
-            isConversionTask ? "conversion" : "upload"
+            isConversionTask ? "conversion" : "upload",
+            replaceSourceId
           );
         }
         await client.query(

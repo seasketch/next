@@ -3,6 +3,8 @@ fragment DataUploadDetails on DataUploadTask {
   filename
   tableOfContentsItemStableIds
   projectBackgroundJobId
+  replaceSourceId
+  createdAt
 }
 
 fragment DataUploadExtendedDetails on DataUploadTask {
@@ -16,12 +18,14 @@ mutation createDataUpload(
   $projectId: Int!
   $filename: String!
   $contentType: String!
+  $replaceSourceId: Int
 ) {
   createDataUpload(
     input: {
       filename: $filename
       projectId: $projectId
       contentType: $contentType
+      replaceSourceId: $replaceSourceId
     }
   ) {
     dataUploadTask {
@@ -41,8 +45,18 @@ fragment JobDetails on ProjectBackgroundJob {
   startedAt
   title
   type
+  createdAt
+  userId
   dataUploadTask {
     ...DataUploadDetails
+  }
+  esriFeatureLayerConversionTask {
+    nodeId
+    tableOfContentsItemId
+    tableOfContentsItem {
+      id
+      title
+    }
   }
 }
 
@@ -123,7 +137,9 @@ fragment BackgroundJobSubscriptionEvent on ProjectBackgroundJobSubscriptionPaylo
   job {
     ...JobDetails
     esriFeatureLayerConversionTask {
+      nodeId
       projectBackgroundJobId
+      tableOfContentsItemId
       tableOfContentsItem {
         id
         stableId

@@ -24,6 +24,7 @@ import {
 import { BBox, Feature, Polygon } from "geojson";
 import {
   ArcgisFeatureLayerFetchStrategy,
+  ArchivedSourceFragment,
   BasemapDetailsFragment,
   BasemapType,
   DataLayerDetailsFragment,
@@ -921,7 +922,7 @@ class MapContextManager extends EventEmitter {
         for (const id in this.customSources) {
           const sourceConfig = this.clientDataSources[id];
           const { customSource, visible } = this.customSources[id];
-          if (visible) {
+          if (visible && sourceConfig) {
             if (isArcGISDynamicMapService(customSource)) {
               customSource.updateUseDevicePixelRatio(
                 sourceConfig.useDevicePixelRatio || false
@@ -1393,7 +1394,11 @@ class MapContextManager extends EventEmitter {
           const layer = this.layers[layerId];
           // If layer or source are not set yet, they will be ignored
           if (layer) {
-            const source = this.clientDataSources[layer.dataSourceId];
+            const source =
+              this.archivedSource &&
+              this.archivedSource.dataLayerId === layer.id
+                ? this.archivedSource.dataSource
+                : this.clientDataSources[layer.dataSourceId];
             if (source) {
               // Add the source
               if (!baseStyle.sources[source.id.toString()]) {
@@ -1541,7 +1546,13 @@ class MapContextManager extends EventEmitter {
                 }
               }
               // Add the sprites if needed
-              if (layer.sprites?.length) {
+              if (
+                this.archivedSource &&
+                this.archivedSource.dataLayerId === layer.id &&
+                this.archivedSource.sprites?.length
+              ) {
+                sprites = [...sprites, ...this.archivedSource.sprites];
+              } else if (layer.sprites?.length) {
                 sprites = [...sprites, ...layer.sprites];
               }
 
@@ -1559,13 +1570,26 @@ class MapContextManager extends EventEmitter {
                   source.type === DataSourceTypes.SeasketchMvt ||
                   source.type === DataSourceTypes.Vector ||
                   source.type === DataSourceTypes.SeasketchRaster;
-                let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {
+                const staticLayers = (
+                  this.archivedSource &&
+                  this.archivedSource.dataLayerId === layer.id &&
+                  this.archivedSource.mapboxGlStyle
+                    ? this.archivedSource.mapboxGlStyle
+                    : layer.mapboxGlStyles
+                ) as any[];
+                let glLayers = staticLayers.map((lyr, i) => {
                   return {
                     ...lyr,
                     source: source.id.toString(),
                     id: idForLayer(layer, i),
                     ...(shouldHaveSourceLayer
-                      ? { "source-layer": layer.sourceLayer }
+                      ? {
+                          "source-layer":
+                            this.archivedSource &&
+                            this.archivedSource.dataLayerId === layer.id
+                              ? this.archivedSource.sourceLayer
+                              : layer.sourceLayer,
+                        }
                       : {}),
                   } as AnyLayer;
                 });
@@ -3110,11 +3134,25 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  async zoomToTocItem(stableId: string) {
+  private boundsForTocItem = async (stableId: string) => {
     let bounds: [number, number, number, number] | undefined;
     const item = this.tocItems[stableId];
     if (item) {
-      if (item.bounds) {
+      if (
+        (this.archivedSource &&
+          item.dataLayerId === this.archivedSource.dataLayerId &&
+          this.archivedSource.bounds) ||
+        this.archivedSource?.dataSource?.bounds
+      ) {
+        bounds =
+          ((this.archivedSource.bounds ||
+            this.archivedSource?.dataSource?.bounds) as [
+            number,
+            number,
+            number,
+            number
+          ]) || undefined;
+      } else if (item.bounds) {
         bounds = item.bounds.map((coord: string | number) =>
           typeof coord === "string" ? parseFloat(coord) : coord
         ) as [number, number, number, number];
@@ -3144,6 +3182,25 @@ class MapContextManager extends EventEmitter {
         }
       }
     }
+    return bounds;
+  };
+
+  async zoomToTocItem(
+    stableId: string,
+    options?: { onlyIfNotVisible: boolean }
+  ) {
+    const bounds = await this.boundsForTocItem(stableId);
+    if (options?.onlyIfNotVisible && bounds) {
+      // Check the current map bounds. If any part of the bounds is visible, don't zoom
+      const mapBounds = this.map?.getBounds();
+      if (mapBounds) {
+        const sw = new mapboxgl.LngLat(bounds[0], bounds[1]);
+        const ne = new mapboxgl.LngLat(bounds[2], bounds[3]);
+        if (mapBounds.contains(sw) || mapBounds.contains(ne)) {
+          return;
+        }
+      }
+    }
     if (bounds && [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")) {
       const sidebar = currentSidebarState();
       this.map?.fitBounds(bounds, {
@@ -3156,6 +3213,18 @@ class MapContextManager extends EventEmitter {
         },
       });
     }
+  }
+
+  private archivedSource: ArchivedSourceFragment | null = null;
+
+  showArchivedSource(archive: ArchivedSourceFragment) {
+    this.archivedSource = archive;
+    this.debouncedUpdateStyle();
+  }
+
+  clearArchivedSource() {
+    this.archivedSource = null;
+    this.debouncedUpdateStyle();
   }
 }
 

@@ -1,7 +1,9 @@
 import bytes from "bytes";
 import {
   DataUploadOutputType,
+  FullAdminOverlayFragment,
   FullAdminSourceFragment,
+  useLayerTotalQuotaUsedQuery,
 } from "../../../generated/graphql";
 import { SettingsDLListItem } from "../../SettingsDefinitionList";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
@@ -13,6 +15,8 @@ import { humanizeOutputType } from "../QuotaUsageTreemap";
 export default function HostedLayerInfo({
   source,
   readonly,
+  layerId,
+  version,
 }: {
   source: Pick<
     FullAdminSourceFragment,
@@ -24,7 +28,14 @@ export default function HostedLayerInfo({
     | "outputs"
   >;
   readonly?: boolean;
+  layerId: number;
+  version?: number;
 }) {
+  const { data } = useLayerTotalQuotaUsedQuery({
+    variables: {
+      id: layerId,
+    },
+  });
   const { t } = useTranslation("admin:data");
   const original = (source.outputs || []).find((output) => output.isOriginal);
   return (
@@ -67,7 +78,7 @@ export default function HostedLayerInfo({
                     <div className="text-sm">
                       <h5 className="font-medium">{t("Assets")}</h5>
                       {(source.outputs || []).map((output) => (
-                        <div className="flex items-center">
+                        <div className="flex items-center" key={output.id}>
                           <span className="w-36">
                             {humanizeOutputType(output.type)}{" "}
                             {output.isOriginal ? "(" + t("original") + ")" : ""}
@@ -85,6 +96,20 @@ export default function HostedLayerInfo({
                 </Tooltip.Portal>
               </Tooltip.Root>
             </Tooltip.Provider>
+            {version &&
+              version > 1 &&
+              data?.dataLayer?.totalQuotaUsed &&
+              data?.dataLayer?.totalQuotaUsed >
+                (source.hostingQuotaUsed || 0) && (
+                <span>
+                  {" "}
+                  /{" "}
+                  {bytes(parseInt(data.dataLayer.totalQuotaUsed), {
+                    unitSeparator: " ",
+                  })}
+                  {t(" for all versions")}
+                </span>
+              )}
           </div>
         }
       />

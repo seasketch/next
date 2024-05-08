@@ -28,6 +28,8 @@ export interface DataUploadProcessingCompleteEvent {
    * upload this will not be true. */
   isFromCurrentSession: boolean;
   layerStaticIds: string[];
+  replaceSourceId?: number;
+  newSourceId: number;
 }
 
 export interface FeatureLayerConversionCompleteEvent {
@@ -42,6 +44,11 @@ export interface DataUploadErrorEvent {
   jobId: string;
 }
 
+export interface UploadSubmittedEvent {
+  uploadTaskId: string;
+  jobId: string;
+  replaceSourceId?: number;
+}
 /**
  * Manages project background jobs, which includes:
  *
@@ -94,6 +101,8 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
    */
   "upload-processing-complete": DataUploadProcessingCompleteEvent;
   "feature-layer-conversion-complete": FeatureLayerConversionCompleteEvent;
+  "file-uploaded": { uploadTaskId: string; jobId: string };
+  "upload-submitted": UploadSubmittedEvent;
 }> {
   client: ApolloClient<any>;
   slug: string;
@@ -135,33 +144,49 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
   }
 
   addJobToQueryCache(task: JobDetailsFragment) {
-    this.client.cache.updateQuery<ProjectBackgroundJobsQuery>(
-      {
-        query: ProjectBackgroundJobsDocument,
-        variables: {
-          slug: this.slug,
+    try {
+      this.client.cache.updateQuery<ProjectBackgroundJobsQuery>(
+        {
+          query: ProjectBackgroundJobsDocument,
+          variables: {
+            slug: this.slug,
+          },
         },
-      },
-      (data) => {
-        if (data?.projectBySlug?.projectBackgroundJobs) {
-          return {
-            ...data,
-            projectBySlug: {
-              ...data.projectBySlug,
-              projectBackgroundJobs: [
-                ...data.projectBySlug.projectBackgroundJobs.filter((u) => {
-                  return u.id !== task.id;
-                }),
-                task,
-              ],
-            },
-          };
+        (data) => {
+          if (data?.projectBySlug?.projectBackgroundJobs) {
+            return {
+              ...data,
+              projectBySlug: {
+                ...data.projectBySlug,
+                projectBackgroundJobs: [
+                  ...data.projectBySlug.projectBackgroundJobs.filter((u) => {
+                    return u.id !== task.id;
+                  }),
+                  {
+                    ...task,
+                    dataUploadTask: null,
+                    esriFeatureLayerConversionTask: null,
+                  },
+                ],
+              },
+            };
+          }
         }
-      }
-    );
+      );
+    } catch (e) {
+      console.error(e);
+    }
   }
 
-  async uploadFiles(files: File[]) {
+  async uploadFiles(
+    files: File[],
+    options?: {
+      replaceSourceId?: number;
+    }
+  ) {
+    if (files.length > 1 && options?.replaceSourceId) {
+      throw new Error("Cannot upload multiple files and replace a source");
+    }
     if (files.length) {
       const tasksAndFiles = await Promise.all(
         files.map(async (file) => {
@@ -172,6 +197,7 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                 projectId: this.projectId,
                 filename: file.name,
                 contentType: file.type,
+                replaceSourceId: options?.replaceSourceId,
               },
             });
             if (
@@ -191,6 +217,13 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
             }
 
             const jobId = job.id;
+
+            this.emit("upload-submitted", {
+              uploadTaskId: task.id,
+              jobId,
+              replaceSourceId: options?.replaceSourceId,
+            });
+
             // Add the new task to DataUploadTasksQuery cache
             this.addJobToQueryCache(job);
 
@@ -252,6 +285,10 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
           }).then(async (response) => {
             if (response.status === 200) {
               try {
+                this.emit("file-uploaded", {
+                  uploadTaskId: task.id,
+                  jobId,
+                });
                 await this.client.mutate<SubmitDataUploadMutation>({
                   mutation: SubmitDataUploadDocument,
                   variables: {
@@ -291,12 +328,13 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
       event.job.state !== ProjectBackgroundJobState.Complete &&
       event.job.state !== ProjectBackgroundJobState.Failed
     ) {
-      this.addJobToQueryCache(event.job.id);
+      this.addJobToQueryCache(event.job);
       this.activeJobs.add(event.job.id);
     }
 
     // If it's an upload task, detect if processing is complete
     const dataUploadTask = event.job.dataUploadTask;
+    const conversionTask = event.job.esriFeatureLayerConversionTask;
     if (
       dataUploadTask &&
       !this.completedTasks.has(event.job.id) &&
@@ -312,6 +350,7 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
         uploadTaskId: dataUploadTask.id,
         isFromCurrentSession,
         layerStaticIds: dataUploadTask.tableOfContentsItemStableIds || [],
+        replaceSourceId: dataUploadTask.replaceSourceId || undefined,
       });
     }
     if (

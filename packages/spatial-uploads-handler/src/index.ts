@@ -497,7 +497,12 @@ export default async function handleUpload(
       // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
       // from the normalized fgb dynamically if someone wants to download it as
       // GeoJSON or shapefile.
-      if (normalizedVectorFileSize <= MVT_THRESHOLD) {
+      const original = outputs.find((o) => o.isOriginal);
+      const underThreshold =
+        normalizedVectorFileSize <= MVT_THRESHOLD ||
+        (original?.type === "GeoJSON" && original.size <= MVT_THRESHOLD * 10);
+      console.log({ underThreshold });
+      if (underThreshold) {
         const geojsonPath = path.join(dist, name + ".geojson.json");
         await logger.exec(
           [
@@ -623,7 +628,7 @@ export default async function handleUpload(
        * At some point we may need to customize the settings of tippecanoe but it
        * seems the Felt is doing a lot of work on improving the default behavior.
        */
-      if (normalizedVectorFileSize > MVT_THRESHOLD) {
+      if (!underThreshold) {
         const mvtPath = path.join(dist, name + ".mbtiles");
         const pmtilesPath = path.join(dist, name + ".pmtiles");
         await updateProgress("running", "tiling");
@@ -758,7 +763,6 @@ export default async function handleUpload(
     );
     return response;
   } catch (e) {
-    console.log("caught an error", e);
     const error = e as Error;
     if (!skipLoggingProgress) {
       const q = await pgClient.query(
@@ -846,7 +850,6 @@ class Logger {
     throwMsg: string,
     progressFraction?: number
   ): Promise<string> {
-    // console.log("exec " + command[0] + " " + command[1].join(" "));
     let stdout = "";
     const self = this;
     return new Promise((resolve, reject) => {
@@ -858,7 +861,6 @@ class Logger {
 
       child.stdout.setEncoding("utf8");
       child.stdout.on("data", function (data) {
-        // console.log(`stdout: ${data}`);
         if (progressFraction && progressRegExp.test(data.toString())) {
           const newProgress = parseFloat(
             data.toString().match(progressRegExp)[1]
@@ -873,7 +875,6 @@ class Logger {
 
       child.stderr.setEncoding("utf8");
       child.stderr.on("data", function (data) {
-        // console.log(`stderr: ${data}`);
         if (
           data.indexOf("ERROR 1: ICreateFeature: Mismatched geometry type") !=
           -1

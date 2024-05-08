@@ -12,7 +12,7 @@ import {
 import InlineAuthor from "../../../components/InlineAuthor";
 import HostedLayerInfo from "./HostedLayerInfo";
 import ArcGISDynamicMapServiceLayerInfo from "./ArcGISDynamicMapServiceLayerInfo";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { GeostatsLayer } from "../GLStyleEditor/extensions/glStyleAutocomplete";
 import { InfoCircledIcon, TableIcon } from "@radix-ui/react-icons";
 import GeostatsModal from "../GLStyleEditor/GeostatsModal";
@@ -25,6 +25,7 @@ export default function LayerInfoList({
   source,
   readonly,
   layer,
+  children,
 }: {
   source: Pick<
     FullAdminSourceFragment,
@@ -46,9 +47,10 @@ export default function LayerInfoList({
   >;
   layer: Pick<
     FullAdminDataLayerFragment,
-    "sublayer" | "sublayerType" | "sourceLayer"
+    "sublayer" | "sublayerType" | "sourceLayer" | "id" | "version"
   >;
   readonly?: boolean;
+  children?: ReactNode;
 }) {
   const { t } = useTranslation("admin:data");
   const profile = source.authorProfile;
@@ -173,7 +175,14 @@ export default function LayerInfoList({
             }
           />
         )}
-        {!isRemote && <HostedLayerInfo readonly={readonly} source={source} />}
+        {!isRemote && (
+          <HostedLayerInfo
+            layerId={layer.id}
+            readonly={readonly}
+            source={source}
+            version={layer.version || 0}
+          />
+        )}
         {source.type === DataSourceTypes.ArcgisDynamicMapserver && (
           <ArcGISDynamicMapServiceLayerInfo
             source={source}
@@ -201,6 +210,7 @@ export default function LayerInfoList({
         {source.type === DataSourceTypes.Vector && (
           <RemoteVectorLayerInfo source={source} readonly={readonly} />
         )}
+        {children}
       </SettingsDefinitionList>
       {showColumnModal && source.geostats && (
         <GeostatsModal

@@ -230,6 +230,12 @@ function ApolloProviderWithToken(props: any) {
               },
             },
           },
+          ArchivedDataSource: {
+            keyFields: ["nodeId"],
+          },
+          SpriteImage: {
+            keyFields: ["url"],
+          },
         },
       });
 

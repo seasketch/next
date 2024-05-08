@@ -19,7 +19,6 @@ interface GeostatsModalProps {
  * @returns
  */
 export default function GeostatsModal(props: GeostatsModalProps) {
-  console.log(props.geostats);
   return (
     <Modal
       className={props.className}
