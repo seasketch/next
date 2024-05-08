@@ -11,10 +11,16 @@ export default function ArcGISTiledRasterBaseSettings({
   url,
   onMaxZoomChange,
   maxZoomSetting,
+  readonly,
+  hideLocation,
+  hideType,
 }: {
   url: string;
   onMaxZoomChange: (maxzoom: number | null) => void;
   maxZoomSetting: number | null;
+  readonly?: boolean;
+  hideLocation?: boolean;
+  hideType?: boolean;
 }) {
   const [state, setState] = useState<
     | {
@@ -54,24 +60,28 @@ export default function ArcGISTiledRasterBaseSettings({
 
   return (
     <SettingsDefinitionList>
-      <SettingsDLListItem
-        term={t("Source Type")}
-        description={t("Raster tiles hosted on ArcGIS Server")}
-      />
-      <SettingsDLListItem
-        truncate
-        term={t("Source Server")}
-        description={
-          <a
-            target="_blank"
-            className="text-primary-600 underline"
-            href={url!}
-            rel="noreferrer"
-          >
-            {url!.replace("https://", "").replace("http://", "")}
-          </a>
-        }
-      />
+      {!hideType && (
+        <SettingsDLListItem
+          term={t("Source Type")}
+          description={t("Raster tiles hosted on ArcGIS Server")}
+        />
+      )}
+      {!hideLocation && (
+        <SettingsDLListItem
+          truncate
+          term={t("Source Server")}
+          description={
+            <a
+              target="_blank"
+              className="text-primary-600 underline"
+              href={url!}
+              rel="noreferrer"
+            >
+              {url!.replace("https://", "").replace("http://", "")}
+            </a>
+          }
+        />
+      )}
       <SettingsDLListItem
         term={t("Image Format")}
         description={
@@ -100,12 +110,13 @@ export default function ArcGISTiledRasterBaseSettings({
         }
       />
       <InputBlock
-        className="py-4 text-sm font-medium text-gray-500"
+        className="py-4 text-sm font-medium text-gray-500 px-2"
         title={t("Adjusted Maximum Zoom Level")}
         input={
           state ? (
             <select
               id="location"
+              disabled={Boolean(readonly)}
               name="location"
               className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
               value={maxZoomSetting === null ? "" : maxZoomSetting}

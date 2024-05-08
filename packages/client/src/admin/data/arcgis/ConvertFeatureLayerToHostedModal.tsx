@@ -5,6 +5,7 @@ import {
   ProjectBackgroundJobState,
   ProjectBackgroundJobType,
   useConvertFeatureLayerToHostedMutation,
+  useDismissFailedJobMutation,
   useGetLayerItemQuery,
 } from "../../../generated/graphql";
 import { Trans, useTranslation } from "react-i18next";
@@ -20,6 +21,7 @@ export default function ConvertFeatureLayerToHostedModal({
 }) {
   const context = useContext(ProjectBackgroundJobContext);
   const onError = useGlobalErrorHandler();
+  const [dismiss] = useDismissFailedJobMutation();
   const [mutate, state] = useConvertFeatureLayerToHostedMutation({
     variables: {
       tocId,
@@ -43,14 +45,25 @@ export default function ConvertFeatureLayerToHostedModal({
         },
         {
           label: t("Convert to SeaSketch hosted layer"),
-          onClick: () => {
-            mutate().then(() => {
-              onRequestClose();
-            });
+          onClick: async () => {
+            // first, dismiss any existing jobs
+            const failedJobs = (item?.projectBackgroundJobs || []).filter(
+              (j) =>
+                j.state === ProjectBackgroundJobState.Failed &&
+                j.type === ProjectBackgroundJobType.ArcgisImport
+            );
+            await Promise.all(
+              failedJobs.map((j) => dismiss({ variables: { id: j.id } }))
+            );
+            await mutate();
+            onRequestClose();
           },
           disabled:
             (item?.projectBackgroundJobs || []).filter(
-              (j) => j.type === ProjectBackgroundJobType.ArcgisImport
+              (j) =>
+                j.type === ProjectBackgroundJobType.ArcgisImport &&
+                j.state !== ProjectBackgroundJobState.Complete &&
+                j.state !== ProjectBackgroundJobState.Failed
             ).length > 0,
           variant: "primary",
         },
@@ -70,24 +83,6 @@ export default function ConvertFeatureLayerToHostedModal({
               take a few minutes and will operate in the background.
             </Trans>
           </p>
-          {context.manager &&
-            (item.projectBackgroundJobs || [])?.length > 0 && (
-              <ul className="pt-3">
-                {(item.projectBackgroundJobs || [])
-                  .filter(
-                    (j) => j.type === ProjectBackgroundJobType.ArcgisImport
-                  )
-                  .map((job) => (
-                    <BackgroundJobListItem
-                      key={job.id}
-                      job={job}
-                      manager={context.manager}
-                      className="shadow-none border"
-                      showCompletedItems={true}
-                    />
-                  ))}
-              </ul>
-            )}
           {(data.tableOfContentsItem?.projectBackgroundJobs || []).filter(
             (j) =>
               j.state === ProjectBackgroundJobState.Queued ||

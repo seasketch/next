@@ -210,103 +210,163 @@ mutation UpdateFolder(
   }
 }
 
-query GetLayerItem($id: Int!) {
-  tableOfContentsItem(id: $id) {
+fragment FullAdminSource on DataSource {
+  id
+  attribution
+  bounds
+  buffer
+  byteLength
+  cluster
+  clusterMaxZoom
+  clusterProperties
+  clusterRadius
+  coordinates
+  createdAt
+  encoding
+  enhancedSecurity
+  generateId
+  importType
+  lineMetrics
+  maxzoom
+  minzoom
+  originalSourceUrl
+  promoteId
+  queryParameters
+  scheme
+  tiles
+  tileSize
+  tolerance
+  type
+  url
+  urls
+  useDevicePixelRatio
+  supportsDynamicLayers
+  uploadedSourceFilename
+  uploadedBy
+  geostats
+  translatedProps
+  arcgisFetchStrategy
+  authorProfile {
+    userId
+    affiliations
+    email
+    fullname
+    nickname
+    picture
+  }
+  hostingQuotaUsed
+  outputs {
     id
-    acl {
-      nodeId
-      id
-      type
-      groups {
-        id
-        name
-      }
+    isOriginal
+    url
+    type
+    size
+    originalFilename
+  }
+  changelog
+}
+
+fragment ArchivedSource on ArchivedDataSource {
+  nodeId
+  dataSourceId
+  changelog
+  dataSource {
+    ...FullAdminSource
+  }
+  sprites {
+    id
+    spriteImages {
+      spriteId
+      pixelRatio
+      height
+      width
+      url
     }
-    bounds
-    dataLayerId
-    dataSourceType
-    metadata
-    parentStableId
-    projectId
-    containedBy {
-      id
-      stableId
-      title
+    type
+  }
+  version
+  mapboxGlStyle
+  sourceLayer
+  spriteIds
+  dataLayerId
+  bounds
+  changelog
+}
+
+fragment FullAdminDataLayer on DataLayer {
+  id
+  zIndex
+  mapboxGlStyles
+  interactivitySettingsId
+  renderUnder
+  sourceLayer
+  sublayer
+  sublayerType
+  sprites {
+    id
+    spriteImages {
+      pixelRatio
+      height
+      width
+      url
     }
+    type
+  }
+  dataSourceId
+  dataSource {
+    ...FullAdminSource
+  }
+  version
+  archivedSources {
+    ...ArchivedSource
+  }
+}
+
+fragment FullAdminOverlay on TableOfContentsItem {
+  id
+  acl {
+    nodeId
+    id
+    type
+    groups {
+      id
+      name
+    }
+  }
+  bounds
+  dataLayerId
+  dataSourceType
+  metadata
+  parentStableId
+  projectId
+  containedBy {
+    id
     stableId
     title
-    enableDownload
-    geoprocessingReferenceId
-    primaryDownloadUrl
-    projectBackgroundJobs {
-      id
-      type
-      title
-      state
-      progress
-      progressMessage
-      errorMessage
-    }
-    hasOriginalSourceUpload
-    dataLayer {
-      id
-      zIndex
-      mapboxGlStyles
-      interactivitySettingsId
-      renderUnder
-      sourceLayer
-      sublayer
-      sublayerType
-      staticId
-      sprites {
-        id
-        spriteImages {
-          pixelRatio
-          height
-          width
-          url
-        }
-        type
-      }
-      dataSourceId
-      dataSource {
-        id
-        attribution
-        bounds
-        buffer
-        byteLength
-        cluster
-        clusterMaxZoom
-        clusterProperties
-        clusterRadius
-        coordinates
-        createdAt
-        encoding
-        enhancedSecurity
-        generateId
-        importType
-        lineMetrics
-        maxzoom
-        minzoom
-        originalSourceUrl
-        promoteId
-        queryParameters
-        scheme
-        tiles
-        tileSize
-        tolerance
-        type
-        url
-        urls
-        useDevicePixelRatio
-        supportsDynamicLayers
-        uploadedSourceFilename
-        uploadedBy
-        geostats
-        translatedProps
-        arcgisFetchStrategy
-      }
-    }
+  }
+  stableId
+  title
+  enableDownload
+  geoprocessingReferenceId
+  primaryDownloadUrl
+  projectBackgroundJobs {
+    id
+    type
+    title
+    state
+    progress
+    progressMessage
+    errorMessage
+  }
+  hasOriginalSourceUpload
+  dataLayer {
+    ...FullAdminDataLayer
+  }
+}
+
+query GetLayerItem($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    ...FullAdminOverlay
   }
 }
 
@@ -757,24 +817,113 @@ query QuotaUsageDetails($slug: String!) {
     id
     dataHostingQuota
     dataHostingQuotaUsed
-    uploadedDraftDataSources {
+    draftTableOfContentsItems {
+      isFolder
       id
+      title
+      stableId
+      breadcrumbs {
+        id
+        title
+        stableId
+      }
       quotaUsed {
         bytes
         id
         isOriginal
         type
+        isArchived
       }
-      dataLayersConnection {
-        nodes {
-          id
-          tableOfContentsItem {
-            id
-            title
-            stableId
-          }
-        }
+    }
+  }
+}
+
+mutation SetChangelog($dataUploadTaskId: UUID!, $changelog: String!) {
+  setDataUploadTaskChangelog(
+    input: { dataUploadTaskId: $dataUploadTaskId, changelog: $changelog }
+  ) {
+    dataUploadTask {
+      id
+      changelog
+      dataSource {
+        id
+        changelog
       }
+    }
+  }
+}
+
+query LayerTotalQuotaUsed($id: Int!) {
+  dataLayer(id: $id) {
+    id
+    totalQuotaUsed
+  }
+}
+
+mutation DeleteArchivedDataSource($id: Int!) {
+  deleteArchivedSource(input: { sourceId: $id }) {
+    tableOfContentsItem {
+      id
+      ...FullAdminOverlay
+      dataLayer {
+        id
+        ...FullAdminDataLayer
+        totalQuotaUsed
+      }
+    }
+  }
+}
+
+mutation RollbackArchivedDataSource($id: Int!, $rollbackGLStyle: Boolean) {
+  rollbackToArchivedSource(
+    input: { sourceId: $id, rollbackGlStyle: $rollbackGLStyle }
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+      dataLayer {
+        ...FullAdminDataLayer
+        totalQuotaUsed
+      }
+    }
+  }
+}
+
+mutation SetProjectDataHostingRetentionPeriod(
+  $id: Int!
+  $period: IntervalInput
+) {
+  updateProject(
+    input: { id: $id, patch: { dataHostingRetentionPeriod: $period } }
+  ) {
+    project {
+      id
+      dataHostingRetentionPeriod {
+        days
+      }
+    }
+  }
+}
+
+query ProjectHostingRetentionPeriod($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingRetentionPeriod {
+      days
+    }
+  }
+}
+
+query EstimatedDataHostingQuotaUsage(
+  $slug: String!
+  $newRetentionPeriod: IntervalInput
+) {
+  projectBySlug(slug: $slug) {
+    id
+    estimateDeletedDataForRetentionChange(
+      newRetentionPeriod: $newRetentionPeriod
+    ) {
+      bytes
+      numSources
     }
   }
 }

@@ -10,8 +10,14 @@ import ArcGISTiledRasterBaseSettings from "./ArcGISTiledRasterBaseSettings";
 
 export default function ArcGISTiledRasterSettings({
   source,
+  readonly,
+  hideLocation,
+  hideType,
 }: {
-  source: DataSourceDetailsFragment;
+  source: Pick<DataSourceDetailsFragment, "id" | "maxzoom" | "minzoom" | "url">;
+  readonly?: boolean;
+  hideLocation?: boolean;
+  hideType?: boolean;
 }) {
   const onError = useGlobalErrorHandler();
   const [setMaxZoom] = useSetMaxZoomMutation({
@@ -45,6 +51,9 @@ export default function ArcGISTiledRasterSettings({
     <ArcGISTiledRasterBaseSettings
       url={source.url!}
       maxZoomSetting={source.maxzoom || null}
+      readonly={readonly}
+      hideLocation={hideLocation}
+      hideType={hideType}
       onMaxZoomChange={(mz) =>
         setMaxZoom({
           variables: {

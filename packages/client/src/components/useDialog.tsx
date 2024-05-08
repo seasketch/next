@@ -16,6 +16,12 @@ export default function useDialog() {
   const context = useContext(UseDialogContext);
   return useMemo(
     () => ({
+      /**
+       * @deprecated
+       * Hacky thing used to force a re-render of the dialog when providing
+       * inputs within a dialog that rely on external state. Use with caution.
+       */
+      setState: context.setState,
       makeChoice: (options: {
         title: string;
         choices: ReactNode[];
@@ -100,7 +106,7 @@ export default function useDialog() {
       confirm: (
         message: string,
         options?: {
-          description?: string;
+          description?: string | ReactNode;
           icon?: "alert" | "delete";
           primaryButtonText?: string;
           secondaryButtonText?: string;
@@ -125,9 +131,10 @@ export default function useDialog() {
       },
       confirmDelete: (options: {
         message: string;
-        description?: string;
+        description?: string | ReactNode;
         onDelete: (value: string) => void | Promise<string | void>;
         onCancel?: () => void;
+        primaryButtonText?: string;
       }) => {
         context.setState({
           type: "confirm",
@@ -138,7 +145,7 @@ export default function useDialog() {
           onCancel: options.onCancel,
           submitting: false,
           icon: "delete",
-          primaryButtonText: "Delete",
+          primaryButtonText: options.primaryButtonText || "Delete",
           primaryButtonVariant: "danger",
         });
       },

@@ -2,7 +2,6 @@ import { Trans, useTranslation } from "react-i18next";
 import Button from "../../components/Button";
 import {
   AdminOverlayFragment,
-  OverlayFragment,
   ProjectBackgroundJobState,
   ProjectBackgroundJobType,
   useConvertFeatureLayerToHostedMutation,

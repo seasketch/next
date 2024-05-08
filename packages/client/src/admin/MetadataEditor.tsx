@@ -1,14 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { EditorState } from "prosemirror-state";
-import { Node } from "prosemirror-model";
 import "prosemirror-menu/style/menu.css";
 import Spinner from "../components/Spinner";
 import "prosemirror-view/style/prosemirror.css";
 import Button from "../components/Button";
-import { useProseMirror, ProseMirror } from "use-prosemirror";
+import { ProseMirror } from "use-prosemirror";
 import { metadata as editorConfig } from "../editor/config";
 import EditorMenuBar from "../editor/EditorMenuBar";
-import { EditorView } from "prosemirror-view";
 import { MutationResult } from "@apollo/client";
 import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../components/useDialog";

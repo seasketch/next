@@ -305,24 +305,44 @@ export type ArchiveResponsesPayload = {
  */
 export type ArchivedDataSource = Node & {
   __typename?: 'ArchivedDataSource';
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** Optional changelog so that admins can explain what changed in the new version. */
   changelog?: Maybe<Scalars['String']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
   dataLayerId: Scalars['Int'];
   /** Reads a single `DataSource` that is related to this `ArchivedDataSource`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
+  dynamicMetadata: Scalars['Boolean'];
   /**
    * Mapbox GL style from the associated data layer at the time of upload of the
    * new version. This is tracked in case the data source is significantly changed
    * such that rolling back to a previous version also requires style changes
    */
-  mapboxGlStyle: Scalars['JSON'];
+  mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  projectId: Scalars['Int'];
+  sourceLayer?: Maybe<Scalars['String']>;
   /** Array of sprite ids used in the archived mapbox_gl_style. */
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /** Reads and enables pagination through a set of `Sprite`. */
+  sprites?: Maybe<Array<Sprite>>;
+  sublayer?: Maybe<Scalars['String']>;
+  sublayerType?: Maybe<SublayerType>;
   /** Version number of the data source. Incremented each time a new version is uploaded. */
   version: Scalars['Int'];
+};
+
+
+/**
+ * Admins can upload new version of data sources, and these are tracked from this
+ * table. This is used to track changes to data sources over time with a version
+ * number and optional changelog.
+ */
+export type ArchivedDataSourceSpritesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 /**
@@ -1105,6 +1125,7 @@ export type CreateDataUploadInput = {
   contentType?: Maybe<Scalars['String']>;
   filename?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
+  replaceSourceId?: Maybe<Scalars['Int']>;
 };
 
 /** The output of our `createDataUpload` mutation. */
@@ -2013,6 +2034,8 @@ export type DashboardStat = {
  */
 export type DataLayer = Node & {
   __typename?: 'DataLayer';
+  /** Reads and enables pagination through a set of `ArchivedDataSource`. */
+  archivedSources?: Maybe<Array<ArchivedDataSource>>;
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
@@ -2054,7 +2077,23 @@ export type DataLayer = Node & {
    * @deprecated Please use tableOfContentsItem instead
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
+  totalQuotaUsed?: Maybe<Scalars['BigInt']>;
+  version?: Maybe<Scalars['Int']>;
   zIndex: Scalars['Int'];
+};
+
+
+/**
+ * Data layers represent multiple MapBox GL Style layers tied to a single source.
+ * These layers could also be called "operational layers" in that they are meant to
+ * be overlaid on a basemap.
+ *
+ * The layers can appear tied to a TableOfContentsItem or be part of rich features
+ * associated with a basemap.
+ */
+export type DataLayerArchivedSourcesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -2215,6 +2254,7 @@ export type DataSource = Node & {
   archivedDataSources: Array<ArchivedDataSource>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
+  authorProfile?: Maybe<Profile>;
   /**
    * An array containing the longitude and latitude of the southwest and northeast
    * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
@@ -2233,6 +2273,7 @@ export type DataSource = Node & {
   buffer?: Maybe<Scalars['Int']>;
   /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
   byteLength?: Maybe<Scalars['Int']>;
+  changelog?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only.
    *
@@ -2262,6 +2303,7 @@ export type DataSource = Node & {
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt: Scalars['Datetime'];
+  createdBy?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `DataLayer`. */
   dataLayersConnection: DataLayersConnection;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
@@ -2283,6 +2325,7 @@ export type DataSource = Node & {
    * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
    */
   geostats?: Maybe<Scalars['JSON']>;
+  hostingQuotaUsed?: Maybe<Scalars['BigInt']>;
   /** Should be used as sourceId in stylesheets. */
   id: Scalars['Int'];
   /**
@@ -2290,6 +2333,7 @@ export type DataSource = Node & {
    * a direct upload or a service location like ArcGIS server
    */
   importType?: Maybe<DataSourceImportTypes>;
+  isArchived?: Maybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -2321,6 +2365,8 @@ export type DataSource = Node & {
    * copy of the data source if necessary.
    */
   originalSourceUrl?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `DataUploadOutput`. */
+  outputs?: Maybe<Array<DataUploadOutput>>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
@@ -2336,6 +2382,8 @@ export type DataSource = Node & {
   queryParameters?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  /** Reads and enables pagination through a set of `TableOfContentsItem`. */
+  relatedTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
@@ -2412,7 +2460,33 @@ export type DataSourceDataLayersConnectionArgs = {
  *
  * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
  */
+export type DataSourceOutputsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
 export type DataSourceQuotaUsedArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceRelatedTableOfContentsItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -2447,6 +2521,7 @@ export type DataSourceInput = {
   buffer?: Maybe<Scalars['Int']>;
   /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
   byteLength?: Maybe<Scalars['Int']>;
+  changelog?: Maybe<Scalars['String']>;
   /**
    * GeoJSON only.
    *
@@ -2476,6 +2551,7 @@ export type DataSourceInput = {
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
+  createdBy?: Maybe<Scalars['Int']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
   /**
@@ -2790,6 +2866,23 @@ export enum DataSourcesOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+export type DataUploadOutput = Node & {
+  __typename?: 'DataUploadOutput';
+  createdAt: Scalars['Datetime'];
+  dataSourceId?: Maybe<Scalars['Int']>;
+  filename: Scalars['String'];
+  id: Scalars['Int'];
+  isOriginal: Scalars['Boolean'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  originalFilename?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  remote: Scalars['String'];
+  size: Scalars['BigInt'];
+  type: DataUploadOutputType;
+  url: Scalars['String'];
+};
+
 export enum DataUploadOutputType {
   FlatGeobuf = 'FLAT_GEOBUF',
   GeoJson = 'GEO_JSON',
@@ -2801,9 +2894,11 @@ export enum DataUploadOutputType {
 
 export type DataUploadTask = Node & {
   __typename?: 'DataUploadTask';
+  changelog?: Maybe<Scalars['String']>;
   /** Content-Type of the original upload. */
   contentType: Scalars['String'];
   createdAt: Scalars['Datetime'];
+  dataSource?: Maybe<DataSource>;
   /** Original name of file as uploaded by the user. */
   filename: Scalars['String'];
   id: Scalars['UUID'];
@@ -2818,6 +2913,7 @@ export type DataUploadTask = Node & {
   /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
   projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   projectBackgroundJobId: Scalars['UUID'];
+  replaceSourceId?: Maybe<Scalars['Int']>;
   tableOfContentsItemStableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
 
@@ -2872,6 +2968,39 @@ export enum DataUploadTasksOrderBy {
 }
 
 
+
+/** All input for the `deleteArchivedSource` mutation. */
+export type DeleteArchivedSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sourceId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `deleteArchivedSource` mutation. */
+export type DeleteArchivedSourcePayload = {
+  __typename?: 'DeleteArchivedSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `deleteArchivedSource` mutation. */
+export type DeleteArchivedSourcePayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
 
 /** All input for the `deleteBasemapByNodeId` mutation. */
 export type DeleteBasemapByNodeIdInput = {
@@ -4557,6 +4686,13 @@ export enum FileUploadsOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
+
+export type FolderBreadcrumb = {
+  __typename?: 'FolderBreadcrumb';
+  id?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
 
 /**
  * Custom user-input Forms are used in two places in SeaSketch. For SketchClasses,
@@ -6573,6 +6709,7 @@ export type Mutation = {
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   createTopic: Topic;
   createVisibilityLogicRule?: Maybe<CreateVisibilityLogicRulePayload>;
+  deleteArchivedSource?: Maybe<DeleteArchivedSourcePayload>;
   /** Deletes a single `Basemap` using a unique key. */
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
   /** Deletes a single `Basemap` using its globally unique id. */
@@ -6777,6 +6914,7 @@ export type Mutation = {
   resendVerificationEmail: SendVerificationEmailResults;
   /** Remove participant admin privileges. */
   revokeAdminAccess?: Maybe<RevokeAdminAccessPayload>;
+  rollbackToArchivedSource?: Maybe<RollbackToArchivedSourcePayload>;
   /** Send all UNSENT invites in the current project. */
   sendAllProjectInvites?: Maybe<SendAllProjectInvitesPayload>;
   /**
@@ -6791,6 +6929,7 @@ export type Mutation = {
    * Returns the same inviteId if successful.
    */
   sendSurveyInviteReminder?: Maybe<Scalars['Int']>;
+  setDataUploadTaskChangelog?: Maybe<SetDataUploadTaskChangelogPayload>;
   /**
    * Sets the enable_download flag for all overlays in a project. Note this is only
    * applied to draft items, so will require a publish to impact project users.
@@ -7354,6 +7493,12 @@ export type MutationCreateVisibilityLogicRuleArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteArchivedSourceArgs = {
+  input: DeleteArchivedSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteBasemapArgs = {
   input: DeleteBasemapInput;
 };
@@ -7881,6 +8026,12 @@ export type MutationRevokeAdminAccessArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationRollbackToArchivedSourceArgs = {
+  input: RollbackToArchivedSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendAllProjectInvitesArgs = {
   input: SendAllProjectInvitesInput;
 };
@@ -7901,6 +8052,12 @@ export type MutationSendProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendSurveyInviteReminderArgs = {
   inviteId: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetDataUploadTaskChangelogArgs = {
+  input: SetDataUploadTaskChangelogInput;
 };
 
 
@@ -8976,6 +9133,7 @@ export type Project = Node & {
   creatorId: Scalars['Int'];
   dataHostingQuota?: Maybe<Scalars['BigInt']>;
   dataHostingQuotaUsed?: Maybe<Scalars['BigInt']>;
+  dataHostingRetentionPeriod?: Maybe<Interval>;
   /**
    * Retrieve DataLayers for a given set of TableOfContentsItem IDs. Should be used
    * in conjuction with `dataSourcesForItems` to progressively load layer information
@@ -9007,6 +9165,7 @@ export type Project = Node & {
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault: Scalars['Boolean'];
+  estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
   /** Reads and enables pagination through a set of `Group`. */
@@ -9257,6 +9416,15 @@ export type ProjectDataSourcesForItemsArgs = {
 export type ProjectDraftTableOfContentsItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectEstimateDeletedDataForRetentionChangeArgs = {
+  newRetentionPeriod?: Maybe<IntervalInput>;
 };
 
 
@@ -9640,7 +9808,8 @@ export type ProjectBackgroundJobSubscriptionPayload = {
 export enum ProjectBackgroundJobType {
   ArcgisImport = 'ARCGIS_IMPORT',
   ConsolidateDataSources = 'CONSOLIDATE_DATA_SOURCES',
-  DataUpload = 'DATA_UPLOAD'
+  DataUpload = 'DATA_UPLOAD',
+  ReplacementUpload = 'REPLACEMENT_UPLOAD'
 }
 
 /** Methods to use when ordering `ProjectBackgroundJob`. */
@@ -9915,6 +10084,7 @@ export type ProjectMapDataRequest = Node & {
 export type ProjectPatch = {
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl?: Maybe<ProjectAccessControlSetting>;
+  dataHostingRetentionPeriod?: Maybe<IntervalInput>;
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
@@ -11352,6 +11522,7 @@ export type QuotaDetail = {
   __typename?: 'QuotaDetail';
   bytes?: Maybe<Scalars['BigInt']>;
   id?: Maybe<Scalars['Int']>;
+  isArchived?: Maybe<Scalars['Boolean']>;
   isOriginal?: Maybe<Scalars['Boolean']>;
   type?: Maybe<DataUploadOutputType>;
 };
@@ -11443,6 +11614,12 @@ export enum RenderUnderType {
   None = 'NONE'
 }
 
+export type RetentionChangeEstimate = {
+  __typename?: 'RetentionChangeEstimate';
+  bytes?: Maybe<Scalars['BigInt']>;
+  numSources?: Maybe<Scalars['Int']>;
+};
+
 /** All input for the `revokeAdminAccess` mutation. */
 export type RevokeAdminAccessInput = {
   /**
@@ -11464,6 +11641,40 @@ export type RevokeAdminAccessPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `rollbackToArchivedSource` mutation. */
+export type RollbackToArchivedSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  rollbackGlStyle?: Maybe<Scalars['Boolean']>;
+  sourceId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `rollbackToArchivedSource` mutation. */
+export type RollbackToArchivedSourcePayload = {
+  __typename?: 'RollbackToArchivedSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `rollbackToArchivedSource` mutation. */
+export type RollbackToArchivedSourcePayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
 export type SearchResult = {
@@ -11525,6 +11736,40 @@ export type SendVerificationEmailResults = {
   __typename?: 'SendVerificationEmailResults';
   error?: Maybe<Scalars['String']>;
   success: Scalars['Boolean'];
+};
+
+/** All input for the `setDataUploadTaskChangelog` mutation. */
+export type SetDataUploadTaskChangelogInput = {
+  changelog?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataUploadTaskId?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `setDataUploadTaskChangelog` mutation. */
+export type SetDataUploadTaskChangelogPayload = {
+  __typename?: 'SetDataUploadTaskChangelogPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataUploadTask?: Maybe<DataUploadTask>;
+  /** An edge for our `DataUploadTask`. May be used by Relay 1. */
+  dataUploadTaskEdge?: Maybe<DataUploadTasksEdge>;
+  /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `setDataUploadTaskChangelog` mutation. */
+export type SetDataUploadTaskChangelogPayloadDataUploadTaskEdgeArgs = {
+  orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
 /** All input for the `setEnableDownloadForAllOverlays` mutation. */
@@ -12759,6 +13004,8 @@ export type TableOfContentsItem = Node & {
   acl?: Maybe<Acl>;
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /** Reads and enables pagination through a set of `FolderBreadcrumb`. */
+  breadcrumbs?: Maybe<Array<FolderBreadcrumb>>;
   /**
    * Metadata will be returned as directly stored in the SeaSketch
    * database or computed by fetching from a 3rd party service,
@@ -12826,6 +13073,8 @@ export type TableOfContentsItem = Node & {
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs?: Maybe<Array<ProjectBackgroundJob>>;
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `QuotaDetail`. */
+  quotaUsed?: Maybe<Array<QuotaDetail>>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
   /** Position in the layer list */
@@ -12857,6 +13106,22 @@ export type TableOfContentsItem = Node & {
  * batch only once the layer is turned on, using the
  * `dataLayersAndSourcesByLayerId` query.
  */
+export type TableOfContentsItemBreadcrumbsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
 export type TableOfContentsItemDownloadOptionsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -12874,6 +13139,22 @@ export type TableOfContentsItemDownloadOptionsArgs = {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItemProjectBackgroundJobsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemQuotaUsedArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -12938,6 +13219,8 @@ export type TableOfContentsItemCondition = {
   isDraft?: Maybe<Scalars['Boolean']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `stableId` field. */
+  stableId?: Maybe<Scalars['String']>;
 };
 
 /** An input for mutations affecting `TableOfContentsItem` */
@@ -13068,7 +13351,9 @@ export enum TableOfContentsItemsOrderBy {
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ProjectIdAsc = 'PROJECT_ID_ASC',
-  ProjectIdDesc = 'PROJECT_ID_DESC'
+  ProjectIdDesc = 'PROJECT_ID_DESC',
+  StableIdAsc = 'STABLE_ID_ASC',
+  StableIdDesc = 'STABLE_ID_DESC'
 }
 
 export enum TileScheme {
@@ -15350,14 +15635,14 @@ export type UpdateProjectStorageBucketMutation = (
   )> }
 );
 
-export type UpdateFormatFragment = (
-  { __typename?: 'DataSource' }
-  & Pick<DataSource, 'queryParameters'>
-);
-
 export type NewGlStyleFragment = (
   { __typename?: 'DataLayer' }
   & Pick<DataLayer, 'mapboxGlStyles'>
+);
+
+export type UpdateFormatFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'queryParameters'>
 );
 
 export type NewRuleFragment = (
@@ -15809,6 +16094,22 @@ export type RequestInviteOnlyProjectAccessMutation = (
   )> }
 );
 
+export type BackgroundJobDetailsFragment = (
+  { __typename?: 'ProjectBackgroundJob' }
+  & Pick<ProjectBackgroundJob, 'id' | 'title' | 'userId' | 'errorMessage' | 'progress' | 'progressMessage' | 'state' | 'type' | 'createdAt'>
+  & { dataUploadTask?: Maybe<(
+    { __typename?: 'DataUploadTask' }
+    & Pick<DataUploadTask, 'id' | 'filename' | 'replaceSourceId' | 'createdAt'>
+  )>, esriFeatureLayerConversionTask?: Maybe<(
+    { __typename?: 'EsriFeatureLayerConversionTask' }
+    & Pick<EsriFeatureLayerConversionTask, 'tableOfContentsItemId'>
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title'>
+    )> }
+  )> }
+);
+
 export type BackgroundJobsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -15821,7 +16122,7 @@ export type BackgroundJobsQuery = (
     & Pick<Project, 'id'>
     & { projectBackgroundJobs: Array<(
       { __typename?: 'ProjectBackgroundJob' }
-      & Pick<ProjectBackgroundJob, 'id' | 'title' | 'userId' | 'errorMessage' | 'progress' | 'progressMessage' | 'state' | 'type'>
+      & BackgroundJobDetailsFragment
     )> }
   )> }
 );
@@ -16316,7 +16617,7 @@ export type DashboardStatsQuery = (
 
 export type DataUploadDetailsFragment = (
   { __typename?: 'DataUploadTask' }
-  & Pick<DataUploadTask, 'id' | 'filename' | 'tableOfContentsItemStableIds' | 'projectBackgroundJobId'>
+  & Pick<DataUploadTask, 'id' | 'filename' | 'tableOfContentsItemStableIds' | 'projectBackgroundJobId' | 'replaceSourceId' | 'createdAt'>
 );
 
 export type DataUploadExtendedDetailsFragment = (
@@ -16332,6 +16633,7 @@ export type CreateDataUploadMutationVariables = Exact<{
   projectId: Scalars['Int'];
   filename: Scalars['String'];
   contentType: Scalars['String'];
+  replaceSourceId?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -16349,10 +16651,17 @@ export type CreateDataUploadMutation = (
 
 export type JobDetailsFragment = (
   { __typename?: 'ProjectBackgroundJob' }
-  & Pick<ProjectBackgroundJob, 'id' | 'state' | 'progress' | 'progressMessage' | 'errorMessage' | 'createdAt' | 'startedAt' | 'title' | 'type'>
+  & Pick<ProjectBackgroundJob, 'id' | 'state' | 'progress' | 'progressMessage' | 'errorMessage' | 'createdAt' | 'startedAt' | 'title' | 'type' | 'userId'>
   & { dataUploadTask?: Maybe<(
     { __typename?: 'DataUploadTask' }
     & DataUploadDetailsFragment
+  )>, esriFeatureLayerConversionTask?: Maybe<(
+    { __typename?: 'EsriFeatureLayerConversionTask' }
+    & Pick<EsriFeatureLayerConversionTask, 'nodeId' | 'tableOfContentsItemId'>
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title'>
+    )> }
   )> }
 );
 
@@ -16494,7 +16803,7 @@ export type BackgroundJobSubscriptionEventFragment = (
     { __typename?: 'ProjectBackgroundJob' }
     & { esriFeatureLayerConversionTask?: Maybe<(
       { __typename?: 'EsriFeatureLayerConversionTask' }
-      & Pick<EsriFeatureLayerConversionTask, 'projectBackgroundJobId'>
+      & Pick<EsriFeatureLayerConversionTask, 'nodeId' | 'projectBackgroundJobId' | 'tableOfContentsItemId'>
       & { tableOfContentsItem?: Maybe<(
         { __typename?: 'TableOfContentsItem' }
         & Pick<TableOfContentsItem, 'id' | 'stableId'>
@@ -16744,6 +17053,75 @@ export type UpdateFolderMutation = (
   )> }
 );
 
+export type FullAdminSourceFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'hostingQuotaUsed' | 'changelog'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
+  )>, outputs?: Maybe<Array<(
+    { __typename?: 'DataUploadOutput' }
+    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename'>
+  )>> }
+);
+
+export type ArchivedSourceFragment = (
+  { __typename?: 'ArchivedDataSource' }
+  & Pick<ArchivedDataSource, 'nodeId' | 'dataSourceId' | 'changelog' | 'version' | 'mapboxGlStyle' | 'sourceLayer' | 'spriteIds' | 'dataLayerId' | 'bounds'>
+  & { dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & FullAdminSourceFragment
+  )>, sprites?: Maybe<Array<(
+    { __typename?: 'Sprite' }
+    & Pick<Sprite, 'id' | 'type'>
+    & { spriteImages: Array<(
+      { __typename?: 'SpriteImage' }
+      & Pick<SpriteImage, 'spriteId' | 'pixelRatio' | 'height' | 'width' | 'url'>
+    )> }
+  )>> }
+);
+
+export type FullAdminDataLayerFragment = (
+  { __typename?: 'DataLayer' }
+  & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType' | 'dataSourceId' | 'version'>
+  & { sprites?: Maybe<Array<(
+    { __typename?: 'Sprite' }
+    & Pick<Sprite, 'id' | 'type'>
+    & { spriteImages: Array<(
+      { __typename?: 'SpriteImage' }
+      & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
+    )> }
+  )>>, dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & FullAdminSourceFragment
+  )>, archivedSources?: Maybe<Array<(
+    { __typename?: 'ArchivedDataSource' }
+    & ArchivedSourceFragment
+  )>> }
+);
+
+export type FullAdminOverlayFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'nodeId' | 'id' | 'type'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )>, containedBy?: Maybe<Array<Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title'>
+  )>>>, projectBackgroundJobs?: Maybe<Array<(
+    { __typename?: 'ProjectBackgroundJob' }
+    & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
+  )>>, dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & FullAdminDataLayerFragment
+  )> }
+);
+
 export type GetLayerItemQueryVariables = Exact<{
   id: Scalars['Int'];
 }>;
@@ -16753,35 +17131,7 @@ export type GetLayerItemQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
-    & { acl?: Maybe<(
-      { __typename?: 'Acl' }
-      & Pick<Acl, 'nodeId' | 'id' | 'type'>
-      & { groups?: Maybe<Array<(
-        { __typename?: 'Group' }
-        & Pick<Group, 'id' | 'name'>
-      )>> }
-    )>, containedBy?: Maybe<Array<Maybe<(
-      { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title'>
-    )>>>, projectBackgroundJobs?: Maybe<Array<(
-      { __typename?: 'ProjectBackgroundJob' }
-      & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
-    )>>, dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'zIndex' | 'mapboxGlStyles' | 'interactivitySettingsId' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType' | 'staticId' | 'dataSourceId'>
-      & { sprites?: Maybe<Array<(
-        { __typename?: 'Sprite' }
-        & Pick<Sprite, 'id' | 'type'>
-        & { spriteImages: Array<(
-          { __typename?: 'SpriteImage' }
-          & Pick<SpriteImage, 'pixelRatio' | 'height' | 'width' | 'url'>
-        )> }
-      )>>, dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy'>
-      )> }
-    )> }
+    & FullAdminOverlayFragment
   )> }
 );
 
@@ -17268,24 +17618,151 @@ export type QuotaUsageDetailsQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'dataHostingQuota' | 'dataHostingQuotaUsed'>
-    & { uploadedDraftDataSources?: Maybe<Array<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id'>
-      & { quotaUsed?: Maybe<Array<(
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'isFolder' | 'id' | 'title' | 'stableId'>
+      & { breadcrumbs?: Maybe<Array<(
+        { __typename?: 'FolderBreadcrumb' }
+        & Pick<FolderBreadcrumb, 'id' | 'title' | 'stableId'>
+      )>>, quotaUsed?: Maybe<Array<(
         { __typename?: 'QuotaDetail' }
-        & Pick<QuotaDetail, 'bytes' | 'id' | 'isOriginal' | 'type'>
-      )>>, dataLayersConnection: (
-        { __typename?: 'DataLayersConnection' }
-        & { nodes: Array<(
-          { __typename?: 'DataLayer' }
-          & Pick<DataLayer, 'id'>
-          & { tableOfContentsItem?: Maybe<(
-            { __typename?: 'TableOfContentsItem' }
-            & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId'>
-          )> }
-        )> }
-      ) }
+        & Pick<QuotaDetail, 'bytes' | 'id' | 'isOriginal' | 'type' | 'isArchived'>
+      )>> }
     )>> }
+  )> }
+);
+
+export type SetChangelogMutationVariables = Exact<{
+  dataUploadTaskId: Scalars['UUID'];
+  changelog: Scalars['String'];
+}>;
+
+
+export type SetChangelogMutation = (
+  { __typename?: 'Mutation' }
+  & { setDataUploadTaskChangelog?: Maybe<(
+    { __typename?: 'SetDataUploadTaskChangelogPayload' }
+    & { dataUploadTask?: Maybe<(
+      { __typename?: 'DataUploadTask' }
+      & Pick<DataUploadTask, 'id' | 'changelog'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'changelog'>
+      )> }
+    )> }
+  )> }
+);
+
+export type LayerTotalQuotaUsedQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type LayerTotalQuotaUsedQuery = (
+  { __typename?: 'Query' }
+  & { dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id' | 'totalQuotaUsed'>
+  )> }
+);
+
+export type DeleteArchivedDataSourceMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteArchivedDataSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteArchivedSource?: Maybe<(
+    { __typename?: 'DeleteArchivedSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id' | 'totalQuotaUsed'>
+        & FullAdminDataLayerFragment
+      )> }
+      & FullAdminOverlayFragment
+    )> }
+  )> }
+);
+
+export type RollbackArchivedDataSourceMutationVariables = Exact<{
+  id: Scalars['Int'];
+  rollbackGLStyle?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type RollbackArchivedDataSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { rollbackToArchivedSource?: Maybe<(
+    { __typename?: 'RollbackToArchivedSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'totalQuotaUsed'>
+        & FullAdminDataLayerFragment
+      )> }
+      & FullAdminOverlayFragment
+    )> }
+  )> }
+);
+
+export type SetProjectDataHostingRetentionPeriodMutationVariables = Exact<{
+  id: Scalars['Int'];
+  period?: Maybe<IntervalInput>;
+}>;
+
+
+export type SetProjectDataHostingRetentionPeriodMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id'>
+      & { dataHostingRetentionPeriod?: Maybe<(
+        { __typename?: 'Interval' }
+        & Pick<Interval, 'days'>
+      )> }
+    )> }
+  )> }
+);
+
+export type ProjectHostingRetentionPeriodQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectHostingRetentionPeriodQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { dataHostingRetentionPeriod?: Maybe<(
+      { __typename?: 'Interval' }
+      & Pick<Interval, 'days'>
+    )> }
+  )> }
+);
+
+export type EstimatedDataHostingQuotaUsageQueryVariables = Exact<{
+  slug: Scalars['String'];
+  newRetentionPeriod?: Maybe<IntervalInput>;
+}>;
+
+
+export type EstimatedDataHostingQuotaUsageQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { estimateDeletedDataForRetentionChange?: Maybe<(
+      { __typename?: 'RetentionChangeEstimate' }
+      & Pick<RetentionChangeEstimate, 'bytes' | 'numSources'>
+    )> }
   )> }
 );
 
@@ -20702,14 +21179,14 @@ export const NewBasemapFragmentDoc = gql`
   surveysOnly
 }
     `;
-export const UpdateFormatFragmentDoc = gql`
-    fragment UpdateFormat on DataSource {
-  queryParameters
-}
-    `;
 export const NewGlStyleFragmentDoc = gql`
     fragment NewGLStyle on DataLayer {
   mapboxGlStyles
+}
+    `;
+export const UpdateFormatFragmentDoc = gql`
+    fragment UpdateFormat on DataSource {
+  queryParameters
 }
     `;
 export const NewRuleFragmentDoc = gql`
@@ -20889,6 +21366,32 @@ export const DataFragmentDoc = gql`
   name
 }
     `;
+export const BackgroundJobDetailsFragmentDoc = gql`
+    fragment BackgroundJobDetails on ProjectBackgroundJob {
+  id
+  title
+  userId
+  errorMessage
+  progress
+  progressMessage
+  state
+  type
+  createdAt
+  dataUploadTask {
+    id
+    filename
+    replaceSourceId
+    createdAt
+  }
+  esriFeatureLayerConversionTask {
+    tableOfContentsItemId
+    tableOfContentsItem {
+      id
+      title
+    }
+  }
+}
+    `;
 export const BasemapDetailsFragmentDoc = gql`
     fragment BasemapDetails on Basemap {
   id
@@ -20981,6 +21484,8 @@ export const DataUploadDetailsFragmentDoc = gql`
   filename
   tableOfContentsItemStableIds
   projectBackgroundJobId
+  replaceSourceId
+  createdAt
 }
     `;
 export const JobDetailsFragmentDoc = gql`
@@ -20994,8 +21499,18 @@ export const JobDetailsFragmentDoc = gql`
   startedAt
   title
   type
+  createdAt
+  userId
   dataUploadTask {
     ...DataUploadDetails
+  }
+  esriFeatureLayerConversionTask {
+    nodeId
+    tableOfContentsItemId
+    tableOfContentsItem {
+      id
+      title
+    }
   }
 }
     ${DataUploadDetailsFragmentDoc}`;
@@ -21015,7 +21530,9 @@ export const BackgroundJobSubscriptionEventFragmentDoc = gql`
   job {
     ...JobDetails
     esriFeatureLayerConversionTask {
+      nodeId
       projectBackgroundJobId
+      tableOfContentsItemId
       tableOfContentsItem {
         id
         stableId
@@ -21066,6 +21583,165 @@ export const AdminOverlayFragmentDoc = gql`
   }
 }
     ${OverlayFragmentDoc}`;
+export const FullAdminSourceFragmentDoc = gql`
+    fragment FullAdminSource on DataSource {
+  id
+  attribution
+  bounds
+  buffer
+  byteLength
+  cluster
+  clusterMaxZoom
+  clusterProperties
+  clusterRadius
+  coordinates
+  createdAt
+  encoding
+  enhancedSecurity
+  generateId
+  importType
+  lineMetrics
+  maxzoom
+  minzoom
+  originalSourceUrl
+  promoteId
+  queryParameters
+  scheme
+  tiles
+  tileSize
+  tolerance
+  type
+  url
+  urls
+  useDevicePixelRatio
+  supportsDynamicLayers
+  uploadedSourceFilename
+  uploadedBy
+  geostats
+  translatedProps
+  arcgisFetchStrategy
+  authorProfile {
+    userId
+    affiliations
+    email
+    fullname
+    nickname
+    picture
+  }
+  hostingQuotaUsed
+  outputs {
+    id
+    isOriginal
+    url
+    type
+    size
+    originalFilename
+  }
+  changelog
+}
+    `;
+export const ArchivedSourceFragmentDoc = gql`
+    fragment ArchivedSource on ArchivedDataSource {
+  nodeId
+  dataSourceId
+  changelog
+  dataSource {
+    ...FullAdminSource
+  }
+  sprites {
+    id
+    spriteImages {
+      spriteId
+      pixelRatio
+      height
+      width
+      url
+    }
+    type
+  }
+  version
+  mapboxGlStyle
+  sourceLayer
+  spriteIds
+  dataLayerId
+  bounds
+  changelog
+}
+    ${FullAdminSourceFragmentDoc}`;
+export const FullAdminDataLayerFragmentDoc = gql`
+    fragment FullAdminDataLayer on DataLayer {
+  id
+  zIndex
+  mapboxGlStyles
+  interactivitySettingsId
+  renderUnder
+  sourceLayer
+  sublayer
+  sublayerType
+  sprites {
+    id
+    spriteImages {
+      pixelRatio
+      height
+      width
+      url
+    }
+    type
+  }
+  dataSourceId
+  dataSource {
+    ...FullAdminSource
+  }
+  version
+  archivedSources {
+    ...ArchivedSource
+  }
+}
+    ${FullAdminSourceFragmentDoc}
+${ArchivedSourceFragmentDoc}`;
+export const FullAdminOverlayFragmentDoc = gql`
+    fragment FullAdminOverlay on TableOfContentsItem {
+  id
+  acl {
+    nodeId
+    id
+    type
+    groups {
+      id
+      name
+    }
+  }
+  bounds
+  dataLayerId
+  dataSourceType
+  metadata
+  parentStableId
+  projectId
+  containedBy {
+    id
+    stableId
+    title
+  }
+  stableId
+  title
+  enableDownload
+  geoprocessingReferenceId
+  primaryDownloadUrl
+  projectBackgroundJobs {
+    id
+    type
+    title
+    state
+    progress
+    progressMessage
+    errorMessage
+  }
+  hasOriginalSourceUpload
+  dataLayer {
+    ...FullAdminDataLayer
+  }
+}
+    ${FullAdminDataLayerFragmentDoc}`;
 export const ForumListDetailsFragmentDoc = gql`
     fragment ForumListDetails on Forum {
   id
@@ -22882,18 +23558,11 @@ export const BackgroundJobsDocument = gql`
   projectBySlug(slug: $slug) {
     id
     projectBackgroundJobs {
-      id
-      title
-      userId
-      errorMessage
-      progress
-      progressMessage
-      state
-      type
+      ...BackgroundJobDetails
     }
   }
 }
-    `;
+    ${BackgroundJobDetailsFragmentDoc}`;
 
 /**
  * __useBackgroundJobsQuery__
@@ -24016,9 +24685,9 @@ export type DashboardStatsQueryHookResult = ReturnType<typeof useDashboardStatsQ
 export type DashboardStatsLazyQueryHookResult = ReturnType<typeof useDashboardStatsLazyQuery>;
 export type DashboardStatsQueryResult = Apollo.QueryResult<DashboardStatsQuery, DashboardStatsQueryVariables>;
 export const CreateDataUploadDocument = gql`
-    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!) {
+    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!, $replaceSourceId: Int) {
   createDataUpload(
-    input: {filename: $filename, projectId: $projectId, contentType: $contentType}
+    input: {filename: $filename, projectId: $projectId, contentType: $contentType, replaceSourceId: $replaceSourceId}
   ) {
     dataUploadTask {
       ...DataUploadExtendedDetails
@@ -24045,6 +24714,7 @@ export type CreateDataUploadMutationFn = Apollo.MutationFunction<CreateDataUploa
  *      projectId: // value for 'projectId'
  *      filename: // value for 'filename'
  *      contentType: // value for 'contentType'
+ *      replaceSourceId: // value for 'replaceSourceId'
  *   },
  * });
  */
@@ -24902,104 +25572,10 @@ export type UpdateFolderMutationOptions = Apollo.BaseMutationOptions<UpdateFolde
 export const GetLayerItemDocument = gql`
     query GetLayerItem($id: Int!) {
   tableOfContentsItem(id: $id) {
-    id
-    acl {
-      nodeId
-      id
-      type
-      groups {
-        id
-        name
-      }
-    }
-    bounds
-    dataLayerId
-    dataSourceType
-    metadata
-    parentStableId
-    projectId
-    containedBy {
-      id
-      stableId
-      title
-    }
-    stableId
-    title
-    enableDownload
-    geoprocessingReferenceId
-    primaryDownloadUrl
-    projectBackgroundJobs {
-      id
-      type
-      title
-      state
-      progress
-      progressMessage
-      errorMessage
-    }
-    hasOriginalSourceUpload
-    dataLayer {
-      id
-      zIndex
-      mapboxGlStyles
-      interactivitySettingsId
-      renderUnder
-      sourceLayer
-      sublayer
-      sublayerType
-      staticId
-      sprites {
-        id
-        spriteImages {
-          pixelRatio
-          height
-          width
-          url
-        }
-        type
-      }
-      dataSourceId
-      dataSource {
-        id
-        attribution
-        bounds
-        buffer
-        byteLength
-        cluster
-        clusterMaxZoom
-        clusterProperties
-        clusterRadius
-        coordinates
-        createdAt
-        encoding
-        enhancedSecurity
-        generateId
-        importType
-        lineMetrics
-        maxzoom
-        minzoom
-        originalSourceUrl
-        promoteId
-        queryParameters
-        scheme
-        tiles
-        tileSize
-        tolerance
-        type
-        url
-        urls
-        useDevicePixelRatio
-        supportsDynamicLayers
-        uploadedSourceFilename
-        uploadedBy
-        geostats
-        translatedProps
-        arcgisFetchStrategy
-      }
-    }
+    ...FullAdminOverlay
   }
 }
-    `;
+    ${FullAdminOverlayFragmentDoc}`;
 
 /**
  * __useGetLayerItemQuery__
@@ -26156,23 +26732,22 @@ export const QuotaUsageDetailsDocument = gql`
     id
     dataHostingQuota
     dataHostingQuotaUsed
-    uploadedDraftDataSources {
+    draftTableOfContentsItems {
+      isFolder
       id
+      title
+      stableId
+      breadcrumbs {
+        id
+        title
+        stableId
+      }
       quotaUsed {
         bytes
         id
         isOriginal
         type
-      }
-      dataLayersConnection {
-        nodes {
-          id
-          tableOfContentsItem {
-            id
-            title
-            stableId
-          }
-        }
+        isArchived
       }
     }
   }
@@ -26206,6 +26781,287 @@ export function useQuotaUsageDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHook
 export type QuotaUsageDetailsQueryHookResult = ReturnType<typeof useQuotaUsageDetailsQuery>;
 export type QuotaUsageDetailsLazyQueryHookResult = ReturnType<typeof useQuotaUsageDetailsLazyQuery>;
 export type QuotaUsageDetailsQueryResult = Apollo.QueryResult<QuotaUsageDetailsQuery, QuotaUsageDetailsQueryVariables>;
+export const SetChangelogDocument = gql`
+    mutation SetChangelog($dataUploadTaskId: UUID!, $changelog: String!) {
+  setDataUploadTaskChangelog(
+    input: {dataUploadTaskId: $dataUploadTaskId, changelog: $changelog}
+  ) {
+    dataUploadTask {
+      id
+      changelog
+      dataSource {
+        id
+        changelog
+      }
+    }
+  }
+}
+    `;
+export type SetChangelogMutationFn = Apollo.MutationFunction<SetChangelogMutation, SetChangelogMutationVariables>;
+
+/**
+ * __useSetChangelogMutation__
+ *
+ * To run a mutation, you first call `useSetChangelogMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetChangelogMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setChangelogMutation, { data, loading, error }] = useSetChangelogMutation({
+ *   variables: {
+ *      dataUploadTaskId: // value for 'dataUploadTaskId'
+ *      changelog: // value for 'changelog'
+ *   },
+ * });
+ */
+export function useSetChangelogMutation(baseOptions?: Apollo.MutationHookOptions<SetChangelogMutation, SetChangelogMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetChangelogMutation, SetChangelogMutationVariables>(SetChangelogDocument, options);
+      }
+export type SetChangelogMutationHookResult = ReturnType<typeof useSetChangelogMutation>;
+export type SetChangelogMutationResult = Apollo.MutationResult<SetChangelogMutation>;
+export type SetChangelogMutationOptions = Apollo.BaseMutationOptions<SetChangelogMutation, SetChangelogMutationVariables>;
+export const LayerTotalQuotaUsedDocument = gql`
+    query LayerTotalQuotaUsed($id: Int!) {
+  dataLayer(id: $id) {
+    id
+    totalQuotaUsed
+  }
+}
+    `;
+
+/**
+ * __useLayerTotalQuotaUsedQuery__
+ *
+ * To run a query within a React component, call `useLayerTotalQuotaUsedQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayerTotalQuotaUsedQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayerTotalQuotaUsedQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useLayerTotalQuotaUsedQuery(baseOptions: Apollo.QueryHookOptions<LayerTotalQuotaUsedQuery, LayerTotalQuotaUsedQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LayerTotalQuotaUsedQuery, LayerTotalQuotaUsedQueryVariables>(LayerTotalQuotaUsedDocument, options);
+      }
+export function useLayerTotalQuotaUsedLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerTotalQuotaUsedQuery, LayerTotalQuotaUsedQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LayerTotalQuotaUsedQuery, LayerTotalQuotaUsedQueryVariables>(LayerTotalQuotaUsedDocument, options);
+        }
+export type LayerTotalQuotaUsedQueryHookResult = ReturnType<typeof useLayerTotalQuotaUsedQuery>;
+export type LayerTotalQuotaUsedLazyQueryHookResult = ReturnType<typeof useLayerTotalQuotaUsedLazyQuery>;
+export type LayerTotalQuotaUsedQueryResult = Apollo.QueryResult<LayerTotalQuotaUsedQuery, LayerTotalQuotaUsedQueryVariables>;
+export const DeleteArchivedDataSourceDocument = gql`
+    mutation DeleteArchivedDataSource($id: Int!) {
+  deleteArchivedSource(input: {sourceId: $id}) {
+    tableOfContentsItem {
+      id
+      ...FullAdminOverlay
+      dataLayer {
+        id
+        ...FullAdminDataLayer
+        totalQuotaUsed
+      }
+    }
+  }
+}
+    ${FullAdminOverlayFragmentDoc}
+${FullAdminDataLayerFragmentDoc}`;
+export type DeleteArchivedDataSourceMutationFn = Apollo.MutationFunction<DeleteArchivedDataSourceMutation, DeleteArchivedDataSourceMutationVariables>;
+
+/**
+ * __useDeleteArchivedDataSourceMutation__
+ *
+ * To run a mutation, you first call `useDeleteArchivedDataSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteArchivedDataSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteArchivedDataSourceMutation, { data, loading, error }] = useDeleteArchivedDataSourceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteArchivedDataSourceMutation(baseOptions?: Apollo.MutationHookOptions<DeleteArchivedDataSourceMutation, DeleteArchivedDataSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteArchivedDataSourceMutation, DeleteArchivedDataSourceMutationVariables>(DeleteArchivedDataSourceDocument, options);
+      }
+export type DeleteArchivedDataSourceMutationHookResult = ReturnType<typeof useDeleteArchivedDataSourceMutation>;
+export type DeleteArchivedDataSourceMutationResult = Apollo.MutationResult<DeleteArchivedDataSourceMutation>;
+export type DeleteArchivedDataSourceMutationOptions = Apollo.BaseMutationOptions<DeleteArchivedDataSourceMutation, DeleteArchivedDataSourceMutationVariables>;
+export const RollbackArchivedDataSourceDocument = gql`
+    mutation RollbackArchivedDataSource($id: Int!, $rollbackGLStyle: Boolean) {
+  rollbackToArchivedSource(
+    input: {sourceId: $id, rollbackGlStyle: $rollbackGLStyle}
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+      dataLayer {
+        ...FullAdminDataLayer
+        totalQuotaUsed
+      }
+    }
+  }
+}
+    ${FullAdminOverlayFragmentDoc}
+${FullAdminDataLayerFragmentDoc}`;
+export type RollbackArchivedDataSourceMutationFn = Apollo.MutationFunction<RollbackArchivedDataSourceMutation, RollbackArchivedDataSourceMutationVariables>;
+
+/**
+ * __useRollbackArchivedDataSourceMutation__
+ *
+ * To run a mutation, you first call `useRollbackArchivedDataSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRollbackArchivedDataSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [rollbackArchivedDataSourceMutation, { data, loading, error }] = useRollbackArchivedDataSourceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      rollbackGLStyle: // value for 'rollbackGLStyle'
+ *   },
+ * });
+ */
+export function useRollbackArchivedDataSourceMutation(baseOptions?: Apollo.MutationHookOptions<RollbackArchivedDataSourceMutation, RollbackArchivedDataSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RollbackArchivedDataSourceMutation, RollbackArchivedDataSourceMutationVariables>(RollbackArchivedDataSourceDocument, options);
+      }
+export type RollbackArchivedDataSourceMutationHookResult = ReturnType<typeof useRollbackArchivedDataSourceMutation>;
+export type RollbackArchivedDataSourceMutationResult = Apollo.MutationResult<RollbackArchivedDataSourceMutation>;
+export type RollbackArchivedDataSourceMutationOptions = Apollo.BaseMutationOptions<RollbackArchivedDataSourceMutation, RollbackArchivedDataSourceMutationVariables>;
+export const SetProjectDataHostingRetentionPeriodDocument = gql`
+    mutation SetProjectDataHostingRetentionPeriod($id: Int!, $period: IntervalInput) {
+  updateProject(input: {id: $id, patch: {dataHostingRetentionPeriod: $period}}) {
+    project {
+      id
+      dataHostingRetentionPeriod {
+        days
+      }
+    }
+  }
+}
+    `;
+export type SetProjectDataHostingRetentionPeriodMutationFn = Apollo.MutationFunction<SetProjectDataHostingRetentionPeriodMutation, SetProjectDataHostingRetentionPeriodMutationVariables>;
+
+/**
+ * __useSetProjectDataHostingRetentionPeriodMutation__
+ *
+ * To run a mutation, you first call `useSetProjectDataHostingRetentionPeriodMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetProjectDataHostingRetentionPeriodMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setProjectDataHostingRetentionPeriodMutation, { data, loading, error }] = useSetProjectDataHostingRetentionPeriodMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      period: // value for 'period'
+ *   },
+ * });
+ */
+export function useSetProjectDataHostingRetentionPeriodMutation(baseOptions?: Apollo.MutationHookOptions<SetProjectDataHostingRetentionPeriodMutation, SetProjectDataHostingRetentionPeriodMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetProjectDataHostingRetentionPeriodMutation, SetProjectDataHostingRetentionPeriodMutationVariables>(SetProjectDataHostingRetentionPeriodDocument, options);
+      }
+export type SetProjectDataHostingRetentionPeriodMutationHookResult = ReturnType<typeof useSetProjectDataHostingRetentionPeriodMutation>;
+export type SetProjectDataHostingRetentionPeriodMutationResult = Apollo.MutationResult<SetProjectDataHostingRetentionPeriodMutation>;
+export type SetProjectDataHostingRetentionPeriodMutationOptions = Apollo.BaseMutationOptions<SetProjectDataHostingRetentionPeriodMutation, SetProjectDataHostingRetentionPeriodMutationVariables>;
+export const ProjectHostingRetentionPeriodDocument = gql`
+    query ProjectHostingRetentionPeriod($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    dataHostingRetentionPeriod {
+      days
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectHostingRetentionPeriodQuery__
+ *
+ * To run a query within a React component, call `useProjectHostingRetentionPeriodQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectHostingRetentionPeriodQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectHostingRetentionPeriodQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectHostingRetentionPeriodQuery(baseOptions: Apollo.QueryHookOptions<ProjectHostingRetentionPeriodQuery, ProjectHostingRetentionPeriodQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectHostingRetentionPeriodQuery, ProjectHostingRetentionPeriodQueryVariables>(ProjectHostingRetentionPeriodDocument, options);
+      }
+export function useProjectHostingRetentionPeriodLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectHostingRetentionPeriodQuery, ProjectHostingRetentionPeriodQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectHostingRetentionPeriodQuery, ProjectHostingRetentionPeriodQueryVariables>(ProjectHostingRetentionPeriodDocument, options);
+        }
+export type ProjectHostingRetentionPeriodQueryHookResult = ReturnType<typeof useProjectHostingRetentionPeriodQuery>;
+export type ProjectHostingRetentionPeriodLazyQueryHookResult = ReturnType<typeof useProjectHostingRetentionPeriodLazyQuery>;
+export type ProjectHostingRetentionPeriodQueryResult = Apollo.QueryResult<ProjectHostingRetentionPeriodQuery, ProjectHostingRetentionPeriodQueryVariables>;
+export const EstimatedDataHostingQuotaUsageDocument = gql`
+    query EstimatedDataHostingQuotaUsage($slug: String!, $newRetentionPeriod: IntervalInput) {
+  projectBySlug(slug: $slug) {
+    id
+    estimateDeletedDataForRetentionChange(newRetentionPeriod: $newRetentionPeriod) {
+      bytes
+      numSources
+    }
+  }
+}
+    `;
+
+/**
+ * __useEstimatedDataHostingQuotaUsageQuery__
+ *
+ * To run a query within a React component, call `useEstimatedDataHostingQuotaUsageQuery` and pass it any options that fit your needs.
+ * When your component renders, `useEstimatedDataHostingQuotaUsageQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useEstimatedDataHostingQuotaUsageQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      newRetentionPeriod: // value for 'newRetentionPeriod'
+ *   },
+ * });
+ */
+export function useEstimatedDataHostingQuotaUsageQuery(baseOptions: Apollo.QueryHookOptions<EstimatedDataHostingQuotaUsageQuery, EstimatedDataHostingQuotaUsageQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<EstimatedDataHostingQuotaUsageQuery, EstimatedDataHostingQuotaUsageQueryVariables>(EstimatedDataHostingQuotaUsageDocument, options);
+      }
+export function useEstimatedDataHostingQuotaUsageLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<EstimatedDataHostingQuotaUsageQuery, EstimatedDataHostingQuotaUsageQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<EstimatedDataHostingQuotaUsageQuery, EstimatedDataHostingQuotaUsageQueryVariables>(EstimatedDataHostingQuotaUsageDocument, options);
+        }
+export type EstimatedDataHostingQuotaUsageQueryHookResult = ReturnType<typeof useEstimatedDataHostingQuotaUsageQuery>;
+export type EstimatedDataHostingQuotaUsageLazyQueryHookResult = ReturnType<typeof useEstimatedDataHostingQuotaUsageLazyQuery>;
+export type EstimatedDataHostingQuotaUsageQueryResult = Apollo.QueryResult<EstimatedDataHostingQuotaUsageQuery, EstimatedDataHostingQuotaUsageQueryVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -32285,6 +33141,9 @@ export const namedOperations = {
     InteractivitySettingsById: 'InteractivitySettingsById',
     ProjectDownloadSetting: 'ProjectDownloadSetting',
     QuotaUsageDetails: 'QuotaUsageDetails',
+    LayerTotalQuotaUsed: 'LayerTotalQuotaUsed',
+    ProjectHostingRetentionPeriod: 'ProjectHostingRetentionPeriod',
+    EstimatedDataHostingQuotaUsage: 'EstimatedDataHostingQuotaUsage',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
@@ -32405,6 +33264,10 @@ export const namedOperations = {
     ConvertFeatureLayerToHosted: 'ConvertFeatureLayerToHosted',
     CreateMVTSource: 'CreateMVTSource',
     CreateRemoteGeoJSONSource: 'CreateRemoteGeoJSONSource',
+    SetChangelog: 'SetChangelog',
+    DeleteArchivedDataSource: 'DeleteArchivedDataSource',
+    RollbackArchivedDataSource: 'RollbackArchivedDataSource',
+    SetProjectDataHostingRetentionPeriod: 'SetProjectDataHostingRetentionPeriod',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
@@ -32504,8 +33367,8 @@ export const namedOperations = {
     NewLabelsLayer: 'NewLabelsLayer',
     NewTerrain: 'NewTerrain',
     NewBasemap: 'NewBasemap',
-    UpdateFormat: 'UpdateFormat',
     NewGLStyle: 'NewGLStyle',
+    UpdateFormat: 'UpdateFormat',
     NewRule: 'NewRule',
     NewCondition: 'NewCondition',
     NewElement: 'NewElement',
@@ -32522,6 +33385,7 @@ export const namedOperations = {
     MyFolder: 'MyFolder',
     PopupShareDetails: 'PopupShareDetails',
     data: 'data',
+    BackgroundJobDetails: 'BackgroundJobDetails',
     BasemapDetails: 'BasemapDetails',
     BasemapAdminDetails: 'BasemapAdminDetails',
     DataUploadDetails: 'DataUploadDetails',
@@ -32529,6 +33393,10 @@ export const namedOperations = {
     JobDetails: 'JobDetails',
     BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
     AdminOverlay: 'AdminOverlay',
+    FullAdminSource: 'FullAdminSource',
+    ArchivedSource: 'ArchivedSource',
+    FullAdminDataLayer: 'FullAdminDataLayer',
+    FullAdminOverlay: 'FullAdminOverlay',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',

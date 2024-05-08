@@ -403,6 +403,17 @@ COMMENT ON TYPE public.file_upload_usage IS '@enum';
 
 
 --
+-- Name: folder_breadcrumbs; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.folder_breadcrumbs AS (
+	id integer,
+	stable_id text,
+	title text
+);
+
+
+--
 -- Name: form_element_layout; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -686,7 +697,8 @@ CREATE TYPE public.project_background_job_state AS ENUM (
 CREATE TYPE public.project_background_job_type AS ENUM (
     'data_upload',
     'arcgis_import',
-    'consolidate_data_sources'
+    'consolidate_data_sources',
+    'replacement_upload'
 );
 
 
@@ -736,7 +748,8 @@ CREATE TYPE public.quota_details AS (
 	bytes bigint,
 	id integer,
 	type public.data_upload_output_type,
-	is_original boolean
+	is_original boolean,
+	is_archived boolean
 );
 
 
@@ -758,6 +771,16 @@ CREATE TYPE public.render_under_type AS ENUM (
     'labels',
     'land',
     'none'
+);
+
+
+--
+-- Name: retention_change_estimate; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.retention_change_estimate AS (
+	bytes bigint,
+	num_sources integer
 );
 
 
@@ -1981,6 +2004,7 @@ CREATE TABLE public.projects (
     hide_sketches boolean DEFAULT false NOT NULL,
     hide_overlays boolean DEFAULT false NOT NULL,
     enable_download_by_default boolean DEFAULT false NOT NULL,
+    data_hosting_retention_period interval,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -2866,6 +2890,99 @@ CREATE FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) 
     AS $$
     update survey_responses set archived = "makeArchived" where id = any(ids) returning survey_responses.*;
 $$;
+
+
+--
+-- Name: extract_sprite_ids(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_sprite_ids(t text) RETURNS integer[]
+    LANGUAGE sql IMMUTABLE
+    AS $$
+      select array(select i::int from (
+        select 
+          unnest(regexp_matches(t, 'seasketch://sprites/([^"]+)', 'g')) i 
+      ) t)
+  $$;
+
+
+--
+-- Name: archived_data_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.archived_data_sources (
+    data_source_id integer NOT NULL,
+    data_layer_id integer NOT NULL,
+    version integer NOT NULL,
+    mapbox_gl_style jsonb,
+    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_style)::text)) STORED,
+    changelog text,
+    source_layer text,
+    bounds numeric[],
+    created_at timestamp with time zone DEFAULT now(),
+    sublayer text,
+    sublayer_type public.sublayer_type,
+    dynamic_metadata boolean DEFAULT false NOT NULL,
+    project_id integer NOT NULL
+);
+
+
+--
+-- Name: TABLE archived_data_sources; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.archived_data_sources IS 'Admins can upload new version of data sources, and these are tracked from this table. This is used to track changes to data sources over time with a version number and optional changelog.';
+
+
+--
+-- Name: COLUMN archived_data_sources.version; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.archived_data_sources.version IS 'Version number of the data source. Incremented each time a new version is uploaded.';
+
+
+--
+-- Name: COLUMN archived_data_sources.mapbox_gl_style; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.archived_data_sources.mapbox_gl_style IS 'Mapbox GL style from the associated data layer at the time of upload of the new version. This is tracked in case the data source is significantly changed such that rolling back to a previous version also requires style changes';
+
+
+--
+-- Name: COLUMN archived_data_sources.sprite_ids; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.archived_data_sources.sprite_ids IS 'Array of sprite ids used in the archived mapbox_gl_style.';
+
+
+--
+-- Name: COLUMN archived_data_sources.changelog; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.archived_data_sources.changelog IS 'Optional changelog so that admins can explain what changed in the new version.';
+
+
+--
+-- Name: archived_data_sources_sprites(public.archived_data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.archived_data_sources_sprites(l public.archived_data_sources) RETURNS SETOF public.sprites
+    LANGUAGE sql STABLE
+    AS $$
+  select * from sprites where id in (
+      select i::int from (
+        select 
+          unnest(l.sprite_ids) i 
+      ) t)
+    ;
+$$;
+
+
+--
+-- Name: FUNCTION archived_data_sources_sprites(l public.archived_data_sources); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.archived_data_sources_sprites(l public.archived_data_sources) IS '@simpleCollections only';
 
 
 --
@@ -5436,7 +5553,9 @@ CREATE TABLE public.data_upload_tasks (
     filename text NOT NULL,
     content_type text NOT NULL,
     outputs jsonb,
-    project_background_job_id uuid NOT NULL
+    project_background_job_id uuid NOT NULL,
+    changelog text,
+    replace_source_id integer
 );
 
 
@@ -5455,10 +5574,10 @@ COMMENT ON COLUMN public.data_upload_tasks.content_type IS 'Content-Type of the 
 
 
 --
--- Name: create_data_upload(text, integer, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: create_data_upload(text, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_data_upload(filename text, project_id integer, content_type text) RETURNS public.data_upload_tasks
+CREATE FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer) RETURNS public.data_upload_tasks
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -5469,6 +5588,23 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
     begin
       if session_is_admin(project_id) then
         select projects_data_hosting_quota_used(projects.*), projects_data_hosting_quota(projects.*) into used, quota from projects where id = project_id;
+        -- make sure there are no other active project_background_jobs with the same replace_source_id
+        if replace_source_id is not null and (select exists(
+          select 
+            data_upload_tasks.id 
+          from 
+            data_upload_tasks 
+          inner join 
+            project_background_jobs 
+          on 
+            data_upload_tasks.project_background_job_id = project_background_jobs.id 
+          where 
+            data_upload_tasks.replace_source_id is not null and 
+            project_background_jobs.state in ('queued', 'running') and
+            data_upload_tasks.replace_source_id = create_data_upload.replace_source_id
+        )) then
+          raise exception 'There is already an active upload task for this data source';
+        end if;
         if quota - used > 0 then
           insert into project_background_jobs (
             project_id, 
@@ -5478,7 +5614,9 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
             timeout_at
           ) values (
             project_id, 
-            filename, 
+            (
+              case when replace_source_id is not null then 'Replacement upload ' else '' end
+            ) || filename, 
             nullif(current_setting('session.user_id', TRUE), '')::integer, 
             'data_upload',
             timezone('utc'::text, now()) + interval '15 minutes'
@@ -5487,11 +5625,13 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
           insert into data_upload_tasks(
             filename, 
             content_type, 
-            project_background_job_id
+            project_background_job_id,
+            replace_source_id
           ) values (
             create_data_upload.filename, 
             create_data_upload.content_type, 
-            job.id
+            job.id,
+            create_data_upload.replace_source_id
           ) returning * into upload;
           return upload;
         else
@@ -7225,20 +7365,6 @@ COMMENT ON FUNCTION public.data_hosting_quota_left(pid integer) IS '@omit';
 
 
 --
--- Name: extract_sprite_ids(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.extract_sprite_ids(t text) RETURNS integer[]
-    LANGUAGE sql IMMUTABLE
-    AS $$
-      select array(select i::int from (
-        select 
-          unnest(regexp_matches(t, 'seasketch://sprites/([^"]+)', 'g')) i 
-      ) t)
-  $$;
-
-
---
 -- Name: data_layers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7320,6 +7446,24 @@ COMMENT ON COLUMN public.data_layers.static_id IS '@deprecated Use TableOfConten
 
 
 --
+-- Name: data_layers_archived_sources(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_layers_archived_sources(data_layer public.data_layers) RETURNS SETOF public.archived_data_sources
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from archived_data_sources where data_layer_id = data_layer.id order by version desc;
+    $$;
+
+
+--
+-- Name: FUNCTION data_layers_archived_sources(data_layer public.data_layers); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_layers_archived_sources(data_layer public.data_layers) IS '@simpleCollections only';
+
+
+--
 -- Name: data_layers_sprites(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7340,6 +7484,32 @@ $$;
 --
 
 COMMENT ON FUNCTION public.data_layers_sprites(l public.data_layers) IS '@simpleCollections only';
+
+
+--
+-- Name: data_layers_total_quota_used(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RETURNS bigint
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select coalesce(sum(size), 0)::bigint from data_upload_outputs where data_source_id in (
+      select data_source_id from data_layers where id = layer.id
+      union all
+      select data_source_id from archived_data_sources where data_layer_id = layer.id
+    )
+  $$;
+
+
+--
+-- Name: data_layers_version(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_layers_version(data_layer public.data_layers) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select coalesce(max(version), 0)::integer + 1 from archived_data_sources where data_layer_id = data_layer.id;
+    $$;
 
 
 --
@@ -7418,6 +7588,7 @@ CREATE TABLE public.data_sources (
     uploaded_by integer,
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     created_by integer,
+    changelog text,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -7762,6 +7933,65 @@ CREATE FUNCTION public.data_sources_author_profile(source public.data_sources) R
 
 
 --
+-- Name: data_sources_hosting_quota_used(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_hosting_quota_used(source public.data_sources) RETURNS bigint
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select coalesce(sum(size), 0)::bigint from data_upload_outputs where data_source_id = source.id;
+  $$;
+
+
+--
+-- Name: data_sources_is_archived(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_is_archived(data_source public.data_sources) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select exists(select 1 from archived_data_sources where data_source_id = data_source.id);
+    $$;
+
+
+--
+-- Name: data_upload_outputs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_upload_outputs (
+    id integer NOT NULL,
+    data_source_id integer,
+    project_id integer,
+    type public.data_upload_output_type NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    url text NOT NULL,
+    remote text NOT NULL,
+    is_original boolean DEFAULT false NOT NULL,
+    size bigint NOT NULL,
+    filename text NOT NULL,
+    original_filename text
+);
+
+
+--
+-- Name: data_sources_outputs(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_outputs(source public.data_sources) RETURNS SETOF public.data_upload_outputs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from data_upload_outputs where data_source_id = source.id;
+  $$;
+
+
+--
+-- Name: FUNCTION data_sources_outputs(source public.data_sources); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_sources_outputs(source public.data_sources) IS '@simpleCollections only';
+
+
+--
 -- Name: data_sources_quota_used(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7772,7 +8002,8 @@ CREATE FUNCTION public.data_sources_quota_used(source public.data_sources) RETUR
       size as bytes,
       id,
       type,
-      is_original
+      is_original,
+      false as is_archived
     from
       data_upload_outputs
     where
@@ -7785,6 +8016,24 @@ CREATE FUNCTION public.data_sources_quota_used(source public.data_sources) RETUR
 --
 
 COMMENT ON FUNCTION public.data_sources_quota_used(source public.data_sources) IS '@simpleCollections only';
+
+
+--
+-- Name: data_sources_related_table_of_contents_items(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_related_table_of_contents_items(data_source public.data_sources) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from table_of_contents_items where data_layer_id in (select id from data_layers where data_source_id = data_source.id);
+    $$;
+
+
+--
+-- Name: FUNCTION data_sources_related_table_of_contents_items(data_source public.data_sources); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_sources_related_table_of_contents_items(data_source public.data_sources) IS '@simpleCollections only';
 
 
 --
@@ -7812,6 +8061,17 @@ CREATE FUNCTION public.data_sources_uploaded_by(data_source public.data_sources)
     end if;
   end
   $$;
+
+
+--
+-- Name: data_upload_tasks_data_source(public.data_upload_tasks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_upload_tasks_data_source(data_upload_task public.data_upload_tasks) RETURNS public.data_sources
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from data_sources where upload_task_id = data_upload_task.id;
+    $$;
 
 
 --
@@ -7855,6 +8115,65 @@ CREATE FUNCTION public.data_upload_tasks_table_of_contents_item_stable_ids(task 
         (select id from data_sources where upload_task_id = task.id)
       )
     ));
+  $$;
+
+
+--
+-- Name: delete_archived_source(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_archived_source(source_id integer) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      source archived_data_sources;
+      item_id integer;
+      item table_of_contents_items;
+      archive archived_data_sources;
+    begin
+      select
+        project_id into pid 
+      from 
+        data_sources 
+      where 
+        id = delete_archived_source.source_id;
+      
+      if session_is_admin(pid) then
+        select * into archive from archived_data_sources where data_source_id = delete_archived_source.source_id;
+        if archive is null then
+          raise exception 'Archived source not found';
+        end if;
+        select 
+          id into item_id 
+        from 
+          table_of_contents_items 
+        where 
+          data_layer_id = archive.data_layer_id;
+        delete from archived_data_sources where data_source_id = delete_archived_source.source_id;
+        select * from table_of_contents_items where id = item_id into item;
+        return item;
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: delete_expired_archived_data_sources(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_expired_archived_data_sources() RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    delete from
+      archived_data_sources
+    where
+      archived_data_sources.project_id not in (
+        select id from projects where data_hosting_retention_period is null
+      ) and
+      created_at < now() - (select data_hosting_retention_period from projects where id = archived_data_sources.project_id);
   $$;
 
 
@@ -11505,6 +11824,42 @@ CREATE FUNCTION public.projects_eligable_downloadable_layers_count(p public.proj
 
 
 --
+-- Name: projects_estimate_deleted_data_for_retention_change(public.projects, interval); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval) RETURNS public.retention_change_estimate
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      bytes bigint;
+      num_sources int;
+      estimate retention_change_estimate :=  (0, 0);
+    begin
+      if session_is_admin(project.id) then
+        select 
+          count(distinct(data_source_id))::integer,
+          sum(size) into estimate.num_sources, estimate.bytes
+        from 
+          data_upload_outputs 
+        where 
+          data_source_id in (
+            select 
+              data_source_id 
+            from 
+              archived_data_sources 
+            where 
+              project_id = project.id and
+              created_at < now() - new_retention_period
+            );
+        return estimate;
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: projects_imported_arcgis_services(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12338,11 +12693,7 @@ Users can be approved using the `approveParticipant()` mutation.
 CREATE FUNCTION public.projects_uploaded_draft_data_sources(p public.projects) RETURNS SETOF public.data_sources
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-  select * from data_sources where type = any ('{seasketch-mvt,seasketch-vector,seasketch-raster}') and id = any (
-    select data_source_id from data_layers where id = any (
-      select data_layer_id from table_of_contents_items where project_id = p.id and data_layer_id is not null and is_draft = true
-    )
-  );
+  select * from data_sources where type = any ('{seasketch-mvt,seasketch-vector,seasketch-raster}') and project_id = p.id;
 $$;
 
 
@@ -13277,6 +13628,64 @@ Remove a SketchClass from the list of valid children for a Collection.
 
 
 --
+-- Name: replace_data_source(integer, integer, text, numeric[], jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id integer, source_layer text, bounds numeric[], gl_styles jsonb) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      old_source_id integer;
+      old_source_type text;
+      old_metadata_is_dynamic boolean;
+    begin
+        select data_layers.data_source_id into old_source_id from data_layers where id = replace_data_source.data_layer_id;
+        select type into old_source_type from data_sources where id = old_source_id;
+        select metadata is null and (old_source_type = 'arcgis-vector' or old_source_type = 'arcgis-dynamic-mapserver') into old_metadata_is_dynamic from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id limit 1;
+        insert into archived_data_sources (
+          data_source_id,
+          data_layer_id,
+          version,
+          mapbox_gl_style,
+          changelog,
+          source_layer,
+          bounds,
+          sublayer,
+          sublayer_type,
+          dynamic_metadata,
+          project_id
+        ) values (
+          old_source_id,
+          replace_data_source.data_layer_id,
+          (
+            select 
+              coalesce(max(version), 0) + 1 
+            from 
+              archived_data_sources 
+            where archived_data_sources.data_layer_id = replace_data_source.data_layer_id
+          ),
+          (
+            select 
+              mapbox_gl_styles
+            from 
+              data_layers 
+            where id = replace_data_source.data_layer_id
+          ),
+          (select changelog from data_sources where id = replace_data_source.data_source_id),
+          (select data_layers.source_layer from data_layers where data_layers.id = replace_data_source.data_layer_id),
+          (select table_of_contents_items.bounds from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and table_of_contents_items.bounds is not null limit 1),
+          (select sublayer from data_layers where id = data_layer_id),
+          (select sublayer_type from data_layers where id = data_layer_id),
+          old_metadata_is_dynamic,
+          (select project_id from data_sources where id = replace_data_source.data_source_id)
+        );
+        update data_layers set data_source_id = replace_data_source.data_source_id, source_layer = replace_data_source.source_layer, mapbox_gl_styles = coalesce(gl_styles, data_layers.mapbox_gl_styles) where id = replace_data_source.data_layer_id;
+        update table_of_contents_items set bounds = replace_data_source.bounds where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id;
+    end;
+  $$;
+
+
+--
 -- Name: revoke_admin_access(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13304,6 +13713,85 @@ CREATE FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer
 COMMENT ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) IS '
 Remove participant admin privileges.
 ';
+
+
+--
+-- Name: rollback_to_archived_source(integer, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.rollback_to_archived_source(source_id integer, rollback_gl_style boolean) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      source archived_data_sources;
+      item_id integer;
+      item table_of_contents_items;
+      archive archived_data_sources;
+      source_type text;
+    begin
+      select
+        project_id, 
+        type 
+      into 
+        pid, 
+        source_type
+      from 
+        data_sources 
+      where 
+        id = rollback_to_archived_source.source_id;
+      
+      if session_is_admin(pid) then
+        select * into archive from archived_data_sources where data_source_id = rollback_to_archived_source.source_id;
+        if archive is null then
+          raise exception 'Archived source not found';
+        end if;
+        select 
+          id into item_id 
+        from 
+          table_of_contents_items 
+        where 
+          table_of_contents_items.data_layer_id = archive.data_layer_id;
+        update 
+          data_layers 
+        set 
+          data_source_id = rollback_to_archived_source.source_id, 
+          source_layer = archive.source_layer,
+          mapbox_gl_styles = (
+            case source_type
+              when 'arcgis-dynamic-mapserver' then
+                null
+              when 'arcgis-vector' then
+                null
+              when 'arcgis-dynamic-mapserver-vector-sublayer' then
+                null
+              else
+                case when rollback_gl_style then
+                  archive.mapbox_gl_style
+                else
+                  data_layers.mapbox_gl_styles
+                end
+              end
+          )
+        where 
+          id = archive.data_layer_id;
+        update table_of_contents_items set bounds = archive.bounds where table_of_contents_items.data_layer_id = archive.data_layer_id;
+        delete from archived_data_sources where data_source_id = rollback_to_archived_source.source_id;
+        delete from archived_data_sources where archived_data_sources.data_layer_id = archive.data_layer_id and version >= archive.version;
+        if archive.sublayer is not null then
+          update data_layers set sublayer = archive.sublayer, sublayer_type = archive.sublayer_type where id = archive.data_layer_id;
+        end if;
+        if archive.dynamic_metadata then
+          update table_of_contents_items set metadata = null where table_of_contents_items.data_layer_id = archive.data_layer_id and is_draft = true;
+        end if;
+        delete from esri_feature_layer_conversion_tasks where table_of_contents_item_id = item_id;
+        select * from table_of_contents_items where id = item_id into item;
+        return item;
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -13810,6 +14298,30 @@ CREATE FUNCTION public.session_on_acl(acl_id integer) RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.session_on_acl(acl_id integer) IS '@omit';
+
+
+--
+-- Name: set_data_upload_task_changelog(uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_data_upload_task_changelog(data_upload_task_id uuid, changelog text) RETURNS public.data_upload_tasks
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      task data_upload_tasks;
+    begin
+      if (session_is_admin((select project_id from data_sources where id = (select replace_source_id from data_upload_tasks where id = data_upload_task_id)))) then
+        -- first, set the changelog on data_upload_task
+        update data_upload_tasks set changelog = set_data_upload_task_changelog.changelog where id = data_upload_task_id;
+        -- then, see if there are any data_sources that have already been created for the task. If so, set data_source.changelog
+        update data_sources set changelog = set_data_upload_task_changelog.changelog where upload_task_id = data_upload_task_id;
+        select * into task from data_upload_tasks where id = data_upload_task_id;
+        return task;
+      else
+        raise exception 'permission denied';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -14921,6 +15433,29 @@ $$;
 
 
 --
+-- Name: table_of_contents_items_breadcrumbs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_breadcrumbs(item public.table_of_contents_items) RETURNS SETOF public.folder_breadcrumbs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+      with recursive breadcrumbs as (
+        select 0 as position, id, title, parent_stable_id, stable_id, is_draft from table_of_contents_items where id = item.id and is_draft = item.is_draft
+        union all
+        select b.position + 1 as position, t.id, t.title, t.parent_stable_id, t.stable_id, t.is_draft from breadcrumbs b join table_of_contents_items t on b.parent_stable_id = t.stable_id and b.is_draft = t.is_draft
+      )
+      select id, stable_id, title from breadcrumbs where position > 0 order by position desc;
+    $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_breadcrumbs(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_breadcrumbs(item public.table_of_contents_items) IS '@simpleCollections only';
+
+
+--
 -- Name: table_of_contents_items_contained_by(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15240,6 +15775,48 @@ CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
       return NEW;
     end;
   $$;
+
+
+--
+-- Name: table_of_contents_items_quota_used(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_quota_used(item public.table_of_contents_items) RETURNS SETOF public.quota_details
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select
+      size as bytes,
+      id,
+      type,
+      is_original,
+      false as is_archived
+    from
+      data_upload_outputs
+    where
+      data_source_id = (
+        select data_source_id from data_layers where id = item.data_layer_id
+      )
+    union all
+    select
+      size as bytes,
+      id,
+      type,
+      is_original,
+      true as is_archived
+    from
+      data_upload_outputs
+    where
+      data_source_id in (
+        select data_source_id from archived_data_sources where data_layer_id = item.data_layer_id
+      )
+  $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_quota_used(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_quota_used(item public.table_of_contents_items) IS '@simpleCollections only';
 
 
 --
@@ -16633,55 +17210,6 @@ ALTER TABLE public.access_control_lists ALTER COLUMN id ADD GENERATED BY DEFAULT
 
 
 --
--- Name: archived_data_sources; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.archived_data_sources (
-    data_source_id integer NOT NULL,
-    data_layer_id integer NOT NULL,
-    version integer NOT NULL,
-    mapbox_gl_style jsonb NOT NULL,
-    sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_style)::text)) STORED,
-    changelog text
-);
-
-
---
--- Name: TABLE archived_data_sources; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.archived_data_sources IS 'Admins can upload new version of data sources, and these are tracked from this table. This is used to track changes to data sources over time with a version number and optional changelog.';
-
-
---
--- Name: COLUMN archived_data_sources.version; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.archived_data_sources.version IS 'Version number of the data source. Incremented each time a new version is uploaded.';
-
-
---
--- Name: COLUMN archived_data_sources.mapbox_gl_style; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.archived_data_sources.mapbox_gl_style IS 'Mapbox GL style from the associated data layer at the time of upload of the new version. This is tracked in case the data source is significantly changed such that rolling back to a previous version also requires style changes';
-
-
---
--- Name: COLUMN archived_data_sources.sprite_ids; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.archived_data_sources.sprite_ids IS 'Array of sprite ids used in the archived mapbox_gl_style.';
-
-
---
--- Name: COLUMN archived_data_sources.changelog; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.archived_data_sources.changelog IS 'Optional changelog so that admins can explain what changed in the new version.';
-
-
---
 -- Name: basemaps_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -16827,25 +17355,6 @@ ALTER TABLE public.data_sources ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDEN
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
-
-
---
--- Name: data_upload_outputs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.data_upload_outputs (
-    id integer NOT NULL,
-    data_source_id integer,
-    project_id integer,
-    type public.data_upload_output_type NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    url text NOT NULL,
-    remote text NOT NULL,
-    is_original boolean DEFAULT false NOT NULL,
-    size bigint NOT NULL,
-    filename text NOT NULL,
-    original_filename text
 );
 
 
@@ -18558,6 +19067,13 @@ CREATE UNIQUE INDEX access_control_lists_table_of_contents_item_id_idx ON public
 
 
 --
+-- Name: archived_data_sources_data_source_id_fkey; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX archived_data_sources_data_source_id_fkey ON public.archived_data_sources USING btree (data_source_id);
+
+
+--
 -- Name: basemap_project_id_and_surveys_only; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -19202,6 +19718,13 @@ CREATE INDEX table_of_contents_items_project_id_idx ON public.table_of_contents_
 
 
 --
+-- Name: table_of_contents_items_stable_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX table_of_contents_items_stable_id_idx ON public.table_of_contents_items USING btree (stable_id);
+
+
+--
 -- Name: topic_notification_unsubscribes_topic_id_user_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -19802,6 +20325,14 @@ COMMENT ON CONSTRAINT archived_data_sources_data_source_id_fkey ON public.archiv
 
 
 --
+-- Name: archived_data_sources archived_data_sources_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.archived_data_sources
+    ADD CONSTRAINT archived_data_sources_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
 -- Name: basemaps basemaps_interactivity_settings_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -19967,6 +20498,14 @@ ALTER TABLE ONLY public.data_upload_outputs
 
 ALTER TABLE ONLY public.data_upload_tasks
     ADD CONSTRAINT data_upload_tasks_project_background_job_id_fkey FOREIGN KEY (project_background_job_id) REFERENCES public.project_background_jobs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: data_upload_tasks data_upload_tasks_replace_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_tasks
+    ADD CONSTRAINT data_upload_tasks_replace_source_id_fkey FOREIGN KEY (replace_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
 
 
 --
@@ -23006,6 +23545,13 @@ GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_u
 
 
 --
+-- Name: COLUMN projects.data_hosting_retention_period; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketch_user;
+
+
+--
 -- Name: FUNCTION active_projects(period public.activity_stats_period, "limit" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -23235,6 +23781,29 @@ GRANT UPDATE(archived) ON TABLE public.survey_responses TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.archive_responses(ids integer[], "makeArchived" boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION extract_sprite_ids(t text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_sprite_ids(t text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_sprite_ids(t text) TO anon;
+
+
+--
+-- Name: TABLE archived_data_sources; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.archived_data_sources TO seasketch_user;
+
+
+--
+-- Name: FUNCTION archived_data_sources_sprites(l public.archived_data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.archived_data_sources_sprites(l public.archived_data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.archived_data_sources_sprites(l public.archived_data_sources) TO anon;
 
 
 --
@@ -24351,11 +24920,11 @@ GRANT SELECT(content_type) ON TABLE public.data_upload_tasks TO seasketch_user;
 
 
 --
--- Name: FUNCTION create_data_upload(filename text, project_id integer, content_type text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer) TO seasketch_user;
 
 
 --
@@ -24834,14 +25403,6 @@ GRANT ALL ON FUNCTION public.data_hosting_quota_left(pid integer) TO anon;
 
 
 --
--- Name: FUNCTION extract_sprite_ids(t text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.extract_sprite_ids(t text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.extract_sprite_ids(t text) TO anon;
-
-
---
 -- Name: TABLE data_layers; Type: ACL; Schema: public; Owner: -
 --
 
@@ -24865,11 +25426,35 @@ GRANT SELECT(sprite_ids) ON TABLE public.data_layers TO anon;
 
 
 --
+-- Name: FUNCTION data_layers_archived_sources(data_layer public.data_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_layers_archived_sources(data_layer public.data_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_layers_archived_sources(data_layer public.data_layers) TO anon;
+
+
+--
 -- Name: FUNCTION data_layers_sprites(l public.data_layers); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
+
+
+--
+-- Name: FUNCTION data_layers_total_quota_used(layer public.data_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_layers_total_quota_used(layer public.data_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_layers_total_quota_used(layer public.data_layers) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_layers_version(data_layer public.data_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_layers_version(data_layer public.data_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_layers_version(data_layer public.data_layers) TO anon;
 
 
 --
@@ -25074,6 +25659,30 @@ GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sour
 
 
 --
+-- Name: FUNCTION data_sources_hosting_quota_used(source public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_hosting_quota_used(source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_hosting_quota_used(source public.data_sources) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_sources_is_archived(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_is_archived(data_source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_is_archived(data_source public.data_sources) TO anon;
+
+
+--
+-- Name: FUNCTION data_sources_outputs(source public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION data_sources_quota_used(source public.data_sources); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25082,11 +25691,27 @@ GRANT ALL ON FUNCTION public.data_sources_quota_used(source public.data_sources)
 
 
 --
+-- Name: FUNCTION data_sources_related_table_of_contents_items(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_related_table_of_contents_items(data_source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_related_table_of_contents_items(data_source public.data_sources) TO anon;
+
+
+--
 -- Name: FUNCTION data_sources_uploaded_by(data_source public.data_sources); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_sources) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_sources_uploaded_by(data_source public.data_sources) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_upload_tasks_data_source(data_upload_task public.data_upload_tasks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_upload_tasks_data_source(data_upload_task public.data_upload_tasks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_upload_tasks_data_source(data_upload_task public.data_upload_tasks) TO seasketch_user;
 
 
 --
@@ -25132,6 +25757,21 @@ REVOKE ALL ON FUNCTION public.decrypt(bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.decrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION delete_archived_source(source_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_archived_source(source_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.delete_archived_source(source_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION delete_expired_archived_data_sources(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_expired_archived_data_sources() FROM PUBLIC;
 
 
 --
@@ -28054,6 +28694,14 @@ GRANT ALL ON FUNCTION public.projects_eligable_downloadable_layers_count(p publi
 
 
 --
+-- Name: FUNCTION projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_imported_arcgis_services(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -28435,11 +29083,26 @@ REVOKE ALL ON FUNCTION public.replace(public.citext, public.citext, public.citex
 
 
 --
+-- Name: FUNCTION replace_data_source(data_layer_id integer, data_source_id integer, source_layer text, bounds numeric[], gl_styles jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.replace_data_source(data_layer_id integer, data_source_id integer, source_layer text, bounds numeric[], gl_styles jsonb) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION revoke_admin_access("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION rollback_to_archived_source(source_id integer, rollback_gl_style boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.rollback_to_archived_source(source_id integer, rollback_gl_style boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.rollback_to_archived_source(source_id integer, rollback_gl_style boolean) TO seasketch_user;
 
 
 --
@@ -28628,6 +29291,14 @@ REVOKE ALL ON FUNCTION public.session_member_of_group(groups integer[]) FROM PUB
 
 REVOKE ALL ON FUNCTION public.session_on_acl(acl_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.session_on_acl(acl_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION set_data_upload_task_changelog(data_upload_task_id uuid, changelog text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_data_upload_task_changelog(data_upload_task_id uuid, changelog text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_data_upload_task_changelog(data_upload_task_id uuid, changelog text) TO seasketch_user;
 
 
 --
@@ -31813,6 +32484,14 @@ GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surv
 
 
 --
+-- Name: FUNCTION table_of_contents_items_breadcrumbs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_breadcrumbs(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_breadcrumbs(item public.table_of_contents_items) TO anon;
+
+
+--
 -- Name: FUNCTION table_of_contents_items_contained_by(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
 --
 
@@ -31897,6 +32576,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_project_background_jobs(ite
 --
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_project_update() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_quota_used(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_quota_used(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_quota_used(item public.table_of_contents_items) TO seasketch_user;
 
 
 --
@@ -32605,13 +33292,6 @@ REVOKE ALL ON FUNCTION public.st_union(public.geometry, double precision) FROM P
 --
 
 GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
-
-
---
--- Name: TABLE archived_data_sources; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.archived_data_sources TO seasketch_user;
 
 
 --

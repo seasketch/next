@@ -78,6 +78,9 @@ export default function useSourcePropertyNames(
                 }
                 setNames(fieldNames);
               }
+            })
+            .catch((e) => {
+              console.error(e);
             });
         }
       }

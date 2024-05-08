@@ -53,6 +53,8 @@ import Warning from "../../components/Warning";
 import AddMVTUrlModal from "../AddMVTUrlModal";
 import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
+import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
+import useProjectId from "../../useProjectId";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -577,6 +579,8 @@ function Header({
 }) {
   const uploadContext = useContext(ProjectBackgroundJobContext);
   const { t } = useTranslation("admin:data");
+  const [dataHostingRetentionModalOpen, setDataHostingRetentionModalOpen] =
+    useState(false);
   const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
   const onError = useGlobalErrorHandler();
   const [enableDownload] = useEnableDownloadForEligibleLayersMutation({
@@ -593,6 +597,7 @@ function Header({
   });
   const [mvtUrlModalOpen, setMVTUrlModalOpen] = useState(false);
   const [remoteGeoJSONModalOpen, setRemoteGeoJSONModalOpen] = useState(false);
+  const projectId = useProjectId();
 
   const { confirm } = useDialog();
   return (
@@ -766,6 +771,11 @@ function Header({
                 <MenuBarItem onClick={() => setDataDownloadSettingOpen(true)}>
                   <Trans ns="admin:data">Data download...</Trans>
                 </MenuBarItem>
+                <MenuBarItem
+                  onClick={() => setDataHostingRetentionModalOpen(true)}
+                >
+                  <Trans ns="admin:data">Archived Layer Retention...</Trans>
+                </MenuBarItem>
               </Menubar.MenubarGroup>
             </MenuBarContent>
           </Menubar.Portal>
@@ -820,6 +830,12 @@ function Header({
       {dataDownloadSettingOpen && (
         <DataDownloadDefaultSettingModal
           onRequestClose={() => setDataDownloadSettingOpen(false)}
+        />
+      )}
+      {dataHostingRetentionModalOpen && projectId && (
+        <DataHostingRetentionPeriodModal
+          projectId={projectId}
+          onRequestClose={() => setDataHostingRetentionModalOpen(false)}
         />
       )}
       {mvtUrlModalOpen && (

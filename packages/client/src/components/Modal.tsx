@@ -293,8 +293,12 @@ function Panel({
           const dom = myRef.current as HTMLElement;
           const inputs = dom.querySelectorAll("input");
           if (inputs && inputs.length) {
-            inputs[0].focus();
-            return;
+            for (const input of inputs) {
+              if (input.tabIndex !== -1) {
+                input.focus();
+                return;
+              }
+            }
           }
           const buttons = dom.querySelectorAll("button");
           if (buttons && buttons.length) {
@@ -338,6 +342,7 @@ function FooterButton(props: FooterButtonProps) {
   }, []);
   return (
     <button
+      tabIndex={0}
       ref={ref}
       autoFocus={props.autoFocus || false}
       type="button"

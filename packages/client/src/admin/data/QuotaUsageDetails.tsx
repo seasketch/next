@@ -55,22 +55,18 @@ export default function QuotaUsageDetails({
   }, [treeMapContainer, tableOfContentsItems, data]);
 
   const totalQuotaUsage = useMemo(() => {
-    let used = 0;
-    for (const item of data?.projectBySlug?.uploadedDraftDataSources || []) {
-      for (const usage of item.quotaUsed || []) {
-        used += parseInt(usage.bytes);
-      }
-    }
-    const total = parseInt(data?.projectBySlug?.dataHostingQuota || "10000000");
+    const total = data?.projectBySlug?.dataHostingQuota
+      ? parseInt(data.projectBySlug.dataHostingQuota)
+      : 0;
+    const used = data?.projectBySlug?.dataHostingQuotaUsed
+      ? parseInt(data.projectBySlug.dataHostingQuotaUsed)
+      : 0;
     return {
-      used,
       total,
+      used,
       fraction: used / total,
     };
-  }, [
-    data?.projectBySlug?.dataHostingQuota,
-    data?.projectBySlug?.uploadedDraftDataSources,
-  ]);
+  }, [data?.projectBySlug]);
 
   if (error) {
     return (
