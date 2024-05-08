@@ -7493,7 +7493,7 @@ COMMENT ON FUNCTION public.data_layers_sprites(l public.data_layers) IS '@simple
 CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RETURNS bigint
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select coalesce(sum(size), 0) from data_upload_outputs where data_source_id in (
+    select coalesce(sum(size), 0)::bigint from data_upload_outputs where data_source_id in (
       select data_source_id from data_layers where id = layer.id
       union all
       select data_source_id from archived_data_sources where data_layer_id = layer.id

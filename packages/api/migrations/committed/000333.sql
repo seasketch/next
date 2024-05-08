@@ -1,5 +1,5 @@
 --! Previous: sha1:5ee4e72d4f7f8783cfe5a111000c54384d242908
---! Hash: sha1:70edc56c2a63ec0b505f21165f69bce0fa17f2aa
+--! Hash: sha1:ca022b277c252198db2bb81f68eaf88afbfc0ec5
 
 -- Enter migration here
 alter type project_background_job_type add value if not exists 'replacement_upload';
@@ -350,7 +350,7 @@ create or replace function data_layers_total_quota_used(layer data_layers)
   language sql
   security definer
   stable as $$
-    select coalesce(sum(size), 0) from data_upload_outputs where data_source_id in (
+    select coalesce(sum(size), 0)::bigint from data_upload_outputs where data_source_id in (
       select data_source_id from data_layers where id = layer.id
       union all
       select data_source_id from archived_data_sources where data_layer_id = layer.id
