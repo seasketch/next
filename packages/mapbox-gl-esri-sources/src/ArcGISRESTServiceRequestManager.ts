@@ -66,7 +66,7 @@ export class ArcGISRESTServiceRequestManager {
       options?.signal
     );
     const layers = await this.fetch<LayersMetadata>(
-      `${url}/layers?${params.toString()}`
+      `${url}/layers/?${params.toString()}`
     );
     if ((layers as any).error) {
       throw new Error((layers as any).error.message);
@@ -95,13 +95,15 @@ export class ArcGISRESTServiceRequestManager {
       params.set("token", options.token);
     }
 
-    const requestUrl = `${url}?${params.toString()}`;
+    const requestUrl = `${url}${
+      url.endsWith("/") ? "" : "/"
+    }?${params.toString()}`;
     const serviceMetadata = await this.fetch<FeatureServerMetadata>(
       requestUrl,
       options?.signal
     );
     const layers = await this.fetch<LayersMetadata>(
-      `${url}/layers?${params.toString()}`
+      `${url}/layers/?${params.toString()}`
     );
     if ((layers as any).error) {
       throw new Error((layers as any).error.message);
@@ -123,7 +125,9 @@ export class ArcGISRESTServiceRequestManager {
       params.set("token", options?.token);
     }
 
-    const requestUrl = `${url}?${params.toString()}`;
+    const requestUrl = `${url}${
+      url.endsWith("/") ? "" : "/"
+    }?${params.toString()}`;
     const response = await this.fetch<{
       currentVersion: number;
       folders: string[];
@@ -185,7 +189,7 @@ export class ArcGISRESTServiceRequestManager {
       params.set("token", token);
     }
 
-    const requestUrl = `${url}/legend?${params.toString()}`;
+    const requestUrl = `${url}/legend/?${params.toString()}`;
     const response = await this.fetch<MapServiceLegendMetadata>(requestUrl);
     return response;
   }
@@ -252,4 +256,16 @@ export async function fetchWithTTL(
       return await response;
     }
   }
+}
+
+function fetchWithProxy(url: string, init?: RequestInit) {
+  const Url = new URL(url);
+  const searchParams = Url.searchParams;
+  const location = Url.origin + Url.pathname;
+  searchParams.set("location", location);
+  Url.host = "arcgis-catalog-proxy.underbluewaters.workers.dev";
+  Url.pathname = "";
+  Url.protocol = "https:";
+  console.log("fetchWithProxy", Url.toString());
+  return fetch(Url, init);
 }
