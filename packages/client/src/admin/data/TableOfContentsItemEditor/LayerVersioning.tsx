@@ -430,7 +430,7 @@ function VersionDetails({
     <div>
       <p>
         <Trans ns="admin:data">
-          Archives which were created after version {version} will be
+          Archives which were created after version {{ version }} will be
           automatically deleted. This action cannot be undone.
         </Trans>
       </p>
@@ -492,7 +492,7 @@ function VersionDetails({
     <div className="flex-2 p-4 border-t">
       <h2 className="text-base font-medium leading-6 text-gray-900">
         <Trans ns="admin:data">
-          Version {version.toString()} details and settings
+          Version {{ version }} details and settings
         </Trans>
       </h2>
       <div className="border rounded mt-4 overflow-hidden bg-white">
@@ -565,7 +565,7 @@ function VersionDetails({
             }
             className="px-2 py-1 text-sm text-black border-black border-opacity-20 font-medium bg-white rounded border shadow-sm"
           >
-            <Trans ns="admin:data">Rollback to Version {version}</Trans>
+            <Trans ns="admin:data">Rollback to Version {{ version }}</Trans>
           </button>
         )}
         {!source.isArchived &&
