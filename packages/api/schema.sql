@@ -7939,7 +7939,7 @@ CREATE FUNCTION public.data_sources_author_profile(source public.data_sources) R
 CREATE FUNCTION public.data_sources_hosting_quota_used(source public.data_sources) RETURNS bigint
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select coalesce(sum(size), 0) from data_upload_outputs where data_source_id = source.id;
+    select coalesce(sum(size), 0)::bigint from data_upload_outputs where data_source_id = source.id;
   $$;
 
 
