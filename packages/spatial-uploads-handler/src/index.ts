@@ -501,7 +501,6 @@ export default async function handleUpload(
       const underThreshold =
         normalizedVectorFileSize <= MVT_THRESHOLD ||
         (original?.type === "GeoJSON" && original.size <= MVT_THRESHOLD * 10);
-      console.log({ underThreshold });
       if (underThreshold) {
         const geojsonPath = path.join(dist, name + ".geojson.json");
         await logger.exec(
