@@ -3191,6 +3191,8 @@ class MapContextManager extends EventEmitter {
   ) {
     const bounds = await this.boundsForTocItem(stableId);
     if (options?.onlyIfNotVisible && bounds) {
+      // TODO: make this work again
+      return;
       // Check the current map bounds. If any part of the bounds is visible, don't zoom
       const mapBounds = this.map?.getBounds();
       if (mapBounds) {
