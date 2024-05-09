@@ -3194,14 +3194,14 @@ class MapContextManager extends EventEmitter {
       // TODO: make this work again
       return;
       // Check the current map bounds. If any part of the bounds is visible, don't zoom
-      const mapBounds = this.map?.getBounds();
-      if (mapBounds) {
-        const sw = new mapboxgl.LngLat(bounds[0], bounds[1]);
-        const ne = new mapboxgl.LngLat(bounds[2], bounds[3]);
-        if (mapBounds.contains(sw) || mapBounds.contains(ne)) {
-          return;
-        }
-      }
+      // const mapBounds = this.map?.getBounds();
+      // if (mapBounds) {
+      //   const sw = new mapboxgl.LngLat(bounds[0], bounds[1]);
+      //   const ne = new mapboxgl.LngLat(bounds[2], bounds[3]);
+      //   if (mapBounds.contains(sw) || mapBounds.contains(ne)) {
+      //     return;
+      //   }
+      // }
     }
     if (bounds && [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")) {
       const sidebar = currentSidebarState();
