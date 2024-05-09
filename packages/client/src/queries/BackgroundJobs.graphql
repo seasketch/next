@@ -11,7 +11,7 @@ fragment BackgroundJobDetails on ProjectBackgroundJob {
   dataUploadTask {
     id
     filename
-    replaceSourceId
+    replaceTableOfContentsItemId
     createdAt
   }
   esriFeatureLayerConversionTask {

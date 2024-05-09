@@ -291,6 +291,7 @@ fragment ArchivedSource on ArchivedDataSource {
   dataLayerId
   bounds
   changelog
+  sublayer
 }
 
 fragment FullAdminDataLayer on DataLayer {

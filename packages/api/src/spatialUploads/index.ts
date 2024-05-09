@@ -27,7 +27,10 @@ export async function createDBRecordsForProcessedLayer(
   client: PoolClient | Client,
   jobId: string,
   jobType: "upload" | "conversion",
-  replaceSourceId?: number
+  replace?: {
+    sourceId: number;
+    layerId: number;
+  }
 ) {
   const uploadCountResult = await client.query(
     `
@@ -224,15 +227,14 @@ export async function createDBRecordsForProcessedLayer(
 
   const sourceLayer = pmtiles ? layer.name : undefined;
 
-  // if (jobType === "upload") {
-  if (replaceSourceId) {
+  if (replace) {
     // create archived_data_sources record with the old data_source
     // first, get the related source, layer, and table of contents items
     const sourceResults = await client.query(
       `
           select * from data_sources where id = $1
         `,
-      [replaceSourceId]
+      [replace.sourceId]
     );
     if (!sourceResults.rows.length) {
       throw new Error("Could not find source to replace");
@@ -240,9 +242,9 @@ export async function createDBRecordsForProcessedLayer(
     const source = sourceResults.rows[0];
     const layerResults = await client.query(
       `
-          select * from data_layers where data_source_id = $1
+          select * from data_layers where id = $1
         `,
-      [replaceSourceId]
+      [replace.layerId]
     );
     if (!layerResults.rows.length) {
       throw new Error("Could not find layer to replace");
@@ -278,7 +280,24 @@ export async function createDBRecordsForProcessedLayer(
         dataSourceId,
         sourceLayer,
         layer.bounds,
-        conversionTask ? JSON.stringify(conversionTask.mapbox_gl_styles) : null,
+        // if the new data source is a conversion task, use the mapbox_gl_styles
+        // from the conversion task (translated esri styles). Otherwise, if the
+        // existing layer being replaced already has a style, leave it blank.
+        // The replace_data_source stored procedure will fill it in with the
+        // existing style when left null. Finally, for the case where the
+        // existing style is blank (e.g. an arcgis layer is being replace by an upload),
+        // generate a new style based on the geometry type.
+        conversionTask
+          ? JSON.stringify(conversionTask.mapbox_gl_styles)
+          : dataLayer.mapbox_gl_styles
+          ? null
+          : JSON.stringify(
+              getStyle(
+                isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
+                uploadCount,
+                layer.geostats
+              )
+            ),
       ]
     );
 

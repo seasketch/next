@@ -29,7 +29,7 @@ export default async function processDataUpload(
       );
     }
     try {
-      let replaceSourceId: number | undefined = undefined;
+      let replaceTableOfContentsItemId: number | undefined = undefined;
       const results = await client.query(
         `update project_background_jobs set progress_message = 'cartography' where id = $1 returning *`,
         [jobId]
@@ -41,13 +41,14 @@ export default async function processDataUpload(
         [jobId]
       );
       const uploadTaskQuery = await client.query(
-        `select id, replace_source_id from data_upload_tasks where project_background_job_id = $1 limit 1`,
+        `select id, replace_table_of_contents_item_id from data_upload_tasks where project_background_job_id = $1 limit 1`,
         [jobId]
       );
       const isConversionTask = conversionTaskQuery.rows.length > 0;
       const isUploadTask = uploadTaskQuery.rows.length > 0;
       if (isUploadTask) {
-        replaceSourceId = uploadTaskQuery.rows[0].replace_source_id;
+        replaceTableOfContentsItemId =
+          uploadTaskQuery.rows[0].replace_table_of_contents_item_id;
       } else if (isConversionTask) {
         const originalSource = await client.query(
           `
@@ -58,7 +59,8 @@ export default async function processDataUpload(
           [conversionTaskQuery.rows[0].table_of_contents_item_id]
         );
         if (originalSource.rows.length >= 1) {
-          replaceSourceId = originalSource.rows[0].data_source_id;
+          replaceTableOfContentsItemId =
+            conversionTaskQuery.rows[0].table_of_contents_item_id;
         }
       }
       if (!isConversionTask && !isUploadTask) {
@@ -67,6 +69,32 @@ export default async function processDataUpload(
             jobId
         );
       }
+      let replace: undefined | { sourceId: number; layerId: number } =
+        undefined;
+
+      if (replaceTableOfContentsItemId) {
+        const layerQ = await client.query(
+          `
+          select data_layer_id from table_of_contents_items where id = $1`,
+          [replaceTableOfContentsItemId]
+        );
+        const sourceQ = await client.query(
+          `
+          select data_source_id from data_layers where id = $1`,
+          [layerQ.rows[0].data_layer_id]
+        );
+        if (!sourceQ.rows[0] || !layerQ.rows[0]) {
+          return handleError(
+            "Could not find source or layer for table of contents item " +
+              replaceTableOfContentsItemId
+          );
+        }
+        replace = {
+          sourceId: sourceQ.rows[0].data_source_id as number,
+          layerId: layerQ.rows[0].data_layer_id as number,
+        };
+      }
+
       const projectId = results.rows[0].project_id;
       if (!data.error) {
         // Create layers
@@ -77,7 +105,7 @@ export default async function processDataUpload(
             client,
             jobId,
             isConversionTask ? "conversion" : "upload",
-            replaceSourceId
+            replace
           );
         }
         await client.query(

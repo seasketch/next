@@ -3,7 +3,7 @@ fragment DataUploadDetails on DataUploadTask {
   filename
   tableOfContentsItemStableIds
   projectBackgroundJobId
-  replaceSourceId
+  replaceTableOfContentsItemId
   createdAt
 }
 
@@ -18,14 +18,14 @@ mutation createDataUpload(
   $projectId: Int!
   $filename: String!
   $contentType: String!
-  $replaceSourceId: Int
+  $replaceTableOfContentsItemId: Int
 ) {
   createDataUpload(
     input: {
       filename: $filename
       projectId: $projectId
       contentType: $contentType
-      replaceSourceId: $replaceSourceId
+      replaceTableOfContentsItemId: $replaceTableOfContentsItemId
     }
   ) {
     dataUploadTask {
