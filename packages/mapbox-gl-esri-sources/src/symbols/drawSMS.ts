@@ -94,5 +94,7 @@ export default function (symbol: SimpleMarkerSymbol, pixelRatio: 1 | 2 | 3) {
     default:
       throw new Error(`Unknown symbol type ${symbol.style}`);
   }
-  return { width, height, data: CANVAS_TO_DATA_URL(canvas) };
+  const data = CANVAS_TO_DATA_URL(canvas);
+  console.log("canvas data", data);
+  return { width, height, data };
 }
