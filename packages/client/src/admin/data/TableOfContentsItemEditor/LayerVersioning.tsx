@@ -74,7 +74,7 @@ export default function LayerVersioning({
     return () => {
       jobContext.setUploadType("create");
     };
-  }, [item.id, item.stableId]);
+  }, [item.id, item.stableId, item.dataLayer?.dataSourceId]);
 
   const versions = useMemo(() => {
     const versions = [
@@ -402,11 +402,11 @@ function VersionDetails({
   version: number;
   layer: Pick<
     FullAdminDataLayerFragment,
-    "sublayer" | "sublayerType" | "id" | "version"
+    "sublayer" | "sublayerType" | "id" | "version" | "sourceLayer"
   >;
   onDelete?: () => void;
   onRollback?: (e: { sourceId: number }) => void;
-  archivedDataSource?: Pick<ArchivedDataSource, "sublayer">;
+  archivedDataSource?: Pick<ArchivedDataSource, "sublayer" | "sourceLayer">;
 }) {
   const onError = useGlobalErrorHandler();
   const [deleteArchive, deleteArchiveState] =
@@ -509,6 +509,7 @@ function VersionDetails({
           layer={{
             ...layer,
             sublayer: archivedDataSource?.sublayer || layer.sublayer,
+            sourceLayer: archivedDataSource?.sourceLayer || layer.sourceLayer,
           }}
           readonly={false}
         >

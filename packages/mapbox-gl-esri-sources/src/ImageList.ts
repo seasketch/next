@@ -282,7 +282,7 @@ function createFillImage(pattern: PatternFn, strokeStyle: string): Image {
   };
 }
 
-let CANVAS_TO_DATA_URL = (canvas: HTMLCanvasElement) => {
+export let CANVAS_TO_DATA_URL = (canvas: HTMLCanvasElement) => {
   return canvas.toDataURL();
 };
 
