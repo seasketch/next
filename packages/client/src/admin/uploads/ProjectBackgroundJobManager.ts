@@ -28,7 +28,7 @@ export interface DataUploadProcessingCompleteEvent {
    * upload this will not be true. */
   isFromCurrentSession: boolean;
   layerStaticIds: string[];
-  replaceSourceId?: number;
+  replaceTableOfContentsItemId?: number;
   newSourceId: number;
 }
 
@@ -47,7 +47,7 @@ export interface DataUploadErrorEvent {
 export interface UploadSubmittedEvent {
   uploadTaskId: string;
   jobId: string;
-  replaceSourceId?: number;
+  replaceTableOfContentsItemId?: number;
 }
 /**
  * Manages project background jobs, which includes:
@@ -181,10 +181,10 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
   async uploadFiles(
     files: File[],
     options?: {
-      replaceSourceId?: number;
+      replaceTableOfContentsItemId?: number;
     }
   ) {
-    if (files.length > 1 && options?.replaceSourceId) {
+    if (files.length > 1 && options?.replaceTableOfContentsItemId) {
       throw new Error("Cannot upload multiple files and replace a source");
     }
     if (files.length) {
@@ -197,7 +197,8 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                 projectId: this.projectId,
                 filename: file.name,
                 contentType: file.type,
-                replaceSourceId: options?.replaceSourceId,
+                replaceTableOfContentsItemId:
+                  options?.replaceTableOfContentsItemId,
               },
             });
             if (
@@ -221,7 +222,8 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
             this.emit("upload-submitted", {
               uploadTaskId: task.id,
               jobId,
-              replaceSourceId: options?.replaceSourceId,
+              replaceTableOfContentsItemId:
+                options?.replaceTableOfContentsItemId,
             });
 
             // Add the new task to DataUploadTasksQuery cache
@@ -350,7 +352,8 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
         uploadTaskId: dataUploadTask.id,
         isFromCurrentSession,
         layerStaticIds: dataUploadTask.tableOfContentsItemStableIds || [],
-        replaceSourceId: dataUploadTask.replaceSourceId || undefined,
+        replaceTableOfContentsItemId:
+          dataUploadTask.replaceTableOfContentsItemId || undefined,
       });
     }
     if (

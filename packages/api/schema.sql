@@ -5555,7 +5555,7 @@ CREATE TABLE public.data_upload_tasks (
     outputs jsonb,
     project_background_job_id uuid NOT NULL,
     changelog text,
-    replace_source_id integer
+    replace_table_of_contents_item_id integer
 );
 
 
@@ -5577,7 +5577,7 @@ COMMENT ON COLUMN public.data_upload_tasks.content_type IS 'Content-Type of the 
 -- Name: create_data_upload(text, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer) RETURNS public.data_upload_tasks
+CREATE FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer) RETURNS public.data_upload_tasks
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -5588,8 +5588,7 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
     begin
       if session_is_admin(project_id) then
         select projects_data_hosting_quota_used(projects.*), projects_data_hosting_quota(projects.*) into used, quota from projects where id = project_id;
-        -- make sure there are no other active project_background_jobs with the same replace_source_id
-        if replace_source_id is not null and (select exists(
+        if replace_table_of_contents_item_id is not null and (select exists(
           select 
             data_upload_tasks.id 
           from 
@@ -5599,11 +5598,11 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
           on 
             data_upload_tasks.project_background_job_id = project_background_jobs.id 
           where 
-            data_upload_tasks.replace_source_id is not null and 
+            data_upload_tasks.replace_table_of_contents_item_id is not null and 
             project_background_jobs.state in ('queued', 'running') and
-            data_upload_tasks.replace_source_id = create_data_upload.replace_source_id
+            data_upload_tasks.replace_table_of_contents_item_id = create_data_upload.replace_table_of_contents_item_id
         )) then
-          raise exception 'There is already an active upload task for this data source';
+          raise exception 'There is already an active upload task for this layer';
         end if;
         if quota - used > 0 then
           insert into project_background_jobs (
@@ -5615,7 +5614,7 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
           ) values (
             project_id, 
             (
-              case when replace_source_id is not null then 'Replacement upload ' else '' end
+              case when replace_table_of_contents_item_id is not null then 'Replacement upload ' else '' end
             ) || filename, 
             nullif(current_setting('session.user_id', TRUE), '')::integer, 
             'data_upload',
@@ -5626,12 +5625,12 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
             filename, 
             content_type, 
             project_background_job_id,
-            replace_source_id
+            replace_table_of_contents_item_id
           ) values (
             create_data_upload.filename, 
             create_data_upload.content_type, 
             job.id,
-            create_data_upload.replace_source_id
+            create_data_upload.replace_table_of_contents_item_id
           ) returning * into upload;
           return upload;
         else
@@ -13679,7 +13678,7 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
           old_metadata_is_dynamic,
           (select project_id from data_sources where id = replace_data_source.data_source_id)
         );
-        update data_layers set data_source_id = replace_data_source.data_source_id, source_layer = replace_data_source.source_layer, mapbox_gl_styles = coalesce(gl_styles, data_layers.mapbox_gl_styles) where id = replace_data_source.data_layer_id;
+        update data_layers set data_source_id = replace_data_source.data_source_id, source_layer = replace_data_source.source_layer, mapbox_gl_styles = coalesce(gl_styles, data_layers.mapbox_gl_styles), sublayer = null where id = replace_data_source.data_layer_id;
         update table_of_contents_items set bounds = replace_data_source.bounds where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id;
     end;
   $$;
@@ -13772,7 +13771,8 @@ CREATE FUNCTION public.rollback_to_archived_source(source_id integer, rollback_g
                   data_layers.mapbox_gl_styles
                 end
               end
-          )
+          ),
+          sublayer = archive.sublayer
         where 
           id = archive.data_layer_id;
         update table_of_contents_items set bounds = archive.bounds where table_of_contents_items.data_layer_id = archive.data_layer_id;
@@ -14310,7 +14310,7 @@ CREATE FUNCTION public.set_data_upload_task_changelog(data_upload_task_id uuid, 
     declare
       task data_upload_tasks;
     begin
-      if (session_is_admin((select project_id from data_sources where id = (select replace_source_id from data_upload_tasks where id = data_upload_task_id)))) then
+      if (session_is_admin((select project_id from table_of_contents_items where id = (select replace_table_of_contents_item_id from data_upload_tasks where id = data_upload_task_id)))) then
         -- first, set the changelog on data_upload_task
         update data_upload_tasks set changelog = set_data_upload_task_changelog.changelog where id = data_upload_task_id;
         -- then, see if there are any data_sources that have already been created for the task. If so, set data_source.changelog
@@ -20501,11 +20501,11 @@ ALTER TABLE ONLY public.data_upload_tasks
 
 
 --
--- Name: data_upload_tasks data_upload_tasks_replace_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: data_upload_tasks data_upload_tasks_replace_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.data_upload_tasks
-    ADD CONSTRAINT data_upload_tasks_replace_source_id_fkey FOREIGN KEY (replace_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
+    ADD CONSTRAINT data_upload_tasks_replace_table_of_contents_item_id_fkey FOREIGN KEY (replace_table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
 
 
 --
@@ -24920,11 +24920,11 @@ GRANT SELECT(content_type) ON TABLE public.data_upload_tasks TO seasketch_user;
 
 
 --
--- Name: FUNCTION create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_source_id integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer) TO seasketch_user;
 
 
 --

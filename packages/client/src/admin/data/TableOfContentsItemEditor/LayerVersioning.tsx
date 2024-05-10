@@ -1,5 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import {
+  ArchivedDataSource,
   AuthorProfileFragment,
   BackgroundJobDetailsFragment,
   DataSourceTypes,
@@ -69,11 +70,11 @@ export default function LayerVersioning({
         onlyIfNotVisible: true,
       });
     }
-    jobContext.setUploadType("replace", item.dataLayer?.dataSourceId);
+    jobContext.setUploadType("replace", item.id);
     return () => {
       jobContext.setUploadType("create");
     };
-  }, [item.dataLayer?.dataSourceId, item.stableId]);
+  }, [item.id, item.stableId, item.dataLayer?.dataSourceId]);
 
   const versions = useMemo(() => {
     const versions = [
@@ -101,7 +102,7 @@ export default function LayerVersioning({
         versions.find(
           ({ source }) =>
             source &&
-            (source.id === job.dataUploadTask?.replaceSourceId ||
+            (item.id === job.dataUploadTask?.replaceTableOfContentsItemId ||
               item.id ===
                 job.esriFeatureLayerConversionTask?.tableOfContentsItemId) &&
             job.state !== ProjectBackgroundJobState.Complete
@@ -273,6 +274,11 @@ export default function LayerVersioning({
           }
           source={versions.find((v) => v.source.id === selectedItemId)?.source!}
           layer={item.dataLayer!}
+          archivedDataSource={
+            item.dataLayer?.archivedSources?.find(
+              (s) => s.dataSource?.id === selectedItemId
+            ) as ArchivedDataSource | undefined
+          }
           onDelete={() => {
             setSelectedItemId(
               item.dataLayer?.dataSourceId || versions[0].source.id
@@ -389,16 +395,18 @@ function VersionDetails({
   onDelete,
   onRollback,
   itemId,
+  archivedDataSource,
 }: {
   itemId: number;
   source: FullAdminSourceFragment & { isArchived: boolean };
   version: number;
   layer: Pick<
     FullAdminDataLayerFragment,
-    "sublayer" | "sublayerType" | "id" | "version"
+    "sublayer" | "sublayerType" | "id" | "version" | "sourceLayer"
   >;
   onDelete?: () => void;
   onRollback?: (e: { sourceId: number }) => void;
+  archivedDataSource?: Pick<ArchivedDataSource, "sublayer" | "sourceLayer">;
 }) {
   const onError = useGlobalErrorHandler();
   const [deleteArchive, deleteArchiveState] =
@@ -496,7 +504,15 @@ function VersionDetails({
         </Trans>
       </h2>
       <div className="border rounded mt-4 overflow-hidden bg-white">
-        <LayerInfoList source={source} layer={layer} readonly={false}>
+        <LayerInfoList
+          source={source}
+          layer={{
+            ...layer,
+            sublayer: archivedDataSource?.sublayer || layer.sublayer,
+            sourceLayer: archivedDataSource?.sourceLayer || layer.sourceLayer,
+          }}
+          readonly={false}
+        >
           {source.changelog && source.changelog.length > 0 && (
             <div className="p-2 border-t ">
               <h3 className="text-sm font-medium text-gray-500 py-1 ">

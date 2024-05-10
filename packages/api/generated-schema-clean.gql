@@ -1289,7 +1289,7 @@ input CreateDataUploadInput {
   contentType: String
   filename: String
   projectId: Int
-  replaceSourceId: Int
+  replaceTableOfContentsItemId: Int
 }
 
 """The output of our `createDataUpload` mutation."""
@@ -3423,7 +3423,7 @@ type DataUploadTask implements Node {
   """
   projectBackgroundJob: ProjectBackgroundJob
   projectBackgroundJobId: UUID!
-  replaceSourceId: Int
+  replaceTableOfContentsItemId: Int
   tableOfContentsItemStableIds: [String]
 }
 

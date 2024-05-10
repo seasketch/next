@@ -1,5 +1,6 @@
 import { SimpleFillSymbol, SimpleMarkerSymbol } from "arcgis-rest-api";
 import { createCanvas, rgba, ptToPx } from "./utils";
+import { CANVAS_TO_DATA_URL } from "../ImageList";
 
 /** @hidden */
 export default function (symbol: SimpleMarkerSymbol, pixelRatio: 1 | 2 | 3) {
@@ -93,5 +94,5 @@ export default function (symbol: SimpleMarkerSymbol, pixelRatio: 1 | 2 | 3) {
     default:
       throw new Error(`Unknown symbol type ${symbol.style}`);
   }
-  return { width, height, data: canvas.toDataURL() };
+  return { width, height, data: CANVAS_TO_DATA_URL(canvas) };
 }

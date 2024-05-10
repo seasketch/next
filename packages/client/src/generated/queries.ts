@@ -1123,7 +1123,7 @@ export type CreateDataUploadInput = {
   contentType?: Maybe<Scalars['String']>;
   filename?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
-  replaceSourceId?: Maybe<Scalars['Int']>;
+  replaceTableOfContentsItemId?: Maybe<Scalars['Int']>;
 };
 
 /** The output of our `createDataUpload` mutation. */
@@ -2911,7 +2911,7 @@ export type DataUploadTask = Node & {
   /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
   projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   projectBackgroundJobId: Scalars['UUID'];
-  replaceSourceId?: Maybe<Scalars['Int']>;
+  replaceTableOfContentsItemId?: Maybe<Scalars['Int']>;
   tableOfContentsItemStableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
 
@@ -16097,7 +16097,7 @@ export type BackgroundJobDetailsFragment = (
   & Pick<ProjectBackgroundJob, 'id' | 'title' | 'userId' | 'errorMessage' | 'progress' | 'progressMessage' | 'state' | 'type' | 'createdAt'>
   & { dataUploadTask?: Maybe<(
     { __typename?: 'DataUploadTask' }
-    & Pick<DataUploadTask, 'id' | 'filename' | 'replaceSourceId' | 'createdAt'>
+    & Pick<DataUploadTask, 'id' | 'filename' | 'replaceTableOfContentsItemId' | 'createdAt'>
   )>, esriFeatureLayerConversionTask?: Maybe<(
     { __typename?: 'EsriFeatureLayerConversionTask' }
     & Pick<EsriFeatureLayerConversionTask, 'tableOfContentsItemId'>
@@ -16615,7 +16615,7 @@ export type DashboardStatsQuery = (
 
 export type DataUploadDetailsFragment = (
   { __typename?: 'DataUploadTask' }
-  & Pick<DataUploadTask, 'id' | 'filename' | 'tableOfContentsItemStableIds' | 'projectBackgroundJobId' | 'replaceSourceId' | 'createdAt'>
+  & Pick<DataUploadTask, 'id' | 'filename' | 'tableOfContentsItemStableIds' | 'projectBackgroundJobId' | 'replaceTableOfContentsItemId' | 'createdAt'>
 );
 
 export type DataUploadExtendedDetailsFragment = (
@@ -16631,7 +16631,7 @@ export type CreateDataUploadMutationVariables = Exact<{
   projectId: Scalars['Int'];
   filename: Scalars['String'];
   contentType: Scalars['String'];
-  replaceSourceId?: Maybe<Scalars['Int']>;
+  replaceTableOfContentsItemId?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -17065,7 +17065,7 @@ export type FullAdminSourceFragment = (
 
 export type ArchivedSourceFragment = (
   { __typename?: 'ArchivedDataSource' }
-  & Pick<ArchivedDataSource, 'nodeId' | 'dataSourceId' | 'changelog' | 'version' | 'mapboxGlStyle' | 'sourceLayer' | 'spriteIds' | 'dataLayerId' | 'bounds'>
+  & Pick<ArchivedDataSource, 'nodeId' | 'dataSourceId' | 'changelog' | 'version' | 'mapboxGlStyle' | 'sourceLayer' | 'spriteIds' | 'dataLayerId' | 'bounds' | 'sublayer'>
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
     & FullAdminSourceFragment
@@ -21378,7 +21378,7 @@ export const BackgroundJobDetailsFragmentDoc = /*#__PURE__*/ gql`
   dataUploadTask {
     id
     filename
-    replaceSourceId
+    replaceTableOfContentsItemId
     createdAt
   }
   esriFeatureLayerConversionTask {
@@ -21482,7 +21482,7 @@ export const DataUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
   filename
   tableOfContentsItemStableIds
   projectBackgroundJobId
-  replaceSourceId
+  replaceTableOfContentsItemId
   createdAt
 }
     `;
@@ -21664,6 +21664,7 @@ export const ArchivedSourceFragmentDoc = /*#__PURE__*/ gql`
   dataLayerId
   bounds
   changelog
+  sublayer
 }
     ${FullAdminSourceFragmentDoc}`;
 export const FullAdminDataLayerFragmentDoc = /*#__PURE__*/ gql`
@@ -23309,9 +23310,9 @@ export const DashboardStatsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const CreateDataUploadDocument = /*#__PURE__*/ gql`
-    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!, $replaceSourceId: Int) {
+    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!, $replaceTableOfContentsItemId: Int) {
   createDataUpload(
-    input: {filename: $filename, projectId: $projectId, contentType: $contentType, replaceSourceId: $replaceSourceId}
+    input: {filename: $filename, projectId: $projectId, contentType: $contentType, replaceTableOfContentsItemId: $replaceTableOfContentsItemId}
   ) {
     dataUploadTask {
       ...DataUploadExtendedDetails

@@ -1613,7 +1613,13 @@ class MapContextManager extends EventEmitter {
                   }
                   layers.push(...glLayers);
                 }
-              } else if (isCustomSourceType(source.type) && layer.sublayer) {
+              } else if (
+                isCustomSourceType(source.type) &&
+                (layer.sublayer ||
+                  (this.archivedSource &&
+                    this.archivedSource.dataLayerId === layer.id &&
+                    this.archivedSource.sublayer))
+              ) {
                 // Add sublayer info if needed
                 if (!Array.isArray(this.customSources[source.id].sublayers)) {
                   this.customSources[source.id].sublayers = [];
@@ -1622,9 +1628,15 @@ class MapContextManager extends EventEmitter {
                 if (!settings) {
                   throw new Error("Visible layer settings missing");
                 }
+                const sublayer =
+                  this.archivedSource &&
+                  this.archivedSource.dataLayerId === layer.id &&
+                  this.archivedSource.sublayer
+                    ? this.archivedSource.sublayer
+                    : layer.sublayer;
                 if (!this.visibleLayers[layerId]?.hidden) {
                   this.customSources[source.id].sublayers!.unshift({
-                    id: layer.sublayer,
+                    id: sublayer!,
                     opacity:
                       "opacity" in settings && settings.opacity !== undefined
                         ? settings.opacity
@@ -3191,17 +3203,19 @@ class MapContextManager extends EventEmitter {
   ) {
     const bounds = await this.boundsForTocItem(stableId);
     if (options?.onlyIfNotVisible && bounds) {
-      // TODO: make this work again
-      return;
       // Check the current map bounds. If any part of the bounds is visible, don't zoom
-      // const mapBounds = this.map?.getBounds();
-      // if (mapBounds) {
-      //   const sw = new mapboxgl.LngLat(bounds[0], bounds[1]);
-      //   const ne = new mapboxgl.LngLat(bounds[2], bounds[3]);
-      //   if (mapBounds.contains(sw) || mapBounds.contains(ne)) {
-      //     return;
-      //   }
-      // }
+      const mapBounds = this.map?.getBounds()?.toArray().flat() as [
+        number,
+        number,
+        number,
+        number
+      ];
+      if (mapBounds) {
+        const intersects = boundsIntersect(mapBounds, bounds);
+        if (intersects) {
+          return;
+        }
+      }
     }
     if (bounds && [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")) {
       const sidebar = currentSidebarState();
@@ -3690,4 +3704,14 @@ function hasZoomExpression(expression: Expression) {
     }
   }
   return false;
+}
+
+// Calculates whether the given geographic extents cross, overlap, or contain each other
+function boundsIntersect(
+  mapBounds: [number, number, number, number],
+  bounds: [number, number, number, number]
+) {
+  const [minX, minY, maxX, maxY] = mapBounds;
+  const [minX2, minY2, maxX2, maxY2] = bounds;
+  return minX <= maxX2 && maxX >= minX2 && minY <= maxY2 && maxY >= minY2;
 }

@@ -47,7 +47,7 @@ export const ProjectBackgroundJobContext = createContext<{
   uploadType: UploadType;
   setUploadType: (type: UploadType, sourceId?: number) => void;
   dragActive: boolean;
-  replaceSourceId: number | null;
+  replaceTableOfContentsItemId: number | null;
 }>({
   jobs: [],
   setDisabled: () => {},
@@ -56,7 +56,7 @@ export const ProjectBackgroundJobContext = createContext<{
   uploadType: "create",
   setUploadType: () => {},
   dragActive: false,
-  replaceSourceId: null,
+  replaceTableOfContentsItemId: null,
 });
 
 export default function DataUploadDropzone({
@@ -77,7 +77,7 @@ export default function DataUploadDropzone({
     disabled?: boolean;
     uploadType: UploadType;
     isUploadingReplacement: boolean;
-    replaceSourceId: number | null;
+    replaceTableOfContentsItemId: number | null;
     finishedWithChangelog: boolean;
     changelog?: string;
   }>({
@@ -86,7 +86,7 @@ export default function DataUploadDropzone({
     disabled: false,
     uploadType: "create",
     isUploadingReplacement: false,
-    replaceSourceId: null,
+    replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
   });
   const client = useApolloClient();
@@ -279,9 +279,10 @@ export default function DataUploadDropzone({
         state.manager
           .uploadFiles(
             filteredFiles,
-            state.uploadType === "replace" && state.replaceSourceId
+            state.uploadType === "replace" && state.replaceTableOfContentsItemId
               ? {
-                  replaceSourceId: state.replaceSourceId,
+                  replaceTableOfContentsItemId:
+                    state.replaceTableOfContentsItemId,
                 }
               : undefined
           )
@@ -322,7 +323,7 @@ export default function DataUploadDropzone({
       state.manager,
       t,
       state.uploadType,
-      state.replaceSourceId,
+      state.replaceTableOfContentsItemId,
     ]
   );
 
@@ -350,27 +351,29 @@ export default function DataUploadDropzone({
         handleFiles: onDrop,
         openHostFeatureLayerOnSeaSketchModal: setHostOnSeasketch,
         uploadType: state.uploadType,
-        setUploadType: (uploadType, sourceId) => {
+        setUploadType: (uploadType, itemId) => {
           if (uploadType === "create") {
             setState((prev) => ({
               ...prev,
               uploadType,
-              replaceSourceId: null,
+              replaceTableOfContentsItemId: null,
             }));
           } else {
-            if (!sourceId) {
-              throw new Error("sourceId is required for replace upload type");
+            if (!itemId) {
+              throw new Error(
+                "table of contents item id is required for replace upload type"
+              );
             } else {
               setState((prev) => ({
                 ...prev,
                 uploadType,
-                replaceSourceId: sourceId,
+                replaceTableOfContentsItemId: itemId,
               }));
             }
           }
         },
         dragActive: isDragActive,
-        replaceSourceId: state.replaceSourceId,
+        replaceTableOfContentsItemId: state.replaceTableOfContentsItemId,
       }}
     >
       <div
