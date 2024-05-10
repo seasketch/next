@@ -666,18 +666,7 @@ function Header({
                 <MenuBarLabel>{t("Host data on SeaSketch")}</MenuBarLabel>
                 <MenuBarItem
                   onClick={() => {
-                    const fileInput = document.createElement("input");
-                    fileInput.type = "file";
-                    fileInput.accept = ".zip,.json,.geojson,.fgb,.tif,.tiff";
-                    fileInput.multiple = true;
-                    fileInput.onchange = async (e) => {
-                      const files = (e.target as HTMLInputElement).files;
-                      if (!files) {
-                        return;
-                      }
-                      uploadContext.handleFiles([...files]);
-                    };
-                    fileInput.click();
+                    uploadContext.browseForFiles(true);
                   }}
                 >
                   {t("Upload spatial data files")}

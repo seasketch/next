@@ -240,7 +240,12 @@ export default function LayerVersioning({
               <Trans ns="admin:data">
                 Drag & Drop a spatial data file here to create a new version of
                 this layer, or{" "}
-                <button className="underline text-primary-500">
+                <button
+                  className="underline text-primary-500"
+                  onClick={() => {
+                    jobContext.browseForFiles(false);
+                  }}
+                >
                   browse for files on your computer
                 </button>
                 .

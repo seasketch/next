@@ -48,6 +48,7 @@ export const ProjectBackgroundJobContext = createContext<{
   setUploadType: (type: UploadType, sourceId?: number) => void;
   dragActive: boolean;
   replaceTableOfContentsItemId: number | null;
+  browseForFiles: (multiple?: boolean) => void;
 }>({
   jobs: [],
   setDisabled: () => {},
@@ -57,6 +58,7 @@ export const ProjectBackgroundJobContext = createContext<{
   setUploadType: () => {},
   dragActive: false,
   replaceTableOfContentsItemId: null,
+  browseForFiles: (multiple?: boolean) => {},
 });
 
 export default function DataUploadDropzone({
@@ -349,6 +351,20 @@ export default function DataUploadDropzone({
         manager: state.manager,
         setDisabled,
         handleFiles: onDrop,
+        browseForFiles: (multiple?: boolean) => {
+          const fileInput = document.createElement("input");
+          fileInput.type = "file";
+          fileInput.accept = ".zip,.json,.geojson,.fgb,.tif,.tiff";
+          fileInput.multiple = multiple || false;
+          fileInput.onchange = async (e) => {
+            const files = (e.target as HTMLInputElement).files;
+            if (!files) {
+              return;
+            }
+            onDrop([...files]);
+          };
+          fileInput.click();
+        },
         openHostFeatureLayerOnSeaSketchModal: setHostOnSeasketch,
         uploadType: state.uploadType,
         setUploadType: (uploadType, itemId) => {
