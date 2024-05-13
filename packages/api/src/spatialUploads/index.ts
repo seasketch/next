@@ -410,59 +410,6 @@ export async function createDBRecordsForProcessedLayer(
       tableOfContentsItemId,
     };
   }
-  // } else if (jobType === "conversion") {
-  //   const dataLayerIdQ = await client.query(
-  //     `select data_layer_id from table_of_contents_items where id = $1`,
-  //     [conversionTask.table_of_contents_item_id]
-  //   );
-  //   const dataLayerId = dataLayerIdQ.rows[0].data_layer_id;
-  //   if (!dataLayerId) {
-  //     throw new Error("Could not find data_layer_id for conversion task");
-  //   }
-  //   const layerResult = await client.query(
-  //     `
-  //       update data_layers set data_source_id = $1, source_layer = $2,
-  //         mapbox_gl_styles = $3, sublayer = null where data_layers.id = $4 returning *
-  //     `,
-  //     [
-  //       dataSourceId,
-  //       pmtiles ? layer.name : undefined,
-  //       JSON.stringify(
-  //         conversionTask?.mapbox_gl_styles ||
-  //           getStyle(
-  //             isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
-  //             uploadCount,
-  //             layer.geostats
-  //           )
-  //       ),
-  //       dataLayerId,
-  //     ]
-  //   );
-  //   const dataLayer = layerResult.rows[0];
-  //   if (!dataLayer) {
-  //     throw new Error(
-  //       "Could not find layer with data_source_id=" + dataSourceId
-  //     );
-  //   }
-  //   // update metadata on table of contents item
-  //   await client.query(
-  //     `
-  //     update table_of_contents_items set metadata = $1, bounds = $2 where id = $3
-  //   `,
-  //     [
-  //       JSON.stringify(conversionTask.metadata || {}),
-  //       layer.bounds,
-  //       conversionTask.table_of_contents_item_id,
-  //     ]
-  //   );
-  //   return {
-  //     dataSourceId,
-  //     dataLayerId: dataLayer.id,
-  //     tableOfContentsItemId: conversionTask.table_of_contents_item_id,
-  //   };
-  // } else {
-  //   throw new Error(`Invalid jobType "${jobType}"`);
-  // }
 }
 
 // Colors borrowed from https://github.com/mapbox/mbview/blob/master/views/vector.ejs#L75
