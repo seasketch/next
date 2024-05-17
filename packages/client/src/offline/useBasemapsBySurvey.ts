@@ -58,10 +58,10 @@ export default function useBasemapsBySurvey(
                 if (existing.surveys.indexOf(survey.name) === -1) {
                   existing.surveys.push(survey.name);
                 }
-              } else {
+              } else if (basemap.offlineSupportInformation) {
                 const cacheState = await getCacheStatusForBasemap(
                   basemap.id,
-                  basemap.offlineSupportInformation!
+                  basemap.offlineSupportInformation
                 );
                 details.push({
                   basemap: {

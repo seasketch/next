@@ -130,159 +130,166 @@ const BasemapOfflineDetailsPlugin = makeExtendSchemaPlugin((build) => {
             key.searchParams.delete("access_token");
             cacheKey = key.toString();
           }
-          const style = (await context.loaders.style.load(
-            styleUrl.toString()
-          )) as Style;
-
-          const validSources = Object.values(style.sources).filter(
-            (s) => s.type === "vector" || s.type === "raster"
-            // disable raster-dem for now
-            // || s.type === "raster-dem"
-          ) as (VectorSource | RasterDemSource | RasterSource)[];
-
-          const sourceUrls = validSources.reduce((urls, source) => {
-            const url = source.tiles ? source.tiles[0] : source.url!;
-            if (urls.indexOf(url) === -1) {
-              urls.push(url);
+          try {
+            const style = (await context.loaders.style.load(
+              styleUrl.toString()
+            )) as Style;
+            if (!style) {
+              return null;
             }
-            return urls;
-          }, [] as string[]);
 
-          const offlineTilePackages: any[] = flatten(
-            await Promise.all(
-              sourceUrls.map((url) => {
-                const key = `${basemap.projectId}\n${url}`;
-                return context.loaders.offlineTilePackageBySource.load(key);
-              })
-            )
-          );
+            const validSources = Object.values(style.sources).filter(
+              (s) => s.type === "vector" || s.type === "raster"
+              // disable raster-dem for now
+              // || s.type === "raster-dem"
+            ) as (VectorSource | RasterDemSource | RasterSource)[];
 
-          // Gather up needed static assets
-          const staticAssets: {
-            type: "IMAGE" | "FONT" | "MAPBOX_GL_STYLE" | "JSON" | "SPRITE";
-            url: string;
-            cacheKey?: string;
-          }[] = [
-            {
-              type: "MAPBOX_GL_STYLE",
-              url: styleUrl,
-              cacheKey,
-            },
-          ];
+            const sourceUrls = validSources.reduce((urls, source) => {
+              const url = source.tiles ? source.tiles[0] : source.url!;
+              if (urls.indexOf(url) === -1) {
+                urls.push(url);
+              }
+              return urls;
+            }, [] as string[]);
 
-          function addAsset(asset: {
-            type: "IMAGE" | "FONT" | "MAPBOX_GL_STYLE" | "JSON" | "SPRITE";
-            url: string;
-            cacheKey?: string;
-          }) {
-            if (!staticAssets.find((a) => a.url === asset.url)) {
-              staticAssets.push(asset);
+            const offlineTilePackages: any[] = flatten(
+              await Promise.all(
+                sourceUrls.map((url) => {
+                  const key = `${basemap.projectId}\n${url}`;
+                  return context.loaders.offlineTilePackageBySource.load(key);
+                })
+              )
+            );
+
+            // Gather up needed static assets
+            const staticAssets: {
+              type: "IMAGE" | "FONT" | "MAPBOX_GL_STYLE" | "JSON" | "SPRITE";
+              url: string;
+              cacheKey?: string;
+            }[] = [
+              {
+                type: "MAPBOX_GL_STYLE",
+                url: styleUrl,
+                cacheKey,
+              },
+            ];
+
+            function addAsset(asset: {
+              type: "IMAGE" | "FONT" | "MAPBOX_GL_STYLE" | "JSON" | "SPRITE";
+              url: string;
+              cacheKey?: string;
+            }) {
+              if (!staticAssets.find((a) => a.url === asset.url)) {
+                staticAssets.push(asset);
+              }
             }
-          }
 
-          for (const source of validSources) {
-            const url = source.tiles ? source.tiles[0] : source.url!;
-            // add tilejson for mapbox sources
-            if (/mapbox:/.test(url)) {
-              // add tilejson
-              const [_, sourceList] = url.split("//");
-              const tileJsonUrl = `https://api.mapbox.com/v4/${sourceList}.json?access_token=${apiKey!}`;
-              staticAssets.push({
-                url: tileJsonUrl,
-                type: "JSON",
-                cacheKey: tileJsonUrl.split("?")[0],
-              });
+            for (const source of validSources) {
+              const url = source.tiles ? source.tiles[0] : source.url!;
+              // add tilejson for mapbox sources
+              if (/mapbox:/.test(url)) {
+                // add tilejson
+                const [_, sourceList] = url.split("//");
+                const tileJsonUrl = `https://api.mapbox.com/v4/${sourceList}.json?access_token=${apiKey!}`;
+                staticAssets.push({
+                  url: tileJsonUrl,
+                  type: "JSON",
+                  cacheKey: tileJsonUrl.split("?")[0],
+                });
+              }
             }
-          }
 
-          // add glyphs
-          if (style.glyphs) {
-            const fontStacks: string[] = [];
-            for (const layer of style.layers) {
-              if ("layout" in layer && layer.layout) {
-                if ("text-font" in layer.layout) {
-                  const textFont = layer.layout["text-font"];
-                  if (Array.isArray(textFont)) {
-                    // exclude expressions. TODO: support expressions
-                    if (!textFont.find((el) => typeof el !== "string")) {
-                      const stack = textFont.join(",");
-                      if (fontStacks.indexOf(stack) === -1) {
-                        fontStacks.push(stack);
+            // add glyphs
+            if (style.glyphs) {
+              const fontStacks: string[] = [];
+              for (const layer of style.layers) {
+                if ("layout" in layer && layer.layout) {
+                  if ("text-font" in layer.layout) {
+                    const textFont = layer.layout["text-font"];
+                    if (Array.isArray(textFont)) {
+                      // exclude expressions. TODO: support expressions
+                      if (!textFont.find((el) => typeof el !== "string")) {
+                        const stack = textFont.join(",");
+                        if (fontStacks.indexOf(stack) === -1) {
+                          fontStacks.push(stack);
+                        }
                       }
                     }
                   }
                 }
               }
-            }
-            for (const stack of fontStacks) {
-              let url = style
-                .glyphs!.replace("{fontstack}", stack)
-                .replace("{range}", "0-255");
-              if (/^mapbox:/.test(style.glyphs!)) {
-                url = `https://api.mapbox.com/fonts/v1/mapbox/${encodeURI(
-                  stack
-                )}/0-255.pbf?access_token=${apiKey}`;
-              }
-              addAsset({
-                type: "FONT",
-                url,
-                cacheKey: url.split("?")[0],
-              });
-            }
-          }
-          // add sprites
-          // Useful background - https://docs.mapbox.com/mapbox-gl-js/style-spec/sprite/#loading-sprite-files
-          if (style.sprite) {
-            const variants = ["1x", "2x"];
-            if (/mapbox:/.test(style.sprite)) {
-              const id = style.sprite.replace("mapbox://sprites/", "");
-              for (const variant of variants) {
-                const jsonUrl = `https://api.mapbox.com/styles/v1/${id}/sprite@${variant}.json?access_token=${apiKey}`;
+              for (const stack of fontStacks) {
+                let url = style
+                  .glyphs!.replace("{fontstack}", stack)
+                  .replace("{range}", "0-255");
+                if (/^mapbox:/.test(style.glyphs!)) {
+                  url = `https://api.mapbox.com/fonts/v1/mapbox/${encodeURI(
+                    stack
+                  )}/0-255.pbf?access_token=${apiKey}`;
+                }
                 addAsset({
-                  url: jsonUrl,
-                  cacheKey: jsonUrl.split("?")[0],
-                  type: "SPRITE",
-                });
-                const pngUrl = `https://api.mapbox.com/styles/v1/${id}/sprite@${variant}.png?access_token=${apiKey}`;
-                addAsset({
-                  url: pngUrl,
-                  cacheKey: pngUrl.split("?")[0],
-                  type: "SPRITE",
-                });
-              }
-            } else {
-              for (const variant of variants) {
-                const jsonUrl = `${style.sprite!}@${variant}.json`;
-                addAsset({
-                  url: jsonUrl,
-                  type: "SPRITE",
-                });
-                const pngUrl = `${style.sprite!}@${variant}.png`;
-                addAsset({
-                  url: pngUrl,
-                  type: "SPRITE",
+                  type: "FONT",
+                  url,
+                  cacheKey: url.split("?")[0],
                 });
               }
             }
-          }
+            // add sprites
+            // Useful background - https://docs.mapbox.com/mapbox-gl-js/style-spec/sprite/#loading-sprite-files
+            if (style.sprite) {
+              const variants = ["1x", "2x"];
+              if (/mapbox:/.test(style.sprite)) {
+                const id = style.sprite.replace("mapbox://sprites/", "");
+                for (const variant of variants) {
+                  const jsonUrl = `https://api.mapbox.com/styles/v1/${id}/sprite@${variant}.json?access_token=${apiKey}`;
+                  addAsset({
+                    url: jsonUrl,
+                    cacheKey: jsonUrl.split("?")[0],
+                    type: "SPRITE",
+                  });
+                  const pngUrl = `https://api.mapbox.com/styles/v1/${id}/sprite@${variant}.png?access_token=${apiKey}`;
+                  addAsset({
+                    url: pngUrl,
+                    cacheKey: pngUrl.split("?")[0],
+                    type: "SPRITE",
+                  });
+                }
+              } else {
+                for (const variant of variants) {
+                  const jsonUrl = `${style.sprite!}@${variant}.json`;
+                  addAsset({
+                    url: jsonUrl,
+                    type: "SPRITE",
+                  });
+                  const pngUrl = `${style.sprite!}@${variant}.png`;
+                  addAsset({
+                    url: pngUrl,
+                    type: "SPRITE",
+                  });
+                }
+              }
+            }
 
-          return {
-            id: basemap.id,
-            hasUncacheableSources:
-              validSources.length > Object.values(style.sources).length,
-            validSources,
-            offlineTilePackages,
-            projectId: basemap.projectId,
-            styleUrl: styleUrl.toString(),
-            basemapId: basemap.id,
-            style: style,
-            staticAssets,
-            tilePackageIds: offlineTilePackages,
-            styleLastModified:
-              "modified" in style
-                ? new Date((style as any).modified as string)
-                : undefined,
-          };
+            return {
+              id: basemap.id,
+              hasUncacheableSources:
+                validSources.length > Object.values(style.sources).length,
+              validSources,
+              offlineTilePackages,
+              projectId: basemap.projectId,
+              styleUrl: styleUrl.toString(),
+              basemapId: basemap.id,
+              style: style,
+              staticAssets,
+              tilePackageIds: offlineTilePackages,
+              styleLastModified:
+                "modified" in style
+                  ? new Date((style as any).modified as string)
+                  : undefined,
+            };
+          } catch (e) {
+            return null;
+          }
         },
       },
     },

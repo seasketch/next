@@ -9,7 +9,7 @@ const ISSUER = (process.env.ISSUER || "seasketch.org")
 
 export function makeDataLoaders(pool: Pool) {
   return {
-    style: new DataLoader<string, Style>((urls) =>
+    style: new DataLoader<string, Style | null>((urls) =>
       Promise.all(urls.map((url) => getStyle(url)))
     ),
     mapboxApiKey: new DataLoader<number, string>((ids) =>
@@ -51,7 +51,8 @@ async function getStyle(styleUrl: string) {
       await cache.setWithTTL(styleUrl, JSON.stringify(style), 1000 * 60 * 2);
       return style as Style;
     } else {
-      throw new Error(await response.text());
+      const text = await response.text();
+      return null;
     }
   }
 }
