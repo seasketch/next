@@ -400,7 +400,6 @@ class MapContextManager extends EventEmitter {
       pitch: this.initialCameraOptions?.pitch || 0,
       bearing: this.initialCameraOptions?.bearing || 0,
       maxPitch: 70,
-      optimizeForTerrain: true,
       logoPosition: "bottom-right",
       transformRequest: this.requestTransformer,
     };

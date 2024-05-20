@@ -43,6 +43,7 @@
     "typescript": "^5.2"
   },
   "dependencies": {
+    "@mapbox/mapbox-gl-style-spec": "^14.3.0",
     "@mapbox/tilebelt": "^1.0.2",
     "@terraformer/arcgis": "^2.0.7",
     "@turf/bbox-polygon": "^6.5.0",
@@ -50,12 +51,14 @@
     "@turf/boolean-intersects": "^6.5.0",
     "@turf/boolean-overlap": "^6.5.0",
     "@types/lodash.debounce": "^4.0.8",
+    "@types/mapbox-gl": "^3.1.0",
     "@types/mapbox__tilebelt": "^1.0.2",
     "@types/node": "^20.10.4",
     "arcgis-pbf-parser": "^0.0.4",
     "bytes": "^3.1.2",
     "eventemitter3": "^5.0.1",
     "lodash.debounce": "^4.0.8",
+    "mapbox-gl": "^3.3.0",
     "tilebelt": "^1.0.1",
     "uuid": "^8.3.0"
   }

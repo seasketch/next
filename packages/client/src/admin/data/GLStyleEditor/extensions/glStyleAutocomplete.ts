@@ -504,14 +504,14 @@ export function evaluateStyleContext(
             expressions: currentPropertySpec.expression
               ? {
                   feature:
-                    currentPropertySpec.expression!.parameters.includes(
+                    currentPropertySpec.expression.parameters?.includes(
                       "feature"
                     ),
-                  zoom: currentPropertySpec.expression!.parameters.includes(
+                  zoom: currentPropertySpec.expression.parameters?.includes(
                     "zoom"
                   ),
                   interpolate: Boolean(
-                    currentPropertySpec.expression!.interpolated
+                    currentPropertySpec.expression.interpolated
                   ),
                 }
               : false,
