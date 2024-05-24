@@ -1043,7 +1043,7 @@ function addTileToGeostats(geostats: Geostats, data: ArrayBuffer) {
           attribute = {
             attribute: key,
             count: 0,
-            values: [],
+            values: {},
           };
           geostatsLayer!.attributes.push(attribute!);
           geostatsLayer!.attributeCount++;
@@ -1089,9 +1089,14 @@ function addTileToGeostats(geostats: Geostats, data: ArrayBuffer) {
             attribute.type = "null";
           }
         }
-        if (attribute.values.length < 100) {
-          if (!attribute.values.includes(feature.properties[key])) {
-            attribute.values.push(feature.properties[key]);
+        if (Object.keys(attribute.values).length < 100) {
+          if (
+            !Object.keys(attribute.values).includes(
+              feature.properties[key].toString()
+            )
+          ) {
+            // @ts-ignore
+            attribute.values[feature.properties[key]] = 0;
           }
         }
       }

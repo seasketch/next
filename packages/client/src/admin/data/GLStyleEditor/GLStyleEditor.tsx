@@ -7,9 +7,6 @@ import { linter, lintGutter } from "@codemirror/lint";
 import { color } from "./extensions/glStyleColor";
 import { glStyleLinter } from "./extensions/glStyleValidator";
 import {
-  GeostatsAttribute,
-  GeostatsAttributeType,
-  GeostatsLayer,
   getInsertLayerOptions,
   glStyleAutocomplete,
 } from "./extensions/glStyleAutocomplete";
@@ -46,37 +43,16 @@ import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import GeostatsModal, { Geostats } from "./GeostatsModal";
 import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
+import { GeostatsLayer } from "@seasketch/geostats-types";
 
 require("./RadixDropdown.css");
-
-/**
- * Strict mapbox/geostats stringifies objects and arrays, which isn't helpful
- * when dealing with sketch classes. GeoJSON can contain arrays and objects in
- * properties, and so can MVT (it's not strictly specified in the spec).
- * https://docs.mapbox.com/data/tilesets/guides/vector-tiles-standards/#how-to-encode-attributes-that-arent-strings-or-numbers
- */
-export type ExtendedGeostatsAttributeType =
-  | "string"
-  | "number"
-  | "boolean"
-  | "null"
-  | "mixed"
-  | "object"
-  | "array";
-interface ExtendedGeostatsAttribute extends GeostatsAttribute {
-  type: ExtendedGeostatsAttributeType;
-  typeArrayOf?: GeostatsAttributeType;
-}
-export interface ExtendedGeostatsLayer extends GeostatsLayer {
-  attributes: ExtendedGeostatsAttribute[];
-}
 
 interface GLStyleEditorProps {
   initialStyle?: string;
   type?: "vector" | "raster";
   onChange?: (newStyle: string) => void;
   className?: string;
-  geostats?: ExtendedGeostatsLayer;
+  geostats?: GeostatsLayer;
   bounds?: [number, number, number, number];
   tocItemId?: string;
   onRequestShowBounds?: (bounds: [number, number, number, number]) => void;

@@ -10,7 +10,8 @@
     "packages/mapbox-gl-esri-sources",
     "packages/spatial-uploads-handler",
     "packages/uploads-server",
-    "packages/vector-data-source"
+    "packages/vector-data-source",
+    "packages/geostats-types"
   ],
   "version": "independent"
 }

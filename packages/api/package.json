@@ -52,6 +52,7 @@
     "@graphile/pg-pubsub": "^4.11.0",
     "@mapbox/mapbox-gl-style-spec": "^13.28.0",
     "@mapbox/tilebelt": "^1.0.2",
+    "@seasketch/geostats-types": "^1.0.0",
     "@seasketch/map-tile-cache-calculator": "^1.0.0",
     "@seasketch/mapbox-gl-esri-sources": "^0.9.0",
     "@sentry/browser": "^7.44.2",

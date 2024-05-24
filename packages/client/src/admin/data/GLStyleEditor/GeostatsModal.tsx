@@ -1,6 +1,7 @@
 /* eslint-disable i18next/no-literal-string */
 import Modal from "../../../components/Modal";
-import { GeostatsLayer } from "./extensions/glStyleAutocomplete";
+import { GeostatsLayer } from "@seasketch/geostats-types";
+import { getAttributeValues } from "./extensions/glStyleAutocomplete";
 
 export interface Geostats {
   layers: GeostatsLayer[];
@@ -63,7 +64,7 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                           <div className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                             <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
                               {layer.attributes.map((attribute) => (
-                                <>
+                                <div key={attribute.attribute}>
                                   <div
                                     key={attribute.attribute}
                                     className="pl-3 pr-4 py-3 flex items-center justify-between text-sm clear-both"
@@ -81,12 +82,14 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                                   </div>
                                   <div className="clear-both overflow-auto max-h-32 bg-white p-2 font-mono text-gray-500 ">
                                     {attribute.type === "number" &&
-                                    attribute.values.length > 10
+                                    getAttributeValues(attribute).length > 10
                                       ? attribute.min !== undefined &&
                                         attribute.max !== undefined
                                         ? `${attribute.min} - ${attribute.max}`
-                                        : `${attribute.values.length} values`
-                                      : attribute.values
+                                        : `${
+                                            getAttributeValues(attribute).length
+                                          } values`
+                                      : getAttributeValues(attribute)
                                           .map((v) =>
                                             /,/.test(v?.toString() || "")
                                               ? (v = `"${v}"`)
@@ -96,7 +99,8 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                                     {attribute.type === "boolean" &&
                                       `true, false`}
                                     {attribute.type === "string" &&
-                                    attribute.values.length === 0 ? (
+                                    getAttributeValues(attribute).length ===
+                                      0 ? (
                                       <span className="italic">
                                         Values unknown
                                       </span>
@@ -104,7 +108,7 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                                       ""
                                     )}
                                   </div>
-                                </>
+                                </div>
                               ))}
                             </ul>
                           </div>

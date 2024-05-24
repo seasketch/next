@@ -1429,9 +1429,13 @@ class MapContextManager extends EventEmitter {
                     };
                     break;
                   case DataSourceTypes.SeasketchMvt:
+                    let url = source.url!;
+                    if (!/\.json$/.test(url)) {
+                      url += ".json";
+                    }
                     baseStyle.sources[source.id.toString()] = {
                       type: "vector",
-                      url: source.url! + ".json",
+                      url,
                       attribution: source.attribution || "",
                     };
                     break;
@@ -1445,9 +1449,13 @@ class MapContextManager extends EventEmitter {
                     break;
                   case DataSourceTypes.SeasketchRaster:
                     if (source.url) {
+                      let url = source.url!;
+                      if (!/\.json$/.test(url)) {
+                        url += ".json";
+                      }
                       baseStyle.sources[source.id.toString()] = {
                         type: "raster",
-                        url: source.url,
+                        url,
                         attribution: source.attribution || "",
                       };
                     } else {

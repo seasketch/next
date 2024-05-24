@@ -1,4 +1,4 @@
-import handleUpload from "./src/index";
+import handleUpload from "./src/handleUpload";
 
 export interface SpatialUploadsHandlerRequest {
   taskId: string;

@@ -2,7 +2,7 @@ import { Client, PoolClient } from "pg";
 import { ProcessedUploadLayer } from "spatial-uploads-handler";
 import { customAlphabet } from "nanoid";
 import { GeoJsonGeometryTypes } from "geojson";
-import { GeostatsLayer } from "spatial-uploads-handler/src/geostats";
+import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
@@ -293,7 +293,9 @@ export async function createDBRecordsForProcessedLayer(
           ? null
           : JSON.stringify(
               getStyle(
-                isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
+                isVector
+                  ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
+                  : "Raster",
                 uploadCount,
                 layer.geostats
               )
@@ -337,7 +339,9 @@ export async function createDBRecordsForProcessedLayer(
         JSON.stringify(
           conversionTask?.mapbox_gl_styles ||
             getStyle(
-              isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
+              isVector
+                ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
+                : "Raster",
               uploadCount,
               layer.geostats
             )
@@ -435,13 +439,16 @@ function getColor(i: number) {
 }
 
 function getStyle(
-  type: GeoJsonGeometryTypes | "Raster",
+  type: GeoJsonGeometryTypes | "Raster" | "Unknown",
   colorIndex: number,
-  geostats?: GeostatsLayer | null
+  geostats?: GeostatsLayer | RasterInfo | null
 ) {
+  if (type === "Unknown") {
+    return [];
+  }
   const color = getColor(colorIndex);
   let labelAttribute: string | undefined;
-  if (geostats) {
+  if (geostats && "attributes" in geostats) {
     for (const attr of geostats.attributes) {
       if (
         attr.attribute !== "OBJECTID" &&

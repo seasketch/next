@@ -13,6 +13,7 @@
     "wrangler": "^3.0.0"
   },
   "dependencies": {
-    "@turf/bbox": "^6.5.0"
+    "@turf/bbox": "^6.5.0",
+    "@types/geojson": "^7946.0.14"
   }
 }
