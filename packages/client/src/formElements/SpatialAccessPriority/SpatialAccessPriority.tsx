@@ -3,6 +3,7 @@ import {
   MapIcon,
   PlusCircleIcon,
   ScaleIcon,
+  TranslateIcon,
   XIcon,
 } from "@heroicons/react/outline";
 import { colord } from "colord";
@@ -72,6 +73,7 @@ import MapPicker from "../../components/MapPicker";
 import useDialog from "../../components/useDialog";
 import SketchForm from "../../projects/Sketches/SketchForm";
 import { updateFeatureInCollection } from "../MultiSpatialInput";
+import LanguageSelector from "../../surveys/LanguageSelector";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -583,6 +585,8 @@ const SpatialAccessPriority: FormElementComponent<
     </>
   );
 
+  const langContext = useContext(FormLanguageContext);
+
   return (
     <>
       <AnimatePresence
@@ -930,7 +934,7 @@ const SpatialAccessPriority: FormElementComponent<
                   }
                 }}
               />
-              <div className="space-x-2 rtl:space-x-reverse">
+              <div className="space-x-2 rtl:space-x-reverse flex items-center">
                 {geometryEditingState?.isNew && (
                   <SurveyButton
                     secondary={true}
@@ -962,6 +966,22 @@ const SpatialAccessPriority: FormElementComponent<
                       }
                     }}
                   />
+                )}
+                {(langContext.supportedLanguages || []).length > 0 && (
+                  <LanguageSelector
+                    options={langContext.supportedLanguages}
+                    button={(onClick) => (
+                      <button
+                        className="px-3 py-1.5 rounded self text-gray-700 opacity-80"
+                        style={{
+                          background: `linear-gradient(rgb(255, 255, 255) 50%, rgb(232, 227, 227) 100%)`,
+                        }}
+                        onClick={onClick}
+                      >
+                        <TranslateIcon className="w-6 h-6" />
+                      </button>
+                    )}
+                  ></LanguageSelector>
                 )}
                 <SurveyButton
                   label={
