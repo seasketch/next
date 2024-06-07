@@ -42,8 +42,9 @@ export interface GLLegendMarkerSymbol {
   iconSize: number;
 }
 
-export interface GLLegendRasterSymbol {
-  type: "raster";
+export interface GLLegendRGBRasterSymbol {
+  type: "rgb-raster";
+  representativeColors?: number[][];
 }
 
 export interface GLLegendVideoSymbol {
@@ -65,7 +66,7 @@ export type GLLegendSymbol =
   | GLLegendCircleSymbol
   | GLLegendMarkerSymbol
   | GLLegendTextSymbol
-  | GLLegendRasterSymbol
+  | GLLegendRGBRasterSymbol
   | GLLegendLineSymbol
   | GLLegendVideoSymbol;
 

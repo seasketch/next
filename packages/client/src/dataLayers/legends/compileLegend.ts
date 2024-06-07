@@ -75,9 +75,92 @@ const SIGNIFICANT_STYLE_PROPS = [
 
 export function compileLegendFromGLStyleLayers(
   layers: SeaSketchGlLayer[],
-  sourceType: "vector" | "raster" | "geojson" | "image" | "video" | "raster-dem"
+  sourceType:
+    | "vector"
+    | "raster"
+    | "geojson"
+    | "image"
+    | "video"
+    | "raster-dem",
+  representativeColors?: number[][],
+  scale?: number,
+  offset?: number
 ): LegendForGLLayers {
   if (
+    sourceType === "raster" &&
+    layers.length === 1 &&
+    "paint" in layers[0] &&
+    "raster-color" in layers[0].paint! &&
+    isExpression(layers[0].paint!["raster-color"]) &&
+    ["interpolate", "match", "step"].includes(
+      layers[0].paint!["raster-color"][0]
+    )
+  ) {
+    let legendItems: { panel: GLLegendPanel; filters: Expression[] }[] = [];
+    const layer = cloneDeep(layers[0]);
+    // @ts-ignore
+    const rasterColor = layer.paint!["raster-color"];
+    switch (rasterColor[0]) {
+      case "match":
+        legendItems.push({
+          panel: pluckRasterMatchPanel(
+            "layer-0-raster-color-legend",
+            rasterColor,
+            // @ts-ignore
+            layer.paint!["raster-color-range"] as [number, number] | undefined
+          ),
+          filters: [],
+        });
+        break;
+      case "step":
+        legendItems.push({
+          panel: pluckRasterStepPanel(
+            "layer-0-raster-color-legend",
+            rasterColor,
+            // @ts-ignore
+            layer.paint!["raster-color-range"] as [number, number] | undefined
+          ),
+          filters: [],
+        });
+        break;
+      case "interpolate":
+      case "interpolate-hcl":
+      case "interpolate-lab":
+        legendItems.push({
+          panel: {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `layer-0-raster-color-legend`,
+            type: "GLLegendGradientPanel",
+            stops: interpolationExpressionToStops(rasterColor),
+          },
+          filters: [],
+        });
+        if ((scale && scale !== 1) || (offset && offset !== 0)) {
+          scale = scale === null || scale === undefined ? 1 : scale;
+          offset = offset === null || offset === undefined ? 0 : offset;
+          const panel = legendItems[0].panel as GLLegendGradientPanel;
+          panel.stops = panel.stops.map((stop) => ({
+            ...stop,
+            value: stop.value * scale! + offset!,
+          }));
+        }
+        break;
+    }
+
+    // TODO: pluck list items from match expressions or get interpolation
+    // return {
+    //   type: "SimpleGLLegend",
+    //   symbol: {
+    //     type: "rgb-raster",
+    //     representativeColors,
+    //   },
+    // };
+
+    return {
+      type: "MultipleSymbolGLLegend",
+      panels: consolidatePanels(legendItems),
+    };
+  } else if (
     sourceType === "raster" ||
     sourceType === "raster-dem" ||
     sourceType === "image"
@@ -85,7 +168,8 @@ export function compileLegendFromGLStyleLayers(
     return {
       type: "SimpleGLLegend",
       symbol: {
-        type: "raster",
+        type: "rgb-raster",
+        representativeColors,
       },
     };
   } else if (sourceType === "video") {
@@ -897,6 +981,105 @@ function pluckLayersWithExpression<T extends GLLegendPanel>(
     }
   }
   return panels;
+}
+
+export function pluckRasterStepPanel(
+  id: string,
+  expression: Expression,
+  rasterColorRange?: [number, number]
+) {
+  const inputOutputPairs = expression.slice(2);
+
+  const panel: GLLegendStepPanel = {
+    id,
+    type: "GLLegendStepPanel",
+    steps: [
+      ...(rasterColorRange && inputOutputPairs[1] === rasterColorRange[0]
+        ? []
+        : [
+            {
+              id: id + "-first",
+              label: "< " + inputOutputPairs[1],
+              symbol: {
+                type: "fill",
+                color: inputOutputPairs[0],
+              } as GLLegendFillSymbol,
+            },
+          ]),
+      ...inputOutputPairs.reduce((steps, current, i) => {
+        if (i % 2 !== 0) {
+          const input = current;
+          const output = inputOutputPairs[i + 1];
+          if (
+            output !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
+            output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
+          ) {
+            steps.push({
+              id: id + "-" + i,
+              label: `${input.toLocaleString()}`,
+              symbol: {
+                type: "fill",
+                color: output,
+              } as GLLegendFillSymbol,
+            });
+          }
+        }
+        return steps;
+      }, [] as { id: string; label: string; symbol: GLLegendSymbol }[]),
+    ],
+  };
+  // filter out transparent pixels from legend
+  panel.steps = panel.steps.filter(
+    (step) => "color" in step.symbol && step.symbol.color !== "transparent"
+  );
+  return panel;
+}
+
+export function pluckRasterMatchPanel(
+  id: string,
+  expression: Expression,
+  rasterColorRange?: [number, number]
+) {
+  const defaultValue = expression[expression.length - 1];
+  const inputOutputPairs = expression.slice(2, -1);
+
+  const panel: GLLegendListPanel = {
+    id,
+    type: "GLLegendListPanel",
+    items: [],
+  };
+
+  for (var i = 0; i < inputOutputPairs.length; i += 2) {
+    const input = inputOutputPairs[i];
+    const output = inputOutputPairs[i + 1];
+    if (
+      output !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
+      output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
+    ) {
+      // valuesUsed.push(input);
+      panel.items.push({
+        id: id + "-" + i,
+        label: `${input}`,
+        symbol: {
+          type: "fill",
+          color: output,
+        } as GLLegendFillSymbol,
+      });
+    }
+  }
+
+  if (defaultValue !== "transparent") {
+    panel.items.push({
+      id: id + "-default",
+      label: "default",
+      symbol: {
+        type: "fill",
+        color: defaultValue,
+      } as GLLegendFillSymbol,
+    });
+  }
+
+  return panel;
 }
 
 export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {

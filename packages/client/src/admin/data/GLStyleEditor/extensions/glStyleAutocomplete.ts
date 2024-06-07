@@ -15,6 +15,7 @@ import {
   LegacyGeostatsLayer,
   LegacyGeostatsAttribute,
   NumericGeostatsAttribute,
+  GeostatsLayer,
 } from "@seasketch/geostats-types";
 
 export function isLegacyGeostatsLayer(
@@ -76,14 +77,6 @@ export type GeostatsAttributeType =
   | "mixed"
   | "object"
   | "array";
-
-export interface GeostatsLayer {
-  layer: string;
-  count: number;
-  geometry: GeoJsonGeometryTypes;
-  attributeCount: number;
-  attributes: GeostatsAttribute[];
-}
 
 type LayerType =
   | "fill"
@@ -226,7 +219,7 @@ export interface InsertLayerOption {
 
 export const glStyleAutocomplete =
   (
-    layer?: GeostatsLayer | LegacyGeostatsLayer,
+    layer?: GeostatsLayer | LegacyGeostatsLayer | undefined,
     sprites?: SpriteDetailsFragment[]
   ) =>
   (context: CompletionContext) => {

@@ -18,6 +18,8 @@ describe("rasterInfoForBands", () => {
         .sort()
         .reverse()
     ).toEqual(["Red", "Green", "Blue"]);
+    expect(info.representativeColorsForRGB).toBeTruthy();
+    expect(info.representativeColorsForRGB!.length).toBe(9);
   });
   test("SST", async () => {
     // console.time("sst");
@@ -25,7 +27,7 @@ describe("rasterInfoForBands", () => {
     // console.timeEnd("sst");
     expect(info.bands.length).toBe(1);
     const band = info.bands[0];
-    expect(band.base).toBe(-32768);
+    expect(band.base).toBe(-3011);
     expect(band.name).toBe("sea_surface_temperature");
     expect(band.colorInterpretation?.toLowerCase()).toBe("gray");
     expect(band.noDataValue).toBe(-32768);
@@ -36,6 +38,7 @@ describe("rasterInfoForBands", () => {
     expect(band.count).toBe(48846121);
     expect(band.offset).toBe(0);
     expect(band.scale).toBe(0.01);
+    expect(band.interval).toBe(1);
     expect(band.stats.equalInterval[5].map(roundRasterBucket)).toEqual(
       (
         [
@@ -179,7 +182,8 @@ describe("rasterInfoForBands", () => {
     // console.timeEnd("sstf");
     expect(info.bands.length).toBe(1);
     const band = info.bands[0];
-    expect(band.base).toBe(0);
+    expect(band.base).toBeCloseTo(-1.85);
+    expect(band.interval).toBe(0.01);
     expect(band.name).toBe("band 1");
     expect(band.colorInterpretation?.toLowerCase()).toBe("gray");
     expect(band.noDataValue).toBe(null);
@@ -231,6 +235,10 @@ describe("rasterInfoForBands", () => {
     );
     expect(sumCategoryFraction).toBeCloseTo(1);
     expect(band.count).toBe(26328575);
+  });
+
+  test("Maldives float", async () => {
+    const info = await rasterInfoForBands(`${__dirname}/maldives.tif`);
   });
 
   test.todo("base and interval, RGB encoding");

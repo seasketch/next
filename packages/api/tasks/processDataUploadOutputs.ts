@@ -1,9 +1,6 @@
 import { Helpers } from "graphile-worker";
-import {
-  ProcessedUploadResponse,
-  SpatialUploadsHandlerRequest,
-} from "spatial-uploads-handler";
 import { createDBRecordsForProcessedLayer } from "../src/spatialUploads";
+import { ProcessedUploadResponse } from "spatial-uploads-handler/dist/src/handleUpload";
 
 /**
  * graphile-worker task which processes outputs from the spatial-uploads-handler

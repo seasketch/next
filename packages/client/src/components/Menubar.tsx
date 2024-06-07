@@ -6,9 +6,21 @@ import {
   DotFilledIcon,
 } from "@radix-ui/react-icons";
 
-export function MenubarTrigger({ children }: { children?: ReactNode }) {
+export function MenubarTrigger({
+  children,
+  dark,
+}: {
+  children?: ReactNode;
+  dark?: boolean;
+}) {
   return (
-    <Menubar.Trigger className="MenubarTrigger py-2 px-3 outline-none select-none font-medium leading-none rounded hover:bg-gray-200">
+    <Menubar.Trigger
+      className={`MenubarTrigger py-2 px-3 outline-none select-none font-medium leading-none rounded ${
+        dark
+          ? "hover:bg-gray-700 hover:text-blue-100 text-gray-300"
+          : "hover:bg-gray-200 hover:text-black text-black"
+      }`}
+    >
       {children}
     </Menubar.Trigger>
   );

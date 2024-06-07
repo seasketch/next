@@ -72,6 +72,9 @@ query layersAndSourcesForItems(
       uploadedSourceFilename
       translatedProps
       arcgisFetchStrategy
+      rasterRepresentativeColors
+      rasterOffset
+      rasterScale
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -101,6 +104,7 @@ query layersAndSourcesForItems(
       renderUnder
       sourceLayer
       sublayer
+      respectRasterOffsetAndScale
     }
   }
 }
@@ -246,6 +250,7 @@ fragment FullAdminSource on DataSource {
   geostats
   translatedProps
   arcgisFetchStrategy
+  rasterRepresentativeColors
   authorProfile {
     userId
     affiliations

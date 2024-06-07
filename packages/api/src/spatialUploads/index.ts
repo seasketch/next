@@ -2,7 +2,13 @@ import { Client, PoolClient } from "pg";
 import { ProcessedUploadLayer } from "spatial-uploads-handler";
 import { customAlphabet } from "nanoid";
 import { GeoJsonGeometryTypes } from "geojson";
-import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
+import {
+  GeostatsLayer,
+  RasterInfo,
+  SuggestedRasterPresentation,
+  isRasterInfo,
+} from "@seasketch/geostats-types";
+
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
@@ -178,6 +184,8 @@ export async function createDBRecordsForProcessedLayer(
         ? null
         : "layers" in layer.geostats
         ? layer.geostats
+        : isRasterInfo(layer.geostats)
+        ? layer.geostats
         : // If geostats is just a fragment layer, put it into a complete
           // geostats layer list
           {
@@ -292,7 +300,7 @@ export async function createDBRecordsForProcessedLayer(
           : dataLayer.mapbox_gl_styles
           ? null
           : JSON.stringify(
-              getStyle(
+              await getStyle(
                 isVector
                   ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
                   : "Raster",
@@ -338,13 +346,13 @@ export async function createDBRecordsForProcessedLayer(
         pmtiles ? layer.name : undefined,
         JSON.stringify(
           conversionTask?.mapbox_gl_styles ||
-            getStyle(
+            (await getStyle(
               isVector
                 ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
                 : "Raster",
               uploadCount,
               layer.geostats
-            )
+            ))
         ),
       ]
     );
@@ -438,11 +446,12 @@ function getColor(i: number) {
   return lightColors[i % (lightColors.length - 1)];
 }
 
-function getStyle(
+async function getStyle(
   type: GeoJsonGeometryTypes | "Raster" | "Unknown",
   colorIndex: number,
   geostats?: GeostatsLayer | RasterInfo | null
 ) {
+  console.log(type, geostats);
   if (type === "Unknown") {
     return [];
   }
@@ -462,17 +471,111 @@ function getStyle(
   }
   switch (type) {
     case "Raster":
-      return [
-        {
-          type: "raster",
-          layout: {
-            visibility: "visible",
+      if (!geostats || !isRasterInfo(geostats)) {
+        return [
+          {
+            type: "raster",
+            layout: {
+              visibility: "visible",
+            },
+            paint: {
+              "raster-resampling": "nearest",
+            },
           },
-          paint: {
-            "raster-resampling": "nearest",
+        ];
+      } else if (
+        geostats.presentation === SuggestedRasterPresentation.categorical
+      ) {
+        let colors: [number, string][] = [];
+        if (geostats.bands[0].colorTable) {
+          colors = geostats.bands[0].colorTable;
+        } else if (geostats.bands[0].stats.categories) {
+          const categories = geostats.bands[0].stats.categories;
+          for (const category of categories) {
+            colors.push([
+              category[0],
+              observable10[categories.indexOf(category) % 10],
+            ]);
+          }
+        }
+        return [
+          {
+            type: "raster",
+            paint: {
+              "raster-color": [
+                "step",
+                ["ceil", ["raster-value"]],
+                "transparent",
+                ...colors.flat(),
+              ],
+              "raster-color-mix": [0, 0, 256, geostats.bands[0].base],
+              "raster-resampling": "nearest",
+              "raster-color-range": [
+                geostats.bands[0].minimum,
+                geostats.bands[0].maximum,
+              ],
+              "raster-fade-duration": 0,
+            },
+            layout: {
+              visibility: "visible",
+            },
           },
-        },
-      ];
+        ];
+      } else if (
+        geostats.presentation === SuggestedRasterPresentation.continuous
+      ) {
+        const band = geostats.bands[0]!;
+        let rasterColorMix = [
+          ["*", 255, 65536],
+          ["*", 255, 256],
+          255,
+          ["+", -32768, band.base],
+        ] as any;
+        if (band.interval && band.interval !== 1) {
+          rasterColorMix = rasterColorMix.map((channel: any) => [
+            "*",
+            band.interval,
+            channel,
+          ]);
+        }
+        return [
+          {
+            type: "raster",
+            paint: {
+              "raster-color": [
+                "interpolate",
+                ["linear"],
+                ["raster-value"],
+                ...band.stats.equalInterval[9]
+                  .map((bucket, i) => [bucket[0], plasma[i]])
+                  .flat(),
+              ],
+              "raster-color-mix": rasterColorMix,
+              "raster-resampling": "nearest",
+              "raster-color-range": [band.minimum, band.maximum],
+              "raster-fade-duration": 0,
+            },
+            layout: {
+              visibility: "visible",
+            },
+          },
+        ];
+      } else {
+        return [
+          {
+            type: "raster",
+            layout: {
+              visibility: "visible",
+            },
+            paint: {
+              "raster-resampling":
+                geostats.presentation === SuggestedRasterPresentation.rgb
+                  ? "linear"
+                  : "nearest",
+            },
+          },
+        ];
+      }
     case "Polygon":
     case "MultiPolygon":
       return [
@@ -572,3 +675,40 @@ function getStyle(
       ];
   }
 }
+
+function colors(specifier: string) {
+  var n = (specifier.length / 6) | 0,
+    colors = new Array(n),
+    i = 0;
+  while (i < n) colors[i] = "#" + specifier.slice(i * 6, ++i * 6);
+  return colors;
+}
+
+const observable10 = colors(
+  "4269d0efb118ff725c6cc5b03ca951ff8ab7a463f297bbf59c6b4e9498a0"
+);
+
+const plasma = [
+  "#0d0887",
+  "#46039f",
+  "#7201a8",
+  "#9c179e",
+  "#bd3786",
+  "#d8576b",
+  "#ed7953",
+  "#fb9f3a",
+  "#fdca26",
+  "#f0f921",
+];
+const magma = [
+  "#000004",
+  "#180f3d",
+  "#440f76",
+  "#721f81",
+  "#9e2f7f",
+  "#cd4071",
+  "#f1605d",
+  "#fd9668",
+  "#feca8d",
+  "#fcfdbf",
+];

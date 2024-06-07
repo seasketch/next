@@ -226,3 +226,62 @@ function downsampleArray(data: number[], targetSize: number) {
 
   return sampledData;
 }
+
+// Function to convert RGB to a single number
+function rgbToNumber(r: number, g: number, b: number): number {
+  return (r << 16) + (g << 8) + b;
+}
+
+// Function to convert a single number to RGB
+function numberToRGB(num: number): [number, number, number] {
+  const r = (num >> 16) & 0xff;
+  const g = (num >> 8) & 0xff;
+  const b = num & 0xff;
+  return [r, g, b];
+}
+
+export function getRepresentativeColors(
+  pixels: number[][],
+  numColors: number,
+  downsampleTo?: number
+): [number, number, number][] {
+  let flattenedPixels = pixels.map((pixel) =>
+    rgbToNumber(pixel[0], pixel[1], pixel[2])
+  );
+  flattenedPixels.sort((a, b) => a - b);
+  if (downsampleTo) {
+    flattenedPixels = downsampleArray(flattenedPixels, downsampleTo);
+  }
+
+  const clusters = ckmeans(flattenedPixels, numColors);
+  const colors = clusters.map((cluster, i) => {
+    const pixels = cluster.map((num) => numberToRGB(num));
+    return numberToRGB(cluster[Math.floor(cluster.length / 2)]);
+  });
+  // sort colors by hue
+  colors.sort((a, b) => {
+    const aHue = rgbToHue(a[0], a[1], a[2]);
+    const bHue = rgbToHue(b[0], b[1], b[2]);
+    return aHue - bHue;
+  });
+
+  return colors;
+}
+
+function rgbToHue(r: number, g: number, b: number): number {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let hue = 0;
+  if (max === r) {
+    hue = (g - b) / (max - min);
+  } else if (max === g) {
+    hue = 2 + (b - r) / (max - min);
+  } else {
+    hue = 4 + (r - g) / (max - min);
+  }
+  hue *= 60;
+  if (hue < 0) {
+    hue += 360;
+  }
+  return hue;
+}

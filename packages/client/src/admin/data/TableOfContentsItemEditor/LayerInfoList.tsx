@@ -13,13 +13,19 @@ import InlineAuthor from "../../../components/InlineAuthor";
 import HostedLayerInfo from "./HostedLayerInfo";
 import ArcGISDynamicMapServiceLayerInfo from "./ArcGISDynamicMapServiceLayerInfo";
 import { ReactNode, useMemo, useState } from "react";
-import { GeostatsLayer } from "../GLStyleEditor/extensions/glStyleAutocomplete";
 import { InfoCircledIcon, TableIcon } from "@radix-ui/react-icons";
 import GeostatsModal from "../GLStyleEditor/GeostatsModal";
 import ArcGISTiledRasterSettings from "../ArcGISTiledRasterSettings";
 import ArcGISVectorLayerInfo from "./ArcGISVectorLayerInfo";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import RemoteVectorLayerInfo from "./RemoteVectorLayerInfo";
+import {
+  GeostatsLayer,
+  RasterInfo,
+  SuggestedRasterPresentation,
+  isRasterInfo,
+} from "@seasketch/geostats-types";
+import RasterInfoModal, { RasterInfoHistogram } from "../RasterInfoModal";
 
 export default function LayerInfoList({
   source,
@@ -57,6 +63,9 @@ export default function LayerInfoList({
   const isRemote = isRemoteSource(source.type);
   const geostatsLayer: GeostatsLayer | undefined = useMemo(() => {
     if (!source.geostats) return undefined;
+    if (isRasterInfo(source.geostats)) {
+      return undefined;
+    }
     if (layer.sourceLayer) {
       return (source.geostats.layers || []).find(
         (l: any) => l.layer === layer.sourceLayer
@@ -66,7 +75,16 @@ export default function LayerInfoList({
     }
   }, [source.geostats]);
 
+  const rasterInfo: RasterInfo | undefined = useMemo(() => {
+    if (!source.geostats) return undefined;
+    if (isRasterInfo(source.geostats)) {
+      return source.geostats;
+    }
+    return undefined;
+  }, [source.geostats]);
+
   const [showColumnModal, setShowColumnModal] = useState(false);
+  const [showRasterModal, setShowRasterModal] = useState(false);
 
   return (
     <>
@@ -175,6 +193,59 @@ export default function LayerInfoList({
             }
           />
         )}
+        {rasterInfo && (
+          <SettingsDLListItem
+            term={t("Raster")}
+            description={
+              <div className="w-full truncate flex">
+                <span>
+                  {rasterInfo.bands.length === 1
+                    ? t("Single band")
+                    : rasterInfo.bands.length + " " + t("bands")}
+                </span>
+                ,
+                <span className="ml-1">
+                  {rasterInfo.presentation === SuggestedRasterPresentation.rgb
+                    ? rasterInfo.bands.length === 3
+                      ? t("RGB")
+                      : t("RGBA")
+                    : rasterInfo.presentation ===
+                      SuggestedRasterPresentation.categorical
+                    ? t("categorical")
+                    : t("data values")}
+                </span>
+                <div className="text-right flex-1 px-1">
+                  <button
+                    onClick={() => setShowRasterModal(true)}
+                    className="hover:shadow-sm right-7 text-primary-500 items-center inline-flex border px-2 rounded-full text-xs py-0.5 "
+                  >
+                    <span>{t("band detail")}</span>
+                    {rasterInfo &&
+                    rasterInfo.presentation ===
+                      SuggestedRasterPresentation.rgb ? (
+                      <div className="relative -top-4 w-10 ml-1">
+                        {rasterInfo.bands.map((band) => (
+                          <RasterInfoHistogram
+                            className="top-0 left-0 absolute opacity-70"
+                            data={band.stats.histogram}
+                            count={band.count}
+                            min={band.minimum}
+                            max={band.maximum}
+                            colorInterpretation={band.colorInterpretation}
+                            width={40}
+                            height={10}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <TableIcon className="inline ml-1" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            }
+          />
+        )}
         {!isRemote && (
           <HostedLayerInfo
             layerId={layer.id}
@@ -216,6 +287,12 @@ export default function LayerInfoList({
         <GeostatsModal
           geostats={source.geostats}
           onRequestClose={() => setShowColumnModal(false)}
+        />
+      )}
+      {showRasterModal && rasterInfo && (
+        <RasterInfoModal
+          rasterInfo={rasterInfo}
+          onRequestClose={() => setShowRasterModal(false)}
         />
       )}
     </>

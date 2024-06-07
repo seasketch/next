@@ -2859,7 +2859,14 @@ class MapContextManager extends EventEmitter {
               try {
                 const legend = compileLegendFromGLStyleLayers(
                   layer.mapboxGlStyles,
-                  sourceType
+                  sourceType,
+                  source.rasterRepresentativeColors,
+                  layer.respectRasterOffsetAndScale
+                    ? (source.rasterScale as number | undefined)
+                    : undefined,
+                  layer.respectRasterOffsetAndScale
+                    ? (source.rasterOffset as number | undefined)
+                    : undefined
                 );
                 if (legend) {
                   newLegendState[id] = {

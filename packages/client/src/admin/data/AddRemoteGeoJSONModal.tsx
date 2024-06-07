@@ -3,7 +3,6 @@ import { FormEvent, useCallback, useContext, useRef, useState } from "react";
 import AddRemoteServiceMapModal from "./AddRemoteServiceMapModal";
 import { Trans, useTranslation } from "react-i18next";
 import Warning from "../../components/Warning";
-import { GeostatsLayer } from "./GLStyleEditor/extensions/glStyleAutocomplete";
 import bytes from "bytes";
 import parseCacheControl from "parse-cache-control";
 import GeostatsModal, { Geostats } from "./GLStyleEditor/GeostatsModal";
@@ -16,6 +15,7 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import getSlug from "../../getSlug";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import Spinner from "../../components/Spinner";
+import { GeostatsLayer } from "@seasketch/geostats-types";
 
 interface BaseInspectorResponse {
   location: string;

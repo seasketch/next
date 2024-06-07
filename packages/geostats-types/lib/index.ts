@@ -218,5 +218,12 @@ export enum SuggestedRasterPresentation {
 export interface RasterInfo {
   bands: RasterBandInfo[];
   presentation: SuggestedRasterPresentation;
+  representativeColorsForRGB?: [number, number, number][];
   metadata?: { [key: string]: string };
+}
+
+export function isRasterInfo(
+  info: RasterInfo | GeostatsLayer
+): info is RasterInfo {
+  return (info as RasterInfo).bands !== undefined;
 }

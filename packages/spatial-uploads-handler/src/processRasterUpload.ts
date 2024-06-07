@@ -2,11 +2,7 @@ import {
   RasterInfo,
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
-import {
-  ProgressUpdater,
-  ResponseOutput,
-  SupportedTypes,
-} from "./handleUpload";
+import { ProgressUpdater, ResponseOutput } from "./handleUpload";
 import { parse as parsePath, join as pathJoin } from "path";
 import { statSync } from "fs";
 import { rasterInfoForBands } from "../rasterInfoForBands";
@@ -37,95 +33,42 @@ export async function processRasterUpload(options: {
     jobId,
     originalName,
   } = options;
-  // Step 2) Use ogr/gdal to see if it is a supported file format
   await updateProgress("running", "validating");
-  let type: SupportedTypes;
   let path = options.path;
   const originalPath = options.path;
-  let { ext } = parsePath(path);
-  const isTif = ext === ".tif" || ext === ".tiff";
-  if (!isTif) {
-    throw new Error("Only GeoTIFF files are supported");
-  }
-  // Raster specific
-  type = "GeoTIFF";
 
-  const rioInfo = await logger.exec(
-    ["rio", ["info", path]],
-    "Problem reading file. Rasters should be uploaded as GeoTIFF.",
-    2 / 30
-  );
-  const rioData = JSON.parse(rioInfo);
-  if (rioData.driver !== "GTiff") {
-    throw new Error(`Unrecognized raster driver "${rioData.driver}"`);
-  }
+  const { ext, isCorrectProjection } = await validateInput(path, logger);
 
-  const isCorrectProjection = rioData.crs === "EPSG:3857";
-  let resolution = rioData.transform[0];
-
-  const fc = await logger.exec(
-    ["rio", ["bounds", path]],
-    "Problem determining bounds of raster",
-    2 / 30
-  );
-  const bounds = JSON.parse(fc).bbox;
+  // Get raster stats
+  const stats = await rasterInfoForBands(path);
 
   if (!isCorrectProjection) {
+    console.log("reprojecting");
     // use rio warp to reproject tif
     const warpedPath = pathJoin(workingDirectory, jobId + ".warped.tif");
     await logger.exec(
-      ["rio", ["warp", path, warpedPath, "--dst-crs", "EPSG:3857"]],
-      "Problem reprojecting raster",
-      5 / 30
-    );
-    path = warpedPath;
-    const inputExt = parsePath(path).ext;
-  }
-
-  const stats = await rasterInfoForBands(path);
-
-  if (
-    stats.presentation === SuggestedRasterPresentation.categorical &&
-    stats.bands[0].colorInterpretation?.toLowerCase() === "palette"
-  ) {
-    // use pct2rgb.py to convert to rgb
-    const rgbPath = pathJoin(workingDirectory, jobId + ".rgb.tif");
-    await logger.exec(
-      ["gdal_translate", ["-expand", "rgb", path, rgbPath]],
-      "Problem converting palletized raster to RGB",
-      2 / 30
-    );
-    path = rgbPath;
-  } else if (stats.presentation === SuggestedRasterPresentation.continuous) {
-    // If singleband, determine scale ratio. Otherwise set to 1
-    // An example of using the scale ratio is a single-band raster with 8-bit
-    // float values 0 - 1. We want to scale these to 0 - 255 so they can be
-    // displayed in grayscale.
-    let scaleRatio = 254 / stats.bands[0].maximum;
-    // use rio to convert to rgb
-    const rgbPath = pathJoin(workingDirectory, jobId + "-rgb.png");
-    await logger.exec(
       [
-        "rio",
+        "gdalwarp",
         [
-          "convert",
-          "--scale-ratio",
-          scaleRatio.toString(),
-          "-f",
-          "PNG",
-          "--rgb",
-          "--dtype",
-          "uint8",
+          "-r",
+          stats.presentation === SuggestedRasterPresentation.rgb
+            ? "cubic"
+            : stats.presentation === SuggestedRasterPresentation.categorical
+            ? "mode"
+            : "nearest",
+          "-t_srs",
+          "EPSG:3857",
           path,
-          rgbPath,
+          warpedPath,
         ],
       ],
-      "Problem converting raster to RGB",
+      "Problem reprojecting raster",
       2 / 30
     );
-    path = rgbPath;
+    path = warpedPath;
   }
 
+  // Add original file to outputs
   outputs.push({
     type: ext === ".tif" || ext === ".tiff" ? "GeoTIFF" : "PNG",
     remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
@@ -137,7 +80,7 @@ export async function processRasterUpload(options: {
     isNormalizedOutput: path === originalPath,
   });
 
-  // Add transformed file to outputs
+  // Add transformed file to outputs, if different from original
   if (path !== originalPath) {
     const inputExt = parsePath(path).ext;
     outputs.push({
@@ -151,7 +94,92 @@ export async function processRasterUpload(options: {
     });
   }
 
+  // Assign bounds from rio bounds command output
+  const fc = await logger.exec(
+    ["rio", ["bounds", path]],
+    "Problem determining bounds of raster",
+    2 / 30
+  );
+  const bounds = JSON.parse(fc).bbox;
+  for (const band of stats.bands) {
+    band.bounds = bounds;
+  }
+
+  if (
+    stats.presentation === SuggestedRasterPresentation.categorical ||
+    stats.presentation === SuggestedRasterPresentation.continuous
+  ) {
+    console.log(stats.presentation, stats.bands[0]);
+    path = await encodeValuesToRGB(
+      path,
+      logger,
+      workingDirectory,
+      stats.bands[0].noDataValue,
+      stats.bands[0].base,
+      stats.bands[0].interval,
+      jobId
+    );
+  }
+
   await updateProgress("running", "tiling");
+
+  const pmtilesPath = await createPMTiles(
+    path,
+    logger,
+    workingDirectory,
+    jobId,
+    originalName,
+    stats.presentation
+  );
+
+  outputs.push({
+    type: "PMTiles",
+    remote: `${process.env.TILES_REMOTE}/${baseKey}/${jobId}.pmtiles`,
+    local: pmtilesPath,
+    size: statSync(pmtilesPath).size,
+    url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
+    filename: `${jobId}.pmtiles`,
+  });
+
+  return stats;
+}
+
+async function validateInput(path: string, logger: Logger) {
+  let { ext } = parsePath(path);
+
+  // Use rasterio to see if it is a supported file format
+  const isTif = ext === ".tif" || ext === ".tiff";
+  if (!isTif) {
+    throw new Error("Only GeoTIFF files are supported");
+  }
+
+  const rioInfo = await logger.exec(
+    ["rio", ["info", path]],
+    "Problem reading file. Rasters should be uploaded as GeoTIFF.",
+    2 / 30
+  );
+  const rioData = JSON.parse(rioInfo);
+  if (rioData.driver !== "GTiff") {
+    throw new Error(`Unrecognized raster driver "${rioData.driver}"`);
+  }
+
+  const isCorrectProjection = rioData.crs === "EPSG:3857";
+
+  return {
+    isCorrectProjection,
+    crs: rioData.crs,
+    ext,
+  };
+}
+
+async function createPMTiles(
+  path: string,
+  logger: Logger,
+  workingDirectory: string,
+  jobId: string,
+  layerName: string,
+  presentation: SuggestedRasterPresentation
+) {
   const mbtilesPath = pathJoin(workingDirectory, jobId + ".mbtiles");
 
   await logger.exec(
@@ -165,7 +193,7 @@ export async function processRasterUpload(options: {
         "-co",
         "RESAMPLING=NEAREST",
         "-co",
-        `NAME=${originalName}`,
+        `NAME=${layerName}`,
         path,
         mbtilesPath,
       ],
@@ -175,8 +203,29 @@ export async function processRasterUpload(options: {
   );
 
   // TODO: how can we make this tile all the way back to z=5 at least?
+  // Research Notes 5/5/24 - Chad Burt
+  // gdaladdo may quit once the overview would be < 128 pixels on a side.
+  // The way to add one more zoom level would be to perform the following steps:
+  //   * Figure out the zoom range in the mbtiles (e.g. 6-9)
+  //   * Calculate the size reduction (e.g. 9-6=3. 3**2 = 8x. Need 16x next)
+  //   * Use gdal_translate to resize the tif.
+  //     (gdal_translate -outsize 6.25% 6.25% input.tif output.tif)
+  //   * Convert to mbtiles again
+  //   * Use a script like the following to merge the 2 mbtiles archives
+  //     https://github.com/mapbox/mbutil/blob/d495c0a737f4bce5fde8e707fe267674be39369a/patch
+  //
+  // I'm not sure it's worth it to do all that at this point.
   await logger.exec(
-    ["gdaladdo", ["-minsize", "8", "-r", "nearest", mbtilesPath]],
+    [
+      "gdaladdo",
+      [
+        "-minsize",
+        "2",
+        "-r",
+        presentation === SuggestedRasterPresentation.rgb ? "cubic" : "nearest",
+        mbtilesPath,
+      ],
+    ],
     "Problem adding overviews to mbtiles",
     4 / 30
   );
@@ -188,19 +237,70 @@ export async function processRasterUpload(options: {
     "PMTiles conversion failed",
     4 / 30
   );
-  outputs.push({
-    type: "PMTiles",
-    remote: `${process.env.TILES_REMOTE}/${baseKey}/${jobId}.pmtiles`,
-    local: pmtilesPath,
-    size: statSync(pmtilesPath).size,
-    url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
-    filename: `${jobId}.pmtiles`,
-  });
 
-  // Assign bounds from rio bounds command output
-  for (const band of stats.bands) {
-    band.bounds = bounds;
+  return pmtilesPath;
+}
+
+async function encodeValuesToRGB(
+  path: string,
+  logger: Logger,
+  workingDirectory: string,
+  noDataValue: number | null,
+  base: number,
+  interval: number,
+  jobId?: string
+) {
+  const rel = (p: string) => pathJoin(workingDirectory, p);
+
+  const operations: { [fname: string]: string } = {
+    "temp_r.tif": `floor((((A - ${base}) * ${1 / interval}) + 32768) / 65536)`,
+    "temp_g.tif": `floor(((((A - ${base}) * ${
+      1 / interval
+    }) + 32768) % 65536) / 256)`,
+    "temp_b.tif": `(floor((A - ${base}) * ${1 / interval}) + 32768) % 256`,
+  };
+
+  if (noDataValue !== null) {
+    operations["temp_a.tif"] = `255*(A!=${noDataValue})`;
   }
 
-  return stats;
+  for (const [output, formula] of Object.entries(operations)) {
+    await logger.exec(
+      [
+        "gdal_calc.py",
+        [
+          "-A",
+          path,
+          "--outfile",
+          rel(output),
+          "--calc",
+          formula,
+          "--NoDataValue",
+          "0",
+          "--type",
+          "Byte",
+        ],
+      ],
+      `Problem creating ${output}`
+    );
+  }
+
+  // Step 2: Merge Bands into a Single RGB TIFF
+  const vrtInputs = [rel("temp_r.tif"), rel("temp_g.tif"), rel("temp_b.tif")];
+  if (noDataValue !== null) {
+    vrtInputs.push(rel("temp_a.tif"));
+  }
+  const vrtFname = rel(noDataValue === null ? "temp_rgb.vrt" : "temp_rgba.vrt");
+  await logger.exec(
+    ["gdalbuildvrt", ["-separate", vrtFname, ...vrtInputs]],
+    "Problem building VRT"
+  );
+  const encodedFname =
+    noDataValue === null ? "output_encoded_rgb.tif" : "output_encoded_rgba.tif";
+  await logger.exec(
+    ["gdal_translate", [vrtFname, encodedFname]],
+    "Problem converting VRT to RGB TIFF"
+  );
+
+  return encodedFname;
 }

@@ -6,6 +6,7 @@
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
   "main": "src/index.ts",
+  "types": "dist/src/index.d.ts",
   "directories": {
     "lib": "lib",
     "test": "__tests__"
@@ -24,6 +25,11 @@
     "watch": "tsc --watch",
     "build:container": "docker build -t spatial-uploads-handler .",
     "test": "jest"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "dist/"
+    ]
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

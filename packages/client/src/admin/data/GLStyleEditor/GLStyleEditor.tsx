@@ -6,6 +6,16 @@ import { sublime } from "@uiw/codemirror-theme-sublime";
 import { linter, lintGutter } from "@codemirror/lint";
 import { color } from "./extensions/glStyleColor";
 import { glStyleLinter } from "./extensions/glStyleValidator";
+import * as Menubar from "@radix-ui/react-menubar";
+import {
+  MenuBarContent,
+  MenuBarItem,
+  MenuBarLabel,
+  MenuBarSeparator,
+  MenuBarSubmenu,
+  MenubarRadioItem,
+  MenubarTrigger,
+} from "../../../components/Menubar";
 import {
   getInsertLayerOptions,
   glStyleAutocomplete,
@@ -38,12 +48,20 @@ import getSlug from "../../../getSlug";
 import SpritePopover from "./SpritePopover";
 import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { CaretDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
+import {
+  CaretDownIcon,
+  ChevronRightIcon,
+  CodeIcon,
+  GearIcon,
+  SliderIcon,
+} from "@radix-ui/react-icons";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import GeostatsModal, { Geostats } from "./GeostatsModal";
 import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
-import { GeostatsLayer } from "@seasketch/geostats-types";
+import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
+import { Trans, useTranslation } from "react-i18next";
+import GUIStyleEditor from "../GUIStyleEditor";
 
 require("./RadixDropdown.css");
 
@@ -66,9 +84,20 @@ interface GLStyleEditorProps {
  */
 export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [value] = useState(formatGLStyle(props.initialStyle || ""));
-  const onChange = useDebouncedFn(props.onChange || (() => {}), 100, {});
+  const [layers, setLayers] = useState(value);
+  const onChange = useDebouncedFn(
+    (newStyle: string) => {
+      if (props.onChange) {
+        props.onChange(newStyle);
+      }
+      setLayers(newStyle);
+    },
+    100,
+    {}
+  );
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
+  const [editor, setEditor] = useState<"style" | "code">("code");
   const type = props.type || "vector";
 
   const spriteQuery = useSpritesQuery({
@@ -206,6 +235,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
 
   const mapContext = useContext(MapContext);
   const visibleLayers = mapContext.manager?.getVisibleLayerReferenceIds();
+  const { t } = useTranslation("admin:data");
 
   const [zoom, setZoom] = useState(0);
   useEffect(() => {
@@ -228,200 +258,284 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   return (
     <div
       className="flex flex-col h-full overflow-hidden"
-      style={{ backgroundColor: "rgb(48, 56, 65)" }}
+      style={{
+        backgroundColor: editor === "code" ? "rgb(48, 56, 65)" : "#fefefe",
+      }}
     >
       <div
-        className="p-2 border-b border-black border-opacity-30 z-10 shadow flex space-x-2 flex-0"
-        style={{ backgroundColor: "#303841" }}
+        className={`p-0.5   border-opacity-30 z-10 shadow flex space-x-2 flex-0 ${
+          editor === "code" ? "border-b border-black" : ""
+        }`}
+        style={{
+          backgroundColor: editor === "code" ? "#303841" : "rgb(243, 244, 246)",
+        }}
       >
         {(props.tocItemId || props.geostats) && (
           <>
-            <DropdownMenu.Root>
-              <DropdownTrigger label="View" ariaLabel="View menu" />
-              <DropdownMenuContent>
-                {props.bounds && (
-                  <DropdownMenuItem
-                    disabled={!props.bounds}
-                    onClick={() => {
-                      if (props.bounds && props.onRequestShowBounds) {
-                        props.onRequestShowBounds(props.bounds);
-                      } else if (mapContext.manager && props.geostats) {
-                        mapContext.manager.map?.fitBounds(props.bounds!);
+            <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center text-sm">
+              <Menubar.Menu>
+                <MenubarTrigger dark={editor === "code"}>
+                  {t("View")}
+                </MenubarTrigger>
+                <Menubar.Portal>
+                  <MenuBarContent>
+                    <MenuBarItem
+                      disabled={!props.bounds}
+                      onClick={() => {
+                        if (props.bounds && props.onRequestShowBounds) {
+                          props.onRequestShowBounds(props.bounds);
+                        } else if (mapContext.manager && props.bounds) {
+                          mapContext.manager.map?.fitBounds(props.bounds);
+                        }
+                      }}
+                    >
+                      {t("Show layer extent")}
+                    </MenuBarItem>
+                    <MenuBarItem
+                      disabled={
+                        !visibleLayers ||
+                        (visibleLayers.length === 1 &&
+                          visibleLayers[0] === props.tocItemId)
                       }
-                    }}
-                    label="Show layer extent"
-                  />
-                )}
-                {props.tocItemId && (
-                  <DropdownMenuItem
-                    label="Hide all other overlays"
-                    disabled={
-                      !visibleLayers ||
-                      (visibleLayers.length === 1 &&
-                        visibleLayers[0] === props.tocItemId)
-                    }
-                    onClick={() => {
-                      if (mapContext.manager && props.geostats) {
-                        mapContext.manager.setVisibleTocItems([
-                          props.tocItemId!,
-                        ]);
+                      onClick={() => {
+                        if (mapContext.manager && props.geostats) {
+                          mapContext.manager.setVisibleTocItems([
+                            props.tocItemId!,
+                          ]);
+                        }
+                      }}
+                    >
+                      {t("Hide all other overlays")}
+                    </MenuBarItem>
+                    {props.geostats && (
+                      <MenuBarItem
+                        disabled={!props.geostats}
+                        onClick={() => {
+                          setGeostatsModal({
+                            layers: [props.geostats!],
+                            layerCount: 1,
+                          });
+                        }}
+                      >
+                        {t("Open layer property details")}
+                      </MenuBarItem>
+                    )}
+                  </MenuBarContent>
+                </Menubar.Portal>
+              </Menubar.Menu>
+              <Menubar.Menu>
+                <MenubarTrigger dark={editor === "code"}>
+                  {t("Edit")}
+                </MenubarTrigger>
+                <Menubar.Portal>
+                  <MenuBarContent>
+                    <MenuBarItem
+                      disabled={
+                        !Boolean(editorState) || undoDepth(editorState!) === 0
                       }
-                    }}
-                  />
-                )}
-                {props.geostats && (
-                  <DropdownMenuItem
-                    label="Open layer property details"
-                    disabled={!props.geostats}
-                    onClick={() => {
-                      setGeostatsModal({
-                        layers: [props.geostats!],
-                        layerCount: 1,
-                      });
-                    }}
-                  />
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu.Root>
-          </>
-        )}
-        <DropdownMenu.Root>
-          <DropdownTrigger label="Edit" ariaLabel="Edit menu" />
-          <DropdownMenuContent>
-            <DropdownMenuItem
-              label="Undo"
-              disabled={!Boolean(editorState) || undoDepth(editorState!) === 0}
-              onClick={() => {
-                if (editorRef.current?.view) {
-                  const editorView = editorRef.current?.view;
-                  undo(editorView);
-                }
-              }}
-              keyCode={(mac ? "⌘" : "^") + "Z"}
-            />
-            <DropdownMenuItem
-              label="Redo"
-              disabled={!Boolean(editorState) || redoDepth(editorState!) === 0}
-              onClick={() => {
-                if (editorRef.current?.view) {
-                  const editorView = editorRef.current?.view;
-                  redo(editorView);
-                }
-              }}
-              keyCode={(mac ? "⌘" : "^") + `+Shift+Z`}
-            />
-            <DropdownMenuItem
-              label="Format Code"
-              onClick={() => {
-                if (editorRef.current?.view) {
-                  const editorView = editorRef.current?.view;
-                  formatJSONCommand(editorView);
-                }
-              }}
-              keyCode={`${mac ? "⌘" : "^"}+F`}
-            />
-
-            {props.tocItemId && (
-              <>
-                <DropdownSeperator />
-                <DropdownLabel label="Insert a new layer" />
-              </>
-            )}
-            {layerTypes.map((type) => (
-              <DropdownSubmenu
-                label={type === "symbol" ? "Labels & Symbols" : type}
-                key={type}
-              >
-                {insertOptions
-                  .filter((o) => o.layer.type === type && !o.propertyChoice)
-                  .map((option) => (
-                    <DropdownMenuItem
                       onClick={() => {
                         if (editorRef.current?.view) {
                           const editorView = editorRef.current?.view;
-                          editorView.dispatch({
-                            changes: {
-                              from: editorView.state.doc.length - 2,
-                              to: editorView.state.doc.length - 2,
-                              insert:
-                                editorView.state.doc.length > 10
-                                  ? "," + JSON.stringify(option.layer)
-                                  : JSON.stringify(option.layer),
-                            },
-                            scrollIntoView: true,
-                            selection: {
-                              anchor: editorView.state.doc.length - 1,
-                            },
-                          });
+                          undo(editorView);
+                        }
+                      }}
+                    >
+                      <span>{t("Undo")}</span>
+                      <div className="ml-auto pl-1">
+                        {(mac ? "⌘" : "^") + "Z"}
+                      </div>
+                    </MenuBarItem>
+                    <MenuBarItem
+                      disabled={
+                        !Boolean(editorState) || redoDepth(editorState!) === 0
+                      }
+                      onClick={() => {
+                        if (editorRef.current?.view) {
+                          const editorView = editorRef.current?.view;
+                          redo(editorView);
+                        }
+                      }}
+                    >
+                      <span>{t("Redo")}</span>
+                      <div className="ml-auto pl-1">
+                        {(mac ? "⌘" : "^") + `+Shift+Z`}
+                      </div>
+                    </MenuBarItem>
+                    <MenuBarItem
+                      onClick={() => {
+                        if (editorRef.current?.view) {
+                          const editorView = editorRef.current?.view;
                           formatJSONCommand(editorView);
                         }
                       }}
-                      key={option.label + option.propertyChoice?.property}
-                      label={option.label}
-                    />
-                  ))}
-                {(() => {
-                  const groups = insertOptions.reduce((set, o) => {
-                    if (o.propertyChoice && o.type === type) {
-                      set.add(o.label);
-                    }
-                    return set;
-                  }, new Set<string>());
-
-                  return [...groups].map((group) => (
-                    <Fragment key={group}>
-                      <DropdownLabel label={group} />
-                      {insertOptions
-                        .filter((v) => v.label === group)
-                        .map((option) => (
-                          <DropdownMenuItem
-                            inset
-                            key={option.label + option.propertyChoice?.property}
-                            onClick={() => {
-                              if (editorRef.current?.view) {
-                                insertLayer(
-                                  editorRef.current.view,
-                                  option.layer
-                                );
+                    >
+                      <span>{t("Format Code")}</span>
+                      <div className="ml-auto pl-1">
+                        {`${mac ? "⌘" : "^"}+F`}
+                      </div>
+                    </MenuBarItem>
+                    {props.tocItemId && (
+                      <>
+                        <MenuBarSeparator />
+                        <MenuBarLabel>{t("Insert a new layer")}</MenuBarLabel>
+                      </>
+                    )}
+                    {layerTypes.map((type) => (
+                      <MenuBarSubmenu
+                        label={
+                          type === "symbol"
+                            ? "Labels & Symbols"
+                            : `${type.slice(0, 1).toUpperCase()}${type.slice(
+                                1
+                              )}`
+                        }
+                        key={type}
+                      >
+                        {insertOptions
+                          .filter(
+                            (o) => o.layer.type === type && !o.propertyChoice
+                          )
+                          .map((option) => (
+                            <MenuBarItem
+                              onClick={() => {
+                                if (editorRef.current?.view) {
+                                  const editorView = editorRef.current?.view;
+                                  editorView.dispatch({
+                                    changes: {
+                                      from: editorView.state.doc.length - 2,
+                                      to: editorView.state.doc.length - 2,
+                                      insert:
+                                        editorView.state.doc.length > 10
+                                          ? "," + JSON.stringify(option.layer)
+                                          : JSON.stringify(option.layer),
+                                    },
+                                    scrollIntoView: true,
+                                    selection: {
+                                      anchor: editorView.state.doc.length - 1,
+                                    },
+                                  });
+                                  formatJSONCommand(editorView);
+                                }
+                              }}
+                              key={
+                                option.label + option.propertyChoice?.property
                               }
-                            }}
-                            label={option.propertyChoice?.property || ""}
-                            details={
-                              option.propertyChoice?.type === "string" ||
-                              (option.propertyChoice?.type === "array" &&
-                                option.propertyChoice?.typeArrayOf === "string")
-                                ? (option.propertyChoice!.values || []).join(
-                                    ", "
-                                  )
-                                : option.propertyChoice?.type === "number" &&
-                                  option.propertyChoice?.min !== undefined &&
-                                  option.propertyChoice.max
-                                ? `${option.propertyChoice.min} - ${option.propertyChoice.max}`
-                                : undefined
+                            >
+                              {option.label}
+                            </MenuBarItem>
+                          ))}
+                        {(() => {
+                          const groups = insertOptions.reduce((set, o) => {
+                            if (o.propertyChoice && o.type === type) {
+                              set.add(o.label);
                             }
-                          />
-                        ))}
-                    </Fragment>
-                  ));
-                })()}
-              </DropdownSubmenu>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu.Root>
-        {props.tocItemId && (
-          <span className="font-mono text-sm bg-gray-700 text-blue-300 text-opacity-80 px-1 py-0.5 rounded w-24 text-center tabular-nums">
-            zoom{" "}
-            <span className="font-mono ">
-              {Math.round(zoom) === zoom ? zoom + ".0" : zoom}
-            </span>
-          </span>
+                            return set;
+                          }, new Set<string>());
+                          return [...groups].map((group) => (
+                            <Fragment key={group}>
+                              <MenuBarLabel>{group}</MenuBarLabel>
+                              {insertOptions
+                                .filter((v) => v.label === group)
+                                .map((option) => {
+                                  const details =
+                                    option.propertyChoice?.type === "string" ||
+                                    (option.propertyChoice?.type === "array" &&
+                                      option.propertyChoice?.typeArrayOf ===
+                                        "string")
+                                      ? (
+                                          option.propertyChoice!.values || []
+                                        ).join(", ")
+                                      : option.propertyChoice?.type ===
+                                          "number" &&
+                                        option.propertyChoice?.min !==
+                                          undefined &&
+                                        option.propertyChoice.max
+                                      ? `${option.propertyChoice.min} - ${option.propertyChoice.max}`
+                                      : undefined;
+                                  return (
+                                    <MenuBarItem
+                                      // inset
+                                      key={
+                                        option.label +
+                                        option.propertyChoice?.property
+                                      }
+                                      onClick={() => {
+                                        if (editorRef.current?.view) {
+                                          insertLayer(
+                                            editorRef.current.view,
+                                            option.layer
+                                          );
+                                        }
+                                      }}
+                                    >
+                                      {option.propertyChoice?.property || ""}
+                                      {details && (
+                                        <div
+                                          className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
+                                          style={{ maxWidth: 350 }}
+                                        >
+                                          {details}
+                                        </div>
+                                      )}
+                                    </MenuBarItem>
+                                  );
+                                })}
+                            </Fragment>
+                          ));
+                        })()}
+                      </MenuBarSubmenu>
+                    ))}
+                  </MenuBarContent>
+                </Menubar.Portal>
+              </Menubar.Menu>
+            </Menubar.Root>
+            {props.tocItemId && (
+              <span
+                className={`font-mono text-sm ${
+                  editor === "code"
+                    ? "bg-gray-700 text-blue-300 text-opacity-80"
+                    : "bg-gray-300 text-blue-600"
+                } px-1 my-1 rounded w-24 text-center tabular-nums flex items-center justify-center space-x-2`}
+              >
+                <span>zoom</span>
+                <span className="font-mono ">
+                  {Math.round(zoom) === zoom ? zoom + ".0" : zoom}
+                </span>
+              </span>
+            )}
+            <div
+              className={`flex-1 flex items-center justify-end pr-2 relative ${
+                editor === "code" ? "text-blue-300" : "text-black"
+              }`}
+            >
+              {editor === "code" ? (
+                <CodeIcon className="pointer-events-none w-5 h-5 absolute right-10 " />
+              ) : (
+                <SliderIcon className="pointer-events-none w-4 h-4 absolute right-10 " />
+              )}
+              <select
+                value={editor}
+                onChange={(e) => setEditor(e.target.value as "style" | "code")}
+                className={`text-sm rounded py-0.5 my-0   border-none pr-14 ${
+                  editor === "code"
+                    ? "bg-gray-700"
+                    : "border border-gray-900 shadow-sm"
+                }`}
+              >
+                <option value="style">{t("Style Editor")}</option>
+                <option value="code">{t("Code Editor")}</option>
+              </select>
+            </div>
+          </>
         )}
       </div>
 
       <SpritePopover spriteState={spriteState} onChange={onSpriteChange} />
 
       <CodeMirror
-        className="flex-1 overflow-y-auto"
+        className={`flex-1 overflow-y-auto ${
+          editor === "style" ? "hidden" : "visible"
+        }`}
         value={value}
         ref={editorRef}
         theme={sublime}
@@ -454,123 +568,30 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function DropdownTrigger({
-  label,
-  ariaLabel,
-}: {
-  label: string;
-  ariaLabel?: string;
-}) {
-  return (
-    <DropdownMenu.Trigger asChild>
-      <button
-        className="text-sm bg-gray-400 rounded-sm p-0 px-1 shadow pl-2"
-        aria-label={ariaLabel}
-      >
-        {label} <CaretDownIcon className="inline" />
-      </button>
-    </DropdownMenu.Trigger>
-  );
-}
-
-function DropdownMenuContent({ children }: { children: ReactNode }) {
-  return (
-    <DropdownMenu.Portal>
-      <DropdownMenu.Content
-        className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
-        style={{ minWidth: 220 }}
-        sideOffset={5}
-        align="start"
-      >
-        {children}
-      </DropdownMenu.Content>
-    </DropdownMenu.Portal>
-  );
-}
-
-function DropdownMenuItem({
-  disabled,
-  onClick,
-  label,
-  keyCode,
-  details,
-  inset,
-}: {
-  disabled?: boolean;
-  onClick: () => void;
-  label: string;
-  keyCode?: string;
-  details?: string;
-  inset?: boolean;
-}) {
-  return (
-    <DropdownMenu.Item
-      disabled={disabled}
-      onClick={onClick}
-      className={`RadixDropdownItem group leading-none cursor-pointer rounded flex items-center h-5 relative px-2 select-none outline-none ${
-        inset ? "ml-2" : ""
-      }`}
-    >
-      {label}
-      {keyCode && <div className="ml-auto pl-1">{keyCode}</div>}
-      {details && (
-        <div
-          style={{ maxWidth: 350 }}
-          className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
-        >
-          {details}
-        </div>
+      {editor === "style" && (
+        <GUIStyleEditor style={layers} editorRef={editorRef} />
       )}
-    </DropdownMenu.Item>
-  );
-}
-
-function DropdownSeperator() {
-  return (
-    <DropdownMenu.Separator
-      style={{ height: 1 }}
-      className="bg-gray-400 opacity-50 my-1.5 mb-1"
-    />
-  );
-}
-
-function DropdownLabel({ label }: { label: string }) {
-  return (
-    <DropdownMenu.Label className="pl-2 text-gray-500 text-sm leading-2 mb-1 mt-2">
-      {label}
-    </DropdownMenu.Label>
-  );
-}
-
-function DropdownSubmenu({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <DropdownMenu.Sub>
-      <DropdownMenu.SubTrigger className="RadixDropdownItem capitalize group leading-none cursor-pointer rounded flex items-center h-5 relative px-2 select-none outline-none ">
-        {label}
-        <div className="ml-auto pl-[20px] text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8">
-          <ChevronRightIcon />
-        </div>
-      </DropdownMenu.SubTrigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.SubContent
-          className="shadow-lg bg-gray-300 bg-opacity-95 z-50 text-sm rounded-md p-1"
-          sideOffset={2}
-          alignOffset={-5}
-        >
-          {children}
-        </DropdownMenu.SubContent>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Sub>
+      {editor === "code" && (
+        <p className="text-sm text-gray-100 p-4 bg-gray-700">
+          <Trans ns={["admin:data"]}>
+            Vector layers can be styled using{" "}
+            <a
+              className="underline text-primary-300"
+              href="https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              MapBox GL Style Layers
+            </a>
+            . Don't specify a <code>source</code> or <code>id</code> property on
+            your layers, those will be managed for you by SeaSketch. Press{" "}
+            <span className="font-mono">Control+Space</span> to autocomplete
+            string values and property names, and hover over properties to see
+            documentation.
+          </Trans>
+        </p>
+      )}
+    </div>
   );
 }
 
