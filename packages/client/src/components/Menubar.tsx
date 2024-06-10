@@ -84,12 +84,16 @@ export function MenuBarSeparator() {
 }
 
 export const MenuBarContentClasses =
-  "z-50 bg-gray-100 bg-opacity-90 rounded shadow-md p-1 border border-black border-opacity-10";
+  "z-50 bg-gray-100 rounded shadow-md p-1 border border-black border-opacity-10";
 
 export function MenuBarContent({ children }: { children?: ReactNode }) {
   return (
     <Menubar.Content
-      style={{ backdropFilter: "blur(3px)", minWidth: 220 }}
+      style={{
+        backdropFilter: "blur(6px)",
+        minWidth: 220,
+        backgroundColor: "rgba(243, 244, 246, 0.75)",
+      }}
       className={MenuBarContentClasses}
       align="start"
       sideOffset={2}

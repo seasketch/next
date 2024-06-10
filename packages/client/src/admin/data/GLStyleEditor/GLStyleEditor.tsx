@@ -62,6 +62,7 @@ import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
 import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import { Trans, useTranslation } from "react-i18next";
 import GUIStyleEditor from "../GUIStyleEditor";
+import CodeVsGuiSwitch from "./CodeVsGuiSwitch";
 
 require("./RadixDropdown.css");
 
@@ -257,13 +258,13 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const editorState = editorRef.current?.view?.state;
   return (
     <div
-      className="flex flex-col h-full overflow-hidden"
+      className="flex flex-col h-full overflow-hidden transition-colors"
       style={{
         backgroundColor: editor === "code" ? "rgb(48, 56, 65)" : "#fefefe",
       }}
     >
       <div
-        className={`p-0.5   border-opacity-30 z-10 shadow flex space-x-2 flex-0 ${
+        className={`transition-colors p-0.5   border-opacity-30 z-10 shadow flex space-x-2 flex-0 ${
           editor === "code" ? "border-b border-black" : ""
         }`}
         style={{
@@ -361,171 +362,161 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                         {(mac ? "⌘" : "^") + `+Shift+Z`}
                       </div>
                     </MenuBarItem>
-                    <MenuBarItem
-                      onClick={() => {
-                        if (editorRef.current?.view) {
-                          const editorView = editorRef.current?.view;
-                          formatJSONCommand(editorView);
-                        }
-                      }}
-                    >
-                      <span>{t("Format Code")}</span>
-                      <div className="ml-auto pl-1">
-                        {`${mac ? "⌘" : "^"}+F`}
-                      </div>
-                    </MenuBarItem>
-                    {props.tocItemId && (
-                      <>
-                        <MenuBarSeparator />
-                        <MenuBarLabel>{t("Insert a new layer")}</MenuBarLabel>
-                      </>
-                    )}
-                    {layerTypes.map((type) => (
-                      <MenuBarSubmenu
-                        label={
-                          type === "symbol"
-                            ? "Labels & Symbols"
-                            : `${type.slice(0, 1).toUpperCase()}${type.slice(
-                                1
-                              )}`
-                        }
-                        key={type}
+                    {editor === "code" && (
+                      <MenuBarItem
+                        onClick={() => {
+                          if (editorRef.current?.view) {
+                            const editorView = editorRef.current?.view;
+                            formatJSONCommand(editorView);
+                          }
+                        }}
                       >
-                        {insertOptions
-                          .filter(
-                            (o) => o.layer.type === type && !o.propertyChoice
-                          )
-                          .map((option) => (
-                            <MenuBarItem
-                              onClick={() => {
-                                if (editorRef.current?.view) {
-                                  const editorView = editorRef.current?.view;
-                                  editorView.dispatch({
-                                    changes: {
-                                      from: editorView.state.doc.length - 2,
-                                      to: editorView.state.doc.length - 2,
-                                      insert:
-                                        editorView.state.doc.length > 10
-                                          ? "," + JSON.stringify(option.layer)
-                                          : JSON.stringify(option.layer),
-                                    },
-                                    scrollIntoView: true,
-                                    selection: {
-                                      anchor: editorView.state.doc.length - 1,
-                                    },
-                                  });
-                                  formatJSONCommand(editorView);
+                        <span>{t("Format Code")}</span>
+                        <div className="ml-auto pl-1">
+                          {`${mac ? "⌘" : "^"}+F`}
+                        </div>
+                      </MenuBarItem>
+                    )}
+                    {props.tocItemId &&
+                      editor === "code" &&
+                      layerTypes.length > 0 && (
+                        <>
+                          <MenuBarSeparator />
+                          <MenuBarLabel>{t("Insert a new layer")}</MenuBarLabel>
+                        </>
+                      )}
+                    {editor === "code" &&
+                      layerTypes.map((type) => (
+                        <MenuBarSubmenu
+                          label={
+                            type === "symbol"
+                              ? "Labels & Symbols"
+                              : `${type.slice(0, 1).toUpperCase()}${type.slice(
+                                  1
+                                )}`
+                          }
+                          key={type}
+                        >
+                          {insertOptions
+                            .filter(
+                              (o) => o.layer.type === type && !o.propertyChoice
+                            )
+                            .map((option) => (
+                              <MenuBarItem
+                                onClick={() => {
+                                  if (editorRef.current?.view) {
+                                    const editorView = editorRef.current?.view;
+                                    editorView.dispatch({
+                                      changes: {
+                                        from: editorView.state.doc.length - 2,
+                                        to: editorView.state.doc.length - 2,
+                                        insert:
+                                          editorView.state.doc.length > 10
+                                            ? "," + JSON.stringify(option.layer)
+                                            : JSON.stringify(option.layer),
+                                      },
+                                      scrollIntoView: true,
+                                      selection: {
+                                        anchor: editorView.state.doc.length - 1,
+                                      },
+                                    });
+                                    formatJSONCommand(editorView);
+                                  }
+                                }}
+                                key={
+                                  option.label + option.propertyChoice?.property
                                 }
-                              }}
-                              key={
-                                option.label + option.propertyChoice?.property
+                              >
+                                {option.label}
+                              </MenuBarItem>
+                            ))}
+                          {(() => {
+                            const groups = insertOptions.reduce((set, o) => {
+                              if (o.propertyChoice && o.type === type) {
+                                set.add(o.label);
                               }
-                            >
-                              {option.label}
-                            </MenuBarItem>
-                          ))}
-                        {(() => {
-                          const groups = insertOptions.reduce((set, o) => {
-                            if (o.propertyChoice && o.type === type) {
-                              set.add(o.label);
-                            }
-                            return set;
-                          }, new Set<string>());
-                          return [...groups].map((group) => (
-                            <Fragment key={group}>
-                              <MenuBarLabel>{group}</MenuBarLabel>
-                              {insertOptions
-                                .filter((v) => v.label === group)
-                                .map((option) => {
-                                  const details =
-                                    option.propertyChoice?.type === "string" ||
-                                    (option.propertyChoice?.type === "array" &&
-                                      option.propertyChoice?.typeArrayOf ===
-                                        "string")
-                                      ? (
-                                          option.propertyChoice!.values || []
-                                        ).join(", ")
-                                      : option.propertyChoice?.type ===
-                                          "number" &&
-                                        option.propertyChoice?.min !==
-                                          undefined &&
-                                        option.propertyChoice.max
-                                      ? `${option.propertyChoice.min} - ${option.propertyChoice.max}`
-                                      : undefined;
-                                  return (
-                                    <MenuBarItem
-                                      // inset
-                                      key={
-                                        option.label +
-                                        option.propertyChoice?.property
-                                      }
-                                      onClick={() => {
-                                        if (editorRef.current?.view) {
-                                          insertLayer(
-                                            editorRef.current.view,
-                                            option.layer
-                                          );
+                              return set;
+                            }, new Set<string>());
+                            return [...groups].map((group) => (
+                              <Fragment key={group}>
+                                <MenuBarLabel>{group}</MenuBarLabel>
+                                {insertOptions
+                                  .filter((v) => v.label === group)
+                                  .map((option) => {
+                                    const details =
+                                      option.propertyChoice?.type ===
+                                        "string" ||
+                                      (option.propertyChoice?.type ===
+                                        "array" &&
+                                        option.propertyChoice?.typeArrayOf ===
+                                          "string")
+                                        ? (
+                                            option.propertyChoice!.values || []
+                                          ).join(", ")
+                                        : option.propertyChoice?.type ===
+                                            "number" &&
+                                          option.propertyChoice?.min !==
+                                            undefined &&
+                                          option.propertyChoice.max
+                                        ? `${option.propertyChoice.min} - ${option.propertyChoice.max}`
+                                        : undefined;
+                                    return (
+                                      <MenuBarItem
+                                        // inset
+                                        key={
+                                          option.label +
+                                          option.propertyChoice?.property
                                         }
-                                      }}
-                                    >
-                                      {option.propertyChoice?.property || ""}
-                                      {details && (
-                                        <div
-                                          className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
-                                          style={{ maxWidth: 350 }}
-                                        >
-                                          {details}
-                                        </div>
-                                      )}
-                                    </MenuBarItem>
-                                  );
-                                })}
-                            </Fragment>
-                          ));
-                        })()}
-                      </MenuBarSubmenu>
-                    ))}
+                                        onClick={() => {
+                                          if (editorRef.current?.view) {
+                                            insertLayer(
+                                              editorRef.current.view,
+                                              option.layer
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        {option.propertyChoice?.property || ""}
+                                        {details && (
+                                          <div
+                                            className="truncate ml-auto pl-5 text-mauve11 group-data-[highlighted]:text-white group-data-[disabled]:text-mauve8"
+                                            style={{ maxWidth: 350 }}
+                                          >
+                                            {details}
+                                          </div>
+                                        )}
+                                      </MenuBarItem>
+                                    );
+                                  })}
+                              </Fragment>
+                            ));
+                          })()}
+                        </MenuBarSubmenu>
+                      ))}
                   </MenuBarContent>
                 </Menubar.Portal>
               </Menubar.Menu>
             </Menubar.Root>
-            {props.tocItemId && (
-              <span
-                className={`font-mono text-sm ${
-                  editor === "code"
-                    ? "bg-gray-700 text-blue-300 text-opacity-80"
-                    : "bg-gray-300 text-blue-600"
-                } px-1 my-1 rounded w-24 text-center tabular-nums flex items-center justify-center space-x-2`}
-              >
-                <span>zoom</span>
-                <span className="font-mono ">
-                  {Math.round(zoom) === zoom ? zoom + ".0" : zoom}
-                </span>
-              </span>
-            )}
-            <div
-              className={`flex-1 flex items-center justify-end pr-2 relative ${
-                editor === "code" ? "text-blue-300" : "text-black"
-              }`}
-            >
-              {editor === "code" ? (
-                <CodeIcon className="pointer-events-none w-5 h-5 absolute right-10 " />
-              ) : (
-                <SliderIcon className="pointer-events-none w-4 h-4 absolute right-10 " />
-              )}
-              <select
-                value={editor}
-                onChange={(e) => setEditor(e.target.value as "style" | "code")}
-                className={`text-sm rounded py-0.5 my-0   border-none pr-14 ${
-                  editor === "code"
-                    ? "bg-gray-700"
-                    : "border border-gray-900 shadow-sm"
-                }`}
-              >
-                <option value="style">{t("Style Editor")}</option>
-                <option value="code">{t("Code Editor")}</option>
-              </select>
+
+            <div className="h-full flex items-center">
+              <CodeVsGuiSwitch value={editor} onChange={setEditor} />
             </div>
+            {props.tocItemId && (
+              <div className="flex-1 flex items-center justify-end pr-2">
+                <span
+                  className={`transition-colors font-mono text-sm h-3/4 block ${
+                    editor === "code"
+                      ? "bg-gray-700 text-green-300 text-opacity-80 border border-opacity-0"
+                      : "bg-gray-200 text-blue-500 border border-black border-opacity-5"
+                  } px-1 rounded w-24 text-center tabular-nums flex items-center justify-center space-x-2`}
+                >
+                  <span>zoom</span>
+                  <span className="font-mono ">
+                    {Math.round(zoom) === zoom ? zoom + ".0" : zoom}
+                  </span>
+                </span>
+              </div>
+            )}
           </>
         )}
       </div>

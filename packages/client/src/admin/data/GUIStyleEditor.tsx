@@ -1,6 +1,6 @@
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { ChangeEventHandler, RefObject, useCallback, useMemo } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { formatJSONCommand } from "./GLStyleEditor/formatCommand";
 
 export default function GUIStyleEditor({
