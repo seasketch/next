@@ -108,7 +108,8 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(graphqlQueryCache.handleRequest(url, event));
   } else if (
     url.host === self.location.host &&
-    !fileExtensionRegexp.test(url.pathname)
+    !fileExtensionRegexp.test(url.pathname) &&
+    event.request.method === "GET"
   ) {
     event.respondWith(staticAssetCache.networkThenIndexHtmlCache(event));
   } else if (
