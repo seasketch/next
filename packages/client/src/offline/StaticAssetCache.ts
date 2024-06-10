@@ -309,12 +309,12 @@ class StaticAssetCache {
       true
     );
     if (response.status === 204) {
+      console.warn("networkThenIndexHtmlCache 204 response");
       console.warn({
         cache: STATIC_ASSET_CACHE_NAME,
         cacheKey: "/",
         request: event.request,
       });
-      throw new Error("No content");
     }
     if (response && response.ok) {
       return response;
