@@ -12,13 +12,15 @@ import S3 from "aws-sdk/clients/s3";
 import zlib from "zlib";
 import Bottleneck from "bottleneck";
 
-const calculator = new MapTileCacheCalculator(
-  "https://d3p1dsef9f0gjr.cloudfront.net/"
-);
-
 const s3 = new S3();
 
+let calculator: MapTileCacheCalculator;
+
 export async function createTilePackage(packageId: string, client: DBClient) {
+  calculator =
+    calculator ||
+    new MapTileCacheCalculator("https://d3p1dsef9f0gjr.cloudfront.net/");
+
   if (!process.env.MAPBOX_ACCESS_TOKEN) {
     throw new Error("MAPBOX_ACCESS_TOKEN env var not set");
   }
