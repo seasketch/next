@@ -33,8 +33,12 @@ export async function networkFirst(
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
-      if (appendToCache) {
+      if (appendToCache && networkResponse.status !== 204) {
         cache.put(cacheKey, networkResponse.clone());
+      } else if (networkResponse.status === 204) {
+        console.warn(
+          "204 response from networkFirst strategy, skipping caching"
+        );
       }
       return networkResponse;
     } else {
