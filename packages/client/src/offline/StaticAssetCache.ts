@@ -221,7 +221,7 @@ class StaticAssetCache {
     // Finally, add index.html. Note that this step is last. index.html will
     // contain references to all the javascript chunks. It should only be
     // updated if these other assets are cached successfully
-    await cache.add("/index.html");
+    await cache.add("/");
     await this.purgeStaleEntries();
     return this.getState();
   }
@@ -266,7 +266,12 @@ class StaticAssetCache {
     for (const cacheKey of cachedUrls) {
       if (
         manifestCacheKeys.indexOf(cacheKey) === -1 &&
-        cacheKey !== "/index.html"
+        // index.html is a legacy entry from older service workers which
+        // referenced this url.
+        cacheKey !== "/index.html" &&
+        // current service worker uses / since that's what is reliable on the
+        // cloudflare deployment
+        cacheKey !== "/"
       ) {
         console.warn(`purging ${cacheKey} from static asset cache`);
         cache.delete(cacheKey);
@@ -297,7 +302,21 @@ class StaticAssetCache {
   }
 
   async networkThenIndexHtmlCache(event: FetchEvent) {
-    return networkFirst(await this.cache, "/index.html", event.request, true);
+    const response = await networkFirst(
+      await this.cache,
+      "/",
+      event.request,
+      true
+    );
+    if (response && response.ok) {
+      return response;
+    } else {
+      // If the network request fails, return the index.html from the cache
+      // index.html used to be cached in older service workers, so this is a
+      // remotely-possible fallback for those cases.
+      // Should probably remove this code path after the fiji surveys (6/10/24)
+      return networkFirst(await this.cache, "/index.html", event.request, true);
+    }
   }
 }
 
