@@ -215,19 +215,21 @@ export default function SubmitOfflineResponsesPage() {
             {online &&
               (responses.length > 0 || submissionDetails.responses > 0) && (
                 <div className="flex justify-center py-5 space-x-5">
-                  <SignedInAs
-                    onClick={() => {
-                      loginWithRedirect({
-                        authorizationParams: {
-                          prompt: "login",
-                        },
-                        appState: {
-                          returnTo: window.location.pathname,
-                        },
-                      });
-                    }}
-                    className="w-lg border p-2 rounded shadow-sm"
-                  />
+                  {data?.me && (
+                    <SignedInAs
+                      onClick={() => {
+                        loginWithRedirect({
+                          authorizationParams: {
+                            prompt: "login",
+                          },
+                          appState: {
+                            returnTo: window.location.pathname,
+                          },
+                        });
+                      }}
+                      className="w-lg border p-2 rounded shadow-sm"
+                    />
+                  )}
                   {!data?.me && (
                     <Button
                       onClick={() => {
