@@ -28,6 +28,8 @@ import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import useClipboard from "react-use-clipboard";
 import SurveyLocalizableTextInput from "../surveys/SurveyLocalizableTextInput";
 import { OfflineStateContext } from "../offline/OfflineStateContext";
+import useDialog from "../components/useDialog";
+import { downloadOfflineSurveyResponses } from "../offline/useOfflineSurveyResponses";
 
 export interface ThankYouProps {
   promptToRespondAgain?: boolean;
@@ -51,6 +53,7 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
     successDuration: 1000,
   });
   const { online } = useContext(OfflineStateContext);
+  const { confirm } = useDialog();
 
   const respondAgainMessage = useLocalizedComponentSetting(
     "respondAgainMessage",
@@ -100,6 +103,23 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
                     </p>
                   </>
                 )}
+                <p>
+                  <button
+                    onClick={async () => {
+                      const confirmed = await confirm("Download Responses", {
+                        primaryButtonText: "Download",
+                        description:
+                          "You may download response data in JSON format as a backup if needed. This backup would need to be provided to SeaSketch support for manual processing in the event of data loss.",
+                      });
+                      if (confirmed) {
+                        downloadOfflineSurveyResponses();
+                      }
+                    }}
+                    className="underline text-primary-500 text-sm"
+                  >
+                    <Trans ns="offline">Download responses</Trans>
+                  </button>
+                </p>
               </div>
               {online && (
                 <Link to={`/submit-offline-surveys`} className="underline">
