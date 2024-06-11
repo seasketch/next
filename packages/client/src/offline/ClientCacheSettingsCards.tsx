@@ -256,6 +256,10 @@ function ClientCacheDetailsModal({
     });
   }, [navigator.serviceWorker]);
 
+  useEffect(() => {
+    context.updateCacheSizes();
+  }, [ServiceWorkerWindow.build]);
+
   const queryCacheItems = useMemo(() => {
     const items: {
       name: string;
@@ -318,7 +322,8 @@ function ClientCacheDetailsModal({
                 <button
                   className="underline"
                   onClick={async () => {
-                    await serviceWorkerRegistration?.unregister();
+                    await serviceWorkerRegistration?.update();
+                    // await serviceWorkerRegistration?.unregister();
                     window.location.reload();
                   }}
                 >

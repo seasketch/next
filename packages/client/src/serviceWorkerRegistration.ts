@@ -49,9 +49,15 @@ function registerValidSW(swUrl: string, config?: Config) {
     .then((registration) => {
       // Check on service worker for updates every 5 minutes
       setInterval(() => registration.update(), 1000 * 60 * 5);
-      registration.onupdatefound = () => {
+      if (registration.active) {
+        ServiceWorkerWindow.updateWorkbox();
+      }
+      registration.addEventListener("updatefound", () => {
         const installingWorker = registration.installing;
         if (installingWorker == null) {
+          if (registration.active) {
+            ServiceWorkerWindow.updateWorkbox();
+          }
           return;
         }
         installingWorker.onstatechange = () => {
@@ -60,8 +66,8 @@ function registerValidSW(swUrl: string, config?: Config) {
               // At this point, the updated precached content has been fetched,
               // but the previous service worker will still serve the older
               // content until all client tabs are closed.
-              console.log("New service worker available");
               ServiceWorkerWindow.skipWaiting();
+              ServiceWorkerWindow.updateWorkbox();
               // Execute callback
               if (config && config.onUpdate) {
                 config.onUpdate(registration);
@@ -74,7 +80,7 @@ function registerValidSW(swUrl: string, config?: Config) {
             }
           }
         };
-      };
+      });
     })
     .catch((error) => {
       console.error("Error during service worker registration:", error);
@@ -94,7 +100,6 @@ function checkValidServiceWorker(swUrl: string, config?: Config) {
         (contentType != null && contentType.indexOf("javascript") === -1)
       ) {
         // No service worker found. Probably a different app. Reload the page.
-        console.log("no service worker found, reloading");
         navigator.serviceWorker.ready.then((registration) => {
           registration.unregister().then(() => {
             window.location.reload();
