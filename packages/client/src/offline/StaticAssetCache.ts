@@ -114,12 +114,9 @@ class StaticAssetCache {
     if (!this.manifest) {
       await this.setManifestFromServiceWorker();
     }
-    if (!this.manifest) {
-      throw new Error("Manifest not set");
-    }
     const entries = [];
     let bytes = 0;
-    for (const entry of this.manifest) {
+    for (const entry of this.manifest || []) {
       const response = await this.hasFile(entry);
       if (response) {
         bytes += (await response.blob()).size;
@@ -251,9 +248,12 @@ class StaticAssetCache {
    */
   async purgeStaleEntries() {
     if (!this.manifest) {
-      throw new Error(
-        "Manifest has not been set. Cannot purge cache without information about current bundles."
-      );
+      await this.setManifestFromServiceWorker();
+      if (!this.manifest) {
+        throw new Error(
+          "Manifest has not been set. Cannot purge cache without information about current bundles."
+        );
+      }
     }
     const cache = await this.cache;
     const cachedUrls = (await cache.keys()).map((req) => {
