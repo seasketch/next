@@ -23,6 +23,7 @@ import { ErrorBoundary } from "@sentry/react";
 import { DownloadManagerContext } from "./MapDownloadManager";
 import Modal from "../components/Modal";
 import ServiceWorkerWindow from "./ServiceWorkerWindow";
+import { Route, useHistory } from "react-router-dom";
 
 function label(id: string) {
   switch (id) {
@@ -75,6 +76,7 @@ function description(id: string) {
 export function CacheSettingCards({ className }: { className?: string }) {
   const { t } = useTranslation("cache-settings");
   const [dlContextValue, setDlContextValue] = useState(0);
+  const history = useHistory();
 
   const context = useContext(ClientCacheManagerContext);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -178,7 +180,7 @@ export function CacheSettingCards({ className }: { className?: string }) {
                 ) {
                   context.updateCacheSizes();
                 }
-                setDetailsOpen(true);
+                history.replace(`/${getSlug()}/app/settings/cacheDetails`);
               }}
               className="underline"
             >
@@ -186,14 +188,30 @@ export function CacheSettingCards({ className }: { className?: string }) {
             </button>
           </div>
         )}
-        {detailsOpen && context && (
+        <Route path={`/${getSlug()}/app/settings/cacheDetails`}>
+          {context && (
+            <ClientCacheDetailsModal
+              context={context}
+              onRequestClose={() => {
+                history.replace(`/${getSlug()}/app/settings`);
+              }}
+              loading={
+                context
+                  ? context.updatingCacheSizes && !context.cacheSizes
+                  : true
+              }
+              stats={context?.cacheSizes}
+            />
+          )}
+        </Route>
+        {/* {detailsOpen && context && (
           <ClientCacheDetailsModal
             context={context}
             onRequestClose={() => setDetailsOpen(false)}
             loading={context ? context.updatingCacheSizes : true}
             stats={context?.cacheSizes}
           />
-        )}
+        )} */}
       </Card>
       {data?.project?.isOfflineEnabled && (
         <ErrorBoundary
@@ -230,7 +248,7 @@ function ClientCacheDetailsModal({
   loading: boolean;
   onRequestClose: () => void;
   stats?: CacheInformation;
-  context: ClientCacheContextValue;
+  context?: ClientCacheContextValue;
 }) {
   const [swBuild, setSwBuild] = useState<string | null | undefined>(undefined);
   useEffect(() => {
@@ -238,7 +256,7 @@ function ClientCacheDetailsModal({
   }, [ServiceWorkerWindow.build]);
 
   const quotaPercent =
-    context.storageEstimate?.quota && context.storageEstimate.usage
+    context?.storageEstimate?.quota && context.storageEstimate.usage
       ? context.storageEstimate.usage / context.storageEstimate.quota
       : 0;
   const percent = Intl.NumberFormat(undefined, {
@@ -257,7 +275,7 @@ function ClientCacheDetailsModal({
   }, [navigator.serviceWorker]);
 
   useEffect(() => {
-    context.updateCacheSizes();
+    context?.updateCacheSizes();
   }, [ServiceWorkerWindow.build]);
 
   const queryCacheItems = useMemo(() => {
