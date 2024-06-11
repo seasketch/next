@@ -19,7 +19,10 @@ import {
   useSurveysByIdQuery,
 } from "../generated/graphql";
 import { OfflineStateContext } from "./OfflineStateContext";
-import useOfflineSurveyResponses from "./useOfflineSurveyResponses";
+import useOfflineSurveyResponses, {
+  downloadOfflineSurveyResponses,
+} from "./useOfflineSurveyResponses";
+import useDialog from "../components/useDialog";
 
 export default function SubmitOfflineResponsesPage() {
   const { online } = useContext(OfflineStateContext);
@@ -36,7 +39,7 @@ export default function SubmitOfflineResponsesPage() {
     responses: 0,
     projects: [],
   });
-  const { data, loading } = useSurveysByIdQuery({
+  const { data, loading, error } = useSurveysByIdQuery({
     variables: {
       surveyIds: [...responses.map((r) => r.surveyId)],
     },
@@ -135,8 +138,11 @@ export default function SubmitOfflineResponsesPage() {
     }
   }, [data, responses, mutate, onError, removeResponse]);
 
+  const { confirm } = useDialog();
+
   return (
     <CenteredCardListLayout>
+      {error && <Warning level="error">{error.message}</Warning>}
       <Card>
         <Header>
           {responses.length !== 0 ? (
@@ -349,6 +355,25 @@ export default function SubmitOfflineResponsesPage() {
               </>
             }
           />
+        </div>
+      )}
+      {responses?.length > 0 && (
+        <div className="w-full flex justify-center items-center pt-2">
+          <button
+            onClick={async () => {
+              const confirmed = await confirm("Download Responses", {
+                primaryButtonText: "Download",
+                description:
+                  "You may download response data in JSON format as a backup if needed. This backup would need to be provided to SeaSketch support for manual processing in the event of data loss.",
+              });
+              if (confirmed) {
+                downloadOfflineSurveyResponses();
+              }
+            }}
+            className="underline text-primary-500 text-sm"
+          >
+            <Trans ns="offline">Download responses</Trans>
+          </button>
         </div>
       )}
     </CenteredCardListLayout>

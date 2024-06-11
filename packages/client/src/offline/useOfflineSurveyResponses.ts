@@ -77,3 +77,23 @@ export default function useOfflineSurveyResponses() {
     removeResponse,
   };
 }
+
+export function downloadOfflineSurveyResponses() {
+  localforage.getItem(OFFLINE_SURVEY_RESPONSES_KEY).then((value) => {
+    if (value && Array.isArray(value) && value.length) {
+      const jsonString = JSON.stringify(value, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const a = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      // eslint-disable-next-line i18next/no-literal-string
+      a.download = `responses-${new Date().toLocaleDateString()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } else {
+      throw new Error("No offline survey responses to download");
+    }
+  });
+}
