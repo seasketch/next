@@ -99,8 +99,9 @@ export interface ClientCacheContextValue {
   populateOfflineSurveyAssets: (clearFirst: boolean) => Promise<void>;
 }
 
-export const ClientCacheManagerContext =
-  createContext<ClientCacheContextValue | undefined>(undefined);
+export const ClientCacheManagerContext = createContext<
+  ClientCacheContextValue | undefined
+>(undefined);
 
 const defaultCacheSetting = ClientCacheSettings.find(
   (l) => l.id === "default"
@@ -134,14 +135,13 @@ export function ClientCacheManagerProvider({
     [setState]
   );
 
-  const [storageStats, setStorageStats] =
-    useState<
-      | {
-          estimate?: StorageEstimate;
-          error?: string;
-        }
-      | undefined
-    >();
+  const [storageStats, setStorageStats] = useState<
+    | {
+        estimate?: StorageEstimate;
+        error?: string;
+      }
+    | undefined
+  >();
 
   const updateStorageStats = useCallback(async () => {
     if ("storage" in navigator && "estimate" in navigator.storage) {

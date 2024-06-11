@@ -27,7 +27,7 @@ function CacheProgress({
   loading?: boolean;
   className?: string;
 }) {
-  const barColor = percent === 100 ? "bg-primary-500" : "bg-gray-400";
+  const barColor = percent === 100 ? "bg-primary-500" : "bg-yellow-600";
   return (
     <div className={className}>
       {" "}
