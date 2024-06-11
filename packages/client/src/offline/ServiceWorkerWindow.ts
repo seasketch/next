@@ -22,16 +22,31 @@ export const MESSAGE_TYPES = {
  */
 class ServiceWorkerWindow {
   private wb: Pick<Workbox, "messageSW">;
+  public build?: string;
 
   constructor() {
     if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
       const wb = new Workbox("/service-worker.js");
       wb.register();
       this.wb = wb;
+      this.getSWBuild().then((build) => {
+        this.build = build;
+      });
     } else {
       this.wb = {
         messageSW: (message: object) => Promise.resolve(),
       };
+    }
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        // You can also perform additional actions here if needed
+        const wb = new Workbox("/service-worker.js");
+        wb.register();
+        this.wb = wb;
+        this.getSWBuild().then((build) => {
+          this.build = build;
+        });
+      });
     }
   }
 
@@ -96,4 +111,5 @@ class ServiceWorkerWindow {
   }
 }
 
-export default new ServiceWorkerWindow();
+const sww = new ServiceWorkerWindow();
+export default sww;

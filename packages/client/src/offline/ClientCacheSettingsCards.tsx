@@ -22,6 +22,7 @@ import getSlug from "../getSlug";
 import { ErrorBoundary } from "@sentry/react";
 import { DownloadManagerContext } from "./MapDownloadManager";
 import Modal from "../components/Modal";
+import ServiceWorkerWindow from "./ServiceWorkerWindow";
 
 function label(id: string) {
   switch (id) {
@@ -89,21 +90,26 @@ export function CacheSettingCards({ className }: { className?: string }) {
     // but I'd like an extra step to make sure prefetching works if the user is proactively
     // checking their offline readiness
     if (context?.level.prefetchEnabled) {
+      const doUpdate = async () => {
+        if (context) {
+          await context.staticAssetCache.populateCache();
+          await context.updateCacheSizes();
+        }
+      };
       setTimeout(() => {
         if (
           context.cacheSizes &&
           context.cacheSizes.staticAssets.entries.find((e) => !e.cached)
         ) {
-          context.staticAssetCache.populateCache().then(() => {
-            setTimeout(() => {
-              context.updateCacheSizes();
-            }, 100);
-          });
+          doUpdate();
         }
       }, 200);
+
+      setTimeout(() => {
+        context.updateCacheSizes();
+      }, 2000);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [context?.level?.prefetchEnabled]);
 
   const level = context?.level || defaultCacheSetting;
   const quotaPercent =
@@ -226,6 +232,11 @@ function ClientCacheDetailsModal({
   stats?: CacheInformation;
   context: ClientCacheContextValue;
 }) {
+  const [swBuild, setSwBuild] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    setSwBuild(ServiceWorkerWindow.build);
+  }, [ServiceWorkerWindow.build]);
+
   const quotaPercent =
     context.storageEstimate?.quota && context.storageEstimate.usage
       ? context.storageEstimate.usage / context.storageEstimate.quota
@@ -234,6 +245,16 @@ function ClientCacheDetailsModal({
     style: "percent",
     minimumFractionDigits: 2,
   });
+
+  const [serviceWorkerRegistration, setServiceWorkerRegistration] = useState<
+    ServiceWorkerRegistration | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    navigator.serviceWorker.getRegistration().then((registration) => {
+      setServiceWorkerRegistration(registration);
+    });
+  }, [navigator.serviceWorker]);
 
   const queryCacheItems = useMemo(() => {
     const items: {
@@ -286,6 +307,32 @@ function ClientCacheDetailsModal({
           <StaticAssetCacheStatus />
           <div className="mb-4 mt-2">
             <h2 className="flex-1 mb-1">
+              <Trans ns="cache-settings">Service Worker</Trans>
+            </h2>
+            <div className="">
+              <p className="text-gray-500 text-sm flex-1 mb-1">
+                The service worker is a background process that helps SeaSketch
+                work offline, acting as an <i>offline server</i> which resolves
+                requests from cache. While this service updates automatically,
+                you can also{" "}
+                <button
+                  className="underline"
+                  onClick={async () => {
+                    await serviceWorkerRegistration?.unregister();
+                    window.location.reload();
+                  }}
+                >
+                  force-update the service worker
+                </button>
+              </p>
+              <ServiceWorkerRegistration
+                registration={serviceWorkerRegistration}
+                build={swBuild}
+              />
+            </div>
+          </div>
+          <div className="mb-4 mt-2">
+            <h2 className="flex-1 mb-1">
               <Trans ns="cache-settings">Query Cache</Trans>
             </h2>
             <div className="flex">
@@ -321,5 +368,57 @@ function ClientCacheDetailsModal({
         </div>
       )}
     </Modal>
+  );
+}
+
+function ServiceWorkerRegistration({
+  registration,
+  build,
+}: {
+  registration?: ServiceWorkerRegistration | null;
+  build?: string | null | undefined;
+}) {
+  let status: "active" | "installing" | "waiting" | "none" | "out-of-date" =
+    "none";
+  let current: ServiceWorker | undefined;
+  if (registration?.active) {
+    status = "active";
+    current = registration.active;
+  } else if (registration?.installing) {
+    status = "installing";
+    current = registration.installing;
+  } else if (registration?.waiting) {
+    status = "waiting";
+    current = registration.waiting;
+  }
+  const appBuild = process.env.REACT_APP_BUILD || "local";
+  if (build && build !== appBuild) {
+    status = "out-of-date";
+  }
+  return (
+    <div
+      className={`flex font-mono text-sm items-center ${
+        status === "active"
+          ? "text-green-800"
+          : status === "none"
+          ? "text-red-700"
+          : "text-yellow-700"
+      }`}
+    >
+      {current && (
+        <>
+          <div className="flex-1">{current.scriptURL}</div>
+          <div>
+            {current.state} ({build}
+            {status === "out-of-date" && " outdated"})
+          </div>
+        </>
+      )}
+      {!current && status === "none" && (
+        <div>
+          <Trans ns="cache-settings">No service worker found!</Trans>
+        </div>
+      )}
+    </div>
   );
 }
