@@ -101,7 +101,7 @@ export default function SubmitOfflineResponsesPage() {
         },
         onError,
       });
-      if (!res.errors?.length) {
+      if (!res.errors?.length && res.data?.createSurveyResponseV2?.id) {
         await removeResponse(response.offlineId);
         setSubmissionDetails((prev) => {
           const surveyDetails = surveys.find(
