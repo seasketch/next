@@ -20236,7 +20236,7 @@ export type ToggleResponsesPracticeMutation = (
     { __typename?: 'ToggleResponsesPracticePayload' }
     & { surveyResponses?: Maybe<Array<(
       { __typename?: 'SurveyResponse' }
-      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail'>
+      & Pick<SurveyResponse, 'id' | 'isPractice' | 'archived' | 'lastUpdatedByEmail' | 'updatedAt'>
       & { survey?: Maybe<(
         { __typename?: 'Survey' }
         & Pick<Survey, 'id' | 'practiceResponseCount' | 'archivedResponseCount' | 'submittedResponseCount'>
@@ -31371,6 +31371,7 @@ export const ToggleResponsesPracticeDocument = gql`
       isPractice
       archived
       lastUpdatedByEmail
+      updatedAt
       survey {
         id
         practiceResponseCount

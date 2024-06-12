@@ -699,6 +699,7 @@ mutation toggleResponsesPractice($ids: [Int], $isPractice: Boolean) {
       isPractice
       archived
       lastUpdatedByEmail
+      updatedAt
       survey {
         id
         practiceResponseCount
