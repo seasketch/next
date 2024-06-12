@@ -128,7 +128,11 @@ function calculatePathToElement<
         throw new Error(
           `Stepped past current formElement! ${path
             .map((p) => p.typeId + ":" + p.id)
-            .join(" => ")}. step = ${step.typeId + ":" + step.id}`
+            .join(" => ")}. step = ${
+            step.typeId + ":" + step.id
+          }. index = ${sortedFormElements.indexOf(
+            step
+          )}. currentIndex = ${currentIndex}. recursion limit: ${recursionLimit}`
         );
       }
     }
