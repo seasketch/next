@@ -28,10 +28,25 @@ export async function networkFirst(
   cache: Cache | CacheLike,
   cacheKey: string,
   request: Request,
-  appendToCache?: boolean
+  appendToCache?: boolean,
+  timeout?: number
 ) {
+  const cached = await cache.match(cacheKey);
+  const abortController = new AbortController();
+  let timeoutRef: any;
+  if (timeout && cached) {
+    timeoutRef = setTimeout(() => {
+      console.warn("service-worker: aborting request due to timeout");
+      abortController.abort();
+    }, timeout);
+  }
   try {
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetch(request, {
+      signal: abortController.signal,
+    });
+    if (timeoutRef) {
+      clearTimeout(timeoutRef);
+    }
     if (networkResponse.ok) {
       if (appendToCache && networkResponse.status !== 204) {
         cache.put(cacheKey, networkResponse.clone());
@@ -54,7 +69,9 @@ export async function networkFirst(
       }
     }
   } catch (e) {
-    const cached = await cache.match(cacheKey);
+    if (timeoutRef) {
+      clearTimeout(timeoutRef);
+    }
     if (cached) {
       return cached;
     } else {

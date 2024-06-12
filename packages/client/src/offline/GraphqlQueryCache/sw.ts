@@ -107,7 +107,7 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
       if (cached) {
         this.putToCaches(strategies, cacheReq, cached.clone()).then(() => {
           if (strategies.find((s) => s.swr === true)) {
-            this.swr(event.request, cacheReq, variables, strategies);
+            this.swr(event.request, cacheReq, variables, strategies, 8000);
           }
         });
         return cached;
@@ -158,12 +158,28 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
     request: Request,
     cacheKey: Request,
     variables: any,
-    strategies: Strategy[]
+    strategies: Strategy[],
+    timeout?: number
   ) {
     try {
       const queryName = strategies[0].queryName;
       // 1) fetch in background
-      const response = await fetch(request);
+      let abortController: AbortController | undefined = undefined;
+      if (timeout) {
+        abortController = new AbortController();
+        setTimeout(() => {
+          console.warn("service-worker swr: aborting request due to timeout");
+          abortController?.abort();
+        }, timeout);
+      }
+      const response = await fetch(
+        request,
+        abortController
+          ? {
+              signal: abortController.signal,
+            }
+          : undefined
+      );
       if (response.ok) {
         const json = await response.clone().json();
         if (!("errors" in json) || json.errors.length === 0) {
@@ -186,6 +202,9 @@ export class GraphqlQueryCache extends GraphqlQueryCacheCommon {
         }
       }
     } catch (e) {
+      if (e.name === "AbortError") {
+        console.warn("service-worker: aborting request due to timeout");
+      }
       // Not necessary to do anything if offline
       // TODO: consider notifying the related client that the user may be
       // offline, or if it's a server error show a toast message

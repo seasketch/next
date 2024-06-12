@@ -54,7 +54,13 @@ export async function handleMapTileRequest(
   // Default is network-first resolution
   resolution = resolution || "network-first";
   if (resolution === "network-first") {
-    return networkFirst(MapTileCacheLike, cacheKey, event.request, false);
+    return networkFirst(
+      MapTileCacheLike,
+      cacheKey,
+      event.request,
+      false,
+      navigator.onLine ? 8000 : 3000
+    );
   } else {
     return cacheFirst(MapTileCacheLike, cacheKey, event.request, false);
   }
