@@ -3403,7 +3403,8 @@ export function useMapContext(options?: MapContextOptions) {
 
   useEffect(() => {
     if (error) {
-      throw error;
+      console.error(error);
+      return;
     }
     if (data?.projectBySlug?.region.geojson && state.manager) {
       state.manager.setProjectBounds(data.projectBySlug.region.geojson);
