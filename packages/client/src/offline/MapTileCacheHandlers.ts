@@ -2,13 +2,15 @@ import { OfflineTileSettings } from "@seasketch/map-tile-cache-calculator";
 import { MapTileCacheCalculator as Calculator } from "@seasketch/map-tile-cache-calculator";
 import { cacheFirst, CacheLike, networkFirst } from "./handlerStrategies";
 
-const calculator = new Calculator("https://d3p1dsef9f0gjr.cloudfront.net/");
+let calculator: Calculator;
 
 export function handleSimulatorRequest(
   url: URL,
   event: FetchEvent,
   settings: OfflineTileSettings
 ) {
+  calculator =
+    calculator || new Calculator("https://d3p1dsef9f0gjr.cloudfront.net/");
   const realUrl = url.toString().replace("-offline", "");
   const match = url.pathname.match(/\/(\d+)\/(\d+)\/(\d+).+$/);
   if (match && match.length) {
