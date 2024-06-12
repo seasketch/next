@@ -125,7 +125,11 @@ function calculatePathToElement<
         sortedFormElements.indexOf(step) > currentIndex &&
         !step.subordinateTo
       ) {
-        throw new Error("Stepped past current formElement!");
+        throw new Error(
+          `Stepped past current formElement! ${path
+            .map((p) => p.typeId + ":" + p.id)
+            .join(" => ")}. step = ${step.typeId + ":" + step.id}`
+        );
       }
     }
   }
