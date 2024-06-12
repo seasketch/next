@@ -14,7 +14,13 @@ type OfflineSurveyResponse = {
   groupResponse: boolean;
 };
 
+type SubmittedOfflineSurveyResponse = OfflineSurveyResponse & {
+  submittedAt: Date;
+};
+
 const OFFLINE_SURVEY_RESPONSES_KEY = "offline-survey-responses";
+const SUBMITTED_OFFLINE_SURVEY_RESPONSES_KEY =
+  "submitted-offline-survey-responses";
 
 export default function useOfflineSurveyResponses() {
   const [responses, setResponses] = useState<OfflineSurveyResponse[]>([]);
@@ -38,9 +44,10 @@ export default function useOfflineSurveyResponses() {
       groupResponse: boolean,
       responseData: { [formElementId: number]: any }
     ) => {
-      const responses = ((await localforage.getItem(
-        OFFLINE_SURVEY_RESPONSES_KEY
-      )) || []) as OfflineSurveyResponse[];
+      const responses =
+        (await localforage.getItem<OfflineSurveyResponse[]>(
+          OFFLINE_SURVEY_RESPONSES_KEY
+        )) || [];
       responses.push({
         offlineId: uuid(),
         surveyId,
@@ -67,6 +74,21 @@ export default function useOfflineSurveyResponses() {
     )) || []) as OfflineSurveyResponse[];
     const filtered = responses.filter((r) => r.offlineId !== offlineId);
     await localforage.setItem(OFFLINE_SURVEY_RESPONSES_KEY, filtered);
+    const submittedResponse = responses.find((r) => r.offlineId === offlineId);
+    if (submittedResponse) {
+      const submittedResponses =
+        (await localforage.getItem<SubmittedOfflineSurveyResponse[]>(
+          SUBMITTED_OFFLINE_SURVEY_RESPONSES_KEY
+        )) || [];
+      submittedResponses.push({
+        ...submittedResponse,
+        submittedAt: new Date(),
+      });
+      await localforage.setItem(
+        SUBMITTED_OFFLINE_SURVEY_RESPONSES_KEY,
+        submittedResponses
+      );
+    }
     setResponses(filtered);
   }, []);
 
