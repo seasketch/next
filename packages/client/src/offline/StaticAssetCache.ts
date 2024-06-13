@@ -307,7 +307,7 @@ class StaticAssetCache {
       "/",
       event.request,
       true,
-      8000
+      navigator.onLine ? 8000 : 1000
     );
     if (response.status === 204) {
       console.warn("networkThenIndexHtmlCache 204 response");
