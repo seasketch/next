@@ -36,8 +36,13 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
     setSaving(true);
     setErrors(null);
     const startedSubmissionAt = new Date().getTime();
-
-    if (surveyContext?.saveResponse) {
+    if (!online && surveyContext?.clientIsPreppedForOfflineUse) {
+      setTimeout(() => {
+        surveyContext.saveResponseToOfflineStore().then(() => {
+          advance(startedSubmissionAt);
+        });
+      }, 1000);
+    } else if (surveyContext?.saveResponse) {
       surveyContext.saveResponse().then(async (response) => {
         if (response.errors) {
           if (!online && surveyContext.clientIsPreppedForOfflineUse) {
