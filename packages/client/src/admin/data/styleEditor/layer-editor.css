@@ -1,0 +1,8 @@
+.LayerEditor input[type="number"]:hover::-webkit-inner-spin-button,
+.LayerEditor input[type="number"]:hover::-webkit-outer-spin-button,
+.LayerEditor input[type="number"]:focus::-webkit-inner-spin-button,
+.LayerEditor input[type="number"]:focus::-webkit-outer-spin-button {
+  /* -webkit-appearance: none; */
+  margin: 0;
+  opacity: 0.4;
+}
