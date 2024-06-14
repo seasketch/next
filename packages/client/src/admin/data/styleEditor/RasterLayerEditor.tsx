@@ -33,7 +33,19 @@ export default function RasterLayerEditor({
         "raster-brightness-min" in glLayer.paint ||
         "raster-brightness-max" in glLayer.paint)
     );
-  }, [glLayer.paint]);
+  }, [
+    glLayer.paint,
+    // @ts-ignore
+    glLayer.paint?.["raster-contrast"],
+    // @ts-ignore
+    glLayer.paint?.["raster-saturation"],
+    // @ts-ignore
+    glLayer.paint?.["raster-hue-rotate"],
+    // @ts-ignore
+    glLayer.paint?.["raster-brightness-min"],
+    // @ts-ignore
+    glLayer.paint?.["raster-brightness-max"],
+  ]);
 
   return (
     <>

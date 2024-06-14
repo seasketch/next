@@ -1,11 +1,20 @@
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { ReactNode, RefObject, useCallback, useMemo } from "react";
+import {
+  ReactNode,
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { formatJSONCommand } from "../GLStyleEditor/formatCommand";
 import { RasterInfo, GeostatsLayer } from "@seasketch/geostats-types";
 import { validVisualizationTypesForGeostats } from "./visualizationTypes";
 import { Layer } from "mapbox-gl";
 import LayerEditor from "./LayerEditor";
+import deepEqual from "fast-deep-equal";
+import set from "lodash.set";
 
 type PropertyRef = {
   type: "paint" | "layout" | undefined;
@@ -25,13 +34,37 @@ export default function GUIStyleEditor({
     return validVisualizationTypesForGeostats(geostats);
   }, [geostats]);
 
-  const styleJSON = useMemo(() => {
-    try {
-      return JSON.parse(style) as Layer[];
-    } catch (e) {
-      return null;
+  // TODO: maintain a copy of the style JSON in local state and do fast updates
+  // to it in support of rendering the GUI controls. These changes can then be
+  // applied to the codemirror state (immediately or with a debounce), and
+  // changes incoming from codemirror should be checked with a fast-deep-equal
+  // check against the local state to avoid unnecessary re-renders.
+  // The map can be updated from here on some sort of debounced interval, or
+  // could rely on the existing codemirror cycle depending on how often
+  // codemirror state gets updated.
+
+  const [styleJSON, setStyleJSON] = useState(JSON.parse(style) as Layer[]);
+
+  // TODO: This doesn't work reliably because it can be called before the
+  // transation is committed
+  useEffect(() => {
+    const view = editorRef.current?.view;
+    if (view) {
+      const keydownHandler = (e: KeyboardEvent) => {
+        if (e.key === "z" && e.metaKey) {
+          // sync state
+          setTimeout(() => {
+            const doc = view.state.doc.toString();
+            setStyleJSON(JSON.parse(doc) as Layer[]);
+          }, 100);
+        }
+      };
+      document.body.addEventListener("keydown", keydownHandler);
+      return () => {
+        document.body.removeEventListener("keydown", keydownHandler);
+      };
     }
-  }, [style]);
+  }, [editorRef, setStyleJSON]);
 
   const visualizationType =
     validVisualizationTypes.length > 0 ? validVisualizationTypes[0] : null;
@@ -56,6 +89,7 @@ export default function GUIStyleEditor({
           delete layer[property];
         }
       });
+      setStyleJSON([...styleJSON]);
       editorRef.current?.view?.dispatch({
         changes: {
           from: 0,
@@ -109,6 +143,7 @@ export default function GUIStyleEditor({
       // if (errors.length > 0) {
       //   throw new Error(errors.join("\n"));
       // }
+      setStyleJSON([...styleJSON]);
       editorRef.current?.view?.dispatch({
         changes: {
           from: 0,
@@ -118,7 +153,7 @@ export default function GUIStyleEditor({
       });
       formatJSONCommand(editorRef.current?.view!);
     },
-    [styleJSON, editorRef]
+    [styleJSON, editorRef, setStyleJSON]
   );
 
   if (validVisualizationTypes.length === 0) {
