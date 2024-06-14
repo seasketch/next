@@ -1,6 +1,9 @@
-import { Cross1Icon } from "@radix-ui/react-icons";
+import { Cross1Icon, TrashIcon, TriangleDownIcon } from "@radix-ui/react-icons";
 import { Trans } from "react-i18next";
 import * as Editor from "./Editors";
+import * as Slider from "@radix-ui/react-slider";
+import { useContext, useEffect, useState } from "react";
+import { MapContext } from "../../../dataLayers/MapContextManager";
 
 export function ZoomRangeEditor({
   minzoom,
@@ -11,13 +14,30 @@ export function ZoomRangeEditor({
   maxzoom?: number;
   onChange: (minzoom?: number, maxzoom?: number) => void;
 }) {
+  const [zoom, setZoom] = useState(0);
+  const mapContext = useContext(MapContext);
+  useEffect(() => {
+    if (mapContext.manager?.map) {
+      const onZoom = () => {
+        setZoom(
+          Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10
+        );
+      };
+      mapContext.manager.map.on("zoom", onZoom);
+      setZoom(Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10);
+      return () => {
+        mapContext.manager?.map?.off("zoom", onZoom);
+      };
+    }
+  }, [mapContext.manager?.map]);
   if (minzoom === undefined || maxzoom === undefined) {
     return null;
   }
+
   return (
     <div className="flex flex-1 items-center group text-sm h-10">
-      <h3 className="capitalize text-sm flex-1 flex items-center space-x-2">
-        <span>
+      <h3 className="capitalize text-sm flex-1 items-center space-x-2 flex mr-2">
+        <span className="">
           <Trans ns="admin:data">zoom range</Trans>
         </span>
         <button
@@ -26,28 +46,35 @@ export function ZoomRangeEditor({
           }}
           className="opacity-0 group-hover:opacity-80 text-indigo-300"
         >
-          <Cross1Icon />
+          <TrashIcon className="w-5 h-5" />
         </button>
       </h3>
       <Editor.Control>
-        <input
-          type="number"
-          className="bg-gray-700 rounded-l py-0.5 pr-0.5 w-14"
-          value={minzoom}
+        <Slider.Root
+          className="relative flex items-center select-none touch-none w-44 h-5"
+          value={[minzoom, maxzoom]}
           min={0}
-          max={Math.min(maxzoom, 16)}
+          max={24}
           step={1}
-          onChange={(e) => onChange(parseFloat(e.target.value), maxzoom)}
-        />
-        <input
-          type="number"
-          className="bg-gray-700 rounded-r py-0.5 pr-0.5  w-14"
-          value={maxzoom}
-          min={Math.max(minzoom, 2)}
-          max={22}
-          step={1}
-          onChange={(e) => onChange(minzoom, parseFloat(e.target.value))}
-        />
+          minStepsBetweenThumbs={1}
+          onValueChange={(v) => {
+            onChange(v[0], v[1]);
+          }}
+        >
+          <TriangleDownIcon
+            style={{
+              // move the zoom indicator according to the current zoom level
+              // along the track
+              transform: `translateX(${((zoom || 5) / 24) * 176}px)`,
+            }}
+            className="w-7 h-7 absolute -top-3.5 -left-2.5 text-green-400 opacity-50 pointer-events-none transform"
+          />
+          <Slider.Track className="bg-gray-800 bg-opacity-90 border-b border-gray-600  relative grow rounded h-1 w-full">
+            <Slider.Range className="absolute bg-indigo-500 rounded h-full" />
+          </Slider.Track>
+          <Editor.Thumb aria-label="minzoom" />
+          <Editor.Thumb aria-label="maxzoom" />
+        </Slider.Root>
       </Editor.Control>
     </div>
   );

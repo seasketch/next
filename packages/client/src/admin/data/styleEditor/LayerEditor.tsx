@@ -1,6 +1,10 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 import { Layer } from "mapbox-gl";
-import { EditorCard, LayerPropertyUpdater } from "./GUIStyleEditor";
+import {
+  EditorCard,
+  LayerPropertyDeleter,
+  LayerPropertyUpdater,
+} from "./GUIStyleEditor";
 import { RefObject } from "react";
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { OpacityEditor } from "./OpacityEditor";
@@ -18,12 +22,14 @@ export default function LayerEditor({
   glLayer,
   editorRef,
   updateLayerProperty,
+  deleteLayerProperties,
 }: {
   // layer: FullAdminDataLayerFragment;
   geostats: GeostatsLayer | RasterInfo;
   glLayer: Layer;
   editorRef: RefObject<ReactCodeMirrorRef>;
   updateLayerProperty: LayerPropertyUpdater;
+  deleteLayerProperties: LayerPropertyDeleter;
 }) {
   if (!supportedTypes.includes(glLayer.type)) {
     return null;
@@ -31,8 +37,8 @@ export default function LayerEditor({
     return (
       <EditorCard>
         <div className="flex flex-1 group pb-2">
-          <h3 className="capitalize text-lg flex-1 space-x-2">
-            <span>{glLayer.type}</span>
+          <h3 className="capitalize text-lg flex-1 space-x-2 flex">
+            <span className="flex-1">{glLayer.type}</span>
             {(glLayer.minzoom !== undefined ||
               glLayer.maxzoom !== undefined) && (
               <span className="text-sm text-gray-400">
@@ -78,6 +84,8 @@ export default function LayerEditor({
             <RasterLayerEditor
               glLayer={glLayer}
               updateLayerProperty={updateLayerProperty}
+              deleteLayerProperties={deleteLayerProperties}
+              rasterInfo={geostats as RasterInfo}
             />
           )}
         </div>

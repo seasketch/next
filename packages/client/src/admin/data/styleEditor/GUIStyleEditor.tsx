@@ -1,22 +1,16 @@
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import {
-  ChangeEventHandler,
-  ReactNode,
-  RefObject,
-  useCallback,
-  useMemo,
-} from "react";
+import { ReactNode, RefObject, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { formatJSONCommand } from "../GLStyleEditor/formatCommand";
-import {
-  RasterInfo,
-  GeostatsLayer,
-  isRasterInfo,
-} from "@seasketch/geostats-types";
+import { RasterInfo, GeostatsLayer } from "@seasketch/geostats-types";
 import { validVisualizationTypesForGeostats } from "./visualizationTypes";
 import { Layer } from "mapbox-gl";
 import LayerEditor from "./LayerEditor";
-import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
+
+type PropertyRef = {
+  type: "paint" | "layout" | undefined;
+  property: string;
+};
 
 export default function GUIStyleEditor({
   editorRef,
@@ -43,6 +37,36 @@ export default function GUIStyleEditor({
     validVisualizationTypes.length > 0 ? validVisualizationTypes[0] : null;
 
   const { t } = useTranslation("admin:data");
+
+  const deleteLayerProperties = useCallback(
+    (layerIndex: number, properties: PropertyRef[]) => {
+      if (styleJSON === null) {
+        throw new Error("Style JSON is null");
+      }
+      if (layerIndex >= styleJSON.length) {
+        throw new Error("Layer index out of bounds");
+      }
+      const layer = styleJSON[layerIndex];
+      properties.forEach(({ type, property }) => {
+        if (type && layer[type]) {
+          // @ts-ignore
+          delete layer[type][property];
+        } else {
+          // @ts-ignore
+          delete layer[property];
+        }
+      });
+      editorRef.current?.view?.dispatch({
+        changes: {
+          from: 0,
+          to: editorRef.current.view!.state.doc.length,
+          insert: JSON.stringify(styleJSON),
+        },
+      });
+      formatJSONCommand(editorRef.current?.view!);
+    },
+    [editorRef, styleJSON]
+  );
 
   const updateLayerProperty = useCallback(
     (
@@ -127,11 +151,14 @@ export default function GUIStyleEditor({
         styleJSON.map((layer, idx) => (
           <LayerEditor
             editorRef={editorRef}
-            key={layer.id}
+            key={idx + layer.type}
             glLayer={layer}
             geostats={geostats}
             updateLayerProperty={(type, property, value) => {
               updateLayerProperty(idx, type, property, value);
+            }}
+            deleteLayerProperties={(properties) => {
+              deleteLayerProperties(idx, properties);
             }}
           />
         ))}
@@ -144,6 +171,8 @@ export type LayerPropertyUpdater = (
   property: string,
   value: any
 ) => void;
+
+export type LayerPropertyDeleter = (properties: PropertyRef[]) => void;
 
 export function EditorCard({
   className,

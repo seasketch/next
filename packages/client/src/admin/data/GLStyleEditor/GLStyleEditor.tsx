@@ -106,7 +106,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   );
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
-  const [editor, setEditor] = useState<"style" | "code">("code");
+  const [editor, setEditor] = useState<"style" | "code">("style");
   const type = props.type || "vector";
 
   const spriteQuery = useSpritesQuery({
