@@ -287,6 +287,7 @@ export default function LayerTableOfContentsItemEditor(
                 <GLStyleEditor
                   tocItemId={item.stableId}
                   geostats={geostats}
+                  dataSource={source}
                   type={
                     source.type === DataSourceTypes.SeasketchRaster
                       ? "raster"

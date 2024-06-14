@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isRasterInfo = exports.SuggestedRasterPresentation = exports.isLegacyGeostatsAttribute = exports.isLegacyGeostatsLayer = exports.isNumericGeostatsAttribute = void 0;
+exports.isGeostatsLayer = exports.isRasterInfo = exports.SuggestedRasterPresentation = exports.isLegacyGeostatsAttribute = exports.isLegacyGeostatsLayer = exports.isNumericGeostatsAttribute = void 0;
 function isNumericGeostatsAttribute(attr) {
     return attr.type === "number";
 }
@@ -33,3 +33,7 @@ function isRasterInfo(info) {
     return info.bands !== undefined;
 }
 exports.isRasterInfo = isRasterInfo;
+function isGeostatsLayer(data) {
+    return (!Array.isArray(data) && data.attributes !== undefined);
+}
+exports.isGeostatsLayer = isGeostatsLayer;

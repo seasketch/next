@@ -43,6 +43,8 @@ import {
   GetSpriteDocument,
   GetSpriteQuery,
   AdminSketchingDetailsFragment,
+  DataSourceDetailsFragment,
+  FullAdminSourceFragment,
 } from "../../../generated/graphql";
 import getSlug from "../../../getSlug";
 import SpritePopover from "./SpritePopover";
@@ -59,9 +61,14 @@ import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import GeostatsModal, { Geostats } from "./GeostatsModal";
 import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
-import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
+import {
+  GeostatsLayer,
+  RasterInfo,
+  isGeostatsLayer,
+  isRasterInfo,
+} from "@seasketch/geostats-types";
 import { Trans, useTranslation } from "react-i18next";
-import GUIStyleEditor from "../GUIStyleEditor";
+import GUIStyleEditor from "../styleEditor/GUIStyleEditor";
 import CodeVsGuiSwitch from "./CodeVsGuiSwitch";
 
 require("./RadixDropdown.css");
@@ -74,6 +81,7 @@ interface GLStyleEditorProps {
   geostats?: GeostatsLayer;
   bounds?: [number, number, number, number];
   tocItemId?: string;
+  dataSource?: FullAdminSourceFragment;
   onRequestShowBounds?: (bounds: [number, number, number, number]) => void;
 }
 
@@ -125,7 +133,9 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     selectedSpriteId: number | null;
   }>(null);
 
-  const [geostatsModal, setGeostatsModal] = useState<null | Geostats>(null);
+  const [geostatsModal, setGeostatsModal] = useState<
+    null | Geostats | RasterInfo
+  >(null);
 
   useEffect(() => {
     const view = editorRef.current?.view;
@@ -260,24 +270,20 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     <div
       className="flex flex-col h-full overflow-hidden transition-colors"
       style={{
-        backgroundColor: editor === "code" ? "rgb(48, 56, 65)" : "#fefefe",
+        backgroundColor: "rgb(48, 56, 65)",
       }}
     >
       <div
-        className={`transition-colors p-0.5   border-opacity-30 z-10 shadow flex space-x-2 flex-0 ${
-          editor === "code" ? "border-b border-black" : ""
-        }`}
+        className={`transition-colors p-0.5   border-opacity-30 z-10 shadow flex space-x-2 flex-0 ${"border-b border-black"}`}
         style={{
-          backgroundColor: editor === "code" ? "#303841" : "rgb(243, 244, 246)",
+          backgroundColor: "#303841",
         }}
       >
         {(props.tocItemId || props.geostats) && (
           <>
             <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center text-sm">
               <Menubar.Menu>
-                <MenubarTrigger dark={editor === "code"}>
-                  {t("View")}
-                </MenubarTrigger>
+                <MenubarTrigger dark={true}>{t("View")}</MenubarTrigger>
                 <Menubar.Portal>
                   <MenuBarContent>
                     <MenuBarItem
@@ -325,9 +331,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                 </Menubar.Portal>
               </Menubar.Menu>
               <Menubar.Menu>
-                <MenubarTrigger dark={editor === "code"}>
-                  {t("Edit")}
-                </MenubarTrigger>
+                <MenubarTrigger dark={true}>{t("Edit")}</MenubarTrigger>
                 <Menubar.Portal>
                   <MenuBarContent>
                     <MenuBarItem
@@ -504,11 +508,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
             {props.tocItemId && (
               <div className="flex-1 flex items-center justify-end pr-2">
                 <span
-                  className={`transition-colors font-mono text-sm h-3/4 block ${
-                    editor === "code"
-                      ? "bg-gray-700 text-green-300 text-opacity-80 border border-opacity-0"
-                      : "bg-gray-200 text-blue-500 border border-black border-opacity-5"
-                  } px-1 rounded w-24 text-center tabular-nums flex items-center justify-center space-x-2`}
+                  className={`transition-colors font-mono text-sm h-3/4 block ${"bg-gray-700 text-green-300 text-opacity-80 border border-opacity-0"} px-1 rounded w-24 text-center tabular-nums flex items-center justify-center space-x-2`}
                 >
                   <span>zoom</span>
                   <span className="font-mono ">
@@ -551,7 +551,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }
         }}
       />
-      {geostatsModal && (
+      {geostatsModal && !isRasterInfo(geostatsModal) && (
         <GeostatsModal
           geostats={geostatsModal}
           onRequestClose={() => {
@@ -559,8 +559,12 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }}
         />
       )}
-      {editor === "style" && (
-        <GUIStyleEditor style={layers} editorRef={editorRef} />
+      {editor === "style" && props.dataSource?.geostats && (
+        <GUIStyleEditor
+          style={layers}
+          editorRef={editorRef}
+          geostats={props.dataSource.geostats}
+        />
       )}
       {editor === "code" && (
         <p className="text-sm text-gray-100 p-4 bg-gray-700">

@@ -179,7 +179,7 @@ export type RasterBandInfo = {
   count: number;
   minimum: number;
   maximum: number;
-  // interval: number;
+  interval: number;
   noDataValue: number | null;
   scale: number | null;
   offset: number | null;
@@ -223,7 +223,15 @@ export interface RasterInfo {
 }
 
 export function isRasterInfo(
-  info: RasterInfo | GeostatsLayer
+  info: RasterInfo | GeostatsLayer | any
 ): info is RasterInfo {
   return (info as RasterInfo).bands !== undefined;
+}
+
+export function isGeostatsLayer(
+  data: RasterInfo | GeostatsLayer | any
+): data is GeostatsLayer {
+  return (
+    !Array.isArray(data) && (data as GeostatsLayer).attributes !== undefined
+  );
 }

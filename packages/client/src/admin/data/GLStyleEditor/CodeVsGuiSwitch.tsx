@@ -15,11 +15,7 @@ export default function CodeVsGuiSwitch({
   const { t } = useTranslation("admin:data");
   return (
     <div
-      className={`text-sm flex relative items-center transition-colors border-2 rounded-md h-3/4 ${className} ${
-        value === "code"
-          ? "bg-gray-600 border-gray-600"
-          : "bg-gray-300 border-gray-300"
-      }`}
+      className={`text-sm flex relative items-center transition-colors border-2 rounded-md h-3/4 ${className} bg-gray-600 border-gray-600`}
     >
       <button
         onClick={() => onChange("style")}
@@ -35,7 +31,7 @@ export default function CodeVsGuiSwitch({
         onClick={() => onChange("code")}
         style={{ width }}
         className={`flex items-center justify-center space-x-1 z-10 py-1 px-2 ${
-          value === "code" ? "text-black" : " text-gray-500"
+          value === "code" ? "text-black" : " text-gray-300"
         }`}
       >
         <CodeIcon className="w-4 h-4" />
@@ -47,9 +43,7 @@ export default function CodeVsGuiSwitch({
           transform:
             value === "style" ? "translateX(0)" : `translateX(${width}px)`,
         }}
-        className={`transition-all h-full ${
-          value === "style" ? "bg-white" : "bg-indigo-200"
-        } absolute left-0  rounded shadow`}
+        className={`transition-all h-full bg-indigo-200 absolute left-0  rounded shadow`}
       ></div>
     </div>
     // <div
