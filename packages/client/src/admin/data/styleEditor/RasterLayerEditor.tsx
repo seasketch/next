@@ -10,17 +10,21 @@ import { RasterBrightnessEditor } from "./RasterBrightnessEditor";
 import { RasterHueRotateEditor } from "./RasterHueRotateEditor";
 import { useMemo } from "react";
 import { RasterInfo } from "@seasketch/geostats-types";
+import { VisualizationType, replaceColors } from "./visualizationTypes";
+import RasterColorPalette from "./RasterColorPaletteEditor";
 
 export default function RasterLayerEditor({
   updateLayerProperty,
   glLayer,
   deleteLayerProperties,
   rasterInfo,
+  type,
 }: {
   updateLayerProperty: LayerPropertyUpdater;
   glLayer: Layer;
   deleteLayerProperties: LayerPropertyDeleter;
   rasterInfo: RasterInfo;
+  type: VisualizationType | null;
 }) {
   const { t } = useTranslation("admin:data");
 
@@ -63,71 +67,100 @@ export default function RasterLayerEditor({
         // @ts-ignore
         value={glLayer.paint?.["raster-fade-duration"]}
       />
-      <Editor.Header
-        title={
-          <span>
-            {t("Appearance")}
-            {hasAppearanceProp && (
-              <button
-                onClick={() =>
-                  deleteLayerProperties([
-                    { type: "paint", property: "raster-contrast" },
-                    { type: "paint", property: "raster-saturation" },
-                    { type: "paint", property: "raster-hue-rotate" },
-                    { type: "paint", property: "raster-brightness-min" },
-                    { type: "paint", property: "raster-brightness-max" },
-                  ])
-                }
-                className="ml-2 text-sm text-indigo-300 hover:underline"
-              >
-                {" "}
-                {t("reset")}
-              </button>
-            )}
-          </span>
-        }
-      />
-      <RasterContrastEditor
-        // @ts-ignore
-        value={glLayer.paint?.["raster-contrast"]}
-        onChange={(value) => {
-          updateLayerProperty("paint", "raster-contrast", value);
-        }}
-      />
-      <RasterSaturationEditor
-        // @ts-ignore
-        value={glLayer.paint?.["raster-saturation"]}
-        onChange={(value) => {
-          updateLayerProperty("paint", "raster-saturation", value);
-        }}
-        rasterInfo={rasterInfo}
-      />
-      <RasterHueRotateEditor
-        // @ts-ignore
-        value={glLayer.paint?.["raster-hue-rotate"]}
-        onChange={(value) => {
-          updateLayerProperty("paint", "raster-hue-rotate", value);
-        }}
-        rasterInfo={rasterInfo}
-      />
-      <RasterBrightnessEditor
-        // @ts-ignore
-        value={glLayer.paint?.["raster-brightness-min"]}
-        onChange={(value) => {
-          updateLayerProperty("paint", "raster-brightness-min", value);
-        }}
-        property="raster-brightness-min"
-        defaultValue={0}
-      />
-      <RasterBrightnessEditor
-        // @ts-ignore
-        value={glLayer.paint?.["raster-brightness-max"]}
-        onChange={(value) => {
-          updateLayerProperty("paint", "raster-brightness-max", value);
-        }}
-        property="raster-brightness-max"
-        defaultValue={1}
-      />
+      {type === VisualizationType.CATEGORICAL_RASTER && (
+        <>
+          <RasterColorPalette
+            value={(glLayer.metadata || {})["s:palette"]}
+            onChange={(palette) => {
+              console.log(
+                replaceColors(
+                  (glLayer.paint! as any)["raster-color"],
+                  palette,
+                  glLayer.metadata?.["s:reverse-palette"] || false
+                )
+              );
+              updateLayerProperty(
+                "paint",
+                "raster-color",
+                replaceColors(
+                  (glLayer.paint! as any)["raster-color"],
+                  palette,
+                  glLayer.metadata?.["s:reverse-palette"] || false
+                )
+              );
+            }}
+          />
+        </>
+      )}
+      {type === VisualizationType.RGB_RASTER && (
+        <>
+          <Editor.Header
+            title={
+              <span>
+                {t("Appearance")}
+                {hasAppearanceProp && (
+                  <button
+                    onClick={() =>
+                      deleteLayerProperties([
+                        { type: "paint", property: "raster-contrast" },
+                        { type: "paint", property: "raster-saturation" },
+                        { type: "paint", property: "raster-hue-rotate" },
+                        { type: "paint", property: "raster-brightness-min" },
+                        { type: "paint", property: "raster-brightness-max" },
+                      ])
+                    }
+                    className="ml-2 text-sm text-indigo-300 hover:underline"
+                  >
+                    {" "}
+                    {t("reset")}
+                  </button>
+                )}
+              </span>
+            }
+          />
+          <RasterContrastEditor
+            // @ts-ignore
+            value={glLayer.paint?.["raster-contrast"]}
+            onChange={(value) => {
+              updateLayerProperty("paint", "raster-contrast", value);
+            }}
+          />
+          <RasterSaturationEditor
+            // @ts-ignore
+            value={glLayer.paint?.["raster-saturation"]}
+            onChange={(value) => {
+              updateLayerProperty("paint", "raster-saturation", value);
+            }}
+            rasterInfo={rasterInfo}
+          />
+          <RasterHueRotateEditor
+            // @ts-ignore
+            value={glLayer.paint?.["raster-hue-rotate"]}
+            onChange={(value) => {
+              updateLayerProperty("paint", "raster-hue-rotate", value);
+            }}
+            rasterInfo={rasterInfo}
+          />
+          <RasterBrightnessEditor
+            // @ts-ignore
+            value={glLayer.paint?.["raster-brightness-min"]}
+            onChange={(value) => {
+              updateLayerProperty("paint", "raster-brightness-min", value);
+            }}
+            property="raster-brightness-min"
+            defaultValue={0}
+          />
+          <RasterBrightnessEditor
+            // @ts-ignore
+            value={glLayer.paint?.["raster-brightness-max"]}
+            onChange={(value) => {
+              updateLayerProperty("paint", "raster-brightness-max", value);
+            }}
+            property="raster-brightness-max"
+            defaultValue={1}
+          />
+        </>
+      )}
     </>
   );
 }

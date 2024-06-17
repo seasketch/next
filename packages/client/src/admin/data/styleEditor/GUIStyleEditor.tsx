@@ -10,11 +10,21 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { formatJSONCommand } from "../GLStyleEditor/formatCommand";
-import { RasterInfo, GeostatsLayer } from "@seasketch/geostats-types";
-import { validVisualizationTypesForGeostats } from "./visualizationTypes";
+import {
+  RasterInfo,
+  GeostatsLayer,
+  isRasterInfo,
+} from "@seasketch/geostats-types";
+import {
+  VisualizationType,
+  convertToVisualizationType,
+  determineVisualizationType,
+  validVisualizationTypesForGeostats,
+} from "./visualizationTypes";
 import { Layer } from "mapbox-gl";
 import LayerEditor from "./LayerEditor";
 import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
+import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
 
 type PropertyRef = {
   type: "paint" | "layout" | undefined;
@@ -38,15 +48,6 @@ export default function GUIStyleEditor({
 
   const mapContext = useContext(MapContext);
 
-  // TODO: maintain a copy of the style JSON in local state and do fast updates
-  // to it in support of rendering the GUI controls. These changes can then be
-  // applied to the codemirror state (immediately or with a debounce), and
-  // changes incoming from codemirror should be checked with a fast-deep-equal
-  // check against the local state to avoid unnecessary re-renders.
-  // The map can be updated from here on some sort of debounced interval, or
-  // could rely on the existing codemirror cycle depending on how often
-  // codemirror state gets updated.
-
   const [styleJSON, setStyleJSON] = useState(JSON.parse(style) as Layer[]);
 
   // TODO: This doesn't work reliably because it can be called before the
@@ -60,6 +61,14 @@ export default function GUIStyleEditor({
           setTimeout(() => {
             const doc = view.state.doc.toString();
             setStyleJSON(JSON.parse(doc) as Layer[]);
+            const visualizationType = determineVisualizationType(
+              geostats,
+              validVisualizationTypes,
+              JSON.parse(doc) as Layer[]
+            );
+            if (visualizationType) {
+              _setVisualizationType(visualizationType);
+            }
           }, 100);
         }
       };
@@ -70,8 +79,39 @@ export default function GUIStyleEditor({
     }
   }, [editorRef, setStyleJSON]);
 
-  const visualizationType =
-    validVisualizationTypes.length > 0 ? validVisualizationTypes[0] : null;
+  const [visualizationType, _setVisualizationType] =
+    useState<VisualizationType | null>(
+      determineVisualizationType(geostats, validVisualizationTypes, styleJSON)
+    );
+
+  const setVisualizationType = useCallback(
+    (type: VisualizationType) => {
+      const newLayers = convertToVisualizationType(geostats, type, styleJSON);
+      if (newLayers) {
+        _setVisualizationType(type);
+        console.log({ newLayers });
+        const errors = validateGLStyleFragment(
+          newLayers,
+          isRasterInfo(geostats) ? "raster" : "vector"
+        );
+        if (errors.length > 0) {
+          throw new Error(errors.join("\n"));
+        }
+
+        // @ts-ignore
+        setStyleJSON([...newLayers]);
+        editorRef.current?.view?.dispatch({
+          changes: {
+            from: 0,
+            to: editorRef.current.view!.state.doc.length,
+            insert: JSON.stringify(newLayers),
+          },
+        });
+        // formatJSONCommand(editorRef.current?.view!);
+      }
+    },
+    [setStyleJSON, editorRef, styleJSON, geostats]
+  );
 
   const { t } = useTranslation("admin:data");
 
@@ -187,6 +227,9 @@ export default function GUIStyleEditor({
           <select
             className="bg-gray-700 text-white text-sm"
             value={visualizationType}
+            onChange={(e) => {
+              setVisualizationType(e.target.value as VisualizationType);
+            }}
           >
             {validVisualizationTypes.map((type) => (
               <option key={type} value={type}>
@@ -199,6 +242,7 @@ export default function GUIStyleEditor({
       {styleJSON &&
         styleJSON.map((layer, idx) => (
           <LayerEditor
+            type={visualizationType}
             editorRef={editorRef}
             key={idx + layer.type}
             glLayer={layer}

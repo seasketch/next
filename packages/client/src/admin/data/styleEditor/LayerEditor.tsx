@@ -12,6 +12,7 @@ import { ArrowLeftIcon, ArrowRightIcon } from "@radix-ui/react-icons";
 import { ZoomRangeEditor } from "./ZoomRangeEditor";
 import { Trans } from "react-i18next";
 import RasterLayerEditor from "./RasterLayerEditor";
+import { VisualizationType } from "./visualizationTypes";
 require("./layer-editor.css");
 
 const supportedTypes = ["fill", "line", "circle", "symbol", "raster"];
@@ -23,6 +24,7 @@ export default function LayerEditor({
   editorRef,
   updateLayerProperty,
   deleteLayerProperties,
+  type,
 }: {
   // layer: FullAdminDataLayerFragment;
   geostats: GeostatsLayer | RasterInfo;
@@ -30,6 +32,7 @@ export default function LayerEditor({
   editorRef: RefObject<ReactCodeMirrorRef>;
   updateLayerProperty: LayerPropertyUpdater;
   deleteLayerProperties: LayerPropertyDeleter;
+  type: VisualizationType | null;
 }) {
   if (!supportedTypes.includes(glLayer.type)) {
     return null;
@@ -86,6 +89,7 @@ export default function LayerEditor({
               updateLayerProperty={updateLayerProperty}
               deleteLayerProperties={deleteLayerProperties}
               rasterInfo={geostats as RasterInfo}
+              type={type}
             />
           )}
         </div>
