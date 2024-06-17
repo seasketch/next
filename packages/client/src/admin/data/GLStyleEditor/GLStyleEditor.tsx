@@ -13,7 +13,6 @@ import {
   MenuBarLabel,
   MenuBarSeparator,
   MenuBarSubmenu,
-  MenubarRadioItem,
   MenubarTrigger,
 } from "../../../components/Menubar";
 import {
@@ -28,7 +27,6 @@ import {
   useRef,
   useState,
   Fragment,
-  ReactNode,
 } from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import { defaultKeymap } from "@codemirror/commands";
@@ -42,21 +40,11 @@ import {
   useSpritesQuery,
   GetSpriteDocument,
   GetSpriteQuery,
-  AdminSketchingDetailsFragment,
-  DataSourceDetailsFragment,
   FullAdminSourceFragment,
 } from "../../../generated/graphql";
 import getSlug from "../../../getSlug";
 import SpritePopover from "./SpritePopover";
 import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import {
-  CaretDownIcon,
-  ChevronRightIcon,
-  CodeIcon,
-  GearIcon,
-  SliderIcon,
-} from "@radix-ui/react-icons";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import GeostatsModal, { Geostats } from "./GeostatsModal";
@@ -64,7 +52,6 @@ import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
 import {
   GeostatsLayer,
   RasterInfo,
-  isGeostatsLayer,
   isRasterInfo,
 } from "@seasketch/geostats-types";
 import { Trans, useTranslation } from "react-i18next";
@@ -83,6 +70,7 @@ interface GLStyleEditorProps {
   tocItemId?: string;
   dataSource?: FullAdminSourceFragment;
   onRequestShowBounds?: (bounds: [number, number, number, number]) => void;
+  layerId?: number;
 }
 
 /**
@@ -564,6 +552,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           style={layers}
           editorRef={editorRef}
           geostats={props.dataSource.geostats}
+          layerId={props.layerId}
         />
       )}
       {editor === "code" && (

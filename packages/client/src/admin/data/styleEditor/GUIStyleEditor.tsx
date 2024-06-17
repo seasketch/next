@@ -3,6 +3,7 @@ import {
   ReactNode,
   RefObject,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -13,8 +14,7 @@ import { RasterInfo, GeostatsLayer } from "@seasketch/geostats-types";
 import { validVisualizationTypesForGeostats } from "./visualizationTypes";
 import { Layer } from "mapbox-gl";
 import LayerEditor from "./LayerEditor";
-import deepEqual from "fast-deep-equal";
-import set from "lodash.set";
+import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
 
 type PropertyRef = {
   type: "paint" | "layout" | undefined;
@@ -25,14 +25,18 @@ export default function GUIStyleEditor({
   editorRef,
   style,
   geostats,
+  layerId,
 }: {
   editorRef: RefObject<ReactCodeMirrorRef>;
   style: string;
   geostats: GeostatsLayer | RasterInfo;
+  layerId?: number;
 }) {
   const validVisualizationTypes = useMemo(() => {
     return validVisualizationTypesForGeostats(geostats);
   }, [geostats]);
+
+  const mapContext = useContext(MapContext);
 
   // TODO: maintain a copy of the style JSON in local state and do fast updates
   // to it in support of rendering the GUI controls. These changes can then be
@@ -143,6 +147,16 @@ export default function GUIStyleEditor({
       // if (errors.length > 0) {
       //   throw new Error(errors.join("\n"));
       // }
+      if (mapContext.manager?.map && layerId) {
+        const map = mapContext.manager.map;
+        const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
+        // using the layer id, update the style in the map
+        if (type === "layout") {
+          map.setLayoutProperty(id, property, value);
+        } else if (type === "paint") {
+          map.setPaintProperty(id, property, value);
+        }
+      }
       setStyleJSON([...styleJSON]);
       editorRef.current?.view?.dispatch({
         changes: {
@@ -153,7 +167,7 @@ export default function GUIStyleEditor({
       });
       formatJSONCommand(editorRef.current?.view!);
     },
-    [styleJSON, editorRef, setStyleJSON]
+    [styleJSON, editorRef, setStyleJSON, layerId, mapContext.manager?.map]
   );
 
   if (validVisualizationTypes.length === 0) {
