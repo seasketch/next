@@ -103,12 +103,21 @@ export default function FullSidebar({
     >
       <div className="flex w-full">
         <div className="flex-grow-0 flex items-center">
-          {project?.logoUrl && (
+          {project?.logoUrl && !project.logoLink && (
             <img
-              alt="SeaSketch Logo"
+              alt="Project Logo"
               src={project?.logoUrl}
               className="w-12 flex-0 mr-4"
             />
+          )}
+          {project?.logoUrl && project.logoLink && (
+            <a href={project.logoLink} target="_blank" rel="noreferrer">
+              <img
+                alt="Project Logo"
+                src={project?.logoUrl}
+                className="w-12 flex-0 mr-4"
+              />
+            </a>
           )}
         </div>
         <div className="flex-1 max-w-md flex items-center text-xl">
