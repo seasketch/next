@@ -1,9 +1,7 @@
-import { Expression, Layer } from "mapbox-gl";
 import * as Select from "@radix-ui/react-select";
 import * as Editor from "./Editors";
 import { Trans } from "react-i18next";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
-import { forwardRef } from "react";
 import { colorScales } from "./visualizationTypes";
 import * as d3Palettes from "d3-scale-chromatic";
 
@@ -25,7 +23,7 @@ export default function RasterColorPalette({
           }}
         >
           <Select.Trigger
-            className="inline-flex items-center justify-center rounded px-4 text-sm leading-none h-10 gap-1 bg-white text-black shadow  outline-none"
+            className="inline-flex items-center justify-center rounded px-4 text-sm leading-none h-8 gap-1 bg-gray-700 text-gray-400 shadow  outline-none border border-gray-500"
             aria-label="Color Palette"
           >
             <Select.Value placeholder="Custom palette" />
@@ -41,43 +39,49 @@ export default function RasterColorPalette({
             >
               <Select.ScrollUpButton />
               <Select.Viewport className="p-2">
-                <Select.Item
-                  value="custom"
-                  className={`text-sm leading-none rounded flex items-center h-8 pr-1 pl-1 relative select-none`}
-                >
-                  <Trans ns="admin:data">Custom palette</Trans>
-                </Select.Item>
+                {value === null && (
+                  <Select.Item
+                    value="custom"
+                    className={`text-sm leading-none rounded flex items-center h-8 pr-1 pl-1 relative select-none`}
+                  >
+                    <Select.ItemText>
+                      <Trans ns="admin:data">Custom palette</Trans>
+                    </Select.ItemText>
+                  </Select.Item>
+                )}
                 {colorScales.categorical.map((scale) => (
                   <Select.Item
                     key={scale}
                     value={scale}
                     className={`text-sm leading-none rounded flex items-center h-8 pr-1 pl-1 relative select-none hover:bg-indigo-50 hover:border-indigo-500 bg-opacity-30 border border-transparent`}
                   >
-                    {scale in d3Palettes ? (
-                      <div className="flex">
-                        {
-                          // get the length of the color scale, create an array
-                          // of that length, and map over it to create a div for
-                          // each color in the scale
-                          Array.from(
-                            { length: (d3Palettes as any)[scale].length },
-                            (_, i) => (
-                              <div
-                                key={i}
-                                className="w-4 h-4"
-                                style={{
-                                  backgroundColor: (d3Palettes as any)[scale][
-                                    i
-                                  ],
-                                }}
-                              ></div>
+                    <Select.ItemText>
+                      {scale in d3Palettes ? (
+                        <div className="flex">
+                          {
+                            // get the length of the color scale, create an array
+                            // of that length, and map over it to create a div for
+                            // each color in the scale
+                            Array.from(
+                              { length: (d3Palettes as any)[scale].length },
+                              (_, i) => (
+                                <div
+                                  key={i}
+                                  className="w-4 h-4"
+                                  style={{
+                                    backgroundColor: (d3Palettes as any)[scale][
+                                      i
+                                    ],
+                                  }}
+                                ></div>
+                              )
                             )
-                          )
-                        }
-                      </div>
-                    ) : (
-                      scale
-                    )}
+                          }
+                        </div>
+                      ) : (
+                        scale
+                      )}
+                    </Select.ItemText>
                   </Select.Item>
                 ))}
               </Select.Viewport>

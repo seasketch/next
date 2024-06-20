@@ -13,6 +13,8 @@ SELECT CASE
        END
 $$;
 
+grant execute on function get_representative_colors(jsonb) to anon;
+
 alter table data_sources add column if not exists raster_representative_colors jsonb generated always as (get_representative_colors(geostats)) stored;
 
 
@@ -31,6 +33,8 @@ SELECT CASE
        END
 $$;
 
+grant execute on function get_first_band_offset(jsonb) to anon;
+
 
 CREATE OR REPLACE FUNCTION get_first_band_scale(geostats jsonb)
 RETURNS real
@@ -46,6 +50,8 @@ SELECT CASE
            ELSE NULL
        END
 $$;
+
+grant execute on function get_first_band_scale(jsonb) to anon;
 
 alter table data_sources add column if not exists raster_offset real generated always as (get_first_band_offset(geostats)) stored;
 

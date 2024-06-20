@@ -63,7 +63,7 @@ export function determineVisualizationType(
       } else if (paint && "raster-color-mix" in paint) {
         if ("raster-color" in paint && Array.isArray(paint["raster-color"])) {
           const expression = paint["raster-color"][0];
-          if (expression === "step") {
+          if (expression === "step" || expression === "match") {
             if (validTypes.includes(VisualizationType.CATEGORICAL_RASTER)) {
               return VisualizationType.CATEGORICAL_RASTER;
             }
@@ -179,7 +179,8 @@ function defaultsOrUndefined(paintOrLayout: any, keys: string[]) {
 export function replaceColors(
   expression: Expression,
   palette: string,
-  reverse = false
+  reverse = false,
+  excludedValues: (string | number)[] = []
 ) {
   // @ts-ignore
   const colors = colorScale[palette];
@@ -200,12 +201,123 @@ export function replaceColors(
           typeof expression[i] === "string" &&
           expression[i] !== "transparent"
         ) {
-          expression[i] = colors[c % colorCount];
-          c++;
+          if (excludedValues.includes(expression[i - 1])) {
+            expression[i] = "transparent";
+          } else {
+            expression[i] = colors[c % colorCount];
+            c++;
+          }
         }
       }
-      return [...expression];
+      return [...expression] as Expression;
 
+    default:
+      throw new Error("Unsupported expression type. " + expression[0]);
+  }
+}
+
+/**
+ * Checks all colors in an expression to see if they match a palette. Ignores
+ * transparent colors.
+ */
+export function expressionMatchesPalette(
+  expression: Expression,
+  palette: keyof typeof colorScale
+) {
+  const paletteColors = colorScale[palette] as string[];
+  if (!paletteColors?.length) {
+    return false;
+  }
+  const expressionColors = extractColorsFromExpression(expression);
+  for (const color of expressionColors) {
+    if (!paletteColors.includes(color)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function colorsMatch(colorsA: string[], colorsB: string[]) {
+  for (const color of colorsA) {
+    if (!colorsB.includes(color)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isColor(str: string) {
+  return (
+    /^#/.test(str) ||
+    /^rgb/.test(str) ||
+    /^hsl/.test(str) ||
+    /^transparent$/.test(str) ||
+    /^rgba/.test(str)
+  );
+}
+
+export function applyExcludedValuesToCategoryExpression(
+  expression: Expression,
+  excludedValues: (string | number)[],
+  palette: string | undefined | null
+) {
+  let colors = palette ? getScale(palette) : [];
+  const expressionColors = extractColorsFromExpression(expression);
+  if (!colors || !colorsMatch(expressionColors, colors)) {
+    colors = expressionColors;
+  }
+  let c = 0;
+  switch (expression[0]) {
+    case "step":
+    case "match":
+      let i = expression[0] === "step" ? 3 : 2;
+      while (i < expression.length) {
+        if (excludedValues.includes(expression[i])) {
+          expression[i + 1] = "transparent";
+        } else {
+          expression[i + 1] = colors[c % colors.length];
+          c++;
+        }
+        i += 2;
+      }
+      return [...expression] as Expression;
+    default:
+      throw new Error("Unsupported expression type. " + expression[0]);
+  }
+}
+
+function getScale(palette: string) {
+  if (palette in colorScale) {
+    const scale = colorScale[palette as keyof typeof colorScale];
+    if (scale.length) {
+      return scale as string[];
+    }
+  }
+  return null;
+}
+
+function extractColorsFromExpression(expression: Expression) {
+  return expression.filter(
+    (e) => typeof e === "string" && isColor(e) && e !== "transparent"
+  );
+}
+
+export function replaceColorForValueInExpression(
+  expression: Expression,
+  value: string | number,
+  color: string
+) {
+  switch (expression[0]) {
+    case "step":
+    case "match":
+      let i = expression[0] === "step" ? 3 : 2;
+      while (i < expression.length) {
+        if (expression[i] === value) {
+          expression[i + 1] = color;
+        }
+        i += 2;
+      }
+      return [...expression] as Expression;
     default:
       throw new Error("Unsupported expression type. " + expression[0]);
   }

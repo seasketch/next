@@ -10,8 +10,13 @@ import { RasterBrightnessEditor } from "./RasterBrightnessEditor";
 import { RasterHueRotateEditor } from "./RasterHueRotateEditor";
 import { useMemo } from "react";
 import { RasterInfo } from "@seasketch/geostats-types";
-import { VisualizationType, replaceColors } from "./visualizationTypes";
+import {
+  VisualizationType,
+  expressionMatchesPalette,
+  replaceColors,
+} from "./visualizationTypes";
 import RasterColorPalette from "./RasterColorPaletteEditor";
+import { RasterCategoryEditableList } from "./RasterCategoryEditableList";
 
 export default function RasterLayerEditor({
   updateLayerProperty,
@@ -70,23 +75,40 @@ export default function RasterLayerEditor({
       {type === VisualizationType.CATEGORICAL_RASTER && (
         <>
           <RasterColorPalette
-            value={(glLayer.metadata || {})["s:palette"]}
+            value={
+              (glLayer.metadata || {})["s:palette"] &&
+              expressionMatchesPalette(
+                // @ts-ignore
+                glLayer.paint!["raster-color"],
+                glLayer.metadata["s:palette"]
+              )
+                ? (glLayer.metadata || {})["s:palette"]
+                : null
+            }
             onChange={(palette) => {
-              console.log(
-                replaceColors(
-                  (glLayer.paint! as any)["raster-color"],
-                  palette,
-                  glLayer.metadata?.["s:reverse-palette"] || false
-                )
-              );
               updateLayerProperty(
                 "paint",
                 "raster-color",
                 replaceColors(
                   (glLayer.paint! as any)["raster-color"],
                   palette,
-                  glLayer.metadata?.["s:reverse-palette"] || false
-                )
+                  glLayer.metadata?.["s:reverse-palette"],
+                  glLayer.metadata?.["s:excluded"]
+                ),
+                { "s:palette": palette }
+              );
+            }}
+          />
+          <RasterCategoryEditableList
+            // @ts-ignore
+            rasterColorExpression={glLayer.paint!["raster-color"]}
+            metadata={glLayer.metadata}
+            onChange={(expression, metadata) => {
+              updateLayerProperty(
+                "paint",
+                "raster-color",
+                expression,
+                metadata
               );
             }}
           />

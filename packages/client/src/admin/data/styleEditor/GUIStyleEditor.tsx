@@ -57,6 +57,7 @@ export default function GUIStyleEditor({
     if (view) {
       const keydownHandler = (e: KeyboardEvent) => {
         if (e.key === "z" && e.metaKey) {
+          e.preventDefault();
           // sync state
           setTimeout(() => {
             const doc = view.state.doc.toString();
@@ -77,7 +78,7 @@ export default function GUIStyleEditor({
         document.body.removeEventListener("keydown", keydownHandler);
       };
     }
-  }, [editorRef, setStyleJSON]);
+  }, [editorRef.current?.view, setStyleJSON]);
 
   const [visualizationType, _setVisualizationType] =
     useState<VisualizationType | null>(
@@ -89,7 +90,6 @@ export default function GUIStyleEditor({
       const newLayers = convertToVisualizationType(geostats, type, styleJSON);
       if (newLayers) {
         _setVisualizationType(type);
-        console.log({ newLayers });
         const errors = validateGLStyleFragment(
           newLayers,
           isRasterInfo(geostats) ? "raster" : "vector"
@@ -151,7 +151,8 @@ export default function GUIStyleEditor({
       layerIndex: number,
       type: "paint" | "layout" | undefined,
       property: string,
-      value: any | undefined
+      value: any | undefined,
+      metadata?: { [key: string]: any }
     ) => {
       if (styleJSON === null) {
         throw new Error("Style JSON is null");
@@ -197,6 +198,18 @@ export default function GUIStyleEditor({
           map.setPaintProperty(id, property, value);
         }
       }
+      if (metadata) {
+        for (const key in metadata) {
+          layer.metadata = layer.metadata || {};
+          if (metadata[key] === undefined) {
+            delete layer.metadata[key];
+          } else {
+            layer.metadata[key] = metadata[key];
+          }
+        }
+        layer.metadata = { ...layer.metadata };
+      }
+      styleJSON[layerIndex] = { ...layer };
       setStyleJSON([...styleJSON]);
       editorRef.current?.view?.dispatch({
         changes: {
@@ -221,7 +234,7 @@ export default function GUIStyleEditor({
   }
 
   return (
-    <div>
+    <div className="overflow-y-auto">
       <EditorCard>
         {visualizationType && (
           <select
@@ -247,8 +260,8 @@ export default function GUIStyleEditor({
             key={idx + layer.type}
             glLayer={layer}
             geostats={geostats}
-            updateLayerProperty={(type, property, value) => {
-              updateLayerProperty(idx, type, property, value);
+            updateLayerProperty={(type, property, value, metadata) => {
+              updateLayerProperty(idx, type, property, value, metadata);
             }}
             deleteLayerProperties={(properties) => {
               deleteLayerProperties(idx, properties);
@@ -262,7 +275,8 @@ export default function GUIStyleEditor({
 export type LayerPropertyUpdater = (
   type: "paint" | "layout" | undefined,
   property: string,
-  value: any
+  value: any,
+  metadata?: { [key: string]: any }
 ) => void;
 
 export type LayerPropertyDeleter = (properties: PropertyRef[]) => void;

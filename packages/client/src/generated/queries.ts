@@ -10369,6 +10369,9 @@ export type Query = Node & {
   generateExportId?: Maybe<Scalars['String']>;
   generateLabel?: Maybe<Scalars['String']>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
+  getFirstBandOffset?: Maybe<Scalars['Float']>;
+  getFirstBandScale?: Maybe<Scalars['Float']>;
+  getRepresentativeColors?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
@@ -10892,6 +10895,24 @@ export type QueryGenerateExportIdArgs = {
 export type QueryGenerateLabelArgs = {
   body?: Maybe<Scalars['JSON']>;
   id?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetFirstBandOffsetArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetFirstBandScaleArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetRepresentativeColorsArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
 };
 
 

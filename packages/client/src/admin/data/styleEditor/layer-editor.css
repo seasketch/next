@@ -6,3 +6,7 @@
   margin: 0;
   opacity: 0.4;
 }
+
+.LayerEditor input::placeholder {
+  @apply text-gray-400;
+}

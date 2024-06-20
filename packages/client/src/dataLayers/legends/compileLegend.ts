@@ -155,10 +155,36 @@ export function compileLegendFromGLStyleLayers(
     //     representativeColors,
     //   },
     // };
-
+    const panels = consolidatePanels(legendItems);
+    if (layers.find((l) => l.metadata && l.metadata["s:legend-labels"])) {
+      const allLabels: { [key: string]: string } = {};
+      // TODO: this means labels could be set in multiple places and be
+      // different...
+      for (const layer of layers) {
+        const labels = layer.metadata["s:legend-labels"];
+        for (const key in labels) {
+          allLabels[key] = labels[key];
+        }
+      }
+      for (const panel of panels) {
+        if (panel.type === "GLLegendListPanel") {
+          for (const item of panel.items) {
+            if (item.label.toString() in allLabels) {
+              item.label = allLabels[item.label];
+            }
+          }
+        } else if (panel.type === "GLLegendStepPanel") {
+          for (const step of panel.steps) {
+            if (step.label.toString() in allLabels) {
+              step.label = allLabels[step.label];
+            }
+          }
+        }
+      }
+    }
     return {
       type: "MultipleSymbolGLLegend",
-      panels: consolidatePanels(legendItems),
+      panels,
     };
   } else if (
     sourceType === "raster" ||

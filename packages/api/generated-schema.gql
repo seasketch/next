@@ -11790,6 +11790,9 @@ type Query implements Node {
   generateExportId(body: JSON, exportId: String, id: Int): String
   generateLabel(body: JSON, id: Int): String
   getDefaultDataSourcesBucket: String
+  getFirstBandOffset(geostats: JSON): Float
+  getFirstBandScale(geostats: JSON): Float
+  getRepresentativeColors(geostats: JSON): JSON
 
   """Reads and enables pagination through a set of `Survey`."""
   getSurveys(

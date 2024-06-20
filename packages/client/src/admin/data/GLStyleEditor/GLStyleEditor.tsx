@@ -57,7 +57,6 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import GUIStyleEditor from "../styleEditor/GUIStyleEditor";
 import CodeVsGuiSwitch from "./CodeVsGuiSwitch";
-
 require("./RadixDropdown.css");
 
 interface GLStyleEditorProps {
@@ -237,6 +236,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const { t } = useTranslation("admin:data");
 
   const [zoom, setZoom] = useState(0);
+
   useEffect(() => {
     if (mapContext.manager?.map) {
       const onZoom = () => {
