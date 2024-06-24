@@ -37,6 +37,7 @@ import {
   NULLIFIED_EXPRESSION_OUTPUT_NUMBER,
   NULLIFIED_EXPRESSION_OUTPUT_STRING,
 } from "./utils";
+import { SeaSketchLayerMetadata } from "../../admin/data/styleEditor/Editors";
 
 // ordered by rank of importance
 const SIGNIFICANT_PAINT_PROPS = [
@@ -106,6 +107,7 @@ export function compileLegendFromGLStyleLayers(
           panel: pluckRasterMatchPanel(
             "layer-0-raster-color-legend",
             rasterColor,
+            layer.metadata,
             // @ts-ignore
             layer.paint!["raster-color-range"] as [number, number] | undefined
           ),
@@ -117,6 +119,7 @@ export function compileLegendFromGLStyleLayers(
           panel: pluckRasterStepPanel(
             "layer-0-raster-color-legend",
             rasterColor,
+            layer.metadata,
             // @ts-ignore
             layer.paint!["raster-color-range"] as [number, number] | undefined
           ),
@@ -1012,6 +1015,7 @@ function pluckLayersWithExpression<T extends GLLegendPanel>(
 export function pluckRasterStepPanel(
   id: string,
   expression: Expression,
+  metadata?: SeaSketchLayerMetadata,
   rasterColorRange?: [number, number]
 ) {
   const inputOutputPairs = expression.slice(2);
@@ -1026,6 +1030,7 @@ export function pluckRasterStepPanel(
             {
               id: id + "-first",
               label: "< " + inputOutputPairs[1],
+              value: "< " + inputOutputPairs[1],
               symbol: {
                 type: "fill",
                 color: inputOutputPairs[0],
@@ -1043,6 +1048,7 @@ export function pluckRasterStepPanel(
             steps.push({
               id: id + "-" + i,
               label: `${input.toLocaleString()}`,
+              value: input,
               symbol: {
                 type: "fill",
                 color: output,
@@ -1058,12 +1064,21 @@ export function pluckRasterStepPanel(
   panel.steps = panel.steps.filter(
     (step) => "color" in step.symbol && step.symbol.color !== "transparent"
   );
+  const sortedCategories = metadata?.["s:sorted-categories"];
+  if (sortedCategories && panel.steps.find((s) => Boolean(s.value))) {
+    panel.steps = panel.steps.sort((a, b) => {
+      return (
+        sortedCategories.indexOf(a.value) - sortedCategories.indexOf(b.value)
+      );
+    });
+  }
   return panel;
 }
 
 export function pluckRasterMatchPanel(
   id: string,
   expression: Expression,
+  metadata?: SeaSketchLayerMetadata,
   rasterColorRange?: [number, number]
 ) {
   const defaultValue = expression[expression.length - 1];
@@ -1086,6 +1101,7 @@ export function pluckRasterMatchPanel(
       panel.items.push({
         id: id + "-" + i,
         label: `${input}`,
+        value: input,
         symbol: {
           type: "fill",
           color: output,
@@ -1102,6 +1118,14 @@ export function pluckRasterMatchPanel(
         type: "fill",
         color: defaultValue,
       } as GLLegendFillSymbol,
+    });
+  }
+  const sortedCategories = metadata?.["s:sorted-categories"];
+  if (sortedCategories && panel.items.find((i) => Boolean(i.value))) {
+    panel.items = panel.items.sort((a, b) => {
+      return (
+        sortedCategories.indexOf(a.value) - sortedCategories.indexOf(b.value)
+      );
     });
   }
 

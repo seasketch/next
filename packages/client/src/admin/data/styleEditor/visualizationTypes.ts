@@ -205,8 +205,8 @@ export function replaceColors(
             expression[i] = "transparent";
           } else {
             expression[i] = colors[c % colorCount];
-            c++;
           }
+          c++;
         }
       }
       return [...expression] as Expression;
@@ -276,8 +276,8 @@ export function applyExcludedValuesToCategoryExpression(
           expression[i + 1] = "transparent";
         } else {
           expression[i + 1] = colors[c % colors.length];
-          c++;
         }
+        c++;
         i += 2;
       }
       return [...expression] as Expression;

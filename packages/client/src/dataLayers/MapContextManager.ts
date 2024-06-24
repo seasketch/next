@@ -902,10 +902,6 @@ class MapContextManager extends EventEmitter {
         if (!this.map) {
           return;
         }
-        console.log(
-          "set style",
-          style.layers.find((l) => l.id === "seasketch/13182/0")
-        );
         // add any custom sources event listeners
         this.map.setStyle(style);
         for (const id in this.customSources) {

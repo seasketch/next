@@ -74,7 +74,12 @@ export type GLLegendListPanel = {
   id: string;
   type: "GLLegendListPanel";
   label?: string;
-  items: { id: string; label: string; symbol: GLLegendSymbol }[];
+  items: {
+    id: string;
+    label: string;
+    symbol: GLLegendSymbol;
+    value?: string | number;
+  }[];
 };
 
 export type GLLegendFilterPanel = {
@@ -125,7 +130,12 @@ export type GLLegendStepPanel = {
   id: string;
   type: "GLLegendStepPanel";
   label?: string;
-  steps: { id: string; label: string; symbol: GLLegendSymbol }[];
+  steps: {
+    id: string;
+    label: string;
+    symbol: GLLegendSymbol;
+    value: string | number;
+  }[];
 };
 
 export type GLLegendHeatmapPanel = {

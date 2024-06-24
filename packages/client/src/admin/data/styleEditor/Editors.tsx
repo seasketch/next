@@ -1,5 +1,6 @@
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import * as Slider from "@radix-ui/react-slider";
+import { Expression } from "mapbox-gl";
 import { ReactNode } from "react";
 
 export function DocumentationInfo({ href }: { href: string }) {
@@ -37,14 +38,19 @@ export function Root({
 export function Label({
   title,
   docs,
+  buttons,
 }: {
   title: string | ReactNode;
   docs?: string;
+  buttons?: ReactNode;
 }) {
   return (
     <h3 className="flex-1 flex items-center space-x-1">
       <span>{title}</span>
       {docs && <DocumentationInfo href={docs} />}
+      {buttons && (
+        <div className="flex-1 flex items-center justify-end">{buttons}</div>
+      )}
     </h3>
   );
 }
@@ -71,4 +77,34 @@ export function Thumb({
       aria-label={ariaLabel}
     />
   );
+}
+
+export type ExpressionCategory = { value: string | number; color: string };
+
+export type SeaSketchLayerMetadata = { [key: string]: any } & {
+  "s:excluded"?: (string | number)[];
+  "s:palette"?: string[];
+  "s:legend-labels"?: { [key: string]: string };
+  "s:sorted-categories"?: any[];
+};
+
+export function extractCategoriesFromExpression(expression: Expression) {
+  const categories: { value: string | number; color: string }[] = [];
+  // Extract categories from raster-color expression. Assumes that the
+  // expression is a step or match expression.
+  const expressionType = expression[0];
+  if (expressionType !== "step" && expressionType !== "match") {
+    throw new Error("Invalid expression type");
+  }
+  let i = expressionType === "step" ? 3 : 2;
+  while (i < expression.length) {
+    const value = expression[i];
+    const color = expression[i + 1];
+    i += 2;
+    if (typeof color !== "string") {
+      continue;
+    }
+    categories.push({ value, color });
+  }
+  return categories as ExpressionCategory[];
 }

@@ -11,6 +11,10 @@ module.exports = {
   darkMode: "media",
   theme: {
     extend: {
+      cursor: {
+        grab: "grab",
+        grabbing: "grabbing",
+      },
       width: {
         26: "6.5rem",
         27: "6.75rem",
