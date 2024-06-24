@@ -43,7 +43,6 @@ export async function processRasterUpload(options: {
   const stats = await rasterInfoForBands(path);
 
   if (!isCorrectProjection) {
-    console.log("reprojecting");
     // use rio warp to reproject tif
     const warpedPath = pathJoin(workingDirectory, jobId + ".warped.tif");
     await logger.exec(
@@ -109,7 +108,6 @@ export async function processRasterUpload(options: {
     stats.presentation === SuggestedRasterPresentation.categorical ||
     stats.presentation === SuggestedRasterPresentation.continuous
   ) {
-    console.log(stats.presentation, stats.bands[0]);
     path = await encodeValuesToRGB(
       path,
       logger,
@@ -295,8 +293,9 @@ async function encodeValuesToRGB(
     ["gdalbuildvrt", ["-separate", vrtFname, ...vrtInputs]],
     "Problem building VRT"
   );
-  const encodedFname =
-    noDataValue === null ? "output_encoded_rgb.tif" : "output_encoded_rgba.tif";
+  const encodedFname = rel(
+    noDataValue === null ? "output_encoded_rgb.tif" : "output_encoded_rgba.tif"
+  );
   await logger.exec(
     ["gdal_translate", [vrtFname, encodedFname]],
     "Problem converting VRT to RGB TIFF"
