@@ -10,3 +10,11 @@
 .LayerEditor input::placeholder {
   @apply text-gray-400;
 }
+
+.LayerEditorPalette [data-state="checked"] {
+  @apply bg-blue-100 border border-blue-300;
+}
+
+.PaletteSelectContent {
+  max-height: var(--radix-select-content-available-height);
+}

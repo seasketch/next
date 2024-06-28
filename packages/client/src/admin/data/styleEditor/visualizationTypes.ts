@@ -21,6 +21,81 @@ export const colorScales = {
     "schemeSet2",
     "schemeSet3",
   ],
+  continuous: {
+    diverging: [
+      "interpolateBrBG",
+      "interpolatePRGn",
+      "interpolatePiYG",
+      "interpolatePuOr",
+      "interpolateRdBu",
+      "interpolateRdGy",
+      "interpolateRdYlBu",
+      "interpolateRdYlGn",
+      "interpolateSpectral",
+    ],
+    sequential: [
+      "interpolateBlues",
+      "interpolateGreens",
+      "interpolateGreys",
+      "interpolateOranges",
+      "interpolatePurples",
+      "interpolateReds",
+      "interpolateTurbo",
+      "interpolateViridis",
+      "interpolateInferno",
+      "interpolateMagma",
+      "interpolatePlasma",
+      "interpolateCividis",
+      "interpolateWarm",
+      "interpolateCool",
+      "interpolateCubehelixDefault",
+      "interpolateBuGn",
+      "interpolateBuPu",
+      "interpolateGnBu",
+      "interpolateOrRd",
+      "interpolatePuBuGn",
+      "interpolatePuBu",
+      "interpolatePuRd",
+      "interpolateRdPu",
+      "interpolateYlGnBu",
+      "interpolateYlGn",
+      "interpolateYlOrBr",
+      "interpolateYlOrRd",
+    ],
+    cyclical: ["interpolateRainbow", "interpolateSinebow"],
+  },
+
+  // [
+  //   "interpolatePlasma",
+  //   "interpolateViridis",
+  //   "interpolateInferno",
+  //   "interpolateMagma",
+  //   "interpolateCividis",
+  //   "interpolateWarm",
+  //   "interpolateCool",
+  //   "interpolateRainbow",
+  //   "interpolateSinebow",
+  //   "interpolateTurbo",
+  //   "interpolateCubehelixDefault",
+  //   "interpolateSpectral",
+  //   "interpolateRdYlBu",
+  //   "interpolateRdYlGn",
+  //   "interpolateSpectral",
+  //   "interpolateBrBG",
+  //   "interpolatePRGn",
+  //   "interpolatePiYG",
+  //   "interpolatePuOr",
+  //   "interpolateRdBu",
+  //   "interpolateRdGy",
+  //   "interpolateRdYlBu",
+  //   "interpolateRdYlGn",
+  //   "interpolateBlues",
+  //   "interpolateGreens",
+  //   "interpolateGreys",
+  //   "interpolateOranges",
+  //   "interpolatePurples",
+  //   "interpolateReds",
+  // ],
 };
 
 export enum VisualizationType {
@@ -43,6 +118,10 @@ export function validVisualizationTypesForGeostats(
     ) {
       types.push(VisualizationType.CATEGORICAL_RASTER);
       types.push(VisualizationType.RGB_RASTER);
+    } else if (
+      geostats.presentation === SuggestedRasterPresentation.continuous
+    ) {
+      types.push(VisualizationType.CONTINUOUS_RASTER);
     }
   }
   return types;
@@ -139,10 +218,10 @@ export function convertToVisualizationType(
             paint: {
               ...defaultsOrUndefined(oldLayer?.paint, ["raster-opacity"]),
               "raster-resampling": "nearest",
-              "raster-color-mix": [0, 0, 256, geostats.bands[0].base],
+              "raster-color-mix": [0, 0, 258, geostats.bands[0].base],
               "raster-color": [
                 "step",
-                ["ceil", ["raster-value"]],
+                ["round", ["raster-value"]],
                 "transparent",
                 ...colors.flat(),
               ],
@@ -179,40 +258,81 @@ function defaultsOrUndefined(paintOrLayout: any, keys: string[]) {
 export function replaceColors(
   expression: Expression,
   palette: string,
-  reverse = false,
-  excludedValues: (string | number)[] = []
+  reverse: boolean,
+  excludedValues: (string | number)[]
 ) {
   // @ts-ignore
-  const colors = colorScale[palette];
+  let colors = Array.isArray(palette) ? palette : colorScale[palette];
   if (!colors?.length) {
     throw new Error("Invalid palette: " + palette);
   }
+  if (palette in colorScale && reverse && Array.isArray(colors)) {
+    colors = [...colors].reverse();
+  }
   const colorCount = colors.length;
-  switch (expression[0]) {
-    case "step":
-    case "match":
-      let c = 0;
-      for (
-        let i = expression[0] === "step" ? 2 : 3;
-        i < expression.length;
-        i += 2
+  if (expression[0] === "step" || expression[0] === "match") {
+    let c = 0;
+    for (
+      let i = expression[0] === "step" ? 2 : 3;
+      i < expression.length;
+      i += 2
+    ) {
+      if (
+        typeof expression[i] === "string" &&
+        expression[i] !== "transparent"
       ) {
-        if (
-          typeof expression[i] === "string" &&
-          expression[i] !== "transparent"
-        ) {
-          if (excludedValues.includes(expression[i - 1])) {
-            expression[i] = "transparent";
-          } else {
-            expression[i] = colors[c % colorCount];
-          }
-          c++;
+        if (excludedValues.includes(expression[i - 1])) {
+          expression[i] = "transparent";
+        } else {
+          expression[i] = colors[c % colorCount];
         }
+        c++;
       }
-      return [...expression] as Expression;
+    }
+    return [...expression] as Expression;
+  } else if (/interpolate/.test(expression[0])) {
+    const fnName = expression[0];
+    const iType = expression[1];
+    const arg = expression[2];
+    const stops = expression.slice(3);
+    const nStops = stops.length / 2;
+    for (var i = 0; i < nStops; i++) {
+      const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
+      stops[i * 2 + 1] = colors(fraction);
+    }
+    return [fnName, iType, arg, ...stops];
+  } else {
+    throw new Error("Unsupported expression type. " + expression[0]);
+  }
+}
 
-    default:
-      throw new Error("Unsupported expression type. " + expression[0]);
+export function buildContinuousRasterColorExpression(
+  expression: Expression,
+  palette: string | string[],
+  reverse: boolean,
+  range: [number, number]
+) {
+  // TODO: support string[] palettes
+  const colors = Array.isArray(palette)
+    ? palette
+    : colorScale[palette as keyof typeof colorScale];
+  if (/interpolate/.test(expression[0])) {
+    const fnName = expression[0];
+    const iType = expression[1];
+    const arg = expression[2];
+    const stops = [];
+    const nStops = typeof colors === "function" ? 10 : colors.length;
+    const interval = (range[1] - range[0]) / (nStops - 1);
+    for (var i = 0; i < nStops; i++) {
+      const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
+      stops.push(
+        range[0] + interval * i,
+        typeof colors === "function" ? colors(fraction) : colors[i]
+      );
+    }
+    return [fnName, iType, arg, ...stops];
+  } else {
+    throw new Error("Unsupported expression type. " + expression[0]);
   }
 }
 
@@ -222,16 +342,26 @@ export function replaceColors(
  */
 export function expressionMatchesPalette(
   expression: Expression,
-  palette: keyof typeof colorScale
+  palette: keyof typeof colorScale,
+  reversed: boolean
 ) {
-  const paletteColors = colorScale[palette] as string[];
-  if (!paletteColors?.length) {
-    return false;
-  }
+  let paletteColors = (
+    Array.isArray(palette) ? [] : (colorScale[palette] as string[])
+  ) as ((i: number) => string) | string[];
   const expressionColors = extractColorsFromExpression(expression);
   for (const color of expressionColors) {
-    if (!paletteColors.includes(color)) {
-      return false;
+    if (typeof paletteColors === "function") {
+      const i = expressionColors.indexOf(color);
+      const fraction = reversed
+        ? 1 - i / (expressionColors.length - 1)
+        : i / (expressionColors.length - 1);
+      if (paletteColors(fraction) !== color) {
+        return false;
+      }
+    } else {
+      if (!paletteColors.includes(color)) {
+        return false;
+      }
     }
   }
   return true;
@@ -261,7 +391,11 @@ export function applyExcludedValuesToCategoryExpression(
   excludedValues: (string | number)[],
   palette: string | undefined | null
 ) {
-  let colors = palette ? getScale(palette) : [];
+  let colors = palette
+    ? Array.isArray(palette)
+      ? palette
+      : getScale(palette)
+    : [];
   const expressionColors = extractColorsFromExpression(expression);
   if (!colors || !colorsMatch(expressionColors, colors)) {
     colors = expressionColors;
@@ -287,7 +421,7 @@ export function applyExcludedValuesToCategoryExpression(
 }
 
 function getScale(palette: string) {
-  if (palette in colorScale) {
+  if (!Array.isArray(palette) && palette in colorScale) {
     const scale = colorScale[palette as keyof typeof colorScale];
     if (scale.length) {
       return scale as string[];
@@ -296,7 +430,7 @@ function getScale(palette: string) {
   return null;
 }
 
-function extractColorsFromExpression(expression: Expression) {
+export function extractColorsFromExpression(expression: Expression) {
   return expression.filter(
     (e) => typeof e === "string" && isColor(e) && e !== "transparent"
   );
@@ -320,5 +454,19 @@ export function replaceColorForValueInExpression(
       return [...expression] as Expression;
     default:
       throw new Error("Unsupported expression type. " + expression[0]);
+  }
+}
+
+export function extractValueRange(expression: Expression) {
+  const values = [] as number[];
+  const fName = expression[0];
+  if (/interpolate/.test(fName)) {
+    const stops = expression.slice(3);
+    for (let i = 0; i < stops.length; i += 2) {
+      values.push(stops[i]);
+    }
+    return [Math.min(...values), Math.max(...values)];
+  } else {
+    throw new Error("Unsupported expression type. " + fName);
   }
 }

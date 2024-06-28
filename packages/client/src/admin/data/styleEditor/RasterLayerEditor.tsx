@@ -9,14 +9,26 @@ import { RasterSaturationEditor } from "./RasterSaturationEditor";
 import { RasterBrightnessEditor } from "./RasterBrightnessEditor";
 import { RasterHueRotateEditor } from "./RasterHueRotateEditor";
 import { useMemo } from "react";
-import { RasterInfo } from "@seasketch/geostats-types";
+import {
+  RasterInfo,
+  SuggestedRasterPresentation,
+} from "@seasketch/geostats-types";
 import {
   VisualizationType,
+  buildContinuousRasterColorExpression,
   expressionMatchesPalette,
+  extractColorsFromExpression,
+  extractValueRange,
   replaceColors,
 } from "./visualizationTypes";
 import RasterColorPalette from "./RasterColorPaletteEditor";
 import { RasterCategoryEditableList } from "./RasterCategoryEditableList";
+import ContinuousRasterHistogram from "./ContinuousRasterHistogram";
+import Switch from "../../../components/Switch";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
+import * as Tooltip from "@radix-ui/react-tooltip";
+import { reverse } from "lodash";
+import ContinuousRasterStepsEditor from "./ContinuousRasterStepsEditor";
 
 export default function RasterLayerEditor({
   updateLayerProperty,
@@ -72,47 +84,53 @@ export default function RasterLayerEditor({
         // @ts-ignore
         value={glLayer.paint?.["raster-fade-duration"]}
       />
-      {type === VisualizationType.CATEGORICAL_RASTER && (
+      {(type === VisualizationType.CATEGORICAL_RASTER ||
+        type === VisualizationType.CONTINUOUS_RASTER) && (
         <>
           <RasterColorPalette
+            type={
+              type === VisualizationType.CATEGORICAL_RASTER
+                ? SuggestedRasterPresentation.categorical
+                : SuggestedRasterPresentation.continuous
+            }
+            reversed={glLayer.metadata?.["s:reverse-palette"] || false}
             value={
               (glLayer.metadata || {})["s:palette"] &&
               expressionMatchesPalette(
                 // @ts-ignore
                 glLayer.paint!["raster-color"],
-                glLayer.metadata["s:palette"]
+                glLayer.metadata["s:palette"],
+                Boolean(glLayer.metadata["s:reverse-palette"])
               )
                 ? (glLayer.metadata || {})["s:palette"]
                 : null
             }
-            onChange={(palette) => {
+            onChange={(palette, reverse) => {
               updateLayerProperty(
                 "paint",
                 "raster-color",
                 replaceColors(
                   (glLayer.paint! as any)["raster-color"],
                   palette,
-                  glLayer.metadata?.["s:reverse-palette"],
+                  Boolean(reverse),
                   glLayer.metadata?.["s:excluded"]
                 ),
-                { "s:palette": palette }
-              );
-            }}
-          />
-          <RasterCategoryEditableList
-            // @ts-ignore
-            rasterColorExpression={glLayer.paint!["raster-color"]}
-            metadata={glLayer.metadata}
-            onChange={(expression, metadata) => {
-              updateLayerProperty(
-                "paint",
-                "raster-color",
-                expression,
-                metadata
+                { "s:palette": palette, "s:reverse-palette": reverse }
               );
             }}
           />
         </>
+      )}
+
+      {type === VisualizationType.CATEGORICAL_RASTER && (
+        <RasterCategoryEditableList
+          // @ts-ignore
+          rasterColorExpression={glLayer.paint!["raster-color"]}
+          metadata={glLayer.metadata}
+          onChange={(expression, metadata) => {
+            updateLayerProperty("paint", "raster-color", expression, metadata);
+          }}
+        />
       )}
       {type === VisualizationType.RGB_RASTER && (
         <>
@@ -181,6 +199,103 @@ export default function RasterLayerEditor({
             property="raster-brightness-max"
             defaultValue={1}
           />
+        </>
+      )}
+      {/* @ts-ignore */}
+      {glLayer.paint?.["raster-color"] &&
+        type === VisualizationType.CONTINUOUS_RASTER && (
+          <>
+            <ContinuousRasterStepsEditor
+              band={rasterInfo.bands[0]}
+              expression={(glLayer.paint as any)["raster-color"]}
+              metadata={glLayer.metadata}
+              updateLayerProperty={updateLayerProperty}
+            />
+            <ContinuousRasterHistogram
+              // @ts-ignore
+              expression={glLayer.paint?.["raster-color"]}
+              band={rasterInfo.bands[0]}
+              // @ts-ignore
+              range={extractValueRange(glLayer.paint["raster-color"])}
+              onRangeChange={(range) => {
+                let palette = glLayer.metadata?.["s:palette"] as any;
+                if (
+                  !expressionMatchesPalette(
+                    // @ts-ignore
+                    glLayer.paint!["raster-color"],
+                    palette,
+                    glLayer.metadata?.["s:reverse-palette"]
+                  )
+                ) {
+                  palette = extractColorsFromExpression(
+                    // @ts-ignore
+                    glLayer.paint["raster-color"]!
+                  );
+                }
+                const expr = buildContinuousRasterColorExpression(
+                  // @ts-ignore
+                  glLayer.paint["raster-color"],
+                  palette,
+                  glLayer.metadata?.["s:reverse-palette"],
+                  range
+                );
+                updateLayerProperty("paint", "raster-color", expr);
+              }}
+            />
+          </>
+        )}
+      {type === VisualizationType.CONTINUOUS_RASTER && (
+        <>
+          <Editor.Header title={t("Legend")} className="pt-6" />
+          {(rasterInfo.bands[0].offset || rasterInfo.bands[0].scale) && (
+            <div className="space-y-2">
+              <Editor.Control>
+                <Editor.Label
+                  title={t("Respect Scale and Offset")}
+                  tooltip={t(
+                    "When rasters provide offset and/or scale metadata, this info can be used to adjust values in the legend."
+                  )}
+                />
+                <Switch
+                  isToggled={
+                    glLayer.metadata?.["s:respect-scale-and-offset"] || false
+                  }
+                  onClick={(value) => {
+                    updateLayerProperty(undefined, undefined, undefined, {
+                      "s:respect-scale-and-offset": value,
+                    });
+                  }}
+                />
+              </Editor.Control>
+              <Editor.Control>
+                <Editor.Label title={t("Display rounded numbers")} />
+                <Switch
+                  isToggled={glLayer.metadata?.["s:round-numbers"] || false}
+                  onClick={(value) => {
+                    updateLayerProperty(undefined, undefined, undefined, {
+                      "s:round-numbers": value,
+                    });
+                  }}
+                />
+              </Editor.Control>
+              <Editor.Control>
+                <Editor.Label
+                  title={t("Value suffix")}
+                  tooltip={t("Used to append text to values in the legend.")}
+                />
+                <input
+                  type="text"
+                  className="bg-gray-700 rounded py-0.5 pr-0.5 w-24 text-center"
+                  value={glLayer.metadata?.["s:value-suffix"] || ""}
+                  onChange={(e) => {
+                    updateLayerProperty(undefined, undefined, undefined, {
+                      "s:value-suffix": e.target.value,
+                    });
+                  }}
+                />
+              </Editor.Control>
+            </div>
+          )}
         </>
       )}
     </>

@@ -56,5 +56,3 @@ grant execute on function get_first_band_scale(jsonb) to anon;
 alter table data_sources add column if not exists raster_offset real generated always as (get_first_band_offset(geostats)) stored;
 
 alter table data_sources add column if not exists raster_scale real generated always as (get_first_band_scale(geostats)) stored;
-
-alter table data_layers add column if not exists respect_raster_offset_and_scale boolean default true;

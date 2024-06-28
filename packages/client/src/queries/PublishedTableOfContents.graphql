@@ -98,7 +98,6 @@ fragment DataLayerDetails on DataLayer {
     type
     title
   }
-  respectRasterOffsetAndScale
 }
 
 query SearchOverlays(

@@ -451,7 +451,6 @@ async function getStyle(
   colorIndex: number,
   geostats?: GeostatsLayer | RasterInfo | null
 ) {
-  console.log(type, geostats);
   if (type === "Unknown") {
     return [];
   }
@@ -504,15 +503,15 @@ async function getStyle(
             paint: {
               "raster-color": [
                 "step",
-                ["ceil", ["raster-value"]],
+                ["round", ["raster-value"]],
                 "transparent",
                 ...colors.flat(),
               ],
-              "raster-color-mix": [0, 0, 256, geostats.bands[0].base],
+              "raster-color-mix": [0, 0, 258, geostats.bands[0].base],
               "raster-resampling": "nearest",
               "raster-color-range": [
                 geostats.bands[0].minimum,
-                geostats.bands[0].maximum,
+                geostats.bands[0].minimum + 255,
               ],
               "raster-fade-duration": 0,
             },
@@ -557,6 +556,12 @@ async function getStyle(
             },
             layout: {
               visibility: "visible",
+            },
+            metadata: {
+              "s:palette": "interpolatePlasma",
+              ...(geostats.bands[0].offset || geostats.bands[0].scale
+                ? { "s:respect-scale-and-offset": true }
+                : {}),
             },
           },
         ];

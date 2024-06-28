@@ -90,6 +90,7 @@ module.exports = {
       scale: ["active"],
       padding: ["hover"],
       display: ["group-hover"],
+      curosr: ["active"],
     },
     space: ["responsive", "direction"],
     inset: ["responsive", "direction"],

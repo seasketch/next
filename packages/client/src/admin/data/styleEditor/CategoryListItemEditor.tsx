@@ -1,4 +1,8 @@
-import { ExpressionCategory, SeaSketchLayerMetadata } from "./Editors";
+import {
+  ExpressionCategory,
+  SeaSketchLayerMetadata,
+  extractCategoriesFromExpression,
+} from "./Editors";
 import * as Popover from "@radix-ui/react-popover";
 import { RgbaColorPicker } from "react-colorful";
 import { colord } from "colord";
@@ -8,9 +12,7 @@ import {
 } from "./visualizationTypes";
 import { Expression } from "mapbox-gl";
 import {
-  DragHandleDots1Icon,
   DragHandleDots2Icon,
-  DragHandleHorizontalIcon,
   EyeClosedIcon,
   EyeOpenIcon,
 } from "@radix-ui/react-icons";
@@ -83,15 +85,20 @@ export default function CategoryListItemEditor({
             <RgbaColorPicker
               color={colord(category.color).toRgb()}
               onChange={(color) => {
-                const colorString = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
+                const colorString = `rgba(${color.r},${color.g},${color.b},${
+                  color.a === 1 ? "1.0" : color.a.toString()
+                })`;
                 const newExpression = replaceColorForValueInExpression(
                   expression,
                   category.value,
                   colorString
                 );
+                const colors = extractCategoriesFromExpression(
+                  newExpression
+                ).map((c) => c.color);
                 onChange(newExpression, {
                   ...metadata,
-                  "s:palette": undefined,
+                  "s:palette": colors,
                 });
               }}
             />

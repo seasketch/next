@@ -1575,8 +1575,8 @@ class MapContextManager extends EventEmitter {
               ) {
                 const shouldHaveSourceLayer =
                   source.type === DataSourceTypes.SeasketchMvt ||
-                  source.type === DataSourceTypes.Vector ||
-                  source.type === DataSourceTypes.SeasketchRaster;
+                  source.type === DataSourceTypes.Vector; // ||
+                // source.type === DataSourceTypes.SeasketchRaster;
                 const staticLayers = (
                   this.archivedSource &&
                   this.archivedSource.dataLayerId === layer.id &&
@@ -2857,14 +2857,19 @@ class MapContextManager extends EventEmitter {
 
             if (sourceType) {
               try {
+                const respectRasterOffsetAndScale = Boolean(
+                  (layer.mapboxGlStyles || []).find(
+                    (l: any) => l.metadata?.["s:respect-scale-and-offset"]
+                  )
+                );
                 const legend = compileLegendFromGLStyleLayers(
                   layer.mapboxGlStyles,
                   sourceType,
                   source.rasterRepresentativeColors,
-                  layer.respectRasterOffsetAndScale
+                  respectRasterOffsetAndScale
                     ? (source.rasterScale as number | undefined)
                     : undefined,
-                  layer.respectRasterOffsetAndScale
+                  respectRasterOffsetAndScale
                     ? (source.rasterOffset as number | undefined)
                     : undefined
                 );
@@ -3138,8 +3143,8 @@ class MapContextManager extends EventEmitter {
     // TODO: consider customsource layer types
     const shouldHaveSourceLayer =
       source.type === DataSourceTypes.SeasketchMvt ||
-      source.type === DataSourceTypes.Vector ||
-      source.type === DataSourceTypes.SeasketchRaster;
+      source.type === DataSourceTypes.Vector; // ||
+    // source.type === DataSourceTypes.SeasketchRaster;
     if (layer && source && this.map && layer.mapboxGlStyles?.length > 0) {
       // Do an update in place if possible
       let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {

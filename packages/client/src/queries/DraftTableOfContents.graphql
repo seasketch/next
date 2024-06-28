@@ -104,7 +104,6 @@ query layersAndSourcesForItems(
       renderUnder
       sourceLayer
       sublayer
-      respectRasterOffsetAndScale
     }
   }
 }

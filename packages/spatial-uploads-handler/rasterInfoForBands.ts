@@ -266,7 +266,10 @@ export async function rasterInfoForBands(
     info.bands[0].maximum <= 255
   ) {
     info.presentation = SuggestedRasterPresentation.categorical;
-  } else if (info.bands[0].stats.categories.length < 12) {
+  } else if (
+    info.bands[0].stats.categories.length < 12 &&
+    info.bands.length === 1
+  ) {
     info.presentation = SuggestedRasterPresentation.categorical;
   } else if (info.bands[0].colorInterpretation === "Gray") {
     info.presentation = SuggestedRasterPresentation.continuous;

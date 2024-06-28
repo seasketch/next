@@ -142,10 +142,23 @@ export function compileLegendFromGLStyleLayers(
           scale = scale === null || scale === undefined ? 1 : scale;
           offset = offset === null || offset === undefined ? 0 : offset;
           const panel = legendItems[0].panel as GLLegendGradientPanel;
-          panel.stops = panel.stops.map((stop) => ({
-            ...stop,
-            value: stop.value * scale! + offset!,
-          }));
+          panel.stops = panel.stops.map((stop) => {
+            let value = stop.value * scale! + offset!;
+            if (layer.metadata && layer.metadata["s:round-numbers"]) {
+              value = Math.round(value);
+            }
+            return {
+              ...stop,
+              value,
+              ...(layer.metadata?.["s:value-suffix"]?.length
+                ? {
+                    label: `${value.toLocaleString()}${
+                      layer.metadata?.["s:value-suffix"]
+                    }`,
+                  }
+                : { label: value.toLocaleString() }),
+            };
+          });
         }
         break;
     }

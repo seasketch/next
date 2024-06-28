@@ -36,11 +36,13 @@ export default function GUIStyleEditor({
   style,
   geostats,
   layerId,
+  undoRedoCounter,
 }: {
   editorRef: RefObject<ReactCodeMirrorRef>;
   style: string;
   geostats: GeostatsLayer | RasterInfo;
   layerId?: number;
+  undoRedoCounter?: number;
 }) {
   const validVisualizationTypes = useMemo(() => {
     return validVisualizationTypesForGeostats(geostats);
@@ -50,35 +52,21 @@ export default function GUIStyleEditor({
 
   const [styleJSON, setStyleJSON] = useState(JSON.parse(style) as Layer[]);
 
-  // TODO: This doesn't work reliably because it can be called before the
-  // transation is committed
   useEffect(() => {
     const view = editorRef.current?.view;
     if (view) {
-      const keydownHandler = (e: KeyboardEvent) => {
-        if (e.key === "z" && e.metaKey) {
-          e.preventDefault();
-          // sync state
-          setTimeout(() => {
-            const doc = view.state.doc.toString();
-            setStyleJSON(JSON.parse(doc) as Layer[]);
-            const visualizationType = determineVisualizationType(
-              geostats,
-              validVisualizationTypes,
-              JSON.parse(doc) as Layer[]
-            );
-            if (visualizationType) {
-              _setVisualizationType(visualizationType);
-            }
-          }, 100);
-        }
-      };
-      document.body.addEventListener("keydown", keydownHandler);
-      return () => {
-        document.body.removeEventListener("keydown", keydownHandler);
-      };
+      const doc = view.state.doc.toString();
+      setStyleJSON(JSON.parse(doc) as Layer[]);
+      const visualizationType = determineVisualizationType(
+        geostats,
+        validVisualizationTypes,
+        JSON.parse(doc) as Layer[]
+      );
+      if (visualizationType) {
+        _setVisualizationType(visualizationType);
+      }
     }
-  }, [editorRef.current?.view, setStyleJSON]);
+  }, [editorRef.current?.view, setStyleJSON, undoRedoCounter]);
 
   const [visualizationType, _setVisualizationType] =
     useState<VisualizationType | null>(
@@ -150,7 +138,7 @@ export default function GUIStyleEditor({
     (
       layerIndex: number,
       type: "paint" | "layout" | undefined,
-      property: string,
+      property: string | undefined,
       value: any | undefined,
       metadata?: { [key: string]: any }
     ) => {
@@ -164,38 +152,44 @@ export default function GUIStyleEditor({
       if (type && !layer[type]) {
         layer[type] = {};
       }
-      if (type) {
-        if (value === undefined) {
-          // @ts-ignore
-          delete layer[type][property];
+      if (property !== undefined) {
+        if (type) {
+          if (value === undefined) {
+            // @ts-ignore
+            delete layer[type][property];
+          } else {
+            // @ts-ignore
+            layer[type][property] = value;
+          }
         } else {
-          // @ts-ignore
-          layer[type][property] = value;
+          if (value === undefined) {
+            // @ts-ignore
+            delete layer[property];
+          } else {
+            // @ts-ignore
+            layer[property] = value;
+          }
         }
-      } else {
-        if (value === undefined) {
-          // @ts-ignore
-          delete layer[property];
-        } else {
-          // @ts-ignore
-          layer[property] = value;
-        }
-      }
-      // const errors = validateGLStyleFragment(
-      //   styleJSON,
-      //   isRasterInfo(geostats) ? "raster" : "vector"
-      // );
-      // if (errors.length > 0) {
-      //   throw new Error(errors.join("\n"));
-      // }
-      if (mapContext.manager?.map && layerId) {
-        const map = mapContext.manager.map;
-        const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
-        // using the layer id, update the style in the map
-        if (type === "layout") {
-          map.setLayoutProperty(id, property, value);
-        } else if (type === "paint") {
-          map.setPaintProperty(id, property, value);
+        // const errors = validateGLStyleFragment(
+        //   styleJSON,
+        //   isRasterInfo(geostats) ? "raster" : "vector"
+        // );
+        // if (errors.length > 0) {
+        //   throw new Error(errors.join("\n"));
+        // }
+        if (
+          mapContext.manager?.map &&
+          layerId &&
+          mapContext.manager.map.loaded()
+        ) {
+          const map = mapContext.manager.map;
+          const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
+          // using the layer id, update the style in the map
+          if (type === "layout") {
+            map.setLayoutProperty(id, property, value);
+          } else if (type === "paint") {
+            map.setPaintProperty(id, property, value);
+          }
         }
       }
       if (metadata) {
@@ -274,8 +268,8 @@ export default function GUIStyleEditor({
 
 export type LayerPropertyUpdater = (
   type: "paint" | "layout" | undefined,
-  property: string,
-  value: any,
+  property: string | undefined,
+  value: any | undefined,
   metadata?: { [key: string]: any }
 ) => void;
 

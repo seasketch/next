@@ -251,11 +251,33 @@ async function encodeValuesToRGB(
   const rel = (p: string) => pathJoin(workingDirectory, p);
 
   const operations: { [fname: string]: string } = {
-    "temp_r.tif": `floor((((A - ${base}) * ${1 / interval}) + 32768) / 65536)`,
-    "temp_g.tif": `floor(((((A - ${base}) * ${
-      1 / interval
-    }) + 32768) % 65536) / 256)`,
-    "temp_b.tif": `(floor((A - ${base}) * ${1 / interval}) + 32768) % 256`,
+    "temp_r.tif": `
+      floor(
+        (
+          (
+            ( A - ${base} ) * ${1 / interval}
+          ) + 32768
+        ) / 65536
+      )
+    `,
+    "temp_g.tif": `
+      floor(
+        (
+          (
+            (
+              (A - ${base}) * ${1 / interval}
+            ) + 32768
+          ) % 65536
+        ) / 256
+      )
+    `,
+    "temp_b.tif": `
+      (
+        floor(
+          (A - ${base}) * ${1 / interval}
+        ) + 32768
+      ) % 256
+    `,
   };
 
   if (noDataValue !== null) {
@@ -272,7 +294,7 @@ async function encodeValuesToRGB(
           "--outfile",
           rel(output),
           "--calc",
-          formula,
+          formula.replace(/\n/g, "").trim(),
           "--NoDataValue",
           "0",
           "--type",
@@ -299,6 +321,10 @@ async function encodeValuesToRGB(
   await logger.exec(
     ["gdal_translate", [vrtFname, encodedFname]],
     "Problem converting VRT to RGB TIFF"
+  );
+  await logger.exec(
+    ["cp", [encodedFname, "/Users/cburt/Downloads/output_encoded.tif"]],
+    "Problem copying encoded file"
   );
 
   return encodedFname;

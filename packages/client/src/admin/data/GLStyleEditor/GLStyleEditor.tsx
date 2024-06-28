@@ -102,6 +102,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     },
   });
 
+  const [undoRedoCounter, setUndoRedoCounter] = useState(0);
+
   const jsonCompletions = useMemo(() => {
     return jsonLanguage.data.of({
       autocomplete: glStyleAutocomplete(
@@ -144,6 +146,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           } else {
             undo(view);
           }
+          setUndoRedoCounter((c) => c + 1);
         }
       };
       document.body.addEventListener("keydown", keydownHandler);
@@ -330,6 +333,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                         if (editorRef.current?.view) {
                           const editorView = editorRef.current?.view;
                           undo(editorView);
+                          setUndoRedoCounter((c) => c + 1);
                         }
                       }}
                     >
@@ -346,6 +350,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                         if (editorRef.current?.view) {
                           const editorView = editorRef.current?.view;
                           redo(editorView);
+                          setUndoRedoCounter((c) => c + 1);
                         }
                       }}
                     >
@@ -553,6 +558,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           editorRef={editorRef}
           geostats={props.dataSource.geostats}
           layerId={props.layerId}
+          undoRedoCounter={undoRedoCounter}
         />
       )}
       {editor === "code" && (

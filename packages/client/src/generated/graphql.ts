@@ -2056,7 +2056,6 @@ export type DataLayer = Node & {
    * functionality to work, layers must be identified in the basemap configuration.
    */
   renderUnder: RenderUnderType;
-  respectRasterOffsetAndScale?: Maybe<Scalars['Boolean']>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
@@ -2160,7 +2159,6 @@ export type DataLayerInput = {
    * functionality to work, layers must be identified in the basemap configuration.
    */
   renderUnder?: Maybe<RenderUnderType>;
-  respectRasterOffsetAndScale?: Maybe<Scalars['Boolean']>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
@@ -2191,7 +2189,6 @@ export type DataLayerPatch = {
    * functionality to work, layers must be identified in the basemap configuration.
    */
   renderUnder?: Maybe<RenderUnderType>;
-  respectRasterOffsetAndScale?: Maybe<Scalars['Boolean']>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
@@ -16977,7 +16974,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'respectRasterOffsetAndScale'>
+      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
@@ -18889,7 +18886,7 @@ export type ClientSpriteFragment = (
 
 export type DataLayerDetailsFragment = (
   { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'zIndex' | 'staticId' | 'dataSourceId' | 'respectRasterOffsetAndScale'>
+  & Pick<DataLayer, 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'zIndex' | 'staticId' | 'dataSourceId'>
   & { sprites?: Maybe<Array<(
     { __typename?: 'Sprite' }
     & ClientSpriteFragment
@@ -22175,7 +22172,6 @@ export const DataLayerDetailsFragmentDoc = gql`
     type
     title
   }
-  respectRasterOffsetAndScale
 }
     ${ClientSpriteFragmentDoc}`;
 export const ProjectListItemFragmentDoc = gql`
@@ -25358,7 +25354,6 @@ export const LayersAndSourcesForItemsDocument = gql`
       renderUnder
       sourceLayer
       sublayer
-      respectRasterOffsetAndScale
     }
   }
 }

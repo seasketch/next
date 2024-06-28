@@ -2,6 +2,7 @@ import { InfoCircledIcon } from "@radix-ui/react-icons";
 import * as Slider from "@radix-ui/react-slider";
 import { Expression } from "mapbox-gl";
 import { ReactNode } from "react";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 export function DocumentationInfo({ href }: { href: string }) {
   return (
@@ -39,15 +40,34 @@ export function Label({
   title,
   docs,
   buttons,
+  tooltip,
 }: {
   title: string | ReactNode;
   docs?: string;
   buttons?: ReactNode;
+  tooltip?: string | ReactNode;
 }) {
   return (
     <h3 className="flex-1 flex items-center space-x-1">
       <span>{title}</span>
       {docs && <DocumentationInfo href={docs} />}
+      {tooltip && (
+        <Tooltip.Provider>
+          <Tooltip.Root delayDuration={100}>
+            <Tooltip.Trigger>
+              <InfoCircledIcon className="text-gray-500" />
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content
+                className="bg-gray-900 bg-opacity-90 text-white select-none  p-2 px-3 text-sm z-50 rounded"
+                style={{ maxWidth: 200 }}
+              >
+                {tooltip}
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+        </Tooltip.Provider>
+      )}
       {buttons && (
         <div className="flex-1 flex items-center justify-end">{buttons}</div>
       )}
@@ -59,8 +79,14 @@ export function Control({ children }: { children?: ReactNode }) {
   return <div className="flex items-center text-sm">{children}</div>;
 }
 
-export function Header({ title }: { title: string | ReactNode }) {
-  return <h4 className="text-sm font-semibold py-3">{title}</h4>;
+export function Header({
+  title,
+  className,
+}: {
+  title: string | ReactNode;
+  className?: string;
+}) {
+  return <h4 className={`text-sm font-semibold py-3 ${className}`}>{title}</h4>;
 }
 
 export function Thumb({
@@ -86,6 +112,11 @@ export type SeaSketchLayerMetadata = { [key: string]: any } & {
   "s:palette"?: string[];
   "s:legend-labels"?: { [key: string]: string };
   "s:sorted-categories"?: any[];
+  "s:reverse-palette"?: boolean;
+  "s:respect-scale-and-offset"?: boolean;
+  "s:round-numbers"?: boolean;
+  "s:value-suffix"?: string;
+  "s:steps"?: string;
 };
 
 export function extractCategoriesFromExpression(expression: Expression) {

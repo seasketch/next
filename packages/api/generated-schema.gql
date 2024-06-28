@@ -2318,7 +2318,6 @@ type DataLayer implements Node {
   functionality to work, layers must be identified in the basemap configuration.
   """
   renderUnder: RenderUnderType!
-  respectRasterOffsetAndScale: Boolean
 
   """
   For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.
@@ -2418,7 +2417,6 @@ input DataLayerInput {
   functionality to work, layers must be identified in the basemap configuration.
   """
   renderUnder: RenderUnderType
-  respectRasterOffsetAndScale: Boolean
 
   """
   For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.
@@ -2458,7 +2456,6 @@ input DataLayerPatch {
   functionality to work, layers must be identified in the basemap configuration.
   """
   renderUnder: RenderUnderType
-  respectRasterOffsetAndScale: Boolean
 
   """
   For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to.

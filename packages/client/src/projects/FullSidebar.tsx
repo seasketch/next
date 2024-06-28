@@ -48,7 +48,7 @@ export default function FullSidebar({
       if (
         data?.project?.sessionParticipationStatus &&
         data?.project?.sessionParticipationStatus !==
-        ParticipationStatus.ParticipantSharedProfile
+          ParticipationStatus.ParticipantSharedProfile
       ) {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/join?redirectUrl=${window.location.pathname}`);
@@ -96,19 +96,29 @@ export default function FullSidebar({
         },
       }}
       style={{ boxShadow: open ? "rgb(0 0 0 / 23%) 2px 0px 5px 0px" : "none" }}
-      className={`absolute left-0 h-full overflow-y-auto z-20 p-5 w-full md:w-96 ${dark ? "text-gray-200 bg-cool-gray-800" : "text-gray-900 bg-white "
-        }`}
+      className={`absolute left-0 h-full overflow-y-auto z-20 p-5 w-full md:w-96 ${
+        dark ? "text-gray-200 bg-cool-gray-800" : "text-gray-900 bg-white "
+      }`}
       animate={open ? "open" : "closed"}
       initial={false}
     >
       <div className="flex w-full">
         <div className="flex-grow-0 flex items-center">
-          {project?.logoUrl && (
+          {project?.logoUrl && !project.logoLink && (
             <img
-              alt="SeaSketch Logo"
+              alt="Project Logo"
               src={project?.logoUrl}
               className="w-12 flex-0 mr-4"
             />
+          )}
+          {project?.logoUrl && project.logoLink && (
+            <a href={project.logoLink} target="_blank" rel="noreferrer">
+              <img
+                alt="Project Logo"
+                src={project?.logoUrl}
+                className="w-12 flex-0 mr-4"
+              />
+            </a>
           )}
         </div>
         <div className="flex-1 max-w-md flex items-center text-xl">
@@ -158,31 +168,34 @@ export default function FullSidebar({
           label={t("Maps")}
           icon={MapIcon}
         />
-        {data?.project?.hideOverlays !== true &&
+        {data?.project?.hideOverlays !== true && (
           <NavItem
             label={t("Overlay Layers")}
             icon={LayerIcon}
             onClick={chooseSidebar("overlays")}
-          />}
-        {data?.project?.hideSketches !== true && <NavItem
-          label={t("Sketching Tools")}
-          onClick={chooseSidebar("sketches")}
-          icon={
-            <span
-              className="inline-block -mb-0.5 relative"
-              style={{ left: -0.75 }}
-            >
-              {SketchingIcon}
-            </span>
-          }
-        />}
-        {data?.project?.hideForums !== true &&
+          />
+        )}
+        {data?.project?.hideSketches !== true && (
+          <NavItem
+            label={t("Sketching Tools")}
+            onClick={chooseSidebar("sketches")}
+            icon={
+              <span
+                className="inline-block -mb-0.5 relative"
+                style={{ left: -0.75 }}
+              >
+                {SketchingIcon}
+              </span>
+            }
+          />
+        )}
+        {data?.project?.hideForums !== true && (
           <NavItem
             label={t("Discussion Forums")}
             icon={ForumsIcon}
             onClick={chooseSidebar("forums")}
           />
-        }
+        )}
         {project?.isOfflineEnabled && (
           <NavItem
             icon={
@@ -208,8 +221,9 @@ export default function FullSidebar({
         <a
           target="_blank"
           rel="noreferrer"
-          href={`mailto:${data?.project?.supportEmail || "support@seasketch.org"
-            }`}
+          href={`mailto:${
+            data?.project?.supportEmail || "support@seasketch.org"
+          }`}
           className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
           role="menuitem"
         >
