@@ -1,4 +1,5 @@
 import {
+  Bucket,
   GeostatsLayer,
   RasterInfo,
   SuggestedRasterPresentation,
@@ -6,6 +7,7 @@ import {
 } from "@seasketch/geostats-types";
 import { Expression, Layer, RasterLayer } from "mapbox-gl";
 import * as colorScale from "d3-scale-chromatic";
+import { StepsSetting } from "./ContinuousRasterStepsEditor";
 
 export const colorScales = {
   categorical: [
@@ -145,6 +147,10 @@ export function determineVisualizationType(
           if (expression === "step" || expression === "match") {
             if (validTypes.includes(VisualizationType.CATEGORICAL_RASTER)) {
               return VisualizationType.CATEGORICAL_RASTER;
+            } else if (expression === "step") {
+              if (validTypes.includes(VisualizationType.CONTINUOUS_RASTER)) {
+                return VisualizationType.CONTINUOUS_RASTER;
+              }
             }
           } else if (/interpolate/.test(expression)) {
             if (validTypes.includes(VisualizationType.CONTINUOUS_RASTER)) {
@@ -259,12 +265,20 @@ export function replaceColors(
   expression: Expression,
   palette: string,
   reverse: boolean,
-  excludedValues: (string | number)[]
+  excludedValues: (string | number)[],
+  steps?: StepsSetting
 ) {
   // @ts-ignore
   let colors = Array.isArray(palette) ? palette : colorScale[palette];
   if (!colors?.length) {
     throw new Error("Invalid palette: " + palette);
+  }
+  if (typeof colors === "function" && steps && steps.steps !== "continuous") {
+    const nStops = steps.n;
+    const interval = 1 / (nStops - 1);
+    colors = Array.from({ length: nStops }, (_, i) => {
+      return colors(i * interval);
+    });
   }
   if (palette in colorScale && reverse && Array.isArray(colors)) {
     colors = [...colors].reverse();
@@ -307,7 +321,7 @@ export function replaceColors(
 }
 
 export function buildContinuousRasterColorExpression(
-  expression: Expression,
+  expression: Expression | undefined,
   palette: string | string[],
   reverse: boolean,
   range: [number, number]
@@ -316,24 +330,26 @@ export function buildContinuousRasterColorExpression(
   const colors = Array.isArray(palette)
     ? palette
     : colorScale[palette as keyof typeof colorScale];
-  if (/interpolate/.test(expression[0])) {
-    const fnName = expression[0];
-    const iType = expression[1];
-    const arg = expression[2];
-    const stops = [];
-    const nStops = typeof colors === "function" ? 10 : colors.length;
-    const interval = (range[1] - range[0]) / (nStops - 1);
-    for (var i = 0; i < nStops; i++) {
-      const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
-      stops.push(
-        range[0] + interval * i,
-        typeof colors === "function" ? colors(fraction) : colors[i]
-      );
-    }
-    return [fnName, iType, arg, ...stops];
-  } else {
-    throw new Error("Unsupported expression type. " + expression[0]);
+  const fnName =
+    expression && /interpolate/.test(expression[0])
+      ? expression[0]
+      : "interpolate";
+  const iType =
+    expression && /interpolate/.test(expression[0])
+      ? expression?.[1]
+      : ["linear"];
+  const arg = ["raster-value"];
+  const stops = [];
+  const nStops = typeof colors === "function" ? 10 : colors.length;
+  const interval = (range[1] - range[0]) / (nStops - 1);
+  for (var i = 0; i < nStops; i++) {
+    const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
+    stops.push(
+      range[0] + interval * i,
+      typeof colors === "function" ? colors(fraction) : colors[i]
+    );
   }
+  return [fnName, iType, arg, ...stops];
 }
 
 /**
@@ -343,25 +359,21 @@ export function buildContinuousRasterColorExpression(
 export function expressionMatchesPalette(
   expression: Expression,
   palette: keyof typeof colorScale,
-  reversed: boolean
+  reversed: boolean,
+  steps: StepsSetting
 ) {
   let paletteColors = (
     Array.isArray(palette) ? [] : (colorScale[palette] as string[])
   ) as ((i: number) => string) | string[];
+  if (typeof paletteColors === "function" && steps) {
+    const nStops = steps?.steps === "continuous" ? 10 : steps.n;
+    // @ts-ignore
+    paletteColors = getColorStops(palette, nStops, reversed);
+  }
   const expressionColors = extractColorsFromExpression(expression);
   for (const color of expressionColors) {
-    if (typeof paletteColors === "function") {
-      const i = expressionColors.indexOf(color);
-      const fraction = reversed
-        ? 1 - i / (expressionColors.length - 1)
-        : i / (expressionColors.length - 1);
-      if (paletteColors(fraction) !== color) {
-        return false;
-      }
-    } else {
-      if (!paletteColors.includes(color)) {
-        return false;
-      }
+    if (!(paletteColors as string[]).includes(color)) {
+      return false;
     }
   }
   return true;
@@ -467,6 +479,64 @@ export function extractValueRange(expression: Expression) {
     }
     return [Math.min(...values), Math.max(...values)];
   } else {
-    throw new Error("Unsupported expression type. " + fName);
+    const stops = expression.slice(3);
+    for (let i = 0; i < stops.length; i += 2) {
+      values.push(stops[i]);
+    }
+    return [Math.min(...values), Math.max(...values)];
+    // throw new Error("Unsupported expression type. " + fName);
   }
+}
+
+export function buildStepExpression(
+  buckets: Bucket[],
+  palette: string | string[],
+  reverse: boolean
+) {
+  const expression: Expression = ["step", ["raster-value"], "transparent"];
+  const nStops = buckets.length - 1;
+  const colors = getColorStops(palette, nStops, reverse);
+  for (let i = 0; i < nStops; i++) {
+    const bucket = buckets[i];
+    if (buckets[1] !== null && (i === 0 || bucket[0] !== buckets[i - 1][0])) {
+      expression.push(bucket[0], colors[i]);
+    }
+  }
+  return expression;
+}
+
+function getColorStops(
+  palette: string | string[],
+  n: number,
+  reverse: boolean
+) {
+  let colors = Array.isArray(palette)
+    ? palette
+    : colorScale[palette as keyof typeof colorScale];
+  if (!colors?.length) {
+    throw new Error("Invalid palette: " + palette);
+  }
+  if (
+    !Array.isArray(palette) &&
+    palette in colorScale &&
+    reverse &&
+    Array.isArray(colors)
+  ) {
+    colors = [...colors].reverse();
+  }
+  const colorCount = colors.length;
+  const stops = [];
+  for (let i = 0; i < n; i++) {
+    if (typeof colors === "function") {
+      const fraction = reverse ? 1 - i / (n - 1) : i / (n - 1);
+      stops.push(colors(fraction));
+    } else {
+      if (i > colors.length) {
+        stops.push(colors[colors.length - 1]);
+      } else {
+        stops.push(colors[i % colorCount]);
+      }
+    }
+  }
+  return stops;
 }

@@ -1,9 +1,25 @@
-import { RasterBandInfo } from "@seasketch/geostats-types";
+import { Bucket, RasterBandInfo } from "@seasketch/geostats-types";
 import * as Editors from "./Editors";
 import { useTranslation } from "react-i18next";
 import { Expression } from "mapbox-gl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { LayerPropertyUpdater } from "./GUIStyleEditor";
+import {
+  buildContinuousRasterColorExpression,
+  buildStepExpression,
+} from "./visualizationTypes";
+import { update } from "lodash";
+
+type StepsConfiguration =
+  | "continuous"
+  | "manual"
+  | keyof RasterBandInfo["stats"];
+
+export type StepsSetting = {
+  steps: StepsConfiguration;
+  n: number;
+};
+
 export default function ContinuousRasterStepsEditor({
   band,
   expression,
@@ -16,7 +32,7 @@ export default function ContinuousRasterStepsEditor({
   updateLayerProperty: LayerPropertyUpdater;
 }) {
   const { t } = useTranslation("admin:data");
-  const [steps, setSteps] = useState<string>(
+  const [steps, setSteps] = useState<StepsSetting>(
     determineSteps(expression, band, metadata)
   );
 
@@ -26,6 +42,10 @@ export default function ContinuousRasterStepsEditor({
     );
   }
 
+  const state = useMemo(() => {
+    return determineSteps(expression, band, metadata);
+  }, [expression, band, metadata?.["s:steps"]]);
+
   return (
     <>
       <Editors.Root>
@@ -33,13 +53,63 @@ export default function ContinuousRasterStepsEditor({
         <Editors.Control>
           <select
             className="bg-gray-700 rounded text-sm py-1"
-            value={determineSteps(expression, band, metadata)}
+            value={state.steps}
             onChange={(e) => {
-              setSteps(e.target.value);
               if (e.target.value === "continuous") {
+                setSteps((prev) => {
+                  return {
+                    ...prev,
+                    steps: "continuous",
+                  };
+                });
+                updateLayerProperty(
+                  "paint",
+                  "raster-color",
+                  buildContinuousRasterColorExpression(
+                    undefined,
+                    metadata?.["s:palette"] || "schemeGreens6",
+                    Boolean(metadata?.["s:reverse-palette"]),
+                    [band.minimum, band.maximum]
+                  ),
+                  {
+                    "s:steps": `continuous:${steps.n}`,
+                  }
+                );
               } else if (e.target.value === "manual") {
               } else {
-                console.log((band.stats as any)[e.target.value]);
+                let n = steps.n;
+                if (!(e.target.value in band.stats)) {
+                  throw new Error(`Invalid step type ${e.target.value}`);
+                }
+                const bucketValues = Object.keys(
+                  (band.stats as any)[e.target.value]
+                ).map((v) => parseInt(v));
+                const max = Math.max(...bucketValues);
+                const min = Math.min(...bucketValues);
+                if (n > max) {
+                  n = max;
+                } else if (n < min) {
+                  n = min;
+                }
+                setSteps((prev) => {
+                  return {
+                    ...prev,
+                    steps: e.target.value as StepsConfiguration,
+                    n,
+                  };
+                });
+                updateLayerProperty(
+                  "paint",
+                  "raster-color",
+                  buildStepExpression(
+                    (band.stats as any)[e.target.value][n],
+                    metadata?.["s:palette"] || "schemeGreens6",
+                    Boolean(metadata?.["s:reverse-palette"])
+                  ),
+                  {
+                    "s:steps": `${e.target.value}:${n}`,
+                  }
+                );
               }
             }}
           >
@@ -69,23 +139,51 @@ export default function ContinuousRasterStepsEditor({
             <option disabled={isDisabled("geometric")} value="geometric">
               {t("Geometric")}
             </option>
-            {steps === "manual" && (
+            {(steps.steps === "manual" || state.steps === "manual") && (
               <option value="manual">{t("Manual")}</option>
             )}
           </select>
         </Editors.Control>
       </Editors.Root>
-      {steps !== "continuous" && (
+      {steps.steps !== "continuous" && (
         <Editors.Root>
           <Editors.Label title={t("Number of Steps")} />
           <Editors.Control>
-            <select className="bg-gray-700 rounded text-sm py-1">
-              {Object.keys((band.stats as any)[steps]).map((key) => (
-                <option key={key} value={key}>
-                  {key}
-                </option>
-              ))}
-            </select>
+            {steps.steps === "manual" ? (
+              <div>{expression.slice(3).length / 2}</div>
+            ) : (
+              <select
+                value={expression.slice(3).length / 2}
+                className="bg-gray-700 rounded text-sm py-1"
+                onChange={(e) => {
+                  const n = parseInt(e.target.value);
+                  setSteps((prev) => {
+                    return {
+                      ...prev,
+                      n,
+                    };
+                  });
+                  updateLayerProperty(
+                    "paint",
+                    "raster-color",
+                    buildStepExpression(
+                      (band.stats as any)[steps.steps][n],
+                      metadata?.["s:palette"] || "schemeGreens6",
+                      Boolean(metadata?.["s:reverse-palette"])
+                    ),
+                    {
+                      "s:steps": `${steps.steps}:${n}`,
+                    }
+                  );
+                }}
+              >
+                {Object.keys((band.stats as any)[steps.steps]).map((key) => (
+                  <option key={key} value={key}>
+                    {parseInt(key)}
+                  </option>
+                ))}
+              </select>
+            )}
           </Editors.Control>
         </Editors.Root>
       )}
@@ -93,21 +191,51 @@ export default function ContinuousRasterStepsEditor({
   );
 }
 
-function determineSteps(
+export function determineSteps(
   expression: Expression,
   band: RasterBandInfo,
   metadata?: Editors.SeaSketchLayerMetadata
 ) {
+  const result: StepsSetting = {
+    steps: "manual",
+    n: 6,
+  };
   const fnName = expression[0];
   if (/interpolate/.test(fnName)) {
-    return "continuous";
+    result.steps = "continuous";
   } else if (fnName === "step") {
     // TODO: look for type in metadata
+    const msteps = metadata?.["s:steps"];
     // If present, validate values against expression and band stats
-    // if not matching, return manual
-    // otherwise return the metadata value
-    return "quantiles";
+    if (msteps) {
+      const [type, n] = msteps.split(":");
+      if (type !== "manual" && type !== "continuous" && !(type in band.stats)) {
+        throw new Error(`Invalid step type ${type}`);
+      }
+      result.steps = type as StepsConfiguration;
+      result.n = parseInt(n);
+      // validate actual expression
+      if (!(type in band.stats)) {
+        result.steps = "manual";
+        return result;
+      }
+      const buckets = (band.stats as any)[type][n];
+      if (!buckets) {
+        result.steps = "manual";
+        return result;
+      }
+      const stops = expression.slice(3);
+      for (let i = 0; i < stops.length; i += 2) {
+        if (!buckets.find((b: Bucket) => b[0] === stops[i])) {
+          result.steps = "manual";
+          return result;
+        }
+      }
+    } else {
+      result.steps = "manual";
+    }
   } else {
-    return "manual";
+    result.steps = "manual";
   }
+  return result as StepsSetting;
 }

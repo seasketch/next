@@ -125,6 +125,28 @@ export function compileLegendFromGLStyleLayers(
           ),
           filters: [],
         });
+        if (
+          (layer.metadata as SeaSketchLayerMetadata)?.[
+            "s:respect-scale-and-offset"
+          ] &&
+          ((scale && scale !== 1) || (offset && offset !== 0))
+        ) {
+          for (const item of (legendItems[0].panel as GLLegendStepPanel)
+            .steps) {
+            let value = item.value as number;
+            if (layer.metadata && layer.metadata["s:round-numbers"]) {
+              value = Math.round(value);
+            }
+            value = value * scale! + offset!;
+            if (layer.metadata && layer.metadata["s:round-numbers"]) {
+              value = Math.round(value);
+            }
+            item.label = value.toLocaleString();
+            if (layer.metadata?.["s:value-suffix"]?.length) {
+              item.label += layer.metadata["s:value-suffix"];
+            }
+          }
+        }
         break;
       case "interpolate":
       case "interpolate-hcl":
@@ -1031,6 +1053,8 @@ export function pluckRasterStepPanel(
   metadata?: SeaSketchLayerMetadata,
   rasterColorRange?: [number, number]
 ) {
+  const round = Boolean(metadata?.["s:round-numbers"]);
+  const scale = Boolean(metadata?.["s:respect-scale-and-offset"]);
   const inputOutputPairs = expression.slice(2);
 
   const panel: GLLegendStepPanel = {
@@ -1054,13 +1078,19 @@ export function pluckRasterStepPanel(
         if (i % 2 !== 0) {
           const input = current;
           const output = inputOutputPairs[i + 1];
+          let displayValue = input;
+          if (scale) {
+          }
+          if (round) {
+            displayValue = Math.round(input);
+          }
           if (
             output !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
             output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
           ) {
             steps.push({
               id: id + "-" + i,
-              label: `${input.toLocaleString()}`,
+              label: `${displayValue.toLocaleString()}`,
               value: input,
               symbol: {
                 type: "fill",

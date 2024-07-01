@@ -5,12 +5,14 @@ import { ChevronDownIcon, UpdateIcon } from "@radix-ui/react-icons";
 import { colorScales } from "./visualizationTypes";
 import * as d3Palettes from "d3-scale-chromatic";
 import { SuggestedRasterPresentation } from "@seasketch/geostats-types";
+import { StepsSetting } from "./ContinuousRasterStepsEditor";
 
 export default function RasterColorPalette({
   onChange,
   value,
   reversed,
   type,
+  steps,
 }: {
   value?: string;
   reversed?: boolean;
@@ -18,6 +20,7 @@ export default function RasterColorPalette({
   type:
     | SuggestedRasterPresentation.categorical
     | SuggestedRasterPresentation.continuous;
+  steps?: StepsSetting;
 }) {
   return (
     <Editor.Root>
@@ -51,7 +54,7 @@ export default function RasterColorPalette({
           }}
         >
           <Select.Trigger
-            className="inline-flex items-center justify-center rounded px-4 text-sm leading-none h-8 gap-1 bg-gray-700 text-gray-400 shadow  outline-none border border-gray-500"
+            className="inline-flex items-center justify-center rounded px-4 text-sm leading-none h-8 gap-1 bg-gray-700 text-gray-400 shadow  outline-none focus:ring-2 focus:border-transparent ring-blue-600 border border-gray-500"
             aria-label="Color Palette"
           >
             <Select.Value placeholder="Custom palette" />
@@ -92,6 +95,7 @@ export default function RasterColorPalette({
                       reversed={reversed}
                       key={scale}
                       value={scale}
+                      steps={steps}
                     />
                   ))}
                 {type === SuggestedRasterPresentation.continuous &&
@@ -100,6 +104,7 @@ export default function RasterColorPalette({
                       reversed={reversed}
                       key={scale}
                       value={scale}
+                      steps={steps}
                     />
                   ))}
                 {type === SuggestedRasterPresentation.continuous &&
@@ -108,6 +113,7 @@ export default function RasterColorPalette({
                       reversed={reversed}
                       key={scale}
                       value={scale}
+                      steps={steps}
                     />
                   ))}
               </Select.Viewport>
@@ -156,9 +162,11 @@ function CategoricalScaleItem({
 function ContinuousScaleItem({
   value,
   reversed,
+  steps,
 }: {
   value: string;
   reversed?: boolean;
+  steps?: StepsSetting;
 }) {
   const fn = (d3Palettes as any)[value];
   return (
@@ -168,18 +176,32 @@ function ContinuousScaleItem({
     >
       <Select.ItemText>
         {value in d3Palettes ? (
-          <div
-            className="flex w-32 h-4"
-            style={{
-              backgroundImage: `linear-gradient(${
-                reversed ? "to left" : "to right"
-              }, ${fn(0)} 0%, ${fn(0.1)} 10%, ${fn(0.2)} 20%, ${fn(
-                0.3
-              )} 30%, ${fn(0.4)} 40%, ${fn(0.5)} 50%, ${fn(0.6)} 60%, ${fn(
-                0.7
-              )} 70%, ${fn(0.8)} 80%, ${fn(0.9)} 90%, ${fn(1)} 100%`,
-            }}
-          ></div>
+          !steps || steps.steps === "continuous" ? (
+            <div
+              className="flex w-32 h-4"
+              style={{
+                backgroundImage: `linear-gradient(${
+                  reversed ? "to left" : "to right"
+                }, ${fn(0)} 0%, ${fn(0.1)} 10%, ${fn(0.2)} 20%, ${fn(
+                  0.3
+                )} 30%, ${fn(0.4)} 40%, ${fn(0.5)} 50%, ${fn(0.6)} 60%, ${fn(
+                  0.7
+                )} 70%, ${fn(0.8)} 80%, ${fn(0.9)} 90%, ${fn(1)} 100%`,
+              }}
+            ></div>
+          ) : (
+            <div className="flex w-32 h-4">
+              {Array.from({ length: steps.n }, (_, i) => (
+                <div
+                  key={i}
+                  className="h-full flex-1"
+                  style={{
+                    backgroundColor: fn(i / (steps.n - 1)),
+                  }}
+                ></div>
+              ))}
+            </div>
+          )
         ) : (
           value
         )}

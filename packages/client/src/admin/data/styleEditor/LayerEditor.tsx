@@ -1,5 +1,5 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
-import { Layer } from "mapbox-gl";
+import { Layer, RasterPaint } from "mapbox-gl";
 import {
   EditorCard,
   LayerPropertyDeleter,
@@ -83,15 +83,17 @@ export default function LayerEditor({
               updateLayerProperty("paint", `${glLayer.type}-opacity`, value)
             }
           />
-          {glLayer.type === "raster" && (
-            <RasterLayerEditor
-              glLayer={glLayer}
-              updateLayerProperty={updateLayerProperty}
-              deleteLayerProperties={deleteLayerProperties}
-              rasterInfo={geostats as RasterInfo}
-              type={type}
-            />
-          )}
+          {glLayer.type === "raster" &&
+            glLayer.paint &&
+            (glLayer.paint as RasterPaint)["raster-color"] && (
+              <RasterLayerEditor
+                glLayer={glLayer}
+                updateLayerProperty={updateLayerProperty}
+                deleteLayerProperties={deleteLayerProperties}
+                rasterInfo={geostats as RasterInfo}
+                type={type}
+              />
+            )}
         </div>
       </EditorCard>
     );

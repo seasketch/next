@@ -1,4 +1,4 @@
-import { Layer } from "mapbox-gl";
+import { Expression, Layer, RasterPaint } from "mapbox-gl";
 import { LayerPropertyDeleter, LayerPropertyUpdater } from "./GUIStyleEditor";
 import RasterFadDurationEditor from "./RasterFadeDurationEditor";
 import RasterResamplingEditor from "./RasterResamplingEditor";
@@ -25,10 +25,9 @@ import RasterColorPalette from "./RasterColorPaletteEditor";
 import { RasterCategoryEditableList } from "./RasterCategoryEditableList";
 import ContinuousRasterHistogram from "./ContinuousRasterHistogram";
 import Switch from "../../../components/Switch";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
-import * as Tooltip from "@radix-ui/react-tooltip";
-import { reverse } from "lodash";
-import ContinuousRasterStepsEditor from "./ContinuousRasterStepsEditor";
+import ContinuousRasterStepsEditor, {
+  determineSteps,
+} from "./ContinuousRasterStepsEditor";
 
 export default function RasterLayerEditor({
   updateLayerProperty,
@@ -68,14 +67,21 @@ export default function RasterLayerEditor({
     glLayer.paint?.["raster-brightness-max"],
   ]);
 
+  const paint = glLayer.paint as RasterPaint;
+
+  const steps = determineSteps(
+    paint["raster-color"]! as Expression,
+    rasterInfo.bands[0],
+    glLayer.metadata
+  );
+
   return (
     <>
       <RasterResamplingEditor
         onChange={(value) => {
           updateLayerProperty("paint", "raster-resampling", value);
         }}
-        // @ts-ignore
-        value={glLayer.paint?.["raster-resampling"]}
+        value={paint["raster-resampling"]}
       />
       <RasterFadDurationEditor
         onChange={(value) => {
@@ -88,6 +94,7 @@ export default function RasterLayerEditor({
         type === VisualizationType.CONTINUOUS_RASTER) && (
         <>
           <RasterColorPalette
+            steps={steps}
             type={
               type === VisualizationType.CATEGORICAL_RASTER
                 ? SuggestedRasterPresentation.categorical
@@ -97,10 +104,10 @@ export default function RasterLayerEditor({
             value={
               (glLayer.metadata || {})["s:palette"] &&
               expressionMatchesPalette(
-                // @ts-ignore
-                glLayer.paint!["raster-color"],
+                paint["raster-color"]! as Expression,
                 glLayer.metadata["s:palette"],
-                Boolean(glLayer.metadata["s:reverse-palette"])
+                Boolean(glLayer.metadata["s:reverse-palette"]),
+                steps
               )
                 ? (glLayer.metadata || {})["s:palette"]
                 : null
@@ -113,7 +120,8 @@ export default function RasterLayerEditor({
                   (glLayer.paint! as any)["raster-color"],
                   palette,
                   Boolean(reverse),
-                  glLayer.metadata?.["s:excluded"]
+                  glLayer.metadata?.["s:excluded"] || [],
+                  steps
                 ),
                 { "s:palette": palette, "s:reverse-palette": reverse }
               );
@@ -124,8 +132,7 @@ export default function RasterLayerEditor({
 
       {type === VisualizationType.CATEGORICAL_RASTER && (
         <RasterCategoryEditableList
-          // @ts-ignore
-          rasterColorExpression={glLayer.paint!["raster-color"]}
+          rasterColorExpression={paint["raster-color"] as Expression}
           metadata={glLayer.metadata}
           onChange={(expression, metadata) => {
             updateLayerProperty("paint", "raster-color", expression, metadata);
@@ -212,8 +219,7 @@ export default function RasterLayerEditor({
               updateLayerProperty={updateLayerProperty}
             />
             <ContinuousRasterHistogram
-              // @ts-ignore
-              expression={glLayer.paint?.["raster-color"]}
+              expression={paint["raster-color"]! as Expression}
               band={rasterInfo.bands[0]}
               // @ts-ignore
               range={extractValueRange(glLayer.paint["raster-color"])}
@@ -224,7 +230,8 @@ export default function RasterLayerEditor({
                     // @ts-ignore
                     glLayer.paint!["raster-color"],
                     palette,
-                    glLayer.metadata?.["s:reverse-palette"]
+                    glLayer.metadata?.["s:reverse-palette"],
+                    steps
                   )
                 ) {
                   palette = extractColorsFromExpression(

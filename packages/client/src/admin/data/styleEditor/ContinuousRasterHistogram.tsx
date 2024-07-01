@@ -21,12 +21,19 @@ export default function ContinuousRasterHistogram({
   onRangeChange: (range: [number, number]) => void;
 }) {
   const evaluator = useMemo(() => {
-    const expr = [
-      expression[0], // fn name
-      expression[1], // interpolation type
-      ["get", "raster-value"],
-      ...expression.slice(3),
-    ] as Expression;
+    const fnType = expression[0];
+    let expr: Expression = /interpolate/.test(fnType)
+      ? [
+          expression[0], // fn name
+          expression[1], // interpolation type
+          ["get", "raster-value"],
+          ...expression.slice(3),
+        ]
+      : [
+          expression[0], // fn name
+          ["get", "raster-value"],
+          ...expression.slice(2),
+        ];
     return ExpressionEvaluator.parse(expr, "color");
   }, [expression]);
 
@@ -138,30 +145,32 @@ export default function ContinuousRasterHistogram({
           }}
         ></div>
       </div>
-      <div className="">
-        <Slider.Root
-          className="-mt-9 relative w-full flex items-center select-none touch-none h-5"
-          value={value}
-          min={0}
-          max={50}
-          step={1}
-          style={{ width: 426, marginLeft: 13 }}
-          minStepsBetweenThumbs={2}
-          onValueChange={(value) => {
-            const range = [
-              band.stats.histogram[value[0]][0],
-              band.stats.histogram[value[1] - 1][0],
-            ];
-            onRangeChange(range as [number, number]);
-          }}
-        >
-          <Slider.Track className=" relative w-full">
-            <Slider.Range />
-          </Slider.Track>
-          <Thumb value={band.stats.histogram[value[0]][0]} />
-          <Thumb value={band.stats.histogram[value[1] - 1][0]} />
-        </Slider.Root>
-      </div>
+      {/interpolate/.test(expression[0]) && (
+        <div className="">
+          <Slider.Root
+            className="-mt-9 relative w-full flex items-center select-none touch-none h-5"
+            value={value}
+            min={0}
+            max={50}
+            step={1}
+            style={{ width: 426, marginLeft: 13 }}
+            minStepsBetweenThumbs={2}
+            onValueChange={(value) => {
+              const range = [
+                band.stats.histogram[value[0]][0],
+                band.stats.histogram[value[1] - 1][0],
+              ];
+              onRangeChange(range as [number, number]);
+            }}
+          >
+            <Slider.Track className=" relative w-full">
+              <Slider.Range />
+            </Slider.Track>
+            <Thumb value={band.stats.histogram[value[0]][0]} />
+            <Thumb value={band.stats.histogram[value[1] - 1][0]} />
+          </Slider.Root>
+        </div>
+      )}
     </div>
   );
 }
