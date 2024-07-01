@@ -69,11 +69,13 @@ export default function RasterLayerEditor({
 
   const paint = glLayer.paint as RasterPaint;
 
-  const steps = determineSteps(
-    paint["raster-color"]! as Expression,
-    rasterInfo.bands[0],
-    glLayer.metadata
-  );
+  const steps = (paint || {})["raster-color"]
+    ? determineSteps(
+        paint["raster-color"]! as Expression,
+        rasterInfo.bands[0],
+        glLayer.metadata
+      )
+    : undefined;
 
   return (
     <>
@@ -107,7 +109,7 @@ export default function RasterLayerEditor({
                 paint["raster-color"]! as Expression,
                 glLayer.metadata["s:palette"],
                 Boolean(glLayer.metadata["s:reverse-palette"]),
-                steps
+                steps!
               )
                 ? (glLayer.metadata || {})["s:palette"]
                 : null
@@ -231,7 +233,7 @@ export default function RasterLayerEditor({
                     glLayer.paint!["raster-color"],
                     palette,
                     glLayer.metadata?.["s:reverse-palette"],
-                    steps
+                    steps!
                   )
                 ) {
                   palette = extractColorsFromExpression(

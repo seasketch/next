@@ -101,9 +101,9 @@ export const colorScales = {
 };
 
 export enum VisualizationType {
-  RGB_RASTER = "rgb-raster",
-  CATEGORICAL_RASTER = "categorical-raster",
-  CONTINUOUS_RASTER = "continuous-raster",
+  RGB_RASTER = "Raster Image",
+  CATEGORICAL_RASTER = "Categorical Raster",
+  CONTINUOUS_RASTER = "Continuous Raster",
 }
 
 export function validVisualizationTypesForGeostats(
@@ -119,7 +119,7 @@ export function validVisualizationTypesForGeostats(
       geostats.bands[0].stats.categories.length > 0
     ) {
       types.push(VisualizationType.CATEGORICAL_RASTER);
-      types.push(VisualizationType.RGB_RASTER);
+      // types.push(VisualizationType.RGB_RASTER);
     } else if (
       geostats.presentation === SuggestedRasterPresentation.continuous
     ) {
@@ -222,7 +222,7 @@ export function convertToVisualizationType(
           layers.push({
             type: "raster",
             paint: {
-              ...defaultsOrUndefined(oldLayer?.paint, ["raster-opacity"]),
+              ...defaultsOrUndefined(oldLayer?.paint || {}, ["raster-opacity"]),
               "raster-resampling": "nearest",
               "raster-color-mix": [0, 0, 258, geostats.bands[0].base],
               "raster-color": [
@@ -251,10 +251,10 @@ export function convertToVisualizationType(
   return layers;
 }
 
-function defaultsOrUndefined(paintOrLayout: any, keys: string[]) {
+function defaultsOrUndefined(paintOrLayout: any | undefined, keys: string[]) {
   const results = {} as any;
   for (const key of keys) {
-    if (key in paintOrLayout) {
+    if (key in (paintOrLayout || {})) {
       results[key] = paintOrLayout[key];
     }
   }

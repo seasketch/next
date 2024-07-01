@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { formatJSONCommand } from "../GLStyleEditor/formatCommand";
 import {
   RasterInfo,
@@ -25,6 +25,7 @@ import { Layer } from "mapbox-gl";
 import LayerEditor from "./LayerEditor";
 import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
 import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
+import * as Editors from "./Editors";
 
 type PropertyRef = {
   type: "paint" | "layout" | undefined;
@@ -95,7 +96,7 @@ export default function GUIStyleEditor({
             insert: JSON.stringify(newLayers),
           },
         });
-        // formatJSONCommand(editorRef.current?.view!);
+        formatJSONCommand(editorRef.current?.view!);
       }
     },
     [setStyleJSON, editorRef, styleJSON, geostats]
@@ -230,20 +231,37 @@ export default function GUIStyleEditor({
   return (
     <div className="overflow-y-auto">
       <EditorCard>
-        {visualizationType && (
-          <select
-            className="bg-gray-700 text-white text-sm"
-            value={visualizationType}
-            onChange={(e) => {
-              setVisualizationType(e.target.value as VisualizationType);
-            }}
-          >
-            {validVisualizationTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
+        <Editors.Root>
+          <Editors.Label title={t("Visualization Type")} />
+          <Editors.Control>
+            <select
+              className="bg-gray-700 text-white text-sm"
+              value={visualizationType || "Unknown"}
+              onChange={(e) => {
+                setVisualizationType(e.target.value as VisualizationType);
+              }}
+            >
+              {validVisualizationTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+              {(!visualizationType ||
+                !validVisualizationTypes.includes(visualizationType)) && (
+                <option value="Unknown">{t("Unknown")}</option>
+              )}
+            </select>
+          </Editors.Control>
+        </Editors.Root>
+        {(!visualizationType ||
+          !validVisualizationTypes.includes(visualizationType)) && (
+          <p className="pt-4 text-gray-200">
+            <Trans ns="admin:data">
+              The style for this layer could not be recognized using any of
+              SeaSketch's templates. Please choose a visualization type if you
+              would like to use the graphical style editor.
+            </Trans>
+          </p>
         )}
       </EditorCard>
       {styleJSON &&
