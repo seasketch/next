@@ -285,6 +285,7 @@ export default function LayerTableOfContentsItemEditor(
                   </p>
                 )}
                 <GLStyleEditor
+                  sourceLayer={layer.sourceLayer as string | undefined}
                   layerId={layer.id}
                   tocItemId={item.stableId}
                   geostats={geostats}

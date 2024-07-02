@@ -26,8 +26,10 @@ import LayerEditor from "./LayerEditor";
 import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
 import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
 import * as Editors from "./Editors";
+import EditorForVisualizationType from "./EditorForVisualizationType";
+require("./layer-editor.css");
 
-type PropertyRef = {
+export type PropertyRef = {
   type: "paint" | "layout" | undefined;
   property: string;
 };
@@ -220,17 +222,17 @@ export default function GUIStyleEditor({
 
   if (validVisualizationTypes.length === 0) {
     return (
-      <EditorCard>
+      <Editors.Card>
         {t(
           "Visualization options could not be determined for this data source. Please switch to the Code Editor to make changes to this style."
         )}
-      </EditorCard>
+      </Editors.Card>
     );
   }
 
   return (
     <div className="overflow-y-auto">
-      <EditorCard>
+      <Editors.Card>
         <Editors.Root>
           <Editors.Label title={t("Visualization Type")} />
           <Editors.Control>
@@ -263,23 +265,21 @@ export default function GUIStyleEditor({
             </Trans>
           </p>
         )}
-      </EditorCard>
-      {styleJSON &&
-        styleJSON.map((layer, idx) => (
-          <LayerEditor
-            type={visualizationType}
-            editorRef={editorRef}
-            key={idx + layer.type}
-            glLayer={layer}
-            geostats={geostats}
-            updateLayerProperty={(type, property, value, metadata) => {
-              updateLayerProperty(idx, type, property, value, metadata);
-            }}
-            deleteLayerProperties={(properties) => {
-              deleteLayerProperties(idx, properties);
-            }}
-          />
-        ))}
+      </Editors.Card>
+
+      {styleJSON && visualizationType && (
+        <Editors.GUIEditorContext.Provider
+          value={{
+            updateLayer: updateLayerProperty,
+            deleteLayerProperties,
+            geostats,
+            glLayers: styleJSON,
+            type: visualizationType,
+          }}
+        >
+          <EditorForVisualizationType type={visualizationType} />
+        </Editors.GUIEditorContext.Provider>
+      )}
     </div>
   );
 }
@@ -291,20 +291,12 @@ export type LayerPropertyUpdater = (
   metadata?: { [key: string]: any }
 ) => void;
 
-export type LayerPropertyDeleter = (properties: PropertyRef[]) => void;
+export type LayerUpdater = (
+  idx: number,
+  type: "paint" | "layout" | undefined,
+  property: string | undefined,
+  value: any | undefined,
+  metadata?: Editors.SeaSketchLayerMetadata
+) => void;
 
-export function EditorCard({
-  className,
-  children,
-}: {
-  className?: string;
-  children?: ReactNode;
-}) {
-  return (
-    <div
-      className={`LayerEditor m-3 p-4 bg-gray-700 bg-opacity-20 border border-white border-opacity-5 text-white text-sm rounded ${className}`}
-    >
-      {children}
-    </div>
-  );
-}
+export type LayerPropertyDeleter = (properties: PropertyRef[]) => void;

@@ -28,8 +28,11 @@ import Switch from "../../../components/Switch";
 import ContinuousRasterStepsEditor, {
   determineSteps,
 } from "./ContinuousRasterStepsEditor";
+import { OpacityEditor } from "./OpacityEditor";
+import { LimitZoomTrigger, ZoomRangeEditor } from "./ZoomRangeEditor";
+import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 
-export default function RasterLayerEditor({
+function RasterLayerEditor({
   updateLayerProperty,
   glLayer,
   deleteLayerProperties,
@@ -37,7 +40,7 @@ export default function RasterLayerEditor({
   type,
 }: {
   updateLayerProperty: LayerPropertyUpdater;
-  glLayer: Layer;
+  glLayer: SeaSketchGlLayer;
   deleteLayerProperties: LayerPropertyDeleter;
   rasterInfo: RasterInfo;
   type: VisualizationType | null;
@@ -78,7 +81,37 @@ export default function RasterLayerEditor({
     : undefined;
 
   return (
-    <>
+    <Editor.Card>
+      <Editor.CardTitle
+        buttons={
+          <LimitZoomTrigger
+            minzoom={glLayer.minzoom}
+            maxzoom={glLayer.maxzoom}
+            updateLayerProperty={updateLayerProperty}
+          />
+        }
+      >
+        {t("Raster")}
+      </Editor.CardTitle>
+      <ZoomRangeEditor
+        maxzoom={glLayer.maxzoom}
+        minzoom={glLayer.minzoom}
+        onChange={(min, max) => {
+          updateLayerProperty(undefined, "minzoom", min);
+          updateLayerProperty(undefined, "maxzoom", max);
+        }}
+      />
+
+      <OpacityEditor
+        value={
+          // @ts-ignore
+          glLayer.paint?.[`${glLayer.type}-opacity`] as number | undefined
+        }
+        onChange={(value: number) =>
+          updateLayerProperty("paint", `${glLayer.type}-opacity`, value)
+        }
+      />
+
       <RasterResamplingEditor
         onChange={(value) => {
           updateLayerProperty("paint", "raster-resampling", value);
@@ -307,6 +340,12 @@ export default function RasterLayerEditor({
           )}
         </>
       )}
-    </>
+    </Editor.Card>
   );
 }
+
+RasterLayerEditor.hasUnrelatedLayers = (layers: SeaSketchGlLayer[]) => {
+  return layers.length > 1;
+};
+
+export default RasterLayerEditor;

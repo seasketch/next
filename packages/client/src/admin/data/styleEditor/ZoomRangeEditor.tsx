@@ -1,9 +1,16 @@
-import { Cross1Icon, TrashIcon, TriangleDownIcon } from "@radix-ui/react-icons";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  Cross1Icon,
+  TrashIcon,
+  TriangleDownIcon,
+} from "@radix-ui/react-icons";
 import { Trans } from "react-i18next";
 import * as Editor from "./Editors";
 import * as Slider from "@radix-ui/react-slider";
 import { useContext, useEffect, useState } from "react";
 import { MapContext } from "../../../dataLayers/MapContextManager";
+import { LayerPropertyUpdater } from "./GUIStyleEditor";
 
 export function ZoomRangeEditor({
   minzoom,
@@ -30,7 +37,7 @@ export function ZoomRangeEditor({
       };
     }
   }, [mapContext.manager?.map]);
-  if (minzoom === undefined || maxzoom === undefined) {
+  if (minzoom === undefined && maxzoom === undefined) {
     return null;
   }
 
@@ -52,8 +59,8 @@ export function ZoomRangeEditor({
       <Editor.Control>
         <Slider.Root
           className="relative flex items-center select-none touch-none w-44 h-5"
-          value={[minzoom, maxzoom]}
-          min={0}
+          value={[minzoom || 1, maxzoom || 24]}
+          min={1}
           max={24}
           step={1}
           minStepsBetweenThumbs={1}
@@ -77,5 +84,42 @@ export function ZoomRangeEditor({
         </Slider.Root>
       </Editor.Control>
     </div>
+  );
+}
+
+export function LimitZoomTrigger({
+  updateLayerProperty,
+  minzoom,
+  maxzoom,
+}: {
+  updateLayerProperty: LayerPropertyUpdater;
+  minzoom?: number;
+  maxzoom?: number;
+}) {
+  return (
+    <>
+      {minzoom !== undefined || maxzoom !== undefined ? (
+        <span className="text-sm text-gray-400">
+          <Trans ns="admin:data">zoom </Trans>
+          {minzoom || 0}-{maxzoom || 24}
+        </span>
+      ) : (
+        <div className="flex flex-1 group pb-2 justify-end">
+          {minzoom === undefined && maxzoom === undefined && (
+            <button
+              title="limit to zoom range"
+              onClick={() => {
+                updateLayerProperty(undefined, "minzoom", 3);
+                updateLayerProperty(undefined, "maxzoom", 14);
+              }}
+              className="flex items-center space-x-1 text-indigo-200 opacity-20 group-hover:opacity-80"
+            >
+              <ArrowRightIcon />
+              <ArrowLeftIcon />
+            </button>
+          )}
+        </div>
+      )}
+    </>
   );
 }

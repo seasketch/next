@@ -70,6 +70,7 @@ interface GLStyleEditorProps {
   dataSource?: FullAdminSourceFragment;
   onRequestShowBounds?: (bounds: [number, number, number, number]) => void;
   layerId?: number;
+  sourceLayer?: string;
 }
 
 /**
@@ -556,7 +557,11 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
         <GUIStyleEditor
           style={layers}
           editorRef={editorRef}
-          geostats={props.dataSource.geostats}
+          geostats={
+            isRasterInfo(props.dataSource.geostats)
+              ? props.dataSource.geostats
+              : props.dataSource.geostats.layers[0]
+          }
           layerId={props.layerId}
           undoRedoCounter={undoRedoCounter}
         />

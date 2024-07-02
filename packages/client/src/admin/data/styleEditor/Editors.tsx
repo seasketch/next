@@ -1,8 +1,16 @@
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import * as Slider from "@radix-ui/react-slider";
-import { Expression } from "mapbox-gl";
-import { ReactNode } from "react";
+import { Expression, Layer } from "mapbox-gl";
+import { ReactNode, createContext } from "react";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
+import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
+import {
+  LayerPropertyUpdater,
+  LayerUpdater,
+  PropertyRef,
+} from "./GUIStyleEditor";
+import { VisualizationType } from "./visualizationTypes";
 
 export function DocumentationInfo({ href }: { href: string }) {
   return (
@@ -79,6 +87,39 @@ export function Control({ children }: { children?: ReactNode }) {
   return <div className="flex items-center text-sm">{children}</div>;
 }
 
+export function Card({
+  className,
+  children,
+}: {
+  className?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div
+      className={`LayerEditor m-3 p-4 bg-gray-700 bg-opacity-20 border border-white border-opacity-5 text-white text-sm rounded ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function CardTitle({
+  children,
+  buttons,
+}: {
+  children: ReactNode;
+  buttons?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-1 group pb-2">
+      <h3 className="capitalize text-lg flex-1 space-x-2 flex">
+        <span className="flex-1">{children}</span>
+        {buttons}
+      </h3>
+    </div>
+  );
+}
+
 export function Header({
   title,
   className,
@@ -139,3 +180,16 @@ export function extractCategoriesFromExpression(expression: Expression) {
   }
   return categories as ExpressionCategory[];
 }
+
+export const GUIEditorContext = createContext<{
+  glLayers: SeaSketchGlLayer[];
+  geostats: GeostatsLayer | RasterInfo;
+  updateLayer: LayerUpdater;
+  deleteLayerProperties: (idx: number, properties: PropertyRef[]) => void;
+  type?: VisualizationType;
+}>({
+  glLayers: [],
+  geostats: { bands: [] } as unknown as RasterInfo,
+  updateLayer: () => {},
+  deleteLayerProperties: () => {},
+});

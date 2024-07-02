@@ -54,12 +54,12 @@ export default function RasterColorPalette({
           }}
         >
           <Select.Trigger
-            className="inline-flex items-center justify-center rounded px-4 text-sm leading-none h-8 gap-1 bg-gray-700 text-gray-400 shadow  outline-none focus:ring-2 focus:border-transparent ring-blue-600 border border-gray-500"
+            className="inline-flex items-center justify-center rounded px-2.5 text-sm leading-none h-8 gap-1 bg-gray-700 text-gray-400 shadow  outline-none focus:ring-2 focus:border-transparent ring-blue-600 border border-gray-500"
             aria-label="Color Palette"
           >
             <Select.Value placeholder="Custom palette" />
-            <Select.Icon className="text-violet11">
-              <ChevronDownIcon />
+            <Select.Icon className="text-gray-500">
+              <ChevronDownIcon className="w-4 h-4" />
             </Select.Icon>
           </Select.Trigger>
           <Select.Portal>

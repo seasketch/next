@@ -187,7 +187,7 @@ function Thumb({ value }: { value: number }) {
         className="h-2.5 bg-black opacity-40 rounded"
         style={{ width: 1, left: "50%" }}
       ></div>
-      <div className="opacity-0 group-hover:opacity-100 absolute top-5 bg-gray-800 border border-gray-500 bg-opacity-70 text-green-300 px-1 py-0 text-xs rounded-lg font-mono transition-opacity">
+      <div className="opacity-0 group-hover:opacity-100 absolute top-5 bg-gray-800 border border-gray-500 bg-opacity-70 text-green-300 px-1 py-0 text-xs rounded-lg font-mono transition-opacity pointer-events-none">
         {tooltipNumberFormatter.format(value)}
       </div>
     </Slider.Thumb>

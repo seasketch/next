@@ -8,6 +8,7 @@ import {
 import { Expression, Layer, RasterLayer } from "mapbox-gl";
 import * as colorScale from "d3-scale-chromatic";
 import { StepsSetting } from "./ContinuousRasterStepsEditor";
+import { hasGetExpression } from "../../../dataLayers/legends/utils";
 
 export const colorScales = {
   categorical: [
@@ -101,9 +102,15 @@ export const colorScales = {
 };
 
 export enum VisualizationType {
+  // Raster
   RGB_RASTER = "Raster Image",
   CATEGORICAL_RASTER = "Categorical Raster",
   CONTINUOUS_RASTER = "Continuous Raster",
+  // Vector
+  // Polygon or MultiPolygon
+  SIMPLE_POLYGON = "Simple Polygon",
+  CATEGORICAL_POLYGON = "Categories",
+  CONTINUOUS_POLYGON = "Color Range",
 }
 
 export function validVisualizationTypesForGeostats(
@@ -125,6 +132,17 @@ export function validVisualizationTypesForGeostats(
     ) {
       types.push(VisualizationType.CONTINUOUS_RASTER);
     }
+  } else {
+    if (
+      geostats.geometry === "Polygon" ||
+      geostats.geometry === "MultiPolygon"
+    ) {
+      types.push(
+        VisualizationType.SIMPLE_POLYGON,
+        VisualizationType.CATEGORICAL_POLYGON,
+        VisualizationType.CONTINUOUS_POLYGON
+      );
+    }
   }
   return types;
 }
@@ -135,8 +153,9 @@ export function determineVisualizationType(
   layers: Layer[]
 ): VisualizationType | null {
   if (isRasterInfo(geostats)) {
-    if (layers.length === 1 && layers[0].type === "raster") {
-      const paint = layers[0].paint;
+    const rasterLayer = layers.find((l) => l.type === "raster");
+    if (rasterLayer) {
+      const paint = rasterLayer.paint;
       if (paint && !("raster-color-mix" in paint)) {
         if (validTypes.includes(VisualizationType.RGB_RASTER)) {
           return VisualizationType.RGB_RASTER;
@@ -160,8 +179,28 @@ export function determineVisualizationType(
         }
       }
     }
+  } else {
+    if (
+      geostats.geometry === "Polygon" ||
+      geostats.geometry === "MultiPolygon"
+    ) {
+      if (!hasFillColorGetExpression(layers)) {
+        return VisualizationType.SIMPLE_POLYGON;
+      }
+    }
   }
   return null;
+}
+
+function hasFillColorGetExpression(layers: Layer[]) {
+  for (const layer of layers) {
+    if (layer.type === "fill" && layer.paint && "fill-color" in layer.paint) {
+      if (hasGetExpression(layer.paint["fill-color"])) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 export function convertToVisualizationType(
@@ -244,6 +283,38 @@ export function convertToVisualizationType(
       }
       break;
     case VisualizationType.CONTINUOUS_RASTER:
+      if (isRasterInfo(geostats)) {
+        layers.push({
+          type: "raster",
+          paint: {
+            ...defaultsOrUndefined(oldLayers[0]?.paint || {}, [
+              "raster-opacity",
+            ]),
+            "raster-resampling": "nearest",
+            "raster-color-mix": [
+              ["*", 255, 65536],
+              ["*", 255, 256],
+              255,
+              ["+", -32768, geostats.bands[0].base],
+            ],
+            "raster-color-range": [
+              geostats.bands[0].minimum,
+              geostats.bands[0].maximum,
+            ],
+            "raster-fade-duration": 0,
+            "raster-color": buildContinuousRasterColorExpression(
+              undefined,
+              "interpolatePlasma",
+              false,
+              [geostats.bands[0].minimum, geostats.bands[0].maximum]
+            ),
+          },
+          metadata: {
+            "s:palette": "interpolatePlasma",
+            "s:respect-scale-and-offset": true,
+          },
+        });
+      }
       break;
     default:
       layers.push(...oldLayers);
