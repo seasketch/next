@@ -8,6 +8,7 @@ import {
 } from "../../../dataLayers/legends/utils";
 import { FillLayer, Layer, LineLayer, LinePaint } from "mapbox-gl";
 import { OpacityEditor } from "./OpacityEditor";
+import StrokeStyleEditor from "./StrokeStyleEditor";
 export default function SimplePolygonEditor() {
   const context = useContext(Editor.GUIEditorContext);
   const { t } = useTranslation("admin:data");
@@ -19,24 +20,20 @@ export default function SimplePolygonEditor() {
       labels: -1,
     };
     for (const [i, layer] of context.glLayers.entries()) {
-      if (isFillLayer(layer)) {
-        if (
-          layer.paint?.["fill-color"] &&
-          hasGetExpression(layer.paint["fill-color"])
-        ) {
-          // skip over in case there is another fill that is plain
-        } else {
-          indexes.fill = i;
-        }
-      } else if (isLineLayer(layer)) {
-        if (
-          layer.paint?.["line-color"] &&
-          hasGetExpression(layer.paint["line-color"])
-        ) {
-          // skip over in case there is another line that is plain
-        } else {
-          indexes.stroke = i;
-        }
+      if (
+        indexes.fill === -1 &&
+        isFillLayer(layer) &&
+        hasPlainPaintProp(layer, "fill-color")
+      ) {
+        // skip over in case there is another fill that is plain
+        indexes.fill = i;
+      } else if (
+        indexes.stroke === -1 &&
+        isLineLayer(layer) &&
+        hasPlainPaintProp(layer, "line-color")
+      ) {
+        // skip over in case there is another line that is plain
+        indexes.stroke = i;
       } else if (layer.type === "symbol") {
         indexes.labels = i;
       }
@@ -107,6 +104,11 @@ export default function SimplePolygonEditor() {
           }
         }}
       />
+      <StrokeStyleEditor
+        strokeLayer={
+          indexes.stroke !== -1 ? context.glLayers[indexes.stroke] : undefined
+        }
+      />
     </Editor.Card>
   );
 }
@@ -117,4 +119,11 @@ export function isLineLayer(layer: Pick<Layer, "type">): layer is LineLayer {
 
 export function isFillLayer(layer: Pick<Layer, "type">): layer is FillLayer {
   return layer.type === "fill";
+}
+
+export function hasPlainPaintProp(layer: Layer, prop: string) {
+  return (
+    (layer.paint as any)?.[prop] &&
+    !hasGetExpression((layer.paint as any)[prop])
+  );
 }
