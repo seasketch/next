@@ -450,6 +450,15 @@ export function expressionMatchesPalette(
   return true;
 }
 
+export function extractFirstColorFromExpression(expression: Expression) {
+  const colors = extractColorsFromExpression(expression);
+  if (colors.length) {
+    return colors[0];
+  } else {
+    return null;
+  }
+}
+
 function colorsMatch(colorsA: string[], colorsB: string[]) {
   for (const color of colorsA) {
     if (!colorsB.includes(color)) {

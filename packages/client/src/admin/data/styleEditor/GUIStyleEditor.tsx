@@ -27,6 +27,7 @@ import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
 import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
 import * as Editors from "./Editors";
 import EditorForVisualizationType from "./EditorForVisualizationType";
+import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 require("./layer-editor.css");
 
 export type PropertyRef = {
@@ -187,11 +188,15 @@ export default function GUIStyleEditor({
         ) {
           const map = mapContext.manager.map;
           const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
-          // using the layer id, update the style in the map
-          if (type === "layout") {
-            map.setLayoutProperty(id, property, value);
-          } else if (type === "paint") {
-            map.setPaintProperty(id, property, value);
+          if (map.getLayer(id)) {
+            // using the layer id, update the style in the map
+            try {
+              if (type === "layout") {
+                map.setLayoutProperty(id, property, value);
+              } else if (type === "paint") {
+                map.setPaintProperty(id, property, value);
+              }
+            } catch (e) {}
           }
         }
       }
@@ -218,6 +223,28 @@ export default function GUIStyleEditor({
       formatJSONCommand(editorRef.current?.view!);
     },
     [styleJSON, editorRef, setStyleJSON, layerId, mapContext.manager?.map]
+  );
+
+  const addLayer = useCallback(
+    (layerIndex: number, layer: SeaSketchGlLayer) => {
+      if (styleJSON === null) {
+        throw new Error("Style JSON is null");
+      }
+      if (layerIndex >= styleJSON.length) {
+        throw new Error("Layer index out of bounds");
+      }
+      styleJSON.splice(layerIndex, 0, layer as Layer);
+      setStyleJSON([...styleJSON]);
+      editorRef.current?.view?.dispatch({
+        changes: {
+          from: 0,
+          to: editorRef.current.view!.state.doc.length,
+          insert: JSON.stringify(styleJSON),
+        },
+      });
+      formatJSONCommand(editorRef.current?.view!);
+    },
+    [styleJSON, editorRef]
   );
 
   if (validVisualizationTypes.length === 0) {
@@ -275,6 +302,8 @@ export default function GUIStyleEditor({
             geostats,
             glLayers: styleJSON,
             type: visualizationType,
+            t,
+            addLayer,
           }}
         >
           <EditorForVisualizationType type={visualizationType} />

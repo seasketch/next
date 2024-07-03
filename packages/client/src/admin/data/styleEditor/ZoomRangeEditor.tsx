@@ -1,7 +1,6 @@
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  Cross1Icon,
   TrashIcon,
   TriangleDownIcon,
 } from "@radix-ui/react-icons";

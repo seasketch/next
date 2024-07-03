@@ -30,7 +30,6 @@ export default function StrokeStyleEditor({
   const isCustomDashArray =
     /,/.test(value) && value !== "4,4" && value !== "4,2" && value !== "0,2";
 
-  console.log("value", value);
   return (
     <Editor.Root>
       <Editor.Label title={t("Stroke Style")} />

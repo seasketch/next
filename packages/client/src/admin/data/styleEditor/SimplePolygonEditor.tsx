@@ -9,6 +9,8 @@ import {
 import { FillLayer, Layer, LineLayer, LinePaint } from "mapbox-gl";
 import { OpacityEditor } from "./OpacityEditor";
 import StrokeStyleEditor from "./StrokeStyleEditor";
+import FillStyleEditor from "./FillStyleEditor";
+import StrokeEditor from "./StrokeEditor";
 export default function SimplePolygonEditor() {
   const context = useContext(Editor.GUIEditorContext);
   const { t } = useTranslation("admin:data");
@@ -54,21 +56,22 @@ export default function SimplePolygonEditor() {
         }
       }
     }
-    if (indexes.fill === -1) {
-      throw new Error("No fill layer found");
-    }
     return indexes;
   }, [context.glLayers]);
 
-  const fillLayer = context.glLayers[indexes.fill] as FillLayer;
+  const fillLayer = context.glLayers[indexes.fill] as FillLayer | undefined;
+  const strokeLayer =
+    indexes.stroke !== -1
+      ? (context.glLayers[indexes.stroke] as LineLayer)
+      : undefined;
 
   return (
     <Editor.Card>
       <Editor.CardTitle
         buttons={
           <LimitZoomTrigger
-            minzoom={fillLayer.minzoom}
-            maxzoom={fillLayer.maxzoom}
+            minzoom={fillLayer?.minzoom || strokeLayer?.minzoom}
+            maxzoom={fillLayer?.maxzoom || strokeLayer?.maxzoom}
             updateLayerProperty={(...args) => {
               context.updateLayer(indexes.fill, ...args);
             }}
@@ -78,16 +81,22 @@ export default function SimplePolygonEditor() {
         {t("Simple Polygon")}
       </Editor.CardTitle>
       <ZoomRangeEditor
-        maxzoom={fillLayer.maxzoom}
-        minzoom={fillLayer.minzoom}
+        maxzoom={fillLayer?.maxzoom || strokeLayer?.maxzoom}
+        minzoom={fillLayer?.minzoom || strokeLayer?.minzoom}
         onChange={(min, max) => {
-          context.updateLayer(indexes.fill, undefined, "minzoom", min);
-          context.updateLayer(indexes.fill, undefined, "maxzoom", max);
+          if (indexes.fill !== -1) {
+            context.updateLayer(indexes.fill, undefined, "minzoom", min);
+            context.updateLayer(indexes.fill, undefined, "maxzoom", max);
+          }
+          if (indexes.stroke !== -1) {
+            context.updateLayer(indexes.stroke, undefined, "minzoom", min);
+            context.updateLayer(indexes.stroke, undefined, "maxzoom", max);
+          }
         }}
       />
       <OpacityEditor
         value={
-          (fillLayer.paint?.["fill-opacity"] &&
+          (fillLayer?.paint?.["fill-opacity"] &&
           !isExpression(fillLayer.paint?.["fill-opacity"])
             ? fillLayer.paint?.["fill-opacity"]
             : 1) as number
@@ -104,11 +113,13 @@ export default function SimplePolygonEditor() {
           }
         }}
       />
-      <StrokeStyleEditor
+      <FillStyleEditor layer={context.glLayers[indexes.fill]} />
+      <StrokeEditor layer={context.glLayers[indexes.stroke]} />
+      {/* <StrokeStyleEditor
         strokeLayer={
           indexes.stroke !== -1 ? context.glLayers[indexes.stroke] : undefined
         }
-      />
+      /> */}
     </Editor.Card>
   );
 }
