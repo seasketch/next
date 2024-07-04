@@ -6,9 +6,8 @@ import {
   hasGetExpression,
   isExpression,
 } from "../../../dataLayers/legends/utils";
-import { FillLayer, Layer, LineLayer, LinePaint } from "mapbox-gl";
+import { FillLayer, Layer, LineLayer } from "mapbox-gl";
 import { OpacityEditor } from "./OpacityEditor";
-import StrokeStyleEditor from "./StrokeStyleEditor";
 import FillStyleEditor from "./FillStyleEditor";
 import StrokeEditor from "./StrokeEditor";
 export default function SimplePolygonEditor() {
@@ -21,7 +20,8 @@ export default function SimplePolygonEditor() {
       stroke: -1,
       labels: -1,
     };
-    for (const [i, layer] of context.glLayers.entries()) {
+    for (var i = 0; i < context.glLayers.length; i++) {
+      const layer = context.glLayers[i];
       if (
         indexes.fill === -1 &&
         isFillLayer(layer) &&
@@ -41,7 +41,8 @@ export default function SimplePolygonEditor() {
       }
     }
     if (indexes.fill === -1) {
-      for (const [i, layer] of context.glLayers.entries()) {
+      for (var i = 0; i < context.glLayers.length; i++) {
+        const layer = context.glLayers[i];
         if (isFillLayer(layer)) {
           indexes.fill = i;
           break;
@@ -49,7 +50,8 @@ export default function SimplePolygonEditor() {
       }
     }
     if (indexes.stroke === -1) {
-      for (const [i, layer] of context.glLayers.entries()) {
+      for (var i = 0; i < context.glLayers.length; i++) {
+        const layer = context.glLayers[i];
         if (isLineLayer(layer)) {
           indexes.stroke = i;
           break;

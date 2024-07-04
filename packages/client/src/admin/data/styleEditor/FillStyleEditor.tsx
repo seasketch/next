@@ -1,15 +1,11 @@
-import { FillPaint, LineLayer, LinePaint } from "mapbox-gl";
+import { FillPaint, LineLayer } from "mapbox-gl";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import { isExpression } from "../../../dataLayers/legends/utils";
 import * as Editor from "./Editors";
 import { useContext } from "react";
-import { ChevronDownIcon, FontFamilyIcon } from "@radix-ui/react-icons";
-import { CalculatorIcon } from "@heroicons/react/outline";
+import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { RgbaColorPicker } from "react-colorful";
-import {
-  extractColorsFromExpression,
-  extractFirstColorFromExpression,
-} from "./visualizationTypes";
+import { extractFirstColorFromExpression } from "./visualizationTypes";
 import { colord } from "colord";
 
 const Popover = Editor.Popover;
