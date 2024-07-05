@@ -9,10 +9,12 @@ export default function StrokeStyleEditor({
   value,
   dasharray,
   onChange,
+  hasFillLayer,
 }: {
   value: StrokeType;
   dasharray?: string;
   onChange: (value: StrokeType, dasharray?: string) => void;
+  hasFillLayer: boolean;
 }) {
   const { t } = useTranslation("admin:data");
 
@@ -24,7 +26,11 @@ export default function StrokeStyleEditor({
       <Editor.Label title={t("Stroke Style")} />
       <Editor.Control>
         <Select.Root
-          value={value}
+          value={
+            value === StrokeType.Dashed || value === StrokeType.Dotted
+              ? dasharray
+              : value
+          }
           onValueChange={(value) => {
             if (value === "None") {
               onChange(StrokeType.None);
@@ -33,7 +39,7 @@ export default function StrokeStyleEditor({
             } else if (value === "Solid") {
               onChange(StrokeType.Solid);
             } else {
-              if (value === "0,2") {
+              if (value === "1,2") {
                 onChange(StrokeType.Dotted, value);
               } else {
                 onChange(StrokeType.Dashed, value);
@@ -41,14 +47,22 @@ export default function StrokeStyleEditor({
             }
           }}
         >
-          <Select.Trigger className="w-32" aria-label="Stroke Style">
+          <Select.Trigger
+            style={{ maxWidth: 120, stroke: "rgb(209, 213, 219)" }}
+            aria-label="Stroke Style"
+          >
             <Select.Value placeholder="None" />
-            <Select.Icon className="text-gray-500">
-              <ChevronDownIcon className="w-4 h-4" />
+            <Select.Icon className="text-gray-300">
+              <ChevronDownIcon className="w-4 h-4" style={{ stroke: "none" }} />
             </Select.Icon>
           </Select.Trigger>
           <Select.Portal>
-            <Select.Content position="popper" className="w-32" sideOffset={5}>
+            <Select.Content
+              position="popper"
+              className="w-32"
+              sideOffset={5}
+              style={{ stroke: "#555" }}
+            >
               <Select.ScrollUpButton />
               <Select.Viewport>
                 <Select.Item value="None">
@@ -58,7 +72,7 @@ export default function StrokeStyleEditor({
                     </div>
                   </Select.ItemText>
                 </Select.Item>
-                <Select.Item value="Outline">
+                <Select.Item value="Outline" disabled={!hasFillLayer}>
                   <Select.ItemText>
                     <div className="flex h-full overflow-hidden items-center space-x-2">
                       <span className="flex-1">{t("Outline")}</span>
@@ -69,17 +83,17 @@ export default function StrokeStyleEditor({
                           y1="5"
                           x2="100%"
                           y2="5"
-                          stroke="#888"
+                          stroke="inherit"
                         />
                       </svg>
                     </div>
                   </Select.ItemText>
                 </Select.Item>
                 {isCustomDashArray && (
-                  <Select.Item value={value}>
+                  <Select.Item value={dasharray}>
                     <Select.ItemText>
                       <div className="flex">
-                        <Trans ns="admin:data">Custom Dash Array</Trans>
+                        <Trans ns="admin:data">Dashed</Trans>
                       </div>
                     </Select.ItemText>
                   </Select.Item>
@@ -95,7 +109,7 @@ export default function StrokeStyleEditor({
                           y1="5"
                           x2="100%"
                           y2="5"
-                          stroke="#888"
+                          stroke="inherit"
                         />
                       </svg>
                     </div>
@@ -116,7 +130,7 @@ export default function StrokeStyleEditor({
                             y1="5"
                             x2="100%"
                             y2="5"
-                            stroke="#888"
+                            stroke="inherit"
                           />
                         </svg>
                       </div>
@@ -142,7 +156,7 @@ export const DASHARRAYS = [
     svg: "6,2",
   },
   {
-    mapbox: [0, 2],
+    mapbox: [1, 2],
     svg: "2,2",
   },
 ];

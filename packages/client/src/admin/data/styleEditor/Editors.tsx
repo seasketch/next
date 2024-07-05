@@ -2,7 +2,9 @@ import { FontFamilyIcon, InfoCircledIcon } from "@radix-ui/react-icons";
 import * as Slider from "@radix-ui/react-slider";
 import { Expression, Layer } from "mapbox-gl";
 import {
+  Dispatch,
   ReactNode,
+  SetStateAction,
   createContext,
   forwardRef,
   useEffect,
@@ -21,6 +23,7 @@ import {
 import { VisualizationType } from "./visualizationTypes";
 import { TFunction } from "i18next";
 import { Trans } from "react-i18next";
+import { colord } from "colord";
 
 export function DocumentationInfo({ href }: { href: string }) {
   return (
@@ -172,6 +175,7 @@ export type SeaSketchLayerMetadata = { [key: string]: any } & {
   "s:round-numbers"?: boolean;
   "s:value-suffix"?: string;
   "s:steps"?: string;
+  "s:color-auto"?: boolean;
 };
 
 export function extractCategoriesFromExpression(expression: Expression) {
@@ -201,15 +205,21 @@ export const GUIEditorContext = createContext<{
   updateLayer: LayerUpdater;
   deleteLayerProperties: (idx: number, properties: PropertyRef[]) => void;
   addLayer: (index: number, layer: SeaSketchGlLayer) => void;
+  removeLayer: (index: number) => void;
   type?: VisualizationType;
   t: TFunction;
+  previousSettings: { [key: string]: any };
+  setPreviousSettings: Dispatch<SetStateAction<{ [key: string]: any }>>;
 }>({
   glLayers: [],
   geostats: { bands: [] } as unknown as RasterInfo,
   updateLayer: () => {},
   addLayer: () => {},
   deleteLayerProperties: () => {},
+  removeLayer: () => {},
   t: (key: string) => key,
+  previousSettings: {},
+  setPreviousSettings: () => {},
 });
 
 export const Popover = {
@@ -232,7 +242,7 @@ export const Select = {
       {...props}
       // @ts-ignore
       ref={ref}
-      className={`inline-flex items-center justify-center rounded px-2.5 text-sm leading-none h-8 gap-1 bg-gray-700 text-gray-400 shadow  outline-none focus:ring-2 focus:border-transparent ring-blue-600 border border-gray-500 ${props.className}`}
+      className={`inline-flex items-center justify-center rounded px-2.5 text-sm leading-none h-8 gap-1 text-gray-300 border border-gray-500 border-opacity-0 hover:border-opacity-50  outline-none focus:ring-2 focus:border-transparent ring-blue-600 ${props.className}`}
     />
   )),
   Content: forwardRef((props: RadixSelect.SelectContentProps, ref) => (
@@ -285,14 +295,19 @@ export function CustomExpressionIndicator() {
   );
 }
 
-export function Swatch({ color }: { color: string }) {
+export function Swatch({ color, auto }: { color: string; auto?: boolean }) {
+  const isDark = colord(color).isDark();
   return (
     <div
-      className="w-4 h-4 rounded-sm border border-black"
+      className="w-4 h-4 rounded-sm border border-black flex items-center justify-center text-xs"
       style={{
         backgroundColor: color,
       }}
-    ></div>
+    >
+      <span className={isDark ? "text-white" : "text-black"}>
+        {auto && "a"}
+      </span>
+    </div>
   );
 }
 

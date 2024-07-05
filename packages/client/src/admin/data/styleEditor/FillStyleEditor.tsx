@@ -1,4 +1,4 @@
-import { FillPaint, LineLayer } from "mapbox-gl";
+import { FillLayer, FillPaint, LineLayer } from "mapbox-gl";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import { isExpression } from "../../../dataLayers/legends/utils";
 import * as Editor from "./Editors";
@@ -7,6 +7,7 @@ import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { RgbaColorPicker } from "react-colorful";
 import { extractFirstColorFromExpression } from "./visualizationTypes";
 import { colord } from "colord";
+import { isLineLayer } from "./SimplePolygonEditor";
 
 const Popover = Editor.Popover;
 
@@ -65,6 +66,7 @@ export default function FillStyleEditor({
                     : paint["fill-color"]
                 ).toRgb()}
                 onChange={(color) => {
+                  let fillLayer = layer;
                   const c = colord(color);
                   if (layer) {
                     updateLayer(
@@ -77,7 +79,7 @@ export default function FillStyleEditor({
                     const lineLayer = glLayers.find(
                       (l) => l.type === "line"
                     ) as LineLayer;
-                    const fillLayer = {
+                    fillLayer = {
                       type: "fill",
                       paint: {
                         "fill-color": c.toRgbString(),
@@ -90,6 +92,35 @@ export default function FillStyleEditor({
                       layout: {},
                     };
                     addLayer(0, fillLayer);
+                  }
+                  // check if there are any line layers with s:color-auto=true
+                  const matchingLineLayerIndexes = glLayers
+                    .filter(
+                      (l) =>
+                        isLineLayer(l) && l.metadata?.["s:color-auto"] === true
+                    )
+                    .map((l) => glLayers.indexOf(l));
+                  const matchingFillLayerIndexes = glLayers
+                    .filter(
+                      (l) =>
+                        l.type === "fill" &&
+                        l.metadata?.["s:color-auto"] === true
+                    )
+                    .map((l) => glLayers.indexOf(l));
+                  if (fillLayer) {
+                    matchingLineLayerIndexes.forEach((index) => {
+                      const color = autoStrokeColorForFill(
+                        fillLayer as FillLayer,
+                        glLayers[index]! as LineLayer
+                      );
+                      updateLayer(index, "paint", "line-color", color);
+                    });
+                    matchingFillLayerIndexes.forEach((index) => {
+                      const color = autoStrokeColorForFill(
+                        fillLayer as FillLayer
+                      );
+                      updateLayer(index, "paint", "fill-outline-color", color);
+                    });
                   }
                 }}
               />
@@ -108,5 +139,48 @@ export function formatColor(color: string | undefined, defaultColor: string) {
     return "None";
   } else {
     return c.toRgbString();
+  }
+}
+
+export function autoStrokeColorForFill(fill: FillLayer, line?: LineLayer) {
+  let fillColor = "#000000";
+  if (fill.paint?.["fill-color"]) {
+    if (isExpression(fill.paint["fill-color"])) {
+      fillColor =
+        extractFirstColorFromExpression(fill.paint["fill-color"]) || "#000000";
+    } else {
+      fillColor = fill.paint["fill-color"] as string;
+    }
+  }
+  if (colord(fillColor).alpha() === 0) {
+    return "#558";
+  }
+  // First, check if alpha differs substantially between fill and line
+  if (
+    line &&
+    Math.abs(
+      Math.abs(valueOrDefault(line.paint?.["line-opacity"], 1)) -
+        Math.abs(valueOrDefault(fill.paint?.["fill-opacity"], 1))
+    ) > 0.5
+  ) {
+    // if so, just use the fill color
+    return fillColor;
+  } else {
+    // otherwise, determine the lightness of the fill color. If it is dark,
+    // return a lighter color. If it is light, return a darker color.
+    const c = colord(fillColor);
+    if (c.isDark()) {
+      return c.lighten(0.2).toRgbString();
+    } else {
+      return c.darken(0.2).toRgbString();
+    }
+  }
+}
+
+export function valueOrDefault(value: any, defaultValue: any) {
+  if (value === undefined) {
+    return defaultValue;
+  } else {
+    return value;
   }
 }

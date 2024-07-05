@@ -1,14 +1,19 @@
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useState } from "react";
 import * as Editor from "./Editors";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { isFillLayer, isLineLayer } from "./SimplePolygonEditor";
-import { FillPaint, LinePaint } from "mapbox-gl";
+import { FillLayer, FillPaint, LineLayer, LinePaint } from "mapbox-gl";
 import { colord } from "colord";
-import { isExpression } from "../../../dataLayers/legends/utils";
-import { formatColor } from "./FillStyleEditor";
+import {
+  hasGetExpression,
+  isExpression,
+} from "../../../dataLayers/legends/utils";
+import { autoStrokeColorForFill, formatColor } from "./FillStyleEditor";
 import { RgbaColorPicker } from "react-colorful";
 import StrokeStyleEditor, { DASHARRAYS } from "./StrokeStyleEditor";
+import Switch from "../../../components/Switch";
+import { Trans } from "react-i18next";
 const Popover = Editor.Popover;
 
 export enum StrokeType {
@@ -20,8 +25,23 @@ export enum StrokeType {
   CustomExpression = "Custom Expression",
 }
 
-export default function StrokeEditor({ layer }: { layer?: SeaSketchGlLayer }) {
-  const { t, glLayers, updateLayer } = useContext(Editor.GUIEditorContext);
+export default function StrokeEditor({
+  layer,
+  fillLayer,
+}: {
+  layer?: Omit<LineLayer, "source" | "id">;
+  fillLayer?: Omit<FillLayer, "source" | "id">;
+}) {
+  const {
+    t,
+    glLayers,
+    updateLayer,
+    removeLayer,
+    addLayer,
+    previousSettings,
+    setPreviousSettings,
+  } = useContext(Editor.GUIEditorContext);
+  const prevStrokeColor = previousSettings?.strokeColor;
   const outline = (
     glLayers.find((l) => isFillLayer(l) && l.paint?.["fill-outline-color"])
       ?.paint as FillPaint | undefined
@@ -58,15 +78,14 @@ export default function StrokeEditor({ layer }: { layer?: SeaSketchGlLayer }) {
   if (type !== StrokeType.CustomExpression) {
     color =
       ((layer?.paint as LinePaint | undefined)?.["line-color"] as string) ||
-      (outline as string) ||
-      "#000000";
+      (outline as string);
     if (colord(color).alpha() === 0) {
       type = StrokeType.None;
     }
     if (layer && isLineLayer(layer)) {
       const dasharray = (layer.paint as LinePaint)?.["line-dasharray"];
       if (dasharray) {
-        if (dasharray.join(",") === "0,2") {
+        if (dasharray.join(",") === "1,2") {
           type = StrokeType.Dotted;
         } else {
           type = StrokeType.Dashed;
@@ -137,41 +156,200 @@ export default function StrokeEditor({ layer }: { layer?: SeaSketchGlLayer }) {
                     <span>{formatColor(color, "#000000")}</span>
                   )} */}
                   {!isExpression(color) && type !== "None" && (
-                    <Editor.Swatch color={color as string} />
+                    <Editor.Swatch
+                      auto={
+                        type === StrokeType.Outline
+                          ? fillLayer?.metadata?.["s:color-auto"]
+                          : layer?.metadata?.["s:color-auto"]
+                      }
+                      color={color || prevStrokeColor || "#000000"}
+                    />
                   )}
                 </>
               )}
               <ChevronDownIcon />
             </Editor.TriggerDropdownButton>
           </Popover.Trigger>
-          <Popover.Content>
+          <Popover.Content onOpenAutoFocus={(e) => e.preventDefault()}>
             <div className="w-80 px-2">
               <StrokeEditorForm
+                auto={
+                  type === StrokeType.Outline
+                    ? fillLayer?.metadata?.["s:color-auto"] === true
+                    : layer?.metadata?.["s:color-auto"] === true
+                }
+                previousColor={prevStrokeColor}
+                hasFillLayer={Boolean(fillLayer)}
                 width={width}
                 color={color}
                 type={type}
                 i18n={t}
-                onChange={(type, width, color) => {
-                  console.log("onChange", type, width, color);
-                  // console.log(type, width, color);
-                  // TODO: finish making sure this handler handles all possible
-                  // cases
-                  if (type === "Outline") {
-                    const outlineLayer = glLayers.find(
+                onChange={(newType, newWidth, color, dasharray, autoColor) => {
+                  if (newType !== StrokeType.None && type === StrokeType.None) {
+                    autoColor = previousSettings.autoStrokeColor || false;
+                  }
+                  const metadata = {
+                    "s:color-auto": autoColor,
+                  };
+                  setPreviousSettings((prev) => ({
+                    ...prev,
+                    autoStrokeColor: autoColor,
+                  }));
+                  if (layerIndex !== -1) {
+                    updateLayer(
+                      layerIndex,
+                      undefined,
+                      undefined,
+                      undefined,
+                      metadata
+                    );
+                  }
+                  if (autoColor) {
+                    const fillLayer = glLayers.find((l) => isFillLayer(l));
+                    color = autoStrokeColorForFill(
+                      fillLayer as FillLayer,
+                      layer as LineLayer
+                    );
+                  }
+                  const oldType = type;
+                  if (newType !== oldType && newWidth === 0) {
+                    newWidth = 1;
+                  }
+                  const oldWidth = width;
+                  setPreviousSettings((prev) => ({
+                    ...prev,
+                    strokeColor: color,
+                    strokeWidth: newWidth,
+                    dasharray,
+                  }));
+
+                  if (newType === StrokeType.None && newWidth === oldWidth) {
+                    // remove fill-outline-color if exists
+                    const outlineLayer = glLayers.findIndex(
                       (l) => isFillLayer(l) && l.paint?.["fill-outline-color"]
                     );
-                    if (!outlineLayer) {
-                      throw new Error("No outline layer found");
+                    if (outlineLayer !== -1) {
+                      updateLayer(
+                        outlineLayer,
+                        "paint",
+                        "fill-outline-color",
+                        undefined,
+                        metadata
+                      );
+                    }
+                    // remove stroke layer if exists
+                    if (layer) {
+                      removeLayer(layerIndex);
+                    }
+                  } else if (newType === StrokeType.Outline) {
+                    if (!fillLayer) {
+                      throw new Error("No fill layer found");
                     }
                     updateLayer(
-                      glLayers.indexOf(outlineLayer),
+                      glLayers.indexOf(fillLayer),
                       "paint",
                       "fill-outline-color",
-                      color
+                      color || prevStrokeColor || "#000000",
+                      metadata
                     );
-                  } else if (layer) {
-                    updateLayer(layerIndex, "paint", "line-color", color);
-                    updateLayer(layerIndex, "paint", "line-width", width);
+                    // remove stroke layer if exists
+                    if (layer) {
+                      removeLayer(layerIndex);
+                    }
+                  } else {
+                    // clear all outlines
+                    const outlineLayers = glLayers
+                      .filter(
+                        (l) => isFillLayer(l) && l.paint?.["fill-outline-color"]
+                      )
+                      .map((l) => glLayers.indexOf(l));
+                    for (const outlineLayer of outlineLayers) {
+                      updateLayer(
+                        outlineLayer,
+                        "paint",
+                        "fill-outline-color",
+                        undefined,
+                        metadata
+                      );
+                    }
+                    if (layer) {
+                      // update the layer
+                      // update color
+                      if (layer.paint?.["line-color"] !== color) {
+                        updateLayer(
+                          layerIndex,
+                          "paint",
+                          "line-color",
+                          color,
+                          metadata
+                        );
+                      }
+                      // update width
+                      if (layer.paint?.["line-width"] !== newWidth) {
+                        updateLayer(
+                          layerIndex,
+                          "paint",
+                          "line-width",
+                          newWidth
+                        );
+                      }
+                      if (
+                        newType === StrokeType.None &&
+                        oldWidth !== newWidth &&
+                        previousSettings.dasharray
+                      ) {
+                        dasharray = previousSettings.dasharray;
+                      }
+                      if (dasharray) {
+                        updateLayer(
+                          layerIndex,
+                          "paint",
+                          "line-dasharray",
+                          dasharray.split(",").map((s) => parseInt(s))
+                        );
+                      } else {
+                        if (layer.paint?.["line-dasharray"]) {
+                          updateLayer(
+                            layerIndex,
+                            "paint",
+                            "line-dasharray",
+                            undefined,
+                            metadata
+                          );
+                        }
+                      }
+
+                      // update dasharray
+                    } else {
+                      // create the layer
+                      let dasharraySetting = {};
+                      if (dasharray) {
+                        dasharraySetting = {
+                          "line-dasharray": dasharray
+                            .split(",")
+                            .map((s) => parseInt(s)),
+                        };
+                      }
+                      // Find the index of the last fill layer in glLayers
+                      let fillLayerIndex = 0;
+                      for (let i = 0; i < glLayers.length; i++) {
+                        if (isFillLayer(glLayers[i])) {
+                          fillLayerIndex = i;
+                        }
+                      }
+                      addLayer(fillLayerIndex + 1, {
+                        type: "line",
+                        paint: {
+                          "line-color":
+                            color || previousSettings.strokeColor || "#000000",
+                          "line-width":
+                            newWidth || previousSettings?.strokeWidth || 1,
+                          ...dasharraySetting,
+                        },
+                        layout: {},
+                        metadata,
+                      });
+                    }
                   }
                 }}
               />
@@ -190,12 +368,24 @@ export function StrokeEditorForm({
   type,
   i18n: t,
   onChange,
+  hasFillLayer,
+  previousColor,
+  auto,
 }: {
   width: number;
   color?: string;
   type: StrokeType;
   i18n: (key: string) => string;
-  onChange: (type: StrokeType, width: number, color?: string) => void;
+  onChange: (
+    type: StrokeType,
+    width: number,
+    color?: string,
+    dasharray?: string,
+    autoColor?: boolean
+  ) => void;
+  hasFillLayer: boolean;
+  previousColor?: string;
+  auto: boolean;
 }) {
   const { glLayers } = useContext(Editor.GUIEditorContext);
 
@@ -218,27 +408,34 @@ export function StrokeEditorForm({
     <>
       <StrokeStyleEditor
         value={type}
-        onChange={(value) => onChange(value, width, color)}
+        onChange={(value, dasharray) =>
+          onChange(value, width, color, dasharray, auto)
+        }
         dasharray={dasharray ? dasharray.join(",") : undefined}
+        hasFillLayer={hasFillLayer}
       />
-      <Editor.Root>
+      <Editor.Root disabled={type === StrokeType.Outline}>
         <Editor.Label title={t("Stroke Width")} />
         <Editor.Control>
           <Editor.NumberSliderAndInput
-            value={width}
+            value={
+              type === StrokeType.None
+                ? 0
+                : type === StrokeType.Outline
+                ? 0.25
+                : width
+            }
             min={0}
             max={10}
             step={1}
             onChange={(value) => {
-              onChange(type, value, color);
-              // if (type !== "Outline" && layer) {
-              //   updateLayer(
-              //     glLayers.indexOf(layer),
-              //     "paint",
-              //     "line-width",
-              //     value
-              //   );
-              // }
+              onChange(
+                type,
+                value,
+                color,
+                dasharray ? dasharray.join(",") : undefined,
+                auto
+              );
             }}
           />
         </Editor.Control>
@@ -246,49 +443,51 @@ export function StrokeEditorForm({
       <Editor.Root disabled={type === "None"}>
         <Editor.Label title={t("Stroke Color")} />
         <Editor.Control>
-          {color && (
-            <Popover.Root>
-              <Popover.Trigger asChild>
-                <Editor.TriggerDropdownButton>
-                  <span>{formatColor(color, "#000000")}</span>
-                  <Editor.Swatch color={color} />
-                </Editor.TriggerDropdownButton>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <Popover.Content side="right" sideOffset={12}>
-                  <RgbaColorPicker
-                    color={colord(color).toRgb()}
-                    onChange={(color) => {
-                      onChange(type, width, colord(color).toRgbString());
-                      // const c = colord(color);
-                      // if (type === "Outline") {
-                      //   const outlineLayer = glLayers.find(
-                      //     (l) => isFillLayer(l) && l.paint?.["fill-outline-color"]
-                      //   );
-                      //   if (!outlineLayer) {
-                      //     throw new Error("No outline layer found");
-                      //   }
-                      //   updateLayer(
-                      //     glLayers.indexOf(outlineLayer),
-                      //     "paint",
-                      //     "fill-outline-color",
-                      //     c.toRgbString()
-                      //   );
-                      // } else if (layer) {
-                      //   updateLayer(
-                      //     glLayers.indexOf(layer),
-                      //     "paint",
-                      //     "line-color",
-                      //     c.toRgbString()
-                      //   );
-                      // }
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <Editor.TriggerDropdownButton>
+                <span>
+                  {auto
+                    ? "Auto"
+                    : formatColor(color, previousColor || "#000000")}
+                </span>
+                <Editor.Swatch color={color || previousColor || "#000000"} />
+              </Editor.TriggerDropdownButton>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content side="right" sideOffset={12}>
+                <RgbaColorPicker
+                  color={colord(color || "#000000").toRgb()}
+                  onChange={(color) => {
+                    onChange(
+                      type,
+                      width,
+                      colord(color).toRgbString(),
+                      dasharray ? dasharray.join(",") : undefined,
+                      false
+                    );
+                  }}
+                />
+                <div className="p-2 text-xs flex items-center text-white">
+                  <Switch
+                    onClick={(val) => {
+                      onChange(
+                        type,
+                        width,
+                        color,
+                        dasharray ? dasharray.join(",") : undefined,
+                        val
+                      );
                     }}
+                    isToggled={auto}
+                    className="transform scale-75"
                   />
-                  <Popover.Arrow style={{ fill: "rgba(75, 85, 99)" }} />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
-          )}
+                  <p>{t("Auto color based on fill")}</p>
+                </div>
+                <Popover.Arrow style={{ fill: "rgba(75, 85, 99)" }} />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </Editor.Control>
       </Editor.Root>
     </>

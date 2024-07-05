@@ -48,6 +48,9 @@ export default function GUIStyleEditor({
   layerId?: number;
   undoRedoCounter?: number;
 }) {
+  const [previousSettings, setPreviousSettings] = useState<{
+    [setting: string]: any;
+  }>({});
   const validVisualizationTypes = useMemo(() => {
     return validVisualizationTypesForGeostats(geostats);
   }, [geostats]);
@@ -230,10 +233,32 @@ export default function GUIStyleEditor({
       if (styleJSON === null) {
         throw new Error("Style JSON is null");
       }
-      if (layerIndex >= styleJSON.length) {
+      if (layerIndex > styleJSON.length) {
         throw new Error("Layer index out of bounds");
       }
       styleJSON.splice(layerIndex, 0, layer as Layer);
+      setStyleJSON([...styleJSON]);
+      editorRef.current?.view?.dispatch({
+        changes: {
+          from: 0,
+          to: editorRef.current.view!.state.doc.length,
+          insert: JSON.stringify(styleJSON),
+        },
+      });
+      formatJSONCommand(editorRef.current?.view!);
+    },
+    [styleJSON, editorRef]
+  );
+
+  const removeLayer = useCallback(
+    (layerIndex: number) => {
+      if (styleJSON === null) {
+        throw new Error("Style JSON is null");
+      }
+      if (layerIndex >= styleJSON.length) {
+        throw new Error("Layer index out of bounds");
+      }
+      styleJSON.splice(layerIndex, 1);
       setStyleJSON([...styleJSON]);
       editorRef.current?.view?.dispatch({
         changes: {
@@ -297,6 +322,8 @@ export default function GUIStyleEditor({
       {styleJSON && visualizationType && (
         <Editors.GUIEditorContext.Provider
           value={{
+            previousSettings,
+            setPreviousSettings,
             updateLayer: updateLayerProperty,
             deleteLayerProperties,
             geostats,
@@ -304,6 +331,7 @@ export default function GUIStyleEditor({
             type: visualizationType,
             t,
             addLayer,
+            removeLayer,
           }}
         >
           <EditorForVisualizationType type={visualizationType} />
