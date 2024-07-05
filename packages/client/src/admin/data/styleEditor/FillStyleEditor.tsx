@@ -170,9 +170,9 @@ export function autoStrokeColorForFill(fill: FillLayer, line?: LineLayer) {
     // return a lighter color. If it is light, return a darker color.
     const c = colord(fillColor);
     if (c.isDark()) {
-      return c.lighten(0.2).toRgbString();
+      return c.lighten(0.2).alpha(1).toRgbString();
     } else {
-      return c.darken(0.2).toRgbString();
+      return c.darken(0.2).alpha(1).toRgbString();
     }
   }
 }
