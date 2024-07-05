@@ -31,10 +31,10 @@ export default function FillStyleEditor({
               ) : (
                 <>
                   <span
-                    className="w-18 text-right overflow-hidden font-mono"
+                    className="w-18 text-right overflow-hidden"
                     style={{
                       fontVariantNumeric: "tabular-nums",
-                      wordSpacing: "-6px",
+                      wordSpacing: "-3px",
                     }}
                   >
                     {layer
@@ -107,6 +107,6 @@ export function formatColor(color: string | undefined, defaultColor: string) {
   if (c.alpha() === 0) {
     return "None";
   } else {
-    return c.toRgbString().toUpperCase();
+    return c.toRgbString();
   }
 }

@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import * as Editor from "./Editors";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
@@ -8,10 +8,10 @@ import { colord } from "colord";
 import { isExpression } from "../../../dataLayers/legends/utils";
 import { formatColor } from "./FillStyleEditor";
 import { RgbaColorPicker } from "react-colorful";
-import { svg } from "d3";
+import StrokeStyleEditor, { DASHARRAYS } from "./StrokeStyleEditor";
 const Popover = Editor.Popover;
 
-enum StrokeType {
+export enum StrokeType {
   None = "None",
   Solid = "Solid",
   Dotted = "Dotted",
@@ -107,6 +107,8 @@ export default function StrokeEditor({ layer }: { layer?: SeaSketchGlLayer }) {
     }
   }
 
+  const layerIndex = layer ? glLayers.indexOf(layer) : -1;
+
   return (
     <Editor.Root>
       <Editor.Label title={t("Stroke")} />
@@ -150,7 +152,10 @@ export default function StrokeEditor({ layer }: { layer?: SeaSketchGlLayer }) {
                 type={type}
                 i18n={t}
                 onChange={(type, width, color) => {
+                  console.log("onChange", type, width, color);
                   // console.log(type, width, color);
+                  // TODO: finish making sure this handler handles all possible
+                  // cases
                   if (type === "Outline") {
                     const outlineLayer = glLayers.find(
                       (l) => isFillLayer(l) && l.paint?.["fill-outline-color"]
@@ -165,104 +170,11 @@ export default function StrokeEditor({ layer }: { layer?: SeaSketchGlLayer }) {
                       color
                     );
                   } else if (layer) {
-                    // TODO: updating the layer twice rapidly causes an
-                    // exception. The updateLayer function really ought to
-                    // change in order to batch updates and avoid this, but also
-                    // the API should change to accept multiple properties to
-                    // update. If that was in place, these guards would not be
-                    // necessary (or could be implemented as an optimization in
-                    // updateLayer).
-                    if ((layer.paint as LinePaint)?.["line-color"] !== color) {
-                      updateLayer(
-                        glLayers.indexOf(layer),
-                        "paint",
-                        "line-color",
-                        color
-                      );
-                    }
-                    if ((layer.paint as LinePaint)?.["line-width"] !== width) {
-                      updateLayer(
-                        glLayers.indexOf(layer),
-                        "paint",
-                        "line-width",
-                        width
-                      );
-                    }
+                    updateLayer(layerIndex, "paint", "line-color", color);
+                    updateLayer(layerIndex, "paint", "line-width", width);
                   }
                 }}
               />
-              {/* <Editor.Root>
-                <Editor.Label title={t("Stroke Type")} />
-                <Editor.Control></Editor.Control>
-              </Editor.Root>
-              <Editor.Root>
-                <Editor.Label title={t("Stroke Width")} />
-                <Editor.Control>
-                  <Editor.NumberSliderAndInput
-                    value={width}
-                    min={0}
-                    max={10}
-                    step={1}
-                    onChange={(value) => {
-                      if (type !== "Outline" && layer) {
-                        updateLayer(
-                          glLayers.indexOf(layer),
-                          "paint",
-                          "line-width",
-                          value
-                        );
-                      }
-                    }}
-                  />
-                </Editor.Control>
-              </Editor.Root>
-              <Editor.Root disabled={type === "None"}>
-                <Editor.Label title={t("Stroke Color")} />
-                <Editor.Control>
-                  <Popover.Root>
-                    <Popover.Trigger asChild>
-                      <Editor.TriggerDropdownButton>
-                        <span>{formatColor(color, "#000000")}</span>
-                        <Editor.Swatch color={color} />
-                      </Editor.TriggerDropdownButton>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <Popover.Content side="right" sideOffset={12}>
-                        <RgbaColorPicker
-                          color={colord(color).toRgb()}
-                          onChange={(color) => {
-                            const c = colord(color);
-                            if (type === "Outline") {
-                              const outlineLayer = glLayers.find(
-                                (l) =>
-                                  isFillLayer(l) &&
-                                  l.paint?.["fill-outline-color"]
-                              );
-                              if (!outlineLayer) {
-                                throw new Error("No outline layer found");
-                              }
-                              updateLayer(
-                                glLayers.indexOf(outlineLayer),
-                                "paint",
-                                "fill-outline-color",
-                                c.toRgbString()
-                              );
-                            } else if (layer) {
-                              updateLayer(
-                                glLayers.indexOf(layer),
-                                "paint",
-                                "line-color",
-                                c.toRgbString()
-                              );
-                            }
-                          }}
-                        />
-                        <Popover.Arrow style={{ fill: "rgba(75, 85, 99)" }} />
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
-                </Editor.Control>
-              </Editor.Root> */}
             </div>
             <Popover.Arrow style={{ fill: "rgba(75, 85, 99)" }} />
           </Popover.Content>
@@ -271,21 +183,6 @@ export default function StrokeEditor({ layer }: { layer?: SeaSketchGlLayer }) {
     </Editor.Root>
   );
 }
-
-const DASHARRAYS = [
-  {
-    mapbox: [4, 4],
-    svg: "6,6",
-  },
-  {
-    mapbox: [4, 2],
-    svg: "6,2",
-  },
-  {
-    mapbox: [2, 2],
-    svg: "0,2",
-  },
-];
 
 export function StrokeEditorForm({
   width,
@@ -300,12 +197,30 @@ export function StrokeEditorForm({
   i18n: (key: string) => string;
   onChange: (type: StrokeType, width: number, color?: string) => void;
 }) {
+  const { glLayers } = useContext(Editor.GUIEditorContext);
+
+  const dasharray = useMemo(() => {
+    if (type === "Dotted" || type === "Dashed") {
+      const lineLayer = glLayers.find(
+        (l) => isLineLayer(l) && l.paint?.["line-dasharray"]
+      );
+      if (lineLayer) {
+        return (lineLayer.paint as LinePaint)?.["line-dasharray"];
+      } else {
+        return undefined;
+      }
+    } else {
+      return undefined;
+    }
+  }, [glLayers, type]);
+
   return (
     <>
-      <Editor.Root>
-        <Editor.Label title={t("Stroke Type")} />
-        <Editor.Control></Editor.Control>
-      </Editor.Root>
+      <StrokeStyleEditor
+        value={type}
+        onChange={(value) => onChange(value, width, color)}
+        dasharray={dasharray ? dasharray.join(",") : undefined}
+      />
       <Editor.Root>
         <Editor.Label title={t("Stroke Width")} />
         <Editor.Control>

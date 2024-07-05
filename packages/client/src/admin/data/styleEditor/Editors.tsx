@@ -227,6 +227,42 @@ export const Popover = {
 
 export const Select = {
   ...RadixSelect,
+  Trigger: forwardRef((props: RadixSelect.SelectTriggerProps, ref) => (
+    <RadixSelect.Trigger
+      {...props}
+      // @ts-ignore
+      ref={ref}
+      className={`inline-flex items-center justify-center rounded px-2.5 text-sm leading-none h-8 gap-1 bg-gray-700 text-gray-400 shadow  outline-none focus:ring-2 focus:border-transparent ring-blue-600 border border-gray-500 ${props.className}`}
+    />
+  )),
+  Content: forwardRef((props: RadixSelect.SelectContentProps, ref) => (
+    <RadixSelect.Content
+      position="popper"
+      {...props}
+      // @ts-ignore
+      className={`bg-gray-50  rounded-md shadow z-50 ${props.className}`}
+      // @ts-ignore
+      ref={ref}
+    />
+  )),
+  Viewport: forwardRef((props: RadixSelect.SelectViewportProps, ref) => (
+    <RadixSelect.Viewport
+      {...props}
+      // @ts-ignore
+      className={`p-2 LayerEditorPalette ${props.className}`}
+      // @ts-ignore
+      ref={ref}
+    />
+  )),
+  Item: forwardRef((props: RadixSelect.SelectItemProps, ref) => (
+    <RadixSelect.Item
+      {...props}
+      // @ts-ignore
+      className={`text-sm leading-none rounded flex items-center h-8 pr-1 pl-1 relative select-none hover:bg-indigo-50 hover:border-indigo-500 bg-opacity-30 border border-transparent ${props.className}`}
+      // @ts-ignore
+      ref={ref}
+    />
+  )),
 };
 
 export function CustomExpressionIndicator() {

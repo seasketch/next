@@ -329,3 +329,11 @@ export type LayerUpdater = (
 ) => void;
 
 export type LayerPropertyDeleter = (properties: PropertyRef[]) => void;
+
+// export type LayerStyleUpdater = (
+//   layer: Layer,
+//   updates: {
+//     paint: Partial<Layer["paint"]>;
+//     layout: Partial<Layer["layout"]>;
+//   }
+// ) => void;
