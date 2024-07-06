@@ -120,6 +120,12 @@ export default function SimplePolygonEditor() {
       />
       <OpacityEditor
         value={opacity.value}
+        fillColor={
+          fillLayer?.paint?.["fill-color"] &&
+          !isExpression(fillLayer.paint["fill-color"])
+            ? (fillLayer?.paint?.["fill-color"] as string)
+            : undefined
+        }
         onChange={(value) => {
           if (indexes.fill !== -1) {
             context.updateLayer(indexes.fill, "paint", "fill-opacity", value);

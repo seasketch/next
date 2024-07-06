@@ -5,9 +5,11 @@ import * as Slider from "@radix-ui/react-slider";
 export function OpacityEditor({
   value,
   onChange,
+  fillColor,
 }: {
   value?: number;
   onChange: (value: number) => void;
+  fillColor?: string;
 }) {
   return (
     <Editor.Root>
@@ -41,9 +43,9 @@ export function OpacityEditor({
             <Slider.Range
               className="absolute bg-gradient-to-r from-transparent to-indigo-500 rounded h-full"
               style={{
-                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0), #6366f1 ${
-                  (1 / (value === undefined ? 1 : value)) * 90
-                }%`,
+                backgroundImage: `linear-gradient(to right, rgba(0,0,0,0), ${
+                  fillColor || "#aaa"
+                } ${(1 / (value === undefined ? 1 : value)) * 90}%`,
               }}
             />
           </Slider.Track>
