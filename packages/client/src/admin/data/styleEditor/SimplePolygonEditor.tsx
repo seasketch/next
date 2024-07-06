@@ -10,6 +10,7 @@ import { FillLayer, Layer, LineLayer } from "mapbox-gl";
 import { OpacityEditor } from "./OpacityEditor";
 import FillStyleEditor, { autoStrokeColorForFill } from "./FillStyleEditor";
 import StrokeEditor from "./StrokeEditor";
+
 export default function SimplePolygonEditor() {
   const context = useContext(Editor.GUIEditorContext);
   const { t } = useTranslation("admin:data");
@@ -118,55 +119,60 @@ export default function SimplePolygonEditor() {
           }
         }}
       />
-      <OpacityEditor
-        value={opacity.value}
-        fillColor={
-          fillLayer?.paint?.["fill-color"] &&
-          !isExpression(fillLayer.paint["fill-color"])
-            ? (fillLayer?.paint?.["fill-color"] as string)
-            : undefined
-        }
-        onChange={(value) => {
-          if (indexes.fill !== -1) {
-            context.updateLayer(indexes.fill, "paint", "fill-opacity", value);
+      {opacity.isCustomExpression && (
+        <Editor.Root>
+          <Editor.Label title={t("Opacity")} />
+          <Editor.Control>
+            <Editor.CustomExpressionIndicator />
+          </Editor.Control>
+        </Editor.Root>
+      )}
+      {!opacity.isCustomExpression && (
+        <OpacityEditor
+          value={opacity.value}
+          fillColor={
+            fillLayer?.paint?.["fill-color"] &&
+            !isExpression(fillLayer.paint["fill-color"])
+              ? (fillLayer?.paint?.["fill-color"] as string)
+              : undefined
           }
-          if (indexes.stroke !== -1) {
-            context.updateLayer(
-              indexes.stroke,
-              "paint",
-              "line-opacity",
-              indexes.fill === -1 ? value : Math.min(value * 2, 1)
-            );
-            const newStrokeColor = autoStrokeColorForFill(
-              context.glLayers[indexes.fill] as FillLayer,
-              context.glLayers[indexes.stroke] as LineLayer
-            );
-            const line = context.glLayers[indexes.stroke] as LineLayer;
-            if (
-              line.paint &&
-              line.paint["line-color"] &&
-              line.paint["line-color"] !== newStrokeColor
-            ) {
+          onChange={(value) => {
+            if (indexes.fill !== -1) {
+              context.updateLayer(indexes.fill, "paint", "fill-opacity", value);
+            }
+            if (indexes.stroke !== -1) {
               context.updateLayer(
                 indexes.stroke,
                 "paint",
-                "line-color",
-                newStrokeColor
+                "line-opacity",
+                indexes.fill === -1 ? value : Math.min(value * 2, 1)
               );
+              const newStrokeColor = autoStrokeColorForFill(
+                context.glLayers[indexes.fill] as FillLayer,
+                context.glLayers[indexes.stroke] as LineLayer
+              );
+              const line = context.glLayers[indexes.stroke] as LineLayer;
+              if (
+                line.paint &&
+                line.paint["line-color"] &&
+                line.paint["line-color"] !== newStrokeColor
+              ) {
+                context.updateLayer(
+                  indexes.stroke,
+                  "paint",
+                  "line-color",
+                  newStrokeColor
+                );
+              }
             }
-          }
-        }}
-      />
+          }}
+        />
+      )}
       <FillStyleEditor layer={context.glLayers[indexes.fill]} />
       <StrokeEditor
         layer={context.glLayers[indexes.stroke] as LineLayer}
         fillLayer={context.glLayers[indexes.fill] as FillLayer}
       />
-      {/* <StrokeStyleEditor
-        strokeLayer={
-          indexes.stroke !== -1 ? context.glLayers[indexes.stroke] : undefined
-        }
-      /> */}
     </Editor.Card>
   );
 }
