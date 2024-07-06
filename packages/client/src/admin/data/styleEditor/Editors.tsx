@@ -250,7 +250,7 @@ export const Select = {
       position="popper"
       {...props}
       // @ts-ignore
-      className={`bg-gray-700 text-white bg-opacity-80 rounded-md shadow z-50 ${props.className}`}
+      className={`bg-gray-700 border border-white border-opacity-20 text-white bg-opacity-80 rounded-md shadow z-50 ${props.className}`}
       style={{
         backdropFilter: "blur(8px)",
         stroke: "white",
