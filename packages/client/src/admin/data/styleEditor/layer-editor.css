@@ -12,7 +12,11 @@
 }
 
 .LayerEditorPalette [data-state="checked"] {
-  @apply bg-blue-100 border border-blue-300;
+  @apply bg-blue-500 bg-opacity-30 border border-blue-500;
+}
+
+.LayerEditorPalette [data-highlighted] {
+  @apply bg-blue-600;
 }
 
 .PaletteSelectContent {

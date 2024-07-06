@@ -250,7 +250,11 @@ export const Select = {
       position="popper"
       {...props}
       // @ts-ignore
-      className={`bg-gray-50  rounded-md shadow z-50 ${props.className}`}
+      className={`bg-gray-700 text-white bg-opacity-80 rounded-md shadow z-50 ${props.className}`}
+      style={{
+        backdropFilter: "blur(8px)",
+        stroke: "white",
+      }}
       // @ts-ignore
       ref={ref}
     />
@@ -268,7 +272,7 @@ export const Select = {
     <RadixSelect.Item
       {...props}
       // @ts-ignore
-      className={`text-sm leading-none rounded flex items-center h-8 pr-1 pl-1 relative select-none hover:bg-indigo-50 hover:border-indigo-500 bg-opacity-30 border border-transparent ${props.className}`}
+      className={`text-sm leading-none rounded flex items-center h-8 pr-1 pl-1 relative select-none bg-opacity-30 border border-transparent ${props.className}`}
       // @ts-ignore
       ref={ref}
     />
