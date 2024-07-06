@@ -67,6 +67,28 @@ export default function SimplePolygonEditor() {
       ? (context.glLayers[indexes.stroke] as LineLayer)
       : undefined;
 
+  const opacity = useMemo(() => {
+    const opacity = {
+      isCustomExpression: false,
+      value: 1,
+    };
+    if (fillLayer?.paint?.["fill-opacity"] !== undefined) {
+      opacity.value = fillLayer.paint["fill-opacity"] as number;
+      opacity.isCustomExpression = isExpression(
+        fillLayer.paint["fill-opacity"]
+      );
+    } else if (strokeLayer?.paint?.["line-opacity"] !== undefined) {
+      opacity.value = strokeLayer.paint["line-opacity"] as number;
+      opacity.isCustomExpression = isExpression(
+        strokeLayer.paint["line-opacity"]
+      );
+    }
+    return opacity;
+  }, [
+    fillLayer?.paint?.["fill-opacity"],
+    strokeLayer?.paint?.["line-opacity"],
+  ]);
+
   return (
     <Editor.Card>
       <Editor.CardTitle
@@ -97,20 +119,17 @@ export default function SimplePolygonEditor() {
         }}
       />
       <OpacityEditor
-        value={
-          (fillLayer?.paint?.["fill-opacity"] !== undefined &&
-          !isExpression(fillLayer.paint?.["fill-opacity"])
-            ? fillLayer.paint?.["fill-opacity"]
-            : 1) as number
-        }
+        value={opacity.value}
         onChange={(value) => {
-          context.updateLayer(indexes.fill, "paint", "fill-opacity", value);
+          if (indexes.fill !== -1) {
+            context.updateLayer(indexes.fill, "paint", "fill-opacity", value);
+          }
           if (indexes.stroke !== -1) {
             context.updateLayer(
               indexes.stroke,
               "paint",
               "line-opacity",
-              Math.min(value * 2, 1)
+              indexes.fill === -1 ? value : Math.min(value * 2, 1)
             );
             const newStrokeColor = autoStrokeColorForFill(
               context.glLayers[indexes.fill] as FillLayer,

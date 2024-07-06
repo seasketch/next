@@ -142,9 +142,9 @@ export function formatColor(color: string | undefined, defaultColor: string) {
   }
 }
 
-export function autoStrokeColorForFill(fill: FillLayer, line?: LineLayer) {
+export function autoStrokeColorForFill(fill?: FillLayer, line?: LineLayer) {
   let fillColor = "#000000";
-  if (fill.paint?.["fill-color"]) {
+  if (fill?.paint?.["fill-color"]) {
     if (isExpression(fill.paint["fill-color"])) {
       fillColor =
         extractFirstColorFromExpression(fill.paint["fill-color"]) || "#000000";
@@ -158,6 +158,7 @@ export function autoStrokeColorForFill(fill: FillLayer, line?: LineLayer) {
   // First, check if alpha differs substantially between fill and line
   if (
     line &&
+    fill &&
     Math.abs(
       Math.abs(valueOrDefault(line.paint?.["line-opacity"], 1)) -
         Math.abs(valueOrDefault(fill.paint?.["fill-opacity"], 1))
