@@ -279,23 +279,56 @@ export const Select = {
   )),
 };
 
-export function CustomExpressionIndicator() {
+export function CustomExpressionIndicator({
+  onClear,
+}: {
+  onClear?: () => void;
+}) {
   return (
-    <div className="flex items-center space-x-1">
-      <span>
-        <Trans ns="admin:data">Custom Expression</Trans>
-      </span>
-
-      <div className="flex items-center bg-gray-900 bg-opacity-30 rounded p-0.5">
-        <FontFamilyIcon />
-        <span
-          style={{ bottom: -1, left: -1 }}
-          className="font-mono text-xs relative"
-        >
-          ()
-        </span>
-      </div>
-    </div>
+    <Tooltip.Provider>
+      <Tooltip.Root delayDuration={100}>
+        <Tooltip.Trigger asChild>
+          <div className="flex items-center border border-gray-600 rounded">
+            <div className="flex items-center bg-gray-900 bg-opacity-30 p-0 border-r border-gray-600 px-2 py-1">
+              <FontFamilyIcon />
+              <span
+                style={{ bottom: -1, left: -1 }}
+                className="font-mono text-xs relative"
+              >
+                []
+              </span>
+            </div>
+            <span className="px-2 py-1">
+              <Trans ns="admin:data">Custom Expression</Trans>
+            </span>
+          </div>
+        </Tooltip.Trigger>
+        {onClear && (
+          <Tooltip.Portal>
+            <Tooltip.Content
+              side="right"
+              className="bg-gray-700 bg-opacity-90 text-white rounded z-50 text-sm px-4 py-2"
+              style={{ backdropFilter: "blur(4px)" }}
+            >
+              <p className="w-72">
+                <Trans ns="admin:data">
+                  A custom expression function is being used for this property.
+                  You can switch to the code editor to modify it, or delete the
+                  expression so you may use the graphical editor.
+                </Trans>
+              </p>
+              <button
+                className="text-indigo-200 py-2 hover:underline"
+                onClick={onClear}
+              >
+                <Trans ns="admin:data">Delete expression</Trans>
+              </button>
+              <Tooltip.TooltipArrow style={{ fill: "rgb(55, 65, 81)" }} />
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        )}
+      </Tooltip.Root>
+    </Tooltip.Provider>
   );
 }
 

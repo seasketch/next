@@ -20,42 +20,52 @@ export default function FillStyleEditor({
     Editor.GUIEditorContext
   );
   const paint = (layer?.paint || {}) as FillPaint;
+  const value = paint["fill-color"] || "#000000";
   return (
     <Editor.Root>
       <Editor.Label title={t("Fill")} />
       <Editor.Control>
         <Popover.Root>
-          <Popover.Trigger asChild>
-            <Editor.TriggerDropdownButton>
-              {isExpression(paint["fill-color"] || "#000000") ? (
-                <Editor.CustomExpressionIndicator />
-              ) : (
-                <>
-                  <span
-                    className="w-18 text-right overflow-hidden"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      wordSpacing: "-3px",
-                    }}
-                  >
-                    {layer
-                      ? formatColor(paint["fill-color"] as string, "#000000")
-                      : "None"}
-                  </span>
-                  {layer && paint["fill-color"] !== "transparent" ? (
-                    <Editor.Swatch
-                      color={
-                        layer
-                          ? (paint["fill-color"] as string) || "#000000"
-                          : "transparent"
-                      }
-                    />
-                  ) : null}
-                </>
-              )}
-              <ChevronDownIcon />
-            </Editor.TriggerDropdownButton>
-          </Popover.Trigger>
+          {isExpression(value) ? (
+            <Editor.CustomExpressionIndicator
+              onClear={() => {
+                const color =
+                  extractFirstColorFromExpression(value) || "#000000";
+                updateLayer(
+                  glLayers.indexOf(layer!),
+                  "paint",
+                  "fill-color",
+                  color
+                );
+              }}
+            />
+          ) : (
+            <Popover.Trigger asChild>
+              <Editor.TriggerDropdownButton>
+                <span
+                  className="w-18 text-right overflow-hidden"
+                  style={{
+                    fontVariantNumeric: "tabular-nums",
+                    wordSpacing: "-3px",
+                  }}
+                >
+                  {layer
+                    ? formatColor(paint["fill-color"] as string, "#000000")
+                    : "None"}
+                </span>
+                {layer && paint["fill-color"] !== "transparent" ? (
+                  <Editor.Swatch
+                    color={
+                      layer
+                        ? (paint["fill-color"] as string) || "#000000"
+                        : "transparent"
+                    }
+                  />
+                ) : null}
+                <ChevronDownIcon />
+              </Editor.TriggerDropdownButton>
+            </Popover.Trigger>
+          )}
           <Popover.Portal>
             <Popover.Content side="right">
               <RgbaColorPicker

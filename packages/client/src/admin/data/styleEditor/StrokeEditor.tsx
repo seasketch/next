@@ -14,6 +14,7 @@ import { RgbaColorPicker } from "react-colorful";
 import StrokeStyleEditor, { DASHARRAYS } from "./StrokeStyleEditor";
 import Switch from "../../../components/Switch";
 import { Trans } from "react-i18next";
+import { extractFirstColorFromExpression } from "./visualizationTypes";
 const Popover = Editor.Popover;
 
 export enum StrokeType {
@@ -136,40 +137,74 @@ export default function StrokeEditor({
           <Popover.Anchor asChild>
             <div className="absolute right-12 top-9"></div>
           </Popover.Anchor>
-          <Popover.Trigger asChild>
-            <Editor.TriggerDropdownButton>
-              {type === "Custom Expression" ? (
-                <Editor.CustomExpressionIndicator />
-              ) : (
-                <>
-                  {type !== "Outline" && type !== "None" && (
-                    <span>
-                      {width}
-                      {
-                        // eslint-disable-next-line i18next/no-literal-string
-                        "px"
-                      }
-                    </span>
-                  )}
-                  <span>{type}</span>
-                  {/* {!isExpression(color) && (
+          {type === "Custom Expression" ? (
+            <Editor.CustomExpressionIndicator
+              onClear={() => {
+                if (layerIndex !== -1) {
+                  if (
+                    layer?.paint?.["line-color"] &&
+                    isExpression(layer.paint["line-color"])
+                  ) {
+                    updateLayer(
+                      layerIndex,
+                      "paint",
+                      "line-color",
+                      extractFirstColorFromExpression(
+                        layer.paint["line-color"]
+                      ) || "#000000"
+                    );
+                  }
+                  if (
+                    layer?.paint?.["line-width"] &&
+                    isExpression(layer.paint["line-width"])
+                  ) {
+                    updateLayer(layerIndex, "paint", "line-width", 1);
+                  }
+                  if (
+                    layer?.paint?.["line-dasharray"] &&
+                    isExpression(layer.paint["line-dasharray"]) &&
+                    typeof layer.paint["line-dasharray"][0] === "string"
+                  ) {
+                    updateLayer(
+                      layerIndex,
+                      "paint",
+                      "line-dasharray",
+                      undefined
+                    );
+                  }
+                }
+              }}
+            />
+          ) : (
+            <Popover.Trigger asChild>
+              <Editor.TriggerDropdownButton>
+                {type !== "Outline" && type !== "None" && (
+                  <span>
+                    {width}
+                    {
+                      // eslint-disable-next-line i18next/no-literal-string
+                      "px"
+                    }
+                  </span>
+                )}
+                <span>{type}</span>
+                {/* {!isExpression(color) && (
                     <span>{formatColor(color, "#000000")}</span>
                   )} */}
-                  {!isExpression(color) && type !== "None" && (
-                    <Editor.Swatch
-                      auto={
-                        type === StrokeType.Outline
-                          ? fillLayer?.metadata?.["s:color-auto"]
-                          : layer?.metadata?.["s:color-auto"]
-                      }
-                      color={color || prevStrokeColor || "#000000"}
-                    />
-                  )}
-                </>
-              )}
-              <ChevronDownIcon />
-            </Editor.TriggerDropdownButton>
-          </Popover.Trigger>
+                {!isExpression(color) && type !== "None" && (
+                  <Editor.Swatch
+                    auto={
+                      type === StrokeType.Outline
+                        ? fillLayer?.metadata?.["s:color-auto"]
+                        : layer?.metadata?.["s:color-auto"]
+                    }
+                    color={color || prevStrokeColor || "#000000"}
+                  />
+                )}
+                <ChevronDownIcon />
+              </Editor.TriggerDropdownButton>
+            </Popover.Trigger>
+          )}
           <Popover.Content onOpenAutoFocus={(e) => e.preventDefault()}>
             <div className="w-80 px-2">
               <StrokeEditorForm
