@@ -8,6 +8,7 @@ import { isExpression } from "../../../dataLayers/legends/utils";
 import { ChevronDownIcon, TrashIcon } from "@radix-ui/react-icons";
 import FontSizeEditor from "./FontSizeEditor";
 import LabelColorEditor from "./LabelColorEditor";
+import LabelHaloEditor from "./LabelHaloEditor";
 
 export default function LabelLayerEditor() {
   const Select = Editor.Select;
@@ -69,14 +70,12 @@ export default function LabelLayerEditor() {
                   type: "symbol",
                   layout: {
                     "text-field": `{${bestLabel}}`,
-                    "text-size": 12,
-                    "text-anchor": "center",
-                    "text-offset": [0, 0],
+                    "text-size": 13,
                   },
                   paint: {
                     "text-color": "#000000",
-                    "text-halo-color": "#ffffff",
-                    "text-halo-width": 1,
+                    "text-halo-color": "rgba(255, 255, 255, 0.9)",
+                    "text-halo-width": 1.3,
                   },
                   minzoom: 5,
                 };
@@ -170,6 +169,7 @@ export default function LabelLayerEditor() {
         />
         <FontSizeEditor />
         <LabelColorEditor />
+        <LabelHaloEditor />
       </>
     );
   }
