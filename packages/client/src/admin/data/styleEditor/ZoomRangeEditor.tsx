@@ -10,15 +10,18 @@ import * as Slider from "@radix-ui/react-slider";
 import { useContext, useEffect, useState } from "react";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import { LayerPropertyUpdater } from "./GUIStyleEditor";
+const Tooltip = Editor.Tooltip;
 
 export function ZoomRangeEditor({
   minzoom,
   maxzoom,
   onChange,
+  disableRemove,
 }: {
   minzoom?: number;
   maxzoom?: number;
   onChange: (minzoom?: number, maxzoom?: number) => void;
+  disableRemove?: boolean;
 }) {
   const [zoom, setZoom] = useState(0);
   const mapContext = useContext(MapContext);
@@ -46,14 +49,16 @@ export function ZoomRangeEditor({
         <span className="">
           <Trans ns="admin:data">zoom range</Trans>
         </span>
-        <button
-          onClick={() => {
-            onChange(undefined, undefined);
-          }}
-          className="opacity-0 group-hover:opacity-80 text-indigo-300"
-        >
-          <TrashIcon className="w-5 h-5" />
-        </button>
+        {!disableRemove && (
+          <button
+            onClick={() => {
+              onChange(undefined, undefined);
+            }}
+            className="opacity-0 group-hover:opacity-80 text-indigo-300"
+          >
+            <TrashIcon className="w-5 h-5" />
+          </button>
+        )}
       </h3>
       <Editor.Control>
         <Slider.Root
@@ -71,7 +76,7 @@ export function ZoomRangeEditor({
             style={{
               // move the zoom indicator according to the current zoom level
               // along the track
-              transform: `translateX(${((zoom || 5) / 24) * 176}px)`,
+              transform: `translateX(${((zoom || 5) / 24) * 176 - 176 / 24}px)`,
             }}
             className="w-7 h-7 absolute -top-3.5 -left-2.5 text-green-400 opacity-50 pointer-events-none transform"
           />
@@ -103,21 +108,37 @@ export function LimitZoomTrigger({
           {minzoom || 0}-{maxzoom || 24}
         </span>
       ) : (
-        <div className="flex flex-1 group pb-2 justify-end">
-          {minzoom === undefined && maxzoom === undefined && (
-            <button
-              title="limit to zoom range"
-              onClick={() => {
-                updateLayerProperty(undefined, "minzoom", 3);
-                updateLayerProperty(undefined, "maxzoom", 14);
-              }}
-              className="flex items-center space-x-1 text-indigo-200 opacity-20 group-hover:opacity-80"
-            >
-              <ArrowRightIcon />
-              <ArrowLeftIcon />
-            </button>
-          )}
-        </div>
+        <Tooltip.Provider>
+          <Tooltip.Root delayDuration={200}>
+            <Tooltip.Trigger asChild>
+              <div className="flex group pb-2 justify-end">
+                {minzoom === undefined && maxzoom === undefined && (
+                  <button
+                    // title="limit to zoom range"
+                    onClick={() => {
+                      updateLayerProperty(undefined, "minzoom", 3);
+                      updateLayerProperty(undefined, "maxzoom", 14);
+                    }}
+                    className="flex items-center space-x-1 text-indigo-200 opacity-20 group-hover:opacity-80"
+                  >
+                    <ArrowRightIcon />
+                    <ArrowLeftIcon />
+                  </button>
+                )}
+              </div>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content side="top">
+                <div className="px-2 text-sm">
+                  <p>
+                    <Trans ns="admin:data">Limit to zoom range</Trans>
+                  </p>
+                </div>
+                <Tooltip.Arrow />
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+        </Tooltip.Provider>
       )}
     </>
   );

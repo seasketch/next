@@ -10,7 +10,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import * as Tooltip from "@radix-ui/react-tooltip";
+import * as RadixTooltip from "@radix-ui/react-tooltip";
 import * as RadixPopover from "@radix-ui/react-popover";
 import * as RadixSelect from "@radix-ui/react-select";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
@@ -66,14 +66,16 @@ export function Label({
   docs,
   buttons,
   tooltip,
+  className,
 }: {
   title: string | ReactNode;
   docs?: string;
   buttons?: ReactNode;
   tooltip?: string | ReactNode;
+  className?: string;
 }) {
   return (
-    <h3 className="flex-1 flex items-center space-x-1">
+    <h3 className={`flex-1 flex items-center space-x-1 ${className}`}>
       <span>{title}</span>
       {docs && <DocumentationInfo href={docs} />}
       {tooltip && (
@@ -156,7 +158,7 @@ export function Thumb({
 }) {
   return (
     <Slider.Thumb
-      className={`block w-3 h-5 bg-gray-300  shadow rounded hover:bg-gray-100 focus:outline-none focus:shadow ${className}`}
+      className={`block w-3 h-5 rounded bg-gray-300  shadow hover:bg-gray-100 focus:outline-none focus:shadow ${className}`}
       style={{ boxShadow: "1px 1px 3px rgba(0,0,0,0.5)" }}
       aria-label={ariaLabel}
     />
@@ -235,6 +237,30 @@ export const Popover = {
   )),
 };
 
+export const Tooltip = {
+  ...RadixTooltip,
+  Content: forwardRef((props: RadixTooltip.TooltipContentProps, ref) => (
+    <RadixTooltip.Content
+      {...props}
+      // @ts-ignore
+      className={`bg-gray-700 bg-opacity-90 text-white rounded z-50 text-sm p-2 ${props.className}`}
+      style={{ backdropFilter: "blur(4px)" }}
+      // @ts-ignore
+      ref={ref}
+    />
+  )),
+  Arrow: forwardRef((props: RadixTooltip.TooltipArrowProps, ref) => (
+    <RadixTooltip.Arrow
+      {...props}
+      // @ts-ignore
+      ref={ref}
+      style={{
+        fill: "rgb(55, 65, 81)",
+      }}
+    />
+  )),
+};
+
 export const Select = {
   ...RadixSelect,
   Trigger: forwardRef((props: RadixSelect.SelectTriggerProps, ref) => (
@@ -288,7 +314,7 @@ export function CustomExpressionIndicator({
     <Tooltip.Provider>
       <Tooltip.Root delayDuration={100}>
         <Tooltip.Trigger asChild>
-          <div className="flex items-center border border-gray-600 rounded">
+          <div className="flex items-center border border-gray-600 rounded hover:border-gray-500">
             <div className="flex items-center bg-gray-900 bg-opacity-30 p-0 border-r border-gray-600 px-2 py-1">
               <FontFamilyIcon />
               <span
@@ -427,10 +453,11 @@ export function NumberSlider({
       <Slider.Track className="bg-gray-800 bg-opacity-90 border-b border-gray-600  relative grow rounded h-1 w-full">
         <Slider.Range />
       </Slider.Track>
-      <Slider.Thumb
+      <Thumb />
+      {/* <Slider.Thumb
         className="block w-3 h-3 rounded-full bg-gray-300  shadow  hover:bg-gray-100 focus:outline-none focus:shadow"
         style={{ boxShadow: "1px 1px 3px rgba(0,0,0,0.5)" }}
-      />
+      /> */}
     </Slider.Root>
   );
 }
@@ -456,7 +483,7 @@ export function NumberSliderAndInput({
           onChange={onChange}
           min={min}
           max={max}
-          step={(step || 1) / 2}
+          step={step}
         />
       </div>
       <NumberInput

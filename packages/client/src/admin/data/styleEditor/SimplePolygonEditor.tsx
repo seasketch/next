@@ -10,6 +10,7 @@ import { Expression, FillLayer, Layer, LineLayer } from "mapbox-gl";
 import { OpacityEditor } from "./OpacityEditor";
 import FillStyleEditor, { autoStrokeColorForFill } from "./FillStyleEditor";
 import StrokeEditor from "./StrokeEditor";
+import LabelLayerEditor from "./LabelLayerEditor";
 
 export default function SimplePolygonEditor() {
   const context = useContext(Editor.GUIEditorContext);
@@ -150,6 +151,7 @@ export default function SimplePolygonEditor() {
         layer={context.glLayers[indexes.stroke] as LineLayer}
         fillLayer={context.glLayers[indexes.fill] as FillLayer}
       />
+      <LabelLayerEditor />
     </Editor.Card>
   );
 }
