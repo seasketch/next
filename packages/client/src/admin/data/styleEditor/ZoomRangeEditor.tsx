@@ -10,7 +10,6 @@ import * as Slider from "@radix-ui/react-slider";
 import { useContext, useEffect, useState } from "react";
 import { MapContext } from "../../../dataLayers/MapContextManager";
 import { LayerPropertyUpdater } from "./GUIStyleEditor";
-const Tooltip = Editor.Tooltip;
 
 export function ZoomRangeEditor({
   minzoom,
@@ -100,6 +99,8 @@ export function LimitZoomTrigger({
   minzoom?: number;
   maxzoom?: number;
 }) {
+  const Tooltip = Editor.Tooltip;
+
   return (
     <>
       {minzoom !== undefined || maxzoom !== undefined ? (

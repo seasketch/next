@@ -1,6 +1,12 @@
-import { FontFamilyIcon, InfoCircledIcon } from "@radix-ui/react-icons";
+import {
+  ChevronDownIcon,
+  Cross1Icon,
+  FontFamilyIcon,
+  InfoCircledIcon,
+  TrashIcon,
+} from "@radix-ui/react-icons";
 import * as Slider from "@radix-ui/react-slider";
-import { Expression, Layer } from "mapbox-gl";
+import { Expression } from "mapbox-gl";
 import {
   Dispatch,
   ReactNode,
@@ -15,15 +21,13 @@ import * as RadixPopover from "@radix-ui/react-popover";
 import * as RadixSelect from "@radix-ui/react-select";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
-import {
-  LayerPropertyUpdater,
-  LayerUpdater,
-  PropertyRef,
-} from "./GUIStyleEditor";
+import { LayerUpdater, PropertyRef } from "./GUIStyleEditor";
 import { VisualizationType } from "./visualizationTypes";
 import { TFunction } from "i18next";
 import { Trans } from "react-i18next";
 import { colord } from "colord";
+import { formatColor } from "./FillStyleEditor";
+import { RgbaColorPicker } from "react-colorful";
 
 export function DocumentationInfo({ href }: { href: string }) {
   return (
@@ -333,7 +337,8 @@ export function CustomExpressionIndicator({
           <Tooltip.Portal>
             <Tooltip.Content
               side="right"
-              className="bg-gray-700 bg-opacity-90 text-white rounded z-50 text-sm px-4 py-2"
+              sideOffset={30}
+              className="bg-gray-800 bg-opacity-90 text-white rounded z-50 text-sm px-4 py-2"
               style={{ backdropFilter: "blur(4px)" }}
             >
               <p className="w-72">
@@ -344,12 +349,15 @@ export function CustomExpressionIndicator({
                 </Trans>
               </p>
               <button
-                className="text-indigo-200 py-2 hover:underline"
+                className="text-indigo-200 py-2 hover:underline flex items-center space-x-1"
                 onClick={onClear}
               >
-                <Trans ns="admin:data">Delete expression</Trans>
+                <TrashIcon className="w-4 h-4" />
+                <span>
+                  <Trans ns="admin:data">Clear expression</Trans>
+                </span>
               </button>
-              <Tooltip.TooltipArrow style={{ fill: "rgb(55, 65, 81)" }} />
+              <Tooltip.TooltipArrow style={{ fill: "rgb(31, 41, 55)" }} />
             </Tooltip.Content>
           </Tooltip.Portal>
         )}
@@ -494,5 +502,48 @@ export function NumberSliderAndInput({
         step={step}
       />
     </div>
+  );
+}
+
+export function ColorPicker({
+  color,
+  onChange,
+  defaultColor,
+}: {
+  color?: string;
+  defaultColor: string;
+  onChange: (color: string) => void;
+}) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <TriggerDropdownButton>
+          <span
+            className="w-18 text-right overflow-hidden"
+            style={{
+              fontVariantNumeric: "tabular-nums",
+              wordSpacing: "-3px",
+            }}
+          >
+            {formatColor(color, defaultColor)}
+          </span>
+          {color !== "transparent" ? (
+            <Swatch color={color || defaultColor} />
+          ) : null}
+          <ChevronDownIcon />
+        </TriggerDropdownButton>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content side="right">
+          <RgbaColorPicker
+            color={colord(color || defaultColor).toRgb()}
+            onChange={(color) => {
+              onChange(colord(color).toRgbString());
+            }}
+          />
+          <Popover.Arrow />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

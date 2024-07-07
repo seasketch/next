@@ -3,8 +3,6 @@ import * as Editor from "./Editors";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { StrokeType } from "./StrokeEditor";
 
-const Select = Editor.Select;
-
 export default function StrokeStyleEditor({
   value,
   dasharray,
@@ -17,6 +15,7 @@ export default function StrokeStyleEditor({
   hasFillLayer: boolean;
 }) {
   const { t } = useTranslation("admin:data");
+  const Select = Editor.Select;
 
   const isCustomDashArray =
     dasharray && !DASHARRAYS.find((d) => d.mapbox.join(",") === dasharray);

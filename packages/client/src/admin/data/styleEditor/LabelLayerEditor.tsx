@@ -7,10 +7,12 @@ import { ZoomRangeEditor } from "./ZoomRangeEditor";
 import { isExpression } from "../../../dataLayers/legends/utils";
 import { ChevronDownIcon, TrashIcon } from "@radix-ui/react-icons";
 import FontSizeEditor from "./FontSizeEditor";
-const Select = Editor.Select;
-const Tooltip = Editor.Tooltip;
+import LabelColorEditor from "./LabelColorEditor";
 
 export default function LabelLayerEditor() {
+  const Select = Editor.Select;
+  const Tooltip = Editor.Tooltip;
+
   const { t, glLayers, geostats, addLayer, updateLayer, removeLayer } =
     useContext(Editor.GUIEditorContext);
   const labels = useMemo(() => {
@@ -167,6 +169,7 @@ export default function LabelLayerEditor() {
           }}
         />
         <FontSizeEditor />
+        <LabelColorEditor />
       </>
     );
   }

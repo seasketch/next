@@ -27,7 +27,7 @@ export function OpacityEditor({
         {(value === undefined || !isExpression(value)) && (
           <Slider.Root
             className="relative flex items-center select-none touch-none w-44 h-5"
-            value={[value !== undefined ? value : 1]}
+            value={[value !== undefined ? (value as number) : 1]}
             min={0}
             max={1}
             step={0.05}
@@ -55,7 +55,9 @@ export function OpacityEditor({
                 style={{
                   backgroundImage: `linear-gradient(to right, rgba(0,0,0,0), ${
                     fillColor || "#aaa"
-                  } ${(1 / (value === undefined ? 1 : value)) * 90}%`,
+                  } ${
+                    (1 / (value === undefined ? 1 : (value as number))) * 90
+                  }%`,
                 }}
               />
             </Slider.Track>

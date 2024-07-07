@@ -9,13 +9,13 @@ import { extractFirstColorFromExpression } from "./visualizationTypes";
 import { colord } from "colord";
 import { isLineLayer } from "./SimplePolygonEditor";
 
-const Popover = Editor.Popover;
-
 export default function FillStyleEditor({
   layer,
 }: {
   layer?: SeaSketchGlLayer;
 }) {
+  const Popover = Editor.Popover;
+
   const { t, updateLayer, glLayers, addLayer } = useContext(
     Editor.GUIEditorContext
   );

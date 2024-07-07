@@ -15,7 +15,6 @@ import StrokeStyleEditor, { DASHARRAYS } from "./StrokeStyleEditor";
 import Switch from "../../../components/Switch";
 import { Trans } from "react-i18next";
 import { extractFirstColorFromExpression } from "./visualizationTypes";
-const Popover = Editor.Popover;
 
 export enum StrokeType {
   None = "None",
@@ -128,6 +127,7 @@ export default function StrokeEditor({
   }
 
   const layerIndex = layer ? glLayers.indexOf(layer) : -1;
+  const Popover = Editor.Popover;
 
   return (
     <Editor.Root>
@@ -422,6 +422,8 @@ export function StrokeEditorForm({
   previousColor?: string;
   auto: boolean;
 }) {
+  const Popover = Editor.Popover;
+
   const { glLayers } = useContext(Editor.GUIEditorContext);
 
   const dasharray = useMemo(() => {
@@ -462,7 +464,7 @@ export function StrokeEditorForm({
             }
             min={0}
             max={10}
-            step={1}
+            step={0.5}
             onChange={(value) => {
               onChange(
                 type,
