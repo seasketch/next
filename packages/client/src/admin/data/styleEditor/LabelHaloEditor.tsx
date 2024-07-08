@@ -27,14 +27,13 @@ export default function LabelHaloEditor() {
         (color !== undefined && isExpression(color)) ? (
           <Editor.CustomExpressionIndicator
             onClear={() => {
+              const layerIndex = glLayers.indexOf(layer);
+              if (layerIndex === -1) {
+                throw new Error("Layer not found");
+              }
+              updateLayer(layerIndex, "paint", "text-halo-width", 1.3);
               updateLayer(
-                glLayers.indexOf(layer),
-                "paint",
-                "text-halo-width",
-                1.3
-              );
-              updateLayer(
-                glLayers.indexOf(layer),
+                layerIndex,
                 "paint",
                 "text-halo-color",
                 "rgba(255,255,255,0.9)"
