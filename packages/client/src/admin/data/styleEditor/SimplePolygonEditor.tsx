@@ -10,7 +10,8 @@ import { Expression, FillLayer, Layer, LineLayer } from "mapbox-gl";
 import { OpacityEditor } from "./OpacityEditor";
 import FillStyleEditor, { autoStrokeColorForFill } from "./FillStyleEditor";
 import StrokeEditor from "./StrokeEditor";
-import LabelLayerEditor from "./LabelLayerEditor";
+import LabelLayerEditor, { isSymbolLayer } from "./LabelLayerEditor";
+import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 
 export default function SimplePolygonEditor() {
   const context = useContext(Editor.GUIEditorContext);
@@ -170,3 +171,24 @@ export function hasPlainPaintProp(layer: Layer, prop: string) {
     !hasGetExpression((layer.paint as any)[prop])
   );
 }
+
+SimplePolygonEditor.hasUnrelatedLayers = (layers: SeaSketchGlLayer[]) => {
+  if (layers.filter((l) => isFillLayer(l)).length > 1) {
+    return true;
+  } else if (layers.filter((l) => isLineLayer(l)).length > 1) {
+    return true;
+  } else if (layers.filter((l) => l.type === "symbol").length > 1) {
+    return true;
+  }
+  if (layers.find((l) => isSymbolLayer(l) && !l.layout?.["text-field"])) {
+    return true;
+  }
+  if (
+    layers.find(
+      (l) => l.type !== "fill" && l.type !== "line" && l.type !== "symbol"
+    )
+  ) {
+    return true;
+  }
+  return false;
+};

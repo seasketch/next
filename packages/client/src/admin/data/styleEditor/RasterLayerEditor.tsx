@@ -1,4 +1,4 @@
-import { Expression, Layer, RasterPaint } from "mapbox-gl";
+import { Expression, RasterLayer, RasterPaint } from "mapbox-gl";
 import { LayerPropertyDeleter, LayerPropertyUpdater } from "./GUIStyleEditor";
 import RasterFadDurationEditor from "./RasterFadeDurationEditor";
 import RasterResamplingEditor from "./RasterResamplingEditor";
@@ -9,10 +9,7 @@ import { RasterSaturationEditor } from "./RasterSaturationEditor";
 import { RasterBrightnessEditor } from "./RasterBrightnessEditor";
 import { RasterHueRotateEditor } from "./RasterHueRotateEditor";
 import { useMemo } from "react";
-import {
-  RasterInfo,
-  SuggestedRasterPresentation,
-} from "@seasketch/geostats-types";
+import { RasterInfo } from "@seasketch/geostats-types";
 import {
   VisualizationType,
   buildContinuousRasterColorExpression,
@@ -21,13 +18,11 @@ import {
   extractValueRange,
   replaceColors,
 } from "./visualizationTypes";
-import RasterColorPalette from "./RasterColorPaletteEditor";
+import PaletteSelect from "./PaletteSelect";
 import { RasterCategoryEditableList } from "./RasterCategoryEditableList";
-import ContinuousRasterHistogram from "./ContinuousRasterHistogram";
+import HistogramControl from "./HistogramControl";
 import Switch from "../../../components/Switch";
-import ContinuousRasterStepsEditor, {
-  determineSteps,
-} from "./ContinuousRasterStepsEditor";
+import ContinuousStepsEditor, { determineSteps } from "./ContinuousStepsEditor";
 import { OpacityEditor } from "./OpacityEditor";
 import { LimitZoomTrigger, ZoomRangeEditor } from "./ZoomRangeEditor";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
@@ -75,7 +70,7 @@ function RasterLayerEditor({
   const steps = (paint || {})["raster-color"]
     ? determineSteps(
         paint["raster-color"]! as Expression,
-        rasterInfo.bands[0],
+        rasterInfo.bands[0].stats,
         glLayer.metadata
       )
     : undefined;
@@ -128,12 +123,12 @@ function RasterLayerEditor({
       {(type === VisualizationType.CATEGORICAL_RASTER ||
         type === VisualizationType.CONTINUOUS_RASTER) && (
         <>
-          <RasterColorPalette
+          <PaletteSelect
             steps={steps}
             type={
               type === VisualizationType.CATEGORICAL_RASTER
-                ? SuggestedRasterPresentation.categorical
-                : SuggestedRasterPresentation.continuous
+                ? "categorical"
+                : "continuous"
             }
             reversed={glLayer.metadata?.["s:reverse-palette"] || false}
             value={
@@ -243,21 +238,25 @@ function RasterLayerEditor({
           />
         </>
       )}
-      {/* @ts-ignore */}
-      {glLayer.paint?.["raster-color"] &&
+      {isRasterLayer(glLayer) &&
+        glLayer.paint?.["raster-color"] &&
         type === VisualizationType.CONTINUOUS_RASTER && (
           <>
-            <ContinuousRasterStepsEditor
-              band={rasterInfo.bands[0]}
+            <ContinuousStepsEditor
+              stats={rasterInfo.bands[0].stats}
+              minimum={rasterInfo.bands[0].minimum}
+              maximum={rasterInfo.bands[0].maximum}
               expression={(glLayer.paint as any)["raster-color"]}
               metadata={glLayer.metadata}
               updateLayerProperty={updateLayerProperty}
+              valueExpression={["raster-value"]}
             />
-            <ContinuousRasterHistogram
+            <HistogramControl
               expression={paint["raster-color"]! as Expression}
-              band={rasterInfo.bands[0]}
-              // @ts-ignore
-              range={extractValueRange(glLayer.paint["raster-color"])}
+              histogram={rasterInfo.bands[0].stats.histogram}
+              range={extractValueRange(
+                (glLayer!.paint! as RasterPaint)["raster-color"] as Expression
+              )}
               onRangeChange={(range) => {
                 let palette = glLayer.metadata?.["s:palette"] as any;
                 if (
@@ -347,5 +346,9 @@ function RasterLayerEditor({
 RasterLayerEditor.hasUnrelatedLayers = (layers: SeaSketchGlLayer[]) => {
   return layers.length > 1;
 };
+
+export function isRasterLayer(layer: SeaSketchGlLayer): layer is RasterLayer {
+  return layer.type === "raster";
+}
 
 export default RasterLayerEditor;

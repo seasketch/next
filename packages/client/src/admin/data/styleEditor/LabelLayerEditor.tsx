@@ -5,13 +5,13 @@ import { Expression, SymbolLayer } from "mapbox-gl";
 import { isRasterInfo } from "@seasketch/geostats-types";
 import { ZoomRangeEditor } from "./ZoomRangeEditor";
 import { isExpression } from "../../../dataLayers/legends/utils";
-import { ChevronDownIcon, TrashIcon } from "@radix-ui/react-icons";
+import { TrashIcon } from "@radix-ui/react-icons";
 import FontSizeEditor from "./FontSizeEditor";
 import LabelColorEditor from "./LabelColorEditor";
 import LabelHaloEditor from "./LabelHaloEditor";
+import AttributeSelect from "./AttributeSelect";
 
 export default function LabelLayerEditor() {
-  const Select = Editor.Select;
   const Tooltip = Editor.Tooltip;
 
   const { t, glLayers, geostats, addLayer, updateLayer, removeLayer } =
@@ -137,37 +137,17 @@ export default function LabelLayerEditor() {
                 }}
               />
             ) : (
-              <Select.Root
+              <AttributeSelect
                 value={
                   (
                     labels.layer.layout?.["text-field"] as Expression
                   )[1] as string
                 }
-                onValueChange={(v) => {
-                  updateLayer(labels.index, "layout", "text-field", v);
+                attributes={labelFields}
+                onChange={(v) => {
+                  updateLayer(labels.index, "layout", "text-field", ["get", v]);
                 }}
-              >
-                <Select.Trigger>
-                  <Select.Value placeholder="Select Field" />
-                  <Select.Icon>
-                    <ChevronDownIcon />
-                  </Select.Icon>
-                </Select.Trigger>
-                <Select.Portal>
-                  <Select.Content>
-                    <Select.Viewport>
-                      {labelFields.map((field) => (
-                        <Select.Item
-                          key={field.attribute}
-                          value={field.attribute}
-                        >
-                          <Select.ItemText>{field.attribute}</Select.ItemText>
-                        </Select.Item>
-                      ))}
-                    </Select.Viewport>
-                  </Select.Content>
-                </Select.Portal>
-              </Select.Root>
+              />
             )}
           </Editor.Control>
         </Editor.Root>

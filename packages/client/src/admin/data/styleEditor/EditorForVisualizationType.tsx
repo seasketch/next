@@ -45,9 +45,23 @@ export default function EditorForVisualizationType({
         </>
       );
     case VisualizationType.SIMPLE_POLYGON:
-      return <SimplePolygonEditor />;
+      return (
+        <>
+          <SimplePolygonEditor />
+          {SimplePolygonEditor.hasUnrelatedLayers(context.glLayers) && (
+            <ExtraLayersWarning />
+          )}
+        </>
+      );
     case VisualizationType.CONTINUOUS_POLYGON:
-      return <ContinuousPolygonEditor />;
+      return (
+        <>
+          <ContinuousPolygonEditor />
+          {ContinuousPolygonEditor.hasUnrelatedLayers(context.glLayers) && (
+            <ExtraLayersWarning />
+          )}
+        </>
+      );
     default:
       return (
         <Warning className="mx-4" level="error">

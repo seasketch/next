@@ -11,25 +11,41 @@ import {
   hasGetExpression,
   isExpression,
 } from "../../../dataLayers/legends/utils";
-import { Expression, FillLayer, LineLayer } from "mapbox-gl";
-import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
+import { Expression, FillLayer, FillPaint, LineLayer } from "mapbox-gl";
+import {
+  GeostatsLayer,
+  NumericAttributeStats,
+  isLegacyGeostatsAttribute,
+  isNumericGeostatsAttribute,
+  isRasterInfo,
+} from "@seasketch/geostats-types";
 import AttributeSelect from "./AttributeSelect";
 import {
   buildContinuousColorExpression,
+  buildStepExpression,
+  expressionMatchesPalette,
+  extractColorsFromExpression,
   extractFirstColorFromExpression,
+  extractValueRange,
+  replaceColors,
 } from "./visualizationTypes";
 import { LimitZoomTrigger, ZoomRangeEditor } from "./ZoomRangeEditor";
 import { OpacityEditor } from "./OpacityEditor";
 import { autoStrokeColorForFill } from "./FillStyleEditor";
-import LabelLayerEditor from "./LabelLayerEditor";
+import LabelLayerEditor, { isSymbolLayer } from "./LabelLayerEditor";
 import Switch from "../../../components/Switch";
+import PaletteSelect from "./PaletteSelect";
+import HistogramControl from "./HistogramControl";
+import ContinuousStepsEditor, { determineSteps } from "./ContinuousStepsEditor";
 
 export default function ContinuousPolygonEditor() {
   const { t, glLayers, geostats, updateLayer } = useContext(
     Editor.GUIEditorContext
   );
   const indexes = useMemo(() => getIndexes(glLayers), [glLayers]);
-  const fillLayer = glLayers[indexes.fill] as FillLayer | undefined;
+  const fillLayer = glLayers[indexes.fill] as
+    | (FillLayer & { metadata: Editor.SeaSketchLayerMetadata })
+    | undefined;
   const strokeLayer =
     indexes.stroke !== -1 ? (glLayers[indexes.stroke] as LineLayer) : undefined;
   const selectedAttribute = useMemo(() => {
@@ -44,6 +60,18 @@ export default function ContinuousPolygonEditor() {
       }
     }
   }, [indexes.fill, geostats, fillLayer?.paint?.["fill-color"]]);
+
+  const steps =
+    (fillLayer?.paint || {})["fill-color"] &&
+    selectedAttribute &&
+    !isLegacyGeostatsAttribute(selectedAttribute) &&
+    "stats" in selectedAttribute
+      ? determineSteps(
+          fillLayer?.paint!["fill-color"]! as Expression,
+          selectedAttribute.stats as NumericAttributeStats,
+          fillLayer?.metadata
+        )
+      : undefined;
 
   return (
     <Editor.Card>
@@ -130,33 +158,187 @@ export default function ContinuousPolygonEditor() {
               const metadata: Editor.SeaSketchLayerMetadata =
                 fillLayer?.metadata || {};
               if (fillLayer) {
-                updateLayer(
-                  indexes.fill,
-                  "paint",
-                  "fill-color",
-                  buildContinuousColorExpression(
-                    undefined,
-                    metadata["s:palette"] || "interpolatePlasma",
-                    metadata["s:reverse-palette"] || false,
-                    [attribute.min || 0, attribute.max || 1],
-                    ["get", attribute.attribute]
-                  )
-                );
+                if (steps?.steps === "continuous") {
+                  updateLayer(
+                    indexes.fill,
+                    "paint",
+                    "fill-color",
+                    buildContinuousColorExpression(
+                      undefined,
+                      metadata["s:palette"] || "interpolatePlasma",
+                      metadata["s:reverse-palette"] || false,
+                      [attribute.min || 0, attribute.max || 1],
+                      ["get", attribute.attribute]
+                    )
+                  );
+                } else if (isNumericGeostatsAttribute(attribute)) {
+                  let buckets = (attribute.stats as any)[
+                    steps?.steps as string
+                  ][steps!.n];
+                  let m = {};
+                  if (!buckets || buckets.length === 0) {
+                    // change to natural breaks
+                    const nb = (attribute.stats as any).naturalBreaks;
+                    if ("7" in nb) {
+                      buckets = nb["7"];
+                      m = {
+                        "s:steps": "naturalBreaks:7",
+                      };
+                    } else {
+                      const key = Object.keys(nb).pop();
+                      buckets = nb[key!];
+                      m = {
+                        "s:steps": "naturalBreaks:" + key,
+                      };
+                    }
+                  }
+                  updateLayer(
+                    indexes.fill,
+                    "paint",
+                    "fill-color",
+                    buildStepExpression(
+                      buckets,
+                      metadata["s:palette"] || "schemeGreens6",
+                      Boolean(metadata["s:reverse-palette"]),
+                      ["get", attribute.attribute]
+                    ),
+                    m
+                  );
+                }
               }
             }}
           />
         </Editor.Control>
       </Editor.Root>
+      {isNumericGeostatsAttribute(selectedAttribute) && (
+        <ContinuousStepsEditor
+          stats={selectedAttribute?.stats as NumericAttributeStats}
+          minimum={selectedAttribute.min || 0}
+          maximum={selectedAttribute.max || 1}
+          expression={fillLayer?.paint?.["fill-color"] as Expression}
+          metadata={fillLayer?.metadata}
+          updateLayerProperty={(type, property, value, metadata) => {
+            updateLayer(indexes.fill, type, "fill-color", value, metadata);
+          }}
+          valueExpression={["get", selectedAttribute.attribute]}
+        />
+      )}
+      <PaletteSelect
+        steps={steps}
+        type={"continuous"}
+        reversed={fillLayer?.metadata?.["s:reverse-palette"] || false}
+        value={
+          (fillLayer?.metadata || {})["s:palette"] &&
+          expressionMatchesPalette(
+            fillLayer?.paint?.["fill-color"]! as Expression,
+            fillLayer?.metadata["s:palette"],
+            Boolean(fillLayer?.metadata["s:reverse-palette"]),
+            steps!
+          )
+            ? (fillLayer?.metadata || {})["s:palette"]
+            : null
+        }
+        onChange={(palette, reverse) => {
+          updateLayer(
+            indexes.fill,
+            "paint",
+            "fill-color",
+            replaceColors(
+              (fillLayer!.paint! as FillPaint)["fill-color"] as Expression,
+              palette,
+              Boolean(reverse),
+              fillLayer?.metadata?.["s:excluded"] || [],
+              steps
+            ),
+            {
+              "s:palette": palette,
+              "s:reverse-palette": Boolean(reverse),
+            }
+          );
+        }}
+      />
+      <HistogramControl
+        histogram={
+          selectedAttribute &&
+          !isLegacyGeostatsAttribute(selectedAttribute) &&
+          "stats" in selectedAttribute
+            ? // @ts-ignore
+              selectedAttribute.stats!.histogram
+            : []
+        }
+        expression={fillLayer?.paint?.["fill-color"] as Expression}
+        range={extractValueRange(
+          (fillLayer!.paint! as FillPaint)["fill-color"] as Expression
+        )}
+        onRangeChange={(range) => {
+          if (fillLayer) {
+            const fillExpression = fillLayer.paint!["fill-color"] as Expression;
+            let palette = fillLayer.metadata?.["s:palette"] as any;
+            if (
+              !expressionMatchesPalette(
+                fillExpression,
+                palette,
+                fillLayer.metadata?.["s:reverse-palette"],
+                steps!
+              )
+            ) {
+              palette = extractColorsFromExpression(fillExpression);
+            }
+            const expr = buildContinuousColorExpression(
+              fillExpression,
+              palette,
+              fillLayer.metadata?.["s:reverse-palette"],
+              range,
+              ["get", selectedAttribute!.attribute]
+            );
+            updateLayer(indexes.fill, "paint", "fill-color", expr);
+          } else {
+            throw new Error("No fill layer found");
+          }
+        }}
+      />
       {fillLayer && (
         <>
           <Editor.Header title={t("Legend")} className="pt-6" />
           <Editor.Root>
+            <Editor.Label
+              title={t("Value Label")}
+              tooltip={t("Used as a label for the color scale in the legend.")}
+            />
+            <Editor.Control>
+              <Editor.TextInput
+                className="text-right w-32"
+                value={
+                  selectedAttribute?.attribute
+                    ? (fillLayer.metadata as Editor.SeaSketchLayerMetadata)?.[
+                        "s:legend-labels"
+                      ]?.[selectedAttribute?.attribute]
+                    : undefined
+                }
+                placeholder={selectedAttribute?.attribute}
+                onChange={(value) => {
+                  if (selectedAttribute?.attribute) {
+                    updateLayer(indexes.fill, undefined, undefined, undefined, {
+                      "s:legend-labels": {
+                        ...((
+                          fillLayer.metadata as Editor.SeaSketchLayerMetadata
+                        )?.["s:legend-labels"] || {}),
+                        [selectedAttribute.attribute]: value,
+                      },
+                    });
+                  }
+                }}
+              />
+            </Editor.Control>
+          </Editor.Root>
+          <Editor.Root>
             <Editor.Label title={t("Display rounded numbers")} />
             <Editor.Control>
               <Switch
+                toggleColor={"rgba(79, 70, 229)"}
+                className="focus:ring-blue-600"
                 isToggled={fillLayer.metadata?.["s:round-numbers"] || false}
                 onClick={(value) => {
-                  // TODO: does this affect legend rendering yet?
                   updateLayer(indexes.fill, undefined, undefined, undefined, {
                     "s:round-numbers": value,
                   });
@@ -227,3 +409,24 @@ export function getIndexes(glLayers: SeaSketchGlLayer[]) {
   }
   return indexes;
 }
+
+ContinuousPolygonEditor.hasUnrelatedLayers = (layers: SeaSketchGlLayer[]) => {
+  if (layers.filter((l) => isFillLayer(l)).length > 1) {
+    return true;
+  } else if (layers.filter((l) => isLineLayer(l)).length > 1) {
+    return true;
+  } else if (layers.filter((l) => l.type === "symbol").length > 1) {
+    return true;
+  }
+  if (layers.find((l) => isSymbolLayer(l) && !l.layout?.["text-field"])) {
+    return true;
+  }
+  if (
+    layers.find(
+      (l) => l.type !== "fill" && l.type !== "line" && l.type !== "symbol"
+    )
+  ) {
+    return true;
+  }
+  return false;
+};

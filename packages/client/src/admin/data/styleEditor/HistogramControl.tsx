@@ -1,4 +1,4 @@
-import { RasterBandInfo } from "@seasketch/geostats-types";
+import { Bucket, RasterBandInfo } from "@seasketch/geostats-types";
 import { Expression } from "mapbox-gl";
 import { Trans } from "react-i18next";
 import { ExpressionEvaluator } from "../../../dataLayers/legends/ExpressionEvaluator";
@@ -9,13 +9,13 @@ const tooltipNumberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-export default function ContinuousRasterHistogram({
-  band,
+export default function HistogramControl({
+  histogram,
   expression,
   range,
   onRangeChange,
 }: {
-  band: RasterBandInfo;
+  histogram: Bucket[];
   expression: Expression;
   range: [number, number];
   onRangeChange: (range: [number, number]) => void;
@@ -26,18 +26,18 @@ export default function ContinuousRasterHistogram({
       ? [
           expression[0], // fn name
           expression[1], // interpolation type
-          ["get", "raster-value"],
+          ["get", "value"],
           ...expression.slice(3),
         ]
       : [
           expression[0], // fn name
-          ["get", "raster-value"],
+          ["get", "value"],
           ...expression.slice(2),
         ];
     return ExpressionEvaluator.parse(expr, "color");
   }, [expression]);
 
-  const max = band.stats.histogram.reduce((max, count) => {
+  const max = histogram.reduce((max, count) => {
     // @ts-ignore
     return typeof count[1] === "number" && count[1] > max ? count[1] : max;
   }, 0);
@@ -45,17 +45,17 @@ export default function ContinuousRasterHistogram({
   const value = useMemo(() => {
     return [
       findClosestIndex(
-        band.stats.histogram.map((v) => v[0]),
+        histogram.map((v) => v[0]),
         range[0]
       ),
       findClosestIndex(
-        band.stats.histogram.map((v) => v[0]),
+        histogram.map((v) => v[0]),
         range[1]
       ) + 1,
     ];
-  }, [band.stats.histogram, range]);
+  }, [histogram, range]);
 
-  if (!band.stats.histogram.length) {
+  if (!histogram.length) {
     return null;
   }
 
@@ -65,7 +65,7 @@ export default function ContinuousRasterHistogram({
         <Trans ns="admin:data">Histogram</Trans>
       </h4>
       <div className="relative my-1 border border-gray-500 border-opacity-50 rounded w-full h-32 flex items-end p-4 pb-5 bg-black bg-opacity-10">
-        {band.stats.histogram.map((count, i) => (
+        {histogram.map((count, i) => (
           <div
             key={i}
             className="w-2.5 bg-gray-200 flex items-end"
@@ -75,7 +75,7 @@ export default function ContinuousRasterHistogram({
                 .evaluate({
                   type: "Feature",
                   properties: {
-                    "raster-value": count[0],
+                    value: count[0],
                   },
                   geometry: {
                     type: "Point",
@@ -94,7 +94,7 @@ export default function ContinuousRasterHistogram({
                         .evaluate({
                           type: "Feature",
                           properties: {
-                            "raster-value": count[0],
+                            value: count[0],
                           },
                           geometry: {
                             type: "Point",
@@ -110,7 +110,7 @@ export default function ContinuousRasterHistogram({
                         .evaluate({
                           type: "Feature",
                           properties: {
-                            "raster-value": count[0],
+                            value: count[0],
                           },
                           geometry: {
                             type: "Point",
@@ -134,7 +134,7 @@ export default function ContinuousRasterHistogram({
               .evaluate({
                 type: "Feature",
                 properties: {
-                  "raster-value": Infinity,
+                  value: Infinity,
                 },
                 geometry: {
                   type: "Point",
@@ -157,8 +157,8 @@ export default function ContinuousRasterHistogram({
             minStepsBetweenThumbs={2}
             onValueChange={(value) => {
               const range = [
-                band.stats.histogram[value[0]][0],
-                band.stats.histogram[value[1] - 1][0],
+                histogram[value[0]][0],
+                histogram[value[1] - 1][0],
               ];
               onRangeChange(range as [number, number]);
             }}
@@ -166,8 +166,8 @@ export default function ContinuousRasterHistogram({
             <Slider.Track className=" relative w-full">
               <Slider.Range />
             </Slider.Track>
-            <Thumb value={band.stats.histogram[value[0]][0]} />
-            <Thumb value={band.stats.histogram[value[1] - 1][0]} />
+            <Thumb value={histogram[value[0]][0]} />
+            <Thumb value={histogram[value[1] - 1][0]} />
           </Slider.Root>
         </div>
       )}

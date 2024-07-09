@@ -3,6 +3,7 @@ import {
   GeostatsLayer,
   RasterInfo,
   SuggestedRasterPresentation,
+  isNumericGeostatsAttribute,
   isRasterInfo,
 } from "@seasketch/geostats-types";
 import {
@@ -14,7 +15,7 @@ import {
   SymbolLayer,
 } from "mapbox-gl";
 import * as colorScale from "d3-scale-chromatic";
-import { StepsSetting } from "./ContinuousRasterStepsEditor";
+import { StepsSetting } from "./ContinuousStepsEditor";
 import {
   hasGetExpression,
   isExpression,
@@ -22,6 +23,7 @@ import {
 import { isSymbolLayer } from "./LabelLayerEditor";
 import { isFillLayer, isLineLayer } from "./SimplePolygonEditor";
 import { autoStrokeColorForFill } from "./FillStyleEditor";
+import { color } from "d3";
 
 export const colorScales = {
   categorical: [
@@ -176,7 +178,8 @@ export function determineVisualizationType(
             (l) =>
               isFillLayer(l) &&
               isExpression(l.paint?.["fill-color"]) &&
-              /interpolate/.test(l.paint?.["fill-color"][0])
+              (/interpolate/.test(l.paint?.["fill-color"][0]) ||
+                /step/.test(l.paint?.["fill-color"][0]))
           )
         ) {
           return VisualizationType.CONTINUOUS_POLYGON;
@@ -343,6 +346,11 @@ export function convertToVisualizationType(
         } as FillLayer;
       }
       const strokeColor = autoStrokeColorForFill(fillLayer);
+      // Next, add the fill layer
+      layers.push({
+        ...fillLayer,
+      });
+
       // First, add the stroke layer
       if (strokeLayer) {
         // remove any expressions from the stroke color
@@ -367,10 +375,6 @@ export function convertToVisualizationType(
           },
         });
       }
-      // Next, add the fill layer
-      layers.push({
-        ...fillLayer,
-      });
       // Finally, add the label layer if it already exists
       if (labelLayer) {
         layers.push({
@@ -397,28 +401,57 @@ export function convertToVisualizationType(
         (l) => isSymbolLayer(l) && l.layout?.["text-field"]
       ) as SymbolLayer | undefined;
 
+      let fillExpression = buildContinuousColorExpression(
+        undefined,
+        colorPalette,
+        false,
+        [attribute.min || 0, attribute.max!],
+        ["get", attr]
+      ) as Expression;
+      // eslint-disable-next-line i18next/no-literal-string
+      let steps = `continuous:10`;
+      if (
+        isNumericGeostatsAttribute(attribute) &&
+        Object.keys(attribute.stats.naturalBreaks).length > 3
+      ) {
+        let n = "7";
+        if (!(n in attribute.stats.naturalBreaks)) {
+          n = "5";
+        }
+        if (!(n in attribute.stats.naturalBreaks)) {
+          n = Object.keys(attribute.stats.naturalBreaks).slice(-1)[0];
+        }
+        fillExpression = buildStepExpression(
+          attribute.stats.naturalBreaks[n as any],
+          colorPalette,
+          false,
+          ["get", attr]
+        );
+        // eslint-disable-next-line i18next/no-literal-string
+        steps = `naturalBreaks:${n}`;
+      }
+
       if (fillLayer) {
         if (!fillLayer.paint) {
           fillLayer.paint = {};
         }
-        fillLayer.paint["fill-color"] = buildContinuousColorExpression(
-          undefined,
-          colorPalette,
-          false,
-          [attribute.min || 0, attribute.max!],
-          ["get", attr]
-        ) as Expression;
+        fillLayer.paint["fill-color"] = fillExpression;
+        if (typeof colorPalette === "string") {
+          fillLayer.metadata = {
+            ...(fillLayer.metadata || {}),
+            "s:palette": colorPalette,
+          };
+        }
+        fillLayer.paint["fill-opacity"] = 0.7;
+        fillLayer.metadata = {
+          ...fillLayer.metadata,
+          "s:steps": steps,
+        };
       } else {
         fillLayer = {
           type: "fill",
           paint: {
-            "fill-color": buildContinuousColorExpression(
-              undefined,
-              colorPalette,
-              false,
-              [attribute.min || 0, attribute.max!],
-              ["get", attr]
-            ) as Expression,
+            "fill-color": fillExpression,
             "fill-opacity": 0.5,
           },
           layout: {
@@ -426,6 +459,7 @@ export function convertToVisualizationType(
           },
           metadata: {
             "s:palette": colorPalette,
+            "s:steps": steps,
           },
         } as FillLayer;
       }
@@ -698,13 +732,13 @@ export function extractValueRange(expression: Expression) {
     for (let i = 0; i < stops.length; i += 2) {
       values.push(stops[i]);
     }
-    return [Math.min(...values), Math.max(...values)];
+    return [Math.min(...values), Math.max(...values)] as [number, number];
   } else {
     const stops = expression.slice(3);
     for (let i = 0; i < stops.length; i += 2) {
       values.push(stops[i]);
     }
-    return [Math.min(...values), Math.max(...values)];
+    return [Math.min(...values), Math.max(...values)] as [number, number];
     // throw new Error("Unsupported expression type. " + fName);
   }
 }
@@ -712,9 +746,10 @@ export function extractValueRange(expression: Expression) {
 export function buildStepExpression(
   buckets: Bucket[],
   palette: string | string[],
-  reverse: boolean
+  reverse: boolean,
+  valueExpression: Expression
 ) {
-  const expression: Expression = ["step", ["raster-value"], "transparent"];
+  const expression: Expression = ["step", valueExpression, "transparent"];
   const nStops = buckets.length - 1;
   const colors = getColorStops(palette, nStops, reverse);
   for (let i = 0; i < nStops; i++) {
@@ -764,22 +799,36 @@ function getColorStops(
 
 export function findBestContinuousAttribute(geostats: GeostatsLayer) {
   const attributes = geostats.attributes;
-  for (const attr of attributes) {
+  // first, sort attributes by number of stddev values
+  const sorted = [...attributes]
+    .sort((a, b) => {
+      if (a.type === "number" && b.type !== "number") {
+        return -1;
+      } else if (b.type === "number" && a.type !== "number") {
+        return 1;
+      }
+      let aValue =
+        isNumericGeostatsAttribute(a) && a.stats.stdev
+          ? Object.keys(a.stats.stdev).length
+          : 0;
+      let bValue =
+        isNumericGeostatsAttribute(b) && b.stats.stdev
+          ? Object.keys(b.stats.stdev).length
+          : 0;
+      return bValue - aValue;
+    })
+    .reverse();
+  for (const attr of sorted) {
     if (
       attr.type === "number" &&
-      (attr.values.length > 1 ||
-        (attr.min !== undefined && attr.max && attr.max > attr.min)) &&
-      !/id/i.test(attr.attribute)
+      !/area/i.test(attr.attribute) &&
+      !/length/i.test(attr.attribute)
     ) {
       return attr.attribute;
     }
   }
-  for (const attr of attributes) {
-    if (
-      attr.type === "number" &&
-      (attr.values.length > 1 ||
-        (attr.min !== undefined && attr.max && attr.max > attr.min))
-    ) {
+  for (const attr of sorted) {
+    if (attr.type === "number") {
       return attr.attribute;
     }
   }

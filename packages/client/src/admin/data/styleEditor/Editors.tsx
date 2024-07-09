@@ -28,6 +28,7 @@ import { Trans } from "react-i18next";
 import { colord } from "colord";
 import { formatColor } from "./FillStyleEditor";
 import { RgbaColorPicker } from "react-colorful";
+require("./layer-editor.css");
 
 export function DocumentationInfo({ href }: { href: string }) {
   return (
@@ -175,7 +176,7 @@ export type ExpressionCategory = { value: string | number; color: string };
 
 export type SeaSketchLayerMetadata = { [key: string]: any } & {
   "s:excluded"?: (string | number)[];
-  "s:palette"?: string[];
+  "s:palette"?: string[] | string;
   "s:legend-labels"?: { [key: string]: string };
   "s:sorted-categories"?: any[];
   "s:reverse-palette"?: boolean;
@@ -236,7 +237,7 @@ export const Popover = {
     <RadixPopover.Content
       {...props}
       // @ts-ignore
-      className={`rounded-lg p-0.5 z-50 bg-gray-600 shadow-xl ${props.className}`}
+      className={`rounded-lg p-0.5 z-50 bg-gray-600 shadow-xl overflow-y-auto ${props.className}`}
       // @ts-ignore
       ref={ref}
     />
@@ -282,7 +283,9 @@ export const Select = {
       position="popper"
       {...props}
       // @ts-ignore
-      className={`bg-gray-700 border border-white border-opacity-20 text-white bg-opacity-80 rounded-md shadow z-50 ${props.className}`}
+      // className="PaletteSelectContent overflow-hidden bg-white  rounded-md shadow z-50"
+
+      className={`PaletteSelectContent overflow-hidden bg-gray-700 border border-white border-opacity-20 text-white bg-opacity-80 rounded-md shadow z-50 ${props.className}`}
       style={{
         backdropFilter: "blur(8px)",
         stroke: "white",
@@ -295,7 +298,7 @@ export const Select = {
     <RadixSelect.Viewport
       {...props}
       // @ts-ignore
-      className={`p-2 LayerEditorPalette ${props.className}`}
+      className={`p-1 LayerEditorPalette ${props.className}`}
       // @ts-ignore
       ref={ref}
     />
@@ -304,12 +307,34 @@ export const Select = {
     <RadixSelect.Item
       {...props}
       // @ts-ignore
-      className={`text-sm leading-none rounded flex items-center h-8 pr-1 pl-1 relative select-none bg-opacity-30 border border-transparent ${props.className}`}
+      className={`text-sm leading-none rounded flex items-start flex-col justify-center relative select-none bg-opacity-30 border border-transparent p-1 py-1.5  ${props.className}`}
       // @ts-ignore
       ref={ref}
     />
   )),
 };
+
+export function TextInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value?: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <input
+      type="text"
+      value={value || ""}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={`bg-gray-700 py-0.5 px-2 text-sm rounded ${className}`}
+    />
+  );
+}
 
 export function CustomExpressionIndicator({
   onClear,

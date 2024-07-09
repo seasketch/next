@@ -821,6 +821,7 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
         layer.type
       )
     ) {
+      const metadata: SeaSketchLayerMetadata = layer.metadata || {};
       // look for gradient expressions, ordered by priority
       const paint = layer.paint || ({} as any);
       for (const paintProp of [
@@ -843,6 +844,11 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
             for (const facet of exprData.facets) {
               // @ts-ignore
               layer.paint[paintProp] = exprData.remainingValues;
+              const getProp = findGetExpression(facet.expression)?.property;
+              let label = getProp || paintProp;
+              if (getProp && metadata["s:legend-labels"]?.[getProp]) {
+                label = metadata["s:legend-labels"][getProp];
+              }
               panels.push({
                 panel: {
                   // eslint-disable-next-line i18next/no-literal-string
@@ -850,8 +856,11 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
                     layer
                   )}-${paintProp}-${exprData.facets.indexOf(facet)}-gradient`,
                   type: "GLLegendGradientPanel",
-                  label: paintProp,
-                  stops: interpolationExpressionToStops(facet.expression),
+                  label,
+                  stops: interpolationExpressionToStops(
+                    facet.expression,
+                    metadata
+                  ),
                 },
                 filters:
                   layer.filter && isExpression(layer.filter)
@@ -1190,24 +1199,32 @@ export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {
     ) => {
       const inputOutputPairs = expression.slice(3);
       const prop = expression[1][1];
+      const metadata = (layer.metadata || {}) as SeaSketchLayerMetadata;
       const panel: GLLegendStepPanel = {
         id,
         type: "GLLegendStepPanel",
-        label: prop,
+        label:
+          metadata["s:legend-labels"] && prop in metadata["s:legend-labels"]
+            ? metadata["s:legend-labels"][prop]
+            : prop,
         steps: [
-          {
-            id: id + "-first",
-            label: "< " + inputOutputPairs[0],
-            symbol: createSymbol(
-              sortedLayers.indexOf(layer),
-              sortedLayers,
-              {
-                ...featureProps,
-                [prop]: inputOutputPairs[0] - 1,
-              },
-              representedProperties
-            ),
-          },
+          ...("s:steps" in metadata
+            ? []
+            : [
+                {
+                  id: id + "-first",
+                  label: "< " + inputOutputPairs[0],
+                  symbol: createSymbol(
+                    sortedLayers.indexOf(layer),
+                    sortedLayers,
+                    {
+                      ...featureProps,
+                      [prop]: inputOutputPairs[0] - 1,
+                    },
+                    representedProperties
+                  ),
+                },
+              ]),
           ...inputOutputPairs.reduce((steps, current, i) => {
             if (i % 2 === 0) {
               const input = current;
@@ -1216,9 +1233,16 @@ export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {
                 output !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
                 output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
               ) {
+                let label = input.toLocaleString();
+                if (metadata["s:round-numbers"]) {
+                  label = Math.round(input).toLocaleString();
+                }
+                if (metadata["s:value-suffix"]) {
+                  label += metadata["s:value-suffix"];
+                }
                 steps.push({
                   id: id + "-" + i,
-                  label: `${input.toLocaleString()}`,
+                  label,
                   symbol: createSymbol(
                     sortedLayers.indexOf(layer),
                     sortedLayers,
@@ -1892,7 +1916,10 @@ function hasMatchingStops(a: Stop[], b: Stop[]) {
  * @param expression Mapbox gl style interpolation expression
  * @returns Array<{value: number, color: string}>
  */
-function interpolationExpressionToStops(expression?: any) {
+function interpolationExpressionToStops(
+  expression?: any,
+  metadata?: SeaSketchLayerMetadata
+) {
   expression =
     expression && isExpression(expression)
       ? expression
@@ -1921,10 +1948,17 @@ function interpolationExpressionToStops(expression?: any) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [input, ...stopPairs] = args;
       for (let i = 0; i < stopPairs.length; i += 2) {
+        let label = stopPairs[i].toLocaleString();
+        if (metadata && metadata["s:round-numbers"]) {
+          label = Math.round(stopPairs[i]).toLocaleString();
+        }
+        if (metadata && metadata["s:value-suffix"]) {
+          label += metadata["s:value-suffix"];
+        }
         stops.push({
           value: stopPairs[i],
           color: stopPairs[i + 1],
-          label: stopPairs[i].toLocaleString(),
+          label,
         });
       }
     }
