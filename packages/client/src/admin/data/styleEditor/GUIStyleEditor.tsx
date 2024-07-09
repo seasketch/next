@@ -1,6 +1,5 @@
 import { ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import {
-  ReactNode,
   RefObject,
   useCallback,
   useContext,
@@ -22,7 +21,6 @@ import {
   validVisualizationTypesForGeostats,
 } from "./visualizationTypes";
 import { Layer } from "mapbox-gl";
-import LayerEditor from "./LayerEditor";
 import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
 import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
 import * as Editors from "./Editors";
@@ -90,7 +88,8 @@ export default function GUIStyleEditor({
           isRasterInfo(geostats) ? "raster" : "vector"
         );
         if (errors.length > 0) {
-          throw new Error(errors.join("\n"));
+          console.error(errors);
+          throw new Error(errors.map((e) => e.message).join("\n"));
         }
 
         // @ts-ignore
@@ -313,7 +312,8 @@ export default function GUIStyleEditor({
             <Trans ns="admin:data">
               The style for this layer could not be recognized using any of
               SeaSketch's templates. Please choose a visualization type if you
-              would like to use the graphical style editor.
+              would like to use the graphical style editor, or switch to the
+              code editor to make changes.
             </Trans>
           </p>
         )}

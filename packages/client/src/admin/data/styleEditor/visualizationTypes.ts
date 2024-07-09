@@ -5,10 +5,23 @@ import {
   SuggestedRasterPresentation,
   isRasterInfo,
 } from "@seasketch/geostats-types";
-import { Expression, Layer, RasterLayer } from "mapbox-gl";
+import {
+  Expression,
+  FillLayer,
+  Layer,
+  LineLayer,
+  RasterLayer,
+  SymbolLayer,
+} from "mapbox-gl";
 import * as colorScale from "d3-scale-chromatic";
 import { StepsSetting } from "./ContinuousRasterStepsEditor";
-import { hasGetExpression } from "../../../dataLayers/legends/utils";
+import {
+  hasGetExpression,
+  isExpression,
+} from "../../../dataLayers/legends/utils";
+import { isSymbolLayer } from "./LabelLayerEditor";
+import { isFillLayer, isLineLayer } from "./SimplePolygonEditor";
+import { autoStrokeColorForFill } from "./FillStyleEditor";
 
 export const colorScales = {
   categorical: [
@@ -67,38 +80,6 @@ export const colorScales = {
     ],
     cyclical: ["interpolateRainbow", "interpolateSinebow"],
   },
-
-  // [
-  //   "interpolatePlasma",
-  //   "interpolateViridis",
-  //   "interpolateInferno",
-  //   "interpolateMagma",
-  //   "interpolateCividis",
-  //   "interpolateWarm",
-  //   "interpolateCool",
-  //   "interpolateRainbow",
-  //   "interpolateSinebow",
-  //   "interpolateTurbo",
-  //   "interpolateCubehelixDefault",
-  //   "interpolateSpectral",
-  //   "interpolateRdYlBu",
-  //   "interpolateRdYlGn",
-  //   "interpolateSpectral",
-  //   "interpolateBrBG",
-  //   "interpolatePRGn",
-  //   "interpolatePiYG",
-  //   "interpolatePuOr",
-  //   "interpolateRdBu",
-  //   "interpolateRdGy",
-  //   "interpolateRdYlBu",
-  //   "interpolateRdYlGn",
-  //   "interpolateBlues",
-  //   "interpolateGreens",
-  //   "interpolateGreys",
-  //   "interpolateOranges",
-  //   "interpolatePurples",
-  //   "interpolateReds",
-  // ],
 };
 
 export enum VisualizationType {
@@ -184,8 +165,22 @@ export function determineVisualizationType(
       geostats.geometry === "Polygon" ||
       geostats.geometry === "MultiPolygon"
     ) {
-      if (!hasFillColorGetExpression(layers)) {
+      if (
+        !hasFillColorGetExpression(layers) &&
+        layers.find((l) => isFillLayer(l) || isLineLayer(l))
+      ) {
         return VisualizationType.SIMPLE_POLYGON;
+      } else if (hasFillColorGetExpression(layers)) {
+        if (
+          layers.find(
+            (l) =>
+              isFillLayer(l) &&
+              isExpression(l.paint?.["fill-color"]) &&
+              /interpolate/.test(l.paint?.["fill-color"][0])
+          )
+        ) {
+          return VisualizationType.CONTINUOUS_POLYGON;
+        }
       }
     }
   }
@@ -316,6 +311,135 @@ export function convertToVisualizationType(
         });
       }
       break;
+    case VisualizationType.SIMPLE_POLYGON:
+      let fillLayer = oldLayers.find((l) => isFillLayer(l)) as
+        | FillLayer
+        | undefined;
+      const strokeLayer = oldLayers.find((l) => isLineLayer(l)) as
+        | LineLayer
+        | undefined;
+      const labelLayer = oldLayers.find(
+        (l) => isSymbolLayer(l) && l.layout?.["text-field"]
+      ) as SymbolLayer | undefined;
+
+      if (fillLayer) {
+        // remove any expressions from the fill color
+        if (isExpression(fillLayer.paint?.["fill-color"])) {
+          fillLayer.paint["fill-color"] =
+            extractFirstColorFromExpression(fillLayer.paint?.["fill-color"]) ||
+            colorScale.schemeTableau10[Math.floor(Math.random() * 10)];
+        }
+      } else {
+        fillLayer = {
+          type: "fill",
+          paint: {
+            "fill-color":
+              colorScale.schemeTableau10[Math.floor(Math.random() * 10)],
+            "fill-opacity": 0.5,
+          },
+          layout: {
+            visibility: "visible",
+          },
+        } as FillLayer;
+      }
+      const strokeColor = autoStrokeColorForFill(fillLayer);
+      // First, add the stroke layer
+      if (strokeLayer) {
+        // remove any expressions from the stroke color
+        if (isExpression(strokeLayer.paint?.["line-color"])) {
+          strokeLayer.paint["line-color"] = strokeColor;
+        }
+        layers.push({
+          ...strokeLayer,
+        });
+      } else {
+        layers.push({
+          type: "line",
+          paint: {
+            "line-color": strokeColor,
+            "line-opacity": 1,
+          },
+          layout: {
+            visibility: "visible",
+          },
+          metadata: {
+            "s:color-auto": true,
+          },
+        });
+      }
+      // Next, add the fill layer
+      layers.push({
+        ...fillLayer,
+      });
+      // Finally, add the label layer if it already exists
+      if (labelLayer) {
+        layers.push({
+          ...labelLayer,
+        });
+      }
+      break;
+    case VisualizationType.CONTINUOUS_POLYGON: {
+      if (isRasterInfo(geostats)) {
+        throw new Error("Is RasterInfo");
+      }
+      // find the most appropriate attribute to color the fill layer
+      const attr = findBestContinuousAttribute(geostats);
+      const attribute = geostats.attributes.find((a) => a.attribute === attr)!;
+      let fillLayer = oldLayers.find((l) => isFillLayer(l)) as
+        | FillLayer
+        | undefined;
+      let colorPalette =
+        fillLayer?.metadata?.["s:palette"] || "interpolatePlasma";
+      const strokeLayer = oldLayers.find((l) => isLineLayer(l)) as
+        | LineLayer
+        | undefined;
+      const labelLayer = oldLayers.find(
+        (l) => isSymbolLayer(l) && l.layout?.["text-field"]
+      ) as SymbolLayer | undefined;
+
+      if (fillLayer) {
+        if (!fillLayer.paint) {
+          fillLayer.paint = {};
+        }
+        fillLayer.paint["fill-color"] = buildContinuousColorExpression(
+          undefined,
+          colorPalette,
+          false,
+          [attribute.min || 0, attribute.max!],
+          ["get", attr]
+        ) as Expression;
+      } else {
+        fillLayer = {
+          type: "fill",
+          paint: {
+            "fill-color": buildContinuousColorExpression(
+              undefined,
+              colorPalette,
+              false,
+              [attribute.min || 0, attribute.max!],
+              ["get", attr]
+            ) as Expression,
+            "fill-opacity": 0.5,
+          },
+          layout: {
+            visibility: "visible",
+          },
+          metadata: {
+            "s:palette": colorPalette,
+          },
+        } as FillLayer;
+      }
+      // First, add the fill layer
+      layers.push({
+        ...fillLayer,
+      });
+      if (labelLayer) {
+        layers.push({
+          ...labelLayer,
+        });
+      }
+      break;
+    }
     default:
       layers.push(...oldLayers);
   }
@@ -397,6 +521,18 @@ export function buildContinuousRasterColorExpression(
   reverse: boolean,
   range: [number, number]
 ) {
+  return buildContinuousColorExpression(expression, palette, reverse, range, [
+    "raster-value",
+  ]);
+}
+
+export function buildContinuousColorExpression(
+  expression: Expression | undefined,
+  palette: string | string[],
+  reverse: boolean,
+  range: [number, number],
+  arg: Expression
+) {
   // TODO: support string[] palettes
   const colors = Array.isArray(palette)
     ? palette
@@ -409,16 +545,21 @@ export function buildContinuousRasterColorExpression(
     expression && /interpolate/.test(expression[0])
       ? expression?.[1]
       : ["linear"];
-  const arg = ["raster-value"];
   const stops = [];
   const nStops = typeof colors === "function" ? 10 : colors.length;
+  console.log(nStops);
   const interval = (range[1] - range[0]) / (nStops - 1);
-  for (var i = 0; i < nStops; i++) {
-    const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
-    stops.push(
-      range[0] + interval * i,
-      typeof colors === "function" ? colors(fraction) : colors[i]
-    );
+  console.log("interval", interval);
+  if (interval === 0) {
+    stops.push(range[0], typeof colors === "function" ? colors(0) : colors[0]);
+  } else {
+    for (var i = 0; i < nStops; i++) {
+      const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
+      stops.push(
+        range[0] + interval * i,
+        typeof colors === "function" ? colors(fraction) : colors[i]
+      );
+    }
   }
   return [fnName, iType, arg, ...stops];
 }
@@ -619,4 +760,29 @@ function getColorStops(
     }
   }
   return stops;
+}
+
+export function findBestContinuousAttribute(geostats: GeostatsLayer) {
+  const attributes = geostats.attributes;
+  for (const attr of attributes) {
+    if (
+      attr.type === "number" &&
+      (attr.values.length > 1 ||
+        (attr.min !== undefined && attr.max && attr.max > attr.min)) &&
+      !/id/i.test(attr.attribute)
+    ) {
+      return attr.attribute;
+    }
+  }
+  for (const attr of attributes) {
+    if (
+      attr.type === "number" &&
+      (attr.values.length > 1 ||
+        (attr.min !== undefined && attr.max && attr.max > attr.min))
+    ) {
+      return attr.attribute;
+    }
+  }
+
+  throw new Error("No numeric attributes found");
 }

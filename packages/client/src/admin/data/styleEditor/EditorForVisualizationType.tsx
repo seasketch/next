@@ -7,6 +7,7 @@ import { Trans } from "react-i18next";
 import Warning from "../../../components/Warning";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import SimplePolygonEditor from "./SimplePolygonEditor";
+import ContinuousPolygonEditor from "./ContinuousPolygonEditor";
 
 export default function EditorForVisualizationType({
   type,
@@ -45,6 +46,8 @@ export default function EditorForVisualizationType({
       );
     case VisualizationType.SIMPLE_POLYGON:
       return <SimplePolygonEditor />;
+    case VisualizationType.CONTINUOUS_POLYGON:
+      return <ContinuousPolygonEditor />;
     default:
       return (
         <Warning className="mx-4" level="error">
