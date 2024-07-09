@@ -1,7 +1,7 @@
 import { useContext, useMemo } from "react";
 import * as Editor from "./Editors";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
-import { SymbolLayer } from "mapbox-gl";
+import { Expression, SymbolLayer } from "mapbox-gl";
 import { isRasterInfo } from "@seasketch/geostats-types";
 import { ZoomRangeEditor } from "./ZoomRangeEditor";
 import { isExpression } from "../../../dataLayers/legends/utils";
@@ -69,7 +69,7 @@ export default function LabelLayerEditor() {
                 const layer: Omit<SymbolLayer, "id"> = {
                   type: "symbol",
                   layout: {
-                    "text-field": `{${bestLabel}}`,
+                    "text-field": ["get", bestLabel],
                     "text-size": 13,
                   },
                   paint: {
@@ -125,11 +125,24 @@ export default function LabelLayerEditor() {
         <Editor.Root>
           <Editor.Label title={t("Label Field")} />
           <Editor.Control>
-            {isExpression(labels.layer.layout?.["text-field"]) ? (
-              <Editor.CustomExpressionIndicator />
+            {typeof labels.layer.layout?.["text-field"] === "string" ||
+            (isExpression(labels.layer.layout?.["text-field"]) &&
+              labels.layer.layout["text-field"]["0"] !== "get") ? (
+              <Editor.CustomExpressionIndicator
+                onClear={() => {
+                  updateLayer(labels.index, "layout", "text-field", [
+                    "get",
+                    labelFields[0].attribute,
+                  ]);
+                }}
+              />
             ) : (
               <Select.Root
-                value={labels.layer.layout?.["text-field"] as string}
+                value={
+                  (
+                    labels.layer.layout?.["text-field"] as Expression
+                  )[1] as string
+                }
                 onValueChange={(v) => {
                   updateLayer(labels.index, "layout", "text-field", v);
                 }}
@@ -146,7 +159,7 @@ export default function LabelLayerEditor() {
                       {labelFields.map((field) => (
                         <Select.Item
                           key={field.attribute}
-                          value={`{${field.attribute}}`}
+                          value={field.attribute}
                         >
                           <Select.ItemText>{field.attribute}</Select.ItemText>
                         </Select.Item>
