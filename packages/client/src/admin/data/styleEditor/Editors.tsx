@@ -90,10 +90,12 @@ export function Label({
             </Tooltip.Trigger>
             <Tooltip.Portal>
               <Tooltip.Content
+                sideOffset={3}
                 className="bg-gray-900 bg-opacity-90 text-white select-none  p-2 px-3 text-sm z-50 rounded"
                 style={{ maxWidth: 200 }}
               >
                 {tooltip}
+                <RadixTooltip.Arrow style={{ stroke: "rgba(17, 24, 39, 1)" }} />
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>

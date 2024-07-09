@@ -22,6 +22,7 @@ import { LimitZoomTrigger, ZoomRangeEditor } from "./ZoomRangeEditor";
 import { OpacityEditor } from "./OpacityEditor";
 import { autoStrokeColorForFill } from "./FillStyleEditor";
 import LabelLayerEditor from "./LabelLayerEditor";
+import Switch from "../../../components/Switch";
 
 export default function ContinuousPolygonEditor() {
   const { t, glLayers, geostats, updateLayer } = useContext(
@@ -146,6 +147,44 @@ export default function ContinuousPolygonEditor() {
           />
         </Editor.Control>
       </Editor.Root>
+      {fillLayer && (
+        <>
+          <Editor.Header title={t("Legend")} className="pt-6" />
+          <Editor.Root>
+            <Editor.Label title={t("Display rounded numbers")} />
+            <Editor.Control>
+              <Switch
+                isToggled={fillLayer.metadata?.["s:round-numbers"] || false}
+                onClick={(value) => {
+                  // TODO: does this affect legend rendering yet?
+                  updateLayer(indexes.fill, undefined, undefined, undefined, {
+                    "s:round-numbers": value,
+                  });
+                }}
+              />
+            </Editor.Control>
+          </Editor.Root>
+          <Editor.Root>
+            <Editor.Label
+              title={t("Value suffix")}
+              tooltip={t("Used to append text to values in the legend.")}
+            />
+            {/* TODO: this doesn't change the legend yet */}
+            <Editor.Control>
+              <input
+                type="text"
+                className="bg-gray-700 rounded py-0.5 pr-0.5 w-24 text-center"
+                value={fillLayer.metadata?.["s:value-suffix"] || ""}
+                onChange={(e) => {
+                  updateLayer(indexes.fill, undefined, undefined, undefined, {
+                    "s:value-suffix": e.target.value,
+                  });
+                }}
+              />
+            </Editor.Control>
+          </Editor.Root>
+        </>
+      )}
       <LabelLayerEditor />
     </Editor.Card>
   );
