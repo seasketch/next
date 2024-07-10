@@ -177,7 +177,11 @@ function ContinuousScaleItem({
                 }}
               ></div>
             ) : (
-              <div className="flex w-32 h-4 rounded-sm">
+              <div
+                className={`flex w-32 h-4 rounded-sm ${
+                  reversed ? "flex-row-reverse" : ""
+                }`}
+              >
                 {Array.from({ length: steps.n }, (_, i) => (
                   <div
                     key={i}
