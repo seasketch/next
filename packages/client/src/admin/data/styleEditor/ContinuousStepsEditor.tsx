@@ -79,13 +79,14 @@ export default function ContinuousStepsEditor({
                   "raster-color",
                   buildContinuousColorExpression(
                     undefined,
-                    metadata?.["s:palette"] || "schemeGreens6",
+                    metadata?.["s:palette"] || "interpolatePlasma",
                     Boolean(metadata?.["s:reverse-palette"]),
                     [minimum, maximum],
                     valueExpression
                   ),
                   {
                     "s:steps": `continuous:${steps.n}`,
+                    "s:palette": metadata?.["s:palette"] || "interpolatePlasma",
                   }
                 );
               } else if (value === "manual") {
@@ -116,12 +117,13 @@ export default function ContinuousStepsEditor({
                   "raster-color",
                   buildStepExpression(
                     (stats as any)[value][n],
-                    metadata?.["s:palette"] || "schemeGreens6",
+                    metadata?.["s:palette"] || "interpolatePlasma",
                     Boolean(metadata?.["s:reverse-palette"]),
                     valueExpression
                   ),
                   {
                     "s:steps": `${value}:${n}`,
+                    "s:palette": metadata?.["s:palette"] || "interpolatePlasma",
                   }
                 );
               }
@@ -205,12 +207,14 @@ export default function ContinuousStepsEditor({
                     "raster-color",
                     buildStepExpression(
                       (stats as any)[steps.steps][n],
-                      metadata?.["s:palette"] || "schemeGreens6",
+                      metadata?.["s:palette"] || "interpolatePlasma",
                       Boolean(metadata?.["s:reverse-palette"]),
                       valueExpression
                     ),
                     {
                       "s:steps": `${steps.steps}:${n}`,
+                      "s:palette":
+                        metadata?.["s:palette"] || "interpolatePlasma",
                     }
                   );
                 }}

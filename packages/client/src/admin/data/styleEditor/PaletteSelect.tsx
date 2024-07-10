@@ -4,7 +4,6 @@ import { Trans } from "react-i18next";
 import { ChevronDownIcon, UpdateIcon } from "@radix-ui/react-icons";
 import { colorScales } from "./visualizationTypes";
 import * as d3Palettes from "d3-scale-chromatic";
-import { SuggestedRasterPresentation } from "@seasketch/geostats-types";
 import { StepsSetting } from "./ContinuousStepsEditor";
 
 export default function PaletteSelect({

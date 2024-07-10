@@ -23,7 +23,6 @@ import {
 import { isSymbolLayer } from "./LabelLayerEditor";
 import { isFillLayer, isLineLayer } from "./SimplePolygonEditor";
 import { autoStrokeColorForFill } from "./FillStyleEditor";
-import { color } from "d3";
 
 export const colorScales = {
   categorical: [

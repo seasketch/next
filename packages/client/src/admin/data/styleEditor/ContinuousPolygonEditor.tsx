@@ -198,11 +198,14 @@ export default function ContinuousPolygonEditor() {
                     "fill-color",
                     buildStepExpression(
                       buckets,
-                      metadata["s:palette"] || "schemeGreens6",
+                      metadata["s:palette"] || "interpolatePlasma",
                       Boolean(metadata["s:reverse-palette"]),
                       ["get", attribute.attribute]
                     ),
-                    m
+                    {
+                      ...m,
+                      "s:palette": metadata["s:palette"] || "interpolatePlasma",
+                    }
                   );
                 }
               }
