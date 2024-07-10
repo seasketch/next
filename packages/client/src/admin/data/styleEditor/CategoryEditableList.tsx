@@ -3,19 +3,20 @@ import * as Editor from "./Editors";
 import { Expression } from "mapbox-gl";
 import SortableCategoryListEditor from "./SortableCategoryListEditor";
 import { FontSizeIcon } from "@radix-ui/react-icons";
+import { memo, useEffect } from "react";
 
-export function RasterCategoryEditableList({
-  rasterColorExpression,
+function _CategoryEditableList({
+  expression,
   metadata,
   onChange,
 }: {
-  rasterColorExpression: Expression;
+  expression: Expression;
   metadata?: Editor.SeaSketchLayerMetadata;
   onChange: (expression: Expression, metadata: { [key: string]: any }) => void;
 }) {
   return (
     <Editor.Root block className="pt-3">
-      <div className="border rounded border-gray-500 p-4 bg-gray-700">
+      <div className="border rounded border-gray-500 p-4 bg-gray-700 max-h-160 overflow-y-scroll overflow-x-visible">
         <Editor.Label
           title={<Trans ns="admin:data">Categories</Trans>}
           buttons={
@@ -24,9 +25,8 @@ export function RasterCategoryEditableList({
                 className="text-indigo-300 hover:text-indigo-400"
                 title="Alphabetize labels"
                 onClick={() => {
-                  const categories = Editor.extractCategoriesFromExpression(
-                    rasterColorExpression
-                  );
+                  const categories =
+                    Editor.extractCategoriesFromExpression(expression);
                   const sorted = categories.sort((a, b) => {
                     const aLabel =
                       metadata?.["s:legend-labels"]?.[a.value] ||
@@ -48,7 +48,7 @@ export function RasterCategoryEditableList({
                     sorted.reverse();
                   }
 
-                  onChange(rasterColorExpression, {
+                  onChange(expression, {
                     ...metadata,
                     "s:sorted-categories": sorted.map((c) => c.value),
                   });
@@ -61,7 +61,7 @@ export function RasterCategoryEditableList({
         />
         <Editor.Control>
           <SortableCategoryListEditor
-            expression={rasterColorExpression}
+            expression={expression}
             metadata={metadata}
             onChange={onChange}
           />
@@ -70,3 +70,5 @@ export function RasterCategoryEditableList({
     </Editor.Root>
   );
 }
+
+export const CategoryEditableList = memo(_CategoryEditableList);

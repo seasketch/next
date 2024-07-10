@@ -11,7 +11,13 @@ import {
   hasGetExpression,
   isExpression,
 } from "../../../dataLayers/legends/utils";
-import { Expression, FillLayer, FillPaint, LineLayer } from "mapbox-gl";
+import {
+  Expression,
+  FillLayer,
+  FillPaint,
+  LineLayer,
+  SymbolLayout,
+} from "mapbox-gl";
 import {
   GeostatsLayer,
   NumericAttributeStats,
@@ -37,6 +43,7 @@ import Switch from "../../../components/Switch";
 import PaletteSelect from "./PaletteSelect";
 import HistogramControl from "./HistogramControl";
 import ContinuousStepsEditor, { determineSteps } from "./ContinuousStepsEditor";
+import VisualizationTypeControl from "./VisualizationTypeControl";
 
 export default function ContinuousPolygonEditor() {
   const { t, glLayers, geostats, updateLayer } = useContext(
@@ -46,8 +53,6 @@ export default function ContinuousPolygonEditor() {
   const fillLayer = glLayers[indexes.fill] as
     | (FillLayer & { metadata: Editor.SeaSketchLayerMetadata })
     | undefined;
-  const strokeLayer =
-    indexes.stroke !== -1 ? (glLayers[indexes.stroke] as LineLayer) : undefined;
   const selectedAttribute = useMemo(() => {
     if (
       fillLayer?.paint?.["fill-color"] &&
@@ -75,7 +80,7 @@ export default function ContinuousPolygonEditor() {
 
   return (
     <Editor.Card>
-      <Editor.CardTitle
+      <VisualizationTypeControl
         buttons={
           <LimitZoomTrigger
             minzoom={fillLayer?.minzoom}
@@ -85,9 +90,7 @@ export default function ContinuousPolygonEditor() {
             }}
           />
         }
-      >
-        {t("Color Range")}
-      </Editor.CardTitle>
+      />
       <ZoomRangeEditor
         maxzoom={fillLayer?.maxzoom}
         minzoom={fillLayer?.minzoom}
@@ -306,7 +309,7 @@ export default function ContinuousPolygonEditor() {
           <Editor.Root>
             <Editor.Label
               title={t("Value Label")}
-              tooltip={t("Used as a label for the color scale in the legend.")}
+              tooltip={t("Labels the color scale. Use a space to hide.")}
             />
             <Editor.Control>
               <Editor.TextInput
@@ -397,7 +400,10 @@ export function getIndexes(glLayers: SeaSketchGlLayer[]) {
     ) {
       // skip over in case there is another line that is plain
       indexes.stroke = i;
-    } else if (layer.type === "symbol") {
+    } else if (
+      layer.type === "symbol" &&
+      (layer.layout as SymbolLayout)?.["text-field"]
+    ) {
       indexes.labels = i;
     }
   }

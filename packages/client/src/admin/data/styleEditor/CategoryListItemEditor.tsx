@@ -114,20 +114,19 @@ export default function CategoryListItemEditor({
         onClick={() => {
           let excludedValues = metadata?.["s:excluded"] || [];
           if (excluded) {
-            excludedValues = excludedValues.filter(
-              (v: string | number) => v !== category.value
-            );
+            excludedValues = excludedValues.filter((v) => v !== category.value);
           } else {
             excludedValues.push(category.value);
           }
-          const newMetadata: { [key: string]: any } = {
+          const newMetadata: SeaSketchLayerMetadata = {
             ...metadata,
             "s:excluded": excludedValues,
           };
           const newExpression = applyExcludedValuesToCategoryExpression(
             expression,
             newMetadata["s:excluded"] || [],
-            newMetadata["s:palette"]
+            newMetadata["s:palette"],
+            newMetadata["s:reverse-palette"] || false
           );
           onChange(newExpression, newMetadata);
         }}

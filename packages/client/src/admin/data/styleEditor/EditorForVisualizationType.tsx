@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useCallback, useContext, useEffect } from "react";
 import RasterLayerEditor from "./RasterLayerEditor";
 import { VisualizationType } from "./visualizationTypes";
 import { Card, GUIEditorContext } from "./Editors";
@@ -8,6 +8,7 @@ import Warning from "../../../components/Warning";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import SimplePolygonEditor from "./SimplePolygonEditor";
 import ContinuousPolygonEditor from "./ContinuousPolygonEditor";
+import CategoricalPolygonEditor from "./CategoricalPolygonEditor";
 
 export default function EditorForVisualizationType({
   type,
@@ -16,6 +17,15 @@ export default function EditorForVisualizationType({
 }) {
   const context = useContext(GUIEditorContext);
   const rasterLayer = context?.glLayers.find((l) => l.type === "raster");
+
+  const updateLayerProperty = useCallback(
+    (...args) => {
+      // @ts-ignore
+      context.updateLayer(context.glLayers.indexOf(rasterLayer!), ...args);
+    },
+    [context.glLayers.indexOf(rasterLayer!), context.updateLayer]
+  );
+
   switch (type) {
     case VisualizationType.CATEGORICAL_RASTER:
     case VisualizationType.CONTINUOUS_RASTER:
@@ -30,12 +40,7 @@ export default function EditorForVisualizationType({
                 ...args
               )
             }
-            updateLayerProperty={(...args) =>
-              context.updateLayer(
-                context.glLayers.indexOf(rasterLayer!),
-                ...args
-              )
-            }
+            updateLayerProperty={updateLayerProperty}
             rasterInfo={context.geostats as RasterInfo}
             type={type}
           />
@@ -58,6 +63,15 @@ export default function EditorForVisualizationType({
         <>
           <ContinuousPolygonEditor />
           {ContinuousPolygonEditor.hasUnrelatedLayers(context.glLayers) && (
+            <ExtraLayersWarning />
+          )}
+        </>
+      );
+    case VisualizationType.CATEGORICAL_POLYGON:
+      return (
+        <>
+          <CategoricalPolygonEditor />
+          {CategoricalPolygonEditor.hasUnrelatedLayers(context.glLayers) && (
             <ExtraLayersWarning />
           )}
         </>

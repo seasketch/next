@@ -26,6 +26,8 @@ import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLS
 import * as Editors from "./Editors";
 import EditorForVisualizationType from "./EditorForVisualizationType";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
+import Warning from "../../../components/Warning";
+import VisualizationTypeControl from "./VisualizationTypeControl";
 require("./layer-editor.css");
 
 export type PropertyRef = {
@@ -49,7 +51,7 @@ export default function GUIStyleEditor({
   const [previousSettings, setPreviousSettings] = useState<{
     [setting: string]: any;
   }>({});
-  const validVisualizationTypes = useMemo(() => {
+  const supportedTypes = useMemo(() => {
     return validVisualizationTypesForGeostats(geostats);
   }, [geostats]);
 
@@ -64,7 +66,7 @@ export default function GUIStyleEditor({
       setStyleJSON(JSON.parse(doc) as Layer[]);
       const visualizationType = determineVisualizationType(
         geostats,
-        validVisualizationTypes,
+        supportedTypes,
         JSON.parse(doc) as Layer[]
       );
       if (visualizationType) {
@@ -75,7 +77,7 @@ export default function GUIStyleEditor({
 
   const [visualizationType, _setVisualizationType] =
     useState<VisualizationType | null>(
-      determineVisualizationType(geostats, validVisualizationTypes, styleJSON)
+      determineVisualizationType(geostats, supportedTypes, styleJSON)
     );
 
   const setVisualizationType = useCallback(
@@ -271,7 +273,7 @@ export default function GUIStyleEditor({
     [styleJSON, editorRef]
   );
 
-  if (validVisualizationTypes.length === 0) {
+  if (supportedTypes.length === 0) {
     return (
       <Editors.Card>
         {t(
@@ -283,42 +285,13 @@ export default function GUIStyleEditor({
 
   return (
     <div className="overflow-y-auto">
-      <Editors.Card>
-        <Editors.Root>
-          <Editors.Label title={t("Visualization Type")} />
-          <Editors.Control>
-            <select
-              className="bg-gray-700 text-white text-sm"
-              value={visualizationType || "Unknown"}
-              onChange={(e) => {
-                setVisualizationType(e.target.value as VisualizationType);
-              }}
-            >
-              {validVisualizationTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-              {(!visualizationType ||
-                !validVisualizationTypes.includes(visualizationType)) && (
-                <option value="Unknown">{t("Unknown")}</option>
-              )}
-            </select>
-          </Editors.Control>
-        </Editors.Root>
-        {(!visualizationType ||
-          !validVisualizationTypes.includes(visualizationType)) && (
-          <p className="pt-4 text-gray-200">
-            <Trans ns="admin:data">
-              The style for this layer could not be recognized using any of
-              SeaSketch's templates. Please choose a visualization type if you
-              would like to use the graphical style editor, or switch to the
-              code editor to make changes.
-            </Trans>
-          </p>
-        )}
-      </Editors.Card>
-
+      {(!visualizationType || !supportedTypes.includes(visualizationType)) && (
+        <div className="px-4">
+          <div className="mt-5">
+            <VisualizationTypeControl />
+          </div>
+        </div>
+      )}
       {styleJSON && visualizationType && (
         <Editors.GUIEditorContext.Provider
           value={{
@@ -332,6 +305,8 @@ export default function GUIStyleEditor({
             t,
             addLayer,
             removeLayer,
+            supportedTypes,
+            setVisualizationType,
           }}
         >
           <EditorForVisualizationType type={visualizationType} />

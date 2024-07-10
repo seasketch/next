@@ -1,5 +1,6 @@
 import {
   Bucket,
+  GeostatsAttribute,
   GeostatsLayer,
   RasterInfo,
   SuggestedRasterPresentation,
@@ -182,6 +183,15 @@ export function determineVisualizationType(
           )
         ) {
           return VisualizationType.CONTINUOUS_POLYGON;
+        } else if (
+          layers.find(
+            (l) =>
+              isFillLayer(l) &&
+              isExpression(l.paint?.["fill-color"]) &&
+              /match/.test(l.paint?.["fill-color"][0])
+          )
+        ) {
+          return VisualizationType.CATEGORICAL_POLYGON;
         }
       }
     }
@@ -393,9 +403,15 @@ export function convertToVisualizationType(
         | undefined;
       let colorPalette =
         fillLayer?.metadata?.["s:palette"] || "interpolatePlasma";
-      const strokeLayer = oldLayers.find((l) => isLineLayer(l)) as
-        | LineLayer
-        | undefined;
+      if (
+        !(
+          colorPalette in colorScales.continuous.cyclical ||
+          colorPalette in colorScales.continuous.diverging ||
+          colorPalette in colorScales.continuous.sequential
+        )
+      ) {
+        colorPalette = "interpolatePlasma";
+      }
       const labelLayer = oldLayers.find(
         (l) => isSymbolLayer(l) && l.layout?.["text-field"]
       ) as SymbolLayer | undefined;
@@ -471,6 +487,45 @@ export function convertToVisualizationType(
           ...labelLayer,
         });
       }
+      break;
+    }
+    case VisualizationType.CATEGORICAL_POLYGON: {
+      if (isRasterInfo(geostats)) {
+        throw new Error("Is RasterInfo");
+      }
+      // first, find the most appropriate attribute to color the fill layer
+      const attr = findBestCategoricalAttribute(geostats);
+      let oldFillLayer = oldLayers.find((l) => isFillLayer(l)) as
+        | FillLayer
+        | undefined;
+      let colorPalette =
+        oldFillLayer?.metadata?.["s:palette"] || "schemeTableau10";
+      if (
+        !(
+          typeof colorPalette === "string" &&
+          colorPalette in colorScales.categorical
+        )
+      ) {
+        colorPalette = "schemeTableau10";
+      }
+      // add a fill layer
+      layers.push({
+        type: "fill",
+        paint: {
+          "fill-color": buildMatchExpressionForAttribute(
+            attr,
+            colorPalette,
+            oldFillLayer?.metadata?.["s:reverse-palette"] || false
+          ),
+          "fill-opacity": 0.7,
+        },
+        layout: {},
+        metadata: {
+          ...oldFillLayer?.metadata,
+          "s:palette": colorPalette,
+        },
+      });
+      // TODO: add stroke with matching colors
       break;
     }
     default:
@@ -580,9 +635,7 @@ export function buildContinuousColorExpression(
       : ["linear"];
   const stops = [];
   const nStops = typeof colors === "function" ? 10 : colors.length;
-  console.log(nStops);
   const interval = (range[1] - range[0]) / (nStops - 1);
-  console.log("interval", interval);
   if (interval === 0) {
     stops.push(range[0], typeof colors === "function" ? colors(0) : colors[0]);
   } else {
@@ -654,8 +707,9 @@ function isColor(str: string) {
 
 export function applyExcludedValuesToCategoryExpression(
   expression: Expression,
-  excludedValues: (string | number)[],
-  palette: string | undefined | null
+  excludedValues: (string | number | boolean)[],
+  palette: string[] | string | undefined | null,
+  reverse: boolean
 ) {
   let colors = palette
     ? Array.isArray(palette)
@@ -666,12 +720,16 @@ export function applyExcludedValuesToCategoryExpression(
   if (!colors || !colorsMatch(expressionColors, colors)) {
     colors = expressionColors;
   }
+  if (reverse) {
+    colors = [...colors].reverse();
+  }
   let c = 0;
+  expression = [...expression];
   switch (expression[0]) {
     case "step":
     case "match":
       let i = expression[0] === "step" ? 3 : 2;
-      while (i < expression.length) {
+      while (i < expression.length && expression[i + 1] !== undefined) {
         if (excludedValues.includes(expression[i])) {
           expression[i + 1] = "transparent";
         } else {
@@ -680,7 +738,7 @@ export function applyExcludedValuesToCategoryExpression(
         c++;
         i += 2;
       }
-      return [...expression] as Expression;
+      return expression;
     default:
       throw new Error("Unsupported expression type. " + expression[0]);
   }
@@ -833,4 +891,76 @@ export function findBestContinuousAttribute(geostats: GeostatsLayer) {
   }
 
   throw new Error("No numeric attributes found");
+}
+
+export function findBestCategoricalAttribute(geostats: GeostatsLayer) {
+  const attributes = geostats.attributes;
+  const filtered = categoricalAttributes(attributes);
+  // sort the attributes by suitability, with the most suitable coming first.
+  // Criteria:
+  //   1. Strings are prefered over booleans, booleans over numbers
+  //   2. Fewer unique values (countDistinct) are prefered, but only if there are greater than 1
+  const sorted = [...filtered].sort((a, b) => {
+    if (a.type === "string" && b.type !== "string") {
+      return -1;
+    } else if (b.type === "string" && a.type !== "string") {
+      return 1;
+    }
+    if (a.type === "boolean" && b.type !== "boolean") {
+      return -1;
+    } else if (b.type === "boolean" && a.type !== "boolean") {
+      return 1;
+    }
+    let aValue =
+      a.countDistinct && a.countDistinct > 1 ? a.countDistinct : Infinity;
+    let bValue =
+      b.countDistinct && b.countDistinct > 1 ? b.countDistinct : Infinity;
+    return aValue - bValue;
+  });
+  if (sorted.length) {
+    return sorted[0];
+  } else {
+    throw new Error("No categorical attributes found");
+  }
+}
+
+export function categoricalAttributes(attributes: GeostatsAttribute[]) {
+  return attributes.filter(
+    (a) =>
+      a.countDistinct &&
+      a.countDistinct > 1 &&
+      (a.type === "string" ||
+        a.type === "boolean" ||
+        (a.type === "number" && a.countDistinct && a.countDistinct < 12))
+  );
+}
+
+export function buildMatchExpressionForAttribute(
+  attribute: GeostatsAttribute,
+  palette: string | string[],
+  reverse: boolean
+) {
+  const uniqueValues = Object.keys(attribute.values);
+  let colors = palette;
+  if (!Array.isArray(colors)) {
+    let scale = colorScale[colors as keyof typeof colorScale];
+    if (typeof scale === "function") {
+      colors = Array.from({ length: uniqueValues.length }, (_, i) =>
+        scale(i / (uniqueValues.length - 1))
+      );
+    } else {
+      colors = scale as string[];
+    }
+  }
+
+  if (reverse) {
+    colors = [...colors].reverse();
+  }
+  const expression: Expression = ["match", ["get", attribute.attribute]];
+  for (let i = 0; i < uniqueValues.length; i++) {
+    const value = uniqueValues[i];
+    expression.push(value, colors[i % colors.length]);
+  }
+  expression.push("transparent");
+  return expression;
 }

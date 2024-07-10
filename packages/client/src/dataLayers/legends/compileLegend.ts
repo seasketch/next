@@ -1401,11 +1401,15 @@ export function pluckListPanelsFromMatchExpressions(context: {
       const prop = expression[1][1];
       const defaultValue = expression[expression.length - 1];
       const inputOutputPairs = expression.slice(2, -1);
-
+      const metadata: SeaSketchLayerMetadata = layer.metadata || {};
+      let panelLabel = expression[1][1].toString();
+      if (metadata["s:legend-labels"]?.[panelLabel]) {
+        panelLabel = metadata["s:legend-labels"][panelLabel];
+      }
       const panel: GLLegendListPanel = {
         id,
         type: "GLLegendListPanel",
-        label: expression[1][1],
+        label: panelLabel,
         items: [],
       };
       const valuesUsed: any = [];
@@ -1417,19 +1421,30 @@ export function pluckListPanelsFromMatchExpressions(context: {
           output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
         ) {
           valuesUsed.push(input);
-          panel.items.push({
-            id: id + "-" + i,
-            label: `${input}`,
-            symbol: createSymbol(
-              sortedLayers.indexOf(layer),
-              sortedLayers,
-              {
-                ...featureProps,
-                [prop]: input,
-              },
-              representedProperties
-            ),
-          });
+          let label = input.toString();
+          if (input && metadata["s:legend-labels"]?.[input]) {
+            label = metadata["s:legend-labels"][input];
+          }
+
+          if (
+            !metadata["s:excluded"] ||
+            !metadata["s:excluded"].includes(input)
+          ) {
+            panel.items.push({
+              id: id + "-" + i,
+              label,
+              value: input,
+              symbol: createSymbol(
+                sortedLayers.indexOf(layer),
+                sortedLayers,
+                {
+                  ...featureProps,
+                  [prop]: input,
+                },
+                representedProperties
+              ),
+            });
+          }
         }
       }
       if (layer.type === "fill" || layer.type === "line") {
@@ -1441,19 +1456,29 @@ export function pluckListPanelsFromMatchExpressions(context: {
         );
         for (const value of valuesForFeatureProperty) {
           if (!valuesUsed.includes(value)) {
-            panel.items.push({
-              id: id + "-" + value,
-              label: `${value}`,
-              symbol: createSymbol(
-                sortedLayers.indexOf(layer),
-                sortedLayers,
-                {
-                  ...featureProps,
-                  [prop]: value,
-                },
-                representedProperties
-              ),
-            });
+            let label = value.toString();
+            if (value && metadata["s:legend-labels"]?.[value.toString()]) {
+              label = metadata["s:legend-labels"][value.toString()];
+            }
+            if (
+              !metadata["s:excluded"] ||
+              !metadata["s:excluded"].includes(value)
+            ) {
+              panel.items.push({
+                id: id + "-" + value,
+                label,
+                value: value,
+                symbol: createSymbol(
+                  sortedLayers.indexOf(layer),
+                  sortedLayers,
+                  {
+                    ...featureProps,
+                    [prop]: value,
+                  },
+                  representedProperties
+                ),
+              });
+            }
             valuesUsed.push(value);
           }
         }
@@ -1462,17 +1487,34 @@ export function pluckListPanelsFromMatchExpressions(context: {
         defaultValue !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
         defaultValue !== NULLIFIED_EXPRESSION_OUTPUT_STRING
       ) {
-        panel.items.push({
-          id: id + "-default",
-          label: "default",
-          symbol: createSymbol(
-            sortedLayers.indexOf(layer),
-            sortedLayers,
-            {
-              ...featureProps,
-            },
-            representedProperties
-          ),
+        const symbol = createSymbol(
+          sortedLayers.indexOf(layer),
+          sortedLayers,
+          {
+            ...featureProps,
+          },
+          representedProperties
+        );
+        if (
+          (symbol.type === "fill" && symbol.color === "transparent") ||
+          (symbol.type === "line" && symbol.color === "transparent") ||
+          (symbol.type === "circle" && symbol.color === "transparent")
+        ) {
+        } else {
+          panel.items.push({
+            id: id + "-default",
+            label: "default",
+            symbol,
+          });
+        }
+      }
+      const sortedCategories = metadata?.["s:sorted-categories"];
+      if (sortedCategories && panel.items.find((s) => Boolean(s.value))) {
+        panel.items = panel.items.sort((a, b) => {
+          return (
+            sortedCategories.indexOf(a.value) -
+            sortedCategories.indexOf(b.value)
+          );
         });
       }
       return panel;

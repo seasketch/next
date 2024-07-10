@@ -93,7 +93,7 @@ export function Label({
               <Tooltip.Content
                 sideOffset={3}
                 className="bg-gray-900 bg-opacity-90 text-white select-none  p-2 px-3 text-sm z-50 rounded"
-                style={{ maxWidth: 200 }}
+                style={{ maxWidth: 100 }}
               >
                 {tooltip}
                 <RadixTooltip.Arrow style={{ stroke: "rgba(17, 24, 39, 1)" }} />
@@ -175,7 +175,7 @@ export function Thumb({
 export type ExpressionCategory = { value: string | number; color: string };
 
 export type SeaSketchLayerMetadata = { [key: string]: any } & {
-  "s:excluded"?: (string | number)[];
+  "s:excluded"?: (string | number | boolean)[];
   "s:palette"?: string[] | string;
   "s:legend-labels"?: { [key: string]: string };
   "s:sorted-categories"?: any[];
@@ -200,10 +200,11 @@ export function extractCategoriesFromExpression(expression: Expression) {
     const value = expression[i];
     const color = expression[i + 1];
     i += 2;
-    if (typeof color !== "string") {
+    if (typeof color !== "string" || color === undefined) {
       continue;
+    } else {
+      categories.push({ value, color });
     }
-    categories.push({ value, color });
   }
   return categories as ExpressionCategory[];
 }
@@ -219,6 +220,8 @@ export const GUIEditorContext = createContext<{
   t: TFunction;
   previousSettings: { [key: string]: any };
   setPreviousSettings: Dispatch<SetStateAction<{ [key: string]: any }>>;
+  supportedTypes: VisualizationType[];
+  setVisualizationType?: (type: VisualizationType) => void;
 }>({
   glLayers: [],
   geostats: { bands: [] } as unknown as RasterInfo,
@@ -229,6 +232,8 @@ export const GUIEditorContext = createContext<{
   t: (key: string) => key,
   previousSettings: {},
   setPreviousSettings: () => {},
+  supportedTypes: [],
+  setVisualizationType: () => {},
 });
 
 export const Popover = {

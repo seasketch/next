@@ -5,8 +5,9 @@ import { ChevronDownIcon, UpdateIcon } from "@radix-ui/react-icons";
 import { colorScales } from "./visualizationTypes";
 import * as d3Palettes from "d3-scale-chromatic";
 import { StepsSetting } from "./ContinuousStepsEditor";
+import { memo } from "react";
 
-export default function PaletteSelect({
+export default memo(function PaletteSelect({
   onChange,
   value,
   reversed,
@@ -112,7 +113,7 @@ export default function PaletteSelect({
       </Editor.Control>
     </Editor.Root>
   );
-}
+});
 
 function CategoricalScaleItem({
   scale,

@@ -8,7 +8,7 @@ import { RasterContrastEditor } from "./RasterContrastEditor";
 import { RasterSaturationEditor } from "./RasterSaturationEditor";
 import { RasterBrightnessEditor } from "./RasterBrightnessEditor";
 import { RasterHueRotateEditor } from "./RasterHueRotateEditor";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { RasterInfo } from "@seasketch/geostats-types";
 import {
   VisualizationType,
@@ -19,13 +19,14 @@ import {
   replaceColors,
 } from "./visualizationTypes";
 import PaletteSelect from "./PaletteSelect";
-import { RasterCategoryEditableList } from "./RasterCategoryEditableList";
+import { CategoryEditableList } from "./CategoryEditableList";
 import HistogramControl from "./HistogramControl";
 import Switch from "../../../components/Switch";
 import ContinuousStepsEditor, { determineSteps } from "./ContinuousStepsEditor";
 import { OpacityEditor } from "./OpacityEditor";
 import { LimitZoomTrigger, ZoomRangeEditor } from "./ZoomRangeEditor";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
+import VisualizationTypeControl from "./VisualizationTypeControl";
 
 function RasterLayerEditor({
   updateLayerProperty,
@@ -65,6 +66,13 @@ function RasterLayerEditor({
     glLayer.paint?.["raster-brightness-max"],
   ]);
 
+  const onCategoriesChange = useCallback(
+    (expression: Expression, metadata: Editor.SeaSketchLayerMetadata) => {
+      updateLayerProperty("paint", "raster-color", expression, metadata);
+    },
+    [updateLayerProperty]
+  );
+
   const paint = glLayer.paint as RasterPaint;
 
   const steps = (paint || {})["raster-color"]
@@ -77,7 +85,7 @@ function RasterLayerEditor({
 
   return (
     <Editor.Card>
-      <Editor.CardTitle
+      <VisualizationTypeControl
         buttons={
           <LimitZoomTrigger
             minzoom={glLayer.minzoom}
@@ -85,9 +93,8 @@ function RasterLayerEditor({
             updateLayerProperty={updateLayerProperty}
           />
         }
-      >
-        {t("Raster")}
-      </Editor.CardTitle>
+      />
+
       <ZoomRangeEditor
         maxzoom={glLayer.maxzoom}
         minzoom={glLayer.minzoom}
@@ -161,12 +168,10 @@ function RasterLayerEditor({
       )}
 
       {type === VisualizationType.CATEGORICAL_RASTER && (
-        <RasterCategoryEditableList
-          rasterColorExpression={paint["raster-color"] as Expression}
+        <CategoryEditableList
+          expression={paint["raster-color"] as Expression}
           metadata={glLayer.metadata}
-          onChange={(expression, metadata) => {
-            updateLayerProperty("paint", "raster-color", expression, metadata);
-          }}
+          onChange={onCategoriesChange}
         />
       )}
       {type === VisualizationType.RGB_RASTER && (

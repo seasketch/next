@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -17,6 +17,9 @@ import {
 import { Expression } from "mapbox-gl";
 import * as Editor from "./Editors";
 import CategoryListItemEditor from "./CategoryListItemEditor";
+import { Trans } from "react-i18next";
+
+const THRESHOLD = 12;
 
 export default function SortableCategoryListEditor({
   expression,
@@ -60,6 +63,14 @@ export default function SortableCategoryListEditor({
     return categories;
   }, [expression, metadata?.["s:sorted-categories"]]);
 
+  const [showAll, setShowAll] = useState(categories.length < THRESHOLD);
+
+  useEffect(() => {
+    if (categories.length > THRESHOLD) {
+      setShowAll(false);
+    }
+  }, [categories.length, setShowAll]);
+
   return (
     <ul className="w-full py-2">
       <DndContext
@@ -71,17 +82,41 @@ export default function SortableCategoryListEditor({
           items={categories.map((c) => c.value)}
           strategy={verticalListSortingStrategy}
         >
-          {categories.map((category, i) => {
-            return (
-              <CategoryListItemEditor
-                key={category.value}
-                category={category}
-                metadata={metadata}
-                expression={expression}
-                onChange={onChange}
-              />
-            );
-          })}
+          {categories
+            .slice(0, showAll ? categories.length : THRESHOLD)
+            .map((category, i) => {
+              return (
+                <CategoryListItemEditor
+                  key={category.value}
+                  category={category}
+                  metadata={metadata}
+                  expression={expression}
+                  onChange={onChange}
+                />
+              );
+            })}
+          {categories.length > THRESHOLD && (
+            <div className="w-full text-center mt-2">
+              <button
+                className="bg-gray-600 px-3 py-1 rounded-full"
+                onClick={() => {
+                  setShowAll((prev) => !prev);
+                }}
+              >
+                <span>
+                  {showAll ? (
+                    <Trans ns="admin:data">Show less</Trans>
+                  ) : (
+                    <>
+                      <Trans ns="admin:data">
+                        Show all {categories.length.toLocaleString()} categories
+                      </Trans>
+                    </>
+                  )}
+                </span>
+              </button>
+            </div>
+          )}
         </SortableContext>
       </DndContext>
     </ul>

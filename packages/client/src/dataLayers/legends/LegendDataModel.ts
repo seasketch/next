@@ -78,7 +78,7 @@ export type GLLegendListPanel = {
     id: string;
     label: string;
     symbol: GLLegendSymbol;
-    value?: string | number;
+    value?: string | number | boolean;
   }[];
 };
 

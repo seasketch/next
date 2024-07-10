@@ -12,6 +12,8 @@ import FillStyleEditor, { autoStrokeColorForFill } from "./FillStyleEditor";
 import StrokeEditor from "./StrokeEditor";
 import LabelLayerEditor, { isSymbolLayer } from "./LabelLayerEditor";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
+import { CaretDownIcon } from "@radix-ui/react-icons";
+import VisualizationTypeControl from "./VisualizationTypeControl";
 
 export default function SimplePolygonEditor() {
   const context = useContext(Editor.GUIEditorContext);
@@ -70,9 +72,11 @@ export default function SimplePolygonEditor() {
       ? (context.glLayers[indexes.stroke] as LineLayer)
       : undefined;
 
+  const Select = Editor.Select;
+
   return (
     <Editor.Card>
-      <Editor.CardTitle
+      <VisualizationTypeControl
         buttons={
           <LimitZoomTrigger
             minzoom={fillLayer?.minzoom || strokeLayer?.minzoom}
@@ -82,9 +86,7 @@ export default function SimplePolygonEditor() {
             }}
           />
         }
-      >
-        {t("Simple Polygon")}
-      </Editor.CardTitle>
+      />
       <ZoomRangeEditor
         maxzoom={fillLayer?.maxzoom || strokeLayer?.maxzoom}
         minzoom={fillLayer?.minzoom || strokeLayer?.minzoom}
