@@ -978,8 +978,9 @@ export function buildMatchExpressionForAttribute(
   if (!Array.isArray(colors)) {
     let scale = colorScale[colors as keyof typeof colorScale];
     if (typeof scale === "function") {
+      const scaleFn = scale as (i: number) => string;
       colors = Array.from({ length: uniqueValues.length }, (_, i) =>
-        scale(i / (uniqueValues.length - 1))
+        scaleFn(i / (uniqueValues.length - 1))
       );
     } else {
       colors = scale as string[];
