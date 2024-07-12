@@ -1936,7 +1936,7 @@ class MapContextManager extends EventEmitter {
       const visibleLayers: DataLayerDetailsFragment[] = [];
       for (const id in this.visibleLayers) {
         const state = this.visibleLayers[id];
-        if (state.visible) {
+        if (state.visible && !state.hidden) {
           visibleLayers.push(this.layers[id]);
         }
       }
