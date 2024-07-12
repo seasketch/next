@@ -24,7 +24,8 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "build:container": "docker build -t spatial-uploads-handler .",
-    "test": "jest"
+    "test": "jest",
+    "install": "npm run build"
   },
   "jest": {
     "testPathIgnorePatterns": [
