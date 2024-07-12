@@ -13,7 +13,6 @@ import {
   RasterInfo,
   GeostatsLayer,
   isRasterInfo,
-  isLegacyGeostats,
   isLegacyGeostatsLayer,
 } from "@seasketch/geostats-types";
 import {
@@ -31,7 +30,6 @@ import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import VisualizationTypeControl from "./VisualizationTypeControl";
 import useDialog from "../../../components/useDialog";
 import { useDebouncedFn } from "beautiful-react-hooks";
-import { map } from "d3";
 import Warning from "../../../components/Warning";
 require("./layer-editor.css");
 
@@ -90,7 +88,7 @@ export default function GUIStyleEditor({
       });
       formatJSONCommand(editorRef.current?.view!);
     },
-    150,
+    100,
     {},
     [editorRef.current?.view]
   );
@@ -187,14 +185,15 @@ export default function GUIStyleEditor({
       }
 
       setStyleJSON([...styleJSON]);
-      editorRef.current?.view?.dispatch({
-        changes: {
-          from: 0,
-          to: editorRef.current.view!.state.doc.length,
-          insert: JSON.stringify(styleJSON),
-        },
-      });
-      formatJSONCommand(editorRef.current?.view!);
+      updateEditor(JSON.stringify(styleJSON));
+      // editorRef.current?.view?.dispatch({
+      //   changes: {
+      //     from: 0,
+      //     to: editorRef.current.view!.state.doc.length,
+      //     insert: JSON.stringify(styleJSON),
+      //   },
+      // });
+      // formatJSONCommand(editorRef.current?.view!);
     },
     [editorRef, styleJSON, mapContext.manager?.map, layerId]
   );
@@ -293,14 +292,6 @@ export default function GUIStyleEditor({
       setStyleJSON([...styleJSON]);
       const style = JSON.stringify(styleJSON);
       updateEditor(style);
-      // editorRef.current?.view?.dispatch({
-      //   changes: {
-      //     from: 0,
-      //     to: editorRef.current.view!.state.doc.length,
-      //     insert: JSON.stringify(styleJSON),
-      //   },
-      // });
-      // formatJSONCommand(editorRef.current?.view!);
     },
     [styleJSON, updateEditor, setStyleJSON, layerId, mapContext.manager?.map]
   );
@@ -337,14 +328,15 @@ export default function GUIStyleEditor({
       }
       styleJSON.splice(layerIndex, 1);
       setStyleJSON([...styleJSON]);
-      editorRef.current?.view?.dispatch({
-        changes: {
-          from: 0,
-          to: editorRef.current.view!.state.doc.length,
-          insert: JSON.stringify(styleJSON),
-        },
-      });
-      formatJSONCommand(editorRef.current?.view!);
+      updateEditor(JSON.stringify(styleJSON));
+      // editorRef.current?.view?.dispatch({
+      //   changes: {
+      //     from: 0,
+      //     to: editorRef.current.view!.state.doc.length,
+      //     insert: JSON.stringify(styleJSON),
+      //   },
+      // });
+      // formatJSONCommand(editorRef.current?.view!);
     },
     [styleJSON, editorRef]
   );

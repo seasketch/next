@@ -1,9 +1,7 @@
 import {
   Bucket,
-  NumericAttributeStats,
   NumericGeostatsAttribute,
   RasterBandInfo,
-  RasterBandStats,
 } from "@seasketch/geostats-types";
 import * as Editors from "./Editors";
 import { useTranslation } from "react-i18next";
@@ -36,7 +34,7 @@ export default function ContinuousStepsEditor({
   maximum,
   valueExpression,
 }: {
-  stats: RasterBandStats | NumericAttributeStats;
+  stats: RasterBandInfo["stats"] | NumericGeostatsAttribute["stats"];
   expression: Expression;
   metadata?: Editors.SeaSketchLayerMetadata;
   updateLayerProperty: LayerPropertyUpdater;
@@ -250,7 +248,7 @@ export default function ContinuousStepsEditor({
 
 export function determineSteps(
   expression: Expression,
-  stats: NumericAttributeStats | RasterBandStats,
+  stats: RasterBandInfo["stats"] | NumericGeostatsAttribute["stats"],
   metadata?: Editors.SeaSketchLayerMetadata
 ) {
   const result: StepsSetting = {

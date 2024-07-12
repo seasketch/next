@@ -225,6 +225,11 @@ export default function StrokeEditor({
                     ...prev,
                     autoStrokeColor: autoColor,
                   }));
+                  // if (newType === StrokeType.None && layerIndex !== -1) {
+                  //   removeLayer(layerIndex);
+                  //   return;
+                  // }
+
                   if (layerIndex !== -1) {
                     updateLayer(
                       layerIndex,

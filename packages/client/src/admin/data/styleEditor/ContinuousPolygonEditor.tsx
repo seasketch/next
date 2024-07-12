@@ -20,7 +20,7 @@ import {
 } from "mapbox-gl";
 import {
   GeostatsLayer,
-  NumericAttributeStats,
+  NumericGeostatsAttribute,
   isLegacyGeostatsAttribute,
   isNumericGeostatsAttribute,
   isRasterInfo,
@@ -73,7 +73,7 @@ export default function ContinuousPolygonEditor() {
     "stats" in selectedAttribute
       ? determineSteps(
           fillLayer?.paint!["fill-color"]! as Expression,
-          selectedAttribute.stats as NumericAttributeStats,
+          (selectedAttribute as NumericGeostatsAttribute).stats,
           fillLayer?.metadata
         )
       : undefined;
@@ -119,7 +119,6 @@ export default function ContinuousPolygonEditor() {
         )}
         onChange={(value) => {
           if (indexes.fill !== -1) {
-            console.log("updating", indexes.fill, value);
             updateLayer(indexes.fill, "paint", "fill-opacity", value);
           }
           if (indexes.stroke !== -1) {
@@ -222,9 +221,9 @@ export default function ContinuousPolygonEditor() {
           />
         </Editor.Control>
       </Editor.Root>
-      {isNumericGeostatsAttribute(selectedAttribute) && (
+      {selectedAttribute && isNumericGeostatsAttribute(selectedAttribute) && (
         <ContinuousStepsEditor
-          stats={selectedAttribute?.stats as NumericAttributeStats}
+          stats={(selectedAttribute as NumericGeostatsAttribute)?.stats}
           minimum={selectedAttribute.min || 0}
           maximum={selectedAttribute.max || 1}
           expression={fillLayer?.paint?.["fill-color"] as Expression}
