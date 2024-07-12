@@ -8,6 +8,8 @@ import {
   SuggestedRasterPresentation,
   isRasterInfo,
 } from "@seasketch/geostats-types";
+import * as colorScale from "d3-scale-chromatic";
+import { colord } from "colord";
 
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -493,7 +495,7 @@ async function getStyle(
           for (const category of categories) {
             colors.push([
               category[0],
-              observable10[categories.indexOf(category) % 10],
+              colorScale.schemeTableau10[categories.indexOf(category) % 10],
             ]);
           }
         }
@@ -517,6 +519,9 @@ async function getStyle(
             },
             layout: {
               visibility: "visible",
+            },
+            metadata: {
+              "s:palette": "schemeTableau10",
             },
           },
         ];
@@ -588,7 +593,7 @@ async function getStyle(
           type: "fill",
           paint: {
             "fill-color": color,
-            "fill-opacity": 0.2,
+            "fill-opacity": 0.5,
           },
         },
         {
@@ -599,9 +604,12 @@ async function getStyle(
             visibility: "visible",
           },
           paint: {
-            "line-color": color,
+            "line-color": autoStrokeColorForFillColor(color),
             "line-width": 1,
-            "line-opacity": 0.75,
+            "line-opacity": 1,
+          },
+          metadata: {
+            "s:color-auto": true,
           },
         },
       ];
@@ -689,10 +697,6 @@ function colors(specifier: string) {
   return colors;
 }
 
-const observable10 = colors(
-  "4269d0efb118ff725c6cc5b03ca951ff8ab7a463f297bbf59c6b4e9498a0"
-);
-
 const plasma = [
   "#0d0887",
   "#46039f",
@@ -717,3 +721,15 @@ const magma = [
   "#feca8d",
   "#fcfdbf",
 ];
+
+export function autoStrokeColorForFillColor(fillColor: string) {
+  const c = colord(fillColor);
+  if (c.alpha() === 0) {
+    return "#558";
+  }
+  if (c.isDark()) {
+    return c.lighten(0.3).alpha(1).toRgbString();
+  } else {
+    return c.darken(0.15).alpha(1).toRgbString();
+  }
+}

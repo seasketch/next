@@ -38,7 +38,7 @@ export const testCases = {
       panels: [
         {
           id: "0-fill-color-0-gradient",
-          label: "fill-color",
+          label: "SUM_VALUE",
           stops: [
             {
               color: "#0d0887",
@@ -276,7 +276,7 @@ export const testCases = {
         {
           id: "0-circle-color-0-gradient",
           type: "GLLegendGradientPanel",
-          label: "circle-color",
+          label: "pop_max",
           stops: [
             {
               value: 10000,

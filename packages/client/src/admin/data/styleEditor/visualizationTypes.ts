@@ -28,7 +28,6 @@ import { autoStrokeColorForFill } from "./FillStyleEditor";
 
 export const colorScales = {
   categorical: [
-    "schemeObservable10",
     "schemeCategory10",
     "schemeTableau10",
     "schemeAccent",
@@ -259,7 +258,7 @@ export function convertToVisualizationType(
         let colors: [number, string][] = [];
         const oldLayer = oldLayers.find((l) => l.type === "raster");
         let colorScaleKey =
-          oldLayer?.metadata?.["s:palette"] || "schemeObservable10";
+          oldLayer?.metadata?.["s:palette"] || "schemeTableau10";
         // @ts-ignore
         let scale = colorScale[colorScaleKey];
         if (!scale) {

@@ -140,7 +140,7 @@
     "d3-axis": "^3.0.0",
     "d3-hierarchy": "^3.1.2",
     "d3-scale": "^4.0.2",
-    "d3-scale-chromatic": "^3.1.0",
+    "d3-scale-chromatic": "^2.0.0",
     "d3-treemap": "^0.1.0",
     "dagre": "^0.8.5",
     "downshift": "^6.1.7",
@@ -290,6 +290,7 @@
     ]
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@babel/cli": "^7.10.5",
     "@babel/core": "^7.11.5",
     "@craco/craco": "^6.3.0",
