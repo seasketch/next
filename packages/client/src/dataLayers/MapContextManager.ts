@@ -3577,12 +3577,7 @@ type CustomSourceType =
   | DataSourceTypes.ArcgisDynamicMapserver;
 
 function isCustomSourceType(type: DataSourceTypes): type is CustomSourceType {
-  return (
-    sourceTypeIsCustomGLSource(type) ||
-    type === DataSourceTypes.ArcgisDynamicMapserver ||
-    type === DataSourceTypes.ArcgisRasterTiles ||
-    type === DataSourceTypes.ArcgisVector
-  );
+  return sourceTypeIsCustomGLSource(type);
 }
 
 function createCustomSource(
