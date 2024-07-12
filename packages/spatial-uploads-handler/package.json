@@ -39,7 +39,7 @@
     "@babel/preset-env": "^7.24.5",
     "@babel/preset-typescript": "^7.24.1",
     "@mapbox/mbtiles": "^0.12.1",
-    "@seasketch/geostats-types": "^1.0.0",
+    "@seasketch/geostats-types": "file:../geostats-types",
     "@slack/web-api": "^6.7.2",
     "@turf/bbox": "^6.5.0",
     "@types/bytes": "^3.1.1",

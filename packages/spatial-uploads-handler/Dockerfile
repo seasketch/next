@@ -13,11 +13,12 @@ WORKDIR /usr/app
 RUN curl -L https://github.com/protomaps/go-pmtiles/releases/download/v1.8.0/go-pmtiles_1.8.0_Linux_x86_64.tar.gz > ./pmtiles.tar.gz
 RUN tar -zxvf ./pmtiles.tar.gz
 RUN npm install -g typescript@5.1.5
-COPY package.json tsconfig.json  ./
+RUN yum install -y jq
+WORKDIR /usr/app
+COPY ./package.json ./package.json.original
+RUN jq 'del(.dependencies."@seasketch/geostats-types") | del(.scripts.install)' ./package.json.original > ./package.json
+COPY ./tsconfig.json  ./tsconfig.json
 RUN npm install
-COPY handler.ts ./
-COPY src ./src
-RUN npm run build
 
 FROM ghcr.io/lambgeo/lambda-gdal:3.6 as gdal
 
@@ -37,13 +38,15 @@ ENV \
   PATH=/opt/bin:$PATH
 
 COPY --from=builder /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
-COPY --from=builder /usr/app/dist/* ./
-COPY --from=builder /usr/app/dist/src ./src
+COPY ./dist/* ./
+COPY ./dist/src ./src
 COPY --from=builder /usr/app/node_modules ./node_modules
 COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
-COPY .rclone.conf /var/task/rclone.conf
+# RUN mkdir -p /usr/app/node_modules/@seasketch/geostats-types
+COPY ./node_modules/@seasketch /usr/app/node_modules/
+COPY ./.rclone.conf /var/task/rclone.conf
 RUN yum install -y python3
 RUN pip3 install rasterio fiona
 CMD ["handler.processUpload"]

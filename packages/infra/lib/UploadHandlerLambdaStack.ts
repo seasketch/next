@@ -59,7 +59,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         path.join(__dirname, "../../spatial-uploads-handler"),
         {}
       ),
-      timeout: cdk.Duration.minutes(5),
+      timeout: cdk.Duration.minutes(12),
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         PGHOST: props.db.instanceEndpoint.hostname,
