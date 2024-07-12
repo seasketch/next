@@ -341,6 +341,22 @@ export default function GUIStyleEditor({
     [styleJSON, editorRef]
   );
 
+  if (
+    !isRasterInfo(geostats) &&
+    geostats.geometry !== "Polygon" &&
+    geostats.geometry !== "MultiPolygon"
+  ) {
+    return (
+      <Editors.Card>
+        <Warning level="info">
+          {t(
+            "The new cartography tools are only available for raster and polygon data sources at this time. Please check again soon for added support for point and line data."
+          )}
+        </Warning>
+      </Editors.Card>
+    );
+  }
+
   if (supportedTypes.length === 0) {
     return (
       <Editors.Card>
@@ -354,9 +370,14 @@ export default function GUIStyleEditor({
   if (!isRasterInfo(geostats) && isLegacyGeostatsLayer(geostats)) {
     return (
       <Editors.Card>
-        <Warning>
+        <Warning level="info">
           {t(
-            "This older data source lacks metadata necessary to use the new cartography tools. Please use the code editor, or re-upload this data in order to enable these new tools. You can download the data and upload a new copy from the Data Source tab."
+            "This older data source was uploaded before the introduction of the new cartography tools and is incompatible. Please use the code editor, or re-upload this data in order to enable these new tools."
+          )}
+          <br />
+          <br />
+          {t(
+            "You can download the data and upload a new copy from the Data Source tab. Older data sources will be upgraded for the new system using an automated process in the future."
           )}
         </Warning>
       </Editors.Card>

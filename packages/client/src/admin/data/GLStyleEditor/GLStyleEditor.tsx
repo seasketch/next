@@ -52,6 +52,7 @@ import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
 import {
   GeostatsLayer,
   RasterInfo,
+  isLegacyGeostatsLayer,
   isRasterInfo,
 } from "@seasketch/geostats-types";
 import { Trans, useTranslation } from "react-i18next";
@@ -94,7 +95,12 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   );
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
-  const [editor, setEditor] = useState<"style" | "code">("style");
+  const [editor, setEditor] = useState<"style" | "code">(
+    props.geostats &&
+      (isRasterInfo(props.geostats) || !isLegacyGeostatsLayer(props.geostats))
+      ? "style"
+      : "code"
+  );
   const type = props.type || "vector";
 
   const spriteQuery = useSpritesQuery({
