@@ -1,17 +1,13 @@
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import * as Editor from "./Editors";
 import { useCallback, useContext, useMemo } from "react";
-import {
-  hasPlainPaintProp,
-  isFillLayer,
-  isLineLayer,
-} from "./SimplePolygonEditor";
+import { isFillLayer, isLineLayer } from "./SimplePolygonEditor";
 import {
   findGetExpression,
   hasGetExpression,
   isExpression,
 } from "../../../dataLayers/legends/utils";
-import { Expression, FillLayer, LineLayer, SymbolLayout } from "mapbox-gl";
+import { Expression, FillLayer, SymbolLayout } from "mapbox-gl";
 import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import { OpacityEditor } from "./OpacityEditor";
 import {
@@ -20,13 +16,12 @@ import {
   expressionMatchesPalette,
   extractFirstColorFromExpression,
 } from "./visualizationTypes";
-import { autoStrokeColorForFill } from "./FillStyleEditor";
 import AttributeSelect from "./AttributeSelect";
 import PaletteSelect from "./PaletteSelect";
 import { CategoryEditableList } from "./CategoryEditableList";
 import { StepsSetting } from "./ContinuousStepsEditor";
-import LabelLayerEditor from "./LabelLayerEditor";
-import VisualizationTypeControl from "./VisualizationTypeControl";
+import LabelLayerEditor, { isSymbolLayer } from "./LabelLayerEditor";
+import { LimitZoomTrigger, ZoomRangeEditor } from "./ZoomRangeEditor";
 
 const steps = { steps: "manual", n: 0 } as StepsSetting;
 
@@ -38,8 +33,6 @@ export default function CategoricalPolygonEditor() {
   const fillLayer = glLayers[indexes.fill] as
     | (FillLayer & { metadata: Editor.SeaSketchLayerMetadata })
     | undefined;
-  const strokeLayer =
-    indexes.stroke !== -1 ? (glLayers[indexes.stroke] as LineLayer) : undefined;
   const selectedAttribute = useMemo(() => {
     if (
       fillLayer?.paint?.["fill-color"] &&
@@ -86,9 +79,30 @@ export default function CategoricalPolygonEditor() {
   );
 
   return (
-    <Editor.Card>
-      <VisualizationTypeControl />
-      {/* <Editor.CardTitle>{t("Categories")}</Editor.CardTitle> */}
+    <>
+      <Editor.CardButtons>
+        <LimitZoomTrigger
+          minzoom={fillLayer?.minzoom}
+          maxzoom={fillLayer?.maxzoom}
+          updateLayerProperty={(...args) => {
+            updateLayer(indexes.fill, ...args);
+          }}
+        />
+      </Editor.CardButtons>
+      <ZoomRangeEditor
+        maxzoom={fillLayer?.maxzoom}
+        minzoom={fillLayer?.minzoom}
+        onChange={(min, max) => {
+          if (indexes.fill !== -1) {
+            updateLayer(indexes.fill, undefined, "minzoom", min);
+            updateLayer(indexes.fill, undefined, "maxzoom", max);
+          }
+          if (indexes.stroke !== -1) {
+            updateLayer(indexes.stroke, undefined, "minzoom", min);
+            updateLayer(indexes.stroke, undefined, "maxzoom", max);
+          }
+        }}
+      />
       <OpacityEditor
         value={
           fillLayer?.paint?.["fill-opacity"] as number | Expression | undefined
@@ -186,7 +200,7 @@ export default function CategoricalPolygonEditor() {
                     : undefined
                 }
                 placeholder={selectedAttribute?.attribute}
-                onChange={(value) => {
+                onValueChange={(value) => {
                   if (selectedAttribute?.attribute) {
                     updateLayer(indexes.fill, undefined, undefined, undefined, {
                       "s:legend-labels": {
@@ -204,15 +218,19 @@ export default function CategoricalPolygonEditor() {
         </>
       )}
       <LabelLayerEditor />
-    </Editor.Card>
+    </>
   );
 }
 
 CategoricalPolygonEditor.hasUnrelatedLayers = (
   glLayers: SeaSketchGlLayer[]
 ) => {
-  // TODO: Implement this function
-  return false;
+  return (
+    glLayers.filter((l) => isFillLayer(l)).length > 1 ||
+    glLayers.filter((l) => isLineLayer(l)).length > 1 ||
+    glLayers.filter((l) => isSymbolLayer(l) && l.layout?.["text-field"])
+      .length > 1
+  );
 };
 
 export function getIndexes(glLayers: SeaSketchGlLayer[]) {
@@ -243,10 +261,10 @@ export function getIndexes(glLayers: SeaSketchGlLayer[]) {
     }
   }
   if (indexes.stroke === -1) {
-    for (var i = 0; i < glLayers.length; i++) {
-      const layer = glLayers[i];
+    for (var j = 0; j < glLayers.length; j++) {
+      const layer = glLayers[j];
       if (isLineLayer(layer)) {
-        indexes.stroke = i;
+        indexes.stroke = j;
         break;
       }
     }

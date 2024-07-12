@@ -255,7 +255,7 @@ export async function processVectorUpload(options: {
           "--generate-ids",
           "--drop-densest-as-needed",
           "-l",
-          `${originalName}`,
+          `${(Array.isArray(stats) ? stats[0] : stats).layer}`,
           "-o",
           mvtPath,
           normalizedVectorPath,

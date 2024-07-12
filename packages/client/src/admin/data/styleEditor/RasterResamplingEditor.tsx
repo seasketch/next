@@ -1,4 +1,4 @@
-import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { CaretDownIcon } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import * as Editor from "./Editors";
 
@@ -9,6 +9,7 @@ export default function RasterResamplingEditor({
   value?: string;
   onChange: (value?: string) => void;
 }) {
+  const Select = Editor.Select;
   const { t } = useTranslation("admin:data");
   return (
     <Editor.Root>
@@ -17,16 +18,29 @@ export default function RasterResamplingEditor({
         docs="https://docs.mapbox.com/style-spec/reference/layers/#paint-raster-raster-resampling"
       />
       <Editor.Control>
-        <select
+        <Select.Root
           value={value}
-          onChange={(e) => {
-            onChange(e.target.value);
+          onValueChange={(v) => {
+            onChange(v);
           }}
-          className="bg-gray-700 rounded text-sm py-1"
         >
-          <option value="linear">{t("linear")}</option>
-          <option value="nearest">{t("nearest")}</option>
-        </select>
+          <Select.Trigger>
+            <Select.Value placeholder={t("Select a resampling method")} />
+            <CaretDownIcon className="w-5 h-5" />
+          </Select.Trigger>
+          <Select.Portal>
+            <Select.Content>
+              <Select.Viewport>
+                <Select.Item value="linear">
+                  <Select.ItemText>{t("linear")}</Select.ItemText>
+                </Select.Item>
+                <Select.Item value="nearest">
+                  <Select.ItemText>{t("nearest")}</Select.ItemText>
+                </Select.Item>
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </Select.Root>
       </Editor.Control>
     </Editor.Root>
   );

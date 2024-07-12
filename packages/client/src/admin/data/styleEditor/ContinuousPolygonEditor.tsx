@@ -43,7 +43,6 @@ import Switch from "../../../components/Switch";
 import PaletteSelect from "./PaletteSelect";
 import HistogramControl from "./HistogramControl";
 import ContinuousStepsEditor, { determineSteps } from "./ContinuousStepsEditor";
-import VisualizationTypeControl from "./VisualizationTypeControl";
 
 export default function ContinuousPolygonEditor() {
   const { t, glLayers, geostats, updateLayer } = useContext(
@@ -64,6 +63,7 @@ export default function ContinuousPolygonEditor() {
         return geostats.attributes.find((a) => a.attribute === attr.property);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indexes.fill, geostats, fillLayer?.paint?.["fill-color"]]);
 
   const steps =
@@ -78,19 +78,24 @@ export default function ContinuousPolygonEditor() {
         )
       : undefined;
 
+  const range = useMemo(() => {
+    return extractValueRange(
+      (fillLayer!.paint! as FillPaint)["fill-color"] as Expression
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fillLayer?.paint?.["fill-color"]]);
+
   return (
-    <Editor.Card>
-      <VisualizationTypeControl
-        buttons={
-          <LimitZoomTrigger
-            minzoom={fillLayer?.minzoom}
-            maxzoom={fillLayer?.maxzoom}
-            updateLayerProperty={(...args) => {
-              updateLayer(indexes.fill, ...args);
-            }}
-          />
-        }
-      />
+    <>
+      <Editor.CardButtons>
+        <LimitZoomTrigger
+          minzoom={fillLayer?.minzoom}
+          maxzoom={fillLayer?.maxzoom}
+          updateLayerProperty={(...args) => {
+            updateLayer(indexes.fill, ...args);
+          }}
+        />
+      </Editor.CardButtons>
       <ZoomRangeEditor
         maxzoom={fillLayer?.maxzoom}
         minzoom={fillLayer?.minzoom}
@@ -114,6 +119,7 @@ export default function ContinuousPolygonEditor() {
         )}
         onChange={(value) => {
           if (indexes.fill !== -1) {
+            console.log("updating", indexes.fill, value);
             updateLayer(indexes.fill, "paint", "fill-opacity", value);
           }
           if (indexes.stroke !== -1) {
@@ -273,9 +279,7 @@ export default function ContinuousPolygonEditor() {
             : []
         }
         expression={fillLayer?.paint?.["fill-color"] as Expression}
-        range={extractValueRange(
-          (fillLayer!.paint! as FillPaint)["fill-color"] as Expression
-        )}
+        range={range}
         onRangeChange={(range) => {
           if (fillLayer) {
             const fillExpression = fillLayer.paint!["fill-color"] as Expression;
@@ -322,7 +326,7 @@ export default function ContinuousPolygonEditor() {
                     : undefined
                 }
                 placeholder={selectedAttribute?.attribute}
-                onChange={(value) => {
+                onValueChange={(value) => {
                   if (selectedAttribute?.attribute) {
                     updateLayer(indexes.fill, undefined, undefined, undefined, {
                       "s:legend-labels": {
@@ -357,15 +361,13 @@ export default function ContinuousPolygonEditor() {
               title={t("Value suffix")}
               tooltip={t("Used to append text to values in the legend.")}
             />
-            {/* TODO: this doesn't change the legend yet */}
             <Editor.Control>
-              <input
-                type="text"
-                className="bg-gray-700 rounded py-0.5 pr-0.5 w-24 text-center"
+              <Editor.TextInput
+                className="w-24 text-center"
                 value={fillLayer.metadata?.["s:value-suffix"] || ""}
-                onChange={(e) => {
+                onValueChange={(v) => {
                   updateLayer(indexes.fill, undefined, undefined, undefined, {
-                    "s:value-suffix": e.target.value,
+                    "s:value-suffix": v,
                   });
                 }}
               />
@@ -374,7 +376,7 @@ export default function ContinuousPolygonEditor() {
         </>
       )}
       <LabelLayerEditor />
-    </Editor.Card>
+    </>
   );
 }
 
@@ -408,10 +410,10 @@ export function getIndexes(glLayers: SeaSketchGlLayer[]) {
     }
   }
   if (indexes.stroke === -1) {
-    for (var i = 0; i < glLayers.length; i++) {
-      const layer = glLayers[i];
+    for (var j = 0; j < glLayers.length; j++) {
+      const layer = glLayers[j];
       if (isLineLayer(layer)) {
-        indexes.stroke = i;
+        indexes.stroke = j;
         break;
       }
     }

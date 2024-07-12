@@ -12,7 +12,6 @@ import { useMemo, useState } from "react";
 import { LayerPropertyUpdater } from "./GUIStyleEditor";
 import {
   buildContinuousColorExpression,
-  buildContinuousRasterColorExpression,
   buildStepExpression,
 } from "./visualizationTypes";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
@@ -56,6 +55,7 @@ export default function ContinuousStepsEditor({
 
   const state = useMemo(() => {
     return determineSteps(expression, stats, metadata);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expression, stats, metadata?.["s:steps"]]);
 
   const Select = Editors.Select;
@@ -261,7 +261,6 @@ export function determineSteps(
   if (/interpolate/.test(fnName)) {
     result.steps = "continuous";
   } else if (fnName === "step") {
-    // TODO: look for type in metadata
     const msteps = metadata?.["s:steps"];
     // If present, validate values against expression and band stats
     if (msteps) {

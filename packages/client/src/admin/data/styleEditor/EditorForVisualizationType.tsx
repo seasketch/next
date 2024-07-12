@@ -1,5 +1,11 @@
-import { useCallback, useContext, useEffect } from "react";
-import RasterLayerEditor from "./RasterLayerEditor";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import RasterLayerEditor, { isRasterLayer } from "./RasterLayerEditor";
 import { VisualizationType } from "./visualizationTypes";
 import { Card, GUIEditorContext } from "./Editors";
 import { RasterInfo } from "@seasketch/geostats-types";
@@ -9,6 +15,9 @@ import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import SimplePolygonEditor from "./SimplePolygonEditor";
 import ContinuousPolygonEditor from "./ContinuousPolygonEditor";
 import CategoricalPolygonEditor from "./CategoricalPolygonEditor";
+import * as Editor from "./Editors";
+import VisualizationTypeControl from "./VisualizationTypeControl";
+import { ErrorBoundary } from "@sentry/react";
 
 export default function EditorForVisualizationType({
   type,
@@ -16,75 +25,87 @@ export default function EditorForVisualizationType({
   type: VisualizationType;
 }) {
   const context = useContext(GUIEditorContext);
-  const rasterLayer = context?.glLayers.find((l) => l.type === "raster");
-
   const updateLayerProperty = useCallback(
     (...args) => {
-      // @ts-ignore
-      context.updateLayer(context.glLayers.indexOf(rasterLayer!), ...args);
+      context.updateLayer(
+        context.glLayers.findIndex((l) => isRasterLayer(l)),
+        // @ts-ignore
+        ...args
+      );
     },
-    [context.glLayers.indexOf(rasterLayer!), context.updateLayer]
+    [context.glLayers, context.updateLayer]
   );
 
-  switch (type) {
-    case VisualizationType.CATEGORICAL_RASTER:
-    case VisualizationType.CONTINUOUS_RASTER:
-    case VisualizationType.RGB_RASTER:
-      return (
-        <>
-          <RasterLayerEditor
-            glLayer={rasterLayer!}
-            deleteLayerProperties={(...args) =>
-              context.deleteLayerProperties(
-                context.glLayers.indexOf(rasterLayer!),
-                ...args
-              )
-            }
-            updateLayerProperty={updateLayerProperty}
-            rasterInfo={context.geostats as RasterInfo}
-            type={type}
-          />
-          {RasterLayerEditor.hasUnrelatedLayers(context.glLayers) && (
-            <ExtraLayersWarning />
+  const [buttonsContainerRef, setButtonsContainerRef] = useState<
+    HTMLDivElement | undefined
+  >();
+
+  return (
+    <Editor.Card>
+      <VisualizationTypeControl buttonsContainerRef={setButtonsContainerRef} />
+      <ErrorBoundary
+        key={type}
+        fallback={
+          <Warning>
+            <Trans ns="admin:data">
+              An error occured when rendering the controls for this
+              visualization type. You may change visualization types to restore
+              editing capability, or use the code editor.
+            </Trans>
+          </Warning>
+        }
+      >
+        <Editor.CardButtonsPortalRef.Provider
+          value={buttonsContainerRef || null}
+        >
+          {(type === VisualizationType.CATEGORICAL_RASTER ||
+            type === VisualizationType.CONTINUOUS_RASTER ||
+            type === VisualizationType.RGB_RASTER) && (
+            <>
+              <RasterLayerEditor
+                deleteLayerProperties={(...args) =>
+                  context.deleteLayerProperties(
+                    context.glLayers.findIndex((l) => isRasterLayer(l)),
+                    ...args
+                  )
+                }
+                updateLayerProperty={updateLayerProperty}
+                rasterInfo={context.geostats as RasterInfo}
+                type={type}
+              />
+              {RasterLayerEditor.hasUnrelatedLayers(context.glLayers) && (
+                <ExtraLayersWarning />
+              )}
+            </>
           )}
-        </>
-      );
-    case VisualizationType.SIMPLE_POLYGON:
-      return (
-        <>
-          <SimplePolygonEditor />
-          {SimplePolygonEditor.hasUnrelatedLayers(context.glLayers) && (
-            <ExtraLayersWarning />
+          {type === VisualizationType.SIMPLE_POLYGON && (
+            <>
+              <SimplePolygonEditor />
+              {SimplePolygonEditor.hasUnrelatedLayers(context.glLayers) && (
+                <ExtraLayersWarning />
+              )}
+            </>
           )}
-        </>
-      );
-    case VisualizationType.CONTINUOUS_POLYGON:
-      return (
-        <>
-          <ContinuousPolygonEditor />
-          {ContinuousPolygonEditor.hasUnrelatedLayers(context.glLayers) && (
-            <ExtraLayersWarning />
+          {type === VisualizationType.CATEGORICAL_POLYGON && (
+            <>
+              <CategoricalPolygonEditor />
+              {CategoricalPolygonEditor.hasUnrelatedLayers(
+                context.glLayers
+              ) && <ExtraLayersWarning />}
+            </>
           )}
-        </>
-      );
-    case VisualizationType.CATEGORICAL_POLYGON:
-      return (
-        <>
-          <CategoricalPolygonEditor />
-          {CategoricalPolygonEditor.hasUnrelatedLayers(context.glLayers) && (
-            <ExtraLayersWarning />
+          {type === VisualizationType.CONTINUOUS_POLYGON && (
+            <>
+              <ContinuousPolygonEditor />
+              {ContinuousPolygonEditor.hasUnrelatedLayers(context.glLayers) && (
+                <ExtraLayersWarning />
+              )}
+            </>
           )}
-        </>
-      );
-    default:
-      return (
-        <Warning className="mx-4" level="error">
-          <Trans ns="admin:data">
-            No renderer found for visualization type {type}
-          </Trans>
-        </Warning>
-      );
-  }
+        </Editor.CardButtonsPortalRef.Provider>
+      </ErrorBoundary>
+    </Editor.Card>
+  );
 }
 
 function ExtraLayersWarning() {
@@ -97,7 +118,7 @@ function ExtraLayersWarning() {
         <p>
           <Trans ns="admin:data">
             This style contains more layers than can be modified using the
-            editor. Switch to the code view to use edit these layers.
+            editor. Switch to the code editor to modify these layers.
           </Trans>
         </p>
       </div>

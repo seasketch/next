@@ -8,7 +8,7 @@ import { RasterContrastEditor } from "./RasterContrastEditor";
 import { RasterSaturationEditor } from "./RasterSaturationEditor";
 import { RasterBrightnessEditor } from "./RasterBrightnessEditor";
 import { RasterHueRotateEditor } from "./RasterHueRotateEditor";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useContext, useEffect, useMemo } from "react";
 import { RasterInfo } from "@seasketch/geostats-types";
 import {
   VisualizationType,
@@ -30,18 +30,20 @@ import VisualizationTypeControl from "./VisualizationTypeControl";
 
 function RasterLayerEditor({
   updateLayerProperty,
-  glLayer,
   deleteLayerProperties,
   rasterInfo,
   type,
 }: {
   updateLayerProperty: LayerPropertyUpdater;
-  glLayer: SeaSketchGlLayer;
   deleteLayerProperties: LayerPropertyDeleter;
   rasterInfo: RasterInfo;
   type: VisualizationType | null;
 }) {
   const { t } = useTranslation("admin:data");
+  const context = useContext(Editor.GUIEditorContext);
+  const glLayer = context.glLayers.find((l) =>
+    isRasterLayer(l)
+  ) as SeaSketchGlLayer;
 
   const hasAppearanceProp = useMemo(() => {
     return (
@@ -84,16 +86,14 @@ function RasterLayerEditor({
     : undefined;
 
   return (
-    <Editor.Card>
-      <VisualizationTypeControl
-        buttons={
-          <LimitZoomTrigger
-            minzoom={glLayer.minzoom}
-            maxzoom={glLayer.maxzoom}
-            updateLayerProperty={updateLayerProperty}
-          />
-        }
-      />
+    <>
+      <Editor.CardButtons>
+        <LimitZoomTrigger
+          minzoom={glLayer.minzoom}
+          maxzoom={glLayer.maxzoom}
+          updateLayerProperty={updateLayerProperty}
+        />
+      </Editor.CardButtons>
 
       <ZoomRangeEditor
         maxzoom={glLayer.maxzoom}
@@ -294,57 +294,62 @@ function RasterLayerEditor({
         <>
           <Editor.Header title={t("Legend")} className="pt-6" />
           {(rasterInfo.bands[0].offset || rasterInfo.bands[0].scale) && (
-            <div className="space-y-2">
-              <Editor.Control>
+            <>
+              <Editor.Root>
                 <Editor.Label
                   title={t("Respect Scale and Offset")}
                   tooltip={t(
                     "When rasters provide offset and/or scale metadata, this info can be used to adjust values in the legend."
                   )}
                 />
-                <Switch
-                  isToggled={
-                    glLayer.metadata?.["s:respect-scale-and-offset"] || false
-                  }
-                  onClick={(value) => {
-                    updateLayerProperty(undefined, undefined, undefined, {
-                      "s:respect-scale-and-offset": value,
-                    });
-                  }}
-                />
-              </Editor.Control>
-              <Editor.Control>
+                <Editor.Control>
+                  <Switch
+                    isToggled={
+                      glLayer.metadata?.["s:respect-scale-and-offset"] || false
+                    }
+                    onClick={(value) => {
+                      updateLayerProperty(undefined, undefined, undefined, {
+                        "s:respect-scale-and-offset": value,
+                      });
+                    }}
+                  />
+                </Editor.Control>
+              </Editor.Root>
+              <Editor.Root>
                 <Editor.Label title={t("Display rounded numbers")} />
-                <Switch
-                  isToggled={glLayer.metadata?.["s:round-numbers"] || false}
-                  onClick={(value) => {
-                    updateLayerProperty(undefined, undefined, undefined, {
-                      "s:round-numbers": value,
-                    });
-                  }}
-                />
-              </Editor.Control>
-              <Editor.Control>
+                <Editor.Control>
+                  <Switch
+                    isToggled={glLayer.metadata?.["s:round-numbers"] || false}
+                    onClick={(value) => {
+                      updateLayerProperty(undefined, undefined, undefined, {
+                        "s:round-numbers": value,
+                      });
+                    }}
+                  />
+                </Editor.Control>
+              </Editor.Root>
+              <Editor.Root>
                 <Editor.Label
                   title={t("Value suffix")}
                   tooltip={t("Used to append text to values in the legend.")}
                 />
-                <input
-                  type="text"
-                  className="bg-gray-700 rounded py-0.5 pr-0.5 w-24 text-center"
-                  value={glLayer.metadata?.["s:value-suffix"] || ""}
-                  onChange={(e) => {
-                    updateLayerProperty(undefined, undefined, undefined, {
-                      "s:value-suffix": e.target.value,
-                    });
-                  }}
-                />
-              </Editor.Control>
-            </div>
+                <Editor.Control>
+                  <Editor.TextInput
+                    className="w-24 text-center"
+                    value={glLayer.metadata?.["s:value-suffix"] || ""}
+                    onValueChange={(v) => {
+                      updateLayerProperty(undefined, undefined, undefined, {
+                        "s:value-suffix": v,
+                      });
+                    }}
+                  />
+                </Editor.Control>
+              </Editor.Root>
+            </>
           )}
         </>
       )}
-    </Editor.Card>
+    </>
   );
 }
 

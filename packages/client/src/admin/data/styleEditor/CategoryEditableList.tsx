@@ -3,7 +3,7 @@ import * as Editor from "./Editors";
 import { Expression } from "mapbox-gl";
 import SortableCategoryListEditor from "./SortableCategoryListEditor";
 import { FontSizeIcon } from "@radix-ui/react-icons";
-import { memo, useEffect } from "react";
+import { memo } from "react";
 
 function _CategoryEditableList({
   expression,

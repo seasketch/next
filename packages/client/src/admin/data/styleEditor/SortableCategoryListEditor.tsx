@@ -19,7 +19,7 @@ import * as Editor from "./Editors";
 import CategoryListItemEditor from "./CategoryListItemEditor";
 import { Trans } from "react-i18next";
 
-const THRESHOLD = 12;
+const THRESHOLD = 10;
 
 export default function SortableCategoryListEditor({
   expression,
@@ -61,6 +61,7 @@ export default function SortableCategoryListEditor({
       });
     }
     return categories;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expression, metadata?.["s:sorted-categories"]]);
 
   const [showAll, setShowAll] = useState(categories.length < THRESHOLD);
@@ -96,7 +97,7 @@ export default function SortableCategoryListEditor({
               );
             })}
           {categories.length > THRESHOLD && (
-            <div className="w-full text-center mt-2">
+            <div className="w-full text-center mt-1 -mb-2">
               <button
                 className="bg-gray-600 px-3 py-1 rounded-full"
                 onClick={() => {

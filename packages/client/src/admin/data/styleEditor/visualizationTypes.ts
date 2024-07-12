@@ -2,6 +2,7 @@ import {
   Bucket,
   GeostatsAttribute,
   GeostatsLayer,
+  NumericGeostatsAttribute,
   RasterInfo,
   SuggestedRasterPresentation,
   isNumericGeostatsAttribute,
@@ -95,6 +96,19 @@ export enum VisualizationType {
   CATEGORICAL_POLYGON = "Categories",
   CONTINUOUS_POLYGON = "Color Range",
 }
+
+export const VisualizationTypeDescriptions: { [key: string]: string } = {
+  [VisualizationType.CATEGORICAL_RASTER]:
+    "Discrete pixel values rendered as unique colors",
+  [VisualizationType.CONTINUOUS_RASTER]:
+    "Range of colors based on numeric values",
+  [VisualizationType.RGB_RASTER]: "RGB pixels are displayed as uploaded",
+  [VisualizationType.SIMPLE_POLYGON]: "Style features with a single color",
+  [VisualizationType.CONTINUOUS_POLYGON]:
+    "Choropleth maps based on continuous values",
+  [VisualizationType.CATEGORICAL_POLYGON]:
+    "Group polygons by discrete string values",
+};
 
 export function validVisualizationTypesForGeostats(
   geostats: GeostatsLayer | RasterInfo
@@ -856,40 +870,44 @@ function getColorStops(
 
 export function findBestContinuousAttribute(geostats: GeostatsLayer) {
   const attributes = geostats.attributes;
+  const filtered = [...attributes].filter(
+    (a) =>
+      isNumericGeostatsAttribute(a) &&
+      a.min !== undefined &&
+      a.max !== undefined &&
+      a.min < a.max
+  ) as NumericGeostatsAttribute[];
   // first, sort attributes by number of stddev values
-  const sorted = [...attributes]
+  const sorted = filtered
     .sort((a, b) => {
-      if (a.type === "number" && b.type !== "number") {
-        return -1;
-      } else if (b.type === "number" && a.type !== "number") {
-        return 1;
-      }
-      let aValue =
-        isNumericGeostatsAttribute(a) && a.stats.stdev
-          ? Object.keys(a.stats.stdev).length
-          : 0;
-      let bValue =
-        isNumericGeostatsAttribute(b) && b.stats.stdev
-          ? Object.keys(b.stats.stdev).length
-          : 0;
+      let aValue = a.stats.standardDeviations
+        ? Object.keys(a.stats.standardDeviations).length
+        : 0;
+      let bValue = b.stats.standardDeviations
+        ? Object.keys(b.stats.standardDeviations).length
+        : 0;
       return bValue - aValue;
     })
     .reverse();
   for (const attr of sorted) {
     if (
-      attr.type === "number" &&
       !/area/i.test(attr.attribute) &&
-      !/length/i.test(attr.attribute)
+      !/length/i.test(attr.attribute) &&
+      !/code/i.test(attr.attribute) &&
+      Object.keys(attr.stats.standardDeviations || {}).length > 3
     ) {
       return attr.attribute;
     }
   }
-  for (const attr of sorted) {
-    if (attr.type === "number") {
-      return attr.attribute;
-    }
+  const best = sorted.find(
+    (a) => Object.keys(a.stats.standardDeviations || {}).length > 3
+  );
+  if (best) {
+    return best.attribute;
   }
-
+  if (sorted.length) {
+    return sorted[0].attribute;
+  }
   throw new Error("No numeric attributes found");
 }
 
@@ -899,7 +917,8 @@ export function findBestCategoricalAttribute(geostats: GeostatsLayer) {
   // sort the attributes by suitability, with the most suitable coming first.
   // Criteria:
   //   1. Strings are prefered over booleans, booleans over numbers
-  //   2. Fewer unique values (countDistinct) are prefered, but only if there are greater than 1
+  //   2. attribute.values contains a count of how many times each value appears in the dataset. Prefer attributes where the sum of these counts is a large proprotion of the total number of features
+  //   3. Fewer unique values (countDistinct) are prefered
   const sorted = [...filtered].sort((a, b) => {
     if (a.type === "string" && b.type !== "string") {
       return -1;
@@ -911,12 +930,26 @@ export function findBestCategoricalAttribute(geostats: GeostatsLayer) {
     } else if (b.type === "boolean" && a.type !== "boolean") {
       return 1;
     }
-    let aValue =
+    const totalFeaturesWithValuesA = Object.values(a.values).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+    const totalFeaturesWithValuesB = Object.values(b.values).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+    if (totalFeaturesWithValuesA > totalFeaturesWithValuesB) {
+      return -1;
+    } else if (totalFeaturesWithValuesB > totalFeaturesWithValuesA) {
+      return 1;
+    }
+    const aCountDistinct =
       a.countDistinct && a.countDistinct > 1 ? a.countDistinct : Infinity;
-    let bValue =
+    const bCountDistinct =
       b.countDistinct && b.countDistinct > 1 ? b.countDistinct : Infinity;
-    return aValue - bValue;
+    return aCountDistinct - bCountDistinct;
   });
+
   if (sorted.length) {
     return sorted[0];
   } else {

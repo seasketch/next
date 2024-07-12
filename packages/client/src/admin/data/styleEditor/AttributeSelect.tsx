@@ -31,7 +31,7 @@ export default function AttributeSelect({
         >
           <Select.Viewport
             style={{
-              // maxWidth: 280,
+              maxWidth: 280,
               width: "auto",
             }}
           >

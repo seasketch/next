@@ -15,10 +15,9 @@ export default function RasterFadDurationEditor({
         docs="https://docs.mapbox.com/style-spec/reference/layers/#paint-raster-raster-fade-duration"
       />
       <Editor.Control>
-        <input
-          className="bg-gray-700 rounded py-0.5 pr-0.5"
+        <Editor.TextInput
           type="number"
-          value={value === undefined ? "" : value}
+          value={value === undefined ? "" : value.toString()}
           placeholder="300"
           min={0}
           max={5000}

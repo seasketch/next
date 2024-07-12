@@ -31,6 +31,13 @@
   max-height: var(--radix-select-content-available-height);
 }
 
+.LayerEditor [role="combobox"][data-state="open"] {
+  @apply bg-black bg-opacity-10 border-black border-opacity-10;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+  border-right-color: rgba(255, 255, 255, 0.1);
+  border-left-color: rgba(255, 255, 255, 0.05);
+}
+
 .GUIEditorNumberInput input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;

@@ -72,21 +72,17 @@ export default function SimplePolygonEditor() {
       ? (context.glLayers[indexes.stroke] as LineLayer)
       : undefined;
 
-  const Select = Editor.Select;
-
   return (
-    <Editor.Card>
-      <VisualizationTypeControl
-        buttons={
-          <LimitZoomTrigger
-            minzoom={fillLayer?.minzoom || strokeLayer?.minzoom}
-            maxzoom={fillLayer?.maxzoom || strokeLayer?.maxzoom}
-            updateLayerProperty={(...args) => {
-              context.updateLayer(indexes.fill, ...args);
-            }}
-          />
-        }
-      />
+    <>
+      <Editor.CardButtons>
+        <LimitZoomTrigger
+          minzoom={fillLayer?.minzoom || strokeLayer?.minzoom}
+          maxzoom={fillLayer?.maxzoom || strokeLayer?.maxzoom}
+          updateLayerProperty={(...args) => {
+            context.updateLayer(indexes.fill, ...args);
+          }}
+        />
+      </Editor.CardButtons>
       <ZoomRangeEditor
         maxzoom={fillLayer?.maxzoom || strokeLayer?.maxzoom}
         minzoom={fillLayer?.minzoom || strokeLayer?.minzoom}
@@ -155,7 +151,7 @@ export default function SimplePolygonEditor() {
         fillLayer={context.glLayers[indexes.fill] as FillLayer}
       />
       <LabelLayerEditor />
-    </Editor.Card>
+    </>
   );
 }
 

@@ -230,13 +230,14 @@ export default async function handleUpload(
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
+    const geostats = Array.isArray(stats) ? stats[0] : stats;
 
     const response: { layers: ProcessedUploadLayer[]; logfile: string } = {
       layers: [
         {
           filename: originalName + ext,
-          name: originalName,
-          geostats: Array.isArray(stats) ? stats[0] : stats,
+          name: "bands" in geostats ? originalName : geostats.layer,
+          geostats,
           outputs: outputs.map((o) => ({
             ...o,
             local: undefined,

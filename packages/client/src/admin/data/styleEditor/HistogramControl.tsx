@@ -2,14 +2,14 @@ import { Bucket, RasterBandInfo } from "@seasketch/geostats-types";
 import { Expression } from "mapbox-gl";
 import { Trans } from "react-i18next";
 import { ExpressionEvaluator } from "../../../dataLayers/legends/ExpressionEvaluator";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import * as Slider from "@radix-ui/react-slider";
 
 const tooltipNumberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-export default function HistogramControl({
+export default memo(function HistogramControl({
   histogram,
   expression,
   range,
@@ -173,7 +173,7 @@ export default function HistogramControl({
       )}
     </div>
   );
-}
+});
 
 function Thumb({ value }: { value: number }) {
   return (

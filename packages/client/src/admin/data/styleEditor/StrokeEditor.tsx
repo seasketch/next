@@ -1,19 +1,14 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo } from "react";
 import * as Editor from "./Editors";
-import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { isFillLayer, isLineLayer } from "./SimplePolygonEditor";
 import { FillLayer, FillPaint, LineLayer, LinePaint } from "mapbox-gl";
 import { colord } from "colord";
-import {
-  hasGetExpression,
-  isExpression,
-} from "../../../dataLayers/legends/utils";
+import { isExpression } from "../../../dataLayers/legends/utils";
 import { autoStrokeColorForFill, formatColor } from "./FillStyleEditor";
 import { RgbaColorPicker } from "react-colorful";
 import StrokeStyleEditor, { DASHARRAYS } from "./StrokeStyleEditor";
 import Switch from "../../../components/Switch";
-import { Trans } from "react-i18next";
 import { extractFirstColorFromExpression } from "./visualizationTypes";
 
 export enum StrokeType {

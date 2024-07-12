@@ -147,6 +147,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           } else {
             undo(view);
           }
+          e.preventDefault();
+          e.stopImmediatePropagation();
           setUndoRedoCounter((c) => c + 1);
         }
       };

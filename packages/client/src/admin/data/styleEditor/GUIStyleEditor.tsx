@@ -7,12 +7,14 @@ import {
   useMemo,
   useState,
 } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { formatJSONCommand } from "../GLStyleEditor/formatCommand";
 import {
   RasterInfo,
   GeostatsLayer,
   isRasterInfo,
+  isLegacyGeostats,
+  isLegacyGeostatsLayer,
 } from "@seasketch/geostats-types";
 import {
   VisualizationType,
@@ -20,14 +22,17 @@ import {
   determineVisualizationType,
   validVisualizationTypesForGeostats,
 } from "./visualizationTypes";
-import { Layer } from "mapbox-gl";
+import { FillLayer, Layer } from "mapbox-gl";
 import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
 import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
 import * as Editors from "./Editors";
 import EditorForVisualizationType from "./EditorForVisualizationType";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
-import Warning from "../../../components/Warning";
 import VisualizationTypeControl from "./VisualizationTypeControl";
+import useDialog from "../../../components/useDialog";
+import { useDebouncedFn } from "beautiful-react-hooks";
+import { map } from "d3";
+import Warning from "../../../components/Warning";
 require("./layer-editor.css");
 
 export type PropertyRef = {
@@ -64,46 +69,63 @@ export default function GUIStyleEditor({
     if (view) {
       const doc = view.state.doc.toString();
       setStyleJSON(JSON.parse(doc) as Layer[]);
-      const visualizationType = determineVisualizationType(
-        geostats,
-        supportedTypes,
-        JSON.parse(doc) as Layer[]
-      );
-      if (visualizationType) {
-        _setVisualizationType(visualizationType);
-      }
     }
   }, [editorRef.current?.view, setStyleJSON, undoRedoCounter]);
 
-  const [visualizationType, _setVisualizationType] =
-    useState<VisualizationType | null>(
-      determineVisualizationType(geostats, supportedTypes, styleJSON)
-    );
+  const visualizationType = useMemo(
+    () => determineVisualizationType(geostats, supportedTypes, styleJSON),
+    [geostats, supportedTypes, styleJSON]
+  );
+
+  const { alert } = useDialog();
+
+  const updateEditor = useDebouncedFn(
+    (style: string) => {
+      editorRef.current?.view?.dispatch({
+        changes: {
+          from: 0,
+          to: editorRef.current.view!.state.doc.length,
+          insert: style,
+        },
+      });
+      formatJSONCommand(editorRef.current?.view!);
+    },
+    150,
+    {},
+    [editorRef.current?.view]
+  );
 
   const setVisualizationType = useCallback(
     (type: VisualizationType) => {
-      const newLayers = convertToVisualizationType(geostats, type, styleJSON);
-      if (newLayers) {
-        _setVisualizationType(type);
-        const errors = validateGLStyleFragment(
-          newLayers,
-          isRasterInfo(geostats) ? "raster" : "vector"
-        );
-        if (errors.length > 0) {
-          console.error(errors);
-          throw new Error(errors.map((e) => e.message).join("\n"));
-        }
+      try {
+        const newLayers = convertToVisualizationType(geostats, type, styleJSON);
+        if (newLayers) {
+          // _setVisualizationType(type);
+          const errors = validateGLStyleFragment(
+            newLayers,
+            isRasterInfo(geostats) ? "raster" : "vector"
+          );
+          if (errors.length > 0) {
+            console.error(errors);
+            throw new Error(errors.map((e) => e.message).join("\n"));
+          }
 
-        // @ts-ignore
-        setStyleJSON([...newLayers]);
-        editorRef.current?.view?.dispatch({
-          changes: {
-            from: 0,
-            to: editorRef.current.view!.state.doc.length,
-            insert: JSON.stringify(newLayers),
-          },
+          // @ts-ignore
+          setStyleJSON([...newLayers]);
+          editorRef.current?.view?.dispatch({
+            changes: {
+              from: 0,
+              to: editorRef.current.view!.state.doc.length,
+              insert: JSON.stringify(newLayers),
+            },
+          });
+          formatJSONCommand(editorRef.current?.view!);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("An error occurred while changing to this visualization type", {
+          description: e.message,
         });
-        formatJSONCommand(editorRef.current?.view!);
       }
     },
     [setStyleJSON, editorRef, styleJSON, geostats]
@@ -129,6 +151,41 @@ export default function GUIStyleEditor({
           delete layer[property];
         }
       });
+
+      if (mapContext.manager?.map && layerId) {
+        for (const { type, property } of properties) {
+          try {
+            const map = mapContext.manager.map;
+            const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
+            const layer = map.getLayer(id);
+            if (layer) {
+              // using the layer id, update the style in the map
+              try {
+                if (type === "layout") {
+                  map.setLayoutProperty(id, property, undefined);
+                } else if (type === "paint") {
+                  map.setPaintProperty(id, property, undefined);
+                } else if (property === "maxzoom") {
+                  map.setLayerZoomRange(
+                    id,
+                    (layer as FillLayer).minzoom || 0,
+                    24
+                  );
+                } else if (property === "minzoom") {
+                  map.setLayerZoomRange(
+                    id,
+                    0,
+                    (layer as FillLayer).maxzoom || 24
+                  );
+                }
+              } catch (e) {}
+            }
+          } catch (e) {
+            // do nothing. map might not be loaded
+          }
+        }
+      }
+
       setStyleJSON([...styleJSON]);
       editorRef.current?.view?.dispatch({
         changes: {
@@ -139,7 +196,7 @@ export default function GUIStyleEditor({
       });
       formatJSONCommand(editorRef.current?.view!);
     },
-    [editorRef, styleJSON]
+    [editorRef, styleJSON, mapContext.manager?.map, layerId]
   );
 
   const updateLayerProperty = useCallback(
@@ -159,6 +216,10 @@ export default function GUIStyleEditor({
       const layer = styleJSON[layerIndex];
       if (type && !layer[type]) {
         layer[type] = {};
+      }
+      if (!layer) {
+        console.error(styleJSON, layerIndex, layer);
+        throw new Error(`Layer not found. ${layerIndex}`);
       }
       if (property !== undefined) {
         if (type) {
@@ -185,22 +246,35 @@ export default function GUIStyleEditor({
         // if (errors.length > 0) {
         //   throw new Error(errors.join("\n"));
         // }
-        if (
-          mapContext.manager?.map &&
-          layerId &&
-          mapContext.manager.map.loaded()
-        ) {
-          const map = mapContext.manager.map;
-          const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
-          if (map.getLayer(id)) {
-            // using the layer id, update the style in the map
-            try {
-              if (type === "layout") {
-                map.setLayoutProperty(id, property, value);
-              } else if (type === "paint") {
-                map.setPaintProperty(id, property, value);
-              }
-            } catch (e) {}
+        if (mapContext.manager?.map && layerId) {
+          try {
+            const map = mapContext.manager.map;
+            const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
+            const layer = map.getLayer(id);
+            if (layer) {
+              // using the layer id, update the style in the map
+              try {
+                if (type === "layout") {
+                  map.setLayoutProperty(id, property, value);
+                } else if (type === "paint") {
+                  map.setPaintProperty(id, property, value);
+                } else if (property === "maxzoom") {
+                  map.setLayerZoomRange(
+                    id,
+                    (layer as FillLayer).minzoom || 0,
+                    value || 24
+                  );
+                } else if (property === "minzoom") {
+                  map.setLayerZoomRange(
+                    id,
+                    value || 0,
+                    (layer as FillLayer).maxzoom || 24
+                  );
+                }
+              } catch (e) {}
+            }
+          } catch (e) {
+            // do nothing. map might not be loaded
           }
         }
       }
@@ -217,16 +291,18 @@ export default function GUIStyleEditor({
       }
       styleJSON[layerIndex] = { ...layer };
       setStyleJSON([...styleJSON]);
-      editorRef.current?.view?.dispatch({
-        changes: {
-          from: 0,
-          to: editorRef.current.view!.state.doc.length,
-          insert: JSON.stringify(styleJSON),
-        },
-      });
-      formatJSONCommand(editorRef.current?.view!);
+      const style = JSON.stringify(styleJSON);
+      updateEditor(style);
+      // editorRef.current?.view?.dispatch({
+      //   changes: {
+      //     from: 0,
+      //     to: editorRef.current.view!.state.doc.length,
+      //     insert: JSON.stringify(styleJSON),
+      //   },
+      // });
+      // formatJSONCommand(editorRef.current?.view!);
     },
-    [styleJSON, editorRef, setStyleJSON, layerId, mapContext.manager?.map]
+    [styleJSON, updateEditor, setStyleJSON, layerId, mapContext.manager?.map]
   );
 
   const addLayer = useCallback(
@@ -283,35 +359,48 @@ export default function GUIStyleEditor({
     );
   }
 
+  if (!isRasterInfo(geostats) && isLegacyGeostatsLayer(geostats)) {
+    return (
+      <Editors.Card>
+        <Warning>
+          {t(
+            "This older data source lacks metadata necessary to use the new cartography tools. Please use the code editor, or re-upload this data in order to enable these new tools. You can download the data and upload a new copy from the Data Source tab."
+          )}
+        </Warning>
+      </Editors.Card>
+    );
+  }
+
   return (
     <div className="overflow-y-auto">
-      {(!visualizationType || !supportedTypes.includes(visualizationType)) && (
-        <div className="px-4">
-          <div className="mt-5">
-            <VisualizationTypeControl />
+      <Editors.GUIEditorContext.Provider
+        value={{
+          previousSettings,
+          setPreviousSettings,
+          updateLayer: updateLayerProperty,
+          deleteLayerProperties,
+          geostats,
+          glLayers: styleJSON,
+          type: visualizationType || undefined,
+          t,
+          addLayer,
+          removeLayer,
+          supportedTypes,
+          setVisualizationType,
+        }}
+      >
+        {(!visualizationType ||
+          !supportedTypes.includes(visualizationType)) && (
+          <div className="px-4">
+            <div className="mt-5">
+              <VisualizationTypeControl />
+            </div>
           </div>
-        </div>
-      )}
-      {styleJSON && visualizationType && (
-        <Editors.GUIEditorContext.Provider
-          value={{
-            previousSettings,
-            setPreviousSettings,
-            updateLayer: updateLayerProperty,
-            deleteLayerProperties,
-            geostats,
-            glLayers: styleJSON,
-            type: visualizationType,
-            t,
-            addLayer,
-            removeLayer,
-            supportedTypes,
-            setVisualizationType,
-          }}
-        >
+        )}
+        {styleJSON && visualizationType && (
           <EditorForVisualizationType type={visualizationType} />
-        </Editors.GUIEditorContext.Provider>
-      )}
+        )}
+      </Editors.GUIEditorContext.Provider>
     </div>
   );
 }
