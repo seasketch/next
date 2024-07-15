@@ -44,8 +44,8 @@ COPY --from=builder /usr/app/node_modules ./node_modules
 COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
-# RUN mkdir -p /usr/app/node_modules/@seasketch/geostats-types
-COPY ./node_modules/@seasketch /usr/app/node_modules/
+RUN rm -rf ./node_modules/@seasketch/geostats-types
+COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
 COPY ./.rclone.conf /var/task/rclone.conf
 RUN yum install -y python3
 RUN pip3 install rasterio fiona
