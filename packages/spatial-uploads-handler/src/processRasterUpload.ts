@@ -5,7 +5,7 @@ import {
 import { ProgressUpdater, ResponseOutput } from "./handleUpload";
 import { parse as parsePath, join as pathJoin } from "path";
 import { statSync } from "fs";
-import { rasterInfoForBands } from "../rasterInfoForBands";
+import { rasterInfoForBands } from "./rasterInfoForBands";
 import { Logger } from "./logger";
 
 export async function processRasterUpload(options: {
@@ -321,10 +321,6 @@ async function encodeValuesToRGB(
   await logger.exec(
     ["gdal_translate", [vrtFname, encodedFname]],
     "Problem converting VRT to RGB TIFF"
-  );
-  await logger.exec(
-    ["cp", [encodedFname, "/Users/cburt/Downloads/output_encoded.tif"]],
-    "Problem copying encoded file"
   );
 
   return encodedFname;

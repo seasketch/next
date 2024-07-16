@@ -6,16 +6,14 @@ import {
   naturalBreaksBuckets,
   quantileBuckets,
   stdDevBuckets,
-} from "./src/stats";
+} from "./stats";
 import {
   Bucket,
   RasterBandInfo,
-  RasterBucket,
   RasterBuckets,
   RasterInfo,
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
-import { ckmeans } from "simple-statistics";
 
 /**
  * Given the path to a raster file, this function will calculate metadata useful
@@ -120,7 +118,7 @@ export async function rasterInfoForBands(
             sampledCount,
         ]);
         return acc;
-      }, [] as RasterBucket[])
+      }, [] as Bucket[])
       .sort((a, b) => a[0] - b[0]);
 
     // Calculate base and interval

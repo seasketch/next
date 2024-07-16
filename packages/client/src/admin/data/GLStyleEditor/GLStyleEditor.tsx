@@ -96,8 +96,9 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   const [editor, setEditor] = useState<"style" | "code">(
-    props.geostats &&
-      (isRasterInfo(props.geostats) || !isLegacyGeostatsLayer(props.geostats))
+    (props.geostats || props.dataSource?.geostats) &&
+      (isRasterInfo(props.dataSource?.geostats) ||
+        !isLegacyGeostatsLayer(props.geostats || props.dataSource?.geostats))
       ? "style"
       : "code"
   );
