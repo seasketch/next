@@ -16,7 +16,7 @@ RUN npm install -g typescript@5.5
 RUN dnf install -y jq
 COPY tsconfig.json  ./
 COPY package.json ./package.json.original
-RUN jq 'del(.scripts.postinstall) | del(.dependences["@seasketch/geostats-types"])' package.json.original > package.json
+RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@seasketch/geostats-types"])' package.json.original > package.json
 # Not using lerna, so need to copy this manually
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types

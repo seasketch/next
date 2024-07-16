@@ -25,7 +25,7 @@
     "watch": "tsc --watch",
     "build:container": "cp -r node_modules/@seasketch . && docker build -t spatial-uploads-handler . && rm -rf @seasketch",
     "test": "jest",
-    "postinstall": "npm run build"
+    "install": "npm run build"
   },
   "jest": {
     "testPathIgnorePatterns": [
