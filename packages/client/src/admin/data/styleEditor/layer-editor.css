@@ -1,0 +1,50 @@
+.LayerEditor input[type="number"]:hover::-webkit-inner-spin-button,
+.LayerEditor input[type="number"]:hover::-webkit-outer-spin-button,
+.LayerEditor input[type="number"]:focus::-webkit-inner-spin-button,
+.LayerEditor input[type="number"]:focus::-webkit-outer-spin-button {
+  /* -webkit-appearance: none; */
+  margin: 0;
+  opacity: 0.4;
+}
+
+.LayerEditor input::placeholder {
+  @apply text-gray-400;
+}
+
+.PaletteSelectContent [data-disabled] {
+  @apply opacity-50;
+}
+
+.LayerEditorPalette [data-state="checked"] {
+  @apply bg-black bg-opacity-30 border border-blue-500;
+}
+
+.LayerEditorPalette [data-highlighted] {
+  @apply bg-blue-600 !important;
+}
+
+.LayerEditorPalette [data-highlighted] .description {
+  @apply text-white opacity-50;
+}
+
+.PaletteSelectContent {
+  max-height: var(--radix-select-content-available-height);
+}
+
+.LayerEditor [role="combobox"][data-state="open"] {
+  @apply bg-black bg-opacity-10 border-black border-opacity-10;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+  border-right-color: rgba(255, 255, 255, 0.1);
+  border-left-color: rgba(255, 255, 255, 0.05);
+}
+
+.GUIEditorNumberInput input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+.GUIEditorNumberInput input[type="number"] {
+  -moz-appearance: textfield;
+}

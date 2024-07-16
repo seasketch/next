@@ -6,20 +6,67 @@ import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
 import { GeoJsonGeometryTypes } from "geojson";
 import { formatJSONCommand } from "../formatCommand";
 import { SpriteDetailsFragment } from "../../../../generated/graphql";
-import { ExtendedGeostatsLayer } from "../GLStyleEditor";
 import {
   schemeTableau10,
   interpolatePlasma as interpolateColorScale,
 } from "d3-scale-chromatic";
+import {
+  GeostatsAttribute,
+  LegacyGeostatsLayer,
+  LegacyGeostatsAttribute,
+  NumericGeostatsAttribute,
+  GeostatsLayer,
+} from "@seasketch/geostats-types";
 
-export interface GeostatsAttribute {
-  attribute: string;
-  count: number;
-  type: GeostatsAttributeType;
-  values: (string | number | boolean | null)[];
-  min?: number;
-  max?: number;
-  quantiles?: number[];
+export function isLegacyGeostatsLayer(
+  layer: LegacyGeostatsLayer | GeostatsLayer
+): layer is LegacyGeostatsLayer {
+  return (layer as GeostatsLayer).attributes[0].countDistinct === undefined;
+}
+
+export function isLegacyGeostatsAttribute(
+  attr: LegacyGeostatsAttribute | GeostatsAttribute
+): attr is LegacyGeostatsAttribute {
+  return Array.isArray(attr.values);
+}
+
+export function getAttributeValues(
+  attr: LegacyGeostatsAttribute | GeostatsAttribute
+) {
+  if (isLegacyGeostatsAttribute(attr)) {
+    return attr.values;
+  } else {
+    if (attr.type === "number") {
+      return Object.keys(attr.values).map((v) => {
+        return parseFloat(v);
+      });
+    } else {
+      return Object.keys(attr.values);
+    }
+  }
+}
+
+export function getQuantilesForAttribute(
+  attr: LegacyGeostatsAttribute | NumericGeostatsAttribute | GeostatsAttribute
+): number[] | null {
+  if (isLegacyGeostatsAttribute(attr)) {
+    return attr.quantiles || null;
+  } else {
+    if ("stats" in attr && attr.stats.quantiles) {
+      if (attr.stats.quantiles[10]) {
+        return attr.stats.quantiles[10].map((v) => v[0]);
+      } else {
+        let i = 13;
+        while (i > 0) {
+          if (attr.stats.quantiles[i]) {
+            return attr.stats.quantiles[i].map((v) => v[0]);
+          }
+          i--;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 export type GeostatsAttributeType =
@@ -30,14 +77,6 @@ export type GeostatsAttributeType =
   | "mixed"
   | "object"
   | "array";
-
-export interface GeostatsLayer {
-  layer: string;
-  count: number;
-  geometry: GeoJsonGeometryTypes;
-  attributeCount: number;
-  attributes: GeostatsAttribute[];
-}
 
 type LayerType =
   | "fill"
@@ -179,7 +218,10 @@ export interface InsertLayerOption {
 }
 
 export const glStyleAutocomplete =
-  (layer?: GeostatsLayer, sprites?: SpriteDetailsFragment[]) =>
+  (
+    layer?: GeostatsLayer | LegacyGeostatsLayer | undefined,
+    sprites?: SpriteDetailsFragment[]
+  ) =>
   (context: CompletionContext) => {
     let word = context.matchBefore(/[\w-]*/);
     let { state, pos } = context,
@@ -878,7 +920,7 @@ let colorChoiceCounter = 9;
 function getCompletionsForEvaluatedContext(
   styleContext: EvaluatedStyleContext,
   sprites: SpriteDetailsFragment[],
-  layer?: GeostatsLayer
+  layer?: GeostatsLayer | LegacyGeostatsLayer
 ) {
   const completions: Completion[] = [];
   if (styleContext.type === "Root") {
@@ -1183,6 +1225,7 @@ function getCompletionsForEvaluatedContext(
       for (const attribute of layer?.attributes || []) {
         // add match
         if (attribute.type === "boolean" || attribute.type === "string") {
+          const values = getAttributeValues(attribute);
           completions.push(
             replaceExpressionCompletion(styleContext.SurroundingNode, {
               label: `match(${attribute.attribute})`,
@@ -1192,7 +1235,7 @@ function getCompletionsForEvaluatedContext(
             [
               "match",
               ["get", "${attribute.attribute}"],
-              ${attribute.values
+              ${values
                 .filter((v) => v !== null)
                 .map((v, i) => {
                   const strValue =
@@ -1236,9 +1279,9 @@ function getCompletionsForEvaluatedContext(
           attribute.min !== undefined &&
           attribute.max
         ) {
+          let quantiles = getQuantilesForAttribute(attribute);
           // add interpolate
-          if (attribute.quantiles?.length) {
-            let quantiles = attribute.quantiles;
+          if (quantiles?.length) {
             if (quantiles.length === 20) {
               quantiles = quantiles.reduce((acc, q, i) => {
                 if (i % 2 === 0) {
@@ -1265,7 +1308,7 @@ function getCompletionsForEvaluatedContext(
                 .map((q, i) => {
                   return `${q},\n ${getPlaceholderValue(
                     styleContext.propertyContext,
-                    i / quantiles.length,
+                    i / quantiles!.length,
                     "linear",
                     attribute.attribute
                   )}`;
@@ -1308,7 +1351,7 @@ function getCompletionsForEvaluatedContext(
           );
         }
         if (attribute.type === "number" && expressions && expressions.feature) {
-          let quantiles = attribute.quantiles;
+          let quantiles = getQuantilesForAttribute(attribute);
           // reduce the number of quantiles to about 5
           if (quantiles && quantiles.length > 5) {
             const divisor = Math.floor(quantiles.length / 5);
@@ -1400,8 +1443,9 @@ function getCompletionsForEvaluatedContext(
             (a) => a.attribute === styleContext.siblingGetAttribute
           );
           if (relatedAttr && relatedAttr.type === "string") {
+            const values = getAttributeValues(relatedAttr);
             completions.push(
-              ...relatedAttr.values.map((v) => {
+              ...values.map((v) => {
                 return {
                   label: v!.toString(),
                 };
@@ -1418,8 +1462,9 @@ function getCompletionsForEvaluatedContext(
               (a) => a.attribute === styleContext.siblingGetAttribute
             );
             if (relatedAttr && relatedAttr.type === "string") {
+              const values = getAttributeValues(relatedAttr);
               completions.push(
-                ...relatedAttr.values
+                ...values
                   .filter(
                     (v) =>
                       !styleContext.siblingStringArgumentValues.includes(
@@ -1576,7 +1621,7 @@ function getRoot(
 }
 
 export function getInsertLayerOptions(
-  layer: ExtendedGeostatsLayer,
+  layer: GeostatsLayer | LegacyGeostatsLayer,
   sprites: SpriteDetailsFragment[]
 ) {
   const options: InsertLayerOption[] = [];
@@ -1603,6 +1648,7 @@ export function getInsertLayerOptions(
         propertyChoice: {
           property: attribute.attribute,
           ...attribute,
+          values: getAttributeValues(attribute),
         },
         type: "circle",
         layer: {
@@ -1615,7 +1661,7 @@ export function getInsertLayerOptions(
             "circle-color": [
               "match",
               ["get", attribute.attribute],
-              ...attribute.values
+              ...getAttributeValues(attribute)
                 .filter((v) => v !== null)
                 .map((v, i) => {
                   return [v, schemeTableau10[i % 10]];
@@ -1626,7 +1672,7 @@ export function getInsertLayerOptions(
             "circle-stroke-color": [
               "match",
               ["get", attribute.attribute],
-              ...attribute.values
+              ...getAttributeValues(attribute)
                 .filter((v) => v !== null)
                 .map((v, i) => {
                   return [v, schemeTableau10[i % 10]];
@@ -1647,6 +1693,7 @@ export function getInsertLayerOptions(
         propertyChoice: {
           property: attribute.attribute,
           ...attribute,
+          values: getAttributeValues(attribute),
         },
         type: "circle",
         layer: {
@@ -1705,12 +1752,13 @@ export function getInsertLayerOptions(
       },
     });
     for (const attribute of layer.attributes || []) {
+      const values = getAttributeValues(attribute);
       if (
         (attribute.type === "string" &&
-          (attribute.attribute !== "name" || attribute.values.length > 1)) ||
+          (attribute.attribute !== "name" || values.length > 1)) ||
         (attribute.type === "array" &&
           attribute.typeArrayOf === "string" &&
-          attribute.values.length > 1)
+          values.length > 1)
       ) {
         options.push({
           label:
@@ -1720,6 +1768,7 @@ export function getInsertLayerOptions(
           propertyChoice: {
             property: attribute.attribute,
             ...attribute,
+            values: getAttributeValues(attribute),
           },
           type: "fill",
           layer: {
@@ -1730,7 +1779,7 @@ export function getInsertLayerOptions(
                 attribute.type === "array"
                   ? ["at", 0, ["get", attribute.attribute]]
                   : ["get", attribute.attribute],
-                ...attribute.values
+                ...getAttributeValues(attribute)
                   .filter((v) => v !== null)
                   .map((v, i) => {
                     return [v, schemeTableau10[i % 10]];
@@ -1748,8 +1797,8 @@ export function getInsertLayerOptions(
     for (const attribute of layer.attributes || []) {
       if (attribute.type === "number") {
         const values: number[] = [];
-        if (attribute.quantiles?.length) {
-          let quantiles = attribute.quantiles;
+        let quantiles = getQuantilesForAttribute(attribute);
+        if (quantiles?.length) {
           if (quantiles.length === 20) {
             quantiles = quantiles.reduce((acc, q, i) => {
               if (i % 2 === 0) {
@@ -1769,6 +1818,7 @@ export function getInsertLayerOptions(
             propertyChoice: {
               property: attribute.attribute,
               ...attribute,
+              values: getAttributeValues(attribute),
             },
             type: "fill",
             layer: {
@@ -1823,12 +1873,13 @@ export function getInsertLayerOptions(
       },
     });
     for (const attribute of layer.attributes || []) {
+      const values = getAttributeValues(attribute);
       if (
         (attribute.type === "string" &&
-          (attribute.attribute !== "name" || attribute.values.length > 1)) ||
+          (attribute.attribute !== "name" || values.length > 1)) ||
         (attribute.type === "array" &&
           attribute.typeArrayOf === "string" &&
-          attribute.values.length > 1)
+          values.length > 1)
       ) {
         options.push({
           label:
@@ -1838,6 +1889,7 @@ export function getInsertLayerOptions(
           propertyChoice: {
             property: attribute.attribute,
             ...attribute,
+            values: getAttributeValues(attribute),
           },
           type: "line",
           layer: {
@@ -1848,7 +1900,7 @@ export function getInsertLayerOptions(
                 attribute.type === "array"
                   ? ["at", 0, ["get", attribute.attribute]]
                   : ["get", attribute.attribute],
-                ...attribute.values
+                ...getAttributeValues(attribute)
                   .filter((v) => v !== null)
                   .map((v, i) => {
                     return [v, schemeTableau10[i % 10]];
@@ -1875,6 +1927,7 @@ export function getInsertLayerOptions(
           propertyChoice: {
             property: attribute.attribute,
             ...attribute,
+            values: getAttributeValues(attribute),
           },
           layer: {
             type: "symbol",
@@ -1896,6 +1949,7 @@ export function getInsertLayerOptions(
           propertyChoice: {
             property: attribute.attribute,
             ...attribute,
+            values: getAttributeValues(attribute),
           },
           layer: {
             type: "symbol",
@@ -1963,6 +2017,7 @@ export function getInsertLayerOptions(
           propertyChoice: {
             property: attribute.attribute,
             ...attribute,
+            values: getAttributeValues(attribute),
           },
           layer: {
             type: "heatmap",
@@ -2034,6 +2089,7 @@ export function getInsertLayerOptions(
           propertyChoice: {
             property: attribute.attribute,
             ...attribute,
+            values: getAttributeValues(attribute),
           },
           layer: {
             type: "symbol",
@@ -2041,7 +2097,7 @@ export function getInsertLayerOptions(
               "icon-image": [
                 "match",
                 ["get", attribute.attribute],
-                ...attribute.values
+                ...getAttributeValues(attribute)
                   .filter((v) => v !== null)
                   .map((v, i) => {
                     return [

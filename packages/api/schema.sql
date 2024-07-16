@@ -7539,6 +7539,58 @@ CREATE FUNCTION public.data_source_type(data_layer_id integer) RETURNS text
 
 
 --
+-- Name: get_first_band_offset(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_first_band_offset(geostats jsonb) RETURNS real
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT CASE
+           WHEN geostats->'bands' IS NOT NULL
+                AND jsonb_typeof(geostats->'bands') = 'array'
+                AND jsonb_array_length(geostats->'bands') > 0
+                AND (geostats->'bands'->0)->>'offset' IS NOT NULL THEN
+               ((geostats->'bands'->0)->>'offset')::real
+           ELSE NULL
+       END
+$$;
+
+
+--
+-- Name: get_first_band_scale(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_first_band_scale(geostats jsonb) RETURNS real
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT CASE
+           WHEN geostats->'bands' IS NOT NULL
+                AND jsonb_typeof(geostats->'bands') = 'array'
+                AND jsonb_array_length(geostats->'bands') > 0
+                AND (geostats->'bands'->0)->>'scale' IS NOT NULL THEN
+               ((geostats->'bands'->0)->>'scale')::real
+           ELSE NULL
+       END
+$$;
+
+
+--
+-- Name: get_representative_colors(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_representative_colors(geostats jsonb) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT CASE
+           WHEN geostats ? 'representativeColorsForRGB' 
+                AND jsonb_typeof(geostats->'representativeColorsForRGB') = 'array' THEN
+               geostats->'representativeColorsForRGB'
+           ELSE null
+       END
+$$;
+
+
+--
 -- Name: data_sources; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7588,6 +7640,9 @@ CREATE TABLE public.data_sources (
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     created_by integer,
     changelog text,
+    raster_offset real GENERATED ALWAYS AS (public.get_first_band_offset(geostats)) STORED,
+    raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
+    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -25462,6 +25517,30 @@ GRANT ALL ON FUNCTION public.data_layers_version(data_layer public.data_layers) 
 --
 
 REVOKE ALL ON FUNCTION public.data_source_type(data_layer_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION get_first_band_offset(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_first_band_offset(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_first_band_offset(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION get_first_band_scale(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION get_representative_colors(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_representative_colors(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_representative_colors(geostats jsonb) TO anon;
 
 
 --

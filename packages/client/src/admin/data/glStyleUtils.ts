@@ -9,6 +9,7 @@ import {
 } from "mapbox-gl";
 import { isExpression } from "../../dataLayers/legends/utils";
 import { colord } from "colord";
+import { autoStrokeColorForFill } from "./styleEditor/FillStyleEditor";
 
 type HighlightableLayer = FillLayer | LineLayer | SymbolLayer | CircleLayer;
 export function isHighlightableLayer(
@@ -241,7 +242,7 @@ export function addInteractivityExpressions(layers: AnyLayer[]) {
             .toHex();
         }
         let fillOutlineColorValue = l.paint["fill-outline-color"];
-        if (!isExpression(fillOutlineColorValue)) {
+        if (fillOutlineColorValue && !isExpression(fillOutlineColorValue)) {
           fillOutlineColorValue = colord(fillOutlineColorValue as string)
             .alpha(1)
             .toHex();
@@ -260,7 +261,13 @@ export function addInteractivityExpressions(layers: AnyLayer[]) {
             "line-color": [
               "let",
               "c",
-              ["to-rgba", fillOutlineColorValue || fillColorValue || "#000"],
+              [
+                "to-rgba",
+                fillOutlineColorValue ||
+                  fillColorValue ||
+                  // "#000000" ||
+                  autoStrokeColorForFill(l),
+              ],
               [
                 "rgba",
                 ["at", 0, ["var", "c"]],
@@ -281,7 +288,7 @@ export function addInteractivityExpressions(layers: AnyLayer[]) {
               ["boolean", ["feature-state", "selected"], false],
               2,
               ["boolean", ["feature-state", "hovered"], false],
-              1,
+              1.5,
               0,
             ],
           },

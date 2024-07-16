@@ -108,7 +108,7 @@ module.exports = {
         };
       babelLoaderOptions.ignore = [
         "./node_modules/mapbox-gl/dist/mapbox-gl.js",
-        "./node_modules/d3-scale-chromatic",
+        // "./node_modules/d3-scale-chromatic",
         "./node_modules/@observablehq/plot",
         "./node_modules/@observablehq/plot/src/marks/raster.js",
         "./node_modules/@observablehq/plot/**/*",

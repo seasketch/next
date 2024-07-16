@@ -2755,6 +2755,9 @@ type DataSource implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [QuotaDetail!]
+  rasterOffset: Float
+  rasterRepresentativeColors: JSON
+  rasterScale: Float
 
   """Reads and enables pagination through a set of `TableOfContentsItem`."""
   relatedTableOfContentsItems(
@@ -2994,6 +2997,9 @@ input DataSourceInput {
   querystring parameters that will be added to requests.
   """
   queryParameters: JSON
+  rasterOffset: Float
+  rasterRepresentativeColors: JSON
+  rasterScale: Float
 
   """
   For MapBox Vector and Raster sources. Influences the y direction of the tile
@@ -11781,6 +11787,9 @@ type Query implements Node {
   generateExportId(body: JSON, exportId: String, id: Int): String
   generateLabel(body: JSON, id: Int): String
   getDefaultDataSourcesBucket: String
+  getFirstBandOffset(geostats: JSON): Float
+  getFirstBandScale(geostats: JSON): Float
+  getRepresentativeColors(geostats: JSON): JSON
 
   """Reads and enables pagination through a set of `Survey`."""
   getSurveys(

@@ -37,6 +37,7 @@ import {
   NULLIFIED_EXPRESSION_OUTPUT_NUMBER,
   NULLIFIED_EXPRESSION_OUTPUT_STRING,
 } from "./utils";
+import { SeaSketchLayerMetadata } from "../../admin/data/styleEditor/Editors";
 
 // ordered by rank of importance
 const SIGNIFICANT_PAINT_PROPS = [
@@ -75,9 +76,155 @@ const SIGNIFICANT_STYLE_PROPS = [
 
 export function compileLegendFromGLStyleLayers(
   layers: SeaSketchGlLayer[],
-  sourceType: "vector" | "raster" | "geojson" | "image" | "video" | "raster-dem"
+  sourceType:
+    | "vector"
+    | "raster"
+    | "geojson"
+    | "image"
+    | "video"
+    | "raster-dem",
+  representativeColors?: number[][],
+  scale?: number,
+  offset?: number
 ): LegendForGLLayers {
   if (
+    sourceType === "raster" &&
+    layers.length === 1 &&
+    "paint" in layers[0] &&
+    "raster-color" in layers[0].paint! &&
+    isExpression(layers[0].paint!["raster-color"]) &&
+    ["interpolate", "match", "step"].includes(
+      layers[0].paint!["raster-color"][0]
+    )
+  ) {
+    let legendItems: { panel: GLLegendPanel; filters: Expression[] }[] = [];
+    const layer = cloneDeep(layers[0]);
+    // @ts-ignore
+    const rasterColor = layer.paint!["raster-color"];
+    switch (rasterColor[0]) {
+      case "match":
+        legendItems.push({
+          panel: pluckRasterMatchPanel(
+            "layer-0-raster-color-legend",
+            rasterColor,
+            layer.metadata,
+            // @ts-ignore
+            layer.paint!["raster-color-range"] as [number, number] | undefined
+          ),
+          filters: [],
+        });
+        break;
+      case "step":
+        legendItems.push({
+          panel: pluckRasterStepPanel(
+            "layer-0-raster-color-legend",
+            rasterColor,
+            layer.metadata,
+            // @ts-ignore
+            layer.paint!["raster-color-range"] as [number, number] | undefined
+          ),
+          filters: [],
+        });
+        if (
+          (layer.metadata as SeaSketchLayerMetadata)?.[
+            "s:respect-scale-and-offset"
+          ] &&
+          ((scale && scale !== 1) || (offset && offset !== 0))
+        ) {
+          for (const item of (legendItems[0].panel as GLLegendStepPanel)
+            .steps) {
+            let value = item.value as number;
+            if (layer.metadata && layer.metadata["s:round-numbers"]) {
+              value = Math.round(value);
+            }
+            value = value * scale! + offset!;
+            if (layer.metadata && layer.metadata["s:round-numbers"]) {
+              value = Math.round(value);
+            }
+            item.label = value.toLocaleString();
+            if (layer.metadata?.["s:value-suffix"]?.length) {
+              item.label += layer.metadata["s:value-suffix"];
+            }
+          }
+        }
+        break;
+      case "interpolate":
+      case "interpolate-hcl":
+      case "interpolate-lab":
+        legendItems.push({
+          panel: {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `layer-0-raster-color-legend`,
+            type: "GLLegendGradientPanel",
+            stops: interpolationExpressionToStops(rasterColor),
+          },
+          filters: [],
+        });
+        if ((scale && scale !== 1) || (offset && offset !== 0)) {
+          scale = scale === null || scale === undefined ? 1 : scale;
+          offset = offset === null || offset === undefined ? 0 : offset;
+          const panel = legendItems[0].panel as GLLegendGradientPanel;
+          panel.stops = panel.stops.map((stop) => {
+            let value = stop.value * scale! + offset!;
+            if (layer.metadata && layer.metadata["s:round-numbers"]) {
+              value = Math.round(value);
+            }
+            return {
+              ...stop,
+              value,
+              ...(layer.metadata?.["s:value-suffix"]?.length
+                ? {
+                    label: `${value.toLocaleString()}${
+                      layer.metadata?.["s:value-suffix"]
+                    }`,
+                  }
+                : { label: value.toLocaleString() }),
+            };
+          });
+        }
+        break;
+    }
+
+    // TODO: pluck list items from match expressions or get interpolation
+    // return {
+    //   type: "SimpleGLLegend",
+    //   symbol: {
+    //     type: "rgb-raster",
+    //     representativeColors,
+    //   },
+    // };
+    const panels = consolidatePanels(legendItems);
+    if (layers.find((l) => l.metadata && l.metadata["s:legend-labels"])) {
+      const allLabels: { [key: string]: string } = {};
+      // TODO: this means labels could be set in multiple places and be
+      // different...
+      for (const layer of layers) {
+        const labels = layer.metadata["s:legend-labels"];
+        for (const key in labels) {
+          allLabels[key] = labels[key];
+        }
+      }
+      for (const panel of panels) {
+        if (panel.type === "GLLegendListPanel") {
+          for (const item of panel.items) {
+            if (item.label.toString() in allLabels) {
+              item.label = allLabels[item.label];
+            }
+          }
+        } else if (panel.type === "GLLegendStepPanel") {
+          for (const step of panel.steps) {
+            if (step.label.toString() in allLabels) {
+              step.label = allLabels[step.label];
+            }
+          }
+        }
+      }
+    }
+    return {
+      type: "MultipleSymbolGLLegend",
+      panels,
+    };
+  } else if (
     sourceType === "raster" ||
     sourceType === "raster-dem" ||
     sourceType === "image"
@@ -85,7 +232,8 @@ export function compileLegendFromGLStyleLayers(
     return {
       type: "SimpleGLLegend",
       symbol: {
-        type: "raster",
+        type: "rgb-raster",
+        representativeColors,
       },
     };
   } else if (sourceType === "video") {
@@ -673,6 +821,7 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
         layer.type
       )
     ) {
+      const metadata: SeaSketchLayerMetadata = layer.metadata || {};
       // look for gradient expressions, ordered by priority
       const paint = layer.paint || ({} as any);
       for (const paintProp of [
@@ -695,6 +844,11 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
             for (const facet of exprData.facets) {
               // @ts-ignore
               layer.paint[paintProp] = exprData.remainingValues;
+              const getProp = findGetExpression(facet.expression)?.property;
+              let label = getProp || paintProp;
+              if (getProp && metadata["s:legend-labels"]?.[getProp]) {
+                label = metadata["s:legend-labels"][getProp];
+              }
               panels.push({
                 panel: {
                   // eslint-disable-next-line i18next/no-literal-string
@@ -702,8 +856,11 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
                     layer
                   )}-${paintProp}-${exprData.facets.indexOf(facet)}-gradient`,
                   type: "GLLegendGradientPanel",
-                  label: paintProp,
-                  stops: interpolationExpressionToStops(facet.expression),
+                  label,
+                  stops: interpolationExpressionToStops(
+                    facet.expression,
+                    metadata
+                  ),
                 },
                 filters:
                   layer.filter && isExpression(layer.filter)
@@ -899,6 +1056,134 @@ function pluckLayersWithExpression<T extends GLLegendPanel>(
   return panels;
 }
 
+export function pluckRasterStepPanel(
+  id: string,
+  expression: Expression,
+  metadata?: SeaSketchLayerMetadata,
+  rasterColorRange?: [number, number]
+) {
+  const round = Boolean(metadata?.["s:round-numbers"]);
+  const scale = Boolean(metadata?.["s:respect-scale-and-offset"]);
+  const inputOutputPairs = expression.slice(2);
+
+  const panel: GLLegendStepPanel = {
+    id,
+    type: "GLLegendStepPanel",
+    steps: [
+      ...(rasterColorRange && inputOutputPairs[1] === rasterColorRange[0]
+        ? []
+        : [
+            {
+              id: id + "-first",
+              label: "< " + inputOutputPairs[1],
+              value: "< " + inputOutputPairs[1],
+              symbol: {
+                type: "fill",
+                color: inputOutputPairs[0],
+              } as GLLegendFillSymbol,
+            },
+          ]),
+      ...inputOutputPairs.reduce((steps, current, i) => {
+        if (i % 2 !== 0) {
+          const input = current;
+          const output = inputOutputPairs[i + 1];
+          let displayValue = input;
+          if (scale) {
+          }
+          if (round) {
+            displayValue = Math.round(input);
+          }
+          if (
+            output !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
+            output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
+          ) {
+            steps.push({
+              id: id + "-" + i,
+              label: `${displayValue.toLocaleString()}`,
+              value: input,
+              symbol: {
+                type: "fill",
+                color: output,
+              } as GLLegendFillSymbol,
+            });
+          }
+        }
+        return steps;
+      }, [] as { id: string; label: string; symbol: GLLegendSymbol }[]),
+    ],
+  };
+  // filter out transparent pixels from legend
+  panel.steps = panel.steps.filter(
+    (step) => "color" in step.symbol && step.symbol.color !== "transparent"
+  );
+  const sortedCategories = metadata?.["s:sorted-categories"];
+  if (sortedCategories && panel.steps.find((s) => Boolean(s.value))) {
+    panel.steps = panel.steps.sort((a, b) => {
+      return (
+        sortedCategories.indexOf(a.value) - sortedCategories.indexOf(b.value)
+      );
+    });
+  }
+  return panel;
+}
+
+export function pluckRasterMatchPanel(
+  id: string,
+  expression: Expression,
+  metadata?: SeaSketchLayerMetadata,
+  rasterColorRange?: [number, number]
+) {
+  const defaultValue = expression[expression.length - 1];
+  const inputOutputPairs = expression.slice(2, -1);
+
+  const panel: GLLegendListPanel = {
+    id,
+    type: "GLLegendListPanel",
+    items: [],
+  };
+
+  for (var i = 0; i < inputOutputPairs.length; i += 2) {
+    const input = inputOutputPairs[i];
+    const output = inputOutputPairs[i + 1];
+    if (
+      output !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
+      output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
+    ) {
+      // valuesUsed.push(input);
+      panel.items.push({
+        id: id + "-" + i,
+        label: `${input}`,
+        value: input,
+        symbol: {
+          type: "fill",
+          color: output,
+        } as GLLegendFillSymbol,
+      });
+    }
+  }
+
+  if (defaultValue !== "transparent") {
+    panel.items.push({
+      id: id + "-default",
+      label: "default",
+      symbol: {
+        type: "fill",
+        color: defaultValue,
+      } as GLLegendFillSymbol,
+    });
+  }
+  const sortedCategories = metadata?.["s:sorted-categories"];
+  if (sortedCategories && panel.items.find((i) => Boolean(i.value))) {
+    panel.items = panel.items.sort((a, b) => {
+      return (
+        sortedCategories.indexOf(a.value) - sortedCategories.indexOf(b.value)
+      );
+    });
+  }
+
+  return panel;
+}
+
 export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {
   return pluckLayersWithExpression(
     context,
@@ -914,24 +1199,32 @@ export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {
     ) => {
       const inputOutputPairs = expression.slice(3);
       const prop = expression[1][1];
+      const metadata = (layer.metadata || {}) as SeaSketchLayerMetadata;
       const panel: GLLegendStepPanel = {
         id,
         type: "GLLegendStepPanel",
-        label: prop,
+        label:
+          metadata["s:legend-labels"] && prop in metadata["s:legend-labels"]
+            ? metadata["s:legend-labels"][prop]
+            : prop,
         steps: [
-          {
-            id: id + "-first",
-            label: "< " + inputOutputPairs[0],
-            symbol: createSymbol(
-              sortedLayers.indexOf(layer),
-              sortedLayers,
-              {
-                ...featureProps,
-                [prop]: inputOutputPairs[0] - 1,
-              },
-              representedProperties
-            ),
-          },
+          ...("s:steps" in metadata
+            ? []
+            : [
+                {
+                  id: id + "-first",
+                  label: "< " + inputOutputPairs[0],
+                  symbol: createSymbol(
+                    sortedLayers.indexOf(layer),
+                    sortedLayers,
+                    {
+                      ...featureProps,
+                      [prop]: inputOutputPairs[0] - 1,
+                    },
+                    representedProperties
+                  ),
+                },
+              ]),
           ...inputOutputPairs.reduce((steps, current, i) => {
             if (i % 2 === 0) {
               const input = current;
@@ -940,9 +1233,16 @@ export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {
                 output !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
                 output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
               ) {
+                let label = input.toLocaleString();
+                if (metadata["s:round-numbers"]) {
+                  label = Math.round(input).toLocaleString();
+                }
+                if (metadata["s:value-suffix"]) {
+                  label += metadata["s:value-suffix"];
+                }
                 steps.push({
                   id: id + "-" + i,
-                  label: `${input.toLocaleString()}`,
+                  label,
                   symbol: createSymbol(
                     sortedLayers.indexOf(layer),
                     sortedLayers,
@@ -1101,11 +1401,15 @@ export function pluckListPanelsFromMatchExpressions(context: {
       const prop = expression[1][1];
       const defaultValue = expression[expression.length - 1];
       const inputOutputPairs = expression.slice(2, -1);
-
+      const metadata: SeaSketchLayerMetadata = layer.metadata || {};
+      let panelLabel = expression[1][1].toString();
+      if (metadata["s:legend-labels"]?.[panelLabel]) {
+        panelLabel = metadata["s:legend-labels"][panelLabel];
+      }
       const panel: GLLegendListPanel = {
         id,
         type: "GLLegendListPanel",
-        label: expression[1][1],
+        label: panelLabel,
         items: [],
       };
       const valuesUsed: any = [];
@@ -1117,19 +1421,30 @@ export function pluckListPanelsFromMatchExpressions(context: {
           output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
         ) {
           valuesUsed.push(input);
-          panel.items.push({
-            id: id + "-" + i,
-            label: `${input}`,
-            symbol: createSymbol(
-              sortedLayers.indexOf(layer),
-              sortedLayers,
-              {
-                ...featureProps,
-                [prop]: input,
-              },
-              representedProperties
-            ),
-          });
+          let label = input.toString();
+          if (input && metadata["s:legend-labels"]?.[input]) {
+            label = metadata["s:legend-labels"][input];
+          }
+
+          if (
+            !metadata["s:excluded"] ||
+            !metadata["s:excluded"].includes(input)
+          ) {
+            panel.items.push({
+              id: id + "-" + i,
+              label,
+              value: input,
+              symbol: createSymbol(
+                sortedLayers.indexOf(layer),
+                sortedLayers,
+                {
+                  ...featureProps,
+                  [prop]: input,
+                },
+                representedProperties
+              ),
+            });
+          }
         }
       }
       if (layer.type === "fill" || layer.type === "line") {
@@ -1141,19 +1456,29 @@ export function pluckListPanelsFromMatchExpressions(context: {
         );
         for (const value of valuesForFeatureProperty) {
           if (!valuesUsed.includes(value)) {
-            panel.items.push({
-              id: id + "-" + value,
-              label: `${value}`,
-              symbol: createSymbol(
-                sortedLayers.indexOf(layer),
-                sortedLayers,
-                {
-                  ...featureProps,
-                  [prop]: value,
-                },
-                representedProperties
-              ),
-            });
+            let label = value.toString();
+            if (value && metadata["s:legend-labels"]?.[value.toString()]) {
+              label = metadata["s:legend-labels"][value.toString()];
+            }
+            if (
+              !metadata["s:excluded"] ||
+              !metadata["s:excluded"].includes(value)
+            ) {
+              panel.items.push({
+                id: id + "-" + value,
+                label,
+                value: value,
+                symbol: createSymbol(
+                  sortedLayers.indexOf(layer),
+                  sortedLayers,
+                  {
+                    ...featureProps,
+                    [prop]: value,
+                  },
+                  representedProperties
+                ),
+              });
+            }
             valuesUsed.push(value);
           }
         }
@@ -1162,17 +1487,34 @@ export function pluckListPanelsFromMatchExpressions(context: {
         defaultValue !== NULLIFIED_EXPRESSION_OUTPUT_NUMBER &&
         defaultValue !== NULLIFIED_EXPRESSION_OUTPUT_STRING
       ) {
-        panel.items.push({
-          id: id + "-default",
-          label: "default",
-          symbol: createSymbol(
-            sortedLayers.indexOf(layer),
-            sortedLayers,
-            {
-              ...featureProps,
-            },
-            representedProperties
-          ),
+        const symbol = createSymbol(
+          sortedLayers.indexOf(layer),
+          sortedLayers,
+          {
+            ...featureProps,
+          },
+          representedProperties
+        );
+        if (
+          (symbol.type === "fill" && symbol.color === "transparent") ||
+          (symbol.type === "line" && symbol.color === "transparent") ||
+          (symbol.type === "circle" && symbol.color === "transparent")
+        ) {
+        } else {
+          panel.items.push({
+            id: id + "-default",
+            label: "default",
+            symbol,
+          });
+        }
+      }
+      const sortedCategories = metadata?.["s:sorted-categories"];
+      if (sortedCategories && panel.items.find((s) => Boolean(s.value))) {
+        panel.items = panel.items.sort((a, b) => {
+          return (
+            sortedCategories.indexOf(a.value) -
+            sortedCategories.indexOf(b.value)
+          );
         });
       }
       return panel;
@@ -1616,7 +1958,10 @@ function hasMatchingStops(a: Stop[], b: Stop[]) {
  * @param expression Mapbox gl style interpolation expression
  * @returns Array<{value: number, color: string}>
  */
-function interpolationExpressionToStops(expression?: any) {
+function interpolationExpressionToStops(
+  expression?: any,
+  metadata?: SeaSketchLayerMetadata
+) {
   expression =
     expression && isExpression(expression)
       ? expression
@@ -1645,10 +1990,17 @@ function interpolationExpressionToStops(expression?: any) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [input, ...stopPairs] = args;
       for (let i = 0; i < stopPairs.length; i += 2) {
+        let label = stopPairs[i].toLocaleString();
+        if (metadata && metadata["s:round-numbers"]) {
+          label = Math.round(stopPairs[i]).toLocaleString();
+        }
+        if (metadata && metadata["s:value-suffix"]) {
+          label += metadata["s:value-suffix"];
+        }
         stops.push({
           value: stopPairs[i],
           color: stopPairs[i + 1],
-          label: stopPairs[i].toLocaleString(),
+          label,
         });
       }
     }

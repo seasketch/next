@@ -20,6 +20,6 @@ RUN npm install lerna@6
 ARG commit
 RUN git clone https://github.com/seasketch/next.git /home/seasketch/src && cd /home/seasketch/src && git checkout $commit
 WORKDIR /home/seasketch/src/packages/api
-RUN npx lerna@6 bootstrap --scope=@seasketch/api --scope=@seasketch/map-tile-cache-calculator --scope=@seasketch/vector-data-source --scope=@seasketch/mapbox-gl-esri-sources --scope=spatial-uploads-handler && npm run build
+RUN npx lerna@6.6.2 bootstrap --scope=@seasketch/api --scope=@seasketch/map-tile-cache-calculator --scope=@seasketch/vector-data-source --scope=@seasketch/mapbox-gl-esri-sources --scope=spatial-uploads-handler --scope=@seasketch/geostats-types && npm run build
 EXPOSE 3857
 CMD ["npm", "run", "start"]

@@ -13,7 +13,7 @@ const server = http.createServer(function (req, res) {
     });
     req.on("end", async () => {
       const data = JSON.parse(body);
-      import("./src").then(async (handleUpload) => {
+      import("./src/handleUpload").then(async (handleUpload) => {
         const s3LogPath = `s3://${process.env.BUCKET}/${data.taskId}.log.txt`;
         try {
           const outputs = await handleUpload.default(

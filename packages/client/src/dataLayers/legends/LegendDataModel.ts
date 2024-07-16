@@ -42,8 +42,9 @@ export interface GLLegendMarkerSymbol {
   iconSize: number;
 }
 
-export interface GLLegendRasterSymbol {
-  type: "raster";
+export interface GLLegendRGBRasterSymbol {
+  type: "rgb-raster";
+  representativeColors?: number[][];
 }
 
 export interface GLLegendVideoSymbol {
@@ -65,7 +66,7 @@ export type GLLegendSymbol =
   | GLLegendCircleSymbol
   | GLLegendMarkerSymbol
   | GLLegendTextSymbol
-  | GLLegendRasterSymbol
+  | GLLegendRGBRasterSymbol
   | GLLegendLineSymbol
   | GLLegendVideoSymbol;
 
@@ -73,7 +74,12 @@ export type GLLegendListPanel = {
   id: string;
   type: "GLLegendListPanel";
   label?: string;
-  items: { id: string; label: string; symbol: GLLegendSymbol }[];
+  items: {
+    id: string;
+    label: string;
+    symbol: GLLegendSymbol;
+    value?: string | number | boolean;
+  }[];
 };
 
 export type GLLegendFilterPanel = {
@@ -124,7 +130,12 @@ export type GLLegendStepPanel = {
   id: string;
   type: "GLLegendStepPanel";
   label?: string;
-  steps: { id: string; label: string; symbol: GLLegendSymbol }[];
+  steps: {
+    id: string;
+    label: string;
+    symbol: GLLegendSymbol;
+    value: string | number;
+  }[];
 };
 
 export type GLLegendHeatmapPanel = {

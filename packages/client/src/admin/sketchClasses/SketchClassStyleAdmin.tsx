@@ -6,10 +6,7 @@ import {
   SketchGeometryType,
   useUpdateSketchClassStyleMutation,
 } from "../../generated/graphql";
-import GLStyleEditor, {
-  ExtendedGeostatsAttributeType,
-  ExtendedGeostatsLayer,
-} from "../data/GLStyleEditor/GLStyleEditor";
+import GLStyleEditor from "../data/GLStyleEditor/GLStyleEditor";
 import { FormElementOption } from "../../formElements/FormElementOptionsInput";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Map } from "mapbox-gl";
@@ -18,6 +15,11 @@ import point from "./point.json";
 import line from "./line.json";
 import { Feature } from "geojson";
 import bbox from "@turf/bbox";
+import {
+  GeostatsAttributeType,
+  GeostatsLayer,
+  LegacyGeostatsLayer,
+} from "@seasketch/geostats-types";
 
 export default function SketchClassStyleAdmin({
   sketchClass,
@@ -322,11 +324,11 @@ export default function SketchClassStyleAdmin({
 
 function sketchClassToGeostats(
   sketchClass: AdminSketchingDetailsFragment
-): ExtendedGeostatsLayer {
+): GeostatsLayer {
   const inputs = (sketchClass.form?.formElements || []).filter(
     (fe) => fe.isInput && fe.type?.geostatsType
   );
-  const geostats: ExtendedGeostatsLayer = {
+  const geostats: GeostatsLayer = {
     layer: sketchClass.name,
     geometry: coerceGeometrytype(sketchClass.geometryType),
     count: 1,
@@ -345,7 +347,10 @@ function sketchClassToGeostats(
         type: coerceGeostatsType(fe.type?.geostatsType)!,
         typeArrayOf: coerceGeostatsType(fe.type?.geostatsArrayOf, false),
         count: values.length,
-        values,
+        values: values.reduce((acc, v) => {
+          acc[v] = 1;
+          return acc;
+        }, {} as { [value: string]: number }),
       };
     }),
   };
@@ -360,7 +365,7 @@ function coerceGeostatsType(type: any, isRequired = true) {
       return undefined;
     }
   }
-  return type.toLowerCase() as ExtendedGeostatsAttributeType;
+  return type.toLowerCase() as GeostatsAttributeType;
 }
 
 function coerceGeometrytype(type: SketchGeometryType) {

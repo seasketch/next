@@ -59,7 +59,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         path.join(__dirname, "../../spatial-uploads-handler"),
         {}
       ),
-      timeout: cdk.Duration.minutes(5),
+      timeout: cdk.Duration.minutes(12),
       logRetention: logs.RetentionDays.ONE_MONTH,
       environment: {
         PGHOST: props.db.instanceEndpoint.hostname,
@@ -80,6 +80,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         TILES_BASE_URL,
         DEBUGGING_AWS_ACCESS_KEY_ID: DEBUGGING_AWS_ACCESS_KEY_ID || "",
         DEBUGGING_AWS_SECRET_ACCESS_KEY: DEBUGGING_AWS_SECRET_ACCESS_KEY || "",
+        NODE_EXTRA_CA_CERTS: "/var/runtime/ca-cert.pem",
       },
       memorySize: 10240,
       reservedConcurrentExecutions: 100,

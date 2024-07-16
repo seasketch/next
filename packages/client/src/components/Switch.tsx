@@ -5,9 +5,11 @@ export interface SwitchProps {
   disabled?: boolean;
   onClick?: (val: boolean, e?: React.MouseEvent<any, MouseEvent>) => void;
   className?: string;
+  toggleColor?: string;
 }
 
 export default function Switch(props: SwitchProps) {
+  const toggleColor = props.toggleColor || "rgb(46, 115, 182)";
   return (
     <div
       className={`inline-flex items-center ${props.disabled && "opacity-75"}`}
@@ -33,9 +35,7 @@ export default function Switch(props: SwitchProps) {
         aria-readonly={!!props.disabled}
         tabIndex={0}
         style={{
-          backgroundColor: !!props.isToggled
-            ? "rgb(46, 115, 182)"
-            : "rgba(0,0,0,0.18)",
+          backgroundColor: !!props.isToggled ? toggleColor : "rgba(0,0,0,0.18)",
         }}
         className={`inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full ${
           !props.disabled && "cursor-pointer"

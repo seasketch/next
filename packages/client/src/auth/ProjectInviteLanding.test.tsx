@@ -34,6 +34,7 @@ beforeEach(() => {
   });
   // Silence apollo inmemorycache console.error calls based on incomplete mocks
   jest.spyOn(console, "error").mockImplementation(() => {});
+  jest.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 it("renders without crashing", () => {

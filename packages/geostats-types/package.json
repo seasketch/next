@@ -1,0 +1,30 @@
+{
+  "name": "@seasketch/geostats-types",
+  "version": "1.0.0",
+  "description": "Types for metadata describing vector and raster data, useful for cartography and data handling",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "lib/index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "__tests__"
+  },
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "node ./__tests__/geostats-types.test.js"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "dependencies": {
+    "@types/geojson": "^7946.0.14"
+  }
+}

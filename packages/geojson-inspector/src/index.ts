@@ -1,8 +1,6 @@
+import geostats from "./geostats";
 import { FailedInspectorResponse, InspectorResponse } from "./types";
 import calcBBox from "@turf/bbox";
-import geostats, {
-  GeostatsLayer,
-} from "../../spatial-uploads-handler/src/geostats";
 
 export interface Env {}
 

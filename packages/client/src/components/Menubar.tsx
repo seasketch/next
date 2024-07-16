@@ -6,9 +6,21 @@ import {
   DotFilledIcon,
 } from "@radix-ui/react-icons";
 
-export function MenubarTrigger({ children }: { children?: ReactNode }) {
+export function MenubarTrigger({
+  children,
+  dark,
+}: {
+  children?: ReactNode;
+  dark?: boolean;
+}) {
   return (
-    <Menubar.Trigger className="MenubarTrigger py-2 px-3 outline-none select-none font-medium leading-none rounded hover:bg-gray-200">
+    <Menubar.Trigger
+      className={`MenubarTrigger py-2 px-3 outline-none select-none font-medium leading-none rounded ${
+        dark
+          ? "hover:bg-gray-700 hover:text-blue-100 text-gray-300"
+          : "hover:bg-gray-200 hover:text-black text-black"
+      }`}
+    >
       {children}
     </Menubar.Trigger>
   );
@@ -72,12 +84,16 @@ export function MenuBarSeparator() {
 }
 
 export const MenuBarContentClasses =
-  "z-50 bg-gray-100 bg-opacity-90 rounded shadow-md p-1 border border-black border-opacity-10";
+  "z-50 bg-gray-100 rounded shadow-md p-1 border border-black border-opacity-10";
 
 export function MenuBarContent({ children }: { children?: ReactNode }) {
   return (
     <Menubar.Content
-      style={{ backdropFilter: "blur(3px)", minWidth: 220 }}
+      style={{
+        backdropFilter: "blur(6px)",
+        minWidth: 220,
+        backgroundColor: "rgba(243, 244, 246, 0.75)",
+      }}
       className={MenuBarContentClasses}
       align="start"
       sideOffset={2}

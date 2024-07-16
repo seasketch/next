@@ -1429,9 +1429,13 @@ class MapContextManager extends EventEmitter {
                     };
                     break;
                   case DataSourceTypes.SeasketchMvt:
+                    let url = source.url!;
+                    if (!/\.json$/.test(url)) {
+                      url += ".json";
+                    }
                     baseStyle.sources[source.id.toString()] = {
                       type: "vector",
-                      url: source.url! + ".json",
+                      url,
                       attribution: source.attribution || "",
                     };
                     break;
@@ -1445,9 +1449,13 @@ class MapContextManager extends EventEmitter {
                     break;
                   case DataSourceTypes.SeasketchRaster:
                     if (source.url) {
+                      let url = source.url!;
+                      if (!/\.json$/.test(url)) {
+                        url += ".json";
+                      }
                       baseStyle.sources[source.id.toString()] = {
                         type: "raster",
-                        url: source.url,
+                        url,
                         attribution: source.attribution || "",
                       };
                     } else {
@@ -1567,8 +1575,8 @@ class MapContextManager extends EventEmitter {
               ) {
                 const shouldHaveSourceLayer =
                   source.type === DataSourceTypes.SeasketchMvt ||
-                  source.type === DataSourceTypes.Vector ||
-                  source.type === DataSourceTypes.SeasketchRaster;
+                  source.type === DataSourceTypes.Vector; // ||
+                // source.type === DataSourceTypes.SeasketchRaster;
                 const staticLayers = (
                   this.archivedSource &&
                   this.archivedSource.dataLayerId === layer.id &&
@@ -1928,7 +1936,7 @@ class MapContextManager extends EventEmitter {
       const visibleLayers: DataLayerDetailsFragment[] = [];
       for (const id in this.visibleLayers) {
         const state = this.visibleLayers[id];
-        if (state.visible) {
+        if (state.visible && !state.hidden) {
           visibleLayers.push(this.layers[id]);
         }
       }
@@ -2849,9 +2857,21 @@ class MapContextManager extends EventEmitter {
 
             if (sourceType) {
               try {
+                const respectRasterOffsetAndScale = Boolean(
+                  (layer.mapboxGlStyles || []).find(
+                    (l: any) => l.metadata?.["s:respect-scale-and-offset"]
+                  )
+                );
                 const legend = compileLegendFromGLStyleLayers(
                   layer.mapboxGlStyles,
-                  sourceType
+                  sourceType,
+                  source.rasterRepresentativeColors,
+                  respectRasterOffsetAndScale
+                    ? (source.rasterScale as number | undefined)
+                    : undefined,
+                  respectRasterOffsetAndScale
+                    ? (source.rasterOffset as number | undefined)
+                    : undefined
                 );
                 if (legend) {
                   newLegendState[id] = {
@@ -3123,8 +3143,8 @@ class MapContextManager extends EventEmitter {
     // TODO: consider customsource layer types
     const shouldHaveSourceLayer =
       source.type === DataSourceTypes.SeasketchMvt ||
-      source.type === DataSourceTypes.Vector ||
-      source.type === DataSourceTypes.SeasketchRaster;
+      source.type === DataSourceTypes.Vector; // ||
+    // source.type === DataSourceTypes.SeasketchRaster;
     if (layer && source && this.map && layer.mapboxGlStyles?.length > 0) {
       // Do an update in place if possible
       let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {
@@ -3557,12 +3577,7 @@ type CustomSourceType =
   | DataSourceTypes.ArcgisDynamicMapserver;
 
 function isCustomSourceType(type: DataSourceTypes): type is CustomSourceType {
-  return (
-    sourceTypeIsCustomGLSource(type) ||
-    type === DataSourceTypes.ArcgisDynamicMapserver ||
-    type === DataSourceTypes.ArcgisRasterTiles ||
-    type === DataSourceTypes.ArcgisVector
-  );
+  return sourceTypeIsCustomGLSource(type);
 }
 
 function createCustomSource(

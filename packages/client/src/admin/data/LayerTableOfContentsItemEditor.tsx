@@ -278,25 +278,6 @@ export default function LayerTableOfContentsItemEditor(
               source.type === DataSourceTypes.SeasketchRaster ||
               source.type === DataSourceTypes.Vector) && (
               <div className="h-full overflow-hidden flex flex-col">
-                <p className="text-sm text-gray-100 px-2 pb-2 pt-1 bg-gray-700">
-                  <Trans ns={["admin"]}>
-                    Vector layers can be styled using{" "}
-                    <a
-                      className="underline text-primary-300"
-                      href="https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      MapBox GL Style Layers
-                    </a>
-                    . Don't specify a <code>source</code> or <code>id</code>{" "}
-                    property on your layers, those will be managed for you by
-                    SeaSketch. Press{" "}
-                    <span className="font-mono">Control+Space</span> to
-                    autocomplete string values and property names, and hover
-                    over properties to see documentation.
-                  </Trans>
-                </p>
                 {updateGLStyleMutationState.error && (
                   <p className="bg-gray-700 text-red-200 p-2 text-sm">
                     <Trans ns="admin:data">Style save error - </Trans>
@@ -304,8 +285,11 @@ export default function LayerTableOfContentsItemEditor(
                   </p>
                 )}
                 <GLStyleEditor
+                  sourceLayer={layer.sourceLayer as string | undefined}
+                  layerId={layer.id}
                   tocItemId={item.stableId}
                   geostats={geostats}
+                  dataSource={source}
                   type={
                     source.type === DataSourceTypes.SeasketchRaster
                       ? "raster"

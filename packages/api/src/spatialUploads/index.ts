@@ -2,7 +2,15 @@ import { Client, PoolClient } from "pg";
 import { ProcessedUploadLayer } from "spatial-uploads-handler";
 import { customAlphabet } from "nanoid";
 import { GeoJsonGeometryTypes } from "geojson";
-import { GeostatsLayer } from "spatial-uploads-handler/src/geostats";
+import {
+  GeostatsLayer,
+  RasterInfo,
+  SuggestedRasterPresentation,
+  isRasterInfo,
+} from "@seasketch/geostats-types";
+import * as colorScale from "d3-scale-chromatic";
+import { colord } from "colord";
+
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
@@ -178,6 +186,8 @@ export async function createDBRecordsForProcessedLayer(
         ? null
         : "layers" in layer.geostats
         ? layer.geostats
+        : isRasterInfo(layer.geostats)
+        ? layer.geostats
         : // If geostats is just a fragment layer, put it into a complete
           // geostats layer list
           {
@@ -292,8 +302,10 @@ export async function createDBRecordsForProcessedLayer(
           : dataLayer.mapbox_gl_styles
           ? null
           : JSON.stringify(
-              getStyle(
-                isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
+              await getStyle(
+                isVector
+                  ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
+                  : "Raster",
                 uploadCount,
                 layer.geostats
               )
@@ -336,11 +348,13 @@ export async function createDBRecordsForProcessedLayer(
         pmtiles ? layer.name : undefined,
         JSON.stringify(
           conversionTask?.mapbox_gl_styles ||
-            getStyle(
-              isVector ? layer.geostats?.geometry || "Polygon" : "Raster",
+            (await getStyle(
+              isVector
+                ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
+                : "Raster",
               uploadCount,
               layer.geostats
-            )
+            ))
         ),
       ]
     );
@@ -434,14 +448,17 @@ function getColor(i: number) {
   return lightColors[i % (lightColors.length - 1)];
 }
 
-function getStyle(
-  type: GeoJsonGeometryTypes | "Raster",
+async function getStyle(
+  type: GeoJsonGeometryTypes | "Raster" | "Unknown",
   colorIndex: number,
-  geostats?: GeostatsLayer | null
+  geostats?: GeostatsLayer | RasterInfo | null
 ) {
+  if (type === "Unknown") {
+    return [];
+  }
   const color = getColor(colorIndex);
   let labelAttribute: string | undefined;
-  if (geostats) {
+  if (geostats && "attributes" in geostats) {
     for (const attr of geostats.attributes) {
       if (
         attr.attribute !== "OBJECTID" &&
@@ -455,17 +472,120 @@ function getStyle(
   }
   switch (type) {
     case "Raster":
-      return [
-        {
-          type: "raster",
-          layout: {
-            visibility: "visible",
+      if (!geostats || !isRasterInfo(geostats)) {
+        return [
+          {
+            type: "raster",
+            layout: {
+              visibility: "visible",
+            },
+            paint: {
+              "raster-resampling": "nearest",
+            },
           },
-          paint: {
-            "raster-resampling": "nearest",
+        ];
+      } else if (
+        geostats.presentation === SuggestedRasterPresentation.categorical
+      ) {
+        let colors: [number, string][] = [];
+        if (geostats.bands[0].colorTable) {
+          colors = geostats.bands[0].colorTable;
+        } else if (geostats.bands[0].stats.categories) {
+          const categories = geostats.bands[0].stats.categories;
+          for (const category of categories) {
+            colors.push([
+              category[0],
+              colorScale.schemeTableau10[categories.indexOf(category) % 10],
+            ]);
+          }
+        }
+        return [
+          {
+            type: "raster",
+            paint: {
+              "raster-color": [
+                "step",
+                ["round", ["raster-value"]],
+                "transparent",
+                ...colors.flat(),
+              ],
+              "raster-color-mix": [0, 0, 258, geostats.bands[0].base],
+              "raster-resampling": "nearest",
+              "raster-color-range": [
+                geostats.bands[0].minimum,
+                geostats.bands[0].minimum + 255,
+              ],
+              "raster-fade-duration": 0,
+            },
+            layout: {
+              visibility: "visible",
+            },
+            metadata: {
+              "s:palette": "schemeTableau10",
+            },
           },
-        },
-      ];
+        ];
+      } else if (
+        geostats.presentation === SuggestedRasterPresentation.continuous
+      ) {
+        const band = geostats.bands[0]!;
+        let rasterColorMix = [
+          ["*", 255, 65536],
+          ["*", 255, 256],
+          255,
+          ["+", -32768, band.base],
+        ] as any;
+        if (band.interval && band.interval !== 1) {
+          rasterColorMix = rasterColorMix.map((channel: any) => [
+            "*",
+            band.interval,
+            channel,
+          ]);
+        }
+        return [
+          {
+            type: "raster",
+            paint: {
+              "raster-color": [
+                "interpolate",
+                ["linear"],
+                ["raster-value"],
+                ...band.stats.equalInterval[9]
+                  .map((bucket, i) => [bucket[0], plasma[i]])
+                  .flat(),
+              ],
+              "raster-color-mix": rasterColorMix,
+              "raster-resampling": "nearest",
+              "raster-color-range": [band.minimum, band.maximum],
+              "raster-fade-duration": 0,
+            },
+            layout: {
+              visibility: "visible",
+            },
+            metadata: {
+              "s:palette": "interpolatePlasma",
+              ...(geostats.bands[0].offset || geostats.bands[0].scale
+                ? { "s:respect-scale-and-offset": true }
+                : {}),
+            },
+          },
+        ];
+      } else {
+        return [
+          {
+            type: "raster",
+            layout: {
+              visibility: "visible",
+            },
+            paint: {
+              "raster-resampling":
+                geostats.presentation === SuggestedRasterPresentation.rgb
+                  ? "linear"
+                  : "nearest",
+            },
+          },
+        ];
+      }
     case "Polygon":
     case "MultiPolygon":
       return [
@@ -473,7 +593,7 @@ function getStyle(
           type: "fill",
           paint: {
             "fill-color": color,
-            "fill-opacity": 0.2,
+            "fill-opacity": 0.5,
           },
         },
         {
@@ -484,9 +604,12 @@ function getStyle(
             visibility: "visible",
           },
           paint: {
-            "line-color": color,
+            "line-color": autoStrokeColorForFillColor(color),
             "line-width": 1,
-            "line-opacity": 0.75,
+            "line-opacity": 1,
+          },
+          metadata: {
+            "s:color-auto": true,
           },
         },
       ];
@@ -563,5 +686,50 @@ function getStyle(
           },
         },
       ];
+  }
+}
+
+function colors(specifier: string) {
+  var n = (specifier.length / 6) | 0,
+    colors = new Array(n),
+    i = 0;
+  while (i < n) colors[i] = "#" + specifier.slice(i * 6, ++i * 6);
+  return colors;
+}
+
+const plasma = [
+  "#0d0887",
+  "#46039f",
+  "#7201a8",
+  "#9c179e",
+  "#bd3786",
+  "#d8576b",
+  "#ed7953",
+  "#fb9f3a",
+  "#fdca26",
+  "#f0f921",
+];
+const magma = [
+  "#000004",
+  "#180f3d",
+  "#440f76",
+  "#721f81",
+  "#9e2f7f",
+  "#cd4071",
+  "#f1605d",
+  "#fd9668",
+  "#feca8d",
+  "#fcfdbf",
+];
+
+export function autoStrokeColorForFillColor(fillColor: string) {
+  const c = colord(fillColor);
+  if (c.alpha() === 0) {
+    return "#558";
+  }
+  if (c.isDark()) {
+    return c.lighten(0.3).alpha(1).toRgbString();
+  } else {
+    return c.darken(0.15).alpha(1).toRgbString();
   }
 }

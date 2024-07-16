@@ -2380,6 +2380,9 @@ export type DataSource = Node & {
   queryParameters?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  rasterOffset?: Maybe<Scalars['Float']>;
+  rasterRepresentativeColors?: Maybe<Scalars['JSON']>;
+  rasterScale?: Maybe<Scalars['Float']>;
   /** Reads and enables pagination through a set of `TableOfContentsItem`. */
   relatedTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   /**
@@ -2616,6 +2619,9 @@ export type DataSourceInput = {
    * querystring parameters that will be added to requests.
    */
   queryParameters?: Maybe<Scalars['JSON']>;
+  rasterOffset?: Maybe<Scalars['Float']>;
+  rasterRepresentativeColors?: Maybe<Scalars['JSON']>;
+  rasterScale?: Maybe<Scalars['Float']>;
   /**
    * For MapBox Vector and Raster sources. Influences the y direction of the tile
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
@@ -10360,6 +10366,9 @@ export type Query = Node & {
   generateExportId?: Maybe<Scalars['String']>;
   generateLabel?: Maybe<Scalars['String']>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
+  getFirstBandOffset?: Maybe<Scalars['Float']>;
+  getFirstBandScale?: Maybe<Scalars['Float']>;
+  getRepresentativeColors?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
@@ -10883,6 +10892,24 @@ export type QueryGenerateExportIdArgs = {
 export type QueryGenerateLabelArgs = {
   body?: Maybe<Scalars['JSON']>;
   id?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetFirstBandOffsetArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetFirstBandScaleArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetRepresentativeColorsArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -16942,7 +16969,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
@@ -17053,7 +17080,7 @@ export type UpdateFolderMutation = (
 
 export type FullAdminSourceFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'hostingQuotaUsed' | 'changelog'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'hostingQuotaUsed' | 'changelog'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
@@ -18843,7 +18870,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
 );
 
 export type ClientSpriteFragment = (
@@ -21618,6 +21645,7 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
   geostats
   translatedProps
   arcgisFetchStrategy
+  rasterRepresentativeColors
   authorProfile {
     userId
     affiliations
@@ -22103,6 +22131,9 @@ export const DataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   supportsDynamicLayers
   translatedProps
   arcgisFetchStrategy
+  rasterRepresentativeColors
+  rasterOffset
+  rasterScale
 }
     `;
 export const ClientSpriteFragmentDoc = /*#__PURE__*/ gql`
@@ -23506,6 +23537,9 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       uploadedSourceFilename
       translatedProps
       arcgisFetchStrategy
+      rasterRepresentativeColors
+      rasterOffset
+      rasterScale
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
