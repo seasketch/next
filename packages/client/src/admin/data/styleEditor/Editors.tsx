@@ -40,6 +40,7 @@ export function DocumentationInfo({ href }: { href: string }) {
       className="text-gray-500 hover:text-gray-300"
       href={href}
       target="_blank"
+      rel="noreferrer"
     >
       <InfoCircledIcon />
     </a>
