@@ -21,8 +21,8 @@ jobs:
         with:
           node-version: "18.6"
           cache: "npm"
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Install dependencies
         run: |
           npx lerna@6.6.2 bootstrap --ci
