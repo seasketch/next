@@ -11,7 +11,8 @@
     "test": "jest",
     "cdk": "cdk",
     "shell": "bin/shell.sh",
-    "info": "node lib/getBastionProps.js"
+    "info": "node lib/getBastionProps.js",
+    "deploy:upload-handler": "cd ../spatial-uploads-handler && npm run deploy:pre && cd ../infra && npx cdk deploy -e SpatialUploadHandler && cd ../spatial-uploads-handler && npm run deploy:post"
   },
   "devDependencies": {
     "@aws-cdk/assert": "1.106.0",
