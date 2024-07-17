@@ -32,20 +32,18 @@ const SearchOverlaysRateLimiterPlugin = makeWrapResolversPlugin({
   Query: {
     searchOverlays: (resolve, source, args, context, resolveInfo) => {
       if (limiter) {
-        if (context?.user?.sub) {
-          return limiter
-            .consume(context.user?.sub || "anon", 1)
-            .then((value) => {
-              return resolve(source, args, context, resolveInfo);
-            })
-            .catch((e) => {
-              if ("remainingPoints" in e) {
-                throw new Error("Rate limited");
-              } else {
-                throw e;
-              }
-            });
-        }
+        return limiter
+          .consume(context.user?.sub || "anon", 1)
+          .then((value) => {
+            return resolve(source, args, context, resolveInfo);
+          })
+          .catch((e) => {
+            if ("remainingPoints" in e) {
+              throw new Error("Rate limited");
+            } else {
+              throw e;
+            }
+          });
       } else {
         return resolve(source, args, context, resolveInfo);
       }
