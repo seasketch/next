@@ -578,7 +578,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
       {editor === "code" && (
         <p className="text-sm text-gray-100 p-4 bg-gray-700">
           <Trans ns={["admin:data"]}>
-            Vector layers can be styled using{" "}
+            Layers can be styled using{" "}
             <a
               className="underline text-primary-300"
               href="https://docs.mapbox.com/mapbox-gl-js/style-spec/layers/"
