@@ -71,6 +71,15 @@ export default function LabelLayerEditor() {
                   layout: {
                     "text-field": ["get", bestLabel],
                     "text-size": 13,
+                    ...(geostats.geometry === "Point" ||
+                    geostats.geometry === "MultiPoint"
+                      ? {
+                          visibility: "visible",
+                          "text-anchor": "left",
+                          "text-offset": [0.5, 0.5],
+                          "symbol-placement": "point",
+                        }
+                      : {}),
                   },
                   paint: {
                     "text-color": "#000000",
